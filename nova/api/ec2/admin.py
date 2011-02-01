@@ -184,6 +184,17 @@ class AdminController(object):
                 description=None,
                 member_users=None))
 
+    def modify_project(self, context, name, manager_user, description=None,
+                       **kwargs):
+        """Modifies a project"""
+        msg = _("Modify project: %(name)s managed by"
+                " %(manager_user)s") % locals()
+        LOG.audit(msg, context=context)
+        manager.AuthManager().modify_project(name,
+                                             manager_user=manager_user,
+                                             description=description)
+        return True
+
     def deregister_project(self, context, name):
         """Permanently deletes a project."""
         LOG.audit(_("Delete project: %s"), name, context=context)
