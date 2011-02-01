@@ -99,14 +99,16 @@ class VMOps(object):
         network = db.network_get_by_instance(admin_context,
                                              instance['id'])
         for network in db.network_get_all(admin_context):
+            mac_id = instance.mac_address.replace(':', '')
+            location = 'vm-data/networking/%s' % mac_id
             mapping = {'label': network['label'],
                        'gateway': network['gateway'],
                        'mac': instance.mac_address,
-                       'dns': network['dns'],
+                       'dns': [network['dns']],
                        'ips': [{'netmask': network['netmask'],
                                 'enabled': '1',
                                 'ip': '192.168.3.3'}]}      # <===== CHANGE!!!!
-            self.write_network_config_to_xenstore(vm_ref, mapping)
+            self.write_to_param_xenstore(vm_ref, {location: mapping})
 
             bridge = network['bridge']
             network_ref = \
@@ -391,10 +393,6 @@ class VMOps(object):
         vm = self._get_vm_opaque_ref(instance)
         args = {'id': str(uuid.uuid4())}
         resp = self._make_agent_call('resetnetwork', vm, '', args)
-
-    def write_network_config_to_xenstore(self, instance, mapping):
-        vm = self._get_vm_opaque_ref(instance)
-        self.write_to_param_xenstore(vm, mapping)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
