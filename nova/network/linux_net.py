@@ -20,6 +20,7 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 import os
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
@@ -164,7 +165,7 @@ def remove_floating_forward(floating_ip, fixed_ip):
                           % (fixed_ip, floating_ip))
 
 
-def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
+def ensure_vlan_bridge(vlan_num, bridge, net_attrs, set_ip=False):
     """Create a vlan and bridge unless they already exist"""
     interface = ensure_vlan(vlan_num)
     ensure_bridge(bridge, interface, net_attrs)
@@ -181,7 +182,7 @@ def ensure_vlan(vlan_num):
     return interface
 
 
-def ensure_bridge(bridge, interface, net_attrs=None):
+def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
     """Create a bridge unless it already exists"""
     if not _device_exists(bridge):
         LOG.debug(_("Starting Bridge interface for %s"), interface)
@@ -189,12 +190,10 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
-        if interface:
-            _execute("sudo brctl addif %s %s" % (bridge, interface))
         _execute("sudo ifconfig %s up" % bridge)
-    if net_attrs:
-        # NOTE(vish): use ip addr add so it doesn't overwrite
-        #             manual addresses on the bridge.
+    if set_ip:
+        # NOTE(vish): The ip for dnsmasq has to be the first address on the
+        #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
         _execute("sudo ip addr add %s/%s brd %s dev %s" %
                 (net_attrs['gateway'],
@@ -204,6 +203,33 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
+    else:
+        # NOTE(vish): if we don't give an ip to the bridge, we set up a route
+        #             for the guests
+        out, err = _execute("sudo route add -net %s dev %s" %
+                            (net_attrs['cidr'], bridge),
+                            check_exit_code=False)
+        if err and err != "SIOCADDRT: File exists\n":
+            raise exception.Error("Failed to add route: %s" % err)
+    if interface:
+        # NOTE(vish): This will break if there is already an ip on the
+        #             interface, so we move any ips to the bridge
+        out, err = _execute("sudo ip addr show dev %s scope global" %
+                            interface)
+        for line in out.split("\n"):
+            fields = line.split()
+            if fields and fields[0] == "inet":
+                params = ' '.join(fields[1:-2])
+                _execute("sudo ip addr del %s dev %s" % (params, fields[-1]))
+                _execute("sudo ip addr add %s dev %s" % (params, bridge))
+        out, err = _execute("sudo brctl addif %s %s" %
+                            (bridge, interface),
+                            check_exit_code=False)
+
+        if (err and err != "device %s is already a member of a bridge; can't "
+                           "enslave it to bridge %s.\n" % (interface, bridge)):
+            raise exception.Error("Failed to add interface: %s" % err)
+
     if FLAGS.use_nova_chains:
         (out, err) = _execute("sudo iptables -N nova_forward",
                               check_exit_code=False)
