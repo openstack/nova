@@ -44,5 +44,15 @@ class FlavorsTest(unittest.TestCase):
     def test_get_flavor_by_id(self):
         pass
 
+    def test_create_favor(self):
+        pass
+
+    def test_delete_flavor(self):
+        pass
+
+    def test_list_flavors(self):
+        pass
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -210,6 +210,16 @@ class InstanceActions(BASE, NovaBase):
     error = Column(Text)
 
 
+class InstanceTypes(BASE, NovaBase):
+    """Represent possible instance_types or flavor of VM offered"""
+    __tablename__ = "instance_types"
+    id = Column(Integer, primary_key=True)
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+    flavorid = Column(Integer)
+
+
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'

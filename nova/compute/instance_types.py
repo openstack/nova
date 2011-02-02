@@ -48,3 +48,15 @@ def get_by_flavor_id(flavor_id):
         if details['flavorid'] == flavor_id:
             return instance_type
     return FLAGS.default_instance_type
+
+
+def list_flavors():
+    return instance_type
+
+
+def create_flavor():
+    return instance_type
+
+
+def delete_flavor():
+    return instance_type
