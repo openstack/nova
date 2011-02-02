@@ -404,10 +404,14 @@ class API(base.Base):
         process."""
         raise NotImplemented()
 
-    def resize(self, context, instance_id, flavor_id):
+    def resize(self, context, instance_id, flavor):
         """Resize a running instance."""
-        self._cast_compute_message('resize_instance', context, instance_id,
-                flavor_id)
+        rpc.cast(context,
+                     FLAGS.scheduler_topic,
+                     {"method": "resize_instance",
+                      "args": {"topic": FLAGS.compute_topic,
+                               "instance_id": instance_id,
+                               "flavor": flavor}})
         
     def pause(self, context, instance_id):
         """Pause the given instance."""
