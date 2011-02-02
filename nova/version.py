@@ -21,10 +21,10 @@ except ImportError:
                     'revision_id': 'LOCALREVISION',
                     'revno': 0}
 
-NOVA_VERSION = ['2011', '1']
+NOVA_VERSION = ['2011', '2']
 YEAR, COUNT = NOVA_VERSION
 
-FINAL = True   # This becomes true at Release Candidate time
+FINAL = False   # This becomes true at Release Candidate time
 
 
 def canonical_version_string():
