@@ -168,7 +168,7 @@ def remove_floating_forward(floating_ip, fixed_ip):
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs, set_ip=False):
     """Create a vlan and bridge unless they already exist"""
     interface = ensure_vlan(vlan_num)
-    ensure_bridge(bridge, interface, net_attrs)
+    ensure_bridge(bridge, interface, net_attrs, set_ip)
 
 
 def ensure_vlan(vlan_num):
