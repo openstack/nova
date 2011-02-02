@@ -195,11 +195,14 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
-        _execute("sudo ip addr add %s/%s brd %s dev %s" %
-                (net_attrs['gateway'],
-                 suffix,
-                 net_attrs['broadcast'],
-                 bridge))
+        out, err = _execute("sudo ip addr add %s/%s brd %s dev %s" %
+                            (net_attrs['gateway'],
+                             suffix,
+                             net_attrs['broadcast'],
+                             bridge),
+                            check_exit_code=False)
+        if err and err != "RTNETLINK answers: File exists\n":
+            raise exception.Error("Failed to add ip: %s" % err)
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
@@ -214,14 +217,22 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
+        gateway = None
+        out, err = _execute("sudo route")
+        for line in out.split("\n"):
+            fields = line.split()
+            if fields and fields[0] == "default" and fields[-1] == interface:
+                gateway = fields[1]
         out, err = _execute("sudo ip addr show dev %s scope global" %
                             interface)
         for line in out.split("\n"):
             fields = line.split()
             if fields and fields[0] == "inet":
-                params = ' '.join(fields[1:-2])
+                params = ' '.join(fields[1:-1])
                 _execute("sudo ip addr del %s dev %s" % (params, fields[-1]))
                 _execute("sudo ip addr add %s dev %s" % (params, bridge))
+        if gateway:
+            _execute("sudo route add default gw %s" % gateway)
         out, err = _execute("sudo brctl addif %s %s" %
                             (bridge, interface),
                             check_exit_code=False)
