@@ -206,14 +206,6 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
-    else:
-        # NOTE(vish): if we don't give an ip to the bridge, we set up a route
-        #             for the guests
-        out, err = _execute("sudo route add -net %s dev %s" %
-                            (net_attrs['cidr'], bridge),
-                            check_exit_code=False)
-        if err and err != "SIOCADDRT: File exists\n":
-            raise exception.Error("Failed to add route: %s" % err)
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
