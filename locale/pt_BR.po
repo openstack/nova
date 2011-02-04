@@ -8,13 +8,13 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-01-10 11:25-0800\n"
-"PO-Revision-Date: 2011-01-13 18:44+0000\n"
-"Last-Translator: Gustavo Morozowski <Unknown>\n"
+"PO-Revision-Date: 2011-02-03 20:32+0000\n"
+"Last-Translator: André Gondim <andregondim@ubuntu.com>\n"
 "Language-Team: Brazilian Portuguese <pt_BR@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-01-28 05:21+0000\n"
+"X-Launchpad-Export-Date: 2011-02-04 05:31+0000\n"
 "X-Generator: Launchpad (build 12177)\n"
 
 #: nova/crypto.py:46
@@ -60,7 +60,7 @@ msgstr "Sujeito do certificado para vpns, %s para projeto, timestamp"
 #: nova/crypto.py:258
 #, python-format
 msgid "Flags path: %s"
-msgstr ""
+msgstr "Caminho da sinalização: %s"
 
 #: nova/exception.py:33
 msgid "Unexpected error while running command."
@@ -103,7 +103,7 @@ msgstr "Declarando fila %s"
 #: nova/fakerabbit.py:89
 #, python-format
 msgid "Declaring exchange %s"
-msgstr ""
+msgstr "Declarando troca %s"
 
 #: nova/fakerabbit.py:95
 #, python-format
@@ -432,7 +432,7 @@ msgstr "%s não é um ipProtocol válido"
 
 #: nova/api/ec2/cloud.py:361
 msgid "Invalid port range"
-msgstr ""
+msgstr "Intervalo de porta inválido"
 
 #: nova/api/ec2/cloud.py:392
 #, python-format
@@ -767,7 +767,7 @@ msgstr "Criado usuário %s (administrador: %r)"
 #: nova/auth/manager.py:645
 #, python-format
 msgid "Deleting user %s"
-msgstr ""
+msgstr "Apagando usuário %s"
 
 #: nova/auth/manager.py:655
 #, python-format
@@ -804,7 +804,7 @@ msgstr ""
 #: nova/cloudpipe/pipelib.py:97
 #, python-format
 msgid "Launching VPN for %s"
-msgstr ""
+msgstr "Executando VPN para %s"
 
 #: nova/compute/api.py:67
 #, python-format
