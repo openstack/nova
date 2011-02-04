@@ -54,6 +54,10 @@ def copy_kernel_vdi(session,args):
                               _copy_kernel_vdi('/dev/%s' % dev,copy_args))
     return filename
 
+def transfer_disk(dest, args):
+    vdi = exists(args, 'vdi-ref')
+
+
 def _copy_kernel_vdi(dest,copy_args):
     vdi_uuid=copy_args['vdi_uuid']
     vdi_size=copy_args['vdi_size']

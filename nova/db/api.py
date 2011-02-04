@@ -80,8 +80,13 @@ def service_destroy(context, instance_id):
 
 
 def service_get(context, service_id):
-    """Get an service or raise if it does not exist."""
+    """Get a service or raise if it does not exist."""
     return IMPL.service_get(context, service_id)
+
+
+def service_get_by_host_and_topic(context, host, topic):
+    """Get a service by host it's on and topic it listens to"""
+    return IMPL.service_get(context, host, topic)
 
 
 def service_get_all(context, disabled=False):
@@ -251,6 +256,21 @@ def floating_ip_get_by_address(context, address):
     """Get a floating ip by address or raise if it doesn't exist."""
     return IMPL.floating_ip_get_by_address(context, address)
 
+
+####################
+
+
+def migration_create(context, values):
+    """Create a migration record"""
+    return IMPL.migration_create(context, values)
+
+def migration_get(context, migration_id):
+    """Finds a migration by the id"""
+    return IMPL.migration_get(context, migration_id)
+
+def migration_get_by_instance_id(context, instance_id):
+    """Finds a migration by the instance id its migrating"""
+    return IMPL.migration_get_by_instance_id(context, instance_id)
 
 ####################
 

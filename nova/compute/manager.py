@@ -380,18 +380,67 @@ class ComputeManager(manager.Manager):
         """Update instance state when async task completes."""
         self._update_state(context, instance_id)
 
+
     @exception.wrap_exception
     @checks_instance_lock
-    def resize_instance(self, context, instance_id, flavor_id):
-        """Moves a running instance to another host, possibly changing the RAM
-        and disk size in the process"""
+    def prep_resize(self, context, instance_id):
+        """Initiates the process of moving a running instance to another 
+        host, possibly changing the RAM and disk size in the process"""
         context = context.elevated()
         instance_ref = self.db.instance_get(context. instance_id)
-        LOG.audit(_('instance %s: migrating'), instance_id, context=context)
-        self.db.instance_set_state(context, instance_id, power_state.RUNNING,
-                'migrating')
-        self.driver.resize(instance_ref, flavor_id)
-        self._update_state(context, instance_id)
+        migration_ref = self.db.migration_create(context, 
+                { 'instance_id': instance_id,
+                  'source_host': instance_ref['host'],
+                  'dest_host':   socket.gethostbyname(socket.gethostname()),
+                  'status':      'pre-migrating' }
+        LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
+        service = self.db.service_get_by_host_and_topic(context,
+                instance_ref['host'], topic)
+        topic = self.db.queue_get_for(context, topic, service['id'])
+        rpc.cast(context, topic, 
+                { 'method': 'resize_instance',
+                  'migration_id': migration_ref['id'], }
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def resize_instance(self, context, migration_id):
+        """Starts the migration of a running instance to another host"""
+        migration_ref = self.db.migration_get(context, migration_id)
+        self.db.migration_update(context, migration_id, 
+                { 'status': 'migrating', })
+        self.driver.transfer_disk(context, instance_id, 
+                                  migration_ref['dest_host'])
+        self.db.migration_update(context, migration_id, 
+                { 'status': 'post-migrating', })
+
+        self.driver.power_off(context, migration_ref['instance_id'])
+        # This is where we would update the VM record after resizing
+        
+        service = self.db.service_get_by_host_and_topic(context,
+                migration_ref['dest_host'], topic)
+        topic = self.db.queue_get_for(context, topic, service['id'])
+        rpc.cast(context, topic, 
+                { 'method': 'finish_resize',
+                  'migration_id': migration_ref['id'], }
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def finish_resize(self, context, migration_id):
+        """Completes the migration process by setting up the newly transferred
+        disk and turning on the instance on its new host machine"""
+        migration_ref = self.db.migration_get(context, migration_id)
+        instance_ref = self.db.instance_get(context,
+                migration_ref['instance_id'])
+
+        # this may get passed into the following spawn instead
+        self.driver.attach_disk(context, migration_ref['instance_id'])
+        self.driver.spawn(context, instance_ref, preexisting=True)
+
+        self.db.migration_update(context, migration_id, 
+                {'status': 'finished', }) 
+
+        # Cleans up any transferred files and unmounts things
+        self.driver.cleanup_disk_transfer(context, instance_ref['id'])
 
     @exception.wrap_exception
     @checks_instance_lock

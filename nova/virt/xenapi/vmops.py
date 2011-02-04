@@ -60,6 +60,15 @@ class VMOps(object):
                 vms.append(rec["name_label"])
         return vms
 
+    def power_on(self, instance):
+        """Power on a VM instance"""
+        vm = VMHelper.lookup(self._session, instance.name)
+        if vm is  None:
+            raise exception(_('Attempted to power on non-existent instance'
+            ' bad instance id %s') % instance.id)
+        LOG.debug(_("Starting instance %s"), instance.name)
+        self._session.call_xenapi('VM.start', vm, False, False)
+
     def spawn(self, instance):
         """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
@@ -259,7 +268,8 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def _shutdown(self, instance, vm):
+
+    def _shutdown(self, instance, vm, method='hard'):
         """Shutdown an instance """
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
@@ -268,7 +278,11 @@ class VMOps(object):
             return
 
         try:
-            task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+            task = None
+            if method == 'clean':
+                task = self._session.call_xenapi('Async.VM.clean_shutdown', vm)
+            else:
+                task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
             self._session.wait_for_task(instance.id, task)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)

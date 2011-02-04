@@ -156,6 +156,15 @@ def service_get_all_by_topic(context, topic):
                    filter_by(topic=topic).\
                    all()
 
+@require_admin_context
+def service_get_by_host_and_topic(context, host, topic):
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(disabled=False).\
+                   filter_by(host=host).\
+                   filter_by(topic=topic).\
+                   all()
 
 @require_admin_context
 def service_get_all_by_host(context, host):
@@ -1907,6 +1916,50 @@ def host_get_networks(context, host):
                        filter_by(deleted=False).\
                        filter_by(host=host).\
                        all()
+
+
+###################
+
+
+@require_admin_context
+def migration_create(context, values):
+    migration = models.Migration()
+    migration.update(values)
+    migration.save()
+    return migration
+
+
+@require_admin_context
+def migration_update(context, migration_id, values):
+    session = get_session()
+    with session.begin():
+        migration = migration_get(context, migration_id, session=session)
+        migration.update(values)
+        return migration
+
+
+@require_admin_context
+def migration_get(context, migration_id):
+    session = get_session()
+    result = session.query(models.Migration.\
+                     filter_by(migration_id=migration_id)).
+                     first()
+    if not result:
+        raise exception.NotFound(_("No migration found with id %s") 
+                % migration_id)
+    return result
+
+
+@require_admin_context
+def migration_get_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.Migration.\
+                     filter_by(instance_id=instance_id)).
+                     first()
+    if not result:
+        raise exception.NotFound(_("No migration found with instance id %s") 
+                % migration_id)
+    return result
 
 
 ##################

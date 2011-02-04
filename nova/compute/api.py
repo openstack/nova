@@ -379,6 +379,10 @@ class API(base.Base):
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
+    def _cast_scheduler_message(self, context, args)
+        """Generic handler for RPC calls to the scheduler"""
+        rpc.cast(context, FLAGS.scheduler_topic, args)
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -397,21 +401,23 @@ class API(base.Base):
 
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process"""
-        raise NotImplemented()
+        instance_ref = self.db.instance_get(instance_id)
+        self._cast_compute_message('revert_resize', context, instance_id,
+                instance_ref['host'])
 
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize, deleting the 'old' instance in the
         process."""
-        raise NotImplemented()
+        migration_ref = self.db.get_migration_by_instance_id(instance_id)
+        self._cast_compute_message('confirm_resize', context, instance_id,
+                migration_ref['source_host'])
 
     def resize(self, context, instance_id, flavor):
         """Resize a running instance."""
-        rpc.cast(context,
-                     FLAGS.scheduler_topic,
-                     {"method": "resize_instance",
-                      "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id,
-                               "flavor": flavor}})
+        self._cast_scheduler_message(context,
+                    {"method": "prep_resize",
+                     "args": {"topic": FLAGS.compute_topic,
+                              "instance_id": instance_id, }},)
         
     def pause(self, context, instance_id):
         """Pause the given instance."""
