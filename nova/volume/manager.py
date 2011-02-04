@@ -114,7 +114,7 @@ class VolumeManager(manager.Manager):
         except Exception as e:
             self.db.volume_update(context,
                                   volume_ref['id'], {'status': 'error'})
-            raise e
+            raise
 
         now = datetime.datetime.utcnow()
         self.db.volume_update(context,
@@ -141,7 +141,7 @@ class VolumeManager(manager.Manager):
             self.db.volume_update(context,
                                   volume_ref['id'],
                                   {'status': 'error_deleting'})
-            raise e
+            raise
 
         self.db.volume_destroy(context, volume_id)
         LOG.debug(_("volume %s: deleted successfully"), volume_ref['name'])

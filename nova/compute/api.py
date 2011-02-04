@@ -70,7 +70,7 @@ class API(base.Base):
         except exception.NotFound as e:
             LOG.warning(_("Instance %d was not found in get_network_topic"),
                         instance_id)
-            raise e
+            raise
 
         host = instance['host']
         if not host:
@@ -296,7 +296,7 @@ class API(base.Base):
         except exception.NotFound as e:
             LOG.warning(_("Instance %d was not found during terminate"),
                         instance_id)
-            raise e
+            raise
 
         if (instance['state_description'] == 'terminating'):
             LOG.warning(_("Instance %d is already being terminated"),
