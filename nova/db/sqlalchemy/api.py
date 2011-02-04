@@ -2018,3 +2018,34 @@ def console_get(context, console_id, instance_id=None):
         raise exception.NotFound(_("No console with id %(console_id)s"
                                    " %(idesc)s") % locals())
     return result
+
+
+    ##################
+
+
+@require_admin_context
+def instance_type_create(context, values):
+    instance_type_ref = models.InstanceTypes()
+    instance_type_ref.update(values)
+    instance_type_ref.save()
+    return instance_type_ref
+
+def instance_type_get_all(context):
+    session = get_session()
+    return session.query(models.InstanceTypes).\
+                    filter_by(deleted=0)
+
+def instance_type_get_by_name(context, name):
+    session = get_session()
+    return session.query(models.InstanceTypes).\
+                    filter_by(name=name).\
+                    first()
+
+@require_admin_context
+def instance_type_destroy(context,name):
+    session = get_session()
+    instance_type_ref = session.query(models.InstanceTypes).\
+                    filter_by(name=name)
+    rows = instance_type_ref.update(dict(deleted=1))
+    return instance_type_ref
+    

@@ -21,6 +21,8 @@ import stubout
 import webob
 
 import nova.api
+from nova import context
+from nova import db
 from nova.api.openstack import flavors
 from nova.tests.api.openstack import fakes
 
@@ -33,6 +35,7 @@ class FlavorsTest(unittest.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
+        self.context = context.get_admin_context()
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -41,17 +44,22 @@ class FlavorsTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
 
-    def test_get_flavor_by_id(self):
-        pass
-
-    def test_create_favor(self):
-        pass
-
-    def test_delete_flavor(self):
-        pass
-
-    def test_list_flavors(self):
-        pass
+    def test_create_list_delete_favor(self):
+        # create a new flavor
+        starting_flavors = db.instance_type_get_all(self.context)
+        new_instance_type = dict(name="os1.big",memory_mb=512, vcpus=1, local_gb=120, flavorid=25)
+        new_flavor = db.instance_type_create(self.context, new_instance_type)
+        self.assertEqual(new_flavor["name"], new_instance_type["name"])
+        # retrieve the newly created flavor
+        retrieved_new_flavor = db.instance_type_get_by_name(self.context, new_instance_type["name"])
+        # self.assertEqual(len(tuple(retrieved_new_flavor)),1)
+        self.assertEqual(retrieved_new_flavor["memory_mb"], new_instance_type["memory_mb"])
+        flavors = db.instance_type_get_all(self.context)
+        self.assertNotEqual(starting_flavors, flavors)
+        # delete the newly created flavor
+        delete_query = db.instance_type_destroy(self.context,new_instance_type["name"])
+        retrieve_deleted_flavor = db.instance_type_get_by_name(self.context, new_instance_type["name"])
+        self.assertEqual(retrieve_deleted_flavor["deleted"], 1)        
 
 
 if __name__ == '__main__':

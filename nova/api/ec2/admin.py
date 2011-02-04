@@ -79,6 +79,7 @@ class AdminController(object):
     def __str__(self):
         return 'AdminController'
 
+    # FIX-ME(kpepple) for dynamic flavors
     def describe_instance_types(self, _context, **_kwargs):
         return {'instanceTypeSet': [instance_dict(n, v) for n, v in
                                     instance_types.INSTANCE_TYPES.iteritems()]}

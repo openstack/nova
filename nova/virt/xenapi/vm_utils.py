@@ -82,6 +82,7 @@ class VMHelper(HelperBase):
         the pv_kernel flag indicates whether the guest is HVM or PV
         """
 
+        # FIX-ME(kpepple) for dynamic flavors
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])

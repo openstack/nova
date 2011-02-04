@@ -225,6 +225,7 @@ class XenAPIVMTestCase(test.TestCase):
         vm = vms[0]
 
         # Check that m1.large above turned into the right thing.
+        # FIX-ME(kpepple) for dynamic flavors
         instance_type = instance_types.INSTANCE_TYPES['m1.large']
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)

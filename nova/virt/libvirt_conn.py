@@ -611,6 +611,7 @@ class LibvirtConnection(object):
                           user=user,
                           project=project,
                           size=size)
+        # FIX-ME(kpepple) for dynamic flavors
         type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
 
         if type_data['local_gb']:
@@ -671,6 +672,7 @@ class LibvirtConnection(object):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
         # FIXME(vish): stick this in db
+        # FIX-ME(kpepple) for dynamic flavors
         instance_type = instance['instance_type']
         instance_type = instance_types.INSTANCE_TYPES[instance_type]
         ip_address = db.instance_get_fixed_address(context.get_admin_context(),
