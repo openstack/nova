@@ -111,7 +111,7 @@ class VolumeManager(manager.Manager):
 
             LOG.debug(_("volume %s: creating export"), volume_ref['name'])
             self.driver.create_export(context, volume_ref)
-        except Exception as e:
+        except Exception:
             self.db.volume_update(context,
                                   volume_ref['id'], {'status': 'error'})
             raise
@@ -137,7 +137,7 @@ class VolumeManager(manager.Manager):
             self.driver.remove_export(context, volume_ref)
             LOG.debug(_("volume %s: deleting"), volume_ref['name'])
             self.driver.delete_volume(volume_ref)
-        except Exception as e:
+        except Exception:
             self.db.volume_update(context,
                                   volume_ref['id'],
                                   {'status': 'error_deleting'})

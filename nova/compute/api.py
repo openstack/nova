@@ -67,7 +67,7 @@ class API(base.Base):
         """Get the network topic for an instance."""
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found in get_network_topic"),
                         instance_id)
             raise
@@ -293,7 +293,7 @@ class API(base.Base):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found during terminate"),
                         instance_id)
             raise
