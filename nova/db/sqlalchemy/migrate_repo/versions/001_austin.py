@@ -134,6 +134,9 @@ instances = Table('instances', meta,
         Column('ramdisk_id',
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
+        Column('server_name',
+               String(length=255, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
         Column('launch_index', Integer()),
         Column('key_name',
                String(length=255, convert_unicode=False, assert_unicode=None,
@@ -175,23 +178,6 @@ instances = Table('instances', meta,
         Column('display_description',
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)),
-        )
-
-
-iscsi_targets = Table('iscsi_targets', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(),  primary_key=True, nullable=False),
-        Column('target_num', Integer()),
-        Column('host',
-               String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False)),
-        Column('volume_id',
-               Integer(),
-               ForeignKey('volumes.id'),
-               nullable=True),
         )
 
 
@@ -523,7 +509,7 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     for table in (auth_tokens, export_devices, fixed_ips, floating_ips,
-                  instances, iscsi_targets, key_pairs, networks,
+                  instances, key_pairs, networks,
                   projects, quotas, security_groups, security_group_inst_assoc,
                   security_group_rules, services, users,
                   user_project_association, user_project_role_association,
@@ -539,7 +525,7 @@ def upgrade(migrate_engine):
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     for table in (auth_tokens, export_devices, fixed_ips, floating_ips,
-                  instances, iscsi_targets, key_pairs, networks,
+                  instances, key_pairs, networks,
                   projects, quotas, security_groups, security_group_inst_assoc,
                   security_group_rules, services, users,
                   user_project_association, user_project_role_association,

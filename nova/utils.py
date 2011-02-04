@@ -206,21 +206,17 @@ def last_octet(address):
 def  get_my_linklocal(interface):
     try:
         if_str = execute("ip -f inet6 -o addr show %s" % interface)
-        condition = "\s+inet6\s+([0-9a-f:]+/\d+)\s+scope\s+link"
+        condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
         if address[0] is not None:
             return address[0]
         else:
-            return 'fe00::'
-    except IndexError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %(interface)s :%(ex)s")
-                % locals())
-    except ProcessExecutionError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %(interface)s :%(ex)s")
-                % locals())
-    except:
-        return 'fe00::'
+            raise exception.Error(_("Link Local address is not found.:%s")
+                                  % if_str)
+    except Exception as ex:
+        raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
+                " :%(ex)s") % locals())
 
 
 def to_global_ipv6(prefix, mac):
