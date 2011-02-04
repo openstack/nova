@@ -26,6 +26,7 @@ import paramiko
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova.utils import ssh_execute
 from nova.volume.driver import ISCSIDriver
 
 LOG = logging.getLogger("nova.volume.driver")
@@ -38,8 +39,6 @@ flags.DEFINE_string('san_login', 'admin',
                     'Username for SAN controller')
 flags.DEFINE_string('san_password', '',
                     'Password for SAN controller')
-flags.DEFINE_string('san_cluster_name', '',
-                    'Cluster name for creating SAN volumes')
 flags.DEFINE_string('san_privatekey', '',
                     'Filename of private key to use for SSH authentication')
 
@@ -148,17 +147,22 @@ def _get_prefixed_values(data, prefix):
     return matches
 
 class SolarisISCSIDriver(SanISCSIDriver):
-    """Executes commands relating to Solaris-hosted ISCSI volumes."""
+    """Executes commands relating to Solaris-hosted ISCSI volumes.
+    Basic setup for a Solaris iSCSI server:
+    pkg install storage-server SUNWiscsit
+    svcadm enable stmf
+    svcadm enable -r svc:/network/iscsi/target:default
+    pfexec itadm create-tpg e1000g0 ${MYIP}
+    pfexec itadm create-target -t e1000g0
 
-    #pkg install storage-server SUNWiscsit
-    #svcadm enable stmf
-    #zfs allow justinsb create,mount,destroy rpool
-    #usermod -P'File System Management' justinsb
-    # I don't know which perms are needed for sbdadm...
-    #usermod -P'Primary Administrator' justinsb
-    # svcadm enable -r svc:/network/iscsi/target:default
-    #  pfexec itadm create-tpg e1000g0 10.1.184.98
-    # pfexec itadm create-target -t e1000g0
+    Then grant the user that will be logging on lots of permissions.
+    I'm not sure exactly which though:
+    zfs allow justinsb create,mount,destroy rpool
+    usermod -P'File System Management' justinsb
+    usermod -P'Primary Administrator' justinsb
+
+    Also make sure you can login using san_login & san_password/san_privatekey
+    """
 
     def _view_exists(self, luid):
         (out, _err) = self._run_ssh("pfexec /usr/sbin/stmfadm list-view -l %s" %
@@ -280,19 +284,13 @@ class SolarisISCSIDriver(SanISCSIDriver):
         iscsi_name = self._build_iscsi_target_name(volume)
         target_group_name = 'tg-%s' % volume['name']
 
-        # The sequence of commands looks like this:
-        #pfexec stmfadm create-tg tg-vol2
-        # Yes, we add it before we create it!
-        #pfexec stmfadm add-tg-member -g tg-vol2 iqn.2010-10.org.openstack:vol2
-        #pfexec itadm create-target -n iqn.2010-10.org.openstack:vol2
-        #pfexec stmfadm add-view -t tg-vol2 600144F051E2440000004D4A0F730004
-
         # Create a iSCSI target, mapped to just this volume
         if force_create or not self._target_group_exists(target_group_name):
             self._run_ssh("pfexec /usr/sbin/stmfadm create-tg %s" %
                           (target_group_name))
 
         # Yes, we add the initiatior before we create it!
+        # Otherwise, it complains that the target is already active
         if force_create or not self._is_target_group_member(target_group_name,
                                                             iscsi_name):
             self._run_ssh("pfexec /usr/sbin/stmfadm add-tg-member -g %s %s" %
@@ -332,42 +330,3 @@ class SolarisISCSIDriver(SanISCSIDriver):
             self._run_ssh("pfexec /usr/sbin/sbdadm delete-lu %s" %
                           (luid))
 
-
-def ssh_execute(ssh, cmd, process_input=None,
-                addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
-    if addl_env:
-        raise exception.Error("Environment not supported over SSH")
-
-    if process_input:
-        # This is (probably) fixable if we need it...
-        raise exception.Error("process_input not supported over SSH")
-
-    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
-    channel = stdout_stream.channel
-
-    #stdin.write('process_input would go here')
-    #stdin.flush()
-
-    # I'm suspicious of this...
-    # ...other SSH clients have buffering issues with this approach
-    stdout = stdout_stream.read()
-    stderr = stderr_stream.read()
-    stdin_stream.close()
-
-    exit_status = channel.recv_exit_status()
-
-    # exit_status == -1 if no exit code was returned
-    if exit_status != -1:
-        LOG.debug(_("Result was %s") % exit_status)
-        if check_exit_code and exit_status != 0:
-            raise exception.ProcessExecutionError(exit_code=exit_status,
-                                                  stdout=stdout,
-                                                  stderr=stderr,
-                                                  cmd=cmd)
-
-    # Removed, although this is workaround is needed in utils.execute:
-    #  (no reason to believe it's needed here!)
-    # greenthread.sleep(0)
-
-    return (stdout, stderr)
