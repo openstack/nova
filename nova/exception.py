@@ -81,6 +81,24 @@ class TimeoutException(Error):
     pass
 
 
+class DBError(Error):
+    """Wraps an implementation specific exception"""
+    def __init__(self, inner_exception):
+        self.inner_exception = inner_exception
+        super(DBError, self).__init__(str(inner_exception))
+
+
+def wrap_db_error(f):
+    def _wrap(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception, e:
+            LOG.exception(_('DB exception wrapped'))
+            raise DBError(e)
+    return _wrap
+    _wrap.func_name = f.func_name
+
+
 def wrap_exception(f):
     def _wrap(*args, **kw):
         try:

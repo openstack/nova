@@ -26,6 +26,7 @@ from nova import db
 from nova import exception
 from nova import log as logging
 from nova.auth import manager
+from nova.compute import instance_types
 
 
 LOG = logging.getLogger('nova.api.ec2.admin')
@@ -62,6 +63,14 @@ def host_dict(host):
         return {}
 
 
+def instance_dict(name, inst):
+    return {'name': name,
+            'memory_mb': inst['memory_mb'],
+            'vcpus': inst['vcpus'],
+            'disk_gb': inst['local_gb'],
+            'flavor_id': inst['flavorid']}
+
+
 class AdminController(object):
     """
     API Controller for users, hosts, nodes, and workers.
@@ -69,6 +78,10 @@ class AdminController(object):
 
     def __str__(self):
         return 'AdminController'
+
+    def describe_instance_types(self, _context, **_kwargs):
+        return {'instanceTypeSet': [instance_dict(n, v) for n, v in
+                                    instance_types.INSTANCE_TYPES.iteritems()]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""

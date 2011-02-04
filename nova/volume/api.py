@@ -47,7 +47,6 @@ class API(base.Base):
             raise quota.QuotaError(_("Volume quota exceeded. You cannot "
                                      "create a volume of size %sG") % size)
 
-
         options = {
             'size': size,
             'user_id': context.user.id,
