@@ -617,23 +617,24 @@ class InstanceTypesCommands(object):
     def create(self, name, memory, vcpus, local_gb):
         """Creates instance types / flavors
            arguments: name memory_mb vcpus local_gb"""
-        db.instance_type_create(context.get_admin_context(), name, memory, vcpus, local_gb)
+        db.instance_type_create(context.get_admin_context(),
+                                name, memory, vcpus, local_gb)
 
     def delete(self, name):
         """Marks instance types / flavors as deleted
         arguments: name"""
         ctxt = context.get_admin_context()
         # check to see if it exists
-        db.instance_type_delete(context,name)
+        db.instance_type_delete(context, name)
 
     def list(self):
         """Lists all instance types / flavors
         arguments: <none>"""
         instance_types = db.instance_type_get_all(context.get_admin_context())
         for instance in instance_types:
-            print "%s : %s memory (MB), %s vcpus, %s storage(GB)" % (instance.name, 
-                                    instance.memory_mb, instance.vcpus, 
-                                    instance.local_gb)
+            print "%s : %s memory (MB), %s vcpus, %s storage(GB)" %
+            (instance.name, instance.memory_mb, instance.vcpus,
+            instance.local_gb)
 
 
 CATEGORIES = [

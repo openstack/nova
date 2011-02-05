@@ -75,18 +75,18 @@ class QuotaTestCase(test.TestCase):
 
     def test_quota_overrides(self):
         """Make sure overriding a projects quotas works"""
-        # FIX-ME(kpepple) for dynamic flavors
+        # FIXME(kpepple) for dynamic flavors
         num_instances = quota.allowed_instances(self.context, 100,
             instance_types.INSTANCE_TYPES['m1.small'])
         self.assertEqual(num_instances, 2)
         db.quota_create(self.context, {'project_id': self.project.id,
                                        'instances': 10})
-        # FIX-ME(kpepple) for dynamic flavors
+        # FIXME(kpepple) for dynamic flavors
         num_instances = quota.allowed_instances(self.context, 100,
             instance_types.INSTANCE_TYPES['m1.small'])
         self.assertEqual(num_instances, 4)
         db.quota_update(self.context, self.project.id, {'cores': 100})
-        # FIX-ME(kpepple) for dynamic flavors
+        # FIXME(kpepple) for dynamic flavors
         num_instances = quota.allowed_instances(self.context, 100,
             instance_types.INSTANCE_TYPES['m1.small'])
         self.assertEqual(num_instances, 10)

@@ -63,8 +63,8 @@ def host_dict(host):
         return {}
 
 
-def instance_dict(name, inst):
-    return {'name': name,
+def instance_dict(inst):
+    return {'name': inst['name'],
             'memory_mb': inst['memory_mb'],
             'vcpus': inst['vcpus'],
             'disk_gb': inst['local_gb'],
@@ -79,10 +79,19 @@ class AdminController(object):
     def __str__(self):
         return 'AdminController'
 
-    # FIX-ME(kpepple) for dynamic flavors
+    # FIXME(kpepple) this is untested code path.
     def describe_instance_types(self, _context, **_kwargs):
-        return {'instanceTypeSet': [instance_dict(n, v) for n, v in
-                                    instance_types.INSTANCE_TYPES.iteritems()]}
+        """Returns all active instance types data (vcpus, memory, etc.)"""
+        # return {'instanceTypeSet': [instance_dict(n, v) for n, v in
+        #                           instance_types.INSTANCE_TYPES.iteritems()]}
+        return {'instanceTypeSet':
+                [for i in db.instance_type_get_all(): instance_dict(i)]}
+
+    # FIXME(kpepple) this is untested code path.
+    def describe_instance_type(self, _context, name, **_kwargs):
+        """Returns a specific active instance types data"""
+        return {'instanceTypeSet':
+                [instance_dict(db.instance_type_get_by_name(name))]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""

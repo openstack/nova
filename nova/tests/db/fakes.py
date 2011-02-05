@@ -44,7 +44,7 @@ def stub_out_db_instance_api(stubs):
     def fake_instance_create(values):
         """ Stubs out the db.instance_create method """
 
-        # FIX-ME(kpepple) for dynamic flavors
+        # FIXME(kpepple) for dynamic flavors
         type_data = instance_types.INSTANCE_TYPES[values['instance_type']]
 
         base_options = {

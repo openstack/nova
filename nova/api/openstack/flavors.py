@@ -45,7 +45,7 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """Return data about the given flavor id."""
-        # FIX-ME(kpepple) for dynamic flavors
+        # FIXME(kpepple) for dynamic flavors
         for name, val in instance_types.INSTANCE_TYPES.iteritems():
             if val['flavorid'] == int(id):
                 item = dict(ram=val['memory_mb'], disk=val['local_gb'],
@@ -55,5 +55,5 @@ class Controller(wsgi.Controller):
 
     def _all_ids(self):
         """Return the list of all flavorids."""
-        # FIX-ME(kpepple) for dynamic flavors
+        # FIXME(kpepple) for dynamic flavors
         return [i['flavorid'] for i in instance_types.INSTANCE_TYPES.values()]

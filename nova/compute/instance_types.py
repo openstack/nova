@@ -25,7 +25,7 @@ from nova import flags
 from nova import exception
 
 FLAGS = flags.FLAGS
-# FIX-ME(kpepple) for dynamic flavors
+# FIXME(kpepple) for dynamic flavors
 INSTANCE_TYPES = {
     'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
     'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
@@ -36,9 +36,9 @@ INSTANCE_TYPES = {
 
 def get_by_type(instance_type):
     """Build instance data structure and save it to the data store."""
-    # FIX-ME(kpepple) for dynamic flavors
+    # FIXME(kpepple) for dynamic flavors
     if instance_type is None:
-             return FLAGS.default_instance_type
+        return FLAGS.default_instance_type
     if instance_type not in INSTANCE_TYPES:
         raise exception.ApiError(_("Unknown instance type: %s"),
                                  instance_type)
@@ -46,7 +46,7 @@ def get_by_type(instance_type):
 
 
 def get_by_flavor_id(flavor_id):
-    # FIX-ME(kpepple) for dynamic flavors
+    # FIXME(kpepple) for dynamic flavors
     for instance_type, details in INSTANCE_TYPES.iteritems():
         if details['flavorid'] == flavor_id:
             return instance_type

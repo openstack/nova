@@ -90,7 +90,8 @@ class API(base.Base):
         other arguments check out ok."""
 
         # FIXME(kpepple) this needs to be changed from using the old constant
-        #type_data = db.instance_type_get_by_name(context.get_admin_context(), instance_type)
+        #type_data = db.instance_type_get_by_name(context.get_admin_context(),
+                                                    # instance_type)
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:

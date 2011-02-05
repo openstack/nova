@@ -68,7 +68,7 @@ def upgrade(migrate_engine):
             # FIXME(kpepple) should we be seeding created_at / updated_at ?
             # the_time = time.strftime("%Y-%m-%d %H:%M:%S")
             i.execute({'name': name, 'memory_mb': values["memory_mb"],
-                        'vcpus': values["vcpus"],
+                        'vcpus': values["vcpus"], 'deleted': 0,
                         'local_gb': values["local_gb"],
                         'flavorid': values["flavorid"]})
     except Exception:
