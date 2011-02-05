@@ -1005,6 +1005,11 @@ def instance_type_get_by_name(context, name):
     return IMPL.instance_type_get_by_name(context, name)
 
 
+def instance_type_get_by_flavor_id(context, id):
+    """Get instance type by name"""
+    return IMPL.instance_type_get_by_flavor_id(context, id)
+
+
 def instance_type_destroy(context, name):
     """Delete a instance type"""
     return IMPL.instance_type_destroy(context, name)

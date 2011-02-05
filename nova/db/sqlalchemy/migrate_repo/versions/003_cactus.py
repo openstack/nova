@@ -19,7 +19,7 @@ from nova import api
 from nova import db
 from nova import log as logging
 
-import time
+import datetime
 
 meta = MetaData()
 
@@ -66,7 +66,7 @@ def upgrade(migrate_engine):
         i = instance_types.insert()
         for name, values in INSTANCE_TYPES.iteritems():
             # FIXME(kpepple) should we be seeding created_at / updated_at ?
-            # the_time = time.strftime("%Y-%m-%d %H:%M:%S")
+            # now = datetime.datatime.utcnow()
             i.execute({'name': name, 'memory_mb': values["memory_mb"],
                         'vcpus': values["vcpus"], 'deleted': 0,
                         'local_gb': values["local_gb"],

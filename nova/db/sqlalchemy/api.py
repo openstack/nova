@@ -2045,6 +2045,13 @@ def instance_type_get_by_name(context, name):
                     first()
 
 
+def instance_type_get_by_flavor_id(context, id):
+    session = get_session()
+    return session.query(models.InstanceTypes).\
+                    filter_by(flavorid=int(id)).\
+                    first()
+
+
 @require_admin_context
 def instance_type_destroy(context, name):
     session = get_session()

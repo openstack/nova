@@ -17,6 +17,8 @@
 
 from webob import exc
 
+from nova import db 
+from nova import context
 from nova.api.openstack import faults
 from nova.api.openstack import common
 from nova.compute import instance_types
@@ -45,15 +47,19 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """Return data about the given flavor id."""
-        # FIXME(kpepple) for dynamic flavors
-        for name, val in instance_types.INSTANCE_TYPES.iteritems():
-            if val['flavorid'] == int(id):
-                item = dict(ram=val['memory_mb'], disk=val['local_gb'],
-                            id=val['flavorid'], name=name)
-                return dict(flavor=item)
+        # FIXME(kpepple) do we need admin context here ?
+        ctxt = context.get_admin_context()
+        val = db.instance_type_get_by_flavor_id(ctxt, id)
+        item = dict(ram=val['memory_mb'], disk=val['local_gb'],
+                    id=val['flavorid'], name=val['name'])
+        return dict(flavor=item)
         raise faults.Fault(exc.HTTPNotFound())
 
     def _all_ids(self):
         """Return the list of all flavorids."""
-        # FIXME(kpepple) for dynamic flavors
-        return [i['flavorid'] for i in instance_types.INSTANCE_TYPES.values()]
+        # FIXME(kpepple) do we need admin context here ?
+        ctxt = context.get_admin_context()
+        flavor_ids = []
+        for i in db.instance_type_get_all(ctxt):
+            flavor_ids.append(i['flavorid'])
+        return flavor_ids
