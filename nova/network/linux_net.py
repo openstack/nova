@@ -206,6 +206,11 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
+        # NOTE(vish): If the public interface is the same as the
+        #             bridge, then the bridge has to be in promiscuous
+        #             to forward packets properly.
+        if(FLAGS.public_interface == bridge):
+            _execute("sudo ifconfig %s promisc" % bridge)
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
