@@ -55,8 +55,7 @@ class FlavorsTest(unittest.TestCase):
         retrieved_new_flavor = db.instance_type_get_by_name(
                                                     self.context,
                                                     new_instance_type["name"])
-        # self.assertEqual(len(tuple(retrieved_new_flavor)),1)
-        self.assertEqual(retrieved_new_flavor["memory_mb"],
+        self.assertEqual(retrieved_new_flavor.values()[0]["memory_mb"],
                             new_instance_type["memory_mb"])
         flavors = db.instance_type_get_all(self.context)
         self.assertNotEqual(starting_flavors, flavors)
@@ -65,7 +64,7 @@ class FlavorsTest(unittest.TestCase):
                                                 new_instance_type["name"])
         deleted_flavor = db.instance_type_get_by_name(self.context,
                                                     new_instance_type["name"])
-        self.assertEqual(deleted_flavor["deleted"], 1)
+        self.assertEqual(deleted_flavor.values()[0]["deleted"], 1)
 
 
 if __name__ == '__main__':

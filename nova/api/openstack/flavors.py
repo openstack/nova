@@ -17,7 +17,7 @@
 
 from webob import exc
 
-from nova import db 
+from nova import db
 from nova import context
 from nova.api.openstack import faults
 from nova.api.openstack import common
@@ -50,8 +50,9 @@ class Controller(wsgi.Controller):
         # FIXME(kpepple) do we need admin context here ?
         ctxt = context.get_admin_context()
         val = db.instance_type_get_by_flavor_id(ctxt, id)
-        item = dict(ram=val['memory_mb'], disk=val['local_gb'],
-                    id=val['flavorid'], name=val['name'])
+        v = val.values()[0]
+        item = dict(ram=v['memory_mb'], disk=v['local_gb'],
+                    id=v['flavorid'], name=val.keys()[0])
         return dict(flavor=item)
         raise faults.Fault(exc.HTTPNotFound())
 
@@ -60,6 +61,7 @@ class Controller(wsgi.Controller):
         # FIXME(kpepple) do we need admin context here ?
         ctxt = context.get_admin_context()
         flavor_ids = []
-        for i in db.instance_type_get_all(ctxt):
-            flavor_ids.append(i['flavorid'])
+        inst_types = db.instance_type_get_all(ctxt)
+        for i in inst_types.keys():
+            flavor_ids.append(inst_types[i]['flavorid'])
         return flavor_ids

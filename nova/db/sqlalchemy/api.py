@@ -2032,24 +2032,56 @@ def instance_type_create(context, values):
 
 
 def instance_type_get_all(context):
+    """Returns a dict of all instance_types:
+        { 'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
+          'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
+          'm1.medium': dict(memory_mb=4096, vcpus=2, local_gb=40, flavorid=3)}
+    """
     session = get_session()
-    return session.query(models.InstanceTypes).\
+    inst_types = session.query(models.InstanceTypes).\
                     filter_by(deleted=0).\
                     all()
+    inst_dict = {}
+    for i in inst_types:
+        inst_dict[i['name']] = dict(memory_mb=i['memory_mb'],
+                                    vcpus=i['vcpus'],
+                                    local_gb=i['local_gb'],
+                                    flavorid=i['flavorid'],
+                                    deleted=i['deleted'])
+
+    return inst_dict
 
 
 def instance_type_get_by_name(context, name):
+    """
+    Returns a dict of specific instance_type:
+        {'m1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1)}
+    """
     session = get_session()
-    return session.query(models.InstanceTypes).\
+    inst_type = session.query(models.InstanceTypes).\
                     filter_by(name=name).\
                     first()
+    return {inst_type['name']: dict(memory_mb=inst_type['memory_mb'],
+                                    vcpus=inst_type['vcpus'],
+                                    local_gb=inst_type['local_gb'],
+                                    flavorid=inst_type['flavorid'],
+                                    deleted=inst_type['deleted'])}
 
 
 def instance_type_get_by_flavor_id(context, id):
+    """
+    Returns a dict of specific flavor_id:
+        {'m1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1)}
+    """
     session = get_session()
-    return session.query(models.InstanceTypes).\
-                    filter_by(flavorid=int(id)).\
-                    first()
+    inst_type = session.query(models.InstanceTypes).\
+                                    filter_by(flavorid=int(id)).\
+                                    first()
+    return {inst_type['name']: dict(memory_mb=inst_type['memory_mb'],
+                                    vcpus=inst_type['vcpus'],
+                                    local_gb=inst_type['local_gb'],
+                                    flavorid=inst_type['flavorid'],
+                                    deleted=inst_type['deleted'])}
 
 
 @require_admin_context

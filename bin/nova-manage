@@ -632,8 +632,9 @@ class InstanceTypesCommands(object):
         arguments: <none>"""
         instance_types = db.instance_type_get_all(context.get_admin_context())
         for instance in instance_types:
-            print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % (instance.name,
-                instance.memory_mb, instance.vcpus, instance.local_gb)
+            print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
+                (instance.name, instance.memory_mb, instance.vcpus,
+                 instance.local_gb)
 
 
 CATEGORIES = [
