@@ -39,11 +39,12 @@ class NovaManageTestCase(test.TestCase):
                                     "delete", "test"], stdout=fnull)
         self.assertEqual(0, retcode)
 
-    def test_list_instance_types(self):
+    def test_list_instance_types_or_flavors(self):
         fnull = open(os.devnull, 'w')
-        retcode = subprocess.call(["bin/nova-manage", "instance_type", \
-                                    "list"], stdout=fnull)
-        self.assertEqual(0, retcode)
+        for c in ["instance_type", "flavor"]:
+            retcode = subprocess.call(["bin/nova-manage", c, \
+                                        "list"], stdout=fnull)
+            self.assertEqual(0, retcode)
 
     def test_list_specific_instance_type(self):
         fnull = open(os.devnull, 'w')

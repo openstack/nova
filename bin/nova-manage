@@ -609,7 +609,7 @@ class VolumeCommands(object):
                            "mountpoint": volume['mountpoint']}})
 
 
-class InstanceTypesCommands(object):
+class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
     def create(self, name, memory, vcpus, local_gb, flavorid):
@@ -674,7 +674,8 @@ CATEGORIES = [
     ('log', LogCommands),
     ('db', DbCommands),
     ('volume', VolumeCommands),
-    ('instance_types', InstanceTypesCommands)]
+    ('instance_type', InstanceTypeCommands),
+    ('flavor', InstanceTypeCommands)]
 
 
 def lazy_match(name, key_value_tuples):
