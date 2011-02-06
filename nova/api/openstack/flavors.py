@@ -47,9 +47,10 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """Return data about the given flavor id."""
-        # FIXME(kpepple) do we need admin context here ?
+        # FIXME(kpepple) do we really need admin context here ?
         ctxt = context.get_admin_context()
         val = db.instance_type_get_by_flavor_id(ctxt, id)
+        # FIXME(kpepple) refactor db call to return dict
         v = val.values()[0]
         item = dict(ram=v['memory_mb'], disk=v['local_gb'],
                     id=v['flavorid'], name=val.keys()[0])
@@ -58,10 +59,8 @@ class Controller(wsgi.Controller):
 
     def _all_ids(self):
         """Return the list of all flavorids."""
-        # FIXME(kpepple) do we need admin context here ?
+        # FIXME(kpepple) do we really need admin context here ?
         ctxt = context.get_admin_context()
-        flavor_ids = []
         inst_types = db.instance_type_get_all(ctxt)
-        for i in inst_types.keys():
-            flavor_ids.append(inst_types[i]['flavorid'])
+        flavor_ids = [inst_types[i]['flavorid'] for i in inst_types.keys()]
         return flavor_ids

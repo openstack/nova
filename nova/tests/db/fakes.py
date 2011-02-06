@@ -46,6 +46,8 @@ def stub_out_db_instance_api(stubs):
 
         # FIXME(kpepple) for dynamic flavors
         type_data = instance_types.INSTANCE_TYPES[values['instance_type']]
+        # type_data = db.instance_type_get_by_name(context,\
+        #                                                 instance_type)[instance_type]
 
         base_options = {
             'name': values['name'],
