@@ -2040,6 +2040,7 @@ def instance_type_get_all(context):
     session = get_session()
     inst_types = session.query(models.InstanceTypes).\
                     filter_by(deleted=0).\
+                    order_by("name").\
                     all()
     inst_dict = {}
     for i in inst_types:
@@ -2090,4 +2091,4 @@ def instance_type_destroy(context, name):
     instance_type_ref = session.query(models.InstanceTypes).\
                     filter_by(name=name)
     rows = instance_type_ref.update(dict(deleted=1))
-    return instance_type_ref
+    return rows
