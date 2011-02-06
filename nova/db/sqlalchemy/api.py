@@ -2062,6 +2062,7 @@ def instance_type_get_by_name(context, name):
     inst_type = session.query(models.InstanceTypes).\
                     filter_by(name=name).\
                     first()
+    # FIXME(kpepple) this needs to be refactored to just return dict
     return {inst_type['name']: dict(memory_mb=inst_type['memory_mb'],
                                     vcpus=inst_type['vcpus'],
                                     local_gb=inst_type['local_gb'],
@@ -2078,6 +2079,7 @@ def instance_type_get_by_flavor_id(context, id):
     inst_type = session.query(models.InstanceTypes).\
                                     filter_by(flavorid=int(id)).\
                                     first()
+    # FIXME(kpepple) this needs to be refactored to just return dict
     return {inst_type['name']: dict(memory_mb=inst_type['memory_mb'],
                                     vcpus=inst_type['vcpus'],
                                     local_gb=inst_type['local_gb'],
