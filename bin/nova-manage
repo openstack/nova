@@ -649,12 +649,16 @@ class InstanceTypesCommands(object):
             instance_types = db.instance_type_get_all(ctxt)
             if len(instance_types) < 1:
                 sys.exit(1)
+            for k, v in instance_types.iteritems():
+                print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
+                    (k, v["memory_mb"],
+                     v["vcpus"], v["local_gb"])
         else:
             instance_types = db.instance_type_get_by_name(ctxt, name)
-        for k, v in instance_types.iteritems():
             print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
-                (k, v["memory_mb"],
-                 v["vcpus"], v["local_gb"])
+                (instance_types["name"], instance_types["memory_mb"],
+                 instance_types["vcpus"], instance_types["local_gb"])
+
         return
 
 

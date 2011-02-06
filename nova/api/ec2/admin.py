@@ -84,8 +84,9 @@ class AdminController(object):
         """Returns all active instance types data (vcpus, memory, etc.)"""
         # return {'instanceTypeSet': [instance_dict(n, v) for n, v in
         #                           instance_types.INSTANCE_TYPES.iteritems()]}
-        return {'instanceTypeSet':
-                [for i in db.instance_type_get_all(): instance_dict(i)]}
+        # return {'instanceTypeSet':
+        #         [for i in db.instance_type_get_all(): instance_dict(i)]}
+        return {'instanceTypeSet': [db.instance_type_get_all(_context)]}
 
     # FIXME(kpepple) this is untested code path.
     def describe_instance_type(self, _context, name, **_kwargs):

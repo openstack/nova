@@ -44,28 +44,6 @@ class FlavorsTest(unittest.TestCase):
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
 
-    def test_create_list_delete_favor(self):
-        # create a new flavor
-        starting_flavors = db.instance_type_get_all(self.context)
-        new_instance_type = dict(name="os1.big", memory_mb=512,
-                                  vcpus=1, local_gb=120, flavorid=25)
-        new_flavor = db.instance_type_create(self.context, new_instance_type)
-        self.assertEqual(new_flavor["name"], new_instance_type["name"])
-        # retrieve the newly created flavor
-        retrieved_new_flavor = db.instance_type_get_by_name(
-                                                    self.context,
-                                                    new_instance_type["name"])
-        self.assertEqual(retrieved_new_flavor.values()[0]["memory_mb"],
-                            new_instance_type["memory_mb"])
-        flavors = db.instance_type_get_all(self.context)
-        self.assertNotEqual(starting_flavors, flavors)
-        # delete the newly created flavor
-        delete_query = db.instance_type_destroy(self.context,
-                                                new_instance_type["name"])
-        deleted_flavor = db.instance_type_get_by_name(self.context,
-                                                    new_instance_type["name"])
-        self.assertEqual(deleted_flavor.values()[0]["deleted"], 1)
-
 
 if __name__ == '__main__':
     unittest.main()

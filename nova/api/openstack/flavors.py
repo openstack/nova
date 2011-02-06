@@ -49,12 +49,12 @@ class Controller(wsgi.Controller):
         """Return data about the given flavor id."""
         # FIXME(kpepple) do we really need admin context here ?
         ctxt = context.get_admin_context()
-        val = db.instance_type_get_by_flavor_id(ctxt, id)
+        values = db.instance_type_get_by_flavor_id(ctxt, id)
         # FIXME(kpepple) refactor db call to return dict
-        v = val.values()[0]
-        item = dict(ram=v['memory_mb'], disk=v['local_gb'],
-                    id=v['flavorid'], name=val.keys()[0])
-        return dict(flavor=item)
+        # v = val.values()[0]
+        # item = dict(ram=v['memory_mb'], disk=v['local_gb'],
+        #             id=v['flavorid'], name=val.keys()[0])
+        return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
 
     def _all_ids(self):
