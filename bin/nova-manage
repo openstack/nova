@@ -611,30 +611,51 @@ class VolumeCommands(object):
 
 class InstanceTypesCommands(object):
     """Class for managing instance types / flavors."""
-    def usage(self):
-        print "$ nova-manage instance_type NAME MEMORY_MB VCPUS LOCAL_GB"
 
-    def create(self, name, memory, vcpus, local_gb):
+    def create(self, name, memory, vcpus, local_gb, flavorid):
         """Creates instance types / flavors
            arguments: name memory_mb vcpus local_gb"""
+        # FIXME(kpepple) check for absurb arguments (?)
+        for option in [memory, flavorid, local_gb, vcpus]:
+            if option <= 0:
+                print "Instance type parameters must be positive \
+                        numbers: %s" % option
+                sys.exit(1)
         db.instance_type_create(context.get_admin_context(),
-                                name, memory, vcpus, local_gb)
+                                dict(name=name, memory_mb=memory,
+                                vcpus=vcpus, local_gb=local_gb,
+                                flavorid=flavorid))
+        print "%s created" % name
+        return
 
     def delete(self, name):
         """Marks instance types / flavors as deleted
         arguments: name"""
-        ctxt = context.get_admin_context()
-        # check to see if it exists
-        db.instance_type_delete(context, name)
+        if name == None:
+            print "Instance type name must be supplied"
+            exit(1)
+        else:
+            records = db.instance_type_destroy(context.get_admin_context(),\
+                                                name)
+            if records != 1:
+                sys.exit(1)
+        return
 
-    def list(self):
+    def list(self, name=None):
         """Lists all instance types / flavors
-        arguments: <none>"""
-        instance_types = db.instance_type_get_all(context.get_admin_context())
-        for instance in instance_types:
+        arguments: [name]"""
+        ctxt = context.get_admin_context()
+        if name == None:
+            instance_types = db.instance_type_get_all(ctxt)
+            if len(instance_types) < 1:
+                sys.exit(1)
+        else:
+            instance_types = db.instance_type_get_by_name(ctxt, name)
+        for k, v in instance_types.iteritems():
             print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
-                (instance.name, instance.memory_mb, instance.vcpus,
-                 instance.local_gb)
+                (k, v["memory_mb"],
+                 v["vcpus"], v["local_gb"])
+        return
 
 
 CATEGORIES = [
