@@ -193,7 +193,7 @@ class XenAPIConnection(object):
         self._vmops.power_on(instance)
 
     def transfer_disk(self, instance, dest, callback):
-        self._vmops.transfer_disk(
+        self._vmops.transfer_disk()
     
     def suspend(self, instance, callback):
         """suspend the specified instance"""
