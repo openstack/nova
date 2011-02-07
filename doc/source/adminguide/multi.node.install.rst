@@ -37,20 +37,22 @@ From a server you intend to use as a cloud controller node, use this command to 
 
 ::
 
-    wget --no-check-certificate https://github.com/dubsquared/OpenStack-NOVA-Installer-Script/raw/master/Nova_CC_Installer_v0.1
+    wget --no-check-certificate https://github.com/dubsquared/OpenStack-NOVA-Installer-Script/raw/master/  	 nova-CC-install-v1.1.sh
 
 Ensure you can execute the script by modifying the permissions on the script file.
 
 ::
 
-    sudo chmod 755 Nova_CC_Installer_v0.1
+    sudo chmod 755 nova-CC-install-v1.1.sh
 
 
 ::
 
-    sudo ./Nova_CC_Installer_v0.1
+    sudo ./nova-CC-install-v1.1.sh
 
-Next, from a server you intend to use as a compute node (doesn't contain the database), install the nova services. Copy the nova.conf from the cloud controller node to the compute node.
+Next, from a server you intend to use as a compute node (doesn't contain the database), install the nova services. You can use the nova-NODE-installer.sh script from the above github-hosted project for the compute node installation.
+
+Copy the nova.conf from the cloud controller node to the compute node. 
 
 Restart related services::
 
@@ -247,7 +249,7 @@ Here is an example of what this looks like with real data::
 
 Note: The nova-manage service assumes that the first IP address is your network (like 192.168.0.0), that the 2nd IP is your gateway (192.168.0.1), and that the broadcast is the very last IP in the range you defined (192.168.0.255). If this is not the case you will need to manually edit the sql db 'networks' table.o.
 
-On running this command, entries are made in the 'networks' and 'fixed_ips' table. However, one of the networks listed in the 'networks' table needs to be marked as bridge in order for the code to know that a bridge exists. The Network is marked as bridged automatically based on the type of network manager selected.  This is ONLY necessary if you chose FlatManager as your network type.  More information can be found at the end of this document discussing setting up the bridge device.
+On running the "nova-manage network create" command, entries are made in the 'networks' and 'fixed_ips' table. However, one of the networks listed in the 'networks' table needs to be marked as bridge in order for the code to know that a bridge exists. The Network is marked as bridged automatically based on the type of network manager selected. You only need to mark the network as a bridge if you chose FlatManager as your network type. More information can be found at the end of this document discussing setting up the bridge device.
 
 
 Step 2 - Create Nova certifications
@@ -288,8 +290,34 @@ Another common issue is you cannot ping or SSH your instances after issusing the
     killall dnsmasq
     service nova-network restart
 
+To avoid issues with KVM and permissions with Nova, run the following commands to ensure we have VM's that are running optimally::
+
+            chgrp kvm /dev/kvm
+            chmod g+rwx /dev/kvm
+
+If you want to use the 10.04 Ubuntu Enterprise Cloud images that are readily available at http://uec-images.ubuntu.com/releases/10.04/release/, you may run into delays with booting. Any server that does not have nova-api running on it needs this iptables entry so that UEC images can get metadata info. On compute nodes, configure the iptables with this next step::
+
+    # iptables -t nat -A PREROUTING -d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT --to-destination $NOVA_API_IP:8773
+
 Testing the Installation
 ````````````````````````
+
+You can confirm that your compute node is talking to your cloud controller. From the cloud controller, run this database query::
+
+	mysql -u$MYSQL_USER -p$MYSQL_PASS nova -e 'select * from services;'
+
+In return, you should see something similar to this::
+            +---------------------+---------------------+------------+---------+----+----------+----------------+-----------+--------------+----------+-------------------+
+            | created_at          | updated_at          | deleted_at | deleted | id | host     | binary         | topic     | report_count | disabled | availability_zone |
+            +---------------------+---------------------+------------+---------+----+----------+----------------+-----------+--------------+----------+-------------------+
+            | 2011-01-28 22:52:46 | 2011-02-03 06:55:48 | NULL       |       0 |  1 | osdemo02 | nova-network   | network   |        46064 |        0 | nova              |
+            | 2011-01-28 22:52:48 | 2011-02-03 06:55:57 | NULL       |       0 |  2 | osdemo02 | nova-compute   | compute   |        46056 |        0 | nova              |
+            | 2011-01-28 22:52:52 | 2011-02-03 06:55:50 | NULL       |       0 |  3 | osdemo02 | nova-scheduler | scheduler |        46065 |        0 | nova              |
+            | 2011-01-29 23:49:29 | 2011-02-03 06:54:26 | NULL       |       0 |  4 | osdemo01 | nova-compute   | compute   |        37050 |        0 | nova              |
+            | 2011-01-30 23:42:24 | 2011-02-03 06:55:44 | NULL       |       0 |  9 | osdemo04 | nova-compute   | compute   |        28484 |        0 | nova              |
+            | 2011-01-30 21:27:28 | 2011-02-03 06:54:23 | NULL       |       0 |  8 | osdemo05 | nova-compute   | compute   |        29284 |        0 | nova              |
+            +---------------------+---------------------+------------+---------+----+----------+----------------+-----------+--------------+----------+-------------------+
+You can see that 'osdemo0{1,2,4,5} are all running 'nova-compute.' When you start spinning up instances, they will allocate on any node that is running nova-compute from this list.
 
 You can then use `euca2ools` to test some items::
 
