@@ -96,9 +96,11 @@ class VMOps(object):
 
         # write network info
         admin_context = context.get_admin_context()
-        network = db.network_get_by_instance(admin_context,
-                                             instance['id'])
-        for network in db.network_get_all(admin_context):
+        #network = db.network_get_by_instance(admin_context,
+        #                                     instance['id'])
+
+        for network in db.network_get_all_by_instance(admin_context,
+                                                      instance['id']):
             mac_id = instance.mac_address.replace(':', '')
             location = 'vm-data/networking/%s' % mac_id
             mapping = {'label': network['label'],
@@ -119,6 +121,7 @@ class VMOps(object):
                                     network_ref, instance.mac_address)
 
         # call reset networking
+        self.reset_network(vm_ref)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
@@ -389,7 +392,7 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
-    def reset_networking(self, instance):
+    def reset_network(self, instance):
         vm = self._get_vm_opaque_ref(instance)
         args = {'id': str(uuid.uuid4())}
         resp = self._make_agent_call('resetnetwork', vm, '', args)

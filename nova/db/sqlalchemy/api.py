@@ -1055,12 +1055,6 @@ def network_get(context, network_id, session=None):
     return result
 
 
-@require_context
-def network_get_all(context):
-    session = get_session()
-    return session.query(models.Network).all()
-
-
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
@@ -1099,6 +1093,19 @@ def network_get_by_instance(_context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False).\
                  first()
+    if not rv:
+        raise exception.NotFound(_('No network for instance %s') % instance_id)
+    return rv
+
+
+@require_admin_context
+def network_get_all_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(deleted=False).\
+                 join(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
     if not rv:
         raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv
