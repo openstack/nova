@@ -46,11 +46,11 @@ def _key_scan_and_add(host):
     null.close()
     known_hosts.close()
 
-def transfer_vhd(host, vhd_path):
+def transfer_file(host, file_path):
     """Rsyncs a VHD to an adjacent host"""
     _key_scan_and_add(host)
-    if subprocess.call([RSYNC, vhd_path, "%s:/root/" % host]) != 0:
+    if subprocess.call([RSYNC, file_path, "%s:/root/" % host]) != 0:
         raise Exception("Unexpected VHD transfer failure")
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd})
+    XenAPIPlugin.dispatch({'transfer_file': transfer_file})

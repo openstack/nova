@@ -220,6 +220,14 @@ class VMOps(object):
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
+    def transfer_disk(self, instance, dest):
+        """ Copies a VHD from one host machine to another
+
+        :param instance: the instance that owns the VHD in question
+        :param dest: the destination host machine
+        """
+           
+
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """
         raise NotImplementedError()

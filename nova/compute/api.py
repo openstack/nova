@@ -379,7 +379,7 @@ class API(base.Base):
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
-    def _cast_scheduler_message(self, context, args)
+    def _cast_scheduler_message(self, context, args):
         """Generic handler for RPC calls to the scheduler"""
         rpc.cast(context, FLAGS.scheduler_topic, args)
 
