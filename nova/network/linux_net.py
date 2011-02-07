@@ -37,6 +37,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
+flags.DEFINE_string('dhcp_domain',
+                    'novalocal',
+                    'domain to use for building the hostnames')
 
 flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
@@ -313,8 +316,9 @@ interface %s
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address"""
     instance_ref = fixed_ip_ref['instance']
-    return "%s,%s.novalocal,%s" % (instance_ref['mac_address'],
+    return "%s,%s.%s,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
+				   FLAGS.dhcp_domain,
                                    fixed_ip_ref['address'])
 
 
@@ -359,6 +363,7 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
+	   ' --domain=%s' % FLAGS.dhcp_domain,
            ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
