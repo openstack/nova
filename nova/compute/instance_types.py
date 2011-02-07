@@ -21,6 +21,8 @@
 The built-in instance properties.
 """
 
+from nova import context
+from nova import db
 from nova import flags
 from nova import exception
 
@@ -34,20 +36,39 @@ INSTANCE_TYPES = {
     'm1.xlarge': dict(memory_mb=16384, vcpus=8, local_gb=160, flavorid=5)}
 
 
+def get_all_types():
+    """retrieves all instance_types"""
+    return db.instance_type_get_all()
+
+
+def get_all_flavors():
+    """retrieves all flavors. alias for instance_types.get_all_types()"""
+    return get_all_types()
+
+
 def get_by_type(instance_type):
-    """Build instance data structure and save it to the data store."""
+    """retrieve instance_type details"""
     # FIXME(kpepple) for dynamic flavors
     if instance_type is None:
         return FLAGS.default_instance_type
-    if instance_type not in INSTANCE_TYPES:
+    try:
+        ctxt = context.get_admin_context()
+        inst_type = db.instance_type_get_by_name(ctxt, instance_type)
+    except Exception, e:
+        print e
         raise exception.ApiError(_("Unknown instance type: %s"),
                                  instance_type)
-    return instance_type
+    return inst_type['name']
 
 
 def get_by_flavor_id(flavor_id):
-    # FIXME(kpepple) for dynamic flavors
-    for instance_type, details in INSTANCE_TYPES.iteritems():
-        if details['flavorid'] == flavor_id:
-            return instance_type
-    return FLAGS.default_instance_type
+    """retrieve instance_type's name by flavor_id"""
+    if flavor_id is None:
+        return FLAGS.default_instance_type
+    try:
+        ctxt = context.get_admin_context()
+        flavor = db.instance_type_get_by_flavor_id(ctxt, flavor_id)
+    except Exception, e:
+        raise exception.ApiError(_("Unknown flavor: %s"),
+                                 flavor_id)
+    return flavor['name']
