@@ -43,6 +43,16 @@ CHUNK_SIZE = 8192
 KERNEL_DIR = '/boot/guest'
 FILE_SR_PATH = '/var/run/sr-mount'
 
+def remove_kernel_ramdisk(session,args):
+    """Removes kernel and/or ramdisk from dom0's file system"""
+    kernel_file=exists(args,'kernel-file')
+    ramdisk_file=exists(args,'ramdisk-file')
+    if kernel_file:
+        os.remove(kernel_file)
+    if ramdisk_file:
+        os.remove(ramdisk_file)
+    return "ok"
+
 def copy_kernel_vdi(session,args):
     vdi = exists(args, 'vdi-ref')
     size = exists(args,'image-size')
@@ -117,7 +127,6 @@ def put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port):
         while chunk:
             conn.send(chunk)
             chunk = bundle.read(CHUNK_SIZE)
-        
 
         res = conn.getresponse()
         #FIXME(sirp): should this be 201 Created?
@@ -157,4 +166,5 @@ def find_sr(session):
 
 if __name__ == '__main__':
     XenAPIPlugin.dispatch({'put_vdis': put_vdis, 
-                           'copy_kernel_vdi': copy_kernel_vdi})
+                           'copy_kernel_vdi': copy_kernel_vdi,
+                           'remove_kernel_ramdisk': remove_kernel_ramdisk})

@@ -286,8 +286,23 @@ class VMOps(object):
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
         try:
-            task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance.id, task)
+            kernel = None
+            ramdisk = None
+            if instance.kernel_id or instance.ramdisk_id:
+                (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+                                    self._session, vm)
+            task1 = self._session.call_xenapi('Async.VM.destroy', vm)
+            LOG.debug(_("Removing kernel/ramdisk files"))
+            fn = "remove_kernel_ramdisk"
+            args = {}
+            if kernel:
+                args['kernel-file'] = kernel
+            if ramdisk:
+                args['ramdisk-file'] = ramdisk
+            task2 = self._session.async_call_plugin('glance', fn, args)
+            self._session.wait_for_task(instance.id, task1)
+            self._session.wait_for_task(instance.id, task2)
+            LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
