@@ -28,10 +28,13 @@ import XenAPIPlugin
 SSH_HOSTS = '/root/.ssh/known_hosts'
 DEVNULL = '/dev/null'
 KEYSCAN = '/usr/bin/ssh-keyscan'
+RSYNC = '/usr/bin/rsync'
 
 def _key_scan_and_add(host):
     """SSH scans a remote host and writes the SSH key out to known_hosts"""
+    # Touch the file if it doesn't yet exist
     open(SSH_HOSTS, 'a').close()
+
     null = open(DEVNULL, 'w')
     known_hosts = open(SSH_HOSTS, 'a')
     key = subprocess.Popen(['/usr/bin/ssh-keyscan', '-t', 'rsa', host],
@@ -42,3 +45,12 @@ def _key_scan_and_add(host):
         known_hosts.write(key)
     null.close()
     known_hosts.close()
+
+def transfer_vhd(host, vhd_path):
+    """Rsyncs a VHD to an adjacent host"""
+    _key_scan_and_add(host)
+    if subprocess.call([RSYNC, vhd_path, "%s:/root/" % host]) != 0:
+        raise Exception("Unexpected VHD transfer failure")
+
+if __name__ == '__main__':
+    XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd})
