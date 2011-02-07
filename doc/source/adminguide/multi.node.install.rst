@@ -37,7 +37,7 @@ From a server you intend to use as a cloud controller node, use this command to 
 
 ::
 
-    wget --no-check-certificate https://github.com/dubsquared/OpenStack-NOVA-Installer-Script/raw/master/  	 nova-CC-install-v1.1.sh
+    wget --no-check-certificate https://github.com/dubsquared/OpenStack-NOVA-Installer-Script/raw/master/nova-CC-install-v1.1.sh
 
 Ensure you can execute the script by modifying the permissions on the script file.
 
