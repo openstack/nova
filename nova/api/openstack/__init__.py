@@ -83,7 +83,7 @@ class APIRouter(wsgi.Router):
  
             mapper.resource("zone", "zones", controller=zones.Controller(),
                         collection={'detail': 'GET'},
-                        member=zone_members)
+                        collection_name='zones')
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
