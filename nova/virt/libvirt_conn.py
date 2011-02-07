@@ -55,6 +55,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import test
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
@@ -611,8 +612,7 @@ class LibvirtConnection(object):
                           user=user,
                           project=project,
                           size=size)
-        # FIXME(kpepple) for dynamic flavors
-        type_data = instance_types.INSTANCE_TYPES[inst['instance_type']]
+        type_data = test.INSTANCE_TYPES[inst['instance_type']]
 
         if type_data['local_gb']:
             self._cache_image(fn=self._create_local,
@@ -672,9 +672,8 @@ class LibvirtConnection(object):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
         # FIXME(vish): stick this in db
-        # FIXME(kpepple) for dynamic flavors
         instance_type = instance['instance_type']
-        instance_type = instance_types.INSTANCE_TYPES[instance_type]
+        instance_type = test.INSTANCE_TYPES[instance_type]
         ip_address = db.instance_get_fixed_address(context.get_admin_context(),
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.

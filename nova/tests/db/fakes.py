@@ -20,6 +20,7 @@
 import time
 
 from nova import db
+from nova import test
 from nova import utils
 from nova.compute import instance_types
 
@@ -44,10 +45,7 @@ def stub_out_db_instance_api(stubs):
     def fake_instance_create(values):
         """ Stubs out the db.instance_create method """
 
-        # FIXME(kpepple) for dynamic flavors
-        type_data = instance_types.INSTANCE_TYPES[values['instance_type']]
-        # type_data = db.instance_type_get_by_name(context,\
-        #                                                 instance_type)
+        type_data = test.INSTANCE_TYPES[values['instance_type']]
 
         base_options = {
             'name': values['name'],
