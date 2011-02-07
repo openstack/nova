@@ -2031,6 +2031,7 @@ def instance_type_create(context, values):
     return instance_type_ref
 
 
+@require_context
 def instance_type_get_all(context):
     """
     Returns a dict describing all instance_types with name as key:
@@ -2049,6 +2050,7 @@ def instance_type_get_all(context):
     return inst_dict
 
 
+@require_context
 def instance_type_get_by_name(context, name):
     """Returns a dict describing specific instance_type"""
     session = get_session()
@@ -2058,6 +2060,7 @@ def instance_type_get_by_name(context, name):
     return dict(inst_type)
 
 
+@require_context
 def instance_type_get_by_flavor_id(context, id):
     """Returns a dict describing specific flavor_id"""
     session = get_session()
