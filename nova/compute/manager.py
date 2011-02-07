@@ -380,6 +380,20 @@ class ComputeManager(manager.Manager):
         """Update instance state when async task completes."""
         self._update_state(context, instance_id)
 
+    @exception.wrap_exception
+    @checks_instance_lock
+    def confirm_resize(self, context, instance_id):
+        """Destroys the old instance on the source machine"""
+        pass
+
+    @exception.wrap_exception
+    @echecks_instance_lock
+    def revert_resize(self, context, instance_id):
+        """Destroys the new instance on the destination machine, 
+        reverts the model changes, and powers on the old 
+        instance on the source machine"""
+        pass
+    
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -395,8 +409,9 @@ class ComputeManager(manager.Manager):
                   'status':      'pre-migrating' }
         LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
         service = self.db.service_get_by_host_and_topic(context,
-                instance_ref['host'], topic)
-        topic = self.db.queue_get_for(context, topic, service['id'])
+                instance_ref['host'], FLAGS.compute_topic)
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
+                service['id'])
         rpc.cast(context, topic, 
                 { 'method': 'resize_instance',
                   'migration_id': migration_ref['id'], }
@@ -417,8 +432,9 @@ class ComputeManager(manager.Manager):
         # This is where we would update the VM record after resizing
         
         service = self.db.service_get_by_host_and_topic(context,
-                migration_ref['dest_host'], topic)
-        topic = self.db.queue_get_for(context, topic, service['id'])
+                migration_ref['dest_host'], FLAGS.compute_topic)
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
+                service['id'])
         rpc.cast(context, topic, 
                 { 'method': 'finish_resize',
                   'migration_id': migration_ref['id'], }
