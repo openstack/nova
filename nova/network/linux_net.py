@@ -318,7 +318,7 @@ def _host_dhcp(fixed_ip_ref):
     instance_ref = fixed_ip_ref['instance']
     return "%s,%s.%s,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
-				   FLAGS.dhcp_domain,
+                                   FLAGS.dhcp_domain,
                                    fixed_ip_ref['address'])
 
 
@@ -363,7 +363,7 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
-	   ' --domain=%s' % FLAGS.dhcp_domain,
+           ' --domain=%s' % FLAGS.dhcp_domain,
            ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
