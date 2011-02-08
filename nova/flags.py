@@ -208,7 +208,7 @@ def _get_my_ip():
         (addr, port) = csock.getsockname()
         csock.close()
         return addr
-    except socket.gaierror as ex:
+    except socket.error as ex:
         return "127.0.0.1"
 
 
