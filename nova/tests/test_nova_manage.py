@@ -66,6 +66,17 @@ class NovaManageTestCase(test.TestCase):
                                     "120", "1"], stdout=fnull)
         self.assertEqual(1, retcode)
 
+    def test_should_fail_on_duplicate_name(self):
+        fnull = open(os.devnull, 'w')
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
+                                    "create", "fsfsfsdfsdf", "256", "1",\
+                                    "120", "189"], stdout=fnull)
+        self.assertEqual(0, retcode)
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
+                                    "create", "fsfsfsdfsdf", "256", "1",\
+                                    "120", "190"], stdout=fnull)
+        self.assertEqual(1, retcode)
+
     def test_instance_type_delete_should_fail_without_valid_name(self):
         fnull = open(os.devnull, 'w')
         retcode = subprocess.call(["bin/nova-manage", "instance_type",\
