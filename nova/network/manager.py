@@ -402,8 +402,7 @@ class FlatDHCPManager(FlatManager):
         """Sets up matching network for compute hosts."""
         network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
-                                  FLAGS.flat_interface,
-                                  network_ref)
+                                  FLAGS.flat_interface)
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Setup dhcp for this network."""
@@ -428,7 +427,7 @@ class FlatDHCPManager(FlatManager):
         network_ref = db.network_get(context, network_id)
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface,
-                                  network_ref, True)
+                                  network_ref)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network_id)
             if(FLAGS.use_ipv6):
@@ -499,8 +498,7 @@ class VlanManager(NetworkManager):
         """Sets up matching network for compute hosts."""
         network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
-                                       network_ref['bridge'],
-                                       network_ref)
+                                       network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
                         cidr_v6, vlan_start, vpn_start):
@@ -567,7 +565,7 @@ class VlanManager(NetworkManager):
             address = network_ref['vpn_public_address']
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'],
-                                       network_ref, True)
+                                       network_ref)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.

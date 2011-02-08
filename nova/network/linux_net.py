@@ -168,10 +168,10 @@ def remove_floating_forward(floating_ip, fixed_ip):
                           % (fixed_ip, floating_ip))
 
 
-def ensure_vlan_bridge(vlan_num, bridge, net_attrs, set_ip=False):
+def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
     interface = ensure_vlan(vlan_num)
-    ensure_bridge(bridge, interface, net_attrs, set_ip)
+    ensure_bridge(bridge, interface, net_attrs)
 
 
 def ensure_vlan(vlan_num):
@@ -185,8 +185,19 @@ def ensure_vlan(vlan_num):
     return interface
 
 
-def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
-    """Create a bridge unless it already exists"""
+def ensure_bridge(bridge, interface, net_attrs=None):
+    """Create a bridge unless it already exists.
+
+    :param interface: the interface to create the bridge on.
+    :param net_attrs: dictionary with  attributes used to create the bridge.
+
+    If net_attrs is set, it will add the net_attrs['gateway'] to the bridge
+    using net_attrs['broadcast'] and net_attrs['cidr'].  It will also add
+    the ip_v6 address specified in net_attrs['cidr_v6'] if use_ipv6 is set.
+
+    The code will attempt to move any ips that already exist on the interface
+    onto the bridge and reset the default gateway if necessary.
+    """
     if not _device_exists(bridge):
         LOG.debug(_("Starting Bridge interface for %s"), interface)
         _execute("sudo brctl addbr %s" % bridge)
@@ -194,7 +205,7 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
         _execute("sudo ip link set %s up" % bridge)
-    if set_ip:
+    if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
