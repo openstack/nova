@@ -27,6 +27,7 @@ meta = MetaData()
 #
 
 migrations = Table('migrations', meta,
+            Column('id', Integer(), primary_key=True, nullable=False),
             Column('source_host', String(255)),
             Column('dest_host', String(255)),
             Column('instance_id', Integer, ForeignKey('instances.id'),
@@ -38,7 +39,7 @@ def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
-    for table in (migrations):
+    for table in (migrations, ):
         try:
             table.create()
         except Exception:
