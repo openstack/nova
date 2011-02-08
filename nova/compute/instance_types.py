@@ -27,13 +27,28 @@ from nova import flags
 from nova import exception
 
 FLAGS = flags.FLAGS
-# FIXME(kpepple) for dynamic flavors
-# INSTANCE_TYPES = {
-#     'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
-#     'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
-#     'm1.medium': dict(memory_mb=4096, vcpus=2, local_gb=40, flavorid=3),
-#     'm1.large': dict(memory_mb=8192, vcpus=4, local_gb=80, flavorid=4),
-#     'm1.xlarge': dict(memory_mb=16384, vcpus=8, local_gb=160, flavorid=5)}
+
+
+def create(name, memory, vcpus, local_gb, flavorid):
+    """Creates instance types / flavors
+       arguments: name memory_mb vcpus local_gb"""
+    for option in [memory, flavorid, local_gb, vcpus]:
+        if (option <= 0) or (option.__class__ == int):
+            raise InvalidParameters
+    db.instance_type_create(context.get_admin_context(),
+                            dict(name=name, memory_mb=memory,
+                            vcpus=vcpus, local_gb=local_gb,
+                            flavorid=flavorid))
+
+
+def delete(name):
+    """Marks instance types / flavors as deleted
+    arguments: name"""
+    if name == None:
+        raise InvalidParameters
+    else:
+        records = db.instance_type_destroy(context.get_admin_context(),
+                                            name)
 
 
 def get_all_types():
@@ -48,17 +63,15 @@ def get_all_flavors():
 
 def get_by_type(instance_type):
     """retrieve instance_type details"""
-    # FIXME(kpepple) for dynamic flavors
     if instance_type is None:
         return FLAGS.default_instance_type
     try:
         ctxt = context.get_admin_context()
         inst_type = db.instance_type_get_by_name(ctxt, instance_type)
-    except Exception, e:
-        print e
+        return inst_type['name']
+    except exception.DBError:
         raise exception.ApiError(_("Unknown instance type: %s"),
                                  instance_type)
-    return inst_type['name']
 
 
 def get_by_flavor_id(flavor_id):
@@ -68,7 +81,7 @@ def get_by_flavor_id(flavor_id):
     try:
         ctxt = context.get_admin_context()
         flavor = db.instance_type_get_by_flavor_id(ctxt, flavor_id)
-    except Exception, e:
+        return flavor['name']
+    except exception.DBError:
         raise exception.ApiError(_("Unknown flavor: %s"),
                                  flavor_id)
-    return flavor['name']
