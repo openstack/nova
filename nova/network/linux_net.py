@@ -215,10 +215,10 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
         gateway = None
-        out, err = _execute("sudo route")
+        out, err = _execute("sudo route -n")
         for line in out.split("\n"):
             fields = line.split()
-            if fields and fields[0] == "default" and fields[-1] == interface:
+            if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
                 gateway = fields[1]
         out, err = _execute("sudo ip addr show dev %s scope global" %
                             interface)
@@ -229,7 +229,7 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
                 _execute("sudo ip addr del %s dev %s" % (params, fields[-1]))
                 _execute("sudo ip addr add %s dev %s" % (params, bridge))
         if gateway:
-            _execute("sudo route add default gw %s" % gateway)
+            _execute("sudo route add 0.0.0.0 gw %s" % gateway)
         out, err = _execute("sudo brctl addif %s %s" %
                             (bridge, interface),
                             check_exit_code=False)
