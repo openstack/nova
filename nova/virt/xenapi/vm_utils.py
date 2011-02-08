@@ -438,12 +438,15 @@ class VMHelper(HelperBase):
                 return vdis
             else:
                 return None
-    @classmethod
-    def lookup_kernel_ramdisk(cls,session,vm):
-        vm_rec = session.get_xenapi().VM.get_record(vm)
-        return (vm_rec['PV_kernel'],vm_rec['PV_ramdisk'])
 
-    
+    @classmethod
+    def lookup_kernel_ramdisk(cls, session, vm):
+        vm_rec = session.get_xenapi().VM.get_record(vm)
+        if 'PV_kernel' in vm_rec and 'PV_ramdisk' in vm_rec:
+            return (vm_rec['PV_kernel'], vm_rec['PV_ramdisk'])
+        else:
+            return (None, None) 
+
     @classmethod
     def compile_info(cls, record):
         """Fill record with VM status information"""
