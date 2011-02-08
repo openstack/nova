@@ -226,7 +226,7 @@ class VMOps(object):
         :param instance: the instance that owns the VHD in question
         :param dest: the destination host machine
         """
-           
+        vm_ref = VMHelper.lookup(self._session, instance.name)
 
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """

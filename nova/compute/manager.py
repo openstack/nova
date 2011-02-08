@@ -387,7 +387,7 @@ class ComputeManager(manager.Manager):
         pass
 
     @exception.wrap_exception
-    @echecks_instance_lock
+    @checks_instance_lock
     def revert_resize(self, context, instance_id):
         """Destroys the new instance on the destination machine, 
         reverts the model changes, and powers on the old 
@@ -406,7 +406,7 @@ class ComputeManager(manager.Manager):
                 { 'instance_id': instance_id,
                   'source_host': instance_ref['host'],
                   'dest_host':   socket.gethostbyname(socket.gethostname()),
-                  'status':      'pre-migrating' }
+                  'status':      'pre-migrating' })
         LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
         service = self.db.service_get_by_host_and_topic(context,
                 instance_ref['host'], FLAGS.compute_topic)
@@ -414,7 +414,7 @@ class ComputeManager(manager.Manager):
                 service['id'])
         rpc.cast(context, topic, 
                 { 'method': 'resize_instance',
-                  'migration_id': migration_ref['id'], }
+                  'migration_id': migration_ref['id'], })
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -437,7 +437,7 @@ class ComputeManager(manager.Manager):
                 service['id'])
         rpc.cast(context, topic, 
                 { 'method': 'finish_resize',
-                  'migration_id': migration_ref['id'], }
+                  'migration_id': migration_ref['id'], })
 
     @exception.wrap_exception
     @checks_instance_lock
