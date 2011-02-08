@@ -21,20 +21,24 @@ Generic Node baseclass for all workers that run on hosts
 """
 
 import inspect
-import logging
 import os
 import sys
+import time
 
 from eventlet import event
 from eventlet import greenthread
 from eventlet import greenpool
 
+from sqlalchemy.exc import OperationalError
+
 from nova import context
 from nova import db
 from nova import exception
+from nova import log as logging
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import version
 
 
 FLAGS = flags.FLAGS
@@ -110,11 +114,13 @@ class Service(object):
             self.timers.append(periodic)
 
     def _create_service_ref(self, context):
+        zone = FLAGS.node_availability_zone
         service_ref = db.service_create(context,
                                         {'host': self.host,
                                          'binary': self.binary,
                                          'topic': self.topic,
-                                         'report_count': 0})
+                                         'report_count': 0,
+                                         'availability_zone': zone})
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):
@@ -151,7 +157,9 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.warn(_("Starting %s node"), topic)
+        vcs_string = version.version_string_with_vcs()
+        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)")
+                % locals())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -206,24 +214,18 @@ class Service(object):
 
 
 def serve(*services):
-    argv = FLAGS(sys.argv)
+    FLAGS(sys.argv)
+    logging.basicConfig()
 
     if not services:
         services = [Service.create()]
 
     name = '_'.join(x.binary for x in services)
-    logging.debug("Serving %s" % name)
-
-    logging.getLogger('amqplib').setLevel(logging.WARN)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
-    else:
-        logging.getLogger().setLevel(logging.WARNING)
-
+    logging.debug(_("Serving %s"), name)
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
-        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
+        flag_get = FLAGS.get(flag, None)
+        logging.debug("%(flag)s : %(flag_get)s" % locals())
 
     for x in services:
         x.start()

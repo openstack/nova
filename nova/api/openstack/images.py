@@ -15,17 +15,95 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 from webob import exc
 
+from nova import compute
 from nova import flags
 from nova import utils
 from nova import wsgi
 import nova.api.openstack
-import nova.image.service
+from nova.api.openstack import common
 from nova.api.openstack import faults
+import nova.image.service
 
 
 FLAGS = flags.FLAGS
+
+
+def _translate_keys(item):
+    """
+    Maps key names to Rackspace-like attributes for return
+    also pares down attributes to those we want
+    item is a dict
+
+    Note: should be removed when the set of keys expected by the api
+    and the set of keys returned by the image service are equivalent
+
+    """
+    # TODO(tr3buchet): this map is specific to s3 object store,
+    # replace with a list of keys for _filter_keys later
+    mapped_keys = {'status': 'imageState',
+                   'id': 'imageId',
+                   'name': 'imageLocation'}
+
+    mapped_item = {}
+    # TODO(tr3buchet):
+    # this chunk of code works with s3 and the local image service/glance
+    # when we switch to glance/local image service it can be replaced with
+    # a call to _filter_keys, and mapped_keys can be changed to a list
+    try:
+        for k, v in mapped_keys.iteritems():
+            # map s3 fields
+            mapped_item[k] = item[v]
+    except KeyError:
+        # return only the fields api expects
+        mapped_item = _filter_keys(item, mapped_keys.keys())
+
+    return mapped_item
+
+
+def _translate_status(item):
+    """
+    Translates status of image to match current Rackspace api bindings
+    item is a dict
+
+    Note: should be removed when the set of statuses expected by the api
+    and the set of statuses returned by the image service are equivalent
+
+    """
+    status_mapping = {
+        'pending': 'queued',
+        'decrypting': 'preparing',
+        'untarring': 'saving',
+        'available': 'active'}
+    try:
+        item['status'] = status_mapping[item['status']]
+    except KeyError:
+        # TODO(sirp): Performing translation of status (if necessary) here for
+        # now. Perhaps this should really be done in EC2 API and
+        # S3ImageService
+        pass
+
+    return item
+
+
+def _filter_keys(item, keys):
+    """
+    Filters all model attributes except for keys
+    item is a dict
+
+    """
+    return dict((k, v) for k, v in item.iteritems() if k in keys)
+
+
+def _convert_image_id_to_hash(image):
+    if 'imageId' in image:
+        # Convert EC2-style ID (i-blah) to Rackspace-style (int)
+        image_id = abs(hash(image['imageId']))
+        image['imageId'] = image_id
+        image['id'] = image_id
 
 
 class Controller(wsgi.Controller):
@@ -40,34 +118,49 @@ class Controller(wsgi.Controller):
         self._service = utils.import_object(FLAGS.image_service)
 
     def index(self, req):
-        """Return all public images in brief."""
-        return dict(images=[dict(id=img['id'], name=img['name'])
-                            for img in self.detail(req)['images']])
+        """Return all public images in brief"""
+        items = self._service.index(req.environ['nova.context'])
+        items = common.limited(items, req)
+        items = [_filter_keys(item, ('id', 'name')) for item in items]
+        return dict(images=items)
 
     def detail(self, req):
-        """Return all public images in detail."""
+        """Return all public images in detail"""
         try:
-            images = self._service.detail(req.environ['nova.context'])
-            images = nova.api.openstack.limited(images, req)
+            items = self._service.detail(req.environ['nova.context'])
         except NotImplementedError:
-            # Emulate detail() using repeated calls to show()
-            images = self._service.index(ctxt)
-            images = nova.api.openstack.limited(images, req)
-            images = [self._service.show(ctxt, i['id']) for i in images]
-        return dict(images=images)
+            items = self._service.index(req.environ['nova.context'])
+        for image in items:
+            _convert_image_id_to_hash(image)
+
+        items = common.limited(items, req)
+        items = [_translate_keys(item) for item in items]
+        items = [_translate_status(item) for item in items]
+        return dict(images=items)
 
     def show(self, req, id):
-        """Return data about the given image id."""
-        return dict(image=self._service.show(req.environ['nova.context'], id))
+        """Return data about the given image id"""
+        image_id = common.get_image_id_from_image_hash(self._service,
+                    req.environ['nova.context'], id)
+
+        image = self._service.show(req.environ['nova.context'], image_id)
+        _convert_image_id_to_hash(image)
+        return dict(image=image)
 
     def delete(self, req, id):
         # Only public images are supported for now.
         raise faults.Fault(exc.HTTPNotFound())
 
     def create(self, req):
-        # Only public images are supported for now, so a request to
-        # make a backup of a server cannot be supproted.
-        raise faults.Fault(exc.HTTPNotFound())
+        context = req.environ['nova.context']
+        env = self._deserialize(req.body, req)
+        instance_id = env["image"]["serverId"]
+        name = env["image"]["name"]
+
+        image_meta = compute.API().snapshot(
+            context, instance_id, name)
+
+        return dict(image=image_meta)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that

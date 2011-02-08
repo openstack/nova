@@ -150,6 +150,9 @@ def _match(key, value, attrs):
     """Match a given key and value against an attribute list."""
     if key not in attrs:
         return False
+    # This is a wild card search. Implemented as all or nothing for now.
+    if value == "*":
+        return True
     if key != "objectclass":
         return value in attrs[key]
     # it is an objectclass check, so check subclasses

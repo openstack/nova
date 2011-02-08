@@ -1,0 +1,149 @@
+#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""CLI for the Direct API."""
+
+import eventlet
+eventlet.monkey_patch()
+
+import json
+import os
+import pprint
+import sys
+import textwrap
+import urllib
+import urllib2
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
+import gflags
+
+
+FLAGS = gflags.FLAGS
+gflags.DEFINE_string('host', '127.0.0.1', 'Direct API host')
+gflags.DEFINE_integer('port', 8001, 'Direct API host')
+gflags.DEFINE_string('user', 'user1', 'Direct API username')
+gflags.DEFINE_string('project', 'proj1', 'Direct API project')
+
+
+USAGE = """usage: stack [options] <controller> <method> [arg1=value arg2=value]
+
+  `stack help` should output the list of available controllers
+  `stack <controller>` should output the available methods for that controller
+  `stack help <controller>` should do the same
+  `stack help <controller> <method>` should output info for a method
+"""
+
+
+def format_help(d):
+    """Format help text, keys are labels and values are descriptions."""
+    indent = max([len(k) for k in d])
+    out = []
+    for k, v in d.iteritems():
+        t = textwrap.TextWrapper(initial_indent='   %s   ' % k.ljust(indent),
+                                 subsequent_indent=' ' * (indent + 6))
+        out.extend(t.wrap(v))
+    return out
+
+
+def help_all():
+    rv = do_request('reflect', 'get_controllers')
+    out = format_help(rv)
+    return (USAGE + str(FLAGS.MainModuleHelp()) +
+            '\n\nAvailable controllers:\n' +
+            '\n'.join(out) + '\n')
+
+
+def help_controller(controller):
+    rv = do_request('reflect', 'get_methods')
+    methods = dict([(k.split('/')[2], v) for k, v in rv.iteritems()
+               if k.startswith('/%s' % controller)])
+    return ('Available methods for %s:\n' % controller +
+            '\n'.join(format_help(methods)))
+
+
+def help_method(controller, method):
+    rv = do_request('reflect',
+                    'get_method_info',
+                    {'method': '/%s/%s' % (controller, method)})
+
+    sig = '%s(%s):' % (method, ', '.join(['='.join(x) for x in rv['args']]))
+    out = textwrap.wrap(sig, subsequent_indent=' ' * len('%s(' % method))
+    out.append('\n' + rv['doc'])
+    return '\n'.join(out)
+
+
+def do_request(controller, method, params=None):
+    if params:
+        data = urllib.urlencode(params)
+    else:
+        data = None
+
+    url = 'http://%s:%s/%s/%s' % (FLAGS.host, FLAGS.port, controller, method)
+    headers = {'X-OpenStack-User': FLAGS.user,
+               'X-OpenStack-Project': FLAGS.project}
+
+    req = urllib2.Request(url, data, headers)
+    try:
+        resp = urllib2.urlopen(req)
+    except urllib2.HTTPError, e:
+        print e.read()
+        sys.exit(1)
+    return json.loads(resp.read())
+
+
+if __name__ == '__main__':
+    args = FLAGS(sys.argv)
+
+    cmd = args.pop(0)
+    if not args:
+        print help_all()
+        sys.exit()
+
+    first = args.pop(0)
+    if first == 'help':
+        action = help_all
+        params = []
+        if args:
+            params.append(args.pop(0))
+            action = help_controller
+        if args:
+            params.append(args.pop(0))
+            action = help_method
+        print action(*params)
+        sys.exit(0)
+
+    controller = first
+    if not args:
+        print help_controller(controller)
+        sys.exit()
+
+    method = args.pop(0)
+    params = {}
+    for x in args:
+        key, value = x.split('=', 1)
+        params[key] = value
+
+    pprint.pprint(do_request(controller, method, params))

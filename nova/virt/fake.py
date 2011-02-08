@@ -76,9 +76,10 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
-    def init_host(self):
+    def init_host(self, host):
         """
-        Initialize anything that is necessary for the driver to function
+        Initialize anything that is necessary for the driver to function,
+        including catching up with currently running VM's on the given host.
         """
         return
 
@@ -98,7 +99,7 @@ class FakeConnection(object):
         the new instance.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
 
         Once this successfully completes, the instance should be
         running (power_state.RUNNING).
@@ -112,6 +113,20 @@ class FakeConnection(object):
         self.instances[instance.name] = fake_instance
         fake_instance._state = power_state.RUNNING
 
+    def snapshot(self, instance, name):
+        """
+        Snapshots the specified instance.
+
+        The given parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name.
+
+        The second parameter is the name of the snapshot.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
+        """
+        pass
+
     def reboot(self, instance):
         """
         Reboot the specified instance.
@@ -120,7 +135,20 @@ class FakeConnection(object):
         and so the instance is being specified as instance.name.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
+        """
+        pass
+
+    def set_admin_password(self, instance, new_pass):
+        """
+        Set the root password on the specified instance.
+
+        The first parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name. The second
+        parameter is the value of the new password.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
         """
         pass
 
@@ -148,6 +176,18 @@ class FakeConnection(object):
         """
         pass
 
+    def suspend(self, instance, callback):
+        """
+        suspend the specified instance
+        """
+        pass
+
+    def resume(self, instance, callback):
+        """
+        resume the specified instance
+        """
+        pass
+
     def destroy(self, instance):
         """
         Destroy (shutdown and delete) the specified instance.
@@ -156,7 +196,7 @@ class FakeConnection(object):
         and so the instance is being specified as instance.name.
 
         The work will be done asynchronously.  This function returns a
-        Deferred that allows the caller to detect when it is complete.
+        task that allows the caller to detect when it is complete.
         """
         del self.instances[instance.name]
 
@@ -189,6 +229,9 @@ class FakeConnection(object):
                 'mem': 0,
                 'num_cpu': 2,
                 'cpu_time': 0}
+
+    def get_diagnostics(self, instance_name):
+        pass
 
     def list_disks(self, instance_name):
         """
@@ -259,6 +302,62 @@ class FakeConnection(object):
 
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT'
+
+    def get_ajax_console(self, instance):
+        return 'http://fakeajaxconsole.com/?token=FAKETOKEN'
+
+    def get_console_pool_info(self, console_type):
+        return  {'address': '127.0.0.1',
+                 'username': 'fakeuser',
+                 'password': 'fakepassword'}
+
+    def refresh_security_group_rules(self, security_group_id):
+        """This method is called after a change to security groups.
+
+        All security groups and their associated rules live in the datastore,
+        and calling this method should apply the updated rules to instances
+        running the specified security group.
+
+        An error should be raised if the operation cannot complete.
+
+        """
+        return True
+
+    def refresh_security_group_members(self, security_group_id):
+        """This method is called when a security group is added to an instance.
+
+        This message is sent to the virtualization drivers on hosts that are
+        running an instance that belongs to a security group that has a rule
+        that references the security group identified by `security_group_id`.
+        It is the responsiblity of this method to make sure any rules
+        that authorize traffic flow with members of the security group are
+        updated and any new members can communicate, and any removed members
+        cannot.
+
+        Scenario:
+            * we are running on host 'H0' and we have an instance 'i-0'.
+            * instance 'i-0' is a member of security group 'speaks-b'
+            * group 'speaks-b' has an ingress rule that authorizes group 'b'
+            * another host 'H1' runs an instance 'i-1'
+            * instance 'i-1' is a member of security group 'b'
+
+            When 'i-1' launches or terminates we will recieve the message
+            to update members of group 'b', at which time we will make
+            any changes needed to the rules for instance 'i-0' to allow
+            or deny traffic coming from 'i-1', depending on if it is being
+            added or removed from the group.
+
+        In this scenario, 'i-1' could just as easily have been running on our
+        host 'H0' and this method would still have been called.  The point was
+        that this method isn't called on the host where instances of that
+        group are running (as is the case with
+        :method:`refresh_security_group_rules`) but is called where references
+        are made to authorizing those instances.
+
+        An error should be raised if the operation cannot complete.
+
+        """
+        return True
 
 
 class FakeInstance(object):

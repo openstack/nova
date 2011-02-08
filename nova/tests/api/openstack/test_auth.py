@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
 
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
+        self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
@@ -53,7 +53,7 @@ class Test(unittest.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-CDN-Management-Url'],
@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
@@ -81,7 +81,7 @@ class Test(unittest.TestCase):
             fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
 
@@ -105,7 +105,7 @@ class Test(unittest.TestCase):
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'bacon'
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
         self.assertEqual(self.destroy_called, True)
 
@@ -113,25 +113,25 @@ class Test(unittest.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_no_user(self):
         req = webob.Request.blank('/v1.0/')
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 
     def test_bad_token(self):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'baconbaconbacon'
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 
 
 class TestLimiter(unittest.TestCase):
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.openstack.auth.BasicApiAuthManager,
+        self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
         fakes.FakeAuthManager.auth_data = {}
@@ -149,7 +149,7 @@ class TestLimiter(unittest.TestCase):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
         req.headers['X-Auth-Key'] = 'derp'
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
 
         token = result.headers['X-Auth-Token']
@@ -158,7 +158,7 @@ class TestLimiter(unittest.TestCase):
         req = webob.Request.blank('/v1.0/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token
-        result = req.get_response(nova.api.API('os'))
+        result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
 

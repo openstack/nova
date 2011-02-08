@@ -20,7 +20,6 @@
 Auth driver using the DB as its backend.
 """
 
-import logging
 import sys
 
 from nova import context
@@ -120,8 +119,8 @@ class DbDriver(object):
             for member_uid in member_uids:
                 member = db.user_get(context.get_admin_context(), member_uid)
                 if not member:
-                    raise exception.NotFound("Project can't be created "
-                                             "because user %s doesn't exist"
+                    raise exception.NotFound(_("Project can't be created "
+                                               "because user %s doesn't exist")
                                              % member_uid)
                 members.add(member)
 

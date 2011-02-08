@@ -22,7 +22,7 @@ System-level utilities and helper functions.
 
 import datetime
 import inspect
-import logging
+import json
 import os
 import random
 import subprocess
@@ -31,14 +31,18 @@ import struct
 import sys
 import time
 from xml.sax import saxutils
+import re
+import netaddr
 
 from eventlet import event
 from eventlet import greenthread
 
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import log as logging
 
 
+LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 
 
@@ -48,7 +52,8 @@ def import_class(import_str):
     try:
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
-    except (ImportError, ValueError, AttributeError):
+    except (ImportError, ValueError, AttributeError), exc:
+        logging.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
@@ -108,7 +113,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
 
 
 def fetchfile(url, target):
-    logging.debug(_("Fetching %s") % url)
+    LOG.debug(_("Fetching %s") % url)
 #    c = pycurl.Curl()
 #    fp = open(target, "wb")
 #    c.setopt(c.URL, url)
@@ -120,7 +125,7 @@ def fetchfile(url, target):
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    logging.debug(_("Running cmd (subprocess): %s"), cmd)
+    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
@@ -133,7 +138,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        logging.debug(_("Result was %s") % (obj.returncode))
+        LOG.debug(_("Result was %s") % obj.returncode)
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -151,6 +156,11 @@ def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
 
 
+def novadir():
+    import nova
+    return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
+
+
 def default_flagfile(filename='nova.conf'):
     for arg in sys.argv:
         if arg.find('flagfile') != -1:
@@ -166,12 +176,12 @@ def default_flagfile(filename='nova.conf'):
 
 
 def debug(arg):
-    logging.debug('debug in callback: %s', arg)
+    LOG.debug(_('debug in callback: %s'), arg)
     return arg
 
 
 def runthis(prompt, cmd, check_exit_code=True):
-    logging.debug(_("Running %s") % (cmd))
+    LOG.debug(_("Running %s"), (cmd))
     rv, err = execute(cmd, check_exit_code=check_exit_code)
 
 
@@ -193,17 +203,36 @@ def last_octet(address):
     return int(address.split(".")[-1])
 
 
-def get_my_ip():
-    """Returns the actual ip of the local machine."""
+def  get_my_linklocal(interface):
     try:
-        csock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        csock.connect(('8.8.8.8', 80))
-        (addr, port) = csock.getsockname()
-        csock.close()
-        return addr
-    except socket.gaierror as ex:
-        logging.warn(_("Couldn't get IP, using 127.0.0.1 %s"), ex)
-        return "127.0.0.1"
+        if_str = execute("ip -f inet6 -o addr show %s" % interface)
+        condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
+        links = [re.search(condition, x) for x in if_str[0].split('\n')]
+        address = [w.group(1) for w in links if w is not None]
+        if address[0] is not None:
+            return address[0]
+        else:
+            raise exception.Error(_("Link Local address is not found.:%s")
+                                  % if_str)
+    except Exception as ex:
+        raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
+                " :%(ex)s") % locals())
+
+
+def to_global_ipv6(prefix, mac):
+    mac64 = netaddr.EUI(mac).eui64().words
+    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+    mac64_addr = netaddr.IPAddress(int_addr)
+    maskIP = netaddr.IPNetwork(prefix).ip
+    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+
+
+def to_mac(ipv6_address):
+    address = netaddr.IPAddress(ipv6_address)
+    mask1 = netaddr.IPAddress("::ffff:ffff:ffff:ffff")
+    mask2 = netaddr.IPAddress("::0200:0:0:0")
+    mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
+    return ":".join(["%02x" % i for i in mac64[0:3] + mac64[5:8]])
 
 
 def utcnow():
@@ -295,12 +324,26 @@ class LazyPluggable(object):
                 fromlist = backend
 
             self.__backend = __import__(name, None, None, fromlist)
-            logging.info('backend %s', self.__backend)
+            LOG.debug(_('backend %s'), self.__backend)
         return self.__backend
 
     def __getattr__(self, key):
         backend = self.__get_backend()
         return getattr(backend, key)
+
+
+class LoopingCallDone(Exception):
+    """The poll-function passed to LoopingCall can raise this exception to
+    break out of the loop normally. This is somewhat analogous to
+    StopIteration.
+
+    An optional return-value can be included as the argument to the exception;
+    this return-value will be returned by LoopingCall.wait()
+    """
+
+    def __init__(self, retvalue=True):
+        """:param retvalue: Value that LoopingCall.wait() should return"""
+        self.retvalue = retvalue
 
 
 class LoopingCall(object):
@@ -321,12 +364,15 @@ class LoopingCall(object):
                 while self._running:
                     self.f(*self.args, **self.kw)
                     greenthread.sleep(interval)
+            except LoopingCallDone, e:
+                self.stop()
+                done.send(e.retvalue)
             except Exception:
                 logging.exception('in looping call')
                 done.send_exception(*sys.exc_info())
                 return
-
-            done.send(True)
+            else:
+                done.send(True)
 
         self.done = done
 
@@ -361,3 +407,36 @@ def utf8(value):
         return value.encode("utf-8")
     assert isinstance(value, str)
     return value
+
+
+def to_primitive(value):
+    if type(value) is type([]) or type(value) is type((None,)):
+        o = []
+        for v in value:
+            o.append(to_primitive(v))
+        return o
+    elif type(value) is type({}):
+        o = {}
+        for k, v in value.iteritems():
+            o[k] = to_primitive(v)
+        return o
+    elif isinstance(value, datetime.datetime):
+        return str(value)
+    elif hasattr(value, 'iteritems'):
+        return to_primitive(dict(value.iteritems()))
+    elif hasattr(value, '__iter__'):
+        return to_primitive(list(value))
+    else:
+        return value
+
+
+def dumps(value):
+    try:
+        return json.dumps(value)
+    except TypeError:
+        pass
+    return json.dumps(to_primitive(value))
+
+
+def loads(s):
+    return json.loads(s)

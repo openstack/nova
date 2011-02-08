@@ -21,13 +21,11 @@ Nova User API client library.
 
 import base64
 import boto
+import boto.exception
 import httplib
 
-from nova import flags
 from boto.ec2.regioninfo import RegionInfo
 
-
-FLAGS = flags.FLAGS
 
 DEFAULT_CLC_URL = 'http://127.0.0.1:8773'
 DEFAULT_REGION = 'nova'
@@ -193,14 +191,53 @@ class HostInfo(object):
         setattr(self, name, value)
 
 
+class InstanceType(object):
+    """
+    Information about a Nova instance type, as parsed through SAX.
+
+    **Fields include**
+
+    * name
+    * vcpus
+    * disk_gb
+    * memory_mb
+    * flavor_id
+
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.name = None
+        self.vcpus = None
+        self.disk_gb = None
+        self.memory_mb = None
+        self.flavor_id = None
+
+    def __repr__(self):
+        return 'InstanceType:%s' % self.name
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        if name == "memoryMb":
+            self.memory_mb = str(value)
+        elif name == "flavorId":
+            self.flavor_id = str(value)
+        elif name == "diskGb":
+            self.disk_gb = str(value)
+        else:
+            setattr(self, name, str(value))
+
+
 class NovaAdminClient(object):
 
     def __init__(
             self,
             clc_url=DEFAULT_CLC_URL,
             region=DEFAULT_REGION,
-            access_key=FLAGS.aws_access_key_id,
-            secret_key=FLAGS.aws_secret_access_key,
+            access_key=None,
+            secret_key=None,
             **kwargs):
         parts = self.split_clc_url(clc_url)
 
@@ -252,10 +289,14 @@ class NovaAdminClient(object):
 
     def get_user(self, name):
         """Grab a single user by name."""
-        user = self.apiconn.get_object('DescribeUser', {'Name': name},
-                                       UserInfo)
-        if user.username != None:
-            return user
+        try:
+            return self.apiconn.get_object('DescribeUser',
+                                           {'Name': name},
+                                           UserInfo)
+        except boto.exception.BotoServerError, e:
+            if e.status == 400 and e.error_code == 'NotFound':
+                return None
+            raise
 
     def has_user(self, username):
         """Determine if user exists."""
@@ -340,6 +381,13 @@ class NovaAdminClient(object):
                   'MemberUsers': member_users}
         return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
 
+    def modify_project(self, projectname, manager_user=None, description=None):
+        """Modifies an existing project."""
+        params = {'Name': projectname,
+                  'ManagerUser': manager_user,
+                  'Description': description}
+        return self.apiconn.get_status('ModifyProject', params)
+
     def delete_project(self, projectname):
         """Permanently deletes the specified project."""
         return self.apiconn.get_object('DeregisterProject',
@@ -376,3 +424,8 @@ class NovaAdminClient(object):
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])
+
+    def get_instance_types(self):
+        """Grabs the list of all users."""
+        return self.apiconn.get_list('DescribeInstanceTypes', {},
+                                     [('item', InstanceType)])

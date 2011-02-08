@@ -15,16 +15,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
+import json
 import traceback
 
 from webob import exc
 
+from nova import compute
 from nova import exception
+from nova import flags
+from nova import log as logging
 from nova import wsgi
+from nova import utils
+from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
-from nova.compute import api as compute_api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
@@ -34,25 +38,26 @@ LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
 
 
-def _entity_list(entities):
-    """ Coerces a list of servers into proper dictionary format """
-    return dict(servers=entities)
+FLAGS = flags.FLAGS
 
 
-def _entity_detail(inst):
-    """ Maps everything to Rackspace-like attributes for return"""
+def _translate_detail_keys(inst):
+    """ Coerces into dictionary format, mapping everything to Rackspace-like
+    attributes for return"""
     power_mapping = {
+        None: 'build',
         power_state.NOSTATE: 'build',
         power_state.RUNNING: 'active',
         power_state.BLOCKED: 'active',
-        power_state.PAUSED: 'suspended',
+        power_state.SUSPENDED: 'suspended',
+        power_state.PAUSED: 'paused',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
         power_state.CRASHED: 'error'}
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='internal_id')
+        flavorId='instance_type', name='display_name', id='id')
 
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
@@ -65,9 +70,10 @@ def _entity_detail(inst):
     return dict(server=inst_dict)
 
 
-def _entity_inst(inst):
-    """ Filters all model attributes save for id and name """
-    return dict(server=dict(id=inst['internal_id'], name=inst['display_name']))
+def _translate_keys(inst):
+    """ Coerces into dictionary format, excluding all model attributes
+    save for id and name """
+    return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
 
 class Controller(wsgi.Controller):
@@ -80,45 +86,61 @@ class Controller(wsgi.Controller):
                            "status", "progress"]}}}
 
     def __init__(self):
-        self.compute_api = compute_api.ComputeAPI()
+        self.compute_api = compute.API()
+        self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_entity_inst)
+        return self._items(req, entity_maker=_translate_keys)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_entity_detail)
+        return self._items(req, entity_maker=_translate_detail_keys)
 
     def _items(self, req, entity_maker):
         """Returns a list of servers for a given user.
 
-        entity_maker - either _entity_detail or _entity_inst
+        entity_maker - either _translate_detail_keys or _translate_keys
         """
-        instance_list = self.compute_api.get_instances(
-            req.environ['nova.context'])
-        limited_list = nova.api.openstack.limited(instance_list, req)
+        instance_list = self.compute_api.get_all(req.environ['nova.context'])
+        limited_list = common.limited(instance_list, req)
         res = [entity_maker(inst)['server'] for inst in limited_list]
-        return _entity_list(res)
+        return dict(servers=res)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
-            instance = self.compute_api.get_instance(
-                req.environ['nova.context'], int(id))
-            return _entity_detail(instance)
+            instance = self.compute_api.get(req.environ['nova.context'], id)
+            return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
     def delete(self, req, id):
         """ Destroys a server """
         try:
-            self.compute_api.delete_instance(req.environ['nova.context'],
-                int(id))
+            self.compute_api.delete(req.environ['nova.context'], id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
+
+    def _get_kernel_ramdisk_from_image(self, req, image_id):
+        """
+        Machine images are associated with Kernels and Ramdisk images via
+        metadata stored in Glance as 'image_properties'
+        """
+        def lookup(param):
+            _image_id = image_id
+            try:
+                return image['properties'][param]
+            except KeyError:
+                raise exception.NotFound(
+                    _("%(param)s property not found for image %(_image_id)s") %
+                      locals())
+
+        image_id = str(image_id)
+        image = self._image_service.show(req.environ['nova.context'], image_id)
+        return lookup('kernel_id'), lookup('ramdisk_id')
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -128,15 +150,21 @@ class Controller(wsgi.Controller):
 
         key_pair = auth_manager.AuthManager.get_key_pairs(
             req.environ['nova.context'])[0]
-        instances = self.compute_api.create_instances(
+        image_id = common.get_image_id_from_image_hash(self._image_service,
+            req.environ['nova.context'], env['server']['imageId'])
+        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
+            req, image_id)
+        instances = self.compute_api.create(
             req.environ['nova.context'],
             instance_types.get_by_flavor_id(env['server']['flavorId']),
-            env['server']['imageId'],
+            image_id,
+            kernel_id=kernel_id,
+            ramdisk_id=ramdisk_id,
             display_name=env['server']['name'],
-            description=env['server']['name'],
+            display_description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'])
-        return _entity_inst(instances[0])
+        return _translate_keys(instances[0])
 
     def update(self, req, id):
         """ Updates the server name or password """
@@ -144,16 +172,18 @@ class Controller(wsgi.Controller):
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
+        ctxt = req.environ['nova.context']
         update_dict = {}
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
+            try:
+                self.compute_api.set_admin_password(ctxt, id)
+            except exception.TimeoutException, e:
+                return exc.HTTPRequestTimeout()
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
-
         try:
-            self.compute_api.update_instance(req.environ['nova.context'],
-                                             instance['id'],
-                                             **update_dict)
+            self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
@@ -162,6 +192,7 @@ class Controller(wsgi.Controller):
         """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
         input_dict = self._deserialize(req.body, req)
+        #TODO(sandy): rebuild/resize not supported.
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
@@ -174,6 +205,50 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def lock(self, req, id):
+        """
+        lock the instance with id
+        admin only operation
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.lock(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def unlock(self, req, id):
+        """
+        unlock the instance with id
+        admin only operation
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.unlock(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::unlock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def get_lock(self, req, id):
+        """
+        return the boolean state of (instance with id)'s lock
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.get_lock(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::get_lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
@@ -181,7 +256,7 @@ class Controller(wsgi.Controller):
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::pause %s", readable)
+            LOG.exception(_("Compute.api::pause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -192,6 +267,56 @@ class Controller(wsgi.Controller):
             self.compute_api.unpause(ctxt, id)
         except:
             readable = traceback.format_exc()
-            logging.error("Compute.api::unpause %s", readable)
+            LOG.exception(_("Compute.api::unpause %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
+
+    def suspend(self, req, id):
+        """permit admins to suspend the server"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.suspend(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("compute.api::suspend %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def resume(self, req, id):
+        """permit admins to resume the server from suspend"""
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.resume(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("compute.api::resume %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def get_ajax_console(self, req, id):
+        """ Returns a url to an instance's ajaxterm console. """
+        try:
+            self.compute_api.get_ajax_console(req.environ['nova.context'],
+                int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
+    def diagnostics(self, req, id):
+        """Permit Admins to retrieve server diagnostics."""
+        ctxt = req.environ["nova.context"]
+        return self.compute_api.get_diagnostics(ctxt, id)
+
+    def actions(self, req, id):
+        """Permit Admins to retrieve server actions."""
+        ctxt = req.environ["nova.context"]
+        items = self.compute_api.get_actions(ctxt, id)
+        actions = []
+        # TODO(jk0): Do not do pre-serialization here once the default
+        # serializer is updated
+        for item in items:
+            actions.append(dict(
+                created_at=str(item.created_at),
+                action=item.action,
+                error=item.error))
+        return dict(actions=actions)

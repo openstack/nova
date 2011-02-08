@@ -21,6 +21,7 @@ function process_option {
     -V|--virtual-env) let always_venv=1; let never_venv=0;;
     -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
     -f|--force) let force=1;;
+    *) noseargs="$noseargs $1"
   esac
 }
 
@@ -29,39 +30,50 @@ with_venv=tools/with_venv.sh
 always_venv=0
 never_venv=0
 force=0
+noseargs=
+wrapper=""
 
 for arg in "$@"; do
   process_option $arg
 done
 
-if [ $never_venv -eq 1 ]; then
+function run_tests {
   # Just run the test suites in current environment
-  python run_tests.py
-  exit
-fi
+  ${wrapper} rm -f nova.sqlite
+  ${wrapper} $NOSETESTS 2> run_tests.err.log
+}
 
-# Remove the virtual environment if --force used
-if [ $force -eq 1 ]; then
-  echo "Cleaning virtualenv..."
-  rm -rf ${venv}
-fi
+NOSETESTS="python run_tests.py $noseargs"
 
-if [ -e ${venv} ]; then
-  ${with_venv} python run_tests.py $@
-else  
-  if [ $always_venv -eq 1 ]; then
-    # Automatically install the virtualenv
-    python tools/install_venv.py
+if [ $never_venv -eq 0 ]
+then
+  # Remove the virtual environment if --force used
+  if [ $force -eq 1 ]; then
+    echo "Cleaning virtualenv..."
+    rm -rf ${venv}
+  fi
+  if [ -e ${venv} ]; then
+    wrapper="${with_venv}"
   else
-    echo -e "No virtual environment found...create one? (Y/n) \c"
-    read use_ve
-    if [ "x$use_ve" = "xY" -o "x$use_ve" = "x" -o "x$use_ve" = "xy" ]; then
-      # Install the virtualenv and run the test suite in it
+    if [ $always_venv -eq 1 ]; then
+      # Automatically install the virtualenv
       python tools/install_venv.py
+      wrapper="${with_venv}"
     else
-      python run_tests.py
-      exit
+      echo -e "No virtual environment found...create one? (Y/n) \c"
+      read use_ve
+      if [ "x$use_ve" = "xY" -o "x$use_ve" = "x" -o "x$use_ve" = "xy" ]; then
+        # Install the virtualenv and run the test suite in it
+        python tools/install_venv.py
+        wrapper=${with_venv}
+      fi
     fi
   fi
-  ${with_venv} python run_tests.py $@
+fi
+
+if [ -z "$noseargs" ];
+then
+  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
+else
+  run_tests
 fi

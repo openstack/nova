@@ -20,7 +20,7 @@ Starting point for routing EC2 requests.
 
 """
 
-import logging
+import datetime
 import routes
 import webob
 import webob.dec
@@ -29,19 +29,19 @@ import webob.exc
 from nova import context
 from nova import exception
 from nova import flags
+from nova import log as logging
+from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import admin
 from nova.api.ec2 import cloud
 from nova.auth import manager
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.api")
 flags.DEFINE_boolean('use_forwarded_for', False,
                      'Treat X-Forwarded-For as the canonical remote address. '
                      'Only enable this if you have a sanitizing proxy.')
-flags.DEFINE_boolean('use_lockout', False,
-                     'Whether or not to use lockout middleware.')
 flags.DEFINE_integer('lockout_attempts', 5,
                      'Number of failed auths before lockout.')
 flags.DEFINE_integer('lockout_minutes', 15,
@@ -52,17 +52,42 @@ flags.DEFINE_list('lockout_memcached_servers', None,
                   'Memcached servers or None for in process cache.')
 
 
-_log = logging.getLogger("api")
-_log.setLevel(logging.DEBUG)
+class RequestLogging(wsgi.Middleware):
+    """Access-Log akin logging for all EC2 API requests."""
 
+    @webob.dec.wsgify
+    def __call__(self, req):
+        rv = req.get_response(self.application)
+        self.log_request_completion(rv, req)
+        return rv
 
-class API(wsgi.Middleware):
-    """Routing for all EC2 API requests."""
-
-    def __init__(self):
-        self.application = Authenticate(Router(Authorizer(Executor())))
-        if FLAGS.use_lockout:
-            self.application = Lockout(self.application)
+    def log_request_completion(self, response, request):
+        controller = request.environ.get('ec2.controller', None)
+        if controller:
+            controller = controller.__class__.__name__
+        action = request.environ.get('ec2.action', None)
+        ctxt = request.environ.get('ec2.context', None)
+        seconds = 'X'
+        microseconds = 'X'
+        if ctxt:
+            delta = datetime.datetime.utcnow() - \
+                    ctxt.timestamp
+            seconds = delta.seconds
+            microseconds = delta.microseconds
+        LOG.info(
+            "%s.%ss %s %s %s %s:%s %s [%s] %s %s",
+            seconds,
+            microseconds,
+            request.remote_addr,
+            request.method,
+            request.path_info,
+            controller,
+            action,
+            response.status_int,
+            request.user_agent,
+            request.content_type,
+            response.content_type,
+            context=ctxt)
 
 
 class Lockout(wsgi.Middleware):
@@ -98,7 +123,7 @@ class Lockout(wsgi.Middleware):
         failures_key = "authfailures-%s" % access_key
         failures = int(self.mc.get(failures_key) or 0)
         if failures >= FLAGS.lockout_attempts:
-            detail = "Too many failed authentications."
+            detail = _("Too many failed authentications.")
             raise webob.exc.HTTPForbidden(detail=detail)
         res = req.get_response(self.application)
         if res.status_int == 403:
@@ -107,9 +132,11 @@ class Lockout(wsgi.Middleware):
                 # NOTE(vish): To use incr, failures has to be a string.
                 self.mc.set(failures_key, '1', time=FLAGS.lockout_window * 60)
             elif failures >= FLAGS.lockout_attempts:
-                _log.warn('Access key %s has had %d failed authentications'
-                          ' and will be locked out for %d minutes.' %
-                          (access_key, failures, FLAGS.lockout_minutes))
+                lock_mins = FLAGS.lockout_minutes
+                msg = _('Access key %(access_key)s has had %(failures)d'
+                        ' failed authentications and will be locked out'
+                        ' for %(lock_mins)d minutes.') % locals()
+                LOG.warn(msg)
                 self.mc.set(failures_key, str(failures),
                             time=FLAGS.lockout_minutes * 60)
         return res
@@ -142,8 +169,9 @@ class Authenticate(wsgi.Middleware):
                     req.method,
                     req.host,
                     req.path)
-        except exception.Error, ex:
-            logging.debug(_("Authentication Failure: %s") % ex)
+        # Be explicit for what exceptions are 403, the rest bubble as 500
+        except (exception.NotFound, exception.NotAuthorized) as ex:
+            LOG.audit(_("Authentication Failure: %s"), unicode(ex))
             raise webob.exc.HTTPForbidden()
 
         # Authenticated!
@@ -154,29 +182,21 @@ class Authenticate(wsgi.Middleware):
                                       project=project,
                                       remote_address=remote_address)
         req.environ['ec2.context'] = ctxt
+        uname = user.name
+        pname = project.name
+        msg = _('Authenticated Request For %(uname)s:%(pname)s)') % locals()
+        LOG.audit(msg, context=req.environ['ec2.context'])
         return self.application
 
 
-class Router(wsgi.Middleware):
+class Requestify(wsgi.Middleware):
 
-    """Add ec2.'controller', .'action', and .'action_args' to WSGI environ."""
-
-    def __init__(self, application):
-        super(Router, self).__init__(application)
-        self.map = routes.Mapper()
-        self.map.connect("/{controller_name}/")
-        self.controllers = dict(Cloud=cloud.CloudController(),
-                                Admin=admin.AdminController())
+    def __init__(self, app, controller):
+        super(Requestify, self).__init__(app)
+        self.controller = utils.import_class(controller)()
 
     @webob.dec.wsgify
     def __call__(self, req):
-        # Obtain the appropriate controller and action for this request.
-        try:
-            match = self.map.match(req.path_info)
-            controller_name = match['controller_name']
-            controller = self.controllers[controller_name]
-        except:
-            raise webob.exc.HTTPNotFound()
         non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
                     'SignatureVersion', 'Version', 'Timestamp']
         args = dict(req.params)
@@ -189,13 +209,14 @@ class Router(wsgi.Middleware):
         except:
             raise webob.exc.HTTPBadRequest()
 
-        _log.debug(_('action: %s') % action)
+        LOG.debug(_('action: %s'), action)
         for key, value in args.items():
-            _log.debug(_('arg: %s\t\tval: %s') % (key, value))
+            LOG.debug(_('arg: %(key)s\t\tval: %(value)s') % locals())
 
         # Success!
-        req.environ['ec2.controller'] = controller
-        req.environ['ec2.action'] = action
+        api_request = apirequest.APIRequest(self.controller, action,
+                                            req.params['Version'], args)
+        req.environ['ec2.request'] = api_request
         req.environ['ec2.action_args'] = args
         return self.application
 
@@ -256,13 +277,14 @@ class Authorizer(wsgi.Middleware):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller_name = req.environ['ec2.controller'].__class__.__name__
-        action = req.environ['ec2.action']
-        allowed_roles = self.action_roles[controller_name].get(action,
-                                                               ['none'])
+        controller = req.environ['ec2.request'].controller.__class__.__name__
+        action = req.environ['ec2.request'].action
+        allowed_roles = self.action_roles[controller].get(action, ['none'])
         if self._matches_any_role(context, allowed_roles):
             return self.application
         else:
+            LOG.audit(_('Unauthorized request for controller=%(controller)s '
+                        'and action=%(action)s') % locals(), context=context)
             raise webob.exc.HTTPUnauthorized()
 
     def _matches_any_role(self, context, roles):
@@ -289,32 +311,78 @@ class Executor(wsgi.Application):
     @webob.dec.wsgify
     def __call__(self, req):
         context = req.environ['ec2.context']
-        controller = req.environ['ec2.controller']
-        action = req.environ['ec2.action']
-        args = req.environ['ec2.action_args']
-
-        api_request = apirequest.APIRequest(controller, action)
+        api_request = req.environ['ec2.request']
+        result = None
         try:
-            result = api_request.send(context, **args)
-            req.headers['Content-Type'] = 'text/xml'
-            return result
+            result = api_request.invoke(context)
+        except exception.InstanceNotFound as ex:
+            LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
+                     context=context)
+            ec2_id = cloud.id_to_ec2_id(ex.instance_id)
+            message = _('Instance %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
+        except exception.VolumeNotFound as ex:
+            LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
+                     context=context)
+            ec2_id = cloud.id_to_ec2_id(ex.volume_id, 'vol-%08x')
+            message = _('Volume %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
+        except exception.NotFound as ex:
+            LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
         except exception.ApiError as ex:
-
+            LOG.exception(_('ApiError raised: %s'), unicode(ex),
+                          context=context)
             if ex.code:
-                return self._error(req, ex.code, ex.message)
+                return self._error(req, context, ex.code, unicode(ex))
             else:
-                return self._error(req, type(ex).__name__, ex.message)
-        # TODO(vish): do something more useful with unknown exceptions
+                return self._error(req, context, type(ex).__name__,
+                                   unicode(ex))
         except Exception as ex:
-            return self._error(req, type(ex).__name__, str(ex))
+            extra = {'environment': req.environ}
+            LOG.exception(_('Unexpected error raised: %s'), unicode(ex),
+                          extra=extra, context=context)
+            return self._error(req,
+                               context,
+                               'UnknownError',
+                               _('An unknown error has occurred. '
+                               'Please try your request again.'))
+        else:
+            resp = webob.Response()
+            resp.status = 200
+            resp.headers['Content-Type'] = 'text/xml'
+            resp.body = str(result)
+            return resp
 
-    def _error(self, req, code, message):
-        logging.error("%s: %s", code, message)
+    def _error(self, req, context, code, message):
+        LOG.error("%s: %s", code, message, context=context)
         resp = webob.Response()
         resp.status = 400
         resp.headers['Content-Type'] = 'text/xml'
         resp.body = str('<?xml version="1.0"?>\n'
-                     '<Response><Errors><Error><Code>%s</Code>'
-                     '<Message>%s</Message></Error></Errors>'
-                     '<RequestID>?</RequestID></Response>' % (code, message))
+                         '<Response><Errors><Error><Code>%s</Code>'
+                         '<Message>%s</Message></Error></Errors>'
+                         '<RequestID>%s</RequestID></Response>' %
+                         (utils.utf8(code), utils.utf8(message),
+                         utils.utf8(context.request_id)))
         return resp
+
+
+class Versions(wsgi.Application):
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+        """Respond to a request for all EC2 versions."""
+        # available api versions
+        versions = [
+            '1.0',
+            '2007-01-19',
+            '2007-03-01',
+            '2007-08-29',
+            '2007-10-10',
+            '2007-12-15',
+            '2008-02-01',
+            '2008-09-01',
+            '2009-04-04',
+        ]
+        return ''.join('%s\n' % v for v in versions)

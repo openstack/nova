@@ -22,6 +22,7 @@ Session Handling for SQLAlchemy backend
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from nova import exception
 from nova import flags
 
 FLAGS = flags.FLAGS
@@ -36,9 +37,13 @@ def get_session(autocommit=True, expire_on_commit=False):
     global _MAKER
     if not _MAKER:
         if not _ENGINE:
-            _ENGINE = create_engine(FLAGS.sql_connection, echo=False)
+            _ENGINE = create_engine(FLAGS.sql_connection,
+                                    pool_recycle=FLAGS.sql_idle_timeout,
+                                    echo=False)
         _MAKER = (sessionmaker(bind=_ENGINE,
                                 autocommit=autocommit,
                                 expire_on_commit=expire_on_commit))
     session = _MAKER()
+    session.query = exception.wrap_db_error(session.query)
+    session.flush = exception.wrap_db_error(session.flush)
     return session

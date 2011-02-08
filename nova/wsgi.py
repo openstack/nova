@@ -21,8 +21,7 @@
 Utility methods for working with WSGI servers
 """
 
-import json
-import logging
+import os
 import sys
 from xml.dom import minidom
 
@@ -35,18 +34,38 @@ import webob
 import webob.dec
 import webob.exc
 
+from paste import deploy
 
-logging.getLogger("routes.middleware").addHandler(logging.StreamHandler())
+from nova import flags
+from nova import log as logging
+from nova import utils
+
+
+FLAGS = flags.FLAGS
+
+
+class WritableLogger(object):
+    """A thin wrapper that responds to `write` and logs."""
+
+    def __init__(self, logger, level=logging.DEBUG):
+        self.logger = logger
+        self.level = level
+
+    def write(self, msg):
+        self.logger.log(self.level, msg)
 
 
 class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
     def __init__(self, threads=1000):
+        logging.basicConfig()
         self.pool = eventlet.GreenPool(threads)
 
     def start(self, application, port, host='0.0.0.0', backlog=128):
         """Run a WSGI server with the given application."""
+        arg0 = sys.argv[0]
+        logging.audit(_("Starting %(arg0)s on %(host)s:%(port)s") % locals())
         socket = eventlet.listen((host, port), backlog=backlog)
         self.pool.spawn_n(self._run, application, socket)
 
@@ -59,13 +78,38 @@ class Server(object):
 
     def _run(self, application, socket):
         """Start a WSGI server in a new green thread."""
-        eventlet.wsgi.server(socket, application, custom_pool=self.pool)
+        logger = logging.getLogger('eventlet.wsgi.server')
+        eventlet.wsgi.server(socket, application, custom_pool=self.pool,
+                             log=WritableLogger(logger))
 
 
 class Application(object):
-# TODO(gundlach): I think we should toss this class, now that it has no
-# purpose.
     """Base WSGI application wrapper. Subclasses need to implement __call__."""
+
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Used for paste app factories in paste.deploy config fles.
+
+        Any local configuration (that is, values under the [app:APPNAME]
+        section of the paste config) will be passed into the `__init__` method
+        as kwargs.
+
+        A hypothetical configuration would look like:
+
+            [app:wadl]
+            latest_version = 1.3
+            paste.app_factory = nova.api.fancy_api:Wadl.factory
+
+        which would result in a call to the `Wadl` class as
+
+            import nova.api.fancy_api
+            fancy_api.Wadl(latest_version='1.3')
+
+        You could of course re-implement the `factory` method in subclasses,
+        but using the kwarg passing it shouldn't be necessary.
+
+        """
+        return cls(**local_config)
 
     def __call__(self, environ, start_response):
         r"""Subclasses will probably want to implement __call__ like this:
@@ -100,24 +144,69 @@ class Application(object):
         See the end of http://pythonpaste.org/webob/modules/dec.html
         for more info.
         """
-        raise NotImplementedError("You must implement __call__")
+        raise NotImplementedError(_("You must implement __call__"))
 
 
 class Middleware(Application):
-    """
-    Base WSGI middleware wrapper. These classes require an application to be
+    """Base WSGI middleware.
+
+    These classes require an application to be
     initialized that will be called next.  By default the middleware will
     simply call its wrapped app, or you can override __call__ to customize its
     behavior.
     """
 
-    def __init__(self, application):  # pylint: disable-msg=W0231
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Used for paste app factories in paste.deploy config fles.
+
+        Any local configuration (that is, values under the [filter:APPNAME]
+        section of the paste config) will be passed into the `__init__` method
+        as kwargs.
+
+        A hypothetical configuration would look like:
+
+            [filter:analytics]
+            redis_host = 127.0.0.1
+            paste.filter_factory = nova.api.analytics:Analytics.factory
+
+        which would result in a call to the `Analytics` class as
+
+            import nova.api.analytics
+            analytics.Analytics(app_from_paste, redis_host='127.0.0.1')
+
+        You could of course re-implement the `factory` method in subclasses,
+        but using the kwarg passing it shouldn't be necessary.
+
+        """
+        def _factory(app):
+            return cls(app, **local_config)
+        return _factory
+
+    def __init__(self, application):
         self.application = application
 
+    def process_request(self, req):
+        """Called on each request.
+
+        If this returns None, the next application down the stack will be
+        executed. If it returns a response then that response will be returned
+        and execution will stop here.
+
+        """
+        return None
+
+    def process_response(self, response):
+        """Do whatever you'd like to the response."""
+        return response
+
     @webob.dec.wsgify
-    def __call__(self, req):  # pylint: disable-msg=W0221
-        """Override to implement middleware behavior."""
-        return self.application
+    def __call__(self, req):
+        response = self.process_request(req)
+        if response:
+            return response
+        response = req.get_response(self.application)
+        return self.process_response(response)
 
 
 class Debug(Middleware):
@@ -270,7 +359,7 @@ class Serializer(object):
         needed to serialize a dictionary to that type.
         """
         self.metadata = metadata or {}
-        req = webob.Request(environ)
+        req = webob.Request.blank('', environ)
         suffix = req.path_info.split('.')[-1].lower()
         if suffix == 'json':
             self.handler = self._to_json
@@ -303,7 +392,7 @@ class Serializer(object):
         try:
             is_xml = (datastring[0] == '<')
             if not is_xml:
-                return json.loads(datastring)
+                return utils.loads(datastring)
             return self._from_xml(datastring)
         except:
             return None
@@ -336,7 +425,7 @@ class Serializer(object):
             return result
 
     def _to_json(self, data):
-        return json.dumps(data)
+        return utils.dumps(data)
 
     def _to_xml(self, data):
         metadata = self.metadata.get('application/xml', {})
@@ -372,3 +461,64 @@ class Serializer(object):
             node = doc.createTextNode(str(data))
             result.appendChild(node)
         return result
+
+
+def paste_config_file(basename):
+    """Find the best location in the system for a paste config file.
+
+    Search Order
+    ------------
+
+    The search for a paste config file honors `FLAGS.state_path`, which in a
+    version checked out from bzr will be the `nova` directory in the top level
+    of the checkout, and in an installation for a package for your distribution
+    will likely point to someplace like /etc/nova.
+
+    This method tries to load places likely to be used in development or
+    experimentation before falling back to the system-wide configuration
+    in `/etc/nova/`.
+
+    * Current working directory
+    * the `etc` directory under state_path, because when working on a checkout
+      from bzr this will point to the default
+    * top level of FLAGS.state_path, for distributions
+    * /etc/nova, which may not be diffrerent from state_path on your distro
+
+    """
+
+    configfiles = [basename,
+                   os.path.join(FLAGS.state_path, 'etc', basename),
+                   os.path.join(FLAGS.state_path, basename),
+                   '/etc/nova/%s' % basename]
+    for configfile in configfiles:
+        if os.path.exists(configfile):
+            return configfile
+
+
+def load_paste_configuration(filename, appname):
+    """Returns a paste configuration dict, or None."""
+    filename = os.path.abspath(filename)
+    config = None
+    try:
+        config = deploy.appconfig("config:%s" % filename, name=appname)
+    except LookupError:
+        pass
+    return config
+
+
+def load_paste_app(filename, appname):
+    """Builds a wsgi app from a paste config, None if app not configured."""
+    filename = os.path.abspath(filename)
+    app = None
+    try:
+        app = deploy.loadapp("config:%s" % filename, name=appname)
+    except LookupError:
+        pass
+    return app
+
+
+def paste_config_to_flags(config, mixins):
+    for k, v in mixins.iteritems():
+        value = config.get(k, v)
+        converted_value = FLAGS[k].parser.Parse(value)
+        setattr(FLAGS, k, converted_value)

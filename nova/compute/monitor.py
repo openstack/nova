@@ -25,19 +25,17 @@ Instance Monitoring:
 """
 
 import datetime
-import logging
 import os
-import sys
 import time
 
 import boto
 import boto.s3
 import rrdtool
-from twisted.internet import defer
 from twisted.internet import task
 from twisted.application import service
 
 from nova import flags
+from nova import log as logging
 from nova.virt import connection as virt_connection
 
 
@@ -89,6 +87,9 @@ RRD_VALUES = {
 
 
 utcnow = datetime.datetime.utcnow
+
+
+LOG = logging.getLogger('nova.compute.monitor')
 
 
 def update_rrd(instance, name, data):
@@ -255,20 +256,20 @@ class Instance(object):
         Updates the instances statistics and stores the resulting graphs
         in the internal object store on the cloud controller.
         """
-        logging.debug(_('updating %s...'), self.instance_id)
+        LOG.debug(_('updating %s...'), self.instance_id)
 
         try:
             data = self.fetch_cpu_stats()
             if data != None:
-                logging.debug('CPU: %s', data)
+                LOG.debug('CPU: %s', data)
                 update_rrd(self, 'cpu', data)
 
             data = self.fetch_net_stats()
-            logging.debug('NET: %s', data)
+            LOG.debug('NET: %s', data)
             update_rrd(self, 'net', data)
 
             data = self.fetch_disk_stats()
-            logging.debug('DISK: %s', data)
+            LOG.debug('DISK: %s', data)
             update_rrd(self, 'disk', data)
 
             # TODO(devcamcar): Turn these into pool.ProcessPool.execute() calls
@@ -285,7 +286,7 @@ class Instance(object):
             graph_disk(self, '1w')
             graph_disk(self, '1m')
         except Exception:
-            logging.exception(_('unexpected error during update'))
+            LOG.exception(_('unexpected error during update'))
 
         self.last_updated = utcnow()
 
@@ -309,7 +310,7 @@ class Instance(object):
         self.cputime = float(info['cpu_time'])
         self.cputime_last_updated = utcnow()
 
-        logging.debug('CPU: %d', self.cputime)
+        LOG.debug('CPU: %d', self.cputime)
 
         # Skip calculation on first pass. Need delta to get a meaningful value.
         if cputime_last_updated == None:
@@ -319,17 +320,17 @@ class Instance(object):
         d = self.cputime_last_updated - cputime_last_updated
         t = d.days * 86400 + d.seconds
 
-        logging.debug('t = %d', t)
+        LOG.debug('t = %d', t)
 
         # Calculate change over time in number of nanoseconds of CPU time used.
         cputime_delta = self.cputime - cputime_last
 
-        logging.debug('cputime_delta = %s', cputime_delta)
+        LOG.debug('cputime_delta = %s', cputime_delta)
 
         # Get the number of virtual cpus in this domain.
         vcpus = int(info['num_cpu'])
 
-        logging.debug('vcpus = %d', vcpus)
+        LOG.debug('vcpus = %d', vcpus)
 
         # Calculate CPU % used and cap at 100.
         return min(cputime_delta / (t * vcpus * 1.0e9) * 100, 100)
@@ -351,8 +352,9 @@ class Instance(object):
                 rd += rd_bytes
                 wr += wr_bytes
             except TypeError:
-                logging.error(_('Cannot get blockstats for "%s" on "%s"'),
-                              disk, self.instance_id)
+                iid = self.instance_id
+                LOG.error(_('Cannot get blockstats for "%(disk)s"'
+                        ' on "%(iid)s"') % locals())
                 raise
 
         return '%d:%d' % (rd, wr)
@@ -373,8 +375,9 @@ class Instance(object):
                 rx += stats[0]
                 tx += stats[4]
             except TypeError:
-                logging.error(_('Cannot get ifstats for "%s" on "%s"'),
-                              interface, self.instance_id)
+                iid = self.instance_id
+                LOG.error(_('Cannot get ifstats for "%(interface)s"'
+                        ' on "%(iid)s"') % locals())
                 raise
 
         return '%d:%d' % (rx, tx)
@@ -408,7 +411,7 @@ class InstanceMonitor(object, service.Service):
         try:
             conn = virt_connection.get_connection(read_only=True)
         except Exception, exn:
-            logging.exception(_('unexpected exception getting connection'))
+            LOG.exception(_('unexpected exception getting connection'))
             time.sleep(FLAGS.monitoring_instances_delay)
             return
 
@@ -416,14 +419,14 @@ class InstanceMonitor(object, service.Service):
         try:
             self.updateInstances_(conn, domain_ids)
         except Exception, exn:
-            logging.exception('updateInstances_')
+            LOG.exception('updateInstances_')
 
     def updateInstances_(self, conn, domain_ids):
         for domain_id in domain_ids:
             if not domain_id in self._instances:
                 instance = Instance(conn, domain_id)
                 self._instances[domain_id] = instance
-                logging.debug(_('Found instance: %s'), domain_id)
+                LOG.debug(_('Found instance: %s'), domain_id)
 
         for key in self._instances.keys():
             instance = self._instances[key]

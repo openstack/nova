@@ -1,5 +1,5 @@
 ..
-      Copyright 2010 United States Government as represented by the
+      Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration. 
       All Rights Reserved.
 
@@ -60,4 +60,4 @@ Tests
 -----
 
 Tests are lacking for the db api layer and for the sqlalchemy driver.
-Failures in the drivers would be dectected in other test cases, though.
+Failures in the drivers would be detected in other test cases, though.

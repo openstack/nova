@@ -53,9 +53,10 @@
   CLI interface for nova management.
 """
 
+import datetime
 import gettext
-import logging
 import os
+import re
 import sys
 import time
 
@@ -76,18 +77,34 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
+from nova import rpc
 from nova import utils
+from nova.api.ec2.cloud import ec2_id_to_id
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+from nova.db import migration
 
 
+logging.basicConfig()
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
+flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+
+
+def param2id(object_id):
+    """Helper function to convert various id types to internal id.
+    args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
+    """
+    if '-' in object_id:
+        return ec2_id_to_id(object_id)
+    else:
+        return int(object_id)
 
 
 class VpnCommands(object):
@@ -250,6 +267,14 @@ class RoleCommands(object):
         self.manager.remove_role(user, role, project)
 
 
+def _db_error(caught_exception):
+    print caught_exception
+    print _("The above error may show that the database has not "
+            "been created.\nPlease create a database using "
+            "nova-manage sync db before running this command.")
+    exit(1)
+
+
 class UserCommands(object):
     """Class for managing users."""
 
@@ -265,13 +290,19 @@ class UserCommands(object):
     def admin(self, name, access=None, secret=None):
         """creates a new admin and prints exports
         arguments: name [access] [secret]"""
-        user = self.manager.create_user(name, access, secret, True)
+        try:
+            user = self.manager.create_user(name, access, secret, True)
+        except exception.DBError, e:
+            _db_error(e)
         self._print_export(user)
 
     def create(self, name, access=None, secret=None):
         """creates a new user and prints exports
         arguments: name [access] [secret]"""
-        user = self.manager.create_user(name, access, secret, False)
+        try:
+            user = self.manager.create_user(name, access, secret, False)
+        except exception.DBError, e:
+            _db_error(e)
         self._print_export(user)
 
     def delete(self, name):
@@ -332,6 +363,11 @@ class ProjectCommands(object):
         arguments: name project_manager [description]"""
         self.manager.create_project(name, project_manager, description)
 
+    def modify(self, name, project_manager, description=None):
+        """Modifies a project
+        arguments: name project_manager [description]"""
+        self.manager.modify_project(name, project_manager, description)
+
     def delete(self, name):
         """Deletes an existing project
         arguments: name"""
@@ -387,9 +423,14 @@ class ProjectCommands(object):
             with open(filename, 'w') as f:
                 f.write(zip_file)
         except db.api.NoMoreNetworks:
-            print ('No more networks available. If this is a new '
-                   'installation, you need\nto call something like this:\n\n'
-                   '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+            print _('No more networks available. If this is a new '
+                    'installation, you need\nto call something like this:\n\n'
+                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+        except exception.ProcessExecutionError, e:
+            print e
+            print _("The above error may show that the certificate db has not "
+                    "been created.\nPlease create a database by running a "
+                    "nova-api server on this host.")
 
 
 class FloatingIpCommands(object):
@@ -431,11 +472,12 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None, vpn_start=None):
+               network_size=None, vlan_start=None, vpn_start=None,
+               fixed_range_v6=None):
         """Creates fixed ips for host by range
         arguments: [fixed_range=FLAG], [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG]"""
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
             fixed_range = FLAGS.fixed_range
         if not num_networks:
@@ -446,11 +488,126 @@ class NetworkCommands(object):
             vlan_start = FLAGS.vlan_start
         if not vpn_start:
             vpn_start = FLAGS.vpn_start
+        if not fixed_range_v6:
+            fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
-                                    fixed_range, int(num_networks),
-                                    int(network_size), int(vlan_start),
-                                    int(vpn_start))
+                                    cidr=fixed_range,
+                                    num_networks=int(num_networks),
+                                    network_size=int(network_size),
+                                    cidr_v6=fixed_range_v6,
+                                    vlan_start=int(vlan_start),
+                                    vpn_start=int(vpn_start))
+
+
+class ServiceCommands(object):
+    """Enable and disable running services"""
+
+    def list(self, host=None, service=None):
+        """Show a list of all running services. Filter by host & service name.
+        args: [host] [service]"""
+        ctxt = context.get_admin_context()
+        now = datetime.datetime.utcnow()
+        services = db.service_get_all(ctxt)
+        if host:
+            services = [s for s in services if s['host'] == host]
+        if service:
+            services = [s for s in services if s['binary'] == service]
+        for svc in services:
+            delta = now - (svc['updated_at'] or svc['created_at'])
+            alive = (delta.seconds <= 15)
+            art = (alive and ":-)") or "XXX"
+            active = 'enabled'
+            if svc['disabled']:
+                active = 'disabled'
+            print "%-10s %-10s %-8s %s %s" % (svc['host'], svc['binary'],
+                                              active, art,
+                                              svc['updated_at'])
+
+    def enable(self, host, service):
+        """Enable scheduling for a service
+        args: host service"""
+        ctxt = context.get_admin_context()
+        svc = db.service_get_by_args(ctxt, host, service)
+        if not svc:
+            print "Unable to find service"
+            return
+        db.service_update(ctxt, svc['id'], {'disabled': False})
+
+    def disable(self, host, service):
+        """Disable scheduling for a service
+        args: host service"""
+        ctxt = context.get_admin_context()
+        svc = db.service_get_by_args(ctxt, host, service)
+        if not svc:
+            print "Unable to find service"
+            return
+        db.service_update(ctxt, svc['id'], {'disabled': True})
+
+
+class LogCommands(object):
+    def request(self, request_id, logfile='/var/log/nova.log'):
+        """Show all fields in the log for the given request.  Assumes you
+        haven't changed the log format too much.
+        ARGS: request_id [logfile]"""
+        lines = utils.execute("cat %s | grep '\[%s '" % (logfile, request_id))
+        print re.sub('#012', "\n", "\n".join(lines))
+
+
+class DbCommands(object):
+    """Class for managing the database."""
+
+    def __init__(self):
+        pass
+
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return migration.db_sync(version)
+
+    def version(self):
+        """Print the current database version."""
+        print migration.db_version()
+
+
+class VolumeCommands(object):
+    """Methods for dealing with a cloud in an odd state"""
+
+    def delete(self, volume_id):
+        """Delete a volume, bypassing the check that it
+        must be available.
+        args: volume_id_id"""
+        ctxt = context.get_admin_context()
+        volume = db.volume_get(ctxt, param2id(volume_id))
+        host = volume['host']
+        if volume['status'] == 'in-use':
+            print "Volume is in-use."
+            print "Detach volume from instance and then try again."
+            return
+
+        rpc.cast(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.volume_topic, host),
+                 {"method": "delete_volume",
+                  "args": {"volume_id": volume['id']}})
+
+    def reattach(self, volume_id):
+        """Re-attach a volume that has previously been attached
+        to an instance.  Typically called after a compute host
+        has been rebooted.
+        args: volume_id_id"""
+        ctxt = context.get_admin_context()
+        volume = db.volume_get(ctxt, param2id(volume_id))
+        if not volume['instance_id']:
+            print "volume is not attached to an instance"
+            return
+        instance = db.instance_get(ctxt, volume['instance_id'])
+        host = instance['host']
+        rpc.cast(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 {"method": "attach_volume",
+                  "args": {"instance_id": instance['id'],
+                           "volume_id": volume['id'],
+                           "mountpoint": volume['mountpoint']}})
+
 
 CATEGORIES = [
     ('user', UserCommands),
@@ -459,7 +616,11 @@ CATEGORIES = [
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
     ('floating', FloatingIpCommands),
-    ('network', NetworkCommands)]
+    ('network', NetworkCommands),
+    ('service', ServiceCommands),
+    ('log', LogCommands),
+    ('db', DbCommands),
+    ('volume', VolumeCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -497,9 +658,6 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
-
-    if FLAGS.verbose:
-        logging.getLogger().setLevel(logging.DEBUG)
 
     script_name = argv.pop(0)
     if len(argv) < 1:

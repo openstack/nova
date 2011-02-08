@@ -52,10 +52,12 @@ A fake XenAPI SDK.
 
 
 import datetime
-import logging
 import uuid
 
+from pprint import pformat
+
 from nova import exception
+from nova import log as logging
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
@@ -63,11 +65,20 @@ _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
 
 _db_content = {}
 
+LOG = logging.getLogger("nova.virt.xenapi.fake")
+
+
+def log_db_contents(msg=None):
+    text = msg or ""
+    content = pformat(_db_content)
+    LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
+
 
 def reset():
     for c in _CLASSES:
         _db_content[c] = {}
     create_host('fake')
+    create_vm('fake', 'Running', is_a_template=False, is_control_domain=True)
 
 
 def create_host(name_label):
@@ -93,6 +104,24 @@ def create_vm(name_label, status,
         })
 
 
+def destroy_vm(vm_ref):
+    vm_rec = _db_content['VM'][vm_ref]
+
+    vbd_refs = vm_rec['VBDs']
+    for vbd_ref in vbd_refs:
+        destroy_vbd(vbd_ref)
+
+    del _db_content['VM'][vm_ref]
+
+
+def destroy_vbd(vbd_ref):
+    del _db_content['VBD'][vbd_ref]
+
+
+def destroy_vdi(vdi_ref):
+    del _db_content['VDI'][vdi_ref]
+
+
 def create_vdi(name_label, read_only, sr_ref, sharable):
     return _create_object('VDI', {
         'name_label': name_label,
@@ -109,9 +138,34 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
         })
 
 
-def create_pbd(config, sr_ref, attached):
+def create_vbd(vm_ref, vdi_ref):
+    vbd_rec = {
+        'VM': vm_ref,
+        'VDI': vdi_ref,
+        'currently_attached': False,
+        }
+    vbd_ref = _create_object('VBD', vbd_rec)
+    after_VBD_create(vbd_ref, vbd_rec)
+    return vbd_ref
+
+
+def after_VBD_create(vbd_ref, vbd_rec):
+    """Create read-only fields and backref from VM to VBD when VBD is
+    created."""
+    vbd_rec['currently_attached'] = False
+    vbd_rec['device'] = ''
+    vm_ref = vbd_rec['VM']
+    vm_rec = _db_content['VM'][vm_ref]
+    vm_rec['VBDs'] = [vbd_ref]
+
+    vm_name_label = _db_content['VM'][vm_ref]['name_label']
+    vbd_rec['vm_name_label'] = vm_name_label
+
+
+def create_pbd(config, host_ref, sr_ref, attached):
     return _create_object('PBD', {
         'device-config': config,
+        'host': host_ref,
         'SR': sr_ref,
         'currently-attached': attached,
         })
@@ -122,6 +176,33 @@ def create_task(name_label):
         'name_label': name_label,
         'status': 'pending',
         })
+
+
+def create_local_srs():
+    """Create an SR that looks like the one created on the local disk by
+    default by the XenServer installer.  Do this one per host."""
+    for host_ref in _db_content['host'].keys():
+        _create_local_sr(host_ref)
+
+
+def _create_local_sr(host_ref):
+    sr_ref = _create_object('SR', {
+        'name_label': 'Local storage',
+        'type': 'lvm',
+        'content_type': 'user',
+        'shared': False,
+        'physical_size': str(1 << 30),
+        'physical_utilisation': str(0),
+        'virtual_allocation': str(0),
+        'other_config': {
+            'i18n-original-value-name_label': 'Local storage',
+            'i18n-key': 'local-storage',
+            },
+        'VDIs': []
+        })
+    pbd_ref = create_pbd('', host_ref, sr_ref, True)
+    _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
+    return sr_ref
 
 
 def _create_object(table, obj):
@@ -136,9 +217,10 @@ def _create_sr(table, obj):
     # Forces fake to support iscsi only
     if sr_type != 'iscsi':
         raise Failure(['SR_UNKNOWN_DRIVER', sr_type])
+    host_ref = _db_content['host'].keys()[0]
     sr_ref = _create_object(table, obj[2])
     vdi_ref = create_vdi('', False, sr_ref, False)
-    pbd_ref = create_pbd('', sr_ref, True)
+    pbd_ref = create_pbd('', host_ref, sr_ref, True)
     _db_content['SR'][sr_ref]['VDIs'] = [vdi_ref]
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     _db_content['VDI'][vdi_ref]['SR'] = sr_ref
@@ -190,6 +272,20 @@ class SessionBase(object):
     def __init__(self, uri):
         self._session = None
 
+    def VBD_plug(self, _1, ref):
+        rec = get_record('VBD', ref)
+        if rec['currently_attached']:
+            raise Failure(['DEVICE_ALREADY_ATTACHED', ref])
+        rec['currently_attached'] = True
+        rec['device'] = rec['userdevice']
+
+    def VBD_unplug(self, _1, ref):
+        rec = get_record('VBD', ref)
+        if not rec['currently_attached']:
+            raise Failure(['DEVICE_ALREADY_DETACHED', ref])
+        rec['currently_attached'] = False
+        rec['device'] = ''
+
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
             self._login(methodname, params)
@@ -201,9 +297,9 @@ class SessionBase(object):
             full_params = (self._session,) + params
             meth = getattr(self, methodname, None)
             if meth is None:
-                logging.warn('Raising NotImplemented')
+                LOG.debug(_('Raising NotImplemented'))
                 raise NotImplementedError(
-                    'xenapi.fake does not have an implementation for %s' %
+                    _('xenapi.fake does not have an implementation for %s') %
                     methodname)
             return meth(*full_params)
 
@@ -235,16 +331,20 @@ class SessionBase(object):
         elif '.' in name:
             impl = getattr(self, name.replace('.', '_'))
             if impl is not None:
+
                 def callit(*params):
-                    logging.warn('Calling %s %s', name, impl)
+                    localname = name
+                    LOG.debug(_('Calling %(localname)s %(impl)s') % locals())
                     self._check_session(params)
                     return impl(*params)
                 return callit
         if self._is_gettersetter(name, True):
-            logging.warn('Calling getter %s', name)
+            LOG.debug(_('Calling getter %s'), name)
             return lambda *params: self._getter(name, params)
         elif self._is_create(name):
             return lambda *params: self._create(name, params)
+        elif self._is_destroy(name):
+            return lambda *params: self._destroy(name, params)
         else:
             return None
 
@@ -255,10 +355,16 @@ class SessionBase(object):
                 bits[1].startswith(getter and 'get_' or 'set_'))
 
     def _is_create(self, name):
+        return self._is_method(name, 'create')
+
+    def _is_destroy(self, name):
+        return self._is_method(name, 'destroy')
+
+    def _is_method(self, name, meth):
         bits = name.split('.')
         return (len(bits) == 2 and
                 bits[0] in _CLASSES and
-                bits[1] == 'create')
+                bits[1] == meth)
 
     def _getter(self, name, params):
         self._check_session(params)
@@ -276,11 +382,12 @@ class SessionBase(object):
             self._check_arg_count(params, 2)
             return get_record(cls, params[1])
 
-        if (func == 'get_by_name_label' or
-            func == 'get_by_uuid'):
+        if func in ('get_by_name_label', 'get_by_uuid'):
             self._check_arg_count(params, 2)
+            return_singleton = (func == 'get_by_uuid')
             return self._get_by_field(
-                _db_content[cls], func[len('get_by_'):], params[1])
+                _db_content[cls], func[len('get_by_'):], params[1],
+                return_singleton=return_singleton)
 
         if len(params) == 2:
             field = func[len('get_'):]
@@ -290,10 +397,10 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 return _db_content[cls][ref][field]
 
-        logging.error('Raising NotImplemented')
+        LOG.debuug(_('Raising NotImplemented'))
         raise NotImplementedError(
-            'xenapi.fake does not have an implementation for %s or it has '
-            'been called with the wrong number of arguments' % name)
+            _('xenapi.fake does not have an implementation for %s or it has '
+            'been called with the wrong number of arguments') % name)
 
     def _setter(self, name, params):
         self._check_session(params)
@@ -308,7 +415,7 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 _db_content[cls][ref][field] = val
 
-        logging.warn('Raising NotImplemented')
+        LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
             'xenapi.fake does not have an implementation for %s or it has '
             'been called with the wrong number of arguments or the database '
@@ -323,6 +430,12 @@ class SessionBase(object):
         (cls, _) = name.split('.')
         ref = is_sr_create and \
             _create_sr(cls, params) or _create_object(cls, params[1])
+
+        # Call hook to provide any fixups needed (ex. creating backrefs)
+        after_hook = 'after_%s_create' % cls
+        if after_hook in globals():
+            globals()[after_hook](ref, params[1])
+
         obj = get_record(cls, ref)
 
         # Add RO fields
@@ -330,6 +443,15 @@ class SessionBase(object):
             obj['power_state'] = 'Halted'
 
         return ref
+
+    def _destroy(self, name, params):
+        self._check_session(params)
+        self._check_arg_count(params, 2)
+        table, _ = name.split('.')
+        ref = params[1]
+        if ref not in _db_content[table]:
+            raise Failure(['HANDLE_INVALID', table, ref])
+        del _db_content[table][ref]
 
     def _async(self, name, params):
         task_ref = create_task(name)
@@ -349,7 +471,7 @@ class SessionBase(object):
             self._session not in _db_content['session']):
             raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
-            logging.warn('Raising NotImplemented')
+            LOG.debug(_('Raising NotImplemented'))
             raise NotImplementedError('Call to XenAPI without using .xenapi')
 
     def _check_arg_count(self, params, expected):
@@ -358,11 +480,18 @@ class SessionBase(object):
             raise Failure(['MESSAGE_PARAMETER_COUNT_MISMATCH',
                                   expected, actual])
 
-    def _get_by_field(self, recs, k, v):
+    def _get_by_field(self, recs, k, v, return_singleton):
         result = []
         for ref, rec in recs.iteritems():
             if rec.get(k) == v:
                 result.append(ref)
+
+        if return_singleton:
+            try:
+                return result[0]
+            except IndexError:
+                raise Failure(['UUID_INVALID', v, result, recs, k])
+
         return result
 
 

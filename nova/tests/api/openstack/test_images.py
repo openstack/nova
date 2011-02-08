@@ -22,7 +22,6 @@ and as a WSGI layer
 
 import json
 import datetime
-import logging
 import unittest
 
 import stubout
@@ -50,7 +49,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'serverId': None,
+                   'instance_id': None,
                    'progress': None}
 
         num_images = len(self.service.index(self.context))
@@ -67,7 +66,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'serverId': None,
+                   'instance_id': None,
                    'progress': None}
 
         num_images = len(self.service.index(self.context))
@@ -87,7 +86,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'serverId': None,
+                   'instance_id': None,
                    'progress': None}
 
         id = self.service.create(self.context, fixture)
@@ -105,13 +104,13 @@ class BaseImageServiceTests(object):
                      'updated': None,
                      'created': None,
                      'status': None,
-                     'serverId': None,
+                     'instance_id': None,
                      'progress': None},
                     {'name': 'test image 2',
                      'updated': None,
                      'created': None,
                      'status': None,
-                     'serverId': None,
+                     'instance_id': None,
                      'progress': None}]
 
         num_images = len(self.service.index(self.context))
@@ -144,6 +143,7 @@ class LocalImageServiceTest(unittest.TestCase,
 
     def tearDown(self):
         self.service.delete_all()
+        self.service.delete_imagedir()
         self.stubs.UnsetAll()
 
 
@@ -155,6 +155,7 @@ class GlanceImageServiceTest(unittest.TestCase,
     def setUp(self):
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_glance(self.stubs)
+        fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(None, None)
@@ -172,6 +173,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
+         'imageId': '23g2ogk23k4hhkk4k42l',
          'name': 'public image #1',
          'created_at': str(datetime.datetime.utcnow()),
          'updated_at': str(datetime.datetime.utcnow()),
@@ -181,6 +183,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
          'status': 'available',
          'image_type': 'kernel'},
         {'id': 'slkduhfas73kkaskgdas',
+         'imageId': 'slkduhfas73kkaskgdas',
          'name': 'public image #2',
          'created_at': str(datetime.datetime.utcnow()),
          'updated_at': str(datetime.datetime.utcnow()),
@@ -208,7 +211,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')
-        res = req.get_response(nova.api.API('os'))
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
         fixture_index = [dict(id=f['id'], name=f['name']) for f
@@ -220,9 +223,23 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
 
     def test_get_image_details(self):
         req = webob.Request.blank('/v1.0/images/detail')
-        res = req.get_response(nova.api.API('os'))
+        res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
+        def _is_equivalent_subset(x, y):
+            if set(x) <= set(y):
+                for k, v in x.iteritems():
+                    if x[k] != y[k]:
+                        if x[k] == 'active' and y[k] == 'available':
+                            continue
+                        return False
+                return True
+            return False
+
         for image in res_dict['images']:
-            self.assertEquals(1, self.IMAGE_FIXTURES.count(image),
-                              "image %s not in fixtures!" % str(image))
+            for image_fixture in self.IMAGE_FIXTURES:
+                if _is_equivalent_subset(image, image_fixture):
+                    break
+            else:
+                self.assertEquals(1, 2, "image %s not in fixtures!" %
+                                                            str(image))

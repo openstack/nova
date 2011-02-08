@@ -22,7 +22,6 @@ No fan-out support yet.
 """
 
 import json
-import logging
 import sys
 import time
 import traceback
@@ -36,13 +35,12 @@ from nova import context
 from nova import exception
 from nova import fakerabbit
 from nova import flags
+from nova import log as logging
 from nova import utils
 
 
 FLAGS = flags.FLAGS
-
-LOG = logging.getLogger('amqplib')
-LOG.setLevel(logging.DEBUG)
+LOG = logging.getLogger('nova.rpc')
 
 
 class Connection(carrot_connection.BrokerConnection):
@@ -91,15 +89,17 @@ class Consumer(messaging.Consumer):
                 self.failed_connection = False
                 break
             except:  # Catching all because carrot sucks
-                logging.exception(_("AMQP server on %s:%d is unreachable."
-                    " Trying again in %d seconds.") % (
-                    FLAGS.rabbit_host,
-                    FLAGS.rabbit_port,
-                    FLAGS.rabbit_retry_interval))
+                fl_host = FLAGS.rabbit_host
+                fl_port = FLAGS.rabbit_port
+                fl_intv = FLAGS.rabbit_retry_interval
+                LOG.exception(_("AMQP server on %(fl_host)s:%(fl_port)d is"
+                        " unreachable. Trying again in %(fl_intv)d seconds.")
+                        % locals())
                 self.failed_connection = True
         if self.failed_connection:
-            logging.exception(_("Unable to connect to AMQP server"
-                " after %d tries. Shutting down.") % FLAGS.rabbit_max_retries)
+            LOG.exception(_("Unable to connect to AMQP server "
+                          "after %d tries. Shutting down."),
+                          FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
@@ -116,14 +116,14 @@ class Consumer(messaging.Consumer):
                 self.declare()
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
             if self.failed_connection:
-                logging.error(_("Reconnected to queue"))
+                LOG.error(_("Reconnected to queue"))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
         #             exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
         except Exception:  # pylint: disable-msg=W0703
             if not self.failed_connection:
-                logging.exception(_("Failed to fetch message from queue"))
+                LOG.exception(_("Failed to fetch message from queue"))
                 self.failed_connection = True
 
     def attach_to_eventlet(self):
@@ -153,7 +153,7 @@ class TopicConsumer(Consumer):
 class AdapterConsumer(TopicConsumer):
     """Calls methods on a proxy object based on method and args"""
     def __init__(self, connection=None, topic="broadcast", proxy=None):
-        LOG.debug(_('Initing the Adapter Consumer for %s') % (topic))
+        LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
         self.proxy = proxy
         super(AdapterConsumer, self).__init__(connection=connection,
                                               topic=topic)
@@ -168,7 +168,7 @@ class AdapterConsumer(TopicConsumer):
 
         Example: {'method': 'echo', 'args': {'value': 42}}
         """
-        LOG.debug(_('received %s') % (message_data))
+        LOG.debug(_('received %s') % message_data)
         msg_id = message_data.pop('_msg_id', None)
 
         ctxt = _unpack_context(message_data)
@@ -181,7 +181,7 @@ class AdapterConsumer(TopicConsumer):
             #             messages stay in the queue indefinitely, so for now
             #             we just log the message and send an error string
             #             back to the caller
-            LOG.warn(_('no method for message: %s') % (message_data))
+            LOG.warn(_('no method for message: %s') % message_data)
             msg_reply(msg_id, _('No method for message: %s') % message_data)
             return
 
@@ -193,6 +193,7 @@ class AdapterConsumer(TopicConsumer):
             if msg_id:
                 msg_reply(msg_id, rval, None)
         except Exception as e:
+            logging.exception("Exception during message handling")
             if msg_id:
                 msg_reply(msg_id, None, sys.exc_info())
         return
@@ -242,8 +243,8 @@ def msg_reply(msg_id, reply=None, failure=None):
     if failure:
         message = str(failure[1])
         tb = traceback.format_exception(*failure)
-        logging.error(_("Returning exception %s to caller"), message)
-        logging.error(tb)
+        LOG.error(_("Returning exception %s to caller"), message)
+        LOG.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
     conn = Connection.instance(True)
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)
@@ -343,7 +344,7 @@ def call(context, topic, msg):
 
 def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
-    LOG.debug("Making asynchronous cast...")
+    LOG.debug(_("Making asynchronous cast..."))
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)

@@ -21,16 +21,17 @@ import subprocess
 
 from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
-from sphinx.setup_command import BuildDoc
 
 from nova.utils import parse_mailmap, str_dict_replace
+from nova import version
 
-class local_BuildDoc(BuildDoc):
-    def run(self):
-        for builder in ['html', 'man']:
-            self.builder = builder
-            self.finalize_options()
-            BuildDoc.run(self)
+if os.path.isdir('.bzr'):
+    with open("nova/vcsversion.py", 'w') as version_file:
+        vcs_cmd = subprocess.Popen(["bzr", "version-info", "--python"],
+                                   stdout=subprocess.PIPE)
+        vcsversion = vcs_cmd.communicate()[0]
+        version_file.write(vcsversion)
+
 
 class local_sdist(sdist):
     """Customized sdist hook - builds the ChangeLog file from VC first"""
@@ -47,25 +48,53 @@ class local_sdist(sdist):
             with open("ChangeLog", "w") as changelog_file:
                 changelog_file.write(str_dict_replace(changelog, mailmap))
         sdist.run(self)
+nova_cmdclass = {'sdist': local_sdist}
+
+
+try:
+    from sphinx.setup_command import BuildDoc
+
+    class local_BuildDoc(BuildDoc):
+        def run(self):
+            for builder in ['html', 'man']:
+                self.builder = builder
+                self.finalize_options()
+                BuildDoc.run(self)
+    nova_cmdclass['build_sphinx'] = local_BuildDoc
+
+except:
+    pass
+
+
+try:
+    from babel.messages import frontend as babel
+    nova_cmdclass['compile_catalog'] = babel.compile_catalog
+    nova_cmdclass['extract_messages'] = babel.extract_messages
+    nova_cmdclass['init_catalog'] = babel.init_catalog
+    nova_cmdclass['update_catalog'] = babel.update_catalog
+except:
+    pass
 
 setup(name='nova',
-      version='2011.1',
+      version=version.canonical_version_string(),
       description='cloud computing fabric controller',
       author='OpenStack',
       author_email='nova@lists.launchpad.net',
       url='http://www.openstack.org/',
-      cmdclass={ 'sdist': local_sdist,
-                 'build_sphinx' : local_BuildDoc },
+      cmdclass=nova_cmdclass,
       packages=find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
+      test_suite='nose.collector',
       scripts=['bin/nova-api',
                'bin/nova-compute',
                'bin/nova-dhcpbridge',
                'bin/nova-import-canonical-imagestore',
                'bin/nova-instancemonitor',
+               'bin/nova-logspool',
                'bin/nova-manage',
                'bin/nova-network',
                'bin/nova-objectstore',
                'bin/nova-scheduler',
+               'bin/nova-spoolsentry',
                'bin/nova-volume',
                'tools/nova-debug'])

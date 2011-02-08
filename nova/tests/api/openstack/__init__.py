@@ -15,18 +15,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob.dec
 import unittest
 
-from nova.api.openstack import limited
-from nova.api.openstack import RateLimitingMiddleware
-from nova.tests.api.fakes import APIStub
+from nova import context
+from nova import flags
+from nova.api.openstack.ratelimiting import RateLimitingMiddleware
+from nova.api.openstack.common import limited
+from nova.tests.api.openstack import fakes
 from webob import Request
+
+FLAGS = flags.FLAGS
+
+
+@webob.dec.wsgify
+def simple_wsgi(req):
+    return ""
 
 
 class RateLimitingMiddlewareTest(unittest.TestCase):
 
     def test_get_action_name(self):
-        middleware = RateLimitingMiddleware(APIStub())
+        middleware = RateLimitingMiddleware(simple_wsgi)
 
         def verify(method, url, action_name):
             req = Request.blank(url)
@@ -46,6 +56,8 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
     def exhaust(self, middleware, method, url, username, times):
         req = Request.blank(url, dict(REQUEST_METHOD=method),
                             headers={'X-Auth-User': username})
+        req.environ['nova.context'] = context.RequestContext(username,
+                            username)
         for i in range(times):
             resp = req.get_response(middleware)
             self.assertEqual(resp.status_int, 200)
@@ -54,19 +66,19 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         self.assertTrue('Retry-After' in resp.headers)
 
     def test_single_action(self):
-        middleware = RateLimitingMiddleware(APIStub())
+        middleware = RateLimitingMiddleware(simple_wsgi)
         self.exhaust(middleware, 'DELETE', '/servers/4', 'usr1', 100)
         self.exhaust(middleware, 'DELETE', '/servers/4', 'usr2', 100)
 
     def test_POST_servers_action_implies_POST_action(self):
-        middleware = RateLimitingMiddleware(APIStub())
+        middleware = RateLimitingMiddleware(simple_wsgi)
         self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
         self.exhaust(middleware, 'POST', '/images/4', 'usr2', 10)
-        self.assertTrue(set(middleware.limiter._levels) ==
+        self.assertTrue(set(middleware.limiter._levels) == \
                         set(['usr1:POST', 'usr1:POST servers', 'usr2:POST']))
 
     def test_POST_servers_action_correctly_ratelimited(self):
-        middleware = RateLimitingMiddleware(APIStub())
+        middleware = RateLimitingMiddleware(simple_wsgi)
         # Use up all of our "POST" allowance for the minute, 5 times
         for i in range(5):
             self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 10)
@@ -76,9 +88,9 @@ class RateLimitingMiddlewareTest(unittest.TestCase):
         self.exhaust(middleware, 'POST', '/servers/4', 'usr1', 0)
 
     def test_proxy_ctor_works(self):
-        middleware = RateLimitingMiddleware(APIStub())
+        middleware = RateLimitingMiddleware(simple_wsgi)
         self.assertEqual(middleware.limiter.__class__.__name__, "Limiter")
-        middleware = RateLimitingMiddleware(APIStub(), service_host='foobar')
+        middleware = RateLimitingMiddleware(simple_wsgi, service_host='foobar')
         self.assertEqual(middleware.limiter.__class__.__name__, "WSGIAppProxy")
 
 

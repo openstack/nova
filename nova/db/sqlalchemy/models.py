@@ -22,7 +22,7 @@ SQLAlchemy models for nova data.
 import datetime
 
 from sqlalchemy.orm import relationship, backref, object_mapper
-from sqlalchemy import Column, Integer, Float, String, schema
+from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.declarative import declarative_base
@@ -90,53 +90,14 @@ class NovaBase(object):
             setattr(self, k, v)
 
     def iteritems(self):
-        """Make the model object behave like a dict"""
-        return iter(self)
+        """Make the model object behave like a dict.
 
-
-# TODO(vish): Store images in the database instead of file system
-#class Image(BASE, NovaBase):
-#    """Represents an image in the datastore"""
-#    __tablename__ = 'images'
-#    id = Column(Integer, primary_key=True)
-#    ec2_id = Column(String(12), unique=True)
-#    user_id = Column(String(255))
-#    project_id = Column(String(255))
-#    image_type = Column(String(255))
-#    public = Column(Boolean, default=False)
-#    state = Column(String(255))
-#    location = Column(String(255))
-#    arch = Column(String(255))
-#    default_kernel_id = Column(String(255))
-#    default_ramdisk_id = Column(String(255))
-#
-#    @validates('image_type')
-#    def validate_image_type(self, key, image_type):
-#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-#
-#    @validates('state')
-#    def validate_state(self, key, state):
-#        assert(state in ['available', 'pending', 'disabled'])
-#
-#    @validates('default_kernel_id')
-#    def validate_kernel_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#    @validates('default_ramdisk_id')
-#    def validate_ramdisk_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#
-# TODO(vish): To make this into its own table, we need a good place to
-#             create the host entries. In config somwhere? Or the first
-#             time any object sets host? This only becomes particularly
-#             important if we need to store per-host data.
-#class Host(BASE, NovaBase):
-#    """Represents a host where services are running"""
-#    __tablename__ = 'hosts'
-#    id = Column(String(255), primary_key=True)
+        Includes attributes from joins."""
+        local = dict(self)
+        joined = dict([(k, v) for k, v in self.__dict__.iteritems()
+                      if not k[0] == '_'])
+        local.update(joined)
+        return local.iteritems()
 
 
 class Service(BASE, NovaBase):
@@ -149,6 +110,7 @@ class Service(BASE, NovaBase):
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
     disabled = Column(Boolean, default=False)
+    availability_zone = Column(String(255), default='nova')
 
 
 class Certificate(BASE, NovaBase):
@@ -164,11 +126,13 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    id = Column(Integer, primary_key=True)
-    internal_id = Column(Integer, unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.instance_name_template % self.id
 
     admin_pass = Column(String(255))
-
     user_id = Column(String(255))
     project_id = Column(String(255))
 
@@ -179,10 +143,6 @@ class Instance(BASE, NovaBase):
     @property
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
-
-    @property
-    def name(self):
-        return "instance-%d" % self.internal_id
 
     image_id = Column(String(255))
     kernel_id = Column(String(255))
@@ -220,9 +180,13 @@ class Instance(BASE, NovaBase):
     launched_at = Column(DateTime)
     terminated_at = Column(DateTime)
 
+    availability_zone = Column(String(255))
+
     # User editable field for display in user-facing UIs
     display_name = Column(String(255))
     display_description = Column(String(255))
+
+    locked = Column(Boolean)
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -234,21 +198,6 @@ class Instance(BASE, NovaBase):
     #def validate_state(self, key, state):
     #    assert(state in ['nostate', 'running', 'blocked', 'paused',
     #                     'shutdown', 'shutoff', 'crashed'])
-
-
-class InstanceDiagnostics(BASE, NovaBase):
-    """Represents a guest VM's diagnostics"""
-    __tablename__ = "instance_diagnostics"
-    id = Column(Integer, primary_key=True)
-    instance_id = Column(Integer, ForeignKey('instances.id'))
-
-    memory_available = Column(Float)
-    memory_free = Column(Float)
-    cpu_load = Column(Float)
-    disk_read = Column(Float)
-    disk_write = Column(Float)
-    net_tx = Column(Float)
-    net_rx = Column(Float)
 
 
 class InstanceActions(BASE, NovaBase):
@@ -264,8 +213,11 @@ class InstanceActions(BASE, NovaBase):
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
-    id = Column(Integer, primary_key=True)
-    ec2_id = Column(String(12), unique=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.volume_name_template % self.id
 
     user_id = Column(String(255))
     project_id = Column(String(255))
@@ -290,10 +242,6 @@ class Volume(BASE, NovaBase):
 
     display_name = Column(String(255))
     display_description = Column(String(255))
-
-    @property
-    def name(self):
-        return self.ec2_id
 
 
 class Quota(BASE, NovaBase):
@@ -363,10 +311,14 @@ class SecurityGroup(BASE, NovaBase):
                              secondary="security_group_instance_association",
                              primaryjoin='and_('
         'SecurityGroup.id == '
-            'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.deleted == False,'
         'SecurityGroup.deleted == False)',
                              secondaryjoin='and_('
         'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
+        # (anthony) the condition below shouldn't be necessary now that the
+        # association is being marked as deleted.  However, removing this
+        # may cause existing deployments to choke, so I'm leaving it
         'Instance.deleted == False)',
                              backref='security_groups')
 
@@ -424,6 +376,10 @@ class Network(BASE, NovaBase):
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
+    cidr_v6 = Column(String(255), unique=True)
+
+    ra_server = Column(String(255))
+
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -452,7 +408,7 @@ class AuthToken(BASE, NovaBase):
     """
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
-    user_id = Column(Integer)
+    user_id = Column(String(255))
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
@@ -554,18 +510,44 @@ class FloatingIp(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
+class ConsolePool(BASE, NovaBase):
+    """Represents pool of consoles on the same physical node."""
+    __tablename__ = 'console_pools'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    username = Column(String(255))
+    password = Column(String(255))
+    console_type = Column(String(255))
+    public_hostname = Column(String(255))
+    host = Column(String(255))
+    compute_host = Column(String(255))
+
+
+class Console(BASE, NovaBase):
+    """Represents a console session for an instance."""
+    __tablename__ = 'consoles'
+    id = Column(Integer, primary_key=True)
+    instance_name = Column(String(255))
+    instance_id = Column(Integer)
+    password = Column(String(255))
+    port = Column(Integer, nullable=True)
+    pool_id = Column(Integer, ForeignKey('console_pools.id'))
+    pool = relationship(ConsolePool, backref=backref('consoles'))
+
+
 def register_models():
     """Register Models and create metadata.
 
     Called from nova.db.sqlalchemy.__init__ as part of loading the driver,
-    it will never need to be called explicitly elsewhere.
+    it will never need to be called explicitly elsewhere unless the
+    connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceDiagnostics, InstanceActions,
+    models = (Service, Instance, InstanceActions,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate)  # , Image, Host
+              Project, Certificate, ConsolePool, Console)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
