@@ -180,7 +180,7 @@ def ensure_vlan(vlan_num):
         LOG.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
-        _execute("sudo ifconfig %s up" % interface)
+        _execute("sudo ip link set %s up" % interface)
     return interface
 
 
@@ -195,17 +195,17 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         if interface:
             _execute("sudo brctl addif %s %s" % (bridge, interface))
     if net_attrs:
-        _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                (bridge,
-                 net_attrs['gateway'],
-                 net_attrs['broadcast'],
-                 net_attrs['netmask']))
+        _execute("sudo ip addr add %s/%s dev %s broadcast %s" % \
+                 (net_attrs['gateway'],
+                 net_attrs['netmask'],
+                 bridge,
+                 net_attrs['broadcast']))
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
-            _execute("sudo ifconfig %s up" % bridge)
+            _execute("sudo ip link set %s up" % bridge)
     else:
-        _execute("sudo ifconfig %s up" % bridge)
+        _execute("sudo ip link set %s up" % bridge)
     if FLAGS.use_nova_chains:
         (out, err) = _execute("sudo iptables -N nova_forward",
                               check_exit_code=False)
@@ -333,7 +333,8 @@ def _execute(cmd, *args, **kwargs):
 
 def _device_exists(device):
     """Check if ethernet device exists"""
-    (_out, err) = _execute("ifconfig %s" % device, check_exit_code=False)
+    (_out, err) = _execute("ip link show dev %s" % device,
+                           check_exit_code=False)
     return not err
 
 
