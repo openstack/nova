@@ -27,10 +27,11 @@ meta = MetaData()
 #
 
 migrations = Table('migrations', meta,
-          Column('source_host', String(255))
-          Column('dest_host', String(255))
-          Column('instance_id', Integer, ForeignKey('instances.id'), nullable=True)
-          Column('status', String(255))
+            Column('source_host', String(255)),
+            Column('dest_host', String(255)),
+            Column('instance_id', Integer, ForeignKey('instances.id'),
+                nullable=True),
+            Column('status', String(255))
       )
 
 def upgrade(migrate_engine):
