@@ -2044,10 +2044,13 @@ def instance_type_get_all(context):
                     filter_by(deleted=0).\
                     order_by("name").\
                     all()
-    inst_dict = {}
-    for i in inst_types:
-        inst_dict[i['name']] = dict(i)
-    return inst_dict
+    if inst_types:
+        inst_dict = {}
+        for i in inst_types:
+            inst_dict[i['name']] = dict(i)
+        return inst_dict
+    else:
+        raise exception.NotFound
 
 
 @require_context
@@ -2057,7 +2060,10 @@ def instance_type_get_by_name(context, name):
     inst_type = session.query(models.InstanceTypes).\
                     filter_by(name=name).\
                     first()
-    return dict(inst_type)
+    if not inst_type:
+        raise exception.NotFound(_("No instance type with name %s") % name)
+    else:
+        return dict(inst_type)
 
 
 @require_context
@@ -2067,7 +2073,10 @@ def instance_type_get_by_flavor_id(context, id):
     inst_type = session.query(models.InstanceTypes).\
                                     filter_by(flavorid=int(id)).\
                                     first()
-    return dict(inst_type)
+    if not inst_type:
+        raise exception.NotFound(_("No flavor with name %s") % id)
+    else:
+        return dict(inst_type)
 
 
 @require_admin_context
@@ -2077,4 +2086,7 @@ def instance_type_destroy(context, name):
     instance_type_ref = session.query(models.InstanceTypes).\
                     filter_by(name=name)
     rows = instance_type_ref.update(dict(deleted=1))
-    return rows
+    if not rows:
+        raise exception.NotFound(_("Couldn't delete instance type %s") % name)
+    else:
+        return rows

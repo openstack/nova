@@ -617,49 +617,62 @@ class InstanceTypeCommands(object):
            arguments: name memory_mb vcpus local_gb"""
         # FIXME(kpepple) check for absurb arguments (?)
         for option in [memory, flavorid, local_gb, vcpus]:
-            if option <= 0:
+            if (option <= 0) or (option.__class__ == int):
                 print "Instance type parameters must be positive \
-                        numbers: %s" % option
+                        integers: %s" % option
                 sys.exit(1)
-        db.instance_type_create(context.get_admin_context(),
+        try:
+            db.instance_type_create(context.get_admin_context(),
                                 dict(name=name, memory_mb=memory,
                                 vcpus=vcpus, local_gb=local_gb,
                                 flavorid=flavorid))
-        print "%s created" % name
-        return
+            print "%s created" % name
+        except exception.DBError, e:
+            print "%s is already a defined instance types" % name
+            sys.exit(1)
+        except:
+            print "Unknown error"
+            sys.exit(1)
 
     def delete(self, name):
         """Marks instance types / flavors as deleted
         arguments: name"""
         if name == None:
             print "Instance type name must be supplied"
-            exit(1)
+            sys.exit(1)
         else:
-            records = db.instance_type_destroy(context.get_admin_context(),\
-                                                name)
-            if records != 1:
+            try:
+                records = db.instance_type_destroy(
+                                            context.get_admin_context(),
+                                            name)
+            except exception.NotFound, e:
                 sys.exit(1)
-        return
 
     def list(self, name=None):
         """Lists all instance types / flavors
         arguments: [name]"""
         ctxt = context.get_admin_context()
         if name == None:
-            instance_types = db.instance_type_get_all(ctxt)
-            if len(instance_types) < 1:
+            try:
+                instance_types = db.instance_type_get_all(ctxt)
+                if len(instance_types) < 1:
+                    sys.exit(1)
+                for k, v in instance_types.iteritems():
+                    print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
+                        (k, v["memory_mb"],
+                         v["vcpus"], v["local_gb"])
+            except exception.NotFound, e:
+                print e
                 sys.exit(1)
-            for k, v in instance_types.iteritems():
-                print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
-                    (k, v["memory_mb"],
-                     v["vcpus"], v["local_gb"])
         else:
-            instance_types = db.instance_type_get_by_name(ctxt, name)
-            print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
-                (instance_types["name"], instance_types["memory_mb"],
-                 instance_types["vcpus"], instance_types["local_gb"])
-
-        return
+            try:
+                instance_types = db.instance_type_get_by_name(ctxt, name)
+                print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
+                    (instance_types["name"], instance_types["memory_mb"],
+                     instance_types["vcpus"], instance_types["local_gb"])
+            except exception.NotFound, e:
+                print e
+                sys.exit(1)
 
 
 CATEGORIES = [
