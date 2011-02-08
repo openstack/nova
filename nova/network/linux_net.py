@@ -38,6 +38,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
+flags.DEFINE_string('dhcp_domain',
+                    'novalocal',
+                    'domain to use for building the hostnames')
 
 flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
@@ -178,7 +181,7 @@ def ensure_vlan(vlan_num):
         LOG.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
-        _execute("sudo ifconfig %s up" % interface)
+        _execute("sudo ip link set %s up" % interface)
     return interface
 
 
@@ -190,7 +193,7 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
-        _execute("sudo ifconfig %s up" % bridge)
+        _execute("sudo ip link set %s up" % bridge)
     if set_ip:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
@@ -210,7 +213,7 @@ def ensure_bridge(bridge, interface, net_attrs, set_ip=False):
         #             bridge, then the bridge has to be in promiscuous
         #             to forward packets properly.
         if(FLAGS.public_interface == bridge):
-            _execute("sudo ifconfig %s promisc" % bridge)
+            _execute("sudo ip link set dev %s promisc on" % bridge)
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
@@ -348,8 +351,9 @@ interface %s
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address"""
     instance_ref = fixed_ip_ref['instance']
-    return "%s,%s.novalocal,%s" % (instance_ref['mac_address'],
+    return "%s,%s.%s,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
+                                   FLAGS.dhcp_domain,
                                    fixed_ip_ref['address'])
 
 
@@ -364,7 +368,8 @@ def _execute(cmd, *args, **kwargs):
 
 def _device_exists(device):
     """Check if ethernet device exists"""
-    (_out, err) = _execute("ifconfig %s" % device, check_exit_code=False)
+    (_out, err) = _execute("ip link show dev %s" % device,
+                           check_exit_code=False)
     return not err
 
 
@@ -394,6 +399,7 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
+           ' --domain=%s' % FLAGS.dhcp_domain,
            ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
