@@ -66,7 +66,14 @@ class VMOps(object):
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
-
+        #ensure enough free memory, otherwise don't bother
+        if not VMHelper.ensure_free_mem(self._session,instance):
+                LOG.exception(_('instance %s: not enough free memory'),
+                              instance['name'])
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                return 
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
         network_ref = \
