@@ -588,7 +588,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                              'AND instance_id IS NOT NULL '
                              'AND allocated = 0',
                     {'host': host,
-                     'time': time.isoformat()})
+                     'time': time})
     return result.rowcount
 
 

@@ -87,7 +87,7 @@ class VolumeManager(manager.Manager):
             if volume['status'] in ['available', 'in-use']:
                 self.driver.ensure_export(ctxt, volume)
             else:
-                LOG.info(_("volume %s: skipping export"), volume_ref['name'])
+                LOG.info(_("volume %s: skipping export"), volume['name'])
 
     def create_volume(self, context, volume_id):
         """Creates and exports the volume."""
