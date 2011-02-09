@@ -445,7 +445,7 @@ class VMHelper(HelperBase):
         if 'PV_kernel' in vm_rec and 'PV_ramdisk' in vm_rec:
             return (vm_rec['PV_kernel'], vm_rec['PV_ramdisk'])
         else:
-            return (None, None) 
+            return (None, None)
 
     @classmethod
     def compile_info(cls, record):
