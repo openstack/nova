@@ -187,6 +187,7 @@ def ssh_execute(ssh, cmd, process_input=None,
 
     return (stdout, stderr)
 
+
 def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
 

@@ -42,6 +42,7 @@ flags.DEFINE_string('san_password', '',
 flags.DEFINE_string('san_privatekey', '',
                     'Filename of private key to use for SSH authentication')
 
+
 class SanISCSIDriver(ISCSIDriver):
     """ Base class for SAN-style storage volumes
         (storage providers we access over SSH)"""
@@ -68,7 +69,8 @@ class SanISCSIDriver(ISCSIDriver):
                                   volume_name)
 
         iscsi_portal = location.split(",")[0]
-        LOG.debug("iscsi_name=%s, iscsi_portal=%s" % (iscsi_name, iscsi_portal))
+        LOG.debug("iscsi_name=%s, iscsi_portal=%s" %
+                  (iscsi_name, iscsi_portal))
         return (iscsi_name, iscsi_portal)
 
     def _build_iscsi_target_name(self, volume):
@@ -89,7 +91,9 @@ class SanISCSIDriver(ISCSIDriver):
             privatekeyfile = os.path.expanduser(FLAGS.san_privatekey)
             # It sucks that paramiko doesn't support DSA keys
             privatekey = paramiko.RSAKey.from_private_key_file(privatekeyfile)
-            ssh.connect(FLAGS.san_ip, username=FLAGS.san_login, pkey=privatekey)
+            ssh.connect(FLAGS.san_ip,
+            username=FLAGS.san_login,
+            pkey=privatekey)
         else:
             raise exception.Error("Specify san_password or san_privatekey")
         return ssh
@@ -125,6 +129,7 @@ class SanISCSIDriver(ISCSIDriver):
         if not (FLAGS.san_ip):
             raise exception.Error("san_ip must be set")
 
+
 def _collect_lines(data):
     """ Split lines from data into an array, trimming them """
     matches = []
@@ -133,6 +138,7 @@ def _collect_lines(data):
         matches.append(match)
 
     return matches
+
 
 def _get_prefixed_values(data, prefix):
     """Collect lines which start with prefix; with trimming"""
@@ -145,6 +151,7 @@ def _get_prefixed_values(data, prefix):
             matches.append(match)
 
     return matches
+
 
 class SolarisISCSIDriver(SanISCSIDriver):
     """Executes commands relating to Solaris-hosted ISCSI volumes.
@@ -165,8 +172,8 @@ class SolarisISCSIDriver(SanISCSIDriver):
     """
 
     def _view_exists(self, luid):
-        (out, _err) = self._run_ssh("pfexec /usr/sbin/stmfadm list-view -l %s" %
-                                    (luid),
+        cmd = "pfexec /usr/sbin/stmfadm list-view -l %s" % (luid)
+        (out, _err) = self._run_ssh(cmd,
                                     check_exit_code=False)
         if "no views found" in out:
             return False
@@ -228,9 +235,6 @@ class SolarisISCSIDriver(SanISCSIDriver):
                       (thin_provision_arg,
                        sizestr,
                        zfs_poolname))
-
-        return { # 'target_ip': FLAGS.san_ip
-               }
 
     def _get_luid(self, volume):
         zfs_poolname = self._build_zfs_poolname(volume)
@@ -329,4 +333,3 @@ class SolarisISCSIDriver(SanISCSIDriver):
         if self._is_lu_created(volume):
             self._run_ssh("pfexec /usr/sbin/sbdadm delete-lu %s" %
                           (luid))
-
