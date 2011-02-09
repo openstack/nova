@@ -55,13 +55,15 @@ def destroy(name):
         return records
 
 
-def get_all_types():
-    """retrieves all instance_types"""
-    return db.instance_type_get_all(context.get_admin_context())
+def get_all_types(inactive=0):
+    """Retrieves non-deleted instance_types.
+    Pass true as argument if you want deleted instance types returned also."""
+    return db.instance_type_get_all(context.get_admin_context(), inactive)
 
 
 def get_all_flavors():
-    """retrieves all flavors. alias for instance_types.get_all_types()"""
+    """retrieves non-deleted flavors. alias for instance_types.get_all_types().
+    Pass true as argument if you want deleted instance types returned also."""
     return get_all_types(context.get_admin_context())
 
 
@@ -79,7 +81,7 @@ def get_instance_type(name):
 
 
 def get_by_type(instance_type):
-    """retrieve instance_type details"""
+    """retrieve instance type name"""
     if instance_type is None:
         return FLAGS.default_instance_type
     try:
@@ -92,7 +94,7 @@ def get_by_type(instance_type):
 
 
 def get_by_flavor_id(flavor_id):
-    """retrieve instance_type's name by flavor_id"""
+    """retrieve instance type's name by flavor_id"""
     if flavor_id is None:
         return FLAGS.default_instance_type
     try:
