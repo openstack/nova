@@ -612,7 +612,7 @@ class LibvirtConnection(object):
                           user=user,
                           project=project,
                           size=size)
-        type_data = test.INSTANCE_TYPES[inst['instance_type']]
+        type_data = instance_types.get_instance_type([inst['instance_type']])
 
         if type_data['local_gb']:
             self._cache_image(fn=self._create_local,
@@ -673,7 +673,8 @@ class LibvirtConnection(object):
                                              instance['id'])
         # FIXME(vish): stick this in db
         instance_type = instance['instance_type']
-        instance_type = test.INSTANCE_TYPES[instance_type]
+        # instance_type = test.INSTANCE_TYPES[instance_type]
+        instance_type = instance_types.get_instance_type(instance_type)
         ip_address = db.instance_get_fixed_address(context.get_admin_context(),
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.

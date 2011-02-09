@@ -31,7 +31,6 @@ import glance.client
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import test
 from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
@@ -83,7 +82,8 @@ class VMHelper(HelperBase):
         the pv_kernel flag indicates whether the guest is HVM or PV
         """
 
-        instance_type = test.INSTANCE_TYPES[instance.instance_type]
+        instance_type = instance_types.\
+                                get_instance_type(instance.instance_type)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
