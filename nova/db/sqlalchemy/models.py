@@ -369,6 +369,7 @@ class KeyPair(BASE, NovaBase):
 class Migration(BASE, NovaBase):
     """Represents a running host-to-host migration."""
     __tablename__ = 'migrations'
+    id = Column(Integer, primary_key=True, nullable=False)
     source_host = Column(String(255))
     dest_host = Column(String(255))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)

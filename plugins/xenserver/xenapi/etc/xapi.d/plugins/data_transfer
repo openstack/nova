@@ -21,6 +21,7 @@ XenAPI Plugin for transfering data between host nodes
 """
 
 import os.path
+import pickle
 import subprocess
 
 import XenAPIPlugin
@@ -30,27 +31,23 @@ DEVNULL = '/dev/null'
 KEYSCAN = '/usr/bin/ssh-keyscan'
 RSYNC = '/usr/bin/rsync'
 
-def _key_scan_and_add(host):
-    """SSH scans a remote host and writes the SSH key out to known_hosts"""
-    # Touch the file if it doesn't yet exist
-    open(SSH_HOSTS, 'a').close()
 
-    null = open(DEVNULL, 'w')
-    known_hosts = open(SSH_HOSTS, 'a')
-    key = subprocess.Popen(['/usr/bin/ssh-keyscan', '-t', 'rsa', host],
-            stdout=subprocess.PIPE, stderr=null).communicate()[0].strip()
-    grep = subprocess.call(['/bin/grep', '-o', '%s' % key, SSH_HOSTS], 
-            stdout=null, stderr=null)
-    if grep == 1:
-        known_hosts.write(key)
-    null.close()
-    known_hosts.close()
-
-def transfer_file(host, file_path):
+def transfer_vhd(session, args):
     """Rsyncs a VHD to an adjacent host"""
-    _key_scan_and_add(host)
-    if subprocess.call([RSYNC, file_path, "%s:/root/" % host]) != 0:
+    params = pickle.dumps(args)
+    instance_id = params['instance_id']
+    host = params['host']
+    vdi_uuid = params['vdi_uuid']
+    sr_path = get_sr_path(session)
+    vhd_path = "%s.vhd" % vdi_uuid
+
+    source_path = "%s/%s" % (sr_path, vhd_path)
+    dest_path = '%s:/images/instance%d/' % (host, instance_id)
+    rsync_args = [['nohup', RSYNC, '-av', '--progress', 
+            '-e "ssh -o StrictHostKeyChecking=no"', source_path, dest_path]
+
+    if subprocess.call(rsync_args) != 0:
         raise Exception("Unexpected VHD transfer failure")
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'transfer_file': transfer_file})
+    XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd})

@@ -196,6 +196,26 @@ class VMOps(object):
             Glance.
         """
 
+        with self._get_snapshot(instance) as snapshot:
+            # call plugin to ship snapshot off to glance
+            VMHelper.upload_image(
+                self._session, instance.id, snapshot.vdi_uuids, image_id)
+
+        logging.debug(_("Finished snapshot and upload for VM %s"), instance)
+
+    def _get_snapshot(self, instance):
+        class Snapshot(object):
+            def __init__(self, virt, instance, vdis):
+                self.instance = instance
+                self.vdi_uuids = vdis
+                self.virt = virt
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, type, value, traceback):
+                self.virt._destroy(self.instance, self.vm_ref, shutdown=False)
+
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
@@ -204,29 +224,40 @@ class VMOps(object):
 
         label = "%s-snapshot" % instance.name
         try:
-            template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
+            _, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
+            return Snapshot(self, instance, template_vdi_uuids)
         except self.XenAPI.Failure, exc:
             logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
                     % locals())
             return
 
-        try:
-            # call plugin to ship snapshot off to glance
-            VMHelper.upload_image(
-                self._session, instance.id, template_vdi_uuids, image_id)
-        finally:
-            self._destroy(instance, template_vm_ref, shutdown=False)
-
-        logging.debug(_("Finished snapshot and upload for VM %s"), instance)
-
-    def transfer_disk(self, instance, dest):
+    def migrate_disk_and_power_off(self, instance, dest):
         """ Copies a VHD from one host machine to another
 
         :param instance: the instance that owns the VHD in question
         :param dest: the destination host machine
+        :param disk_type: values are 'primary' or 'cow'
         """
         vm_ref = VMHelper.lookup(self._session, instance.name)
+
+        # The primary VDI becomes the COW after the snapshot. We can figure
+        # this out from the VBD. The base copy is the parent_uuid returned
+        # from the snapshot creation
+        with self._get_snapshot(instance) as snapshot:
+            params = {'host':dest, 'vdi_uuid':snapshot.vdi_uuids[1]}
+            kwargs = {'params': pickle.dumps(params)}
+            self._session.async_call_plugin('data_transfer', 'transfer_vhd',
+                    kwargs)
+
+            # Now power down the instance and transfer the COW VHD
+            self._shutdown(instance, method='clean')
+
+            _, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+            params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid']}
+            kwargs = {'params': pickle.dumps(params)}
+            self._session.async_call_plugin('data_transfer', 'transfer_vhd',
+                    kwargs)
 
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """
