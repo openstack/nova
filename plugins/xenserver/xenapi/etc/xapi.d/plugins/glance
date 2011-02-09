@@ -138,8 +138,8 @@ def get_sr_path(session):
     return sr_path
 
 
-#TODO(sirp): both objectstore and glance need this, should this be refactored
-#into common lib
+#TODO(sirp): objectstore, migration and glance need this, should this be 
+# refactored into common lib
 def find_sr(session):
     host = get_this_host(session)
     srs = session.xenapi.SR.get_all()

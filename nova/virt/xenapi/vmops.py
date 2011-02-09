@@ -146,7 +146,7 @@ class VMOps(object):
         """
         vm = None
         try:
-            if instance_or_vm.startswith("OpaqueRef:"):
+            if instance_or_vm.startswith("OpaqueRef:")
                 # Got passed an opaque ref; return it
                 return instance_or_vm
             else:
@@ -241,23 +241,38 @@ class VMOps(object):
         """
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
-        # The primary VDI becomes the COW after the snapshot. We can figure
-        # this out from the VBD. The base copy is the parent_uuid returned
+        # The primary VDI becomes the COW after the snapshot, and we can
+        # identify it via the VBD. The base copy is the parent_uuid returned
         # from the snapshot creation
+
+        #TODO(mdietz): explicitly forcing the base_copy and cow names is
+        #pretty fugly
         with self._get_snapshot(instance) as snapshot:
-            params = {'host':dest, 'vdi_uuid':snapshot.vdi_uuids[1]}
-            kwargs = {'params': pickle.dumps(params)}
-            self._session.async_call_plugin('data_transfer', 'transfer_vhd',
-                    kwargs)
+            params = {'host':dest, 'vdi_uuid':snapshot.vdi_uuids[1],
+                    'dest_name':'base_copy.vhd'}
+            self._session.async_call_plugin('migration', 'transfer_vhd',
+                    {'params': pickle.dumps(params)})
 
             # Now power down the instance and transfer the COW VHD
             self._shutdown(instance, method='clean')
 
             _, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
-            params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid']}
-            kwargs = {'params': pickle.dumps(params)}
+            params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
+                    'dest_name': 'cow.vhd'}
             self._session.async_call_plugin('data_transfer', 'transfer_vhd',
-                    kwargs)
+                    {'params': pickle.dumps(params)})
+            return snapshot.vdi_uuids[1], vm_vdi_rec['uuid']
+
+    def attach_disk(self, instance):
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+
+        params = { 'instance_id': instance.id }
+        self._session.async_call_plugin('migration', 'move_vhds_into_sr',
+                {'params': pickle.dumps(params)})
+
+
+        _, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        VMHelper.scan_sr(self._session, instance.id, vm_vdi_rec['SR'])
 
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """

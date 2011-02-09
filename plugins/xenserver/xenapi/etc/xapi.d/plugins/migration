@@ -20,16 +20,79 @@
 XenAPI Plugin for transfering data between host nodes
 """
 
+import os
 import os.path
 import pickle
+import shutil
 import subprocess
+import uuid
 
 import XenAPIPlugin
+
+from pluginlib_nova import *
 
 SSH_HOSTS = '/root/.ssh/known_hosts'
 DEVNULL = '/dev/null'
 KEYSCAN = '/usr/bin/ssh-keyscan'
 RSYNC = '/usr/bin/rsync'
+FILE_SR_PATH = '/var/run/sr-mount'
+IMAGE_PATH = '/images/'
+VHD_UTIL = '/usr/sbin/vhd-util'
+
+def get_sr_path(session):
+    sr_ref = find_sr(session)
+
+    if sr_ref is None:
+        raise Exception('Cannot find SR to read VDI from')
+
+    sr_rec = session.xenapi.SR.get_record(sr_ref)
+    sr_uuid = sr_rec["uuid"]
+    sr_path = os.path.join(FILE_SR_PATH, sr_uuid)
+    return sr_path
+
+def find_sr(session):
+    host = get_this_host(session)
+    srs = session.xenapi.SR.get_all()
+    for sr in srs:
+        sr_rec = session.xenapi.SR.get_record(sr)
+        if not ('i18n-key' in sr_rec['other_config'] and
+                sr_rec['other_config']['i18n-key'] == 'local-storage'):
+            continue
+        for pbd in sr_rec['PBDs']:
+            pbd_rec = session.xenapi.PBD.get_record(pbd)
+            if pbd_rec['host'] == host:
+                return sr
+    return None
+
+def move_vhds_into_sr(session, args):
+    """Moves the VHDs from their copied location to the SR"""
+    params = pickle.dumps(args)
+    instance_id = params['instance_id']
+
+    sr_path = get_sr_path(session)
+
+    # Discover the copied VHDs locally, and then set up paths to copy 
+    # them to under the SR
+    source_image_path = "%s/instance%d" % (IMAGE_PATH, instance_id)
+    source_base_copy_path = "%s/base_copy.vhd" % source_image_path
+    source_cow_path = "%s/cow.vhd" % source_image_path
+
+    temp_vhd_path = "%s/instance%d/" % (sr_path, instance_id)
+    new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, str(uuid.uuid4()))
+    new_cow_path = "%s/%s.vhd" % (temp_vhd_path, str(uuid.uuid4()))
+
+    os.mkdir(temp_vhd_path)
+    shutil.move(source_base_copy_path, new_base_copy_path)
+    shutil.move(source_cow_path, new_cow_path)
+
+    os.rmdir(source_image_path)
+
+    # Link the COW to the base copy
+    subprocess.call([VHD_UTIL, 'modify', '-n', new_cow_path, '-p', 
+            new_base_copy_path])
+    
+    shutil.move("%s/*.vhd" % temp_vhd_path, sr_path)
+    os.rmdir(temp_vhd_path)
 
 
 def transfer_vhd(session, args):
@@ -38,11 +101,13 @@ def transfer_vhd(session, args):
     instance_id = params['instance_id']
     host = params['host']
     vdi_uuid = params['vdi_uuid']
+    dest_name = params['dest_name']
     sr_path = get_sr_path(session)
     vhd_path = "%s.vhd" % vdi_uuid
 
     source_path = "%s/%s" % (sr_path, vhd_path)
-    dest_path = '%s:/images/instance%d/' % (host, instance_id)
+    dest_path = '%s:%sinstance%d/%s' % (host, IMAGE_PATH, instance_id, 
+            dest_name)
     rsync_args = [['nohup', RSYNC, '-av', '--progress', 
             '-e "ssh -o StrictHostKeyChecking=no"', source_path, dest_path]
 

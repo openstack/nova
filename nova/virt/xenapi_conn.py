@@ -164,6 +164,9 @@ class XenAPIConnection(object):
         """Resize a VM instance"""
         raise NotImplementedError()
 
+    def attach_disk(self, instance_ref):
+        
+
     def reboot(self, instance):
         """Reboot VM instance"""
         self._vmops.reboot(instance)
@@ -195,11 +198,11 @@ class XenAPIConnection(object):
     def migrate_disk_and_power_off(self, instance, dest):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
-        self._vmops.transfer_disk(instance, dest)
+        self._vmops.migrate_disk_and_power_off(instance, dest)
 
-    def move_disk(self, instance_ref):
+    def attach_disk(self, instance):
         """Moves the copied VDIs into the SR"""
-        pass
+        self._vmops.attach_disk(instance)
     
     def suspend(self, instance, callback):
         """suspend the specified instance"""

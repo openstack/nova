@@ -478,6 +478,14 @@ class VMHelper(HelperBase):
         except cls.XenAPI.Failure as e:
             return {"Unable to retrieve diagnostics": e}
 
+    @classmethod
+    def scan_sr(cls, session, instance_id, sr_ref):
+        LOG.debug(_("Re-scanning SR %s"), sr_ref)
+        task = session.call_xenapi('Async.SR.scan', sr_ref)
+        session.wait_for_task(instance_id, task)
+
+
+
 
 def get_rrd(host, uuid):
     """Return the VM RRD XML as a string"""
@@ -520,12 +528,6 @@ def get_vhd_parent_uuid(session, vdi_ref):
         return None
 
 
-def scan_sr(session, instance_id, sr_ref):
-    LOG.debug(_("Re-scanning SR %s"), sr_ref)
-    task = session.call_xenapi('Async.SR.scan', sr_ref)
-    session.wait_for_task(instance_id, task)
-
-
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                           original_parent_uuid):
     """ Spin until the parent VHD is coalesced into its parent VHD
@@ -550,7 +552,7 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                     " %(max_attempts)d), giving up...") % locals())
             raise exception.Error(msg)
 
-        scan_sr(session, instance_id, sr_ref)
+        VMHelper.scan_sr(session, instance_id, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
