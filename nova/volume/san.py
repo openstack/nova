@@ -92,8 +92,8 @@ class SanISCSIDriver(ISCSIDriver):
             # It sucks that paramiko doesn't support DSA keys
             privatekey = paramiko.RSAKey.from_private_key_file(privatekeyfile)
             ssh.connect(FLAGS.san_ip,
-            username=FLAGS.san_login,
-            pkey=privatekey)
+                        username=FLAGS.san_login,
+                        pkey=privatekey)
         else:
             raise exception.Error("Specify san_password or san_privatekey")
         return ssh
