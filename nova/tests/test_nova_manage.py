@@ -31,8 +31,8 @@ class NovaManageTestCase(test.TestCase):
 
     def test_create_and_delete_instance_types(self):
         fnull = open(os.devnull, 'w')
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "create", "test", "256", "1",\
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",
+                                    "create", "test", "256", "1",
                                     "120", "99"], stdout=fnull)
         self.assertEqual(0, retcode)
         retcode = subprocess.call(["bin/nova-manage", "instance_type",\

@@ -84,6 +84,7 @@ from nova import utils
 from nova.api.ec2.cloud import ec2_id_to_id
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+from nova.compute import instance_types
 from nova.db import migration
 
 
@@ -612,67 +613,63 @@ class VolumeCommands(object):
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
+    def _print_instance_types(self, n, val):
+        print "%s: %s memory(MB), %s vcpus, %s storage(GB), %s flavorid"\
+                % (n, val["memory_mb"], val["vcpus"],
+                    val["local_gb"], val["flavorid"])
+
     def create(self, name, memory, vcpus, local_gb, flavorid):
         """Creates instance types / flavors
            arguments: name memory_mb vcpus local_gb"""
-        # FIXME(kpepple) check for absurb arguments (?)
-        for option in [memory, flavorid, local_gb, vcpus]:
-            if (option <= 0) or (option.__class__ == int):
-                print "Instance type parameters must be positive \
-                        integers: %s" % option
-                sys.exit(1)
         try:
-            db.instance_type_create(context.get_admin_context(),
-                                dict(name=name, memory_mb=memory,
-                                vcpus=vcpus, local_gb=local_gb,
-                                flavorid=flavorid))
-            print "%s created" % name
+            instance_types.create(name, memory, vcpus, local_gb, flavorid)
+        except exception.InvalidInputException, e:
+            print "Must supply valid parameters to create instance type"
+            sys.exit(1)
         except exception.DBError, e:
-            print "%s is already a defined instance types" % name
+            print "DB Error: %s" % e
             sys.exit(1)
         except:
             print "Unknown error"
             sys.exit(1)
+        else:
+            print "%s created" % name
 
     def delete(self, name):
         """Marks instance types / flavors as deleted
         arguments: name"""
-        if name == None:
-            print "Instance type name must be supplied"
+        try:
+            records = instance_types.destroy(name)
+        except exception.InvalidParameters:
+            print "Valid instance type name is required"
+            sys.exit(1)
+        except exception.NotFound, e:
+            print "Instance type name %s not found. \
+                    No instance type deleted." % name
             sys.exit(1)
         else:
-            try:
-                records = db.instance_type_destroy(
-                                            context.get_admin_context(),
-                                            name)
-            except exception.NotFound, e:
-                sys.exit(1)
+            print "%s deleted" % name
 
     def list(self, name=None):
-        """Lists all instance types / flavors
+        """Lists all or specific instance types / flavors
         arguments: [name]"""
-        ctxt = context.get_admin_context()
         if name == None:
             try:
-                instance_types = db.instance_type_get_all(ctxt)
-                if len(instance_types) < 1:
-                    sys.exit(1)
-                for k, v in instance_types.iteritems():
-                    print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
-                        (k, v["memory_mb"],
-                         v["vcpus"], v["local_gb"])
+                inst_types = instance_types.get_all_types()
             except exception.NotFound, e:
                 print e
                 sys.exit(1)
+            else:
+                for k, v in inst_types.iteritems():
+                    self._print_instance_types(k, v)
         else:
             try:
-                instance_types = db.instance_type_get_by_name(ctxt, name)
-                print "%s : %s memory(MB), %s vcpus, %s storage(GB)" % \
-                    (instance_types["name"], instance_types["memory_mb"],
-                     instance_types["vcpus"], instance_types["local_gb"])
+                inst_types = instance_types.get_instance_type(name)
             except exception.NotFound, e:
                 print e
                 sys.exit(1)
+            else:
+                self._print_instance_types(name, inst_types)
 
 
 CATEGORIES = [

@@ -2025,9 +2025,12 @@ def console_get(context, console_id, instance_id=None):
 
 @require_admin_context
 def instance_type_create(context, values):
-    instance_type_ref = models.InstanceTypes()
-    instance_type_ref.update(values)
-    instance_type_ref.save()
+    try:
+        instance_type_ref = models.InstanceTypes()
+        instance_type_ref.update(values)
+        instance_type_ref.save()
+    except:
+        raise exception.DBError
     return instance_type_ref
 
 
