@@ -141,11 +141,11 @@ class VMHelper(HelperBase):
     @classmethod
     def ensure_free_mem(cls, session, instance):
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
-        mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
+        mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
         host_free_mem = session.get_xenapi().host.compute_free_memory(host)
-        if (host_free_mem < mem ):
+        if (host_free_mem < mem):
             return False
         return True
 
