@@ -38,8 +38,8 @@ def get_by_type(instance_type):
     if instance_type is None:
         return FLAGS.default_instance_type
     if instance_type not in INSTANCE_TYPES:
-        raise exception.ApiError(_("Unknown instance type: %s"),
-                                 instance_type)
+        raise exception.ApiError(_("Unknown instance type: %s") % (instance_type),
+                                 "Invalid")
     return instance_type
 
 
