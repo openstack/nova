@@ -100,59 +100,12 @@ class NovaBase(object):
         return local.iteritems()
 
 
-# TODO(vish): Store images in the database instead of file system
-#class Image(BASE, NovaBase):
-#    """Represents an image in the datastore"""
-#    __tablename__ = 'images'
-#    id = Column(Integer, primary_key=True)
-#    ec2_id = Column(String(12), unique=True)
-#    user_id = Column(String(255))
-#    project_id = Column(String(255))
-#    image_type = Column(String(255))
-#    public = Column(Boolean, default=False)
-#    state = Column(String(255))
-#    location = Column(String(255))
-#    arch = Column(String(255))
-#    default_kernel_id = Column(String(255))
-#    default_ramdisk_id = Column(String(255))
-#
-#    @validates('image_type')
-#    def validate_image_type(self, key, image_type):
-#        assert(image_type in ['machine', 'kernel', 'ramdisk', 'raw'])
-#
-#    @validates('state')
-#    def validate_state(self, key, state):
-#        assert(state in ['available', 'pending', 'disabled'])
-#
-#    @validates('default_kernel_id')
-#    def validate_kernel_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#    @validates('default_ramdisk_id')
-#    def validate_ramdisk_id(self, key, val):
-#        if val != 'machine':
-#            assert(val is None)
-#
-#
-# TODO(vish): To make this into its own table, we need a good place to
-#             create the host entries. In config somwhere? Or the first
-#             time any object sets host? This only becomes particularly
-#             important if we need to store per-host data.
-#class Host(BASE, NovaBase):
-#    """Represents a host where services are running"""
-#    __tablename__ = 'hosts'
-#    id = Column(String(255), primary_key=True)
-
-
 class Service(BASE, NovaBase):
     """Represents a running service on a host."""
 
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True)
-    #host_id = Column(Integer, ForeignKey('hosts.id'), nullable=True)
-    #host = relationship(Host, backref=backref('services'))
-    host = Column(String(255))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
     binary = Column(String(255))
     topic = Column(String(255))
     report_count = Column(Integer, nullable=False, default=0)
@@ -160,15 +113,16 @@ class Service(BASE, NovaBase):
     availability_zone = Column(String(255), default='nova')
 
     # The below items are compute node only.
-    # -1 or None is inserted for other service.
+    # None is inserted for other service.
     vcpus = Column(Integer, nullable=True)
     memory_mb = Column(Integer, nullable=True)
     local_gb = Column(Integer, nullable=True)
     vcpus_used = Column(Integer, nullable=True)
     memory_mb_used = Column(Integer, nullable=True)
     local_gb_used = Column(Integer, nullable=True)
-    hypervisor_type = Column(Text(), nullable=True)
+    hypervisor_type = Column(Text, nullable=True)
     hypervisor_version = Column(Integer, nullable=True)
+
     # Note(masumotok): Expected Strings example:
     #
     # '{"arch":"x86_64", "model":"Nehalem",
@@ -177,7 +131,7 @@ class Service(BASE, NovaBase):
     #
     # Points are "json translatable" and it must have all
     # dictionary keys above.
-    cpu_info = Column(Text(), nullable=True)
+    cpu_info = Column(Text, nullable=True)
 
 
 class Certificate(BASE, NovaBase):
@@ -255,7 +209,7 @@ class Instance(BASE, NovaBase):
 
     # To remember on which host a instance booted.
     # An instance may moved to other host by live migraiton.
-    launched_on = Column(String(255))
+    launched_on = Column(Text)
     locked = Column(Boolean)
 
     # TODO(vish): see Ewan's email about state improvements, probably
@@ -381,10 +335,14 @@ class SecurityGroup(BASE, NovaBase):
                              secondary="security_group_instance_association",
                              primaryjoin='and_('
         'SecurityGroup.id == '
-            'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.deleted == False,'
         'SecurityGroup.deleted == False)',
                              secondaryjoin='and_('
         'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
+        # (anthony) the condition below shouldn't be necessary now that the
+        # association is being marked as deleted.  However, removing this
+        # may cause existing deployments to choke, so I'm leaving it
         'Instance.deleted == False)',
                              backref='security_groups')
 
@@ -613,7 +571,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console)  # , Host, Image
+              Project, Certificate, ConsolePool, Console)  # , Image, Host
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

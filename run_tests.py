@@ -17,7 +17,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-
+import gettext
 import os
 import unittest
 import sys
@@ -25,6 +25,8 @@ import sys
 from nose import config
 from nose import result
 from nose import core
+
+from nova import log as logging
 
 
 class NovaTestResult(result.TextTestResult):
@@ -58,9 +60,11 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
+    logging.basicConfig()
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
-                      verbosity=3)
+                      verbosity=3,
+                      plugins=core.DefaultPluginManager())
 
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,

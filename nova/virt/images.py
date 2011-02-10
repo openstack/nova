@@ -67,7 +67,7 @@ def _fetch_image_no_curl(url, path, headers):
 
     urlopened = urllib2.urlopen(request)
     urlretrieve(urlopened, path)
-    LOG.debug(_("Finished retreving %s -- placed in %s"), url, path)
+    LOG.debug(_("Finished retreving %(url)s -- placed in %(path)s") % locals())
 
 
 def _fetch_s3_image(image, path, user, project):
@@ -111,5 +111,8 @@ def _image_path(path):
 
 
 def image_url(image):
+    if FLAGS.image_service == "nova.image.glance.GlanceImageService":
+        return "http://%s:%s/images/%s" % (FLAGS.glance_host,
+            FLAGS.glance_port, image)
     return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
                                               image)

@@ -151,8 +151,9 @@ class Scheduler(object):
         src = instance_ref['host']
         if dest == src:
             ec2_id = instance_ref['hostname']
-            msg = _('%s is where %s is running now. choose other host.')
-            raise exception.Invalid(msg % (dest, ec2_id))
+            msg = _("""%(dest)s is where %(ec2_id)s is """
+                    """running now. choose other host.""") % locals()
+            raise exception.Invalid(msg)
 
         # Checking dst host still has enough capacities.
         self.has_enough_resource(context, instance_ref, dest)
@@ -182,17 +183,18 @@ class Scheduler(object):
         oservice_ref = oservice_refs[0]
 
         # Checking hypervisor is same.
-        if oservice_ref['hypervisor_type'] != dservice_ref['hypervisor_type']:
-            msg = _('Different hypervisor type(%s->%s)')
-            raise exception.Invalid(msg % (oservice_ref['hypervisor_type'],
-                                           dservice_ref['hypervisor_type']))
+        o = oservice_ref['hypervisor_type']
+        d = dservice_ref['hypervisor_type']
+        if o != d:
+            msg = _('Different hypervisor type(%(o)s->%(d)s)') % locals()
+            raise exception.Invalid(msg)
 
         # Checkng hypervisor version.
-        if oservice_ref['hypervisor_version'] > \
-           dservice_ref['hypervisor_version']:
-            msg = _('Older hypervisor version(%s->%s)')
-            raise exception.Invalid(msg % (oservice_ref['hypervisor_version'],
-                                           dservice_ref['hypervisor_version']))
+        o = oservice_ref['hypervisor_version']
+        d = dservice_ref['hypervisor_version']
+        if o > d:
+            msg = _('Older hypervisor version(%(o)s->%(d)s)') % locals()
+            raise exception.Invalid(msg)
 
         # Checking cpuinfo.
         try:
@@ -202,11 +204,11 @@ class Scheduler(object):
                       "args": {'cpu_info': oservice_ref['cpu_info']}})
 
         except rpc.RemoteError, e:
-            msg = _(("""%s doesnt have compatibility to %s"""
-                     """(where %s was launched at)"""))
             ec2_id = instance_ref['hostname']
             src = instance_ref['host']
-            logging.error(msg % (dest, src, ec2_id))
+            msg = _(("""%(dest)s doesnt have compatibility to %(src)s"""
+                     """(where %(ec2_id)s was launched at)"""))
+            logging.exception(msg % locals())
             raise e
 
     def has_enough_resource(self, context, instance_ref, dest):
@@ -233,8 +235,9 @@ class Scheduler(object):
         mem_avail = mem_total - mem_used
         mem_inst =  instance_ref['memory_mb']
         if mem_avail <= mem_inst:
-            msg = _('%s is not capable to migrate %s(host:%s <= instance:%s)') 
-            raise exception.NotEmpty(msg % (dest, ec2_id, mem_avail, mem_inst))
+            msg = _("""%(ec2_id)s is not capable to migrate %(dest)s"""
+                    """(host:%(mem_avail)s <= instance:%(mem_inst)s)""") 
+            raise exception.NotEmpty(msg % locals())
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
         """
@@ -256,14 +259,12 @@ class Scheduler(object):
         # make sure existence at src host.
         try:
             rpc.call(context, src_t,
-                     {"method": 'exists', "args":{'path':filename}})
+                     {"method": 'confirm_tmpfile', "args":{'path':filename}})
 
         except (rpc.RemoteError, exception.NotFound), e:
-            msg = (_("""Cannot comfirm %s at %s to confirm shared storage."""
-                     """Check if %s is same shared storage"""))
-            logging.error(msg % FLAGS.instance_path)
+            ipath =  FLAGS.instance_path
+            msg = (_("""Cannot comfirm %(ipath)s at %(dest)s to """
+                     """confirm shared storage."""
+                     """Check if %(ipath)s is same shared storage."""))
+            logging.error(msg % locals())
             raise e
-
-        # then remove.
-        rpc.call(context, dst_t,
-                 {"method": 'remove', "args":{'path':filename}})

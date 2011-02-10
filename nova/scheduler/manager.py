@@ -29,7 +29,6 @@ from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
-from nova import exception
 
 LOG = logging.getLogger('nova.scheduler.manager')
 FLAGS = flags.FLAGS
@@ -60,14 +59,15 @@ class SchedulerManager(manager.Manager):
         try:
             host = getattr(self.driver, driver_method)(elevated, *args,
                                                        **kwargs)
-        except AttributeError:
+        except AttributeError, e:
+            print 'manager.attrerr', e
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         rpc.cast(context,
                  db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
-        LOG.debug(_("Casting to %s %s for %s"), topic, host, method)
+        LOG.debug(_("Casting to %(topic)s %(host)s for %(method)s") % locals())
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bear design summit discussion,

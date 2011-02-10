@@ -19,6 +19,7 @@
 Implementation of SQLAlchemy backend.
 """
 
+import datetime
 import warnings
 
 from nova import db
@@ -247,7 +248,8 @@ def service_get_by_args(context, host, binary):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound(_('No service for %s, %s') % (host, binary))
+        raise exception.NotFound(_('No service for %(host)s, %(binary)s')
+                % locals())
 
     return result
 
@@ -495,16 +497,6 @@ def floating_ip_get_by_address(context, address, session=None):
     return result
 
 
-@require_context
-def floating_ip_update(context, address, values):
-    session = get_session()
-    with session.begin():
-        floating_ip_ref = floating_ip_get_by_address(context, address, session)
-        for (key, value) in values.iteritems():
-            floating_ip_ref[key] = value
-        floating_ip_ref.save(session=session)
-
-
 ###################
 
 
@@ -679,8 +671,14 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
-        instance_ref.delete(session=session)
+        session.execute('update instances set deleted=1,'
+                        'deleted_at=:at where id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
+        session.execute('update security_group_instance_association '
+                        'set deleted=1,deleted_at=:at where instance_id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
 
 
 @require_context
@@ -694,6 +692,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
+                         options(joinedload_all('fixed_ip.network')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -707,7 +706,9 @@ def instance_get(context, instance_id, session=None):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound(_('No instance for id %s') % instance_id)
+        raise exception.InstanceNotFound(_('Instance %s not found')
+                                         % instance_id,
+                                         instance_id)
 
     return result
 
@@ -730,6 +731,17 @@ def instance_get_all_by_user(context, user_id):
                    options(joinedload('security_groups')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
+                   all()
+
+
+@require_admin_context
+def instance_get_all_by_host(context, host):
+    session = get_session()
+    return session.query(models.Instance).\
+                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload('security_groups')).\
+                   filter_by(host=host).\
+                   filter_by(deleted=can_read_deleted(context)).\
                    all()
 
 
@@ -777,32 +789,6 @@ def instance_get_project_vpn(context, project_id):
                    filter_by(image_id=FLAGS.vpn_image_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    first()
-
-
-@require_context
-def instance_get_by_id(context, instance_id):
-    session = get_session()
-
-    if is_admin_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload('security_groups')).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload('security_groups')).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=False).\
-                         first()
-    if not result:
-        raise exception.NotFound(_('Instance %s not found') % (instance_id))
-
-    return result
 
 
 @require_context
@@ -868,7 +854,6 @@ def instance_update(context, instance_id, values):
         return instance_ref
 
 
-@require_context
 def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance"""
     session = get_session()
@@ -999,8 +984,8 @@ def key_pair_get(context, user_id, name, session=None):
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
     if not result:
-        raise exception.NotFound(_('no keypair for user %s, name %s') %
-                                 (user_id, name))
+        raise exception.NotFound(_('no keypair for user %(user_id)s,'
+                ' name %(name)s') % locals())
     return result
 
 
@@ -1459,17 +1444,20 @@ def volume_get(context, volume_id, session=None):
 
     if is_admin_context(context):
         result = session.query(models.Volume).\
+                         options(joinedload('instance')).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
     elif is_user_context(context):
         result = session.query(models.Volume).\
+                         options(joinedload('instance')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=volume_id).\
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.NotFound(_('No volume for id %s') % volume_id)
+        raise exception.VolumeNotFound(_('Volume %s not found') % volume_id,
+                                       volume_id)
 
     return result
 
@@ -1514,7 +1502,8 @@ def volume_get_instance(context, volume_id):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.NotFound(_('Volume %s not found') % ec2_id)
+        raise exception.VolumeNotFound(_('Volume %s not found') % volume_id,
+                                       volume_id)
 
     return result.instance
 
@@ -1601,8 +1590,8 @@ def security_group_get_by_name(context, project_id, group_name):
                         first()
     if not result:
         raise exception.NotFound(
-            _('No security group named %s for project: %s')
-             % (group_name, project_id))
+            _('No security group named %(group_name)s'
+            ' for project: %(project_id)s') % locals())
     return result
 
 
@@ -1655,6 +1644,11 @@ def security_group_destroy(context, security_group_id):
         # TODO(vish): do we have to use sql here?
         session.execute('update security_groups set deleted=1 where id=:id',
                         {'id': security_group_id})
+        session.execute('update security_group_instance_association '
+                        'set deleted=1,deleted_at=:at '
+                        'where security_group_id=:id',
+                        {'id': security_group_id,
+                         'at': datetime.datetime.utcnow()})
         session.execute('update security_group_rules set deleted=1 '
                         'where group_id=:id',
                         {'id': security_group_id})
@@ -1986,8 +1980,8 @@ def console_pool_get(context, pool_id):
                      filter_by(id=pool_id).\
                      first()
     if not result:
-        raise exception.NotFound(_("No console pool with id %(pool_id)s") %
-                                 {'pool_id': pool_id})
+        raise exception.NotFound(_("No console pool with id %(pool_id)s")
+                % locals())
 
     return result
 
@@ -2003,12 +1997,9 @@ def console_pool_get_by_host_type(context, compute_host, host,
                    options(joinedload('consoles')).\
                    first()
     if not result:
-        raise exception.NotFound(_('No console pool of type %(type)s '
+        raise exception.NotFound(_('No console pool of type %(console_type)s '
                                    'for compute host %(compute_host)s '
-                                   'on proxy host %(host)s') %
-                                   {'type': console_type,
-                                    'compute_host': compute_host,
-                                    'host': host})
+                                   'on proxy host %(host)s') % locals())
     return result
 
 
@@ -2046,9 +2037,7 @@ def console_get_by_pool_instance(context, pool_id, instance_id):
                    first()
     if not result:
         raise exception.NotFound(_('No console for instance %(instance_id)s '
-                                 'in pool %(pool_id)s') %
-                                 {'instance_id': instance_id,
-                                  'pool_id': pool_id})
+                                 'in pool %(pool_id)s') % locals())
     return result
 
 
@@ -2069,9 +2058,7 @@ def console_get(context, console_id, instance_id=None):
         query = query.filter_by(instance_id=instance_id)
     result = query.options(joinedload('pool')).first()
     if not result:
-        idesc = (_("on instance %s") % instance_id)  if instance_id else ""
+        idesc = (_("on instance %s") % instance_id) if instance_id else ""
         raise exception.NotFound(_("No console with id %(console_id)s"
-                                   " %(instance)s") %
-                                  {'instance': idesc,
-                                  'console_id': console_id})
+                                   " %(idesc)s") % locals())
     return result

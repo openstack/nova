@@ -71,7 +71,6 @@ class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
 
-
 ###################
 
 
@@ -253,10 +252,6 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
-def floating_ip_update(context, address, values):
-    """update floating ip information."""
-    return IMPL.floating_ip_update(context, address, values)
-
 ####################
 
 
@@ -355,6 +350,11 @@ def instance_get_all_by_project(context, project_id):
     return IMPL.instance_get_all_by_project(context, project_id)
 
 
+def instance_get_all_by_host(context, host):
+    """Get all instance belonging to a host."""
+    return IMPL.instance_get_all_by_host(context, host)
+
+
 def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
@@ -377,11 +377,6 @@ def instance_get_floating_address(context, instance_id):
 def instance_get_project_vpn(context, project_id):
     """Get a vpn instance by project or return None."""
     return IMPL.instance_get_project_vpn(context, project_id)
-
-
-def instance_get_by_id(context, instance_id):
-    """Get an instance by id."""
-    return IMPL.instance_get_by_id(context, instance_id)
 
 
 def instance_is_vpn(context, instance_id):

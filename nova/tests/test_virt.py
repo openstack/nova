@@ -44,6 +44,21 @@ class LibvirtConnTestCase(test.TestCase):
         libvirt_conn._late_load_cheetah()
         self.flags(fake_call=True)
         self.manager = manager.AuthManager()
+
+        try:
+            pjs = self.manager.get_projects()
+            pjs = [p for p in pjs if p.name == 'fake']
+            if 0 != len(pjs): 
+                self.manager.delete_project(pjs[0])
+
+            users = self.manager.get_users()
+            users = [u for u in users if u.name == 'fake']
+            if 0 != len(users): 
+                self.manager.delete_user(users[0])
+        except Exception, e:
+            pass
+
+        users = self.manager.get_users()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
@@ -80,17 +95,12 @@ class LibvirtConnTestCase(test.TestCase):
 
         # inebitable mocks for calling 
         #nova.virt.libvirt_conn.LibvirtConnection.__init__
-        nwmock = self.mox.CreateMock(libvirt_conn.NWFilterFirewall)
-        self.mox.StubOutWithMock(libvirt_conn, 'NWFilterFirewall',
-                                 use_mock_anything=True)
-        libvirt_conn.NWFilterFirewall(mox.IgnoreArg()).AndReturn(nwmock)
-
         obj = utils.import_object(FLAGS.firewall_driver)
         fwmock = self.mox.CreateMock(obj)
         self.mox.StubOutWithMock(libvirt_conn, 'utils',
                                  use_mock_anything=True)
         libvirt_conn.utils.import_object(FLAGS.firewall_driver).AndReturn(fwmock)
-        return nwmock, fwmock
+        return fwmock
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
@@ -162,10 +172,10 @@ class LibvirtConnTestCase(test.TestCase):
 
             if rescue:
                 check = (lambda t: t.find('./os/kernel').text.split('/')[1],
-                         'rescue-kernel')
+                         'kernel.rescue')
                 check_list.append(check)
                 check = (lambda t: t.find('./os/initrd').text.split('/')[1],
-                         'rescue-ramdisk')
+                         'ramdisk.rescue')
                 check_list.append(check)
             else:
                 if expect_kernel:
@@ -201,13 +211,16 @@ class LibvirtConnTestCase(test.TestCase):
         if rescue:
             common_checks += [
                 (lambda t: t.findall('./devices/disk/source')[0].get(
-                    'file').split('/')[1], 'rescue-disk'),
+                    'file').split('/')[1], 'disk.rescue'),
                 (lambda t: t.findall('./devices/disk/source')[1].get(
                     'file').split('/')[1], 'disk')]
         else:
             common_checks += [(lambda t: t.findall(
                 './devices/disk/source')[0].get('file').split('/')[1],
                                'disk')]
+            common_checks += [(lambda t: t.findall(
+                './devices/disk/source')[1].get('file').split('/')[1],
+                               'disk.local')]
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
@@ -429,6 +442,78 @@ class LibvirtConnTestCase(test.TestCase):
             c1 = ( 0 <= e.message.find('Invalid xml: topology') )
             self.assertTrue(c1)
         self.mox.UnsetStubs()
+
+    def test_update_available_resource_works_correctly(self):
+        """
+        In this method, vcpus/memory_mb/local_gb/vcpu_used/
+        memory_mb_used/local_gb_used/hypervisor_type/
+        hypervisor_version/cpu_info should be changed.
+        Based on this specification, this testcase confirms
+        if this method finishes successfully,
+        meaning self.db.service_update must be called with dictinary
+
+        {'vcpu':aaa, 'memory_mb':bbb, 'local_gb':ccc,
+        'vcpu_used':aaa, 'memory_mb_used':bbb, 'local_gb_sed':ccc,
+        'hypervisor_type':ddd, 'hypervisor_version':eee,
+        'cpu_info':fff}
+
+        Since each value of above dict can be obtained through
+        driver(different depends on environment),
+        only dictionary keys are checked.
+        """
+        try: 
+            self._driver_dependent_test_setup()
+        except: 
+            return 
+
+        def dic_key_check(dic):
+            validkey = ['vcpus', 'memory_mb', 'local_gb',
+                        'vcpus_used', 'memory_mb_used', 'local_gb_used',
+                        'hypervisor_type', 'hypervisor_version', 'cpu_info']
+            return (list(set(validkey)) == list(set(dic.keys())))
+
+        host = 'foo'
+        binary = 'nova-compute'
+        service_ref = {'id':1, 'host':host, 'binary':binary, 'topic':'compute'}
+
+        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
+        db.service_get_all_by_topic(mox.IgnoreMox(), 'compute').\
+            AndReturn([service_ref])
+        dbmock.service_update(mox.IgnoreArg(),
+                              service_ref['id'],
+                              mox.Func(dic_key_check))
+
+        self.mox.ReplayAll()
+        conn = libvirt_conn.LibvirtConnection(False)
+        conn.update_available_resource(host)
+        self.mox.UnsetStubs()
+
+    def test_update_resource_info_raise_exception(self):
+        """
+        This testcase confirms if no record found on Service
+        table, exception can be raised.
+        """
+        try: 
+            self._driver_dependent_test_setup()
+        except: 
+            return 
+
+        host = 'foo'
+        binary = 'nova-compute'
+        dbmock = self.mox.CreateMock(db)
+        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
+        db.service_get_all_by_topic(mox.IgnoreMox(), 'compute').\
+            AndRaise(exceptin.NotFound())
+
+        self.mox.ReplayAll()
+        try:
+            conn = libvirt_conn.LibvirtConnection(False)
+            conn.update_available_resource(host)
+        except exception.Invalid, e:
+            msg = 'Cannot insert compute manager specific info'
+            c1 = ( 0 <= e.message.find(msg))
+            self.assertTrue(c1)
+        self.mox.ResetAll()
 
     def test_compare_cpu_works_correctly(self):
         """Calling libvirt.compute_cpu() and works correctly """
@@ -662,8 +747,6 @@ class LibvirtConnTestCase(test.TestCase):
         db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
         self.mox.StubOutWithMock(db, 'fixed_ip_get_network')
         db.fixed_ip_get_network(ctxt, fixed_ip).AndReturn(network_ref)
-        self.mox.StubOutWithMock(db, 'network_update')
-        db.network_update(ctxt, network_ref['id'], {'host': dest})
         
         fl_ip = instance_ref['floating_ip']
         self.mox.StubOutWithMock(db, 'instance_get_floating_address')
@@ -713,8 +796,6 @@ class LibvirtConnTestCase(test.TestCase):
         db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
         self.mox.StubOutWithMock(db, 'fixed_ip_get_network')
         db.fixed_ip_get_network(ctxt, fixed_ip).AndReturn(network_ref)
-        self.mox.StubOutWithMock(db, 'network_update')
-        db.network_update(ctxt, network_ref['id'], {'host': dest})
 
         self.mox.StubOutWithMock(db, 'instance_get_floating_address')
         db.instance_get_floating_address(ctxt, instance_ref['id']).AndReturn(None)
@@ -766,8 +847,6 @@ class LibvirtConnTestCase(test.TestCase):
         db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
         self.mox.StubOutWithMock(db, 'fixed_ip_get_network')
         db.fixed_ip_get_network(ctxt, fixed_ip).AndReturn(network_ref)
-        self.mox.StubOutWithMock(db, 'network_update')
-        db.network_update(ctxt, network_ref['id'], {'host': dest})
 
         self.mox.StubOutWithMock(db, 'instance_get_floating_address')
         db.instance_get_floating_address(ctxt, instance_ref['id']).\
@@ -809,18 +888,17 @@ class IptablesFirewallTestCase(test.TestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext('fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
-        self.fw = libvirt_conn.IptablesFirewallDriver()
+
+        class FakeLibvirtConnection(object):
+            pass
+        self.fake_libvirt_connection = FakeLibvirtConnection()
+        self.fw = libvirt_conn.IptablesFirewallDriver(
+                      get_connection=lambda: self.fake_libvirt_connection)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         super(IptablesFirewallTestCase, self).tearDown()
-
-    def _p(self, *args, **kwargs):
-        if 'iptables-restore' in args:
-            print ' '.join(args), kwargs['stdin']
-        if 'iptables-save' in args:
-            return
 
     in_rules = [
       '# Generated by iptables-save v1.4.4 on Mon Dec  6 11:54:13 2010',
@@ -843,11 +921,21 @@ class IptablesFirewallTestCase(test.TestCase):
       '# Completed on Mon Dec  6 11:54:13 2010',
     ]
 
+    in6_rules = [
+      '# Generated by ip6tables-save v1.4.4 on Tue Jan 18 23:47:56 2011',
+      '*filter',
+      ':INPUT ACCEPT [349155:75810423]',
+      ':FORWARD ACCEPT [0:0]',
+      ':OUTPUT ACCEPT [349256:75777230]',
+      'COMMIT',
+      '# Completed on Tue Jan 18 23:47:56 2011',
+    ]
+
     def test_static_filters(self):
-        self.fw.execute = self._p
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
-                                          'project_id': 'fake'})
+                                          'project_id': 'fake',
+                                          'mac_address': '56:12:12:12:12:12'})
         ip = '10.11.12.13'
 
         network_ref = db.project_get_network(self.context,
@@ -892,18 +980,31 @@ class IptablesFirewallTestCase(test.TestCase):
                                        secgroup['id'])
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
 
-        self.fw.add_instance(instance_ref)
+#        self.fw.add_instance(instance_ref)
+        def fake_iptables_execute(cmd, process_input=None):
+            if cmd == 'sudo ip6tables-save -t filter':
+                return '\n'.join(self.in6_rules), None
+            if cmd == 'sudo iptables-save -t filter':
+                return '\n'.join(self.in_rules), None
+            if cmd == 'sudo iptables-restore':
+                self.out_rules = process_input.split('\n')
+                return '', ''
+            if cmd == 'sudo ip6tables-restore':
+                self.out6_rules = process_input.split('\n')
+                return '', ''
+        self.fw.execute = fake_iptables_execute
 
-        out_rules = self.fw.modify_rules(self.in_rules)
+        self.fw.prepare_instance_filter(instance_ref)
+        self.fw.apply_instance_filter(instance_ref)
 
         in_rules = filter(lambda l: not l.startswith('#'), self.in_rules)
         for rule in in_rules:
             if not 'nova' in rule:
-                self.assertTrue(rule in out_rules,
+                self.assertTrue(rule in self.out_rules,
                                 'Rule went missing: %s' % rule)
 
         instance_chain = None
-        for rule in out_rules:
+        for rule in self.out_rules:
             # This is pretty crude, but it'll do for now
             if '-d 10.11.12.13 -j' in rule:
                 instance_chain = rule.split(' ')[-1]
@@ -911,7 +1012,7 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertTrue(instance_chain, "The instance chain wasn't added")
 
         security_group_chain = None
-        for rule in out_rules:
+        for rule in self.out_rules:
             # This is pretty crude, but it'll do for now
             if '-A %s -j' % instance_chain in rule:
                 security_group_chain = rule.split(' ')[-1]
@@ -920,16 +1021,16 @@ class IptablesFirewallTestCase(test.TestCase):
                         "The security group chain wasn't added")
 
         self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -j ACCEPT' % \
-                               security_group_chain in out_rules,
+                               security_group_chain in self.out_rules,
                         "ICMP acceptance rule wasn't added")
 
-        self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -m icmp --icmp-type'
-                        ' 8 -j ACCEPT' % security_group_chain in out_rules,
+        self.assertTrue('-A %s -p icmp -s 192.168.11.0/24 -m icmp --icmp-type '
+                        '8 -j ACCEPT' % security_group_chain in self.out_rules,
                         "ICMP Echo Request acceptance rule wasn't added")
 
         self.assertTrue('-A %s -p tcp -s 192.168.10.0/24 -m multiport '
                         '--dports 80:81 -j ACCEPT' % security_group_chain \
-                            in out_rules,
+                            in self.out_rules,
                         "TCP port 80/81 acceptance rule wasn't added")
 
 
@@ -1045,6 +1146,19 @@ class NWFilterTestCase(test.TestCase):
                                           'project_id': 'fake'})
         inst_id = instance_ref['id']
 
+        ip = '10.11.12.13'
+
+        network_ref = db.project_get_network(self.context,
+                                             'fake')
+
+        fixed_ip = {'address': ip,
+                    'network_id': network_ref['id']}
+
+        admin_ctxt = context.get_admin_context()
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': instance_ref['id']})
+
         def _ensure_all_called():
             instance_filter = 'nova-instance-%s' % instance_ref['name']
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
@@ -1064,6 +1178,7 @@ class NWFilterTestCase(test.TestCase):
 
         self.fw.setup_basic_filtering(instance)
         self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
 

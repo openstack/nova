@@ -1100,7 +1100,7 @@ class SimpleDriverTestCase(test.TestCase):
             {"method": 'mktmpfile'}).AndReturn(fpath)
         driver.rpc.call(mox.IgnoreArg(), 
             db.queue_get_for(ctxt, FLAGS.compute_topic, i_ref['host']),
-            {"method": 'exists', "args":{'path':fpath}}).\
+            {"method": 'confirm_tmpfile', "args":{'path':fpath}}).\
             AndRaise(rpc.RemoteError('','',''))
         self.mox.StubOutWithMock(driver.logging, 'error')
         msg = _("Cannot create tmpfile at %s to confirm shared storage.")
@@ -1130,10 +1130,7 @@ class SimpleDriverTestCase(test.TestCase):
             {"method": 'mktmpfile'}).AndReturn(fpath)
         driver.rpc.call(mox.IgnoreArg(), 
             db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, i_ref['host']),
-            {"method": 'exists', "args":{'path':fpath}})
-        driver.rpc.call(mox.IgnoreArg(), 
-            db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, dest),
-            {"method": 'remove', "args":{'path':fpath}})
+            {"method": 'confirm_tmpfile', "args":{'path':fpath}})
 
         self.mox.ReplayAll()
         ret = self.scheduler.driver.mounted_on_same_shared_storage(ctxt,

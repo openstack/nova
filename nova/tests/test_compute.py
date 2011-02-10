@@ -34,11 +34,13 @@ from nova import utils
 from nova.auth import manager
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
+from nova.db.sqlalchemy import models
 
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
 flags.DECLARE('stub_network', 'nova.compute.manager')
+flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 
 
 class ComputeTestCase(test.TestCase):
@@ -53,7 +55,7 @@ class ComputeTestCase(test.TestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.get_admin_context()
+        self.context = context.RequestContext('fake', 'fake', False)
 
     def tearDown(self):
         self.manager.delete_user(self.user)
@@ -73,6 +75,13 @@ class ComputeTestCase(test.TestCase):
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']
 
+    def _create_group(self):
+        values = {'name': 'testgroup',
+                  'description': 'testgroup',
+                  'user_id': self.user.id,
+                  'project_id': self.project.id}
+        return db.security_group_create(self.context, values)
+
     def test_create_instance_defaults_display_name(self):
         """Verify that an instance cannot be created without a display_name."""
         cases = [dict(), dict(display_name=None)]
@@ -86,21 +95,53 @@ class ComputeTestCase(test.TestCase):
 
     def test_create_instance_associates_security_groups(self):
         """Make sure create associates security groups"""
-        values = {'name': 'default',
-                  'description': 'default',
-                  'user_id': self.user.id,
-                  'project_id': self.project.id}
-        group = db.security_group_create(self.context, values)
+        group = self._create_group()
         ref = self.compute_api.create(
                 self.context,
                 instance_type=FLAGS.default_instance_type,
                 image_id=None,
-                security_group=['default'])
+                security_group=['testgroup'])
         try:
             self.assertEqual(len(db.security_group_get_by_instance(
-                self.context, ref[0]['id'])), 1)
+                             self.context, ref[0]['id'])), 1)
+            group = db.security_group_get(self.context, group['id'])
+            self.assert_(len(group.instances) == 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
+            db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_destroy_instance_disassociates_security_groups(self):
+        """Make sure destroying disassociates security groups"""
+        group = self._create_group()
+
+        ref = self.compute_api.create(
+                self.context,
+                instance_type=FLAGS.default_instance_type,
+                image_id=None,
+                security_group=['testgroup'])
+        try:
+            db.instance_destroy(self.context, ref[0]['id'])
+            group = db.security_group_get(self.context, group['id'])
+            self.assert_(len(group.instances) == 0)
+        finally:
+            db.security_group_destroy(self.context, group['id'])
+
+    def test_destroy_security_group_disassociates_instances(self):
+        """Make sure destroying security groups disassociates instances"""
+        group = self._create_group()
+
+        ref = self.compute_api.create(
+                self.context,
+                instance_type=FLAGS.default_instance_type,
+                image_id=None,
+                security_group=['testgroup'])
+
+        try:
+            db.security_group_destroy(self.context, group['id'])
+            group = db.security_group_get(context.get_admin_context(
+                                          read_deleted=True), group['id'])
+            self.assert_(len(group.instances) == 0)
+        finally:
             db.instance_destroy(self.context, ref[0]['id'])
 
     def test_run_terminate(self):
@@ -224,119 +265,6 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
-    def test_update_service_exception(self): 
-        """nova-compute updates Serivce table on DB like below.
-           nova.service.Serivce.start -> 
-               nova.compute.ComputeManager.update_service.
-           This testcase confirms if no record found on Service
-           table, exception can be raised.
-        """
-        host = 'foo'
-        binary = 'nova-compute'
-        dbmock = self.mox.CreateMock(db)
-        dbmock.service_get_by_args(mox.IgnoreArg(), 
-                                   mox.StrContains(host), 
-                                   mox.StrContains(binary)).\
-                                   AndRaise(exception.NotFound())
-        self.compute.db = dbmock
-        self.mox.ReplayAll()
-        try: 
-            self.compute.update_service('dummy', host, binary)
-        except exception.Invalid, e:
-            msg = 'Cannot insert compute manager specific info'
-            c1 = ( 0 <= e.message.find(msg))
-            self.assertTrue(c1)
-        self.mox.ResetAll()
-
-    def test_update_service_success(self): 
-        """nova-compute updates Serivce table on DB like below.
-           nova.service.Serivce.start ->
-               nova.compute.ComputeManager.update_service.
-           In this method, vcpus/memory_mb/local_gb/hypervisor_type/
-           hypervisor_version/cpu_info should be changed.
-           Based on this specification, this testcase confirms 
-           if this method finishes successfully,
-           meaning self.db.service_update is called with dictinary
-
-           {'vcpu':aaa, 'memory_mb':bbb, 'local_gb':ccc, 
-            'hypervisor_type':ddd, 'hypervisor_version':eee, 
-            'cpu_info':fff}
-
-           Since each value of above dict can be obtained through
-           driver(different depends on environment), 
-           only dictionary keys are checked.
-        """
-
-        def dic_key_check(dic): 
-            validkey = ['vcpus', 'memory_mb', 'local_gb',
-                        'vcpus_used', 'memory_mb_used', 'local_gb_used',
-                        'hypervisor_type', 'hypervisor_version', 'cpu_info']
-            return (list(set(validkey)) == list(set(dic.keys())))
-
-        host = 'foo'
-        binary = 'nova-compute'
-        service_ref = {'id':1, 'binary':'nova-compute', 'topic':'compute'} 
-        dbmock = self.mox.CreateMock(db)
-        dbmock.service_get_by_args(mox.IgnoreArg(), 
-                                   mox.StrContains(host), 
-                                   mox.StrContains(binary)).\
-                                   AndReturn(service_ref)
-        dbmock.service_update(mox.IgnoreArg(), 
-                              service_ref['id'], 
-                              mox.Func(dic_key_check))
-
-        self.compute.db = dbmock
-        self.mox.ReplayAll()
-        self.compute.update_service('dummy', host, binary)
-        self.mox.ResetAll()
-
-    def test_update_available_resource_exception(self): 
-        """a testcase of update_available_resource raises exception"""
-        host = 'foo'
-        binary = 'nova-compute'
-        ctxt = context.get_admin_context()
-        dbmock = self.mox.CreateMock(db)
-        dbmock.service_get_by_args(mox.IgnoreArg(), 
-                                   mox.StrContains(host), 
-                                   mox.StrContains(binary)).\
-                                   AndRaise(exception.NotFound())
-        self.compute.db = dbmock
-        self.compute.host = host
-        self.mox.ReplayAll()
-        try: 
-            self.compute.update_available_resource(ctxt)
-        except exception.Invalid, e:
-            msg = 'Cannot update resource info.'
-            c1 = ( 0 <= e.message.find(msg))
-            self.assertTrue(c1)
-        self.mox.UnsetStubs()
-
-    def test_update_available_resource_success(self): 
-        """a testcase of update_available_resource finishes with no errors"""
-
-        def dic_key_check(dic): 
-            validkey = [ 'vcpus_avail', 'memory_mb_avail', 'local_gb_avail']
-            return (list(set(validkey)) == list(set(dic.keys())))
-
-        host = 'foo'
-        binary = 'nova-compute'
-        ctxt = context.get_admin_context()
-        service_ref = {'id':1, 'binary':'nova-compute', 'topic':'compute'} 
-        dbmock = self.mox.CreateMock(db)
-        dbmock.service_get_by_args(mox.IgnoreArg(), 
-                                   mox.StrContains(host), 
-                                   mox.StrContains(binary)).\
-                                   AndReturn(service_ref)
-        dbmock.service_update(mox.IgnoreArg(), 
-                              service_ref['id'], 
-                              mox.Func(dic_key_check))
-
-        self.compute.db = dbmock
-        self.compute.host = host
-        self.mox.ReplayAll()
-        self.compute.update_available_resource(ctxt)
-        self.mox.UnsetStubs()
-
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_manager = utils.import_object(FLAGS.network_manager)
@@ -429,6 +357,45 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(ret, None)
         self.mox.ResetAll()
 
+    def test_pre_live_migration_setup_compute_node_fail(self): 
+        """setup_compute_node sometimes fail since concurrent request
+           comes to iptables and iptables complains. Then this method
+           tries to retry, but raise exception in case of over
+            max_retry_count. this method confirms raising exception. 
+        """
+
+        instance_ref = models.Instance()
+        instance_ref.__setitem__('id', 1)
+        instance_ref.__setitem__('volumes', [])
+        instance_ref.__setitem__('hostname', 'i-ec2id')
+
+        c = context.get_admin_context()
+        i_id = instance_ref['id']
+
+        self._setup_other_managers()
+        dbmock = self.mox.CreateMock(db)
+        netmock = self.mox.CreateMock(self.network_manager)
+        drivermock = self.mox.CreateMock(self.compute_driver)
+
+        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
+        dbmock.instance_get_fixed_address(c, i_id).AndReturn('dummy')
+        self.mox.StubOutWithMock(compute_manager.LOG, 'info')
+        compute_manager.LOG.info(_("%s has no volume."), instance_ref['hostname'])
+
+        for i in range(FLAGS.live_migration_retry_count): 
+            netmock.setup_compute_network(c, i_id).\
+                AndRaise(exception.ProcessExecutionError())
+
+        self.compute.db = dbmock
+        self.compute.network_manager = netmock
+        self.compute.driver = drivermock
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.ProcessExecutionError, 
+                          self.compute.pre_live_migration,
+                          c, i_id)
+        self.mox.ResetAll()
+
     def test_live_migration_instance_has_volume(self): 
         """Any volumes are mounted by instances to be migrated are found,
            vblade health must be checked before starting live-migration.
@@ -488,9 +455,9 @@ class ComputeTestCase(test.TestCase):
                  {"method": "pre_live_migration",
                   "args": {'instance_id': i_id}}).\
                  InAnyOrder('g1').AndRaise(rpc.RemoteError('', '', ''))
-        self.mox.StubOutWithMock(compute_manager.LOG, 'error')
-        compute_manager.LOG.error('Pre live migration for %s failed at %s', 
-                                   instance_ref['hostname'], dest)
+        #self.mox.StubOutWithMock(compute_manager.LOG, 'error')
+        #compute_manager.LOG.error('Pre live migration for %s failed at %s', 
+        #                           instance_ref['hostname'], dest)
         dbmock.instance_set_state(c, i_id, power_state.RUNNING, 'running')
         for i in range(len(instance_ref['volumes'])):
             vid = instance_ref['volumes'][i]['id']
@@ -524,9 +491,9 @@ class ComputeTestCase(test.TestCase):
                  {"method": "pre_live_migration",
                   "args": {'instance_id': i_id}}).\
                  AndRaise(rpc.RemoteError('', '', ''))
-        self.mox.StubOutWithMock(compute_manager.LOG, 'error')
-        compute_manager.LOG.error('Pre live migration for %s failed at %s', 
-                                   instance_ref['hostname'], dest)
+        #self.mox.StubOutWithMock(compute_manager.LOG, 'error')
+        #compute_manager.LOG.error('Pre live migration for %s failed at %s', 
+        #                           instance_ref['hostname'], dest)
         dbmock.instance_set_state(c, i_id, power_state.RUNNING, 'running')
 
         self.compute.db = dbmock

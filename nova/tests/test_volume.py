@@ -20,6 +20,8 @@ Tests for Volume Code.
 
 """
 
+import cStringIO
+
 from nova import context
 from nova import exception
 from nova import db
@@ -173,3 +175,97 @@ class VolumeTestCase(test.TestCase):
         # each of them having a different FLAG for storage_node
         # This will allow us to test cross-node interactions
         pass
+
+
+class AOETestCase(test.TestCase):
+    """Test Case for AOEDriver"""
+
+    def setUp(self):
+        super(AOETestCase, self).setUp()
+        self.flags(volume_driver='nova.volume.driver.AOEDriver',
+                   logging_default_format_string="%(message)s")
+        self.volume = utils.import_object(FLAGS.volume_manager)
+        self.context = context.get_admin_context()
+        self.output = ""
+
+        def _fake_execute(_command, *_args, **_kwargs):
+            """Fake _execute."""
+            return self.output, None
+        self.volume.driver._execute = _fake_execute
+        self.volume.driver._sync_execute = _fake_execute
+
+        log = logging.getLogger()
+        self.stream = cStringIO.StringIO()
+        log.addHandler(logging.StreamHandler(self.stream))
+
+        inst = {}
+        self.instance_id = db.instance_create(self.context, inst)['id']
+
+    def tearDown(self):
+        super(AOETestCase, self).tearDown()
+        db.instance_destroy(self.context, self.instance_id)
+
+    def _attach_volume(self):
+        """Attach volumes to an instance. This function also sets
+           a fake log message."""
+        volume_id_list = []
+        for index in xrange(3):
+            vol = {}
+            vol['size'] = 0
+            volume_id = db.volume_create(context.get_admin_context(),
+                                         vol)['id']
+            self.volume.create_volume(self.context, volume_id)
+
+            # each volume has a different mountpoint
+            mountpoint = "/dev/sd" + chr((ord('b') + index))
+            db.volume_attached(self.context, volume_id, self.instance_id,
+                               mountpoint)
+
+            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(self.context,
+                                                                 volume_id)
+            self.output += "%s %s eth0 /dev/nova-volumes/vol-foo auto run\n" \
+                      % (shelf_id, blade_id)
+
+            volume_id_list.append(volume_id)
+
+        return volume_id_list
+
+    def _detach_volume(self, volume_id_list):
+        """Detach volumes from an instance."""
+        for volume_id in volume_id_list:
+            db.volume_detached(self.context, volume_id)
+            self.volume.delete_volume(self.context, volume_id)
+
+    def test_check_for_export_with_no_volume(self):
+        """No log message when no volume is attached to an instance."""
+        self.stream.truncate(0)
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+
+    def test_check_for_export_with_all_vblade_processes(self):
+        """No log message when all the vblade processes are running."""
+        volume_id_list = self._attach_volume()
+
+        self.stream.truncate(0)
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+
+        self._detach_volume(volume_id_list)
+
+    def test_check_for_export_with_vblade_process_missing(self):
+        """Output a warning message when some vblade processes aren't
+           running."""
+        volume_id_list = self._attach_volume()
+
+        # the first vblade process isn't running
+        self.output = self.output.replace("run", "down", 1)
+        (shelf_id, blade_id) = db.volume_get_shelf_and_blade(self.context,
+                                                             volume_id_list[0])
+
+        self.stream.truncate(0)
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(),
+            _("vblade process for e%s.%s isn't running.\n")
+             % (shelf_id, blade_id))
+
+        self._detach_volume(volume_id_list)

@@ -89,6 +89,9 @@ flags.DEFINE_float('xenapi_task_poll_interval',
                    'The interval used for polling of remote tasks '
                    '(Async.VM.start, etc). Used only if '
                    'connection_type=xenapi.')
+flags.DEFINE_string('xenapi_image_service',
+                    'glance',
+                    'Where to get VM images: glance or objectstore.')
 flags.DEFINE_float('xenapi_vhd_coalesce_poll_interval',
                    5.0,
                    'The interval used for polling of coalescing vhds.'
@@ -106,6 +109,14 @@ flags.DEFINE_string('target_port',
 flags.DEFINE_string('iqn_prefix',
                     'iqn.2010-10.org.openstack',
                     'IQN Prefix')
+# NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick, when we pull
+# support for it, we should remove this
+flags.DEFINE_bool('xenapi_remap_vbd_dev', False,
+                  'Used to enable the remapping of VBD dev '
+                  '(Works around an issue in Ubuntu Maverick)')
+flags.DEFINE_string('xenapi_remap_vbd_dev_prefix', 'sd',
+                    'Specify prefix to remap VBD dev to '
+                    '(ex. /dev/xvdb -> /dev/sdb)')
 
 
 def get_connection(_):
@@ -130,7 +141,7 @@ class XenAPIConnection(object):
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
 
-    def init_host(self):
+    def init_host(self, host):
         #FIXME(armando): implement this
         #NOTE(armando): would we need a method
         #to call when shutting down the host?
@@ -209,40 +220,8 @@ class XenAPIConnection(object):
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
 
-    def get_cpu_info(self):
+    def update_available_resource(self, ctxt, host):
         """This method is supported only libvirt.  """
-        return
-
-    def get_vcpu_total(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_memory_mb_total(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_local_gb_total(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_vcpu_used(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_memory_mb_used(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_local_gb_used(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_hypervisor_type(self):
-        """This method is supported only libvirt.."""
-        return
-
-    def get_hypervisor_version(self):
-        """This method is supported only libvirt.."""
         return
 
     def compare_cpu(self, xml):
@@ -335,19 +314,14 @@ class XenAPISession(object):
                 return
             elif status == "success":
                 result = self._session.xenapi.task.get_result(task)
-                LOG.info(_("Task [%s] %s status: success    %s") % (
-                    name,
-                    task,
-                    result))
+                LOG.info(_("Task [%(name)s] %(task)s status:"
+                        " success    %(result)s") % locals())
                 done.send(_parse_xmlrpc_value(result))
             else:
                 error_info = self._session.xenapi.task.get_error_info(task)
                 action["error"] = str(error_info)
-                LOG.warn(_("Task [%s] %s status: %s    %s") % (
-                    name,
-                    task,
-                    status,
-                    error_info))
+                LOG.warn(_("Task [%(name)s] %(task)s status:"
+                        " %(status)s    %(error_info)s") % locals())
                 done.send_exception(self.XenAPI.Failure(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:

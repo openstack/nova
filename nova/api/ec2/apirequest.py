@@ -83,9 +83,10 @@ def _try_convert(value):
 
 
 class APIRequest(object):
-    def __init__(self, controller, action, args):
+    def __init__(self, controller, action, version, args):
         self.controller = controller
         self.action = action
+        self.version = version
         self.args = args
 
     def invoke(self, context):
@@ -93,8 +94,10 @@ class APIRequest(object):
             method = getattr(self.controller,
                              _camelcase_to_underscore(self.action))
         except AttributeError:
-            _error = _('Unsupported API request: controller = %s,'
-                       'action = %s') % (self.controller, self.action)
+            controller = self.controller
+            action = self.action
+            _error = _('Unsupported API request: controller = %(controller)s,'
+                    ' action = %(action)s') % locals()
             LOG.exception(_error)
             # TODO: Raise custom exception, trap in apiserver,
             #       and reraise as 400 error.
@@ -130,7 +133,7 @@ class APIRequest(object):
 
         response_el = xml.createElement(self.action + 'Response')
         response_el.setAttribute('xmlns',
-                                 'http://ec2.amazonaws.com/doc/2009-11-30/')
+                             'http://ec2.amazonaws.com/doc/%s/' % self.version)
         request_id_el = xml.createElement('requestId')
         request_id_el.appendChild(xml.createTextNode(request_id))
         response_el.appendChild(request_id_el)

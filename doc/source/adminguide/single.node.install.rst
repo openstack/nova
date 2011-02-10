@@ -52,7 +52,13 @@ When the installation is complete, you'll see the following lines:
     Finished processing dependencies for nova==2010.1
 
 
-Step 4: Create a Nova administrator
+Step 4: Create the Nova Database
+--------------------------------
+Type or copy/paste in the following line to create your nova db::
+
+    sudo nova-manage db sync
+
+Step 5: Create a Nova administrator
 -----------------------------------
 Type or copy/paste in the following line to create a user named "anne."::
 
@@ -63,10 +69,10 @@ You see an access key and a secret key export, such as these made-up ones:::
     export EC2_ACCESS_KEY=4e6498a2-blah-blah-blah-17d1333t97fd
     export EC2_SECRET_KEY=0a520304-blah-blah-blah-340sp34k05bbe9a7
 
-Step 5: Create the network 
+Step 6: Create the network
 --------------------------
 
-Type or copy/paste in the following line to create a network prior to creating a project. 
+Type or copy/paste in the following line to create a network prior to creating a project.
 
 ::
 
@@ -76,7 +82,7 @@ For this command, the IP address is the cidr notation for your netmask, such as 
 
 After running this command, entries are made in the 'networks' and 'fixed_ips' table in the database.
 
-Step 6: Create a project with the user you created
+Step 7: Create a project with the user you created
 --------------------------------------------------
 Type or copy/paste in the following line to create a project named IRT (for Ice Road Truckers, of course) with the newly-created user named anne.
 
@@ -106,7 +112,7 @@ Type or copy/paste in the following line to create a project named IRT (for Ice 
     Data Base Updated
 
 
-Step 7: Unzip the nova.zip
+Step 8: Unzip the nova.zip
 --------------------------
 
 You should have a nova.zip file in your current working directory. Unzip it with this command:
@@ -128,7 +134,7 @@ You'll see these files extract.
      extracting: cacert.pem
 
 
-Step 8: Source the rc file
+Step 9: Source the rc file
 --------------------------
 Type or copy/paste the following to source the novarc file in your current working directory.
 
@@ -137,14 +143,14 @@ Type or copy/paste the following to source the novarc file in your current worki
     . novarc
 
 
-Step 9: Pat yourself on the back :)
+Step 10: Pat yourself on the back :)
 -----------------------------------
 Congratulations, your cloud is up and running, you’ve created an admin user, created a network, retrieved the user's credentials and put them in your environment.
 
 Now you need an image.
 
 
-Step 9: Get an image
+Step 11: Get an image
 --------------------
 To make things easier, we've provided a small image on the Rackspace CDN. Use this command to get it on your server.
 
@@ -159,7 +165,7 @@ To make things easier, we've provided a small image on the Rackspace CDN. Use th
     Resolving cblah2.cdn.cloudfiles.rackspacecloud.com... 208.111.196.6, 208.111.196.7
     Connecting to cblah2.cdn.cloudfiles.rackspacecloud.com|208.111.196.6|:80... connected.
     HTTP request sent, awaiting response... 200 OK
-    Length: 58520278 (56M) [appication/x-gzip]
+    Length: 58520278 (56M) [application/x-gzip]
     Saving to: `images.tgz'
 
     100%[======================================>] 58,520,278  14.1M/s   in 3.9s
@@ -168,7 +174,7 @@ To make things easier, we've provided a small image on the Rackspace CDN. Use th
 
 
 
-Step 10: Decompress the image file
+Step 12: Decompress the image file
 ----------------------------------
 Use this command to extract the image files:::
 
@@ -187,7 +193,7 @@ You get a directory listing like so:::
         |-- image
         `-- info.json
 
-Step 11: Send commands to upload sample image to the cloud
+Step 13: Send commands to upload sample image to the cloud
 ----------------------------------------------------------
 
 Type or copy/paste the following commands to create a manifest for the kernel.::
@@ -340,7 +346,7 @@ You should see this in response:::
 Type or copy/paste the following commands to ssh to the instance using your private key.::
 
     ssh -i mykey.priv root@10.0.0.3
-    
+
 
 Troubleshooting Installation
 ----------------------------

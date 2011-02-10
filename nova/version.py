@@ -21,7 +21,7 @@ except ImportError:
                     'revision_id': 'LOCALREVISION',
                     'revno': 0}
 
-NOVA_VERSION = ['2011', '1']
+NOVA_VERSION = ['2011', '2']
 YEAR, COUNT = NOVA_VERSION
 
 FINAL = False   # This becomes true at Release Candidate time

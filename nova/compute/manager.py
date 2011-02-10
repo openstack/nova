@@ -37,11 +37,10 @@ terminating it.
 import datetime
 import random
 import string
-import logging
 import socket
+import time
 import functools
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -62,6 +61,9 @@ flags.DEFINE_integer('password_length', 12,
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
+flags.DEFINE_string('live_migration_retry_count', 30,
+                    ("""Retry count needed in live_migration."""
+                     """ sleep 1 sec for each count"""))
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -78,8 +80,8 @@ def checks_instance_lock(function):
 
         LOG.info(_("check_instance_lock: decorating: |%s|"), function,
                  context=context)
-        LOG.info(_("check_instance_lock: arguments: |%s| |%s| |%s|"),
-                 self, context, instance_id, context=context)
+        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
+                " |%(instance_id)s|") % locals(), context=context)
         locked = self.get_lock(context, instance_id)
         admin = context.is_admin
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,
@@ -119,71 +121,7 @@ class ComputeManager(manager.Manager):
         """Do any initialization that needs to be run if this is a
            standalone service.
         """
-        self.driver.init_host()
-
-    def update_service(self, ctxt, host, binary):
-        """Insert compute node specific information to DB."""
-
-        try:
-            service_ref = self.db.service_get_by_args(ctxt,
-                                                      host,
-                                                      binary)
-        except exception.NotFound:
-            msg = _(("""Cannot insert compute manager specific info,"""
-                      """ Because no service record found."""))
-            raise exception.Invalid(msg)
-
-        # Updating host information
-        vcpu = self.driver.get_vcpu_total()
-        memory_mb = self.driver.get_memory_mb_total()
-        local_gb = self.driver.get_local_gb_total()
-        vcpu_u = self.driver.get_vcpu_used()
-        memory_mb_u = self.driver.get_memory_mb_used()
-        local_gb_u = self.driver.get_local_gb_used()
-        hypervisor = self.driver.get_hypervisor_type()
-        version = self.driver.get_hypervisor_version()
-        cpu_info = self.driver.get_cpu_info()
-
-        self.db.service_update(ctxt,
-                               service_ref['id'],
-                               {'vcpus': vcpu,
-                                'memory_mb': memory_mb,
-                                'local_gb': local_gb,
-                                'vcpus_used':vcpu_u,
-                                'memory_mb_used': memory_mb_u,
-                                'local_gb_used': local_gb_u,
-                                'hypervisor_type': hypervisor,
-                                'hypervisor_version': version,
-                                'cpu_info': cpu_info})
-
-    def update_available_resource(self, context):
-        """
-        update compute node specific info to DB.
-        Alghough this might be subset of update_service,
-        udpate_service() is used only nova-compute is lauched.
-        On the other hand, this method is used whenever administrators
-        request comes.
-        """
-        try:
-            service_ref = self.db.service_get_by_args(context,
-                                                      self.host,
-                                                      'nova-compute')
-        except exception.NotFound:
-            msg = _(("""Cannot update resource info."""
-                     """ Because no service record found."""))
-            raise exception.Invalid(msg)
-
-        # Updating host information
-        vcpu_u = self.driver.get_vcpu_used()
-        memory_mb_u = self.driver.get_memory_mb_used()
-        local_gb_u = self.driver.get_local_gb_used()
-
-        self.db.service_update(context,
-                               service_ref['id'],
-                               {'vcpus_used':vcpu_u,
-                                'memory_mb_used': memory_mb_u,
-                                'local_gb_used': local_gb_u})
-        return
+        self.driver.init_host(host=self.host)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -243,10 +181,9 @@ class ComputeManager(manager.Manager):
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
-
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host, 'launched_on': self.host})
+                                {'host': self.host, 'launched_on':self.host})
 
         self.db.instance_set_state(context,
                                    instance_id,
@@ -297,22 +234,25 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
-        if not FLAGS.stub_network:
-            address = self.db.instance_get_floating_address(context,
-                                                            instance_ref['id'])
-            if address:
-                LOG.debug(_("Disassociating address %s"), address,
+        fixed_ip = instance_ref.get('fixed_ip')
+        if not FLAGS.stub_network and fixed_ip:
+            floating_ips = fixed_ip.get('floating_ips') or []
+            for floating_ip in floating_ips:
+                address = floating_ip['address']
+                LOG.debug("Disassociating address %s", address,
                           context=context)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
+                network_topic = self.db.queue_get_for(context,
+                                                      FLAGS.network_topic,
+                                                      floating_ip['host'])
                 rpc.cast(context,
-                         self.get_network_topic(context),
+                         network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"floating_address": address}})
 
-            address = self.db.instance_get_fixed_address(context,
-                                                         instance_ref['id'])
+            address = fixed_ip['address']
             if address:
                 LOG.debug(_("Deallocating address %s"), address,
                           context=context)
@@ -322,7 +262,7 @@ class ComputeManager(manager.Manager):
                 self.network_manager.deallocate_fixed_ip(context.elevated(),
                                                          address)
 
-        volumes = instance_ref.get('volumes', []) or []
+        volumes = instance_ref.get('volumes') or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
@@ -344,11 +284,11 @@ class ComputeManager(manager.Manager):
         LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
 
         if instance_ref['state'] != power_state.RUNNING:
+            state = instance_ref['state']
+            running = power_state.RUNNING
             LOG.warn(_('trying to reboot a non-running '
-                     'instance: %s (state: %s excepted: %s)'),
-                     instance_id,
-                     instance_ref['state'],
-                     power_state.RUNNING,
+                     'instance: %(instance_id)s (state: %(state)s '
+                     'expected: %(running)s)') % locals(),
                      context=context)
 
         self.db.instance_set_state(context,
@@ -373,9 +313,11 @@ class ComputeManager(manager.Manager):
         LOG.audit(_('instance %s: snapshotting'), instance_id,
                   context=context)
         if instance_ref['state'] != power_state.RUNNING:
+            state = instance_ref['state']
+            running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
-                       'instance: %s (state: %s excepted: %s)'),
-                     instance_id, instance_ref['state'], power_state.RUNNING)
+                       'instance: %(instance_id)s (state: %(state)s '
+                       'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
 
@@ -583,8 +525,8 @@ class ComputeManager(manager.Manager):
         """Attach a volume to an instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("instance %s: attaching volume %s to %s"), instance_id,
-                  volume_id, mountpoint, context=context)
+        LOG.audit(_("instance %(instance_id)s: attaching volume %(volume_id)s"
+                " to %(mountpoint)s") % locals(), context=context)
         dev_path = self.volume_manager.setup_compute_volume(context,
                                                             volume_id)
         try:
@@ -599,8 +541,8 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            LOG.exception(_("instance %s: attach failed %s, removing"),
-                          instance_id, mountpoint, context=context)
+            LOG.exception(_("instance %(instance_id)s: attach failed"
+                    " %(mountpoint)s, removing") % locals(), context=context)
             self.volume_manager.remove_compute_volume(context,
                                                       volume_id)
             raise exc
@@ -614,9 +556,9 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        LOG.audit(_("Detach volume %s from mountpoint %s on instance %s"),
-                  volume_id, volume_ref['mountpoint'], instance_id,
-                  context=context)
+        mp = volume_ref['mountpoint']
+        LOG.audit(_("Detach volume %(volume_id)s from mountpoint %(mp)s"
+                " on instance %(instance_id)s") % locals(), context=context)
         if instance_ref['name'] not in self.driver.list_instances():
             LOG.warn(_("Detaching volume from unknown instance %s"),
                      instance_id, context=context)
@@ -635,14 +577,15 @@ class ComputeManager(manager.Manager):
         """make tmpfile under FLAGS.instance_path."""
         return utils.mktmpfile(FLAGS.instances_path)
 
-    def exists(self, context, path):
+    def confirm_tmpfile(self, context, path):
         """Confirm existence of the tmpfile given by path."""
         if not utils.exists(path): 
             raise exception.NotFound(_('%s not found') % path)
-
-    def remove(self, context, path):
-        """remove the tmpfile given by path."""
         return utils.remove(path)
+
+    def update_available_resource(self, context):
+        """See comments update_resource_info"""
+        return self.driver.update_available_resource(context, self.host)
 
     def pre_live_migration(self, context, instance_id):
         """Any preparation for live migration at dst host."""
@@ -654,8 +597,8 @@ class ComputeManager(manager.Manager):
         # Getting fixed ips
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
-            msg = _('%s(%s) doesnt have fixed_ip') % (instance_id, ec2_id)
-            raise exception.NotFound(msg)
+            msg = _("%(instance_id)s(%(ec2_id)s) doesnt have fixed_ip")
+            raise exception.NotFound(msg % locals() )
 
         # If any volume is mounted, prepare here.
         if len(instance_ref['volumes']) == 0:
@@ -668,7 +611,25 @@ class ComputeManager(manager.Manager):
         # call this method prior to ensure_filtering_rules_for_instance,
         # since bridge is not set up, ensure_filtering_rules_for instance
         # fails.
-        self.network_manager.setup_compute_network(context, instance_id)
+        #
+        # Retry operation is necessary because continuously request comes,
+        # concorrent request occurs to iptables, then it complains.
+        #
+        max_retry = FLAGS.live_migration_retry_count
+        for i in range(max_retry):
+            try:
+                self.network_manager.setup_compute_network(context, instance_id)
+                break
+            except exception.ProcessExecutionError, e:
+                if i == max_retry-1:
+                    raise e
+                else:
+                    i_name = instance_ref.name
+                    m = _("""setup_compute_node fail %(i)d th. """
+                          """retry up to %(max_retry)d """
+                          """(%(ec2_id)s == %(i_name)s""") % locals()
+                    LOG.warn(m)
+                    time.sleep(1)
 
         # Creating filters to hypervisors and firewalls.
         # An example is that nova-instance-instance-xxx,
@@ -704,9 +665,10 @@ class ComputeManager(manager.Manager):
                       "args": {'instance_id': instance_id}})
 
         except Exception, e:
-            print e
-            msg = _('Pre live migration for %s failed at %s')
-            LOG.error(msg, ec2_id, dest)
+            msg = _("Pre live migration for %(ec2_id)s failed at %(dest)s")
+            LOG.error(msg % locals())
+            msg = _("instance %s: starting...")
+            LOG.audit(msg, ec2_id, context=context)
             self.db.instance_set_state(context,
                                        instance_id,
                                        power_state.RUNNING,

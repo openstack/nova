@@ -38,6 +38,7 @@ from nova import log as logging
 from nova import flags
 from nova import rpc
 from nova import utils
+from nova import version
 
 
 FLAGS = flags.FLAGS
@@ -80,7 +81,6 @@ class Service(object):
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
-
         try:
             service_ref = db.service_get_by_args(ctxt,
                                                  self.host,
@@ -90,7 +90,7 @@ class Service(object):
             self._create_service_ref(ctxt)
 
         if 'nova-compute' == self.binary:
-            self.manager.update_service(ctxt, self.host, self.binary)
+            self.manager.update_available_resource(ctxt)
 
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
@@ -160,7 +160,9 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.audit(_("Starting %s node"), topic)
+        vcs_string = version.version_string_with_vcs()
+        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)")
+                % locals())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -213,19 +215,6 @@ class Service(object):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))
 
-                try:
-                    # NOTE(vish): This is late-loaded to make sure that the
-                    #             database is not created before flags have
-                    #             been loaded.
-                    from nova.db.sqlalchemy import models
-                    models.register_models()
-                except OperationalError:
-                    logging.exception(_("Data store %s is unreachable."
-                                        " Trying again in %d seconds.") %
-                                      (FLAGS.sql_connection,
-                                       FLAGS.sql_retry_interval))
-                    time.sleep(FLAGS.sql_retry_interval)
-
 
 def serve(*services):
     FLAGS(sys.argv)
@@ -236,10 +225,10 @@ def serve(*services):
 
     name = '_'.join(x.binary for x in services)
     logging.debug(_("Serving %s"), name)
-
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
-        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
+        flag_get = FLAGS.get(flag, None)
+        logging.debug("%(flag)s : %(flag_get)s" % locals())
 
     for x in services:
         x.start()

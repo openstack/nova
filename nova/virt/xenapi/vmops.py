@@ -85,7 +85,8 @@ class VMOps(object):
         #Have a look at the VDI and see if it has a PV kernel
         pv_kernel = False
         if not instance.kernel_id:
-            pv_kernel = VMHelper.lookup_image(self._session, vdi_ref)
+            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
+                                              vdi_ref)
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
@@ -103,7 +104,9 @@ class VMOps(object):
                                 network_ref, instance.mac_address)
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        LOG.info(_('Spawning VM %s created %s.'), instance.name, vm_ref)
+        instance_name = instance.name
+        LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
+                % locals())
 
         # NOTE(armando): Do we really need to do this in virt?
         timer = utils.LoopingCall(f=None)
@@ -146,7 +149,7 @@ class VMOps(object):
             if isinstance(instance_or_vm, (int, long)):
                 ctx = context.get_admin_context()
                 try:
-                    instance_obj = db.instance_get_by_id(ctx, instance_or_vm)
+                    instance_obj = db.instance_get(ctx, instance_or_vm)
                     instance_name = instance_obj.name
                 except exception.NotFound:
                     # The unit tests screw this up, as they use an integer for
@@ -195,7 +198,8 @@ class VMOps(object):
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
         except self.XenAPI.Failure, exc:
-            logging.error(_("Unable to Snapshot %s: %s"), vm_ref, exc)
+            logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
+                    % locals())
             return
 
         try:
@@ -251,40 +255,70 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def destroy(self, instance):
-        """Destroy VM instance"""
-        vm = VMHelper.lookup(self._session, instance.name)
-        return self._destroy(instance, vm, shutdown=True)
-
-    def _destroy(self, instance, vm, shutdown=True):
-        """ Destroy VM instance """
-        if vm is None:
-            # Don't complain, just return.  This lets us clean up instances
-            # that have already disappeared from the underlying platform.
+    def _shutdown(self, instance, vm):
+        """Shutdown an instance """
+        state = self.get_info(instance['name'])['state']
+        if state == power_state.SHUTDOWN:
+            LOG.warn(_("VM %(vm)s already halted, skipping shutdown...") %
+                     locals())
             return
-        # Get the VDIs related to the VM
+
+        try:
+            task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+            self._session.wait_for_task(instance.id, task)
+        except self.XenAPI.Failure, exc:
+            LOG.exception(exc)
+
+    def _destroy_vdis(self, instance, vm):
+        """Destroys all VDIs associated with a VM """
         vdis = VMHelper.lookup_vm_vdis(self._session, vm)
-        if shutdown:
+
+        if not vdis:
+            return
+
+        for vdi in vdis:
             try:
-                task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+                task = self._session.call_xenapi('Async.VDI.destroy', vdi)
                 self._session.wait_for_task(instance.id, task)
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
-        # Disk clean-up
-        if vdis:
-            for vdi in vdis:
-                try:
-                    task = self._session.call_xenapi('Async.VDI.destroy', vdi)
-                    self._session.wait_for_task(instance.id, task)
-                except self.XenAPI.Failure, exc:
-                    LOG.exception(exc)
-        # VM Destroy
+    def _destroy_vm(self, instance, vm):
+        """Destroys a VM record """
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
             self._session.wait_for_task(instance.id, task)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
+
+    def destroy(self, instance):
+        """
+        Destroy VM instance
+
+        This is the method exposed by xenapi_conn.destroy(). The rest of the
+        destroy_* methods are internal.
+        """
+        vm = VMHelper.lookup(self._session, instance.name)
+        return self._destroy(instance, vm, shutdown=True)
+
+    def _destroy(self, instance, vm, shutdown=True):
+        """
+        Destroys VM instance by performing:
+
+        1. A shutdown if requested
+        2. Destroying associated VDIs
+        3. Destroying that actual VM record
+        """
+        if vm is None:
+            # Don't complain, just return.  This lets us clean up instances
+            # that have already disappeared from the underlying platform.
+            return
+
+        if shutdown:
+            self._shutdown(instance, vm)
+
+        self._destroy_vdis(instance, vm)
+        self._destroy_vm(instance, vm)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None

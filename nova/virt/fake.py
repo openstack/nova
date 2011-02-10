@@ -76,9 +76,10 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
-    def init_host(self):
+    def init_host(self, host):
         """
-        Initialize anything that is necessary for the driver to function
+        Initialize anything that is necessary for the driver to function,
+        including catching up with currently running VM's on the given host.
         """
         return
 
@@ -344,6 +345,70 @@ class FakeConnection(object):
 
     def get_hypervisor_version(self):
         """This method is supported only libvirt.."""
+        return
+
+    def compare_cpu(self, xml):
+        """This method is supported only libvirt.."""
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only libvirt.."""
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def live_migration(self, context, instance_ref, dest):
+        """This method is supported only libvirt.."""
+        raise NotImplementedError('This method is supported only libvirt.')
+
+    def refresh_security_group_rules(self, security_group_id):
+        """This method is called after a change to security groups.
+
+        All security groups and their associated rules live in the datastore,
+        and calling this method should apply the updated rules to instances
+        running the specified security group.
+
+        An error should be raised if the operation cannot complete.
+
+        """
+        return True
+
+    def refresh_security_group_members(self, security_group_id):
+        """This method is called when a security group is added to an instance.
+
+        This message is sent to the virtualization drivers on hosts that are
+        running an instance that belongs to a security group that has a rule
+        that references the security group identified by `security_group_id`.
+        It is the responsiblity of this method to make sure any rules
+        that authorize traffic flow with members of the security group are
+        updated and any new members can communicate, and any removed members
+        cannot.
+
+        Scenario:
+            * we are running on host 'H0' and we have an instance 'i-0'.
+            * instance 'i-0' is a member of security group 'speaks-b'
+            * group 'speaks-b' has an ingress rule that authorizes group 'b'
+            * another host 'H1' runs an instance 'i-1'
+            * instance 'i-1' is a member of security group 'b'
+
+            When 'i-1' launches or terminates we will recieve the message
+            to update members of group 'b', at which time we will make
+            any changes needed to the rules for instance 'i-0' to allow
+            or deny traffic coming from 'i-1', depending on if it is being
+            added or removed from the group.
+
+        In this scenario, 'i-1' could just as easily have been running on our
+        host 'H0' and this method would still have been called.  The point was
+        that this method isn't called on the host where instances of that
+        group are running (as is the case with
+        :method:`refresh_security_group_rules`) but is called where references
+        are made to authorizing those instances.
+
+        An error should be raised if the operation cannot complete.
+
+        """
+        return True
+
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only libvirt.  """
         return
 
     def compare_cpu(self, xml):

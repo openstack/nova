@@ -25,4 +25,7 @@ bzr
 Twisted>=10.1.0
 PasteDeploy
 paste
+sqlalchemy-migrate
 netaddr
+sphinx
+glance

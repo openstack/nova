@@ -51,7 +51,7 @@ class FakeComputeManager(compute_manager.ComputeManager):
     
     def __init__(self, compute_driver=None, *args, **kwargs):
         global ghost, gbinary, gmox
-        self.update_service(mox.IgnoreArg(), mox.StrContains(ghost), mox.StrContains(gbinary))
+        self.update_available_resource(mox.IgnoreArg())
         gmox.ReplayAll()
         super(FakeComputeManager, self).__init__(compute_driver, *args, **kwargs)
 
@@ -273,10 +273,10 @@ class ServiceTestCase(test.TestCase):
 
         self.assert_(not serv.model_disconnected)
 
-    def test_compute_can_update_services(self): 
+    def test_compute_can_update_available_resource(self):
         """
         Test nova-compute successfully updated Service table on DB.
-        Doing so, self.manager.update_service must be called 
+        Doing so, self.manager.update_service must be called
         if 'self.binary == nova-compute', and this testcase checks on it.
         """
         host = 'foo'
@@ -299,8 +299,7 @@ class ServiceTestCase(test.TestCase):
                                       binary).AndRaise(exception.NotFound())
         service.db.service_create(mox.IgnoreArg(),
                                   service_create).AndReturn(service_ref)
-        self.mox.StubOutWithMock(compute_manager.ComputeManager, 'update_service')
-
+        self.mox.StubOutWithMock(compute_manager.ComputeManager, 'update_available_resource')
 
         global ghost, gbinary, gmox
         ghost = host
@@ -315,5 +314,3 @@ class ServiceTestCase(test.TestCase):
         #self.mox.ReplayAll()
         serv.start()
         serv.stop()
-
-

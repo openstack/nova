@@ -39,10 +39,9 @@ Supports KVM, QEMU, UML, and XEN.
 import json
 import os
 import shutil
-import re
-import time
 import random
 import subprocess
+import time
 import uuid
 from xml.dom import minidom
 
@@ -73,6 +72,7 @@ Template = None
 LOG = logging.getLogger('nova.virt.libvirt_conn')
 
 FLAGS = flags.FLAGS
+flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 # TODO(vish): These flags should probably go into a shared location
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
@@ -83,9 +83,6 @@ flags.DEFINE_string('injected_network_template',
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
-flags.DEFINE_string('cpuinfo_xml_template',
-                    utils.abspath('virt/cpuinfo.xml.template'),
-                    'CpuInfo XML Template (used only live migration now)')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
@@ -94,16 +91,6 @@ flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
                     ' on libvirt_type)')
-flags.DEFINE_string('live_migration_uri',
-                  "qemu+tcp://%s/system",
-                  'Define protocol used by live_migration feature')
-flags.DEFINE_string('live_migration_flag',
-                  "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
-                  'Define live migration behavior.')
-flags.DEFINE_integer('live_migration_bandwidth', 0,
-                  'Define live migration behavior')
-flags.DEFINE_string('live_migration_timeout_sec', 10,
-                    'Timeout second for pre_live_migration is completed.')
 flags.DEFINE_bool('allow_project_net_traffic',
                   True,
                   'Whether to allow in project network traffic')
@@ -116,6 +103,17 @@ flags.DEFINE_string('ajaxterm_portrange',
 flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
+flags.DEFINE_string('cpuinfo_xml_template',
+                    utils.abspath('virt/cpuinfo.xml.template'),
+                    'CpuInfo XML Template (used only live migration now)')
+flags.DEFINE_string('live_migration_uri',
+                    "qemu+tcp://%s/system",
+                    'Define protocol used by live_migration feature')
+flags.DEFINE_string('live_migration_flag',
+                    "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
+                    'Define live migration behavior.')
+flags.DEFINE_integer('live_migration_bandwidth', 0,
+                    'Define live migration behavior')
 
 
 def get_connection(read_only):
@@ -166,16 +164,34 @@ class LibvirtConnection(object):
         self._wrapped_conn = None
         self.read_only = read_only
 
-        self.nwfilter = NWFilterFirewall(self._get_connection)
+        fw_class = utils.import_class(FLAGS.firewall_driver)
+        self.firewall_driver = fw_class(get_connection=self._get_connection)
 
-        if not FLAGS.firewall_driver:
-            self.firewall_driver = self.nwfilter
-            self.nwfilter.handle_security_groups = True
-        else:
-            self.firewall_driver = utils.import_object(FLAGS.firewall_driver)
+    def init_host(self, host):
+        # Adopt existing VM's running here
+        ctxt = context.get_admin_context()
+        for instance in db.instance_get_all_by_host(ctxt, host):
+            try:
+                LOG.debug(_('Checking state of %s'), instance['name'])
+                state = self.get_info(instance['name'])['state']
+            except exception.NotFound:
+                state = power_state.SHUTOFF
 
-    def init_host(self):
-        pass
+            LOG.debug(_('Current state of %(name)s was %(state)s.'),
+                          {'name': instance['name'], 'state': state})
+            db.instance_set_state(ctxt, instance['id'], state)
+
+            if state == power_state.SHUTOFF:
+                # TODO(soren): This is what the compute manager does when you
+                # terminate # an instance. At some point I figure we'll have a
+                # "terminated" state and some sort of cleanup job that runs
+                # occasionally, cleaning them out.
+                db.instance_destroy(ctxt, instance['id'])
+
+            if state != power_state.RUNNING:
+                continue
+            self.firewall_driver.prepare_instance_filter(instance)
+            self.firewall_driver.apply_instance_filter(instance)
 
     def _get_connection(self):
         if not self._wrapped_conn or not self._test_connection():
@@ -253,8 +269,9 @@ class LibvirtConnection(object):
 
     def _cleanup(self, instance):
         target = os.path.join(FLAGS.instances_path, instance['name'])
-        LOG.info(_('instance %s: deleting instance files %s'),
-                 instance['name'], target)
+        instance_name = instance['name']
+        LOG.info(_('instance %(instance_name)s: deleting instance files'
+                ' %(target)s') % locals())
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -367,7 +384,7 @@ class LibvirtConnection(object):
         rescue_images = {'image_id': FLAGS.rescue_image_id,
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
-        self._create_image(instance, xml, 'rescue-', rescue_images)
+        self._create_image(instance, xml, '.rescue', rescue_images)
         self._conn.createXML(xml, 0)
 
         timer = utils.LoopingCall(f=None)
@@ -402,7 +419,7 @@ class LibvirtConnection(object):
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-        self.nwfilter.setup_basic_filtering(instance)
+        self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_image(instance, xml)
         self._conn.createXML(xml, 0)
@@ -435,7 +452,7 @@ class LibvirtConnection(object):
         virsh_output = virsh_output[0].strip()
 
         if virsh_output.startswith('/dev/'):
-            LOG.info(_('cool, it\'s a device'))
+            LOG.info(_("cool, it's a device"))
             out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
                                      virsh_output, check_exit_code=False)
             return out
@@ -443,7 +460,7 @@ class LibvirtConnection(object):
             return ''
 
     def _append_to_file(self, data, fpath):
-        LOG.info(_('data: %r, fpath: %r'), data, fpath)
+        LOG.info(_('data: %(data)r, fpath: %(fpath)r') % locals())
         fp = open(fpath, 'a+')
         fp.write(data)
         return fpath
@@ -451,7 +468,7 @@ class LibvirtConnection(object):
     def _dump_file(self, fpath):
         fp = open(fpath, 'r+')
         contents = fp.read()
-        LOG.info(_('Contents of file %s: %r'), fpath, contents)
+        LOG.info(_('Contents of file %(fpath)s: %(contents)r') % locals())
         return contents
 
     @exception.wrap_exception
@@ -527,7 +544,6 @@ class LibvirtConnection(object):
             base_dir = os.path.join(FLAGS.instances_path, '_base')
             if not os.path.exists(base_dir):
                 os.mkdir(base_dir)
-                os.chmod(base_dir, 0777)
             base = os.path.join(base_dir, fname)
             if not os.path.exists(base):
                 fn(target=base, *args, **kwargs)
@@ -549,23 +565,22 @@ class LibvirtConnection(object):
         utils.execute('truncate %s -s %dG' % (target, local_gb))
         # TODO(vish): should we format disk by default?
 
-    def _create_image(self, inst, libvirt_xml, prefix='', disk_images=None):
+    def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
         # syntactic nicety
-        def basepath(fname='', prefix=prefix):
+        def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
                                 inst['name'],
-                                prefix + fname)
+                                fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir -p %s' % basepath(prefix=''))
-        utils.execute('chmod 0777 %s' % basepath(prefix=''))
+        utils.execute('mkdir -p %s' % basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
         f.write(libvirt_xml)
         f.close()
 
-        # NOTE(vish): No need add the prefix to console.log
+        # NOTE(vish): No need add the suffix to console.log
         os.close(os.open(basepath('console.log', ''),
                          os.O_CREAT | os.O_WRONLY, 0660))
 
@@ -594,7 +609,7 @@ class LibvirtConnection(object):
 
         root_fname = disk_images['image_id']
         size = FLAGS.minimum_root_size
-        if inst['instance_type'] == 'm1.tiny' or prefix == 'rescue-':
+        if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
             size = None
             root_fname += "_sm"
 
@@ -610,7 +625,7 @@ class LibvirtConnection(object):
 
         if type_data['local_gb']:
             self._cache_image(fn=self._create_local,
-                              target=basepath('local'),
+                              target=basepath('disk.local'),
                               fname="local_%s" % type_data['local_gb'],
                               cow=FLAGS.use_cow_images,
                               local_gb=type_data['local_gb'])
@@ -640,30 +655,28 @@ class LibvirtConnection(object):
                                   'dns': network_ref['dns'],
                                   'ra_server': ra_server}
         if key or net:
+            inst_name = inst['name']
+            img_id = inst.image_id
             if key:
-                LOG.info(_('instance %s: injecting key into image %s'),
-                    inst['name'], inst.image_id)
+                LOG.info(_('instance %(inst_name)s: injecting key into'
+                        ' image %(img_id)s') % locals())
             if net:
-                LOG.info(_('instance %s: injecting net into image %s'),
-                             inst['name'], inst.image_id)
+                LOG.info(_('instance %(inst_name)s: injecting net into'
+                        ' image %(img_id)s') % locals())
             try:
                 disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
                                  nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
-                LOG.warn(_('instance %s: ignoring error injecting data'
-                           ' into image %s (%s)'),
-                         inst['name'], inst.image_id, e)
+                LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
+                        ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo chown root %s' % basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
@@ -675,8 +688,7 @@ class LibvirtConnection(object):
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         ra_server = network['ra_server']
-        if not ra_server:
-            ra_server = 'fd00::'
+
         if FLAGS.allow_project_net_traffic:
             if FLAGS.use_ipv6:
                 net, mask = _get_net_and_mask(network['cidr'])
@@ -715,11 +727,13 @@ class LibvirtConnection(object):
                     'mac_address': instance['mac_address'],
                     'ip_address': ip_address,
                     'dhcp_server': dhcp_server,
-                    'ra_server': ra_server,
                     'extra_params': extra_params,
                     'rescue': rescue,
                     'local': instance_type['local_gb'],
                     'driver_type': driver_type}
+
+        if ra_server:
+            xml_info['ra_server'] = ra_server + "/128"
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
@@ -749,7 +763,8 @@ class LibvirtConnection(object):
                 'cpu_time': cpu_time}
 
     def get_diagnostics(self, instance_name):
-        raise exception.APIError("diagnostics are not supported for libvirt")
+        raise exception.APIError(_("diagnostics are not supported "
+                                   "for libvirt"))
 
     def get_disks(self, instance_name):
         """
@@ -907,8 +922,9 @@ class LibvirtConnection(object):
         keys = ['cores', 'sockets', 'threads']
         tkeys = topology.keys()
         if list(set(tkeys)) != list(set(keys)):
-            msg = _('Invalid xml: topology(%s) must have %s')
-            raise exception.Invalid(msg % (str(topology), ', '.join(keys)))
+            ks = ', '.join(keys)
+            msg = _('Invalid xml: topology(%(topology)s) must have %(ks)s')
+            raise exception.Invalid(msg % locals())
 
         feature_nodes = xml.xpathEval('//cpu/feature')
         features = list()
@@ -956,6 +972,47 @@ class LibvirtConnection(object):
 
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def update_available_resource(self, ctxt, host):
+        """
+        Update compute manager resource info on Service table.
+        This method is called when nova-coompute launches, and
+        whenever admin executes "nova-manage service updateresource".
+        
+        """
+        try:
+            s_refs = db.service_get_all_by_topic(ctxt, 'compute')
+            s_refs = [s for s in s_refs if s.host == host] 
+            if 0 == len(s_refs):
+                raise exception.NotFound('')
+            service_ref = s_refs[0]
+        except exception.NotFound:
+            msg = _(("""Cannot update compute manager specific info,"""
+                      """ Because no service record found."""))
+            raise exception.Invalid(msg)
+
+        # Updating host information
+        vcpu = self.get_vcpu_total()
+        memory_mb = self.get_memory_mb_total()
+        local_gb = self.get_local_gb_total()
+        vcpu_u = self.get_vcpu_used()
+        memory_mb_u = self.get_memory_mb_used()
+        local_gb_u = self.get_local_gb_used()
+        hypervisor = self.get_hypervisor_type()
+        version = self.get_hypervisor_version()
+        cpu_info = self.get_cpu_info()
+
+        db.service_update(ctxt,
+                          service_ref['id'],
+                          {'vcpus': vcpu,
+                           'memory_mb': memory_mb,
+                           'local_gb': local_gb,
+                           'vcpus_used':vcpu_u,
+                           'memory_mb_used': memory_mb_u,
+                           'local_gb_used': local_gb_u,
+                           'hypervisor_type': hypervisor,
+                           'hypervisor_version': version,
+                           'cpu_info': cpu_info})
 
     def compare_cpu(self, cpu_info):
         """
@@ -1016,12 +1073,12 @@ class LibvirtConnection(object):
 
         # Tf any instances never launch at destination host,
         # basic-filtering must be set here.
-        self.nwfilter.setup_basic_filtering(instance_ref)
+        self.firewall_driver.setup_basic_filtering(instance_ref)
         # setting up n)ova-instance-instance-xx mainly.
         self.firewall_driver.prepare_instance_filter(instance_ref)
 
         # wait for completion
-        timeout_count = range(FLAGS.live_migration_timeout_sec * 2)
+        timeout_count = range(FLAGS.live_migration_retry_count)
         while len(timeout_count) != 0:
             try:
                 filter_name = 'nova-instance-%s' % instance_ref.name
@@ -1031,9 +1088,10 @@ class LibvirtConnection(object):
                 timeout_count.pop()
                 if len(timeout_count) == 0:
                     ec2_id = instance_ref['hostname']
-                    msg = _('Timeout migrating for %s(%s)')
-                    raise exception.Error(msg % (ec2_id, instance_ref.name))
-                time.sleep(0.5)
+                    iname = instance_ref.name
+                    msg = _('Timeout migrating for %(ec2_id)s(%(iname)s)')
+                    raise exception.Error(msg % locals())
+                time.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest):
         """
@@ -1123,7 +1181,6 @@ class LibvirtConnection(object):
             logging.warn('fixed_ip is not found for %s ' % ec2_id)
         db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
         network_ref = db.fixed_ip_get_network(ctxt, fixed_ip)
-        db.network_update(ctxt, network_ref['id'], {'host': dest})
 
         try:
             floating_ip \
@@ -1157,10 +1214,10 @@ class LibvirtConnection(object):
                              v['id'],
                              {'status': 'in-use'})
 
-        LOG.info(_('Live migrating %s to %s finishes successfully')
-                     % (ec2_id, dest))
-        msg = _(("""Known error: the below error is nomally occurs.\n"""
-                 """Just check if iinstance is successfully migrated.\n"""
+        msg = _('Migrating %(ec2_id)s to %(dest)s finishes successfully')
+        LOG.info(msg % locals())
+        msg = _(("""The below error is normally occurs."""
+                 """Just check if instance is successfully migrated.\n"""
                  """libvir: QEMU error : Domain not found: no domain """
                  """with matching name.."""))
         LOG.info(msg)
@@ -1200,6 +1257,20 @@ class FirewallDriver(object):
         Gets called when an instance gets added to or removed from
         the security group."""
         raise NotImplementedError()
+
+    def setup_basic_filtering(self, instance):
+        """Create rules to block spoofing and allow dhcp.
+
+        This gets called when spawning an instance, before
+        :method:`prepare_instance_filter`.
+
+        """
+        raise NotImplementedError()
+
+    def _ra_server_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['ra_server']
 
 
 class NWFilterFirewall(FirewallDriver):
@@ -1248,10 +1319,14 @@ class NWFilterFirewall(FirewallDriver):
 
     """
 
-    def __init__(self, get_connection):
+    def __init__(self, get_connection, **kwargs):
         self._libvirt_get_connection = get_connection
         self.static_filters_configured = False
         self.handle_security_groups = False
+
+    def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
+        pass
 
     def _get_connection(self):
         return self._libvirt_get_connection()
@@ -1411,7 +1486,9 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
         if FLAGS.use_ipv6:
-            instance_secgroup_filter_children += ['nova-allow-ra-server']
+            ra_server = self._ra_server_for_instance(instance)
+            if ra_server:
+                instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
 
@@ -1485,9 +1562,14 @@ class NWFilterFirewall(FirewallDriver):
 
 
 class IptablesFirewallDriver(FirewallDriver):
-    def __init__(self, execute=None):
+    def __init__(self, execute=None, **kwargs):
         self.execute = execute or utils.execute
         self.instances = {}
+        self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
+
+    def setup_basic_filtering(self, instance):
+        """Use NWFilter from libvirt for this."""
+        return self.nwfilter.setup_basic_filtering(instance)
 
     def apply_instance_filter(self, instance):
         """No-op. Everything is done in prepare_instance_filter"""
@@ -1543,6 +1625,7 @@ class IptablesFirewallDriver(FirewallDriver):
 
         our_chains += [':nova-local - [0:0]']
         our_rules += ['-A FORWARD -j nova-local']
+        our_rules += ['-A OUTPUT -j nova-local']
 
         security_groups = {}
         # Add our chains
@@ -1583,13 +1666,23 @@ class IptablesFirewallDriver(FirewallDriver):
             if(ip_version == 4):
                 # Allow DHCP responses
                 dhcp_server = self._dhcp_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68' %
-                                                 (chain_name, dhcp_server)]
+                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
+                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidr = self._project_cidr_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' % (chain_name, cidr)]
             elif(ip_version == 6):
                 # Allow RA responses
                 ra_server = self._ra_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p icmpv6' %
-                                                 (chain_name, ra_server)]
+                if ra_server:
+                    our_rules += ['-A %s -s %s -p icmpv6 -j ACCEPT' %
+                                  (chain_name, ra_server + "/128")]
+                #Allow project network traffic
+                if (FLAGS.allow_project_net_traffic):
+                    cidrv6 = self._project_cidrv6_for_instance(instance)
+                    our_rules += ['-A %s -s %s -j ACCEPT' %
+                                        (chain_name, cidrv6)]
 
             # If nothing matches, jump to the fallback chain
             our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
@@ -1676,11 +1769,21 @@ class IptablesFirewallDriver(FirewallDriver):
                                              instance['id'])
 
     def _dhcp_server_for_instance(self, instance):
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         return network['gateway']
 
     def _ra_server_for_instance(self, instance):
-        network = db.project_get_network(context.get_admin_context(),
-                                         instance['project_id'])
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
         return network['ra_server']
+
+    def _project_cidr_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr']
+
+    def _project_cidrv6_for_instance(self, instance):
+        network = db.network_get_by_instance(context.get_admin_context(),
+                                             instance['id'])
+        return network['cidr_v6']

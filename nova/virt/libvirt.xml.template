@@ -18,10 +18,10 @@
         #set $disk_prefix = 'vd'
         #set $disk_bus = 'virtio'
             <type>hvm</type>
-	#end if
+    #end if
     #if $getVar('rescue', False)
-        <kernel>${basepath}/rescue-kernel</kernel>
-        <initrd>${basepath}/rescue-ramdisk</initrd>
+        <kernel>${basepath}/kernel.rescue</kernel>
+        <initrd>${basepath}/ramdisk.rescue</initrd>
     #else
         #if $getVar('kernel', None)
             <kernel>${kernel}</kernel>
@@ -47,7 +47,7 @@
 #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}'/>
-            <source file='${basepath}/rescue-disk'/>
+            <source file='${basepath}/disk.rescue'/>
             <target dev='${disk_prefix}a' bus='${disk_bus}'/>
         </disk>
         <disk type='file'>
@@ -64,7 +64,7 @@
     #if $getVar('local', False)
         <disk type='file'>
             <driver type='${driver_type}'/>
-            <source file='${basepath}/local'/>
+            <source file='${basepath}/disk.local'/>
             <target dev='${disk_prefix}b' bus='${disk_bus}'/>
         </disk>
     #end if
@@ -75,10 +75,12 @@
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
             <filterref filter="nova-instance-${name}">
                 <parameter name="IP" value="${ip_address}" />
-                <parameter name="DHCPSERVER" value="${dhcp_server}" />
-                <parameter name="RASERVER" value="${ra_server}" />
+                <parameter name="DHCPSERVER" value="${dhcp_server}" />           
 #if $getVar('extra_params', False)
                 ${extra_params}
+#end if
+#if $getVar('ra_server', False)
+                <parameter name="RASERVER" value="${ra_server}" />
 #end if
             </filterref>
         </interface>

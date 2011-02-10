@@ -83,7 +83,7 @@ flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
+flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
@@ -92,7 +92,7 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
 
-flags.DEFINE_bool('use_ipv6', True,
+flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
 flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
@@ -159,7 +159,7 @@ class NetworkManager(manager.Manager):
         """Called when this host becomes the host for a network."""
         raise NotImplementedError()
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
         raise NotImplementedError()
 
@@ -198,8 +198,9 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s leased to bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s leased to bad"
+                    " mac %(inst_addr)s vs %(mac)s") % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -211,15 +212,16 @@ class NetworkManager(manager.Manager):
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug("Releasing IP %s", address, context=context)
+        LOG.debug(_("Releasing IP %s"), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
             raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s released from bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s released from"
+                    " bad mac %(inst_addr)s vs %(mac)s") % locals())
         if not fixed_ip_ref['leased']:
             LOG.warn(_("IP %s released that was not leased"), address,
                      context=context)
@@ -320,7 +322,7 @@ class FlatManager(NetworkManager):
         self.db.fixed_ip_update(context, address, {'allocated': False})
         self.db.fixed_ip_disassociate(context.elevated(), address)
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Network is created manually."""
         pass
 
@@ -393,12 +395,12 @@ class FlatDHCPManager(FlatManager):
         standalone service.
         """
         super(FlatDHCPManager, self).init_host()
+        self.driver.init_host()
         self.driver.metadata_forward()
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
-        if network_ref is None:
-            network_ref = db.network_get_by_instance(context, instance_id)
+        network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface)
 
@@ -426,6 +428,10 @@ class FlatDHCPManager(FlatManager):
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface,
                                   network_ref)
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_id)
+            if(FLAGS.use_ipv6):
+                self.driver.update_ra(context, network_id)
 
 
 class VlanManager(NetworkManager):
@@ -459,8 +465,8 @@ class VlanManager(NetworkManager):
         standalone service.
         """
         super(VlanManager, self).init_host()
-        self.driver.metadata_forward()
         self.driver.init_host()
+        self.driver.metadata_forward()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -488,15 +494,14 @@ class VlanManager(NetworkManager):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
 
-    def setup_compute_network(self, context, instance_id, network_ref=None):
+    def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
-        if network_ref is None:
-            network_ref = db.network_get_by_instance(context, instance_id)
+        network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        vlan_start, vpn_start, cidr_v6):
+                        cidr_v6, vlan_start, vpn_start):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)

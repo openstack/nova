@@ -62,7 +62,6 @@ import time
 
 import IPy
 
-
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -80,11 +79,13 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
-from nova import utils
-from nova.auth import manager
 from nova import rpc
+from nova import utils
+from nova.api.ec2.cloud import ec2_id_to_id
+from nova.auth import manager
 from nova.cloudpipe import pipelib
-from nova.api.ec2 import cloud
+from nova.db import migration
+
 
 logging.basicConfig()
 FLAGS = flags.FLAGS
@@ -94,6 +95,16 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+
+
+def param2id(object_id):
+    """Helper function to convert various id types to internal id.
+    args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
+    """
+    if '-' in object_id:
+        return ec2_id_to_id(object_id)
+    else:
+        return int(object_id)
 
 
 class VpnCommands(object):
@@ -256,6 +267,14 @@ class RoleCommands(object):
         self.manager.remove_role(user, role, project)
 
 
+def _db_error(caught_exception):
+    print caught_exception
+    print _("The above error may show that the database has not "
+            "been created.\nPlease create a database using "
+            "nova-manage sync db before running this command.")
+    exit(1)
+
+
 class UserCommands(object):
     """Class for managing users."""
 
@@ -271,13 +290,19 @@ class UserCommands(object):
     def admin(self, name, access=None, secret=None):
         """creates a new admin and prints exports
         arguments: name [access] [secret]"""
-        user = self.manager.create_user(name, access, secret, True)
+        try:
+            user = self.manager.create_user(name, access, secret, True)
+        except exception.DBError, e:
+            _db_error(e)
         self._print_export(user)
 
     def create(self, name, access=None, secret=None):
         """creates a new user and prints exports
         arguments: name [access] [secret]"""
-        user = self.manager.create_user(name, access, secret, False)
+        try:
+            user = self.manager.create_user(name, access, secret, False)
+        except exception.DBError, e:
+            _db_error(e)
         self._print_export(user)
 
     def delete(self, name):
@@ -398,9 +423,14 @@ class ProjectCommands(object):
             with open(filename, 'w') as f:
                 f.write(zip_file)
         except db.api.NoMoreNetworks:
-            print ('No more networks available. If this is a new '
-                   'installation, you need\nto call something like this:\n\n'
-                   '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+            print _('No more networks available. If this is a new '
+                    'installation, you need\nto call something like this:\n\n'
+                    '    nova-manage network create 10.0.0.0/8 10 64\n\n')
+        except exception.ProcessExecutionError, e:
+            print e
+            print _("The above error may show that the certificate db has not "
+                    "been created.\nPlease create a database by running a "
+                    "nova-api server on this host.")
 
 
 class FloatingIpCommands(object):
@@ -462,9 +492,12 @@ class NetworkCommands(object):
             fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
-                                    fixed_range, int(num_networks),
-                                    int(network_size), int(vlan_start),
-                                    int(vpn_start), fixed_range_v6)
+                                    cidr=fixed_range,
+                                    num_networks=int(num_networks),
+                                    network_size=int(network_size),
+                                    cidr_v6=fixed_range_v6,
+                                    vlan_start=int(vlan_start),
+                                    vpn_start=int(vpn_start))
 
 
 class InstanceCommands(object):
@@ -474,7 +507,7 @@ class InstanceCommands(object):
         """live_migration"""
 
         ctxt = context.get_admin_context()
-        instance_id = cloud.ec2_id_to_id(ec2_id)
+        instance_id = ec2_id_to_id(ec2_id)
 
         if FLAGS.connection_type != 'libvirt':
             msg = _('Only KVM is supported for now. Sorry!')
@@ -600,6 +633,61 @@ class LogCommands(object):
         print re.sub('#012', "\n", "\n".join(lines))
 
 
+class DbCommands(object):
+    """Class for managing the database."""
+
+    def __init__(self):
+        pass
+
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return migration.db_sync(version)
+
+    def version(self):
+        """Print the current database version."""
+        print migration.db_version()
+
+
+class VolumeCommands(object):
+    """Methods for dealing with a cloud in an odd state"""
+
+    def delete(self, volume_id):
+        """Delete a volume, bypassing the check that it
+        must be available.
+        args: volume_id_id"""
+        ctxt = context.get_admin_context()
+        volume = db.volume_get(ctxt, param2id(volume_id))
+        host = volume['host']
+        if volume['status'] == 'in-use':
+            print "Volume is in-use."
+            print "Detach volume from instance and then try again."
+            return
+
+        rpc.cast(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.volume_topic, host),
+                 {"method": "delete_volume",
+                  "args": {"volume_id": volume['id']}})
+
+    def reattach(self, volume_id):
+        """Re-attach a volume that has previously been attached
+        to an instance.  Typically called after a compute host
+        has been rebooted.
+        args: volume_id_id"""
+        ctxt = context.get_admin_context()
+        volume = db.volume_get(ctxt, param2id(volume_id))
+        if not volume['instance_id']:
+            print "volume is not attached to an instance"
+            return
+        instance = db.instance_get(ctxt, volume['instance_id'])
+        host = instance['host']
+        rpc.cast(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 {"method": "attach_volume",
+                  "args": {"instance_id": instance['id'],
+                           "volume_id": volume['id'],
+                           "mountpoint": volume['mountpoint']}})
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -610,7 +698,9 @@ CATEGORIES = [
     ('network', NetworkCommands),
     ('instance', InstanceCommands),
     ('service', ServiceCommands),
-    ('log', LogCommands)]
+    ('log', LogCommands),
+    ('db', DbCommands),
+    ('volume', VolumeCommands)]
 
 
 def lazy_match(name, key_value_tuples):

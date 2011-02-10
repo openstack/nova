@@ -37,6 +37,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('dhcpbridge_flagfile',
                     '/etc/nova/nova-dhcpbridge.conf',
                     'location of flagfile for dhcpbridge')
+flags.DEFINE_string('dhcp_domain',
+                    'novalocal',
+                    'domain to use for building the hostnames')
 
 flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
@@ -177,7 +180,7 @@ def ensure_vlan(vlan_num):
         LOG.debug(_("Starting VLAN inteface %s"), interface)
         _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
         _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
-        _execute("sudo ifconfig %s up" % interface)
+        _execute("sudo ip link set %s up" % interface)
     return interface
 
 
@@ -192,17 +195,17 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         if interface:
             _execute("sudo brctl addif %s %s" % (bridge, interface))
     if net_attrs:
-        _execute("sudo ifconfig %s %s broadcast %s netmask %s up" % \
-                (bridge,
-                 net_attrs['gateway'],
-                 net_attrs['broadcast'],
-                 net_attrs['netmask']))
+        _execute("sudo ip addr add %s/%s dev %s broadcast %s" % \
+                 (net_attrs['gateway'],
+                 net_attrs['netmask'],
+                 bridge,
+                 net_attrs['broadcast']))
         if(FLAGS.use_ipv6):
-            _execute("sudo ifconfig %s add %s up" % \
-                     (bridge,
-                      net_attrs['cidr_v6']))
+            _execute("sudo ip -f inet6 addr change %s dev %s" %
+                     (net_attrs['cidr_v6'], bridge))
+            _execute("sudo ip link set %s up" % bridge)
     else:
-        _execute("sudo ifconfig %s up" % bridge)
+        _execute("sudo ip link set %s up" % bridge)
     if FLAGS.use_nova_chains:
         (out, err) = _execute("sudo iptables -N nova_forward",
                               check_exit_code=False)
@@ -298,10 +301,9 @@ interface %s
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo kill -HUP %d' % pid)
-                return
+                _execute('sudo kill %d' % pid)
             except Exception as exc:  # pylint: disable-msg=W0703
-                LOG.debug(_("Hupping radvd threw %s"), exc)
+                LOG.debug(_("killing radvd threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
@@ -314,8 +316,9 @@ interface %s
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address"""
     instance_ref = fixed_ip_ref['instance']
-    return "%s,%s.novalocal,%s" % (instance_ref['mac_address'],
+    return "%s,%s.%s,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
+                                   FLAGS.dhcp_domain,
                                    fixed_ip_ref['address'])
 
 
@@ -330,7 +333,8 @@ def _execute(cmd, *args, **kwargs):
 
 def _device_exists(device):
     """Check if ethernet device exists"""
-    (_out, err) = _execute("ifconfig %s" % device, check_exit_code=False)
+    (_out, err) = _execute("ip link show dev %s" % device,
+                           check_exit_code=False)
     return not err
 
 
@@ -360,6 +364,7 @@ def _dnsmasq_cmd(net):
            ' --strict-order',
            ' --bind-interfaces',
            ' --conf-file=',
+           ' --domain=%s' % FLAGS.dhcp_domain,
            ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
