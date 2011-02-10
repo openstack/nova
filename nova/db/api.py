@@ -522,6 +522,11 @@ def network_get_by_instance(context, instance_id):
     return IMPL.network_get_by_instance(context, instance_id)
 
 
+def network_get_all_by_instance(context, instance_id):
+    """Get all networks by instance id or raise if it does not exist."""
+    return IMPL.network_get_all_by_instance(context, instance_id)
+
+
 def network_get_index(context, network_id):
     """Get non-conflicting index for network."""
     return IMPL.network_get_index(context, network_id)
