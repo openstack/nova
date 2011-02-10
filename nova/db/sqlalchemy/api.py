@@ -607,6 +607,17 @@ def fixed_ip_get_instance(context, address):
 
 
 @require_context
+def fixed_ip_get_all_by_instance(context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
+    if not rv:
+        raise exception.NotFound(_('No address for instance %s') % instance_id)
+    return rv
+
+
+@require_context
 def fixed_ip_get_instance_v6(context, address):
     session = get_session()
     mac = utils.to_mac(address)
