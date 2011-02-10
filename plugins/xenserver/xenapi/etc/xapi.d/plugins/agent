@@ -135,4 +135,5 @@ def _wait_for_agent(self, request_id, arg_dict):
 if __name__ == "__main__":
     XenAPIPlugin.dispatch(
         {"key_init": key_init,
-        "password": password})
+        "password": password,
+        "resetnetwork": resetnetwork})
