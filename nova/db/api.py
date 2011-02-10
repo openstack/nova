@@ -86,7 +86,7 @@ def service_get(context, service_id):
 
 def service_get_by_host_and_topic(context, host, topic):
     """Get a service by host it's on and topic it listens to"""
-    return IMPL.service_get(context, host, topic)
+    return IMPL.service_get_by_host_and_topic(context, host, topic)
 
 
 def service_get_all(context, disabled=False):
