@@ -106,7 +106,8 @@ class VMOps(object):
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
-        VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
+        VMHelper.create_vbd(session=self._session, vm_ref=vm_ref, vdi_ref=vdi_ref, 
+                userdevice=0, bootable=True)
 
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,

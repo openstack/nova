@@ -70,6 +70,7 @@ def move_vhds_into_sr(session, args):
     instance_id = params['instance_id']
 
     sr_path = get_sr_path(session)
+    sr_temp_path = "%s/images/" % sr_path
 
     # Discover the copied VHDs locally, and then set up paths to copy 
     # them to under the SR
@@ -77,7 +78,7 @@ def move_vhds_into_sr(session, args):
     source_base_copy_path = "%s/base_copy.vhd" % source_image_path
     source_cow_path = "%s/cow.vhd" % source_image_path
 
-    temp_vhd_path = "%s/instance%d/" % (sr_path, instance_id)
+    temp_vhd_path = "%s/instance%d/" % (sr_temp_path, instance_id)
     new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, str(uuid.uuid4()))
     new_cow_path = "%s/%s.vhd" % (temp_vhd_path, str(uuid.uuid4()))
 

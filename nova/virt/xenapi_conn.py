@@ -152,7 +152,7 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
-    def spawn(self, instance):
+    def spawn(self, instance, disk_info=None):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
@@ -163,9 +163,6 @@ class XenAPIConnection(object):
     def resize(self, instance, flavor):
         """Resize a VM instance"""
         raise NotImplementedError()
-
-    def attach_disk(self, instance_ref):
-        
 
     def reboot(self, instance):
         """Reboot VM instance"""

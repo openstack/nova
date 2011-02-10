@@ -429,7 +429,8 @@ class ComputeManager(manager.Manager):
     
         self.db.migration_update(context, migration_id, 
                 { 'status': 'post-migrating', })
-        # This is where we would update the VM record after resizing
+        #TODO(mdietz): This is where we would update the VM record 
+        #after resizing
         
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_host'], FLAGS.compute_topic)
@@ -449,8 +450,8 @@ class ComputeManager(manager.Manager):
                 migration_ref['instance_id'])
 
         # this may get passed into the following spawn instead
-        self.driver.attach_disk(context, instance_ref)
-        self.driver.spawn(context, instance_ref, preexisting=True)
+        disk_info = self.driver.attach_disk(context, instance_ref)
+        self.driver.spawn(context, instance_ref, disk_info=disk_info)
 
         self.db.migration_update(context, migration_id, 
                 {'status': 'finished', }) 
