@@ -89,10 +89,7 @@ class API(base.Base):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
-        # FIXME(kpepple) this needs to be factored for api.py:2065 refactor
         type_data = instance_types.get_instance_type(instance_type)
-        # type_data = db.instance_type_get_by_name(context,\
-        #                                         instance_type)
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
             pid = context.project_id
