@@ -80,7 +80,7 @@ class APIRouter(wsgi.Router):
             server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
- 
+
             mapper.resource("zone", "zones", controller=zones.Controller(),
                         collection={'detail': 'GET'},
                         collection_name='zones')

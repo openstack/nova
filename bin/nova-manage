@@ -569,15 +569,6 @@ class DbCommands(object):
         print migration.db_version()
 
 
-class ZoneCommands(object):
-    """Methods for defining zones."""
-
-    def create(self, name):
-        """Create a new Zone for this deployment."""
-        ctxt = context.get_admin_context()
-        db.create_zone(ctxt, name)
-
-
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -629,7 +620,6 @@ CATEGORIES = [
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),
-    ('zone', ZoneCommands),
     ('volume', VolumeCommands)]
 
 
