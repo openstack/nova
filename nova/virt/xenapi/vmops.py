@@ -69,7 +69,7 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm, False, False)
 
-    def spawn(self, instance):
+    def spawn(self, instance, disk):
         """Create VM instance"""
         vm = VMHelper.lookup(self._session, instance.name)
         if vm is not None:
@@ -83,27 +83,32 @@ class VMOps(object):
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
-        #if kernel is not present we must download a raw disk
-        if instance.kernel_id:
-            disk_image_type = ImageType.DISK
+
+        vdi_ref = kernel = ramdisk = pv_kernel = None
+
+        # Are we building from a pre-existing disk?
+        if not disk:
+            #if kernel is not present we must download a raw disk
+            if instance.kernel_id:
+                disk_image_type = ImageType.DISK
+            else:
+                disk_image_type = ImageType.DISK_RAW
+            vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
+                instance.image_id, user, project, disk_image_type)
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+            #Have a look at the VDI and see if it has a PV kernel
+            if not instance.kernel_id:
+                pv_kernel = VMHelper.lookup_image(self._session, instance.id,
+                                                  vdi_ref)
+            if instance.kernel_id:
+                kernel = VMHelper.fetch_image(self._session, instance.id,
+                    instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+            if instance.ramdisk_id:
+                ramdisk = VMHelper.fetch_image(self._session, instance.id,
+                    instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
         else:
-            disk_image_type = ImageType.DISK_RAW
-        vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
-            instance.image_id, user, project, disk_image_type)
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        #Have a look at the VDI and see if it has a PV kernel
-        pv_kernel = False
-        if not instance.kernel_id:
-            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
-                                              vdi_ref)
-        kernel = None
-        if instance.kernel_id:
-            kernel = VMHelper.fetch_image(self._session, instance.id,
-                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
-        ramdisk = None
-        if instance.ramdisk_id:
-            ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', disk)
+
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref, vdi_ref=vdi_ref, 

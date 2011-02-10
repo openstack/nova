@@ -152,9 +152,9 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
-    def spawn(self, instance, disk_info=None):
+    def spawn(self, instance, disk=None):
         """Create VM instance"""
-        self._vmops.spawn(instance)
+        self._vmops.spawn(instance, disk)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
