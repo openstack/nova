@@ -286,8 +286,8 @@ DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
 DEFINE_string('sql_connection',
               'sqlite:///$state_path/nova.sqlite',
               'connection string for sql database')
-DEFINE_string('sql_idle_timeout',
-              '3600',
+DEFINE_integer('sql_idle_timeout',
+              3600,
               'timeout for idle sql database connections')
 DEFINE_integer('sql_max_retries', 12, 'sql connection attempts')
 DEFINE_integer('sql_retry_interval', 10, 'sql connection retry interval')
