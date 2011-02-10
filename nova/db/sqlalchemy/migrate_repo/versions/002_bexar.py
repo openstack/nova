@@ -41,6 +41,10 @@ networks = Table('networks', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
         )
 
+volumes = Table('volumes', meta,
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        )
+
 
 #
 # New Tables
@@ -131,6 +135,23 @@ instance_actions = Table('instance_actions', meta,
         )
 
 
+iscsi_targets = Table('iscsi_targets', meta,
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
+        Column('id', Integer(),  primary_key=True, nullable=False),
+        Column('target_num', Integer()),
+        Column('host',
+               String(length=255, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False)),
+        Column('volume_id',
+               Integer(),
+               ForeignKey('volumes.id'),
+               nullable=True),
+        )
+
+
 #
 # Tables to alter
 #
@@ -188,7 +209,8 @@ def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
-    for table in (certificates, consoles, console_pools, instance_actions):
+    for table in (certificates, consoles, console_pools, instance_actions,
+                  iscsi_targets):
         try:
             table.create()
         except Exception:
