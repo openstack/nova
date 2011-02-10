@@ -14,7 +14,7 @@
 """
 Unit Tests for instance types code
 """
-import datetime
+import time
 
 from nova import context
 from nova import db
@@ -37,12 +37,10 @@ class InstanceTypeTestCase(test.TestCase):
         super(InstanceTypeTestCase, self).setUp()
         session = get_session()
         max_flavorid = session.query(models.InstanceTypes).\
-                                     order_by("flavorid desc").first()
+                                     order_by("flavorid desc").\
+                                     first()
         self.flavorid = max_flavorid["flavorid"] + 1
-        self.name = str(datetime.datetime.utcnow())
-
-    def tearDown(self):
-        pass
+        self.name = str(int(time.time()))
 
     def test_instance_type_create_then_delete(self):
         """Ensure instance types can be created"""

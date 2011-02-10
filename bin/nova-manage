@@ -623,7 +623,7 @@ class InstanceTypeCommands(object):
            arguments: name memory_mb vcpus local_gb"""
         try:
             instance_types.create(name, memory, vcpus, local_gb, flavorid)
-        except exception.InvalidInputException, e:
+        except exception.InvalidInputException:
             print "Must supply valid parameters to create instance type"
             sys.exit(1)
         except exception.DBError, e:

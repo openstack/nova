@@ -32,9 +32,9 @@ FLAGS = flags.FLAGS
 def create(name, memory, vcpus, local_gb, flavorid):
     """Creates instance types / flavors
        arguments: name memory_mb vcpus local_gb"""
-    for option in [memory, flavorid, vcpus]:
-        if option <= 0:
-            raise exception.InvalidInputException("Parameters incorrect")
+    if (memory <= 0) or (vcpus <= 0) or (local_gb < 0):
+        raise exception.InvalidInputException
+
     db.instance_type_create(context.get_admin_context(),
                             dict(name=name, memory_mb=memory,
                             vcpus=vcpus, local_gb=local_gb,
