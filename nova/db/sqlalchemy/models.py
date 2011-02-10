@@ -218,7 +218,7 @@ class InstanceTypes(BASE, NovaBase):
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
     local_gb = Column(Integer)
-    flavorid = Column(Integer)
+    flavorid = Column(Integer, unique=True)
 
 
 class Volume(BASE, NovaBase):
