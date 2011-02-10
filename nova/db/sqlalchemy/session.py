@@ -38,10 +38,14 @@ def get_session(autocommit=True, expire_on_commit=False):
     global _MAKER
     if not _MAKER:
         if not _ENGINE:
+            kwargs = {'pool_recycle': FLAGS.sql_idle_timeout,
+                      'echo': False}
+
+            if FLAGS.sql_connection.startswith('sqlite'):
+                kwargs['poolclass'] = pool.NullPool
+
             _ENGINE = create_engine(FLAGS.sql_connection,
-                                    pool_recycle=FLAGS.sql_idle_timeout,
-                                    poolclass=pool.NullPool,
-                                    echo=False)
+                                    **kwargs)
         _MAKER = (sessionmaker(bind=_ENGINE,
                                 autocommit=autocommit,
                                 expire_on_commit=expire_on_commit))
