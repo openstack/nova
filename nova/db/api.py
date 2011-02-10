@@ -985,6 +985,26 @@ def console_get(context, console_id, instance_id=None):
 ####################
 
 
-def create_zone(context, name):
-    """Create a new Zone entry for this deployment."""
-    return IMPL.create_zone(context, name)
+def zone_create(context, values):
+    """Create a new ChildZone entry in this Zone."""
+    return IMPL.zone_create(context, values)
+
+
+def zone_update(context, zone_id, values):
+    """Update a ChildZone entry in this Zone."""
+    return IMPL.zone_update(context, values)
+
+
+def zone_delete(context, zone_id):
+    """Delete a ChildZone."""
+    return IMPL.zone_delete(context, zone_id)
+
+
+def zone_get(context, zone_id):
+    """Get a specific ChildZone."""
+    return IMPL.zone_get(context, zone_id)
+
+
+def zone_get_all(context):
+    """Get all ChildZone's."""
+    return IMPL.zone_get_all(context)
