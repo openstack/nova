@@ -121,7 +121,7 @@ class VMOps(object):
                                     network_ref, instance.mac_address)
 
         # call reset networking
-        self.reset_network(vm_ref)
+        self.reset_network(instance)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
@@ -393,9 +393,8 @@ class VMOps(object):
         return 'http://fakeajaxconsole/fake_url'
 
     def reset_network(self, instance):
-        vm = self._get_vm_opaque_ref(instance)
         args = {'id': str(uuid.uuid4())}
-        resp = self._make_agent_call('resetnetwork', vm, '', args)
+        resp = self._make_agent_call('resetnetwork', instance, '', args)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
