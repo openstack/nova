@@ -20,6 +20,7 @@ Session Handling for SQLAlchemy backend
 """
 
 from sqlalchemy import create_engine
+from sqlalchemy import pool
 from sqlalchemy.orm import sessionmaker
 
 from nova import exception
@@ -39,7 +40,7 @@ def get_session(autocommit=True, expire_on_commit=False):
         if not _ENGINE:
             _ENGINE = create_engine(FLAGS.sql_connection,
                                     pool_recycle=FLAGS.sql_idle_timeout,
-                                    isolation_level="immediate",
+                                    poolclass=pool.NullPool,
                                     echo=False)
         _MAKER = (sessionmaker(bind=_ENGINE,
                                 autocommit=autocommit,
