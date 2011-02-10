@@ -27,6 +27,10 @@ meta = MetaData()
 #
 
 migrations = Table('migrations', meta,
+            Column('created_at', DateTime(timezone=False)),
+            Column('updated_at', DateTime(timezone=False)),
+            Column('deleted_at', DateTime(timezone=False)),
+            Column('deleted', Boolean(create_constraint=True, name=None)),
             Column('id', Integer(), primary_key=True, nullable=False),
             Column('source_host', String(255)),
             Column('dest_host', String(255)),

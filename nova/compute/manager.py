@@ -401,7 +401,7 @@ class ComputeManager(manager.Manager):
         """Initiates the process of moving a running instance to another 
         host, possibly changing the RAM and disk size in the process"""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context. instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_create(context, 
                 { 'instance_id': instance_id,
                   'source_host': instance_ref['host'],

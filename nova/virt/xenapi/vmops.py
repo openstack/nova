@@ -152,7 +152,7 @@ class VMOps(object):
         """
         vm = None
         try:
-            if instance_or_vm.startswith("OpaqueRef:")
+            if instance_or_vm.startswith("OpaqueRef:"):
                 # Got passed an opaque ref; return it
                 return instance_or_vm
             else:

@@ -207,27 +207,26 @@ class Controller(wsgi.Controller):
         return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_confirm_resize(self, input_dict, req, id):
-        return fault.Fault(exc.HTTPNotImplemented())
+        return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_revert_resize(self, input_dict, req, id):
-        return fault.Fault(exc.HTTPNotImplemented())
+        return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_rebuild(self, input_dict, req, id):
-        return fault.Fault(exc.HTTPNotImplemented())
+        return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
-            resize_flavor = input_dict['resize']['flavorId']
+            flavor_id = input_dict['resize']['flavorId']
             self.compute_api.resize(req.environ['nova.context'], id,
                     flavor_id)
         except:
             return faults.Fault(exc.HTTPUnprocessableEntity())
-        return fault.Fault(exc.HTTPAccepted())
+        return faults.Fault(exc.HTTPAccepted())
 
 
     def _action_reboot(self, input_dict, req, id):
-        #TODO(sandy): rebuild/resize not supported.
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
