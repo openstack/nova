@@ -66,10 +66,11 @@ class VMOps(object):
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
-        #ensure enough free memory, otherwise don't bother
+        #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
-                LOG.exception(_('instance %s: not enough free memory'),
-                              instance['name'])
+                name = instance['name']
+                LOG.exception(_('instance %(name)s: not enough free memory')
+                              % locals())
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
