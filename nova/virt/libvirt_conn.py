@@ -55,7 +55,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import test
+#from nova import test
 from nova import utils
 #from nova.api import context
 from nova.auth import manager
