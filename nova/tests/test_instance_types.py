@@ -62,3 +62,20 @@ class InstanceTypeTestCase(test.TestCase):
                                             count()
         inst_types = instance_types.get_all_types()
         self.assertEqual(total_instance_types, len(inst_types))
+
+    def test_invalid_create_args_should_fail(self):
+        """Ensures that instance type creation fails with invalid args"""
+        self.assertRaises(
+                exception.InvalidInputException,
+                instance_types.create, self.name, 0, 1, 120, self.flavorid)
+        self.assertRaises(
+                exception.InvalidInputException,
+                instance_types.create, self.name, 256, -1, 120, self.flavorid)
+        self.assertRaises(
+                exception.InvalidInputException,
+                instance_types.create, self.name, 256, 1, "aa", self.flavorid)
+
+    def test_non_existant_inst_type_shouldnt_delete(self):
+        """Ensures that instance type creation fails with invalid args"""
+        self.assertRaises(exception.ApiError,
+                          instance_types.destroy, "sfsfsdfdfs")

@@ -2086,10 +2086,10 @@ def instance_type_get_by_flavor_id(context, id):
 def instance_type_destroy(context, name):
     """ Marks specific instance_type as deleted"""
     session = get_session()
-    try:
-        instance_type_ref = session.query(models.InstanceTypes).\
-                                          filter_by(name=name)
-        instance_type_ref.update(dict(deleted=1))
-    except:
-        raise exception.DBError
-    return instance_type_ref
+    instance_type_ref = session.query(models.InstanceTypes).\
+                                      filter_by(name=name)
+    records = instance_type_ref.update(dict(deleted=1))
+    if records == 0:
+        raise exception.NotFound
+    else:
+        return instance_type_ref

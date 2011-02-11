@@ -623,15 +623,16 @@ class InstanceTypeCommands(object):
            arguments: name memory_mb vcpus local_gb"""
         try:
             instance_types.create(name, memory, vcpus, local_gb, flavorid)
-        except exception.InvalidInputException:
+        except exception.InvalidInputException, e:
             print "Must supply valid parameters to create instance type"
+            print e
             sys.exit(1)
         except exception.DBError, e:
             print "DB Error: %s" % e
-            sys.exit(1)
+            sys.exit(2)
         except:
             print "Unknown error"
-            sys.exit(1)
+            sys.exit(3)
         else:
             print "%s created" % name
 
@@ -639,13 +640,9 @@ class InstanceTypeCommands(object):
         """Marks instance types / flavors as deleted
         arguments: name"""
         try:
-            records = instance_types.destroy(name)
-        except exception.InvalidParameters:
+            instance_types.destroy(name)
+        except exception.ApiError:
             print "Valid instance type name is required"
-            sys.exit(1)
-        except exception.NotFound, e:
-            print "Instance type name %s not found. \
-                    No instance type deleted." % name
             sys.exit(1)
         else:
             print "%s deleted" % name
