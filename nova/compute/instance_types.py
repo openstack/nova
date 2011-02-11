@@ -47,12 +47,7 @@ def destroy(name):
     if name == None:
         raise exception.InvalidInputException
     else:
-        records = db.instance_type_destroy(context.get_admin_context(),
-                                            name)
-    if records == 0:
-        raise exception.NotFound("Cannot find instance type named %s" % name)
-    else:
-        return records
+        db.instance_type_destroy(context.get_admin_context(), name)
 
 
 def get_all_types(inactive=0):

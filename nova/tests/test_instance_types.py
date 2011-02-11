@@ -50,8 +50,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertNotEqual(len(starting_inst_list),
                             len(new),
                             'instance was not created')
-        rows = instance_types.destroy(self.name)
-        self.assertEqual(rows, 1)
+        instance_types.destroy(self.name)
         self.assertEqual(1,
                     instance_types.get_instance_type(self.name)["deleted"])
         self.assertEqual(starting_inst_list, instance_types.get_all_types())
