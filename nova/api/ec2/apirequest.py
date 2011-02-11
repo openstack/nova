@@ -83,9 +83,10 @@ def _try_convert(value):
 
 
 class APIRequest(object):
-    def __init__(self, controller, action, args):
+    def __init__(self, controller, action, version, args):
         self.controller = controller
         self.action = action
+        self.version = version
         self.args = args
 
     def invoke(self, context):
@@ -132,7 +133,7 @@ class APIRequest(object):
 
         response_el = xml.createElement(self.action + 'Response')
         response_el.setAttribute('xmlns',
-                                 'http://ec2.amazonaws.com/doc/2009-11-30/')
+                             'http://ec2.amazonaws.com/doc/%s/' % self.version)
         request_id_el = xml.createElement('requestId')
         request_id_el.appendChild(xml.createTextNode(request_id))
         response_el.appendChild(request_id_el)

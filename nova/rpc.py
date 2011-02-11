@@ -46,7 +46,7 @@ LOG = logging.getLogger('nova.rpc')
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
     @classmethod
-    def instance(cls, new=False):
+    def instance(cls, new=True):
         """Returns the instance"""
         if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
@@ -246,7 +246,7 @@ def msg_reply(msg_id, reply=None, failure=None):
         LOG.error(_("Returning exception %s to caller"), message)
         LOG.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
-    conn = Connection.instance(True)
+    conn = Connection.instance()
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)
     try:
         publisher.send({'result': reply, 'failure': failure})
@@ -319,7 +319,7 @@ def call(context, topic, msg):
                 self.result = data['result']
 
     wait_msg = WaitMessage()
-    conn = Connection.instance(True)
+    conn = Connection.instance()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
     consumer.register_callback(wait_msg)
 

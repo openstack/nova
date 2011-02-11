@@ -221,7 +221,12 @@ class IptablesFirewallTestCase(test.TestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext('fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
-        self.fw = libvirt_conn.IptablesFirewallDriver()
+
+        class FakeLibvirtConnection(object):
+            pass
+        self.fake_libvirt_connection = FakeLibvirtConnection()
+        self.fw = libvirt_conn.IptablesFirewallDriver(
+                      get_connection=lambda: self.fake_libvirt_connection)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
@@ -473,6 +478,19 @@ class NWFilterTestCase(test.TestCase):
                                           {'user_id': 'fake',
                                           'project_id': 'fake'})
         inst_id = instance_ref['id']
+
+        ip = '10.11.12.13'
+
+        network_ref = db.project_get_network(self.context,
+                                             'fake')
+
+        fixed_ip = {'address': ip,
+                    'network_id': network_ref['id']}
+
+        admin_ctxt = context.get_admin_context()
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': instance_ref['id']})
 
         def _ensure_all_called():
             instance_filter = 'nova-instance-%s' % instance_ref['name']

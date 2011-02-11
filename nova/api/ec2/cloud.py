@@ -512,8 +512,11 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
-        # instance_id is passed in as a list of instances
-        ec2_id = instance_id[0]
+        # instance_id may be passed in as a list of instances
+        if type(instance_id) == list:
+            ec2_id = instance_id[0]
+        else:
+            ec2_id = instance_id
         instance_id = ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
@@ -532,12 +535,8 @@ class CloudController(object):
             volumes = []
             for ec2_id in volume_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                try:
-                    volume = self.volume_api.get(context, internal_id)
-                    volumes.append(volume)
-                except exception.NotFound:
-                    raise exception.NotFound(_("Volume %s not found")
-                                             % ec2_id)
+                volume = self.volume_api.get(context, internal_id)
+                volumes.append(volume)
         else:
             volumes = self.volume_api.get_all(context)
         volumes = [self._format_volume(context, v) for v in volumes]
@@ -668,12 +667,8 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                try:
-                    instance = self.compute_api.get(context, internal_id)
-                    instances.append(instance)
-                except exception.NotFound:
-                    raise exception.NotFound(_("Instance %s not found")
-                                             % ec2_id)
+                instance = self.compute_api.get(context, internal_id)
+                instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
@@ -722,7 +717,12 @@ class CloudController(object):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
                 r['ownerId'] = instance['project_id']
-                r['groupSet'] = self._convert_to_set([], 'groups')
+                security_group_names = []
+                if instance.get('security_groups'):
+                    for security_group in instance['security_groups']:
+                        security_group_names.append(security_group['name'])
+                r['groupSet'] = self._convert_to_set(security_group_names,
+                                                     'groupId')
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
             reservations[instance['reservation_id']]['instancesSet'].append(i)

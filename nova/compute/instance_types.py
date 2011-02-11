@@ -95,6 +95,7 @@ def get_by_type(instance_type):
     """retrieve instance type name"""
     if instance_type is None:
         return FLAGS.default_instance_type
+
     try:
         ctxt = context.get_admin_context()
         inst_type = db.instance_type_get_by_name(ctxt, instance_type)

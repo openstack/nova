@@ -69,9 +69,7 @@ class S3ImageService(service.BaseImageService):
         """S3 has imageId but OpenStack wants id"""
         for image in images:
             if 'imageId' in image:
-                image_id = image['imageId']
-                del image['imageId']
-                image['id'] = image_id
+                image['id'] = image['imageId']
         return images
 
     def index(self, context):
