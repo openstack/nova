@@ -346,7 +346,7 @@ def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
     LOG.debug(_("Making asynchronous cast..."))
     _pack_context(msg, context)
-    conn = Connection.instance()
+    conn = Connection.instance(True)
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)
     publisher.close()
