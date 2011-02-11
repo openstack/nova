@@ -54,6 +54,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(1,
                     instance_types.get_instance_type(self.name)["deleted"])
         self.assertEqual(starting_inst_list, instance_types.get_all_types())
+        db.instance_type_purge(context.get_admin_context(), self.name)
 
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""

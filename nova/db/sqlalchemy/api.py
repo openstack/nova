@@ -2093,3 +2093,18 @@ def instance_type_destroy(context, name):
         raise exception.NotFound
     else:
         return instance_type_ref
+
+
+@require_admin_context
+def instance_type_purge(context, name):
+    """ Removes specific instance_type from DB
+        Usually instance_type_destroy should be used
+    """
+    session = get_session()
+    instance_type_ref = session.query(models.InstanceTypes).\
+                                      filter_by(name=name)
+    records = instance_type_ref.delete()
+    if records == 0:
+        raise exception.NotFound
+    else:
+        return instance_type_ref
