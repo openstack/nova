@@ -324,6 +324,8 @@ class CloudController(object):
             groups = db.security_group_get_by_project(context,
                                                       context.project_id)
         groups = [self._format_security_group(context, g) for g in groups]
+        LOG.debug(_("Groups after format_security_group: %s"), 
+                  groups, context=context) 
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
 
