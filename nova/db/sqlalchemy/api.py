@@ -164,7 +164,7 @@ def service_get_by_host_and_topic(context, host, topic):
                    filter_by(disabled=False).\
                    filter_by(host=host).\
                    filter_by(topic=topic).\
-                   all()
+                   first()
 
 @require_admin_context
 def service_get_all_by_host(context, host):
