@@ -411,7 +411,7 @@ class ComputeManager(manager.Manager):
         service = self.db.service_get_by_host_and_topic(context,
                 instance_ref['host'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
-                service['id'])
+                service['host'])
         rpc.cast(context, topic, 
                 { 'method': 'resize_instance',
                   'migration_id': migration_ref['id'], })
@@ -435,7 +435,7 @@ class ComputeManager(manager.Manager):
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_host'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
-                service['id'])
+                service['host'])
         rpc.cast(context, topic, 
                 { 'method': 'finish_resize',
                   'migration_id': migration_ref['id'], })
