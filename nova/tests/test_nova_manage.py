@@ -40,9 +40,19 @@ class NovaManageTestCase(test.TestCase):
 
     def test_create_and_delete_instance_types(self):
         fnull = open(os.devnull, 'w')
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",
-                                    "create", self.name, "256", "1",
-                                    "120", self.flavorid], stdout=fnull)
+        retcode = subprocess.call([
+            "bin/nova-manage",
+            "instance_type",
+            "create",
+            self.name,
+            "256",
+            "1",
+            "120",
+            self.flavorid,
+            "2",
+            "10",
+            "10"],
+            stdout=fnull)
         self.assertEqual(0, retcode)
         retcode = subprocess.call(["bin/nova-manage", "instance_type",\
                                     "delete", self.name], stdout=fnull)
@@ -80,13 +90,33 @@ class NovaManageTestCase(test.TestCase):
 
     def test_should_fail_on_duplicate_name(self):
         fnull = open(os.devnull, 'w')
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "create", "fsfsfsdfsdf", "256", "1",\
-                                    "120", self.flavorid], stdout=fnull)
+        retcode = subprocess.call([
+            "bin/nova-manage",
+            "instance_type",
+            "create",
+            "fsfsfsdfsdf",
+            "256",
+            "1",
+            "120",
+            self.flavorid,
+            "2",
+            "10",
+            "10"],
+            stdout=fnull)
         self.assertEqual(0, retcode)
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "create", "fsfsfsdfsdf", "256", "1",\
-                                    "120", self.flavorid], stdout=fnull)
+        retcode = subprocess.call([
+            "bin/nova-manage",
+            "instance_type",
+            "create",
+            "fsfsfsdfsdf",
+            "256",
+            "1",
+            "120",
+            self.flavorid,
+            "2",
+            "10",
+            "10"],
+            stdout=fnull)
         self.assertEqual(1, retcode)
 
     # def test_instance_type_delete_should_fail_without_valid_name(self):

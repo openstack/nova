@@ -219,6 +219,9 @@ class InstanceTypes(BASE, NovaBase):
     vcpus = Column(Integer)
     local_gb = Column(Integer)
     flavorid = Column(Integer, unique=True)
+    swap = Column(Integer, nullable=False, default=0)
+    rxtx_quota = Column(Integer, nullable=False, default=0)
+    rxtx_cap = Column(Integer, nullable=False, default=0)
 
 
 class Volume(BASE, NovaBase):

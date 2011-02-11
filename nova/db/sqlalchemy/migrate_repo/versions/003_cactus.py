@@ -41,7 +41,9 @@ instance_types = Table('instance_types', meta,
         Column('vcpus', Integer(),  nullable=False),
         Column('local_gb', Integer(),  nullable=False),
         Column('flavorid', Integer(),  nullable=False, unique=True),
-        )
+        Column('swap', Integer(),  nullable=False, default=0),
+        Column('rxtx_quota', Integer(),  nullable=False, default=0),
+        Column('rxtx_cap', Integer(),  nullable=False, default=0))
 
 
 def upgrade(migrate_engine):

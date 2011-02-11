@@ -29,16 +29,32 @@ from nova import exception
 FLAGS = flags.FLAGS
 
 
-def create(name, memory, vcpus, local_gb, flavorid):
+def create(
+        name,
+        memory,
+        vcpus,
+        local_gb,
+        flavorid,
+        swap=0,
+        rxtx_quota=0,
+        rxtx_cap=0):
     """Creates instance types / flavors
-       arguments: name memory_mb vcpus local_gb"""
+       arguments: name memory vcpus local_gb flavorid swap rxtx_quota rxtx_cap
+    """
     if (memory <= 0) or (vcpus <= 0) or (local_gb < 0):
         raise exception.InvalidInputException
 
-    db.instance_type_create(context.get_admin_context(),
-                            dict(name=name, memory_mb=memory,
-                            vcpus=vcpus, local_gb=local_gb,
-                            flavorid=flavorid))
+    db.instance_type_create(
+        context.get_admin_context(),
+        dict(
+            name=name,
+            memory_mb=memory,
+            vcpus=vcpus,
+            local_gb=local_gb,
+            flavorid=flavorid,
+            swap=swap,
+            rxtx_quota=rxtx_quota,
+            rxtx_cap=rxtx_cap))
 
 
 def destroy(name):
