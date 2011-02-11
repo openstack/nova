@@ -32,22 +32,36 @@ FLAGS = flags.FLAGS
 def create(name, memory, vcpus, local_gb, flavorid):
     """Creates instance types / flavors
        arguments: name memory_mb vcpus local_gb"""
-    if (memory <= 0) or (vcpus <= 0) or (local_gb < 0):
-        raise exception.InvalidInputException
-
-    db.instance_type_create(context.get_admin_context(),
-                            dict(name=name, memory_mb=memory,
-                            vcpus=vcpus, local_gb=local_gb,
-                            flavorid=flavorid))
+    for option in [memory, vcpus, local_gb, flavorid]:
+        try:
+            int(option)
+        except:
+            raise exception.InvalidInputException(
+                    _("create arguments must be positive integers"))
+    if (int(memory) <= 0) or (int(vcpus) <= 0) or (int(local_gb) < 0):
+        raise exception.InvalidInputException(
+                _("create arguments must be positive integers"))
+    try:
+        db.instance_type_create(context.get_admin_context(),
+                                dict(name=name, memory_mb=memory,
+                                vcpus=vcpus, local_gb=local_gb,
+                                flavorid=flavorid))
+    except exception.DBError:
+        raise exception.ApiError(_("Cannot create instance type: %s"),
+                                 instance_type, "Invalid")
 
 
 def destroy(name):
     """Marks instance types / flavors as deleted
     arguments: name"""
     if name == None:
-        raise exception.InvalidInputException
+        raise exception.InvalidInputException(_("No instance type specified"))
     else:
-        db.instance_type_destroy(context.get_admin_context(), name)
+        try:
+            db.instance_type_destroy(context.get_admin_context(), name)
+        except exception.DBError:
+            raise exception.ApiError(_("Unknown instance type: %s"),
+                                     instance_type, "Invalid")
 
 
 def get_all_types(inactive=0):
@@ -72,7 +86,7 @@ def get_instance_type(name):
         return inst_type
     except exception.DBError:
         raise exception.ApiError(_("Unknown instance type: %s"),
-                                 instance_type)
+                                 instance_type, "Invalid")
 
 
 def get_by_type(instance_type):
@@ -85,7 +99,7 @@ def get_by_type(instance_type):
         return inst_type['name']
     except exception.DBError:
         raise exception.ApiError(_("Unknown instance type: %s"),
-                                 instance_type)
+                                 instance_type, "Invalid")
 
 
 def get_by_flavor_id(flavor_id):
@@ -98,4 +112,4 @@ def get_by_flavor_id(flavor_id):
         return flavor['name']
     except exception.DBError:
         raise exception.ApiError(_("Unknown flavor: %s"),
-                                 flavor_id)
+                                 flavor_id, "Invalid")
