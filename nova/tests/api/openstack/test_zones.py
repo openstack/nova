@@ -17,10 +17,48 @@ import unittest
 
 import stubout
 import webob
+import json
 
-import nova.api
+import nova.db
+from nova import context
+from nova import flags
 from nova.api.openstack import zones
 from nova.tests.api.openstack import fakes
+
+
+FLAGS = flags.FLAGS
+FLAGS.verbose = True
+
+
+def zone_get(context, zone_id):
+    return dict(id=1, api_url='http://foo.com', username='bob',
+                password='xxx')
+
+
+def zone_create(context, values):
+    zone = dict(id=1)
+    zone.update(values)
+    return zone
+
+
+def zone_update(context, zone_id, values):
+    zone = dict(id=zone_id, api_url='http://foo.com', username='bob',
+                password='xxx')
+    zone.update(values)
+    return zone
+
+
+def zone_delete(context, zone_id):
+    pass
+
+
+def zone_get_all(context):
+    return [
+        dict(id=1, api_url='http://foo.com', username='bob',
+                 password='xxx'),
+        dict(id=2, api_url='http://blah.com', username='alice',
+                 password='qwerty')
+    ]
 
 
 class ZonesTest(unittest.TestCase):
@@ -32,42 +70,75 @@ class ZonesTest(unittest.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
 
+        self.allow_admin = FLAGS.allow_admin_api
+        FLAGS.allow_admin_api = True
+
+        self.stubs.Set(nova.db, 'zone_get', zone_get)
+        self.stubs.Set(nova.db, 'zone_get_all', zone_get_all)
+        self.stubs.Set(nova.db, 'zone_update', zone_update)
+        self.stubs.Set(nova.db, 'zone_create', zone_create)
+        self.stubs.Set(nova.db, 'zone_delete', zone_delete)
+
     def tearDown(self):
         self.stubs.UnsetAll()
+        FLAGS.allow_admin_api = self.allow_admin
 
     def test_get_zone_list(self):
         req = webob.Request.blank('/v1.0/zones')
         res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_by_id(self):
         req = webob.Request.blank('/v1.0/zones/1')
         res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        self.assertEqual(res_dict['zone']['id'], 1)
+        self.assertEqual(res_dict['zone']['api_url'], 'http://foo.com')
+        self.assertEqual(res_dict['zone']['username'], 'bob')
+        self.assertEqual(res_dict['zone']['password'], 'xxx')
+
+        self.assertEqual(res.status_int, 200)
 
     def test_zone_delete(self):
         req = webob.Request.blank('/v1.0/zones/1')
         res = req.get_response(fakes.wsgi_app())
 
+        self.assertEqual(res.status_int, 200)
+
     def test_zone_create(self):
-        body = dict(server=dict(api_url='http://blah.zoo', username='bob',
-                        password='qwerty'))
+        body = dict(zone=dict(api_url='http://blah.zoo', username='fred',
+                        password='fubar'))
         req = webob.Request.blank('/v1.0/zones')
         req.method = 'POST'
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
+        self.assertEqual(res_dict['zone']['id'], 1)
+        self.assertEqual(res_dict['zone']['api_url'], 'http://blah.zoo')
+        self.assertEqual(res_dict['zone']['username'], 'fred')
+        self.assertEqual(res_dict['zone']['password'], 'fubar')
 
     def test_zone_update(self):
-        body = dict(server=dict(api_url='http://blah.zoo', username='zeb',
-                        password='sneaky'))
+        body = dict(zone=dict(username='zeb', password='sneaky'))
         req = webob.Request.blank('/v1.0/zones/1')
         req.method = 'PUT'
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
+        self.assertEqual(res_dict['zone']['id'], 1)
+        self.assertEqual(res_dict['zone']['api_url'], 'http://foo.com')
+        self.assertEqual(res_dict['zone']['username'], 'zeb')
+        self.assertEqual(res_dict['zone']['password'], 'sneaky')
 
 
 if __name__ == '__main__':

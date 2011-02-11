@@ -82,8 +82,7 @@ class APIRouter(wsgi.Router):
             server_members['resume'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
-                        collection={'detail': 'GET'},
-                        collection_name='zones')
+                        collection={'detail': 'GET'})
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
