@@ -414,7 +414,11 @@ class ComputeManager(manager.Manager):
                 service['host'])
         rpc.cast(context, topic, 
                 { 'method': 'resize_instance',
-                  'migration_id': migration_ref['id'], })
+                  'args': {
+                        'migration_id': migration_ref['id'], 
+                        'instance_id': instance_id,
+                  }, 
+                })
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -438,7 +442,11 @@ class ComputeManager(manager.Manager):
                 service['host'])
         rpc.cast(context, topic, 
                 { 'method': 'finish_resize',
-                  'migration_id': migration_ref['id'], })
+                  'args': {
+                        'migration_id': migration_ref['id'], 
+                        'instance_id': instance_id,
+                  }, 
+                })
 
     @exception.wrap_exception
     @checks_instance_lock
