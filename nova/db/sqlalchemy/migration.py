@@ -22,7 +22,7 @@ from nova import flags
 
 import sqlalchemy
 from migrate.versioning import api as versioning_api
-from migrate.versioning import exceptions as versioning_exceptions
+from migrate import exceptions as versioning_exceptions
 
 FLAGS = flags.FLAGS
 
