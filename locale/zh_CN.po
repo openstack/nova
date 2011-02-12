@@ -8,14 +8,14 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-01-10 11:25-0800\n"
-"PO-Revision-Date: 2011-01-22 03:11+0000\n"
-"Last-Translator: combo <Unknown>\n"
+"PO-Revision-Date: 2011-02-12 05:05+0000\n"
+"Last-Translator: Winston Dillon <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-02-05 05:36+0000\n"
-"X-Generator: Launchpad (build 12177)\n"
+"X-Launchpad-Export-Date: 2011-02-12 05:37+0000\n"
+"X-Generator: Launchpad (build 12351)\n"
 
 #: nova/twistd.py:268
 #, python-format
@@ -315,7 +315,7 @@ msgstr "键为: %s\t\t值为: %s"
 #: nova/api/ec2/__init__.py:301
 #, python-format
 msgid "Unauthorized request for controller=%s and action=%s"
-msgstr "对于控制器=%s和执行=%s的请求,未审核"
+msgstr "对控制器=%s及动作=%s未经授权"
 
 #: nova/api/ec2/__init__.py:339
 #, python-format
@@ -330,7 +330,7 @@ msgstr "引发了Api错误: %s"
 #: nova/api/ec2/__init__.py:349
 #, python-format
 msgid "Unexpected error raised: %s"
-msgstr "引发了未知的错误: %s"
+msgstr "引发了意外的错误：%s"
 
 #: nova/api/ec2/__init__.py:354
 msgid "An unknown error has occurred. Please try your request again."
@@ -349,7 +349,7 @@ msgstr "删除用户: %s"
 #: nova/api/ec2/admin.py:114
 #, python-format
 msgid "Adding role %s to user %s for project %s"
-msgstr "增加角色 %s给用户 %s,在工程 %s中"
+msgstr "正将%s角色赋予用户%s（在工程%s中）"
 
 #: nova/api/ec2/admin.py:117 nova/auth/manager.py:415
 #, python-format
@@ -359,12 +359,12 @@ msgstr "增加站点范围的 %s角色给用户 %s"
 #: nova/api/ec2/admin.py:122
 #, python-format
 msgid "Removing role %s from user %s for project %s"
-msgstr "移除角色 %s从用户 %s中,在工程 %s"
+msgstr "正将角色%s从用户%s在工程%s中移除"
 
 #: nova/api/ec2/admin.py:125 nova/auth/manager.py:441
 #, python-format
 msgid "Removing sitewide role %s from user %s"
-msgstr "移除站点范围的 %s角色从用户 %s中"
+msgstr ""
 
 #: nova/api/ec2/admin.py:129 nova/api/ec2/admin.py:192
 msgid "operation must be add or remove"
@@ -393,7 +393,7 @@ msgstr "增加用户%s到%s工程"
 #: nova/api/ec2/admin.py:188
 #, python-format
 msgid "Removing user %s from project %s"
-msgstr "移除用户%s从工程%s中"
+msgstr "正将用户%s从工程%s中移除"
 
 #: nova/api/ec2/apirequest.py:95
 #, python-format
@@ -403,7 +403,7 @@ msgstr "不支持的API请求: 控制器 = %s,执行 = %s"
 #: nova/api/ec2/cloud.py:117
 #, python-format
 msgid "Generating root CA: %s"
-msgstr ""
+msgstr "生成根证书: %s"
 
 #: nova/api/ec2/cloud.py:277
 #, python-format
