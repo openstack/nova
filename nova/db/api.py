@@ -259,6 +259,9 @@ def floating_ip_get_by_address(context, address):
 
 ####################
 
+def migration_update(context, id, values):
+    """Update a migration instance""" 
+    return IMPL.migration_update(context, id, values)
 
 def migration_create(context, values):
     """Create a migration record"""
