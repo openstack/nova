@@ -422,7 +422,7 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def resize_instance(self, context, migration_id):
+    def resize_instance(self, context, instance_id, migration_id):
         """Starts the migration of a running instance to another host"""
         migration_ref = self.db.migration_get(context, migration_id)
         self.db.migration_update(context, migration_id, 
@@ -443,14 +443,14 @@ class ComputeManager(manager.Manager):
         rpc.cast(context, topic, 
                 { 'method': 'finish_resize',
                   'args': {
-                        'migration_id': migration_ref['id'], 
+                        'migration_id': migration_id, 
                         'instance_id': instance_id,
                   }, 
                 })
 
     @exception.wrap_exception
     @checks_instance_lock
-    def finish_resize(self, context, migration_id):
+    def finish_resize(self, context, instance_id, migration_id):
         """Completes the migration process by setting up the newly transferred
         disk and turning on the instance on its new host machine"""
         migration_ref = self.db.migration_get(context, migration_id)
