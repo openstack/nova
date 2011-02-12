@@ -1930,19 +1930,19 @@ def migration_create(context, values):
 
 
 @require_admin_context
-def migration_update(context, migration_id, values):
+def migration_update(context, id, values):
     session = get_session()
     with session.begin():
-        migration = migration_get(context, migration_id, session=session)
+        migration = migration_get(context, id, session=session)
         migration.update(values)
         return migration
 
 
 @require_admin_context
-def migration_get(context, migration_id):
+def migration_get(context, id):
     session = get_session()
     result = session.query(models.Migration).\
-                     filter_by(migration_id=migration_id).first()
+                     filter_by(id=id).first()
     if not result:
         raise exception.NotFound(_("No migration found with id %s") 
                 % migration_id)
