@@ -1942,7 +1942,7 @@ def migration_update(context, migration_id, values):
 def migration_get(context, migration_id):
     session = get_session()
     result = session.query(models.Migration).\
-                     filter_by(migration_id=migration_id)).first()
+                     filter_by(migration_id=migration_id).first()
     if not result:
         raise exception.NotFound(_("No migration found with id %s") 
                 % migration_id)
@@ -1953,7 +1953,7 @@ def migration_get(context, migration_id):
 def migration_get_by_instance(context, instance_id):
     session = get_session()
     result = session.query(models.Migration).\
-                     filter_by(instance_id=instance_id)).first()
+                     filter_by(instance_id=instance_id).first()
     if not result:
         raise exception.NotFound(_("No migration found with instance id %s") 
                 % migration_id)
