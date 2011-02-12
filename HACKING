@@ -57,8 +57,12 @@ Docstrings
   parameters and return types use the Sphinx format. After that an extra
   newline then close the quotations.
 
+  When writing the docstring for a class, an extra line should be placed
+  after the closing quotations. For more in-depth explanations for these
+  decisions see http://www.python.org/dev/peps/pep-0257/
+
   :param foo: the foo parameter
   :param bar: the bar parameter
-  :rtype: the return type
+  :returns: description of the return value
 
   """
