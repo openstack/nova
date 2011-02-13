@@ -65,19 +65,27 @@ class S3ImageService(service.BaseImageService):
                                  'image_id': image_id}))
         return image_id
 
-    def _fix_image_id(self, images):
-        """S3 has imageId but OpenStack wants id"""
-        for image in images:
-            if 'imageId' in image:
-                image['id'] = image['imageId']
-        return images
+    def _format_image(self, image):
+        """Convert from S3 format to format defined by BaseImageService."""
+        i = {}
+        i['id'] = image.get('imageId')
+        i['kernel_id'] = image.get('kernelId')
+        i['ramdisk_id'] = image.get('ramdiskId')
+        i['image_location'] = image.get('imageLocation')
+        i['image_owner_id'] = image.get('imageOwnerId')
+        i['image_state'] = image.get('imageState')
+        i['type'] = image.get('type')
+        i['is_public'] = image.get('isPublic')
+        i['architecture'] = image.get('architecture')
+        return i
 
     def index(self, context):
         """Return a list of all images that a user can see."""
         response = self._conn(context).make_request(
             method='GET',
             bucket='_images')
-        return self._fix_image_id(json.loads(response.read()))
+        images = json.loads(response.read())
+        return [self._format_image(i) for i in images]
 
     def show(self, context, image_id):
         """return a image object if the context has permissions"""
