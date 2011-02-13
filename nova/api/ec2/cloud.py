@@ -840,6 +840,7 @@ class CloudController(object):
         return True
 
     def _format_image(self, context, image):
+        """Convert from format defined by BaseImageService to S3 format."""
         i = {}
         i['imageId'] = image.get('id')
         i['kernelId'] = image.get('kernel_id')
