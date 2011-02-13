@@ -512,8 +512,11 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
-        # instance_id is passed in as a list of instances
-        ec2_id = instance_id[0]
+        # instance_id may be passed in as a list of instances
+        if type(instance_id) == list:
+            ec2_id = instance_id[0]
+        else:
+            ec2_id = instance_id
         instance_id = ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
