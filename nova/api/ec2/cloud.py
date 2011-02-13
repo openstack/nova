@@ -328,7 +328,7 @@ class CloudController(object):
             groups = [g for g in groups if g.name in group_name]
 
         return {'securityGroupInfo':
-                sorted(groups, key=lambda k: k['ownerId'])}
+                sorted(groups, key=lambda k: (k['ownerId'], k['groupName']))}
 
     def _format_security_group(self, context, group):
         g = {}
