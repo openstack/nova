@@ -844,9 +844,9 @@ class CloudController(object):
         i['imageId'] = image.get('id')
         i['kernelId'] = image.get('kernel_id')
         i['ramdiskId'] = image.get('ramdisk_id')
-        i['imageLocation'] = image.get('image_location')
-        i['imageOwnerId'] = image.get('image_owner_id')
-        i['imageState'] = image.get('image_state')
+        i['imageOwnerId'] = image.get('owner_id')
+        i['imageLocation'] = image.get('location')
+        i['imageState'] = image.get('status')
         i['type'] = image.get('type')
         i['isPublic'] = image.get('is_public')
         i['architecture'] = image.get('architecture')
@@ -856,7 +856,7 @@ class CloudController(object):
         # NOTE: image_id is a list!
         images = self.image_service.index(context)
         if image_id:
-            images = filter(lambda x: x['imageId'] in image_id, images)
+            images = filter(lambda x: x['id'] in image_id, images)
         images = [self._format_image(context, i) for i in images]
         return {'imagesSet': images}
 

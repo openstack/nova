@@ -69,11 +69,12 @@ class S3ImageService(service.BaseImageService):
         """Convert from S3 format to format defined by BaseImageService."""
         i = {}
         i['id'] = image.get('imageId')
+        i['name'] = image.get('imageId')
         i['kernel_id'] = image.get('kernelId')
         i['ramdisk_id'] = image.get('ramdiskId')
-        i['image_location'] = image.get('imageLocation')
-        i['image_owner_id'] = image.get('imageOwnerId')
-        i['image_state'] = image.get('imageState')
+        i['location'] = image.get('imageLocation')
+        i['owner_id'] = image.get('imageOwnerId')
+        i['status'] = image.get('imageState')
         i['type'] = image.get('type')
         i['is_public'] = image.get('isPublic')
         i['architecture'] = image.get('architecture')
