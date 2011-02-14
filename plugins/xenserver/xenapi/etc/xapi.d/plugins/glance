@@ -29,7 +29,10 @@ import os
 import os.path
 import pickle
 import sha
+import shlex
+import shutil
 import subprocess
+import tempfile
 import time
 import urlparse
 
@@ -66,65 +69,190 @@ def _copy_kernel_vdi(dest,copy_args):
     data=f.read(vdi_size)
     of.write(data)
     f.close()
-    of.close()    
+    of.close()
     logging.debug("Done. Filename: %s",filename)
-    return filename 
+    return filename
+
+
+def execute(cmd):
+    args = shlex.split(cmd)
+    proc = subprocess.Popen(
+        args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+    return proc
+
+
+def get_vdi(session, args):
+    """
+    """
+    params = pickle.loads(exists(args, 'params'))
+    image_id = params["image_id"]
+    glance_host = params["glance_host"]
+    glance_port = params["glance_port"]
+
+    def unbundle_xfer(sr_path, staging_path):
+        """
+
+        """
+        conn = httplib.HTTPConnection(glance_host, glance_port)
+        conn.request('GET', '/images/%s' % image_id)
+        resp = conn.getresponse()
+        if resp.status == httplib.NOT_FOUND:
+            raise Exception("Image '%s' not found in Glance" % image_id)
+        elif resp.status != httplib.OK:
+            raise Exception("Unexpected response from Glance %i" % res.status)
+
+        tar_proc = execute("tar -zx --directory=%(staging_path)s" % locals())
+        chunk = resp.read(CHUNK_SIZE)
+        while chunk:
+            tar_proc.stdin.write(chunk)
+            chunk = resp.read(CHUNK_SIZE)
+        out, err = tar_proc.communicate()
+        # TODO(sirp): write assert_process_success
+        ret = tar_proc.returncode
+        if ret != 0:
+            raise Exception(
+                "tar returned non-zero exit code (%i): '%s'" % (ret, err))
+        conn.close()
+
+    def fixup_vhds(sr_path, staging_path):
+        """
+        """
+        def rename_with_uuid(orig_path):
+            """Generate a uuid and rename the file with the uuid"""
+            orig_dirname = os.path.dirname(orig_path)
+            uuid = generate_uuid()
+            new_path = os.path.join(orig_dirname, "%s.vhd" % uuid)
+            os.rename(orig_path, new_path)
+            return new_path, uuid
+
+        def move_into_sr(orig_path):
+            """Move a file into the SR"""
+            filename = os.path.basename(orig_path)
+            new_path = os.path.join(sr_path, filename)
+            #os.rename(orig_path, new_path)
+            # FIXME(sirp) : testing
+            shutil.copyfile(orig_path, new_path)
+            return new_path
+
+        def link_vhds(child_path, parent_path):
+            proc = execute("vhd-util modify -n %(child_path)s -p %(parent_path)s"
+                           % locals())
+            out, err = proc.communicate()
+            if proc.returncode != 0:
+                raise Exception("Failed to link vhds: '%s'" % err)
+
+        image_path = os.path.join(staging_path, 'image')
+
+        orig_base_copy_path = os.path.join(image_path, 'image.vhd')
+        if not os.path.exists(orig_base_copy_path):
+            raise Exception("Invalid image: image.vhd not present")
+
+        base_copy_path, base_copy_uuid = rename_with_uuid(orig_base_copy_path)
+
+        vdi_uuid = base_copy_uuid
+        orig_snap_path = os.path.join(image_path, 'snap.vhd')
+        if os.path.exists(orig_snap_path):
+            snap_path, snap_uuid = rename_with_uuid(orig_snap_path)
+            vdi_uuid = snap_uuid
+            # NOTE(sirp): this step is necessary so that an SR scan won't
+            # delete the base_copy out from under us (since it would be
+            # orphaned)
+            link_vhds(snap_path, base_copy_path) 
+            move_into_sr(snap_path)
+        else:
+            raise Exception("path '%s' not found!!!" % orig_snap_path)
+        move_into_sr(base_copy_path)
+        return vdi_uuid
+
+    sr_path = get_sr_path(session)
+    staging_path = make_staging_area(sr_path)
+    try:
+        unbundle_xfer(sr_path, staging_path)
+        vdi_uuid = fixup_vhds(sr_path, staging_path)
+        return vdi_uuid
+    finally:
+        # FIXME(sirp) : testing
+        pass
+        #cleanup_staging_area(staging_path)
+
 
 def put_vdis(session, args):
+    """
+    """
     params = pickle.loads(exists(args, 'params'))
     vdi_uuids = params["vdi_uuids"]
     image_id = params["image_id"]
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
-    
-    sr_path = get_sr_path(session)
-    #FIXME(sirp): writing to a temp file until Glance supports chunked-PUTs
-    tmp_file = "%s.tar.gz" % os.path.join('/tmp', str(image_id)) 
-    tar_cmd = ['tar', '-zcf', tmp_file, '--directory=%s' % sr_path]
-    paths = [ "%s.vhd" % vdi_uuid for vdi_uuid in vdi_uuids ]
-    tar_cmd.extend(paths)
-    logging.debug("Bundling image with cmd: %s", tar_cmd)
-    subprocess.call(tar_cmd)
-    logging.debug("Writing to test file %s", tmp_file) 
-    put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port)
-    return "" # FIXME(sirp): return anything useful here?
 
+    def prepare_staging_area(sr_path, staging_path):
+        """
+        Explain preparing staging area here...
+        """
+        image_path = os.path.join(staging_path, 'image')
+        os.mkdir(image_path)
+        for name, uuid in vdi_uuids.items():
+            source = os.path.join(sr_path, "%s.vhd" % uuid)
+            link_name = os.path.join(image_path, "%s.vhd" % name)
+            os.link(source, link_name)
 
-def put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port):
-    size = os.path.getsize(tmp_file) 
-    basename = os.path.basename(tmp_file)
-
-    bundle = open(tmp_file, 'r')
-    try:
-        headers = {
-            'x-image-meta-store': 'file',
-            'x-image-meta-is_public': 'True',
-            'x-image-meta-type': 'raw',
-            'x-image-meta-size': size,
-            'content-length': size,
-            'content-type': 'application/octet-stream',
-         }
+    def bundle_xfer(staging_path):
         conn = httplib.HTTPConnection(glance_host, glance_port)
         #NOTE(sirp): httplib under python2.4 won't accept a file-like object
         # to request
         conn.putrequest('PUT', '/images/%s' % image_id)
 
+        headers = {
+            'x-image-meta-store': 'file',
+            'x-image-meta-is_public': 'True',
+            'x-image-meta-type': 'raw',
+            'x-image-meta-property-disk-format': 'vhd',
+            'x-image-meta-property-container-format': 'tarball',
+            'transfer-encoding': "chunked",
+            'content-type': 'application/octet-stream',
+         }
         for header, value in headers.iteritems():
             conn.putheader(header, value)
         conn.endheaders()
-        
-        chunk = bundle.read(CHUNK_SIZE)
-        while chunk:
-            conn.send(chunk)
-            chunk = bundle.read(CHUNK_SIZE)
-        
 
-        res = conn.getresponse()
+        tar_proc = execute("tar -zc --directory=%(staging_path)s ." % locals())
+
+        chunk = tar_proc.stdout.read(CHUNK_SIZE)
+        while chunk:
+            conn.send("%x\r\n%s\r\n" % (len(chunk), chunk))
+            chunk = tar_proc.stdout.read(CHUNK_SIZE)
+        conn.send("0\r\n\r\n")
+
+        resp = conn.getresponse()
         #FIXME(sirp): should this be 201 Created?
-        if res.status != httplib.OK:
+        if resp.status != httplib.OK:
             raise Exception("Unexpected response from Glance %i" % res.status)
+
+        conn.close()
+
+    sr_path = get_sr_path(session)
+    staging_path = make_staging_area(sr_path)
+    try:
+        prepare_staging_area(sr_path, staging_path)
+        bundle_xfer(staging_path)
     finally:
-        bundle.close()
+        cleanup_staging_area(staging_path)
+
+    return "" # FIXME(sirp): return anything useful here?
+
+
+def make_staging_area(sr_path):
+    """
+    Explain staging area here...
+    """
+    # NOTE(sirp): staging area is created in SR to allow hard-linking
+    staging_path = tempfile.mkdtemp(dir=sr_path)
+    return staging_path
+
+
+def cleanup_staging_area(staging_path):
+    shutil.rmtree(staging_path)
+
 
 def get_sr_path(session):
     sr_ref = find_sr(session)
@@ -154,7 +282,13 @@ def find_sr(session):
                 return sr
     return None
 
+def generate_uuid():
+    # NOTE(sirp): Python2.4 does not include the uuid module
+    proc = execute("uuidgen")
+    uuid = proc.stdout.read().strip()
+    return uuid
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'put_vdis': put_vdis, 
+    XenAPIPlugin.dispatch({'put_vdis': put_vdis,
+                           'get_vdi': get_vdi,
                            'copy_kernel_vdi': copy_kernel_vdi})

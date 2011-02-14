@@ -266,7 +266,9 @@ class VMHelper(HelperBase):
             session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
 
         #TODO(sirp): we need to assert only one parent, not parents two deep
-        return template_vm_ref, [template_vdi_uuid, parent_uuid]
+        template_vdi_uuids = {'image': parent_uuid,
+                              'snap': template_vdi_uuid}
+        return template_vm_ref, template_vdi_uuids
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
@@ -303,15 +305,36 @@ class VMHelper(HelperBase):
             return cls._fetch_image_objectstore(session, instance_id, image,
                                                 access, user.secret, type)
 
+
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access, type):
+    def _fetch_image_glance_vhd(cls, session, instance_id, image, access, type):
+        LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
+                    % locals())
+
+        sr_ref = find_sr(session)
+        if sr_ref is None:
+            raise exception.NotFound('Cannot find SR to write VDI to')
+
+        params = {'image_id': image,
+                  'glance_host': FLAGS.glance_host,
+                  'glance_port': FLAGS.glance_port}
+
+        kwargs = {'params': pickle.dumps(params)}
+        task = session.async_call_plugin('glance', 'get_vdi', kwargs)
+        vdi_uuid = session.wait_for_task(instance_id, task)
+        scan_sr(session, instance_id, sr_ref)
+        LOG.debug(_("Xapi 'get_vdi' returned VDI UUID %(vdi_uuid)s") % locals())
+        return vdi_uuid
+
+    @classmethod
+    def _fetch_image_glance_disk(cls, session, instance_id, image, access, type):
         sr = find_sr(session)
         if sr is None:
             raise exception.NotFound('Cannot find SR to write VDI to')
 
-        c = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
 
-        meta, image_file = c.get_image(image)
+        meta, image_file = client.get_image(image)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
         LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
@@ -343,6 +366,22 @@ class VMHelper(HelperBase):
             return filename
         else:
             return session.get_xenapi().VDI.get_uuid(vdi)
+
+    @classmethod
+    def _fetch_image_glance(cls, session, instance_id, image, access, type):
+        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+        meta = client.get_image_meta(image)
+        properties = meta['properties']
+        disk_format = properties.get('disk_format', None)
+
+        # TODO(sirp): When Glance treats disk_format as a first class
+        # attribute, we should start using that rather than an image-property
+        if disk_format == 'vhd':
+            return cls._fetch_image_glance_vhd(
+                session, instance_id, image, access, type)
+        else:
+            return cls._fetch_image_glance_disk(
+                session, instance_id, image, access, type)
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,

@@ -140,7 +140,11 @@ class Controller(wsgi.Controller):
 
         image_id = str(image_id)
         image = self._image_service.show(req.environ['nova.context'], image_id)
-        return lookup('kernel_id'), lookup('ramdisk_id')
+        disk_format = image['properties'].get('disk_format', None)
+        if disk_format == "vhd":
+            return None, None
+        else:
+            return lookup('kernel_id'), lookup('ramdisk_id')
 
     def create(self, req):
         """ Creates a new server for a given user """
