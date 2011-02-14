@@ -1,4 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
+# vim: tabstop=5 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -462,6 +462,13 @@ class API(base.Base):
         """return the boolean state of (instance with instance_id)'s lock"""
         instance = self.get(context, instance_id)
         return instance['locked']
+
+    def reset_network(self, context, instance_id):
+        """
+        resets networking on the instance
+
+        """
+        self._cast_compute_message('reset_network', context, instance_id)
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):

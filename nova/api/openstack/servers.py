@@ -242,6 +242,20 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def reset_network(self, req, id):
+        """
+        admin only operation which resets networking on an instance
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.reset_network(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::reset_network %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
