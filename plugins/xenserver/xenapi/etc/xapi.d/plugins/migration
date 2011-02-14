@@ -69,6 +69,9 @@ def move_vhds_into_sr(session, args):
     params = pickle.dumps(args)
     instance_id = params['instance_id']
 
+    new_base_copy_uuid = params['new_base_copy_uuid']
+    new_cow_uuid = params['new_cow_uuid']
+
     sr_path = get_sr_path(session)
     sr_temp_path = "%s/images/" % sr_path
 
@@ -78,8 +81,6 @@ def move_vhds_into_sr(session, args):
     source_base_copy_path = "%s/base_copy.vhd" % source_image_path
     source_cow_path = "%s/cow.vhd" % source_image_path
 
-    new_base_copy_uuid = str(uuid.uuid4())
-    new_cow_uuid = str(uuid.uuid4())
 
     temp_vhd_path = "%s/instance%d/" % (sr_temp_path, instance_id)
     new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
@@ -97,7 +98,7 @@ def move_vhds_into_sr(session, args):
     
     shutil.move("%s/*.vhd" % temp_vhd_path, sr_path)
     os.rmdir(temp_vhd_path)
-    return (new_base_copy_uuid, new_cow_uuid)
+    return None
 
 
 def transfer_vhd(session, args):

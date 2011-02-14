@@ -276,14 +276,17 @@ class VMOps(object):
     def attach_disk(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
-        params = { 'instance_id': instance.id }
-        new_base_copy_uuid, new_cow_uuid = self._session.async_call_plugin(
-                'migration', 'move_vhds_into_sr',
+        new_base_copy_uuid = str(uuid.uuid4())
+        
+        params = { 'instance_id': instance.id,
+                   'new_base_copy_uuid': new_base_copy_uuid, 
+                   'new_cow_uuid': str(uuid.uuid4() }
+
+        self._session.async_call_plugin('migration', 'move_vhds_into_sr',
                 {'params': pickle.dumps(params)})
 
         # Now we rescan the SR so we find the VHDs
-        sr_ref = VMHelper.get_sr(self._session)
-        VMHelper.scan_sr(self._session, instance.id, sr_ref)
+        VMHelper.scan_sr(self._session)
 
         return new_base_copy_uuid 
 

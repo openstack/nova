@@ -504,10 +504,14 @@ class VMHelper(HelperBase):
             return {"Unable to retrieve diagnostics": e}
 
     @classmethod
-    def scan_sr(cls, session, instance_id, sr_ref):
-        LOG.debug(_("Re-scanning SR %s"), sr_ref)
-        task = session.call_xenapi('Async.SR.scan', sr_ref)
-        session.wait_for_task(instance_id, task)
+    def scan_sr(cls, session, instance_id=None, sr_ref=None):
+        if sr_ref:
+            LOG.debug(_("Re-scanning SR %s"), sr_ref)
+            task = session.call_xenapi('Async.SR.scan', sr_ref)
+            session.wait_for_task(instance_id, task)
+        else:
+            sr_ref = cls.get_sr(session)
+            session.call_xen_api('SR.scan', sr_ref)
 
 
 def get_rrd(host, uuid):
