@@ -328,7 +328,8 @@ class CloudController(object):
             groups = [g for g in groups if g.name in group_name]
 
         return {'securityGroupInfo':
-                sorted(groups, key=lambda k: (k['ownerId'], k['groupName']))}
+                list(sorted(groups,
+                            key=lambda k: (k['ownerId'], k['groupName'])))}
 
     def _format_security_group(self, context, group):
         g = {}
@@ -840,11 +841,26 @@ class CloudController(object):
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
+    def _format_image(self, context, image):
+        """Convert from format defined by BaseImageService to S3 format."""
+        i = {}
+        i['imageId'] = image.get('id')
+        i['kernelId'] = image.get('kernel_id')
+        i['ramdiskId'] = image.get('ramdisk_id')
+        i['imageOwnerId'] = image.get('owner_id')
+        i['imageLocation'] = image.get('location')
+        i['imageState'] = image.get('status')
+        i['type'] = image.get('type')
+        i['isPublic'] = image.get('is_public')
+        i['architecture'] = image.get('architecture')
+        return i
+
     def describe_images(self, context, image_id=None, **kwargs):
-        # Note: image_id is a list!
+        # NOTE: image_id is a list!
         images = self.image_service.index(context)
         if image_id:
-            images = filter(lambda x: x['imageId'] in image_id, images)
+            images = filter(lambda x: x['id'] in image_id, images)
+        images = [self._format_image(context, i) for i in images]
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
