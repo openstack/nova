@@ -1933,7 +1933,7 @@ def migration_create(context, values):
 def migration_update(context, id, values):
     session = get_session()
     with session.begin():
-        migration = migration_get(context, id, session=session)
+        migration = migration_get(context, id)
         migration.update(values)
         return migration
 
