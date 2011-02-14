@@ -83,7 +83,7 @@ flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
-flags.DEFINE_integer('cnt_vpn_clients', 5,
+flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
@@ -118,6 +118,10 @@ class NetworkManager(manager.Manager):
         super(NetworkManager, self).__init__(*args, **kwargs)
 
     def init_host(self):
+        """Do any initialization that needs to be run if this is a
+        standalone service.
+        """
+        self.driver.init_host()
         # Set up networking for the projects for which we're already
         # the designated network host.
         ctxt = context.get_admin_context()
@@ -198,8 +202,9 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s leased to bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s leased to bad"
+                    " mac %(inst_addr)s vs %(mac)s") % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -218,8 +223,9 @@ class NetworkManager(manager.Manager):
             raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
         if instance_ref['mac_address'] != mac:
-            raise exception.Error(_("IP %s released from bad mac %s vs %s") %
-                                  (address, instance_ref['mac_address'], mac))
+            inst_addr = instance_ref['mac_address']
+            raise exception.Error(_("IP %(address)s released from"
+                    " bad mac %(inst_addr)s vs %(mac)s") % locals())
         if not fixed_ip_ref['leased']:
             LOG.warn(_("IP %s released that was not leased"), address,
                      context=context)
@@ -431,6 +437,10 @@ class FlatDHCPManager(FlatManager):
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface,
                                   network_ref)
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_id)
+            if(FLAGS.use_ipv6):
+                self.driver.update_ra(context, network_id)
 
 
 class VlanManager(NetworkManager):
@@ -465,7 +475,6 @@ class VlanManager(NetworkManager):
         """
         super(VlanManager, self).init_host()
         self.driver.metadata_forward()
-        self.driver.init_host()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -500,7 +509,7 @@ class VlanManager(NetworkManager):
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        vlan_start, vpn_start, cidr_v6):
+                        cidr_v6, vlan_start, vpn_start):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)

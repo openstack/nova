@@ -138,7 +138,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        LOG.debug(_("Result was %s") % (obj.returncode))
+        LOG.debug(_("Result was %s") % obj.returncode)
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -150,6 +150,42 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     #               execute calls in a row hangs the second one
     greenthread.sleep(0)
     return result
+
+
+def ssh_execute(ssh, cmd, process_input=None,
+                addl_env=None, check_exit_code=True):
+    LOG.debug(_("Running cmd (SSH): %s"), cmd)
+    if addl_env:
+        raise exception.Error("Environment not supported over SSH")
+
+    if process_input:
+        # This is (probably) fixable if we need it...
+        raise exception.Error("process_input not supported over SSH")
+
+    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
+    channel = stdout_stream.channel
+
+    #stdin.write('process_input would go here')
+    #stdin.flush()
+
+    # NOTE(justinsb): This seems suspicious...
+    # ...other SSH clients have buffering issues with this approach
+    stdout = stdout_stream.read()
+    stderr = stderr_stream.read()
+    stdin_stream.close()
+
+    exit_status = channel.recv_exit_status()
+
+    # exit_status == -1 if no exit code was returned
+    if exit_status != -1:
+        LOG.debug(_("Result was %s") % exit_status)
+        if check_exit_code and exit_status != 0:
+            raise exception.ProcessExecutionError(exit_code=exit_status,
+                                                  stdout=stdout,
+                                                  stderr=stderr,
+                                                  cmd=cmd)
+
+    return (stdout, stderr)
 
 
 def abspath(s):
@@ -206,19 +242,17 @@ def last_octet(address):
 def  get_my_linklocal(interface):
     try:
         if_str = execute("ip -f inet6 -o addr show %s" % interface)
-        condition = "\s+inet6\s+([0-9a-f:]+/\d+)\s+scope\s+link"
+        condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
         if address[0] is not None:
             return address[0]
         else:
-            return 'fe00::'
-    except IndexError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
-    except ProcessExecutionError as ex:
-        LOG.warn(_("Couldn't get Link Local IP of %s :%s"), interface, ex)
-    except:
-        return 'fe00::'
+            raise exception.Error(_("Link Local address is not found.:%s")
+                                  % if_str)
+    except Exception as ex:
+        raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
+                " :%(ex)s") % locals())
 
 
 def to_global_ipv6(prefix, mac):

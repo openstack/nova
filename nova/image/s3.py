@@ -36,6 +36,22 @@ from nova.image import service
 FLAGS = flags.FLAGS
 
 
+def map_s3_to_base(image):
+    """Convert from S3 format to format defined by BaseImageService."""
+    i = {}
+    i['id'] = image.get('imageId')
+    i['name'] = image.get('imageId')
+    i['kernel_id'] = image.get('kernelId')
+    i['ramdisk_id'] = image.get('ramdiskId')
+    i['location'] = image.get('imageLocation')
+    i['owner_id'] = image.get('imageOwnerId')
+    i['status'] = image.get('imageState')
+    i['type'] = image.get('type')
+    i['is_public'] = image.get('isPublic')
+    i['architecture'] = image.get('architecture')
+    return i
+
+
 class S3ImageService(service.BaseImageService):
 
     def modify(self, context, image_id, operation):
@@ -70,7 +86,8 @@ class S3ImageService(service.BaseImageService):
         response = self._conn(context).make_request(
             method='GET',
             bucket='_images')
-        return json.loads(response.read())
+        images = json.loads(response.read())
+        return [map_s3_to_base(i) for i in images]
 
     def show(self, context, image_id):
         """return a image object if the context has permissions"""

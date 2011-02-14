@@ -157,8 +157,9 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        logging.audit(_("Starting %s node (version %s)"), topic,
-                      version.version_string_with_vcs())
+        vcs_string = version.version_string_with_vcs()
+        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)")
+                % locals())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -221,10 +222,10 @@ def serve(*services):
 
     name = '_'.join(x.binary for x in services)
     logging.debug(_("Serving %s"), name)
-
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
-        logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))
+        flag_get = FLAGS.get(flag, None)
+        logging.debug("%(flag)s : %(flag_get)s" % locals())
 
     for x in services:
         x.start()

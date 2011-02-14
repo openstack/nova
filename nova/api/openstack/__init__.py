@@ -38,9 +38,6 @@ from nova.api.openstack import shared_ip_groups
 
 LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
-flags.DEFINE_string('os_krm_mapping_file',
-    'krm_mapping.json',
-    'Location of OpenStack Flavor/OS:EC2 Kernel/Ramdisk/Machine JSON file.')
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
@@ -54,8 +51,8 @@ class FaultWrapper(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            LOG.exception(_("Caught error: %s"), str(ex))
-            exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
+            LOG.exception(_("Caught error: %s"), unicode(ex))
+            exc = webob.exc.HTTPInternalServerError(explanation=unicode(ex))
             return faults.Fault(exc)
 
 

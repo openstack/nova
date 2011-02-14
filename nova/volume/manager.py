@@ -87,7 +87,7 @@ class VolumeManager(manager.Manager):
             if volume['status'] in ['available', 'in-use']:
                 self.driver.ensure_export(ctxt, volume)
             else:
-                LOG.info(_("volume %s: skipping export"), volume_ref['name'])
+                LOG.info(_("volume %s: skipping export"), volume['name'])
 
     def create_volume(self, context, volume_id):
         """Creates and exports the volume."""
@@ -103,9 +103,10 @@ class VolumeManager(manager.Manager):
         volume_ref['host'] = self.host
 
         try:
-            LOG.debug(_("volume %s: creating lv of size %sG"),
-                      volume_ref['name'],
-                      volume_ref['size'])
+            vol_name = volume_ref['name']
+            vol_size = volume_ref['size']
+            LOG.debug(_("volume %(vol_name)s: creating lv of"
+                    " size %(vol_size)sG") % locals())
             self.driver.create_volume(volume_ref)
 
             LOG.debug(_("volume %s: creating export"), volume_ref['name'])

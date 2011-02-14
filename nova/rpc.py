@@ -46,7 +46,7 @@ LOG = logging.getLogger('nova.rpc')
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
     @classmethod
-    def instance(cls, new=False):
+    def instance(cls, new=True):
         """Returns the instance"""
         if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
@@ -89,15 +89,16 @@ class Consumer(messaging.Consumer):
                 self.failed_connection = False
                 break
             except:  # Catching all because carrot sucks
-                LOG.exception(_("AMQP server on %s:%d is unreachable."
-                                " Trying again in %d seconds.") % (
-                                FLAGS.rabbit_host,
-                                FLAGS.rabbit_port,
-                                FLAGS.rabbit_retry_interval))
+                fl_host = FLAGS.rabbit_host
+                fl_port = FLAGS.rabbit_port
+                fl_intv = FLAGS.rabbit_retry_interval
+                LOG.exception(_("AMQP server on %(fl_host)s:%(fl_port)d is"
+                        " unreachable. Trying again in %(fl_intv)d seconds.")
+                        % locals())
                 self.failed_connection = True
         if self.failed_connection:
             LOG.exception(_("Unable to connect to AMQP server "
-                            "after %d tries. Shutting down."),
+                          "after %d tries. Shutting down."),
                           FLAGS.rabbit_max_retries)
             sys.exit(1)
 
@@ -152,7 +153,7 @@ class TopicConsumer(Consumer):
 class AdapterConsumer(TopicConsumer):
     """Calls methods on a proxy object based on method and args"""
     def __init__(self, connection=None, topic="broadcast", proxy=None):
-        LOG.debug(_('Initing the Adapter Consumer for %s') % (topic))
+        LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
         self.proxy = proxy
         super(AdapterConsumer, self).__init__(connection=connection,
                                               topic=topic)
@@ -167,7 +168,7 @@ class AdapterConsumer(TopicConsumer):
 
         Example: {'method': 'echo', 'args': {'value': 42}}
         """
-        LOG.debug(_('received %s') % (message_data))
+        LOG.debug(_('received %s') % message_data)
         msg_id = message_data.pop('_msg_id', None)
 
         ctxt = _unpack_context(message_data)
@@ -180,7 +181,7 @@ class AdapterConsumer(TopicConsumer):
             #             messages stay in the queue indefinitely, so for now
             #             we just log the message and send an error string
             #             back to the caller
-            LOG.warn(_('no method for message: %s') % (message_data))
+            LOG.warn(_('no method for message: %s') % message_data)
             msg_reply(msg_id, _('No method for message: %s') % message_data)
             return
 
@@ -245,7 +246,7 @@ def msg_reply(msg_id, reply=None, failure=None):
         LOG.error(_("Returning exception %s to caller"), message)
         LOG.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
-    conn = Connection.instance(True)
+    conn = Connection.instance()
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)
     try:
         publisher.send({'result': reply, 'failure': failure})
@@ -318,7 +319,7 @@ def call(context, topic, msg):
                 self.result = data['result']
 
     wait_msg = WaitMessage()
-    conn = Connection.instance(True)
+    conn = Connection.instance()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
     consumer.register_callback(wait_msg)
 

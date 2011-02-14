@@ -76,9 +76,10 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
-    def init_host(self):
+    def init_host(self, host):
         """
-        Initialize anything that is necessary for the driver to function
+        Initialize anything that is necessary for the driver to function,
+        including catching up with currently running VM's on the given host.
         """
         return
 

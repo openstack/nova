@@ -139,7 +139,9 @@ class VMOps(object):
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        LOG.info(_('Spawning VM %s created %s.'), instance.name, vm_ref)
+        instance_name = instance.name
+        LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
+                % locals())
 
         # NOTE(armando): Do we really need to do this in virt?
         timer = utils.LoopingCall(f=None)
@@ -182,7 +184,7 @@ class VMOps(object):
             if isinstance(instance_or_vm, (int, long)):
                 ctx = context.get_admin_context()
                 try:
-                    instance_obj = db.instance_get_by_id(ctx, instance_or_vm)
+                    instance_obj = db.instance_get(ctx, instance_or_vm)
                     instance_name = instance_obj.name
                 except exception.NotFound:
                     # The unit tests screw this up, as they use an integer for
@@ -231,7 +233,8 @@ class VMOps(object):
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
         except self.XenAPI.Failure, exc:
-            logging.error(_("Unable to Snapshot %s: %s"), vm_ref, exc)
+            logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
+                    % locals())
             return
 
         try:
@@ -318,8 +321,23 @@ class VMOps(object):
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
         try:
-            task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance.id, task)
+            kernel = None
+            ramdisk = None
+            if instance.kernel_id or instance.ramdisk_id:
+                (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+                                    self._session, vm)
+            task1 = self._session.call_xenapi('Async.VM.destroy', vm)
+            LOG.debug(_("Removing kernel/ramdisk files"))
+            fn = "remove_kernel_ramdisk"
+            args = {}
+            if kernel:
+                args['kernel-file'] = kernel
+            if ramdisk:
+                args['ramdisk-file'] = ramdisk
+            task2 = self._session.async_call_plugin('glance', fn, args)
+            self._session.wait_for_task(instance.id, task1)
+            self._session.wait_for_task(instance.id, task2)
+            LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
