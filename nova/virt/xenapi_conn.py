@@ -199,7 +199,7 @@ class XenAPIConnection(object):
 
     def attach_disk(self, instance):
         """Moves the copied VDIs into the SR"""
-        self._vmops.attach_disk(instance)
+        return self._vmops.attach_disk(instance)
     
     def suspend(self, instance, callback):
         """suspend the specified instance"""

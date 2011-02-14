@@ -78,9 +78,12 @@ def move_vhds_into_sr(session, args):
     source_base_copy_path = "%s/base_copy.vhd" % source_image_path
     source_cow_path = "%s/cow.vhd" % source_image_path
 
+    new_base_copy_uuid = str(uuid.uuid4())
+    new_cow_uuid = str(uuid.uuid4())
+
     temp_vhd_path = "%s/instance%d/" % (sr_temp_path, instance_id)
-    new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, str(uuid.uuid4()))
-    new_cow_path = "%s/%s.vhd" % (temp_vhd_path, str(uuid.uuid4()))
+    new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
+    new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
 
     os.mkdir(temp_vhd_path)
     shutil.move(source_base_copy_path, new_base_copy_path)
@@ -94,6 +97,7 @@ def move_vhds_into_sr(session, args):
     
     shutil.move("%s/*.vhd" % temp_vhd_path, sr_path)
     os.rmdir(temp_vhd_path)
+    return (new_base_copy_uuid, new_cow_uuid)
 
 
 def transfer_vhd(session, args):

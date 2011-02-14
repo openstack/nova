@@ -266,7 +266,7 @@ class VMHelper(HelperBase):
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
                 % locals())
 
-        vm_vdi_ref, vm_vdi_rec = self.get_vdi_for_vm_safely(session, vm_ref)
+        vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
         vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
@@ -274,7 +274,7 @@ class VMHelper(HelperBase):
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
         template_vm_ref = session.wait_for_task(instance_id, task)
-        template_vdi_rec = self.get_vdi_for_vm_safely(session, 
+        template_vdi_rec = cls.get_vdi_for_vm_safely(session, 
                 template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
@@ -286,6 +286,12 @@ class VMHelper(HelperBase):
 
         #TODO(sirp): we need to assert only one parent, not parents two deep
         return template_vm_ref, [template_vdi_uuid, parent_uuid]
+
+    @classmethod
+    def get_sr(cls, session, sr_label='slices'):
+        """ Finds the SR named by the given name label and returns 
+        the UUID """
+        return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
@@ -502,8 +508,6 @@ class VMHelper(HelperBase):
         LOG.debug(_("Re-scanning SR %s"), sr_ref)
         task = session.call_xenapi('Async.SR.scan', sr_ref)
         session.wait_for_task(instance_id, task)
-
-
 
 
 def get_rrd(host, uuid):

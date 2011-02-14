@@ -266,7 +266,7 @@ class VMOps(object):
             self._shutdown(instance, vm_ref, method='clean')
 
             vdi_ref, vm_vdi_rec = \
-                    VMHelper.get_vdi_for_vm_safely(session, vm_ref)
+                    VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
                     'dest_name': 'cow.vhd'}
             self._session.async_call_plugin('data_transfer', 'transfer_vhd',
@@ -277,12 +277,15 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         params = { 'instance_id': instance.id }
-        self._session.async_call_plugin('migration', 'move_vhds_into_sr',
+        new_base_copy_uuid, new_cow_uuid = self._session.async_call_plugin(
+                'migration', 'move_vhds_into_sr',
                 {'params': pickle.dumps(params)})
 
-        vdi_ref, vm_vdi_rec = \
-                VMHelper.get_vdi_for_vm_safely(session, vm_ref)
-        VMHelper.scan_sr(self._session, instance.id, vm_vdi_rec['SR'])
+        # Now we rescan the SR so we find the VHDs
+        sr_ref = VMHelper.get_sr(self._session)
+        VMHelper.scan_sr(self._session, instance.id, sr_ref)
+
+        return new_base_copy_uuid 
 
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """

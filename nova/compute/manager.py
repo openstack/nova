@@ -405,7 +405,7 @@ class ComputeManager(manager.Manager):
         migration_ref = self.db.migration_create(context, 
                 { 'instance_id': instance_id,
                   'source_host': instance_ref['host'],
-                  'dest_host':   socket.gethostbyname(socket.gethostname()),
+                  'dest_host':   socket.gethostname(),
                   'status':      'pre-migrating' })
         LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
         service = self.db.service_get_by_host_and_topic(context,
@@ -459,7 +459,7 @@ class ComputeManager(manager.Manager):
                 migration_ref['instance_id'])
 
         # this may get passed into the following spawn instead
-        disk_info = self.driver.attach_disk(context, instance_ref)
+        disk_info = self.driver.attach_disk(instance_ref)
         self.driver.spawn(context, instance_ref, disk=disk_info)
 
         self.db.migration_update(context, migration_id, 
