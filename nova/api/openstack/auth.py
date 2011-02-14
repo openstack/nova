@@ -19,6 +19,7 @@ import datetime
 import hashlib
 import json
 import time
+import logging
 
 import webob.exc
 import webob.dec
@@ -78,6 +79,7 @@ class AuthMiddleware(wsgi.Middleware):
         except KeyError:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
+        logging.debug("**** USERNAME %s, PASSWORD %s" % (username, key))
         token, user = self._authorize_user(username, key, req)
         if user and token:
             res = webob.Response()

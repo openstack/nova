@@ -156,6 +156,8 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
     _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                            % (floating_ip, fixed_ip))
+    _confirm_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
+                           % (floating_ip, fixed_ip))
     _confirm_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                            % (fixed_ip, floating_ip))
 
@@ -163,6 +165,8 @@ def ensure_floating_forward(floating_ip, fixed_ip):
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
     _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
+                          % (floating_ip, fixed_ip))
+    _remove_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
                           % (floating_ip, fixed_ip))
     _remove_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                           % (fixed_ip, floating_ip))

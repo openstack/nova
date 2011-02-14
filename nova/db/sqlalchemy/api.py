@@ -719,6 +719,7 @@ def instance_get_all(context):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -729,6 +730,7 @@ def instance_get_all_by_user(context, user_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
                    all()
@@ -740,6 +742,7 @@ def instance_get_all_by_host(context, host):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -753,6 +756,7 @@ def instance_get_all_by_project(context, project_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -766,6 +770,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
                        all()
@@ -773,6 +778,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=False).\
@@ -2035,7 +2041,7 @@ def zone_update(context, zone_id, values):
 def zone_delete(context, zone_id):
     session = get_session()
     with session.begin():
-        session.execute('delete from childzones '
+        session.execute('delete from child_zones '
                         'where id=:id', {'id': zone_id})
 
 
@@ -2051,4 +2057,4 @@ def zone_get(context, zone_id):
 @require_admin_context
 def zone_get_all(context):
     session = get_session()
-    return session.query(models.ChildZone).filter_by(id=zone_id).all()
+    return session.query(models.ChildZone).all()

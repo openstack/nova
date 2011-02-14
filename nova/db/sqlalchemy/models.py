@@ -537,7 +537,7 @@ class Console(BASE, NovaBase):
 
 class ChildZone(BASE, NovaBase):
     """Represents a child zone of this zone."""
-    __tablename__ = 'childzones'
+    __tablename__ = 'child_zones'
     id = Column(Integer, primary_key=True)
     api_url = Column(String(255))
     username = Column(String(255))

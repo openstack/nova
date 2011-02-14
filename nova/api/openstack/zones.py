@@ -55,6 +55,7 @@ class Controller(wsgi.Controller):
         """Return data about the given zone id"""
         zone_id = int(id)
         zone = db.zone_get(req.environ['nova.context'], zone_id)
+        zone = _filter_keys(zone, ('id', 'api_url'))
         return dict(zone=zone)
 
     def delete(self, req, id):
