@@ -96,22 +96,36 @@ class VMOps(object):
 
         # write network info
         admin_context = context.get_admin_context()
-        #network = db.network_get_by_instance(admin_context,
-        #                                     instance['id'])
 
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # I've decided to go ahead and consider multiple IPs and networks
+        # at this stage even though they aren't implemented because these will
+        # be needed for multi-nic and there was no sense writing it for single
+        # network/single IP and then having to turn around and re-write it
+        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
         for network in db.network_get_all_by_instance(admin_context,
                                                       instance['id']):
+            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+
+            def ip_dict(ip):
+                return {'netmask': network['netmask'],
+                        'enabled': '1',
+                        'ip': ip.address}
+
             mac_id = instance.mac_address.replace(':', '')
             location = 'vm-data/networking/%s' % mac_id
             mapping = {'label': network['label'],
                        'gateway': network['gateway'],
                        'mac': instance.mac_address,
                        'dns': [network['dns']],
-                       'ips': [{'netmask': network['netmask'],
-                                'enabled': '1',
-                                'ip': '192.168.3.3'}]}      # <===== CHANGE!!!!
+                       'ips': [ip_dict(ip) for ip in network_IPs]}
             self.write_to_param_xenstore(vm_ref, {location: mapping})
 
+            # TODO(tr3buchet) - remove comment in multi-nic
+            # this bit here about creating the vifs will be updated
+            # in multi-nic to handle multiple IPs on the same network
+            # and multiple networks
+            # for now it works as there is only one of each
             bridge = network['bridge']
             network_ref = \
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
