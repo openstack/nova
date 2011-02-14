@@ -22,6 +22,7 @@ Management class for VM-related functions (spawn, reboot, etc).
 import json
 import M2Crypto
 import os
+import pickle
 import subprocess
 import tempfile
 import uuid
@@ -262,7 +263,7 @@ class VMOps(object):
                     {'params': pickle.dumps(params)})
 
             # Now power down the instance and transfer the COW VHD
-            self._shutdown(instance, method='clean')
+            self._shutdown(instance, snapshot.vm_ref, method='clean')
 
             vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
             params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
