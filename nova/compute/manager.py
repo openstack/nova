@@ -425,10 +425,11 @@ class ComputeManager(manager.Manager):
     def resize_instance(self, context, instance_id, migration_id):
         """Starts the migration of a running instance to another host"""
         migration_ref = self.db.migration_get(context, migration_id)
+        instance_ref = self.db.instance_get(context, instance_id)
         self.db.migration_update(context, migration_id, 
                 { 'status': 'migrating', })
 
-        self.driver.migrate_disk_and_power_off(context, instance, 
+        self.driver.migrate_disk_and_power_off(instance_ref, 
                                   migration_ref['dest_host'])
     
         self.db.migration_update(context, migration_id, 
