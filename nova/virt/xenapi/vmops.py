@@ -258,7 +258,8 @@ class VMOps(object):
         #pretty fugly
         with self._get_snapshot(instance) as snapshot:
             params = {'host':dest, 'vdi_uuid':snapshot.vdi_uuids[1],
-                    'dest_name':'base_copy.vhd'}
+                      'dest_name': 'base_copy.vhd',
+                      'instance_id': instance.id, }
             self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
 
@@ -268,7 +269,8 @@ class VMOps(object):
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
-                    'dest_name': 'cow.vhd'}
+                      'dest_name': 'cow.vhd',
+                      'instance_id': instance.id, }
             self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
             return snapshot.vdi_uuids[1], vm_vdi_rec['uuid']
