@@ -211,10 +211,11 @@ class VMOps(object):
 
     def _get_snapshot(self, instance):
         class Snapshot(object):
-            def __init__(self, virt, instance, vdis):
+            def __init__(self, virt, instance, vm_ref, vdis):
                 self.instance = instance
                 self.vdi_uuids = vdis
                 self.virt = virt
+                self.vm_ref = vm_ref
 
             def __enter__(self):
                 return self
@@ -230,9 +231,10 @@ class VMOps(object):
 
         label = "%s-snapshot" % instance.name
         try:
-            vdi_ref, template_vdi_uuids = VMHelper.create_snapshot(
+            template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
-            return Snapshot(self, instance, template_vdi_uuids)
+            return Snapshot(self, instance, template_vm_ref, 
+                    template_vdi_uuids)
         except self.XenAPI.Failure, exc:
             logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
                     % locals())
@@ -269,7 +271,7 @@ class VMOps(object):
                     {'params': pickle.dumps(params)})
             return snapshot.vdi_uuids[1], vm_vdi_rec['uuid']
 
-    def attach_disk(self, instance):hh
+    def attach_disk(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
         params = { 'instance_id': instance.id }
