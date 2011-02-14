@@ -460,7 +460,7 @@ class ComputeManager(manager.Manager):
 
         # this may get passed into the following spawn instead
         disk_info = self.driver.attach_disk(instance_ref)
-        self.driver.spawn(context, instance_ref, disk=disk_info)
+        self.driver.spawn(instance_ref, disk=disk_info)
 
         self.db.migration_update(context, migration_id, 
                 {'status': 'finished', }) 

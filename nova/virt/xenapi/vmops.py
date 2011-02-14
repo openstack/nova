@@ -280,7 +280,7 @@ class VMOps(object):
         
         params = { 'instance_id': instance.id,
                    'new_base_copy_uuid': new_base_copy_uuid, 
-                   'new_cow_uuid': str(uuid.uuid4() }
+                   'new_cow_uuid': str(uuid.uuid4()) }
 
         self._session.async_call_plugin('migration', 'move_vhds_into_sr',
                 {'params': pickle.dumps(params)})

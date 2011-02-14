@@ -511,7 +511,7 @@ class VMHelper(HelperBase):
             session.wait_for_task(instance_id, task)
         else:
             sr_ref = cls.get_sr(session)
-            session.call_xen_api('SR.scan', sr_ref)
+            session.call_xenapi('SR.scan', sr_ref)
 
 
 def get_rrd(host, uuid):
