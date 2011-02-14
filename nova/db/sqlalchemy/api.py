@@ -609,7 +609,7 @@ def fixed_ip_get_instance(context, address):
 @require_context
 def fixed_ip_get_all_by_instance(context, instance_id):
     session = get_session()
-    rv = session.query(models.Network.fixed_ips).\
+    rv = session.query(models.FixedIp).\
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False)
     if not rv:
