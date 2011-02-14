@@ -880,7 +880,7 @@ class LibvirtConnection(object):
         idx1 = m.index('MemFree:')
         idx2 = m.index('Buffers:')
         idx3 = m.index('Cached:')
-        avail = (int(m[idx1+1]) + int(m[idx2+1]) + int(m[idx3+1])) / 1024
+        avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1])) / 1024
         return  self.get_memory_mb_total() - avail
 
     def get_local_gb_used(self):
@@ -978,11 +978,11 @@ class LibvirtConnection(object):
         Update compute manager resource info on Service table.
         This method is called when nova-coompute launches, and
         whenever admin executes "nova-manage service updateresource".
-        
+
         """
         try:
             s_refs = db.service_get_all_by_topic(ctxt, 'compute')
-            s_refs = [s for s in s_refs if s.host == host] 
+            s_refs = [s for s in s_refs if s.host == host]
             if 0 == len(s_refs):
                 raise exception.NotFound('')
             service_ref = s_refs[0]
@@ -1007,7 +1007,7 @@ class LibvirtConnection(object):
                           {'vcpus': vcpu,
                            'memory_mb': memory_mb,
                            'local_gb': local_gb,
-                           'vcpus_used':vcpu_u,
+                           'vcpus_used': vcpu_u,
                            'memory_mb_used': memory_mb_u,
                            'local_gb_used': local_gb_u,
                            'hypervisor_type': hypervisor,
@@ -1050,7 +1050,7 @@ class LibvirtConnection(object):
         return
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
-        """ 
+        """
         Setting up inevitable filtering rules on compute node,
         and waiting for its completion.
         To migrate an instance, filtering rules to hypervisors
@@ -1093,14 +1093,17 @@ class LibvirtConnection(object):
                     raise exception.Error(msg % locals())
                 time.sleep(1)
 
-    def live_migration(self, ctxt, instance_ref, dest):
+    def live_migration(self, ctxt, instance_ref, dest,
+                       post_method, recover_method):
         """
         Just spawning live_migration operation for
         distributing high-load.
         """
-        greenthread.spawn(self._live_migration, ctxt, instance_ref, dest)
+        greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
+                          post_method, recover_method)
 
-    def _live_migration(self, ctxt, instance_ref, dest):
+    def _live_migration(self, ctxt, instance_ref, dest,
+                        post_method, recover_method):
         """ Do live migration."""
 
         # Do live migration.
@@ -1125,15 +1128,7 @@ class LibvirtConnection(object):
                                  FLAGS.live_migration_bandwidth)
 
         except Exception, e:
-            db.instance_set_state(ctxt,
-                                  instance_ref['id'],
-                                  power_state.RUNNING,
-                                  'running')
-            for v in instance_ref['volumes']:
-                db.volume_update(ctxt,
-                                 v['id'],
-                                 {'status': 'in-use'})
-
+            recover_method(ctxt, instance_ref)
             raise e
 
         # Waiting for completion of live_migration.
@@ -1145,82 +1140,14 @@ class LibvirtConnection(object):
                 self.get_info(instance_ref.name)['state']
             except exception.NotFound:
                 timer.stop()
-                self._post_live_migration(ctxt, instance_ref, dest)
+                post_method(ctxt, instance_ref, dest)
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)
 
-    def _post_live_migration(self, ctxt, instance_ref, dest):
-        """
-        Post operations for live migration.
-        Mainly, database updating.
-        """
-        LOG.info('post livemigration operation is started..')
-        # Detaching volumes.
-        # (not necessary in current version )
-
-        # Releasing vlan.
-        #   (not necessary in current implementation?)
-
-        # Releasing security group ingress rule.
-        if FLAGS.firewall_driver == \
-            'nova.virt.libvirt_conn.IptablesFirewallDriver':
-            try:
-                self.firewall_driver.unfilter_instance(instance_ref)
-            except KeyError:
-                pass
-
-        # Database updating.
-        ec2_id = instance_ref['hostname']
-
-        instance_id = instance_ref['id']
-        fixed_ip = db.instance_get_fixed_address(ctxt, instance_id)
-        # Not return if fixed_ip is not found, otherwise,
-        # instance never be accessible..
-        if None == fixed_ip:
-            logging.warn('fixed_ip is not found for %s ' % ec2_id)
-        db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
-        network_ref = db.fixed_ip_get_network(ctxt, fixed_ip)
-
-        try:
-            floating_ip \
-                = db.instance_get_floating_address(ctxt, instance_id)
-            # Not return if floating_ip is not found, otherwise,
-            # instance never be accessible..
-            if None == floating_ip:
-                LOG.info(_('floating_ip is not found for %s'), ec2_id)
-            else:
-                floating_ip_ref = db.floating_ip_get_by_address(ctxt,
-                                                                floating_ip)
-                db.floating_ip_update(ctxt,
-                                      floating_ip_ref['address'],
-                                      {'host': dest})
-        except exception.NotFound:
-            LOG.info(_('floating_ip is not found for %s'), ec2_id)
-        except:
-            msg = ("""Live migration: Unexpected error:"""
-                   """%s cannot inherit floating ip..""")
-            LOG.error(_(msg), ec2_id)
-
-        # Restore instance/volume state
-        db.instance_update(ctxt,
-                           instance_id,
-                           {'state_description': 'running',
-                            'state': power_state.RUNNING,
-                            'host': dest})
-
-        for v in instance_ref['volumes']:
-            db.volume_update(ctxt,
-                             v['id'],
-                             {'status': 'in-use'})
-
-        msg = _('Migrating %(ec2_id)s to %(dest)s finishes successfully')
-        LOG.info(msg % locals())
-        msg = _(("""The below error is normally occurs."""
-                 """Just check if instance is successfully migrated.\n"""
-                 """libvir: QEMU error : Domain not found: no domain """
-                 """with matching name.."""))
-        LOG.info(msg)
+    def unfilter_instance(self, instance_ref):
+        """See comments of same method in firewall_driver"""
+        self.firewall_driver.unfilter_instance(instance_ref)
 
 
 class FirewallDriver(object):

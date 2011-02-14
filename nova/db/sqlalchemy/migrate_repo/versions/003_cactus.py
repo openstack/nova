@@ -41,7 +41,7 @@ services = Table('services', meta,
 # Tables to alter
 #
 instances_launched_on = Column(
-         'launched_on', 
+         'launched_on',
          Text(convert_unicode=False, assert_unicode=None,
               unicode_error=None, _warn_on_bytestring=False),
               nullable=True)
@@ -52,18 +52,19 @@ services_vcpus_used = Column('vcpus_used', Integer(), nullable=True)
 services_memory_mb_used = Column('memory_mb_used', Integer(), nullable=True)
 services_local_gb_used = Column('local_gb_used', Integer(), nullable=True)
 services_hypervisor_type = Column(
-         'hypervisor_type', 
+         'hypervisor_type',
          Text(convert_unicode=False, assert_unicode=None,
               unicode_error=None, _warn_on_bytestring=False),
               nullable=True)
 services_hypervisor_version = Column(
-        'hypervisor_version', 
+        'hypervisor_version',
         Integer(), nullable=True)
 services_cpu_info = Column(
-         'cpu_info', 
+         'cpu_info',
          Text(convert_unicode=False, assert_unicode=None,
               unicode_error=None, _warn_on_bytestring=False),
          nullable=True)
+
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
@@ -80,4 +81,3 @@ def upgrade(migrate_engine):
     services.create_column(services_hypervisor_type)
     services.create_column(services_hypervisor_version)
     services.create_column(services_cpu_info)
-

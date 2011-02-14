@@ -80,10 +80,10 @@ class SchedulerTestCase(test.TestCase):
                   'args': {'num': 7}})
         self.mox.ReplayAll()
         scheduler.named_method(ctxt, 'topic', num=7)
-         
+
     def test_show_host_resource_host_not_exit(self):
         """
-        A testcase of driver.has_enough_resource 
+        A testcase of driver.has_enough_resource
         given host does not exists.
         """
         scheduler = manager.SchedulerManager()
@@ -95,26 +95,26 @@ class SchedulerTestCase(test.TestCase):
                                       AndReturn([])
 
         self.mox.ReplayAll()
-        result =  scheduler.show_host_resource(ctxt, dest)
+        result = scheduler.show_host_resource(ctxt, dest)
         # ret should be dict
         keys = ['ret', 'msg']
         c1 = list(set(result.keys())) == list(set(keys))
         c2 = not result['ret']
         c3 = result['msg'].find('No such Host or not compute node') <= 0
-        self.assertTrue( c1 and c2 and c3)
+        self.assertTrue(c1 and c2 and c3)
         self.mox.UnsetStubs()
 
     def test_show_host_resource_no_project(self):
         """
-        A testcase of driver.show_host_resource 
+        A testcase of driver.show_host_resource
         no instance stays on the given host
         """
         scheduler = manager.SchedulerManager()
         dest = 'dummydest'
         ctxt = context.get_admin_context()
-        r0 = {'vcpus':16, 'memory_mb':32, 'local_gb':100, 
-             'vcpus_used':16, 'memory_mb_used':32, 'local_gb_used':10}
-        service_ref = {'id':1, 'host':dest}
+        r0 = {'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
+             'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10}
+        service_ref = {'id': 1, 'host': dest}
         service_ref.update(r0)
 
         self.mox.StubOutWithMock(manager, 'db', use_mock_anything=True)
@@ -122,35 +122,35 @@ class SchedulerTestCase(test.TestCase):
                                       AndReturn([(service_ref, 0)])
         manager.db.instance_get_all_by_host(mox.IgnoreArg(), dest).\
                                       AndReturn([])
-        
+
         self.mox.ReplayAll()
-        result =  scheduler.show_host_resource(ctxt, dest)
+        result = scheduler.show_host_resource(ctxt, dest)
         # ret should be dict
         keys = ['ret', 'phy_resource', 'usage']
         c1 = list(set(result.keys())) == list(set(keys))
         c2 = result['ret']
         c3 = result['phy_resource'] == r0
         c4 = result['usage'] == {}
-        self.assertTrue( c1 and c2 and c3 and c4)
+        self.assertTrue(c1 and c2 and c3 and c4)
         self.mox.UnsetStubs()
 
     def test_show_host_resource_works_correctly(self):
         """
-        A testcase of driver.show_host_resource 
+        A testcase of driver.show_host_resource
         to make sure everything finished with no error.
         """
         scheduler = manager.SchedulerManager()
         dest = 'dummydest'
         ctxt = context.get_admin_context()
-        r0 = {'vcpus':16, 'memory_mb':32, 'local_gb':100, 
-             'vcpus_used':16, 'memory_mb_used':32, 'local_gb_used':10}
-        r1 = {'vcpus':10, 'memory_mb':4, 'local_gb':20}
-        r2 = {'vcpus':10, 'memory_mb':20, 'local_gb':30}
-        service_ref = {'id':1, 'host':dest}
+        r0 = {'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
+             'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10}
+        r1 = {'vcpus': 10, 'memory_mb': 4, 'local_gb': 20}
+        r2 = {'vcpus': 10, 'memory_mb': 20, 'local_gb': 30}
+        service_ref = {'id': 1, 'host': dest}
         service_ref.update(r0)
-        instance_ref2 = {'id':2, 'project_id':'p-01', 'host':'dummy'}
+        instance_ref2 = {'id': 2, 'project_id': 'p-01', 'host': 'dummy'}
         instance_ref2.update(r1)
-        instance_ref3 = {'id':3, 'project_id':'p-02', 'host':'dummy'}
+        instance_ref3 = {'id': 3, 'project_id': 'p-02', 'host': 'dummy'}
         instance_ref3.update(r2)
 
         self.mox.StubOutWithMock(manager, 'db', use_mock_anything=True)
@@ -165,9 +165,9 @@ class SchedulerTestCase(test.TestCase):
                             ctxt, dest, p).AndReturn(r2['memory_mb'])
             manager.db.instance_get_disk_sum_by_host_and_project(
                             ctxt, dest, p).AndReturn(r2['local_gb'])
-        
+
         self.mox.ReplayAll()
-        result =  scheduler.show_host_resource(ctxt, dest)
+        result = scheduler.show_host_resource(ctxt, dest)
         # ret should be dict
         keys = ['ret', 'phy_resource', 'usage']
         c1 = list(set(result.keys())) == list(set(keys))
@@ -176,7 +176,7 @@ class SchedulerTestCase(test.TestCase):
         c4 = result['usage'].keys() == ['p-01', 'p-02']
         c5 = result['usage']['p-01'] == r2
         c6 = result['usage']['p-02'] == r2
-        self.assertTrue( c1 and c2 and c3 and c4 and c5 and c6)
+        self.assertTrue(c1 and c2 and c3 and c4 and c5 and c6)
         self.mox.UnsetStubs()
 
 
@@ -498,8 +498,8 @@ class SimpleDriverTestCase(test.TestCase):
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-00000001', 'host':'dummy',
-                 'volumes':[{'id':1}, {'id':2}]}
+        i_ref = {'id': 1, 'hostname': 'i-00000001', 'host': 'dummy',
+                 'volumes': [{'id': 1}, {'id': 2}]}
         dest = 'dummydest'
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
@@ -518,10 +518,9 @@ class SimpleDriverTestCase(test.TestCase):
             driver.db.volume_update(mox.IgnoreArg(), v['id'],
                                    {'status': 'migrating'})
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        kwargs={'instance_id':i_ref['id'], 'dest':dest}
+        kwargs = {'instance_id': i_ref['id'], 'dest': dest}
         rpc.cast(ctxt, db.queue_get_for(ctxt, topic, i_ref['host']),
-                 {"method": 'live_migration', 
-                 "args": kwargs})
+                 {"method": 'live_migration', "args": kwargs})
 
         self.mox.ReplayAll()
         self.scheduler.live_migration(ctxt, topic,
@@ -538,7 +537,7 @@ class SimpleDriverTestCase(test.TestCase):
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 'volumes':[]}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy', 'volumes': []}
         dest = 'dummydest'
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
@@ -553,10 +552,9 @@ class SimpleDriverTestCase(test.TestCase):
         driver.db.instance_set_state(mox.IgnoreArg(), i_ref['id'],
                                      power_state.PAUSED, 'migrating')
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        kwargs={'instance_id':i_ref['id'], 'dest':dest}
+        kwargs = {'instance_id': i_ref['id'], 'dest': dest}
         rpc.cast(ctxt, db.queue_get_for(ctxt, topic, i_ref['host']),
-                 {"method": 'live_migration', 
-                 "args": kwargs})
+                 {"method": 'live_migration', "args": kwargs})
 
         self.mox.ReplayAll()
         self.scheduler.live_migration(ctxt, topic,
@@ -565,15 +563,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_src_check_instance_not_running(self):
         """
-        A testcase of driver._live_migration_src_check. 
+        A testcase of driver._live_migration_src_check.
         The instance given by instance_id is not running.
         """
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         dest = 'dummydest'
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy',
-                        'volumes':[], 'state_description':'migrating',
-                        'state':power_state.RUNNING}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy',
+                 'volumes': [], 'state_description': 'migrating',
+                 'state': power_state.RUNNING}
 
         self.mox.ReplayAll()
         try:
@@ -584,21 +582,21 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_src_check_volume_node_not_alive(self):
         """
-        A testcase of driver._live_migration_src_check. 
-        Volume node is not alive if any volumes are attached to 
+        A testcase of driver._live_migration_src_check.
+        Volume node is not alive if any volumes are attached to
         the given instance.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy',
-                 'volumes':[{'id':1}, {'id':2}], 
-                 'state_description':'running', 'state':power_state.RUNNING}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy',
+                 'volumes': [{'id': 1}, {'id': 2}],
+                 'state_description': 'running', 'state': power_state.RUNNING}
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_topic(mox.IgnoreArg(), 'volume').\
                                            AndReturn([])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_src_check(ctxt, i_ref)
@@ -608,19 +606,19 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_src_check_volume_node_not_alive(self):
         """
-        A testcase of driver._live_migration_src_check. 
+        A testcase of driver._live_migration_src_check.
         The testcase make sure src-compute node is alive.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 'volumes':[], 
-                 'state_description':'running', 'state':power_state.RUNNING}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy', 'volumes': [],
+                 'state_description': 'running', 'state': power_state.RUNNING}
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_topic(mox.IgnoreArg(), 'compute').\
                                            AndReturn([])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_src_check(ctxt, i_ref)
@@ -630,15 +628,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_src_check_works_correctly(self):
         """
-        A testcase of driver._live_migration_src_check. 
+        A testcase of driver._live_migration_src_check.
         The testcase make sure everything finished with no error.
         """
         driver_i = self.scheduler.driver
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 'volumes':[],
-                 'state_description':'running', 'state':power_state.RUNNING}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy', 'volumes': [],
+                 'state_description': 'running', 'state': power_state.RUNNING}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('host', i_ref['host'])
@@ -648,7 +646,7 @@ class SimpleDriverTestCase(test.TestCase):
                                            AndReturn([service_ref])
         self.mox.StubOutWithMock(driver_i, 'service_is_up')
         driver_i.service_is_up(service_ref).AndReturn(True)
-        
+
         self.mox.ReplayAll()
         ret = driver_i._live_migration_src_check(ctxt, i_ref)
         self.assertTrue(ret == None)
@@ -656,14 +654,14 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_dest_check_service_not_exists(self):
         """
-        A testcase of driver._live_migration_dst_check. 
+        A testcase of driver._live_migration_dst_check.
         Destination host does not exist.
         """
         driver_i = self.scheduler.driver
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('host', i_ref['host'])
@@ -671,7 +669,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([])
-        
+
         self.mox.ReplayAll()
         try:
             driver_i._live_migration_dest_check(ctxt, i_ref, dest)
@@ -681,14 +679,14 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_dest_check_service_isnot_compute(self):
         """
-        A testcase of driver._live_migration_dst_check. 
+        A testcase of driver._live_migration_dst_check.
         Destination host does not provide compute.
         """
         driver_i = self.scheduler.driver
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('host', i_ref['host'])
@@ -697,7 +695,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
-        
+
         self.mox.ReplayAll()
         try:
             driver_i._live_migration_dest_check(ctxt, i_ref, dest)
@@ -707,13 +705,13 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_dest_check_service_not_alive(self):
         """
-        A testcase of driver._live_migration_dst_check. 
+        A testcase of driver._live_migration_dst_check.
         Destination host compute service is not alive.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('host', i_ref['host'])
@@ -724,7 +722,7 @@ class SimpleDriverTestCase(test.TestCase):
                                            AndReturn([service_ref])
         self.mox.StubOutWithMock(self.scheduler.driver, 'service_is_up')
         self.scheduler.driver.service_is_up(service_ref).AndReturn(False)
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_dest_check(ctxt, i_ref, dest)
@@ -734,13 +732,13 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_dest_check_service_same_host(self):
         """
-        A testcase of driver._live_migration_dst_check. 
+        A testcase of driver._live_migration_dst_check.
         Destination host is same as src host.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummydest'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummydest'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('host', i_ref['host'])
@@ -751,23 +749,24 @@ class SimpleDriverTestCase(test.TestCase):
                                            AndReturn([service_ref])
         self.mox.StubOutWithMock(self.scheduler.driver, 'service_is_up')
         self.scheduler.driver.service_is_up(service_ref).AndReturn(True)
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_dest_check(ctxt, i_ref, dest)
         except exception.Invalid, e:
-            self.assertTrue(e.message.find('is running now. choose other host') >= 0)
+            msg = 'is running now. choose other host'
+            self.assertTrue(e.message.find(msg) >= 0)
         self.mox.UnsetStubs()
 
     def test_live_migraiton_dest_check_service_works_correctly(self):
         """
-        A testcase of driver._live_migration_dst_check. 
+        A testcase of driver._live_migration_dst_check.
         The testcase make sure everything finished with no error.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummydest'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummydest'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('host', i_ref['host'])
@@ -780,23 +779,24 @@ class SimpleDriverTestCase(test.TestCase):
         self.scheduler.driver.service_is_up(service_ref).AndReturn(True)
         self.mox.StubOutWithMock(self.scheduler.driver, 'has_enough_resource')
         self.scheduler.driver.has_enough_resource(mox.IgnoreArg(), i_ref, dest)
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_dest_check(ctxt, i_ref, dest)
         except exception.Invalid, e:
-            self.assertTrue(e.message.find('is running now. choose other host') >= 0)
+            msg = 'is running now. choose other host'
+            self.assertTrue(e.message.find(msg) >= 0)
         self.mox.UnsetStubs()
 
     def test_live_migraiton_common_check_service_dest_not_exists(self):
         """
-        A testcase of driver._live_migration_common_check. 
+        A testcase of driver._live_migration_common_check.
         Destination host does not exist.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
         driver_i = self.scheduler.driver
 
         self.mox.StubOutWithMock(driver_i, 'mounted_on_same_shared_storage')
@@ -804,7 +804,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_common_check(ctxt,
@@ -816,14 +816,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_common_check_service_orig_not_exists(self):
         """
-        A testcase of driver._live_migration_common_check. 
+        A testcase of driver._live_migration_common_check.
         Original host(an instance launched on) does not exist.
         """
         dest = 'dummydest'
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 'launched_on':'h1'}
+        i_ref = {'id': 1, 'hostname': 'i-01',
+                 'host': 'dummy', 'launched_on': 'h1'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('topic', 'compute')
@@ -837,7 +838,7 @@ class SimpleDriverTestCase(test.TestCase):
         driver.db.service_get_all_by_host(mox.IgnoreArg(),
                                           i_ref['launched_on']).\
                                           AndReturn([])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_common_check(ctxt,
@@ -850,15 +851,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_common_check_service_different_hypervisor(self):
         """
-        A testcase of driver._live_migration_common_check. 
+        A testcase of driver._live_migration_common_check.
         Original host and dest host has different hypervisor type.
         """
         dest = 'dummydest'
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01',
-                        'host':'dummy', 'launched_on':'h1'}
+        i_ref = {'id': 1, 'hostname': 'i-01',
+                 'host': 'dummy', 'launched_on': 'h1'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('topic', 'compute')
@@ -875,7 +876,7 @@ class SimpleDriverTestCase(test.TestCase):
         driver.db.service_get_all_by_host(mox.IgnoreArg(),
                                           i_ref['launched_on']).\
                                           AndReturn([service_ref2])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_common_check(ctxt,
@@ -888,15 +889,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_common_check_service_different_version(self):
         """
-        A testcase of driver._live_migration_common_check. 
+        A testcase of driver._live_migration_common_check.
         Original host and dest host has different hypervisor version.
         """
         dest = 'dummydest'
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01',
-                        'host':'dummy', 'launched_on':'h1'}
+        i_ref = {'id': 1, 'hostname': 'i-01',
+                 'host': 'dummy', 'launched_on': 'h1'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('topic', 'compute')
@@ -913,7 +914,7 @@ class SimpleDriverTestCase(test.TestCase):
         driver.db.service_get_all_by_host(mox.IgnoreArg(),
                                           i_ref['launched_on']).\
                                           AndReturn([service_ref2])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_common_check(ctxt,
@@ -926,15 +927,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_common_check_service_checking_cpuinfo_fail(self):
         """
-        A testcase of driver._live_migration_common_check. 
+        A testcase of driver._live_migration_common_check.
         Original host and dest host has different hypervisor version.
         """
         dest = 'dummydest'
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01',
-                 'host':'dummy', 'launched_on':'h1'}
+        i_ref = {'id': 1, 'hostname': 'i-01',
+                 'host': 'dummy', 'launched_on': 'h1'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('topic', 'compute')
@@ -958,7 +959,7 @@ class SimpleDriverTestCase(test.TestCase):
             {"method": 'compare_cpu',
             "args": {'cpu_info': service_ref2['cpu_info']}}).\
              AndRaise(rpc.RemoteError('doesnt have compatibility to', '', ''))
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver._live_migration_common_check(ctxt,
@@ -971,15 +972,15 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_live_migraiton_common_check_service_works_correctly(self):
         """
-        A testcase of driver._live_migration_common_check. 
+        A testcase of driver._live_migration_common_check.
         The testcase make sure everything finished with no error.
         """
         dest = 'dummydest'
         driver_i = self.scheduler.driver
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        i_ref = {'id':1, 'hostname':'i-01',
-                 'host':'dummy', 'launched_on':'h1'}
+        i_ref = {'id': 1, 'hostname': 'i-01',
+                 'host': 'dummy', 'launched_on': 'h1'}
         service_ref = models.Service()
         service_ref.__setitem__('id', 1)
         service_ref.__setitem__('topic', 'compute')
@@ -1002,7 +1003,7 @@ class SimpleDriverTestCase(test.TestCase):
         driver.rpc.call(mox.IgnoreArg(), mox.IgnoreArg(),
             {"method": 'compare_cpu',
             "args": {'cpu_info': service_ref2['cpu_info']}})
-        
+
         self.mox.ReplayAll()
         ret = self.scheduler.driver._live_migration_common_check(ctxt,
                                                                  i_ref,
@@ -1012,20 +1013,21 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_has_enough_resource_lack_resource_memory(self):
         """
-        A testcase of driver.has_enough_resource. 
+        A testcase of driver.has_enough_resource.
         Lack of memory_mb.(boundary check)
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        service_ref = {'id':1,  'memory_mb':32, 'memory_mb_used':12, 'local_gb':100}
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 
-                     'vcpus':5, 'memory_mb':20, 'local_gb':10}
+        service_ref = {'id': 1,  'memory_mb': 32,
+                       'memory_mb_used': 12, 'local_gb': 100}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy',
+                     'vcpus': 5, 'memory_mb': 20, 'local_gb': 10}
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
-        
+
         self.mox.ReplayAll()
         try:
             self.scheduler.driver.has_enough_resource(ctxt, i_ref, dest)
@@ -1037,20 +1039,20 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_has_enough_resource_works_correctly(self):
         """
-        A testcase of driver.has_enough_resource 
+        A testcase of driver.has_enough_resource
         to make sure everything finished with no error.
         """
         dest = 'dummydest'
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
-        service_ref = {'id':1, 'memory_mb':120, 'memory_mb_used':32}
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy', 
-                  'vcpus':5, 'memory_mb':8, 'local_gb':10}
+        service_ref = {'id': 1, 'memory_mb': 120, 'memory_mb_used': 32}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy',
+                  'vcpus': 5, 'memory_mb': 8, 'local_gb': 10}
 
         self.mox.StubOutWithMock(driver, 'db', use_mock_anything=True)
         driver.db.service_get_all_by_host(mox.IgnoreArg(), dest).\
                                            AndReturn([service_ref])
-        
+
         self.mox.ReplayAll()
         ret = self.scheduler.driver.has_enough_resource(ctxt, i_ref, dest)
         self.assertTrue(ret == None)
@@ -1066,7 +1068,7 @@ class SimpleDriverTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         fpath = '/test/20110127120000'
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
 
         self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
         driver.rpc.call(mox.IgnoreArg(),
@@ -1077,8 +1079,8 @@ class SimpleDriverTestCase(test.TestCase):
         driver.logging.error(msg % FLAGS.instances_path)
 
         self.mox.ReplayAll()
-        self.assertRaises(rpc.RemoteError, 
-                          driver_i.mounted_on_same_shared_storage, 
+        self.assertRaises(rpc.RemoteError,
+                          driver_i.mounted_on_same_shared_storage,
                           ctxt, i_ref, dest)
         self.mox.UnsetStubs()
 
@@ -1092,26 +1094,25 @@ class SimpleDriverTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         fpath = '/test/20110127120000'
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
 
         self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
         driver.rpc.call(mox.IgnoreArg(),
             db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
             {"method": 'mktmpfile'}).AndReturn(fpath)
-        driver.rpc.call(mox.IgnoreArg(), 
+        driver.rpc.call(mox.IgnoreArg(),
             db.queue_get_for(ctxt, FLAGS.compute_topic, i_ref['host']),
-            {"method": 'confirm_tmpfile', "args":{'path':fpath}}).\
-            AndRaise(rpc.RemoteError('','',''))
+            {"method": 'confirm_tmpfile', "args": {'path': fpath}}).\
+            AndRaise(rpc.RemoteError('', '', ''))
         self.mox.StubOutWithMock(driver.logging, 'error')
         msg = _("Cannot create tmpfile at %s to confirm shared storage.")
         driver.logging.error(msg % FLAGS.instances_path)
 
         self.mox.ReplayAll()
-        self.assertRaises(rpc.RemoteError, 
-                          driver_i.mounted_on_same_shared_storage, 
+        self.assertRaises(rpc.RemoteError,
+                          driver_i.mounted_on_same_shared_storage,
                           ctxt, i_ref, dest)
         self.mox.UnsetStubs()
-
 
     def test_mounted_on_same_shared_storage_works_correctly(self):
         """
@@ -1122,15 +1123,17 @@ class SimpleDriverTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         topic = FLAGS.compute_topic
         fpath = '/test/20110127120000'
-        i_ref = {'id':1, 'hostname':'i-01', 'host':'dummy'}
+        i_ref = {'id': 1, 'hostname': 'i-01', 'host': 'dummy'}
 
         self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
         driver.rpc.call(mox.IgnoreArg(),
             db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, dest),
             {"method": 'mktmpfile'}).AndReturn(fpath)
-        driver.rpc.call(mox.IgnoreArg(), 
-            db.queue_get_for(mox.IgnoreArg(), FLAGS.compute_topic, i_ref['host']),
-            {"method": 'confirm_tmpfile', "args":{'path':fpath}})
+        driver.rpc.call(mox.IgnoreArg(),
+                        db.queue_get_for(mox.IgnoreArg(),
+                                         FLAGS.compute_topic,
+                                         i_ref['host']),
+                        {"method": 'confirm_tmpfile', "args": {'path': fpath}})
 
         self.mox.ReplayAll()
         ret = self.scheduler.driver.mounted_on_same_shared_storage(ctxt,

@@ -513,12 +513,10 @@ class InstanceCommands(object):
             msg = _('Only KVM is supported for now. Sorry!')
             raise exception.Error(msg)
 
-        if FLAGS.volume_driver != 'nova.volume.driver.AOEDriver':
-            instance_ref = db.instance_get(ctxt, instance_id)
-            if len(instance_ref['volumes']) != 0:
-                msg = _(("""Volumes attached by ISCSIDriver"""
-                         """ are not supported. Sorry!"""))
-                raise  exception.Error(msg)
+        if FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
+            FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver':
+            msg = _("Support only AOEDriver and ISCSIDriver. Sorry!")
+            raise  exception.Error(msg)
 
         rpc.call(ctxt,
                  FLAGS.scheduler_topic,
@@ -616,12 +614,13 @@ class ServiceCommands(object):
         if len(service_refs) <= 0:
             raise exception.Invalid(_('%s does not exists.') % host)
 
-        service_refs = [s for s in service_refs if s['topic'] == 'compute'] 
+        service_refs = [s for s in service_refs if s['topic'] == 'compute']
         if len(service_refs) <= 0:
             raise exception.Invalid(_('%s is not compute node.') % host)
-        
-        result = rpc.call(ctxt, db.queue_get_for(ctxt, FLAGS.compute_topic, host),
-                     {"method": "update_available_resource"})
+
+        result = rpc.call(ctxt,
+                          db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                          {"method": "update_available_resource"})
 
 
 class LogCommands(object):

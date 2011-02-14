@@ -82,6 +82,41 @@ class ComputeTestCase(test.TestCase):
                   'project_id': self.project.id}
         return db.security_group_create(self.context, values)
 
+    def _get_dummy_instance(self):
+        """Get mock-return-value instance object
+           Use this when any testcase executed later than test_run_terminate
+        """
+        vol1 = models.Volume()
+        vol1.__setitem__('id', 1)
+        vol2 = models.Volume()
+        vol2.__setitem__('id', 2)
+        instance_ref = models.Instance()
+        instance_ref.__setitem__('id', 1)
+        instance_ref.__setitem__('volumes', [vol1, vol2])
+        instance_ref.__setitem__('hostname', 'i-00000001')
+        instance_ref.__setitem__('host', 'dummy')
+        return instance_ref
+
+    def test_create_instance_defaults_display_name(self):
+        """Verify that an instance cannot be created without a display_name."""
+        cases = [dict(), dict(display_name=None)]
+        for instance in cases:
+            ref = self.compute_api.create(self.context,
+                FLAGS.default_instance_type, None, **instance)
+            try:
+                self.assertNotEqual(ref[0]['display_name'], None)
+            finally:
+                db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_create_instance_associates_security_groups(self):
+        """Make sure create associates security groups"""
+        group = self._create_group()
+        instance_ref = models.Instance()
+        instance_ref.__setitem__('id', 1)
+        instance_ref.__setitem__('volumes', [{'id': 1}, {'id': 2}])
+        instance_ref.__setitem__('hostname', 'i-00000001')
+        return instance_ref
+
     def test_create_instance_defaults_display_name(self):
         """Verify that an instance cannot be created without a display_name."""
         cases = [dict(), dict(display_name=None)]
@@ -270,13 +305,12 @@ class ComputeTestCase(test.TestCase):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.compute_driver = utils.import_object(FLAGS.compute_driver)
 
-    def test_pre_live_migration_instance_has_no_fixed_ip(self): 
+    def test_pre_live_migration_instance_has_no_fixed_ip(self):
         """
            if instances that are intended to be migrated doesnt have fixed_ip
            (not happens usually), pre_live_migration has to raise Exception.
         """
-        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
-                      'hostname':'i-000000001'}
+        instance_ref = self._get_dummy_instance()
         c = context.get_admin_context()
         i_id = instance_ref['id']
 
@@ -291,16 +325,14 @@ class ComputeTestCase(test.TestCase):
                           c, instance_ref['id'])
         self.mox.ResetAll()
 
-    def test_pre_live_migration_instance_has_volume(self): 
-        """if any volumes are attached to the instances that are 
+    def test_pre_live_migration_instance_has_volume(self):
+        """if any volumes are attached to the instances that are
            intended to be migrated, setup_compute_volume must be
            called because aoe module should be inserted at destination
            host. This testcase checks on it.
         """
-        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
-                      'hostname':'i-000000001'}
+        i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
-        i_id=instance_ref['id']
 
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
@@ -308,229 +340,318 @@ class ComputeTestCase(test.TestCase):
         netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
 
-        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_address(c, i_id).AndReturn('dummy')
-        for i in range(len(instance_ref['volumes'])):
-            vid = instance_ref['volumes'][i]['id']
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
+        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        for i in range(len(i_ref['volumes'])):
+            vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
-        netmock.setup_compute_network(c, instance_ref['id'])
-        drivermock.ensure_filtering_rules_for_instance(instance_ref)
-                                     
+        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.ensure_filtering_rules_for_instance(i_ref)
+
         self.compute.db = dbmock
         self.compute.volume_manager = volmock
         self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
-        ret = self.compute.pre_live_migration(c, i_id)
+        ret = self.compute.pre_live_migration(c, i_ref['id'])
         self.assertEqual(ret, None)
         self.mox.ResetAll()
-        
-    def test_pre_live_migration_instance_has_no_volume(self): 
-        """if any volumes are not attached to the instances that are 
+
+    def test_pre_live_migration_instance_has_no_volume(self):
+        """if any volumes are not attached to the instances that are
            intended to be migrated, log message should be appears
            because administrator can proove instance conditions before
            live_migration if any trouble occurs.
         """
-        instance_ref={'id':1, 'volumes':[], 'hostname':'i-20000001'}
+        i_ref = self._get_dummy_instance()
+        i_ref.__setitem__('volumes', [])
         c = context.get_admin_context()
-        i_id = instance_ref['id']
 
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
         netmock = self.mox.CreateMock(self.network_manager)
         drivermock = self.mox.CreateMock(self.compute_driver)
-        
-        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_address(c, i_id).AndReturn('dummy')
+
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
+        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
-        compute_manager.LOG.info(_("%s has no volume."), instance_ref['hostname'])
-        netmock.setup_compute_network(c, i_id)
-        drivermock.ensure_filtering_rules_for_instance(instance_ref)
-                                     
+        compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
+        netmock.setup_compute_network(c, i_ref['id'])
+        drivermock.ensure_filtering_rules_for_instance(i_ref)
+
         self.compute.db = dbmock
         self.compute.network_manager = netmock
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
-        ret = self.compute.pre_live_migration(c, i_id)
+        ret = self.compute.pre_live_migration(c, i_ref['id'])
         self.assertEqual(ret, None)
         self.mox.ResetAll()
 
-    def test_pre_live_migration_setup_compute_node_fail(self): 
+    def test_pre_live_migration_setup_compute_node_fail(self):
         """setup_compute_node sometimes fail since concurrent request
            comes to iptables and iptables complains. Then this method
            tries to retry, but raise exception in case of over
-            max_retry_count. this method confirms raising exception. 
+            max_retry_count. this method confirms raising exception.
         """
-
-        instance_ref = models.Instance()
-        instance_ref.__setitem__('id', 1)
-        instance_ref.__setitem__('volumes', [])
-        instance_ref.__setitem__('hostname', 'i-ec2id')
-
+        i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
-        i_id = instance_ref['id']
 
         self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
         netmock = self.mox.CreateMock(self.network_manager)
-        drivermock = self.mox.CreateMock(self.compute_driver)
+        volmock = self.mox.CreateMock(self.volume_manager)
 
-        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_address(c, i_id).AndReturn('dummy')
-        self.mox.StubOutWithMock(compute_manager.LOG, 'info')
-        compute_manager.LOG.info(_("%s has no volume."), instance_ref['hostname'])
-
-        for i in range(FLAGS.live_migration_retry_count): 
-            netmock.setup_compute_network(c, i_id).\
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
+        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        for i in range(len(i_ref['volumes'])):
+            volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
+        for i in range(FLAGS.live_migration_retry_count):
+            netmock.setup_compute_network(c, i_ref['id']).\
                 AndRaise(exception.ProcessExecutionError())
 
         self.compute.db = dbmock
         self.compute.network_manager = netmock
-        self.compute.driver = drivermock
+        self.compute.volume_manager = volmock
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.ProcessExecutionError, 
+        self.assertRaises(exception.ProcessExecutionError,
                           self.compute.pre_live_migration,
-                          c, i_id)
+                          c, i_ref['id'])
         self.mox.ResetAll()
 
-    def test_live_migration_instance_has_volume(self): 
+    def test_live_migration_instance_has_volume(self):
         """Any volumes are mounted by instances to be migrated are found,
            vblade health must be checked before starting live-migration.
            And that is checked by check_for_export().
-           This testcase confirms check_for_export() is called. 
+           This testcase confirms check_for_export() is called.
         """
-        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 'hostname':'i-00000001'}
+        i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
-        dest='dummydest'
-        i_id = instance_ref['id']
+        topic = db.queue_get_for(c, FLAGS.compute_topic, i_ref['host'])
 
-        self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        drivermock = self.mox.CreateMock(self.compute_driver)
-
-        dbmock.instance_get(c, instance_ref['id']).AndReturn(instance_ref)
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, FLAGS.volume_topic,
-                 {"method": "check_for_export",
-                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
-        rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
-                 {"method": "pre_live_migration",
-                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
+        rpc.call(c, FLAGS.volume_topic, {"method": "check_for_export",
+                                         "args": {'instance_id': i_ref['id']}})
+        dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
+                             AndReturn(topic)
+        rpc.call(c, topic, {"method": "pre_live_migration",
+                            "args": {'instance_id': i_ref['id']}})
+        self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
+        self.compute.driver.live_migration(c, i_ref, i_ref['host'],
+                                  self.compute.post_live_migration,
+                                  self.compute.recover_live_migration)
 
         self.compute.db = dbmock
-        self.compute.driver = drivermock
         self.mox.ReplayAll()
-        ret = self.compute.live_migration(c, i_id, dest)
+        ret = self.compute.live_migration(c, i_ref['id'], i_ref['host'])
         self.assertEqual(ret, None)
         self.mox.ResetAll()
 
-    def test_live_migration_instance_has_volume_and_exception(self): 
-        """In addition to test_live_migration_instance_has_volume testcase, 
-           this testcase confirms if any exception raises from check_for_export().
-           Then, valid seaquence of this method should recovering instance/volumes
-           status(ex. instance['state_description'] is changed from 'migrating'
-           -> 'running', was changed by scheduler)
+    def test_live_migration_instance_has_volume_and_exception(self):
+        """In addition to test_live_migration_instance_has_volume testcase,
+           this testcase confirms if any exception raises from
+           check_for_export(). Then, valid seaquence of this method should
+           recovering instance/volumes status(ex. instance['state_description']
+           is changed from 'migrating' -> 'running', was changed by scheduler)
         """
-        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
-                      'hostname':'i-000000001'}
-        dest='dummydest'
+        i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
-        i_id = instance_ref['id']
+        topic = db.queue_get_for(c, FLAGS.compute_topic, i_ref['host'])
 
-        self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        drivermock = self.mox.CreateMock(self.compute_driver)
-
-        dbmock.instance_get(c, instance_ref['id']).AndReturn(instance_ref)
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, FLAGS.volume_topic,
-                 {"method": "check_for_export",
-                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
-        compute_topic = db.queue_get_for(c, FLAGS.compute_topic, dest)
-        dbmock.queue_get_for(c, FLAGS.compute_topic, dest).AndReturn(compute_topic)
-        rpc.call(c, db.queue_get_for(c, FLAGS.compute_topic, dest),
-                 {"method": "pre_live_migration",
-                  "args": {'instance_id': i_id}}).\
-                 InAnyOrder('g1').AndRaise(rpc.RemoteError('', '', ''))
-        #self.mox.StubOutWithMock(compute_manager.LOG, 'error')
-        #compute_manager.LOG.error('Pre live migration for %s failed at %s', 
-        #                           instance_ref['hostname'], dest)
-        dbmock.instance_set_state(c, i_id, power_state.RUNNING, 'running')
-        for i in range(len(instance_ref['volumes'])):
-            vid = instance_ref['volumes'][i]['id']
-            dbmock.volume_update(c, vid, {'status': 'in-use'})
+        rpc.call(c, FLAGS.volume_topic, {"method": "check_for_export",
+                                         "args": {'instance_id': i_ref['id']}})
+        dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
+                             AndReturn(topic)
+        rpc.call(c, topic, {"method": "pre_live_migration",
+                            "args": {'instance_id': i_ref['id']}}).\
+                            AndRaise(rpc.RemoteError('', '', ''))
+        dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
+                                                'state': power_state.RUNNING,
+                                                'host': i_ref['host']})
+        for v in i_ref['volumes']:
+            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
 
         self.compute.db = dbmock
-        self.compute.driver = drivermock
         self.mox.ReplayAll()
-        self.assertRaises(rpc.RemoteError, 
+        self.assertRaises(rpc.RemoteError,
                           self.compute.live_migration,
-                          c, i_id, dest)
+                          c, i_ref['id'], i_ref['host'])
         self.mox.ResetAll()
 
-    def test_live_migration_instance_has_no_volume_and_exception(self): 
-        """Simpler than test_live_migration_instance_has_volume_and_exception"""
-
-        instance_ref={'id':1, 'volumes':[], 'hostname':'i-000000001'}
-        dest='dummydest'
+    def test_live_migration_instance_has_no_volume_and_exception(self):
+        """Simpler than
+           test_live_migration_instance_has_volume_and_exception
+        """
+        i_ref = self._get_dummy_instance()
+        i_ref.__setitem__('volumes', [])
         c = context.get_admin_context()
-        i_id = instance_ref['id']
+        topic = db.queue_get_for(c, FLAGS.compute_topic, i_ref['host'])
 
-        self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        drivermock = self.mox.CreateMock(self.compute_driver)
-
-        dbmock.instance_get(c, instance_ref['id']).AndReturn(instance_ref)
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
+        dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
+                             AndReturn(topic)
         self.mox.StubOutWithMock(rpc, 'call')
-        compute_topic = db.queue_get_for(c, FLAGS.compute_topic, dest)
-        dbmock.queue_get_for(c, FLAGS.compute_topic, dest).AndReturn(compute_topic)
-        rpc.call(c, compute_topic,
-                 {"method": "pre_live_migration",
-                  "args": {'instance_id': i_id}}).\
-                 AndRaise(rpc.RemoteError('', '', ''))
-        #self.mox.StubOutWithMock(compute_manager.LOG, 'error')
-        #compute_manager.LOG.error('Pre live migration for %s failed at %s', 
-        #                           instance_ref['hostname'], dest)
-        dbmock.instance_set_state(c, i_id, power_state.RUNNING, 'running')
+        rpc.call(c, topic, {"method": "pre_live_migration",
+                            "args": {'instance_id': i_ref['id']}}).\
+                            AndRaise(rpc.RemoteError('', '', ''))
+        dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
+                                                'state': power_state.RUNNING,
+                                                'host': i_ref['host']})
 
         self.compute.db = dbmock
-        self.compute.driver = drivermock
         self.mox.ReplayAll()
-        self.assertRaises(rpc.RemoteError, 
+        self.assertRaises(rpc.RemoteError,
                           self.compute.live_migration,
-                          c, i_id, dest)
+                          c, i_ref['id'], i_ref['host'])
         self.mox.ResetAll()
 
-    def test_live_migration_instance_has_volume(self): 
-        """Simpler version than test_live_migration_instance_has_volume."""
-        instance_ref={'id':1, 'volumes':[{'id':1}, {'id':2}], 
-                      'hostname':'i-000000001'}
+    def test_live_migration_instance_has_no_volume(self):
+        """Simpler than test_live_migration_instance_has_volume."""
+        i_ref = self._get_dummy_instance()
+        i_ref.__setitem__('volumes', [])
         c = context.get_admin_context()
-        dest='dummydest'
-        i_id = instance_ref['id']
+        topic = db.queue_get_for(c, FLAGS.compute_topic, i_ref['host'])
 
-        self._setup_other_managers()
         dbmock = self.mox.CreateMock(db)
-        drivermock = self.mox.CreateMock(self.compute_driver)
-
-        dbmock.instance_get(c, i_id).AndReturn(instance_ref)
+        dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
         self.mox.StubOutWithMock(rpc, 'call')
-        rpc.call(c, FLAGS.volume_topic,
-                 {"method": "check_for_export",
-                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
-        compute_topic = db.queue_get_for(c, FLAGS.compute_topic, dest)
-        dbmock.queue_get_for(c, FLAGS.compute_topic, dest).AndReturn(compute_topic)
-        rpc.call(c, compute_topic,
-                 {"method": "pre_live_migration",
-                  "args": {'instance_id': i_id}}).InAnyOrder('g1')
-        drivermock.live_migration(c, instance_ref, dest)
+        dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
+                             AndReturn(topic)
+        rpc.call(c, topic, {"method": "pre_live_migration",
+                            "args": {'instance_id': i_ref['id']}})
+        self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
+        self.compute.driver.live_migration(c, i_ref, i_ref['host'],
+                                  self.compute.post_live_migration,
+                                  self.compute.recover_live_migration)
 
         self.compute.db = dbmock
-        self.compute.driver = drivermock
         self.mox.ReplayAll()
-        ret = self.compute.live_migration(c, i_id, dest)
+        ret = self.compute.live_migration(c, i_ref['id'], i_ref['host'])
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()
+
+    def test_post_live_migration_working_correctly(self):
+        """post_live_migration works as expected correctly """
+
+        i_ref = self._get_dummy_instance()
+        fixed_ip_ref = {'id': 1, 'address': '1.1.1.1'}
+        floating_ip_ref = {'id': 1, 'address': '2.2.2.2'}
+        c = context.get_admin_context()
+
+        dbmock = self.mox.CreateMock(db)
+        dbmock.volume_get_all_by_instance(c, i_ref['id']).\
+                                          AndReturn(i_ref['volumes'])
+        self.mox.StubOutWithMock(self.compute.volume_manager,
+                                 'remove_compute_volume')
+        for v in i_ref['volumes']:
+            self.compute.volume_manager.remove_compute_volume(c, v['id'])
+        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
+        self.compute.driver.unfilter_instance(i_ref)
+
+        fixed_ip = fixed_ip_ref['address']
+        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn(fixed_ip)
+        dbmock.fixed_ip_update(c, fixed_ip, {'host': i_ref['host']})
+
+        fl_ip = floating_ip_ref['address']
+        dbmock.instance_get_floating_address(c, i_ref['id']).AndReturn(fl_ip)
+        dbmock.floating_ip_get_by_address(c, fl_ip).AndReturn(floating_ip_ref)
+        dbmock.floating_ip_update(c, floating_ip_ref['address'],
+                                  {'host': i_ref['host']})
+        dbmock.instance_update(c, i_ref['id'],
+                              {'state_description': 'running',
+                               'state': power_state.RUNNING,
+                               'host': i_ref['host']})
+        for v in i_ref['volumes']:
+            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
+
+        self.compute.db = dbmock
+        self.mox.ReplayAll()
+        ret = self.compute.post_live_migration(c, i_ref, i_ref['host'])
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()
+
+    def test_post_live_migration_no_floating_ip(self):
+        """
+        post_live_migration works as expected correctly
+        (in case instance doesnt have floaitng ip)
+        """
+        i_ref = self._get_dummy_instance()
+        i_ref.__setitem__('volumes', [])
+        fixed_ip_ref = {'id': 1, 'address': '1.1.1.1'}
+        floating_ip_ref = {'id': 1, 'address': '1.1.1.1'}
+        c = context.get_admin_context()
+
+        dbmock = self.mox.CreateMock(db)
+        dbmock.volume_get_all_by_instance(c, i_ref['id']).AndReturn([])
+        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
+        self.compute.driver.unfilter_instance(i_ref)
+
+        fixed_ip = fixed_ip_ref['address']
+        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn(fixed_ip)
+        dbmock.fixed_ip_update(c, fixed_ip, {'host': i_ref['host']})
+
+        dbmock.instance_get_floating_address(c, i_ref['id']).AndReturn(None)
+        dbmock.instance_update(c, i_ref['id'],
+                              {'state_description': 'running',
+                               'state': power_state.RUNNING,
+                               'host': i_ref['host']})
+        for v in i_ref['volumes']:
+            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
+
+        self.compute.db = dbmock
+        self.mox.ReplayAll()
+        ret = self.compute.post_live_migration(c, i_ref, i_ref['host'])
+        self.assertEqual(ret, None)
+        self.mox.ResetAll()
+
+    def test_post_live_migration_no_floating_ip_with_exception(self):
+        """
+        post_live_migration works as expected correctly
+        (in case instance doesnt have floaitng ip, and raise exception)
+        """
+        i_ref = self._get_dummy_instance()
+        i_ref.__setitem__('volumes', [])
+        fixed_ip_ref = {'id': 1, 'address': '1.1.1.1'}
+        floating_ip_ref = {'id': 1, 'address': '1.1.1.1'}
+        c = context.get_admin_context()
+
+        dbmock = self.mox.CreateMock(db)
+        dbmock.volume_get_all_by_instance(c, i_ref['id']).AndReturn([])
+        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
+        self.compute.driver.unfilter_instance(i_ref)
+
+        fixed_ip = fixed_ip_ref['address']
+        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn(fixed_ip)
+        dbmock.fixed_ip_update(c, fixed_ip, {'host': i_ref['host']})
+        dbmock.instance_get_floating_address(c, i_ref['id']).\
+                                             AndRaise(exception.NotFound())
+
+        self.mox.StubOutWithMock(compute_manager.LOG, 'info')
+        compute_manager.LOG.info(_('post_live_migration() is started..'))
+        compute_manager.LOG.info(_('floating_ip is not found for %s'),
+                              i_ref.name)
+        # first 2 messages are checked.
+        compute_manager.LOG.info(mox.IgnoreArg())
+        compute_manager.LOG.info(mox.IgnoreArg())
+
+        self.mox.StubOutWithMock(db, 'instance_update')
+        dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
+                                                'state': power_state.RUNNING,
+                                                'host': i_ref['host']})
+        self.mox.StubOutWithMock(db, 'volume_update')
+        for v in i_ref['volumes']:
+            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
+
+        self.compute.db = dbmock
+        self.mox.ReplayAll()
+        ret = self.compute.post_live_migration(c, i_ref, i_ref['host'])
         self.assertEqual(ret, None)
         self.mox.ResetAll()

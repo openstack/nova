@@ -497,6 +497,16 @@ def floating_ip_get_by_address(context, address, session=None):
     return result
 
 
+@require_context
+def floating_ip_update(context, address, values):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = floating_ip_get_by_address(context, address, session)
+        for (key, value) in values.iteritems():
+            floating_ip_ref[key] = value
+        floating_ip_ref.save(session=session)
+
+
 ###################
 
 
@@ -579,7 +589,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                              'AND instance_id IS NOT NULL '
                              'AND allocated = 0',
                     {'host': host,
-                     'time': time.isoformat()})
+                     'time': time})
     return result.rowcount
 
 
@@ -906,6 +916,7 @@ def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
         return 0
     return result
 
+
 @require_context
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
     session = get_session()
@@ -917,7 +928,6 @@ def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
     if None == result:
         return 0
     return result
-
 
 
 @require_context
@@ -1479,6 +1489,18 @@ def volume_get_all_by_host(context, host):
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+@require_admin_context
+def volume_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.Volume).\
+                     filter_by(instance_id=instance_id).\
+                     filter_by(deleted=False).\
+                     all()
+    if not result:
+        raise exception.NotFound(_('No volume for instance %s') % instance_id)
+    return result
 
 
 @require_context

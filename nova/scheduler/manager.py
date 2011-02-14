@@ -75,24 +75,23 @@ class SchedulerManager(manager.Manager):
     def show_host_resource(self, context, host, *args):
         """show the physical/usage resource given by hosts."""
 
-        computes = db.service_get_all_compute_sorted(context)
-        computes = [s for s,v in computes if s['host'] == host]
-        if 0 == len(computes):
+        compute_refs = db.service_get_all_compute_sorted(context)
+        compute_refs = [s for s, v in compute_refs if s['host'] == host]
+        if 0 == len(compute_refs):
             return {'ret': False, 'msg': 'No such Host or not compute node.'}
-        service_ref = computes[0]
 
         # Getting physical resource information
-        h_resource = {'vcpus': service_ref['vcpus'],
-                     'memory_mb': service_ref['memory_mb'],
-                     'local_gb': service_ref['local_gb'],
-                     'vcpus_used': service_ref['vcpus_used'],
-                     'memory_mb_used': service_ref['memory_mb_used'],
-                     'local_gb_used': service_ref['local_gb_used']}
+        h_resource = {'vcpus': compute_refs[0]['vcpus'],
+                     'memory_mb': compute_refs[0]['memory_mb'],
+                     'local_gb': compute_refs[0]['local_gb'],
+                     'vcpus_used': compute_refs[0]['vcpus_used'],
+                     'memory_mb_used': compute_refs[0]['memory_mb_used'],
+                     'local_gb_used': compute_refs[0]['local_gb_used']}
 
         # Getting usage resource information
         u_resource = {}
         instances_refs = db.instance_get_all_by_host(context,
-                                                     service_ref['host'])
+                                                     compute_refs[0]['host'])
 
         if 0 == len(instances_refs):
             return {'ret': True,
@@ -101,18 +100,18 @@ class SchedulerManager(manager.Manager):
 
         project_ids = [i['project_id'] for i in instances_refs]
         project_ids = list(set(project_ids))
-        for p_id in project_ids:
+        for i in project_ids:
             vcpus = db.instance_get_vcpu_sum_by_host_and_project(context,
                                                                  host,
-                                                                 p_id)
+                                                                 i)
             mem = db.instance_get_memory_sum_by_host_and_project(context,
                                                                  host,
-                                                                 p_id)
+                                                                 i)
             hdd = db.instance_get_disk_sum_by_host_and_project(context,
                                                                host,
-                                                               p_id)
-            u_resource[p_id] = {'vcpus': int(vcpus),
-                                'memory_mb': int(mem),
-                                'local_gb': int(hdd)}
+                                                               i)
+            u_resource[i] = {'vcpus': int(vcpus),
+                             'memory_mb': int(mem),
+                             'local_gb': int(hdd)}
 
         return {'ret': True, 'phy_resource': h_resource, 'usage': u_resource}

@@ -42,20 +42,25 @@ class FakeManager(manager.Manager):
     def test_method(self):
         return 'manager'
 
-# temporary variable to store host/binary/self.mox from each method to fake class.
+# temporary variable to store host/binary/self.mox
+# from each method to fake class.
 global_host = None
 global_binary = None
 global_mox = None
+
+
 class FakeComputeManager(compute_manager.ComputeManager):
     """Fake computemanager manager for tests"""
-    
+
     def __init__(self, compute_driver=None, *args, **kwargs):
         global ghost, gbinary, gmox
         self.update_available_resource(mox.IgnoreArg())
         gmox.ReplayAll()
-        super(FakeComputeManager, self).__init__(compute_driver, *args, **kwargs)
+        super(FakeComputeManager, self).__init__(compute_driver,
+                                                 *args,
+                                                 **kwargs)
 
-   
+
 class ExtendedService(service.Service):
     def test_method(self):
         return 'service'
@@ -299,7 +304,8 @@ class ServiceTestCase(test.TestCase):
                                       binary).AndRaise(exception.NotFound())
         service.db.service_create(mox.IgnoreArg(),
                                   service_create).AndReturn(service_ref)
-        self.mox.StubOutWithMock(compute_manager.ComputeManager, 'update_available_resource')
+        self.mox.StubOutWithMock(compute_manager.ComputeManager,
+                                 'update_available_resource')
 
         global ghost, gbinary, gmox
         ghost = host

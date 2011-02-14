@@ -251,9 +251,6 @@ def msg_reply(msg_id, reply=None, failure=None):
     try:
         publisher.send({'result': reply, 'failure': failure})
     except TypeError:
-        print '>>>>>>>>>>>>>>>>>>'
-        print reply
-        print '>>>>>>>>>>>>>>>>>>'
         publisher.send(
                 {'result': dict((k, repr(v))
                                 for k, v in reply.__dict__.iteritems()),

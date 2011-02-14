@@ -206,8 +206,8 @@ class Scheduler(object):
         except rpc.RemoteError, e:
             ec2_id = instance_ref['hostname']
             src = instance_ref['host']
-            msg = _(("""%(dest)s doesnt have compatibility to %(src)s"""
-                     """(where %(ec2_id)s was launched at)"""))
+            msg = _("""%(dest)s doesnt have compatibility to %(src)s"""
+                    """(where %(ec2_id)s was launched at)""")
             logging.exception(msg % locals())
             raise e
 
@@ -219,10 +219,8 @@ class Scheduler(object):
         without any shared storage) will be available, local storage
         checking is also necessary.
         """
-
         # Getting instance information
         ec2_id = instance_ref['hostname']
-        mem = instance_ref['memory_mb']
 
         # Getting host information
         service_refs = db.service_get_all_by_host(context, dest)
@@ -233,10 +231,10 @@ class Scheduler(object):
         mem_total = int(service_ref['memory_mb'])
         mem_used = int(service_ref['memory_mb_used'])
         mem_avail = mem_total - mem_used
-        mem_inst =  instance_ref['memory_mb']
+        mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:
             msg = _("""%(ec2_id)s is not capable to migrate %(dest)s"""
-                    """(host:%(mem_avail)s <= instance:%(mem_inst)s)""") 
+                    """(host:%(mem_avail)s <= instance:%(mem_inst)s)""")
             raise exception.NotEmpty(msg % locals())
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
@@ -259,12 +257,11 @@ class Scheduler(object):
         # make sure existence at src host.
         try:
             rpc.call(context, src_t,
-                     {"method": 'confirm_tmpfile', "args":{'path':filename}})
+                     {"method": 'confirm_tmpfile', "args": {'path': filename}})
 
         except (rpc.RemoteError, exception.NotFound), e:
-            ipath =  FLAGS.instance_path
-            msg = (_("""Cannot comfirm %(ipath)s at %(dest)s to """
-                     """confirm shared storage."""
-                     """Check if %(ipath)s is same shared storage."""))
-            logging.error(msg % locals())
+            ipath = FLAGS.instance_path
+            msg = _("""Cannot comfirm %(ipath)s at %(dest)s is located at"""
+                    """ same shared storage.""") % locals()
+            logging.error(msg)
             raise e

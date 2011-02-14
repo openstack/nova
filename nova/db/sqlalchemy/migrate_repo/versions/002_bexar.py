@@ -204,25 +204,6 @@ services_availability_zone = Column(
         String(length=255, convert_unicode=False, assert_unicode=None,
                unicode_error=None, _warn_on_bytestring=False))
 
-#services_vcpus = Column('vcpus', Integer(), nullable=True)
-#services_memory_mb = Column('memory_mb', Integer(), nullable=True)
-#services_local_gb = Column('local_gb', Integer(), nullable=True)
-#services_vcpus_used = Column('vcpus_used', Integer(), nullable=True)
-#services_memory_mb_used = Column('memory_mb_used', Integer(), nullable=True)
-#services_local_gb_used = Column('local_gb_used', Integer(), nullable=True)
-#services_hypervisor_type = Column(
-#         'hypervisor_type', 
-#         Text(convert_unicode=False, assert_unicode=None,
-#              unicode_error=None, _warn_on_bytestring=False),
-#              nullable=True)
-#services_hypervisor_version = Column(
-#        'hypervisor_version', 
-#        Integer(), nullable=True)
-#services_cpu_info = Column(
-#         'cpu_info', 
-#         Text(convert_unicode=False, assert_unicode=None,
-#              unicode_error=None, _warn_on_bytestring=False),
-#         nullable=True)
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;

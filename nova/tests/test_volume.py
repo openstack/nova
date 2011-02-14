@@ -177,12 +177,13 @@ class VolumeTestCase(test.TestCase):
         pass
 
 
-class AOETestCase(test.TestCase):
-    """Test Case for AOEDriver"""
+class DriverTestCase(test.TestCase):
+    """Base Test class for Drivers."""
+    driver_name = "nova.volume.driver.FakeAOEDriver"
 
     def setUp(self):
-        super(AOETestCase, self).setUp()
-        self.flags(volume_driver='nova.volume.driver.AOEDriver',
+        super(DriverTestCase, self).setUp()
+        self.flags(volume_driver=self.driver_name,
                    logging_default_format_string="%(message)s")
         self.volume = utils.import_object(FLAGS.volume_manager)
         self.context = context.get_admin_context()
@@ -202,8 +203,29 @@ class AOETestCase(test.TestCase):
         self.instance_id = db.instance_create(self.context, inst)['id']
 
     def tearDown(self):
+        super(DriverTestCase, self).tearDown()
+
+    def _attach_volume(self):
+        """Attach volumes to an instance. This function also sets
+           a fake log message."""
+        return []
+
+    def _detach_volume(self, volume_id_list):
+        """Detach volumes from an instance."""
+        for volume_id in volume_id_list:
+            db.volume_detached(self.context, volume_id)
+            self.volume.delete_volume(self.context, volume_id)
+
+
+class AOETestCase(DriverTestCase):
+    """Test Case for AOEDriver"""
+    driver_name = "nova.volume.driver.AOEDriver"
+
+    def setUp(self):
+        super(AOETestCase, self).setUp()
+
+    def tearDown(self):
         super(AOETestCase, self).tearDown()
-        db.instance_destroy(self.context, self.instance_id)
 
     def _attach_volume(self):
         """Attach volumes to an instance. This function also sets
@@ -212,7 +234,7 @@ class AOETestCase(test.TestCase):
         for index in xrange(3):
             vol = {}
             vol['size'] = 0
-            volume_id = db.volume_create(context.get_admin_context(),
+            volume_id = db.volume_create(self.context,
                                          vol)['id']
             self.volume.create_volume(self.context, volume_id)
 
@@ -229,12 +251,6 @@ class AOETestCase(test.TestCase):
             volume_id_list.append(volume_id)
 
         return volume_id_list
-
-    def _detach_volume(self, volume_id_list):
-        """Detach volumes from an instance."""
-        for volume_id in volume_id_list:
-            db.volume_detached(self.context, volume_id)
-            self.volume.delete_volume(self.context, volume_id)
 
     def test_check_for_export_with_no_volume(self):
         """No log message when no volume is attached to an instance."""
@@ -262,10 +278,95 @@ class AOETestCase(test.TestCase):
         (shelf_id, blade_id) = db.volume_get_shelf_and_blade(self.context,
                                                              volume_id_list[0])
 
+        msg_is_match = False
+        self.stream.truncate(0)
+        try:
+            self.volume.check_for_export(self.context, self.instance_id)
+        except exception.ProcessExecutionError, e:
+            volume_id = volume_id_list[0]
+            msg = _("""Cannot confirm exported volume id:%(volume_id)s."""
+                    """vblade process for e%(shelf_id)s.%(blade_id)s """
+                    """isn't running.""") % locals()
+            msg_is_match = (0 <= e.message.find(msg))
+
+        self.assertTrue(msg_is_match)
+        self._detach_volume(volume_id_list)
+
+
+class ISCSITestCase(DriverTestCase):
+    """Test Case for ISCSIDriver"""
+    driver_name = "nova.volume.driver.ISCSIDriver"
+
+    def setUp(self):
+        super(ISCSITestCase, self).setUp()
+
+    def tearDown(self):
+        super(ISCSITestCase, self).tearDown()
+
+    def _attach_volume(self):
+        """Attach volumes to an instance. This function also sets
+           a fake log message."""
+        volume_id_list = []
+        for index in xrange(3):
+            vol = {}
+            vol['size'] = 0
+            vol_ref = db.volume_create(self.context, vol)
+            self.volume.create_volume(self.context, vol_ref['id'])
+            vol_ref = db.volume_get(self.context, vol_ref['id'])
+
+            # each volume has a different mountpoint
+            mountpoint = "/dev/sd" + chr((ord('b') + index))
+            db.volume_attached(self.context, vol_ref['id'], self.instance_id,
+                               mountpoint)
+            #iscsi_target = db.volume_allocate_iscsi_target(self.context,
+            #                                               vol_ref['id'],
+            #                                               vol_ref['host'])
+            volume_id_list.append(vol_ref['id'])
+
+        return volume_id_list
+
+    def test_check_for_export_with_no_volume(self):
+        """No log message when no volume is attached to an instance."""
         self.stream.truncate(0)
         self.volume.check_for_export(self.context, self.instance_id)
-        self.assertEqual(self.stream.getvalue(),
-            _("vblade process for e%s.%s isn't running.\n")
-             % (shelf_id, blade_id))
+        self.assertEqual(self.stream.getvalue(), '')
+
+    def test_check_for_export_with_all_volume_exported(self):
+        """No log message when all the vblade processes are running."""
+        volume_id_list = self._attach_volume()
+
+        self.mox.StubOutWithMock(self.volume.driver, '_execute')
+        for i in volume_id_list:
+            tid = db.volume_get_iscsi_target_num(self.context, i)
+            self.volume.driver._execute("sudo ietadm --op show --tid=%(tid)d"
+                                        % locals())
+
+        self.stream.truncate(0)
+        self.mox.ReplayAll()
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+        self.mox.UnsetStubs()
+
+        self._detach_volume(volume_id_list)
+
+    def test_check_for_export_with_some_volume_missing(self):
+        """Output a warning message when some volumes are not recognied
+           by ietd."""
+        volume_id_list = self._attach_volume()
+
+        # the first vblade process isn't running
+        tid = db.volume_get_iscsi_target_num(self.context, volume_id_list[0])
+        self.mox.StubOutWithMock(self.volume.driver, '_execute')
+        self.volume.driver._execute("sudo ietadm --op show --tid=%(tid)d"
+            % locals()).AndRaise(exception.ProcessExecutionError())
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.ProcessExecutionError,
+                          self.volume.check_for_export,
+                          self.context,
+                          self.instance_id)
+        msg = _("Cannot confirm exported volume id:%s.") % volume_id_list[0]
+        self.assertTrue(0 <= self.stream.getvalue().find(msg))
+        self.mox.UnsetStubs()
 
         self._detach_volume(volume_id_list)

@@ -183,7 +183,7 @@ class ComputeManager(manager.Manager):
                   context=context)
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host, 'launched_on':self.host})
+                                {'host': self.host, 'launched_on': self.host})
 
         self.db.instance_set_state(context,
                                    instance_id,
@@ -569,20 +569,24 @@ class ComputeManager(manager.Manager):
         self.db.volume_detached(context, volume_id)
         return True
 
+    @exception.wrap_exception
     def compare_cpu(self, context, cpu_info):
         """ Check the host cpu is compatible to a cpu given by xml."""
         return self.driver.compare_cpu(cpu_info)
 
+    @exception.wrap_exception
     def mktmpfile(self, context):
         """make tmpfile under FLAGS.instance_path."""
         return utils.mktmpfile(FLAGS.instances_path)
 
+    @exception.wrap_exception
     def confirm_tmpfile(self, context, path):
         """Confirm existence of the tmpfile given by path."""
-        if not utils.exists(path): 
+        if not utils.exists(path):
             raise exception.NotFound(_('%s not found') % path)
         return utils.remove(path)
 
+    @exception.wrap_exception
     def update_available_resource(self, context):
         """See comments update_resource_info"""
         return self.driver.update_available_resource(context, self.host)
@@ -598,7 +602,7 @@ class ComputeManager(manager.Manager):
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
             msg = _("%(instance_id)s(%(ec2_id)s) doesnt have fixed_ip")
-            raise exception.NotFound(msg % locals() )
+            raise exception.NotFound(msg % locals())
 
         # If any volume is mounted, prepare here.
         if len(instance_ref['volumes']) == 0:
@@ -614,20 +618,19 @@ class ComputeManager(manager.Manager):
         #
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
-        #
         max_retry = FLAGS.live_migration_retry_count
         for i in range(max_retry):
             try:
-                self.network_manager.setup_compute_network(context, instance_id)
+                self.network_manager.setup_compute_network(context,
+                                                           instance_id)
                 break
             except exception.ProcessExecutionError, e:
-                if i == max_retry-1:
+                if i == max_retry - 1:
                     raise e
                 else:
-                    i_name = instance_ref.name
-                    m = _("""setup_compute_node fail %(i)d th. """
+                    m = _("""setup_compute_network fail %(i)d th. """
                           """retry up to %(max_retry)d """
-                          """(%(ec2_id)s == %(i_name)s""") % locals()
+                          """for %(ec2_id)s""") % locals()
                     LOG.warn(m)
                     time.sleep(1)
 
@@ -639,12 +642,13 @@ class ComputeManager(manager.Manager):
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance_ref)
 
+    #@exception.wrap_exception
     def live_migration(self, context, instance_id, dest):
         """executes live migration."""
 
         # Get instance for error handling.
         instance_ref = self.db.instance_get(context, instance_id)
-        ec2_id = instance_ref['hostname']
+        i_name = instance_ref.name
 
         try:
             # Checking volume node is working correctly when any volumes
@@ -656,33 +660,96 @@ class ComputeManager(manager.Manager):
                            "args": {'instance_id': instance_id}})
 
             # Asking dest host to preparing live migration.
-            compute_topic = self.db.queue_get_for(context,
-                                                  FLAGS.compute_topic,
-                                                  dest)
             rpc.call(context,
-                     compute_topic,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": "pre_live_migration",
                       "args": {'instance_id': instance_id}})
 
         except Exception, e:
-            msg = _("Pre live migration for %(ec2_id)s failed at %(dest)s")
+            msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
-            msg = _("instance %s: starting...")
-            LOG.audit(msg, ec2_id, context=context)
-            self.db.instance_set_state(context,
-                                       instance_id,
-                                       power_state.RUNNING,
-                                       'running')
-
-            for v in instance_ref['volumes']:
-                self.db.volume_update(context,
-                                      v['id'],
-                                      {'status': 'in-use'})
-
-            # e should be raised. just calling "raise" may raise NotFound.
+            self.recover_live_migration(context, instance_ref)
             raise e
 
         # Executing live migration
         # live_migration might raises exceptions, but
         # nothing must be recovered in this version.
-        self.driver.live_migration(context, instance_ref, dest)
+        self.driver.live_migration(context, instance_ref, dest,
+                                   self.post_live_migration,
+                                   self.recover_live_migration)
+
+    def post_live_migration(self, ctxt, instance_ref, dest):
+        """
+        Post operations for live migration.
+        Mainly, database updating.
+        """
+        LOG.info('post_live_migration() is started..')
+        instance_id = instance_ref['id']
+
+        # Detaching volumes.
+        try:
+            for vol in self.db.volume_get_all_by_instance(ctxt, instance_id):
+                self.volume_manager.remove_compute_volume(ctxt, vol['id'])
+        except exception.NotFound:
+            pass
+
+        # Releasing vlan.
+        # (not necessary in current implementation?)
+
+        # Releasing security group ingress rule.
+        self.driver.unfilter_instance(instance_ref)
+
+        # Database updating.
+        i_name = instance_ref.name
+        fixed_ip = self.db.instance_get_fixed_address(ctxt, instance_id)
+        # Not return if fixed_ip is not found, otherwise,
+        # instance never be accessible..
+        if None == fixed_ip:
+            logging.warn('fixed_ip is not found for %s ' % i_name)
+        self.db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
+
+        try:
+            # Not return if floating_ip is not found, otherwise,
+            # instance never be accessible..
+            floating_ip = self.db.instance_get_floating_address(ctxt,
+                                                         instance_id)
+            if None == floating_ip:
+                LOG.info(_('floating_ip is not found for %s'), i_name)
+            else:
+                floating_ip_ref = self.db.floating_ip_get_by_address(ctxt,
+                                                              floating_ip)
+                self.db.floating_ip_update(ctxt,
+                                           floating_ip_ref['address'],
+                                           {'host': dest})
+        except exception.NotFound:
+            LOG.info(_('floating_ip is not found for %s'), i_name)
+        except:
+            msg = _("""Live migration: Unexpected error:"""
+                    """%s cannot inherit floating ip..""") % i_name
+            LOG.error(msg)
+
+        # Restore instance/volume state
+        self.recover_live_migration(ctxt, instance_ref, dest)
+
+        msg = _('Migrating %(i_name)s to %(dest)s finishes successfully')
+        LOG.info(msg % locals())
+        msg = _("""The below error is normally occurs."""
+                """Just check if instance is successfully migrated.\n"""
+                """libvir: QEMU error : Domain not found: no domain """
+                """with matching name..""")
+        LOG.info(msg)
+
+    def recover_live_migration(self, ctxt, instance_ref, host=None):
+        """instance/volume state is recovered from migrating -> running"""
+
+        if not host:
+            host = instance_ref['host']
+
+        self.db.instance_update(ctxt,
+                                instance_ref['id'],
+                                {'state_description': 'running',
+                                 'state': power_state.RUNNING,
+                                 'host': host})
+
+        for v in instance_ref['volumes']:
+            self.db.volume_update(ctxt, v['id'], {'status': 'in-use'})

@@ -353,9 +353,14 @@ class FakeConnection(object):
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
         """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
+        return
 
-    def live_migration(self, context, instance_ref, dest):
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only libvirt.."""
+        return
+
+    def unfilter_instance(self, instance_ref):
         """This method is supported only libvirt.."""
         raise NotImplementedError('This method is supported only libvirt.')
 
