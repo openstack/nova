@@ -269,7 +269,7 @@ class VMOps(object):
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
                     'dest_name': 'cow.vhd'}
-            self._session.async_call_plugin('data_transfer', 'transfer_vhd',
+            self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
             return snapshot.vdi_uuids[1], vm_vdi_rec['uuid']
 
