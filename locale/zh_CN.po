@@ -8,13 +8,13 @@ msgstr ""
 "Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
 "POT-Creation-Date: 2011-01-10 11:25-0800\n"
-"PO-Revision-Date: 2011-02-12 05:05+0000\n"
+"PO-Revision-Date: 2011-02-14 02:26+0000\n"
 "Last-Translator: Winston Dillon <Unknown>\n"
 "Language-Team: Chinese (Simplified) <zh_CN@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Launchpad-Export-Date: 2011-02-13 05:09+0000\n"
+"X-Launchpad-Export-Date: 2011-02-14 05:22+0000\n"
 "X-Generator: Launchpad (build 12351)\n"
 
 #: nova/twistd.py:268
@@ -413,50 +413,50 @@ msgstr "创建键值对 %s"
 #: nova/api/ec2/cloud.py:285
 #, python-format
 msgid "Delete key pair %s"
-msgstr ""
+msgstr "删除键值对 %s"
 
 #: nova/api/ec2/cloud.py:357
 #, python-format
 msgid "%s is not a valid ipProtocol"
-msgstr ""
+msgstr "%s是无效的IP协议"
 
 #: nova/api/ec2/cloud.py:361
 msgid "Invalid port range"
-msgstr ""
+msgstr "端口范围无效"
 
 #: nova/api/ec2/cloud.py:392
 #, python-format
 msgid "Revoke security group ingress %s"
-msgstr ""
+msgstr "撤销输入安全组 %s"
 
 #: nova/api/ec2/cloud.py:401 nova/api/ec2/cloud.py:414
 msgid "No rule for the specified parameters."
-msgstr ""
+msgstr "对给定的参数无特定规则。"
 
 #: nova/api/ec2/cloud.py:421
 #, python-format
 msgid "Authorize security group ingress %s"
-msgstr ""
+msgstr "验证输入安全组 %s"
 
 #: nova/api/ec2/cloud.py:432
 #, python-format
 msgid "This rule already exists in group %s"
-msgstr ""
+msgstr "这条规则已经存在安全组%s中。"
 
 #: nova/api/ec2/cloud.py:460
 #, python-format
 msgid "Create Security Group %s"
-msgstr ""
+msgstr "创建安全组%s"
 
 #: nova/api/ec2/cloud.py:463
 #, python-format
 msgid "group %s already exists"
-msgstr ""
+msgstr "安全组%s已经存在"
 
 #: nova/api/ec2/cloud.py:475
 #, python-format
 msgid "Delete security group %s"
-msgstr ""
+msgstr "删除安全组 %s"
 
 #: nova/api/ec2/cloud.py:483 nova/compute/manager.py:452
 #, python-format
