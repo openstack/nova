@@ -28,9 +28,11 @@ It also allows setting of formatting information through flags.
 
 
 import cStringIO
+import inspect
 import json
 import logging
 import logging.handlers
+import os
 import sys
 import traceback
 
@@ -123,8 +125,13 @@ def basicConfig():
         syslog = SysLogHandler(address='/dev/log')
         syslog.setFormatter(_formatter)
         logging.root.addHandler(syslog)
-    if FLAGS.logfile:
-        logfile = FileHandler(FLAGS.logfile)
+    if FLAGS.logfile or FLAGS.logdir:
+        if FLAGS.logfile:
+            logfile = FLAGS.logfile
+        else:
+            binary = os.path.basename(inspect.stack()[-1][1])
+            logpath = '%s.log' % (os.path.join(FLAGS.logdir, binary),)
+        logfile = FileHandler(logpath)
         logfile.setFormatter(_formatter)
         logging.root.addHandler(logfile)
 
