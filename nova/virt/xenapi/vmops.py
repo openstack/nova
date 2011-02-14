@@ -263,9 +263,10 @@ class VMOps(object):
                     {'params': pickle.dumps(params)})
 
             # Now power down the instance and transfer the COW VHD
-            self._shutdown(instance, snapshot.vm_ref, method='clean')
+            self._shutdown(instance, vm_ref, method='clean')
 
-            vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+            vdi_ref, vm_vdi_rec = \
+                    VMHelper.get_vdi_for_vm_safely(session, vm_ref)
             params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
                     'dest_name': 'cow.vhd'}
             self._session.async_call_plugin('data_transfer', 'transfer_vhd',
@@ -279,7 +280,8 @@ class VMOps(object):
         self._session.async_call_plugin('migration', 'move_vhds_into_sr',
                 {'params': pickle.dumps(params)})
 
-        vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        vdi_ref, vm_vdi_rec = \
+                VMHelper.get_vdi_for_vm_safely(session, vm_ref)
         VMHelper.scan_sr(self._session, instance.id, vm_vdi_rec['SR'])
 
     def resize(self, instance, flavor):

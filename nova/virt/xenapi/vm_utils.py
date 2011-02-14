@@ -239,6 +239,24 @@ class VMHelper(HelperBase):
         return vdi_ref
 
     @classmethod
+    def get_vdi_for_vm_safely(cls, session, vm_ref):
+        vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
+        if vdi_refs is None:
+            raise Exception(_("No VDIs found for VM %s") % vm_ref)
+        else:
+            num_vdis = len(vdi_refs)
+            if num_vdis != 1:
+                raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
+                        " for VM %(vm_ref)s") % locals())
+
+        vdi_ref = vdi_refs[0]
+        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        return vdi_ref, vdi_rec
+
+
+
+    
+    @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
         """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
         Snapshot VHD
@@ -248,7 +266,7 @@ class VMHelper(HelperBase):
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
                 % locals())
 
-        vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        vm_vdi_ref, vm_vdi_rec = self.get_vdi_for_vm_safely(session, vm_ref)
         vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
@@ -256,7 +274,8 @@ class VMHelper(HelperBase):
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
         template_vm_ref = session.wait_for_task(instance_id, task)
-        template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
+        template_vdi_rec = self.get_vdi_for_vm_safely(session, 
+                template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
         LOG.debug(_('Created snapshot %(template_vm_ref)s from'
@@ -566,21 +585,6 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
     loop.start(FLAGS.xenapi_vhd_coalesce_poll_interval, now=True)
     parent_uuid = loop.wait()
     return parent_uuid
-
-
-def get_vdi_for_vm_safely(session, vm_ref):
-    vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
-    if vdi_refs is None:
-        raise Exception(_("No VDIs found for VM %s") % vm_ref)
-    else:
-        num_vdis = len(vdi_refs)
-        if num_vdis != 1:
-            raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
-                    " for VM %(vm_ref)s") % locals())
-
-    vdi_ref = vdi_refs[0]
-    vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
-    return vdi_ref, vdi_rec
 
 
 def find_sr(session):
