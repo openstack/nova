@@ -59,12 +59,12 @@ def run_app(paste_config_file):
         LOG.debug(_("App Config: %(api)s\n%(config)r") % locals())
         wsgi.paste_config_to_flags(config, {
             "verbose": FLAGS.verbose,
-            "%s_host" % api: config.get('host', '0.0.0.0'),
+            "%s_host" % api: getattr(FLAGS, "%s_host" % api),
             "%s_port" % api: getattr(FLAGS, "%s_port" % api)})
         LOG.info(_("Running %s API"), api)
         app = wsgi.load_paste_app(paste_config_file, api)
         apps.append((app, getattr(FLAGS, "%s_port" % api),
-                     getattr(FLAGS, "%s_host" % api)))
+                     config.get('listen', '0.0.0.0')))
     if len(apps) == 0:
         LOG.error(_("No known API applications configured in %s."),
                   paste_config_file)
