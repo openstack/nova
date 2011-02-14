@@ -219,6 +219,9 @@ class InstanceTypes(BASE, NovaBase):
     vcpus = Column(Integer)
     local_gb = Column(Integer)
     flavorid = Column(Integer, unique=True)
+    swap = Column(Integer, nullable=False, default=0)
+    rxtx_quota = Column(Integer, nullable=False, default=0)
+    rxtx_cap = Column(Integer, nullable=False, default=0)
 
 
 class Volume(BASE, NovaBase):
@@ -322,10 +325,14 @@ class SecurityGroup(BASE, NovaBase):
                              secondary="security_group_instance_association",
                              primaryjoin='and_('
         'SecurityGroup.id == '
-            'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.deleted == False,'
         'SecurityGroup.deleted == False)',
                              secondaryjoin='and_('
         'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
+        # (anthony) the condition below shouldn't be necessary now that the
+        # association is being marked as deleted.  However, removing this
+        # may cause existing deployments to choke, so I'm leaving it
         'Instance.deleted == False)',
                              backref='security_groups')
 

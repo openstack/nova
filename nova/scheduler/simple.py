@@ -43,7 +43,9 @@ class SimpleScheduler(chance.ChanceScheduler):
     def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
         instance_ref = db.instance_get(context, instance_id)
-        if instance_ref['availability_zone'] and context.is_admin:
+        if (instance_ref['availability_zone']
+            and ':' in instance_ref['availability_zone']
+            and context.is_admin):
             zone, _x, host = instance_ref['availability_zone'].partition(':')
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-compute')
@@ -75,7 +77,9 @@ class SimpleScheduler(chance.ChanceScheduler):
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
         volume_ref = db.volume_get(context, volume_id)
-        if (':' in volume_ref['availability_zone']) and context.is_admin:
+        if (volume_ref['availability_zone']
+            and ':' in volume_ref['availability_zone']
+            and context.is_admin):
             zone, _x, host = volume_ref['availability_zone'].partition(':')
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-volume')

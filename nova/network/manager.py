@@ -118,6 +118,10 @@ class NetworkManager(manager.Manager):
         super(NetworkManager, self).__init__(*args, **kwargs)
 
     def init_host(self):
+        """Do any initialization that needs to be run if this is a
+        standalone service.
+        """
+        self.driver.init_host()
         # Set up networking for the projects for which we're already
         # the designated network host.
         ctxt = context.get_admin_context()
@@ -395,7 +399,6 @@ class FlatDHCPManager(FlatManager):
         standalone service.
         """
         super(FlatDHCPManager, self).init_host()
-        self.driver.init_host()
         self.driver.metadata_forward()
 
     def setup_compute_network(self, context, instance_id):
@@ -428,6 +431,10 @@ class FlatDHCPManager(FlatManager):
         self.driver.ensure_bridge(network_ref['bridge'],
                                   FLAGS.flat_interface,
                                   network_ref)
+        if not FLAGS.fake_network:
+            self.driver.update_dhcp(context, network_id)
+            if(FLAGS.use_ipv6):
+                self.driver.update_ra(context, network_id)
 
 
 class VlanManager(NetworkManager):
@@ -461,7 +468,6 @@ class VlanManager(NetworkManager):
         standalone service.
         """
         super(VlanManager, self).init_host()
-        self.driver.init_host()
         self.driver.metadata_forward()
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
@@ -497,7 +503,7 @@ class VlanManager(NetworkManager):
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        vlan_start, vpn_start, cidr_v6):
+                        cidr_v6, vlan_start, vpn_start):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)

@@ -46,7 +46,6 @@ class Error(Exception):
 
 
 class ApiError(Error):
-
     def __init__(self, message='Unknown', code='Unknown'):
         self.message = message
         self.code = code
@@ -55,6 +54,18 @@ class ApiError(Error):
 
 class NotFound(Error):
     pass
+
+
+class InstanceNotFound(NotFound):
+    def __init__(self, message, instance_id):
+        self.instance_id = instance_id
+        super(InstanceNotFound, self).__init__(message)
+
+
+class VolumeNotFound(NotFound):
+    def __init__(self, message, volume_id):
+        self.volume_id = volume_id
+        super(VolumeNotFound, self).__init__(message)
 
 
 class Duplicate(Error):

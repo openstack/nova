@@ -21,6 +21,7 @@ Nova User API client library.
 
 import base64
 import boto
+import boto.exception
 import httplib
 
 from boto.ec2.regioninfo import RegionInfo
@@ -288,10 +289,14 @@ class NovaAdminClient(object):
 
     def get_user(self, name):
         """Grab a single user by name."""
-        user = self.apiconn.get_object('DescribeUser', {'Name': name},
-                                       UserInfo)
-        if user.username != None:
-            return user
+        try:
+            return self.apiconn.get_object('DescribeUser',
+                                           {'Name': name},
+                                           UserInfo)
+        except boto.exception.BotoServerError, e:
+            if e.status == 400 and e.error_code == 'NotFound':
+                return None
+            raise
 
     def has_user(self, username):
         """Determine if user exists."""
@@ -375,6 +380,13 @@ class NovaAdminClient(object):
                   'Description': description,
                   'MemberUsers': member_users}
         return self.apiconn.get_object('RegisterProject', params, ProjectInfo)
+
+    def modify_project(self, projectname, manager_user=None, description=None):
+        """Modifies an existing project."""
+        params = {'Name': projectname,
+                  'ManagerUser': manager_user,
+                  'Description': description}
+        return self.apiconn.get_status('ModifyProject', params)
 
     def delete_project(self, projectname):
         """Permanently deletes the specified project."""

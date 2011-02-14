@@ -111,5 +111,8 @@ def _image_path(path):
 
 
 def image_url(image):
+    if FLAGS.image_service == "nova.image.glance.GlanceImageService":
+        return "http://%s:%s/images/%s" % (FLAGS.glance_host,
+            FLAGS.glance_port, image)
     return "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
                                               image)

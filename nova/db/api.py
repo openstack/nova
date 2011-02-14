@@ -379,11 +379,6 @@ def instance_get_project_vpn(context, project_id):
     return IMPL.instance_get_project_vpn(context, project_id)
 
 
-def instance_get_by_id(context, instance_id):
-    """Get an instance by id."""
-    return IMPL.instance_get_by_id(context, instance_id)
-
-
 def instance_is_vpn(context, instance_id):
     """True if instance is a vpn."""
     return IMPL.instance_is_vpn(context, instance_id)

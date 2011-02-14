@@ -149,7 +149,7 @@ class VMOps(object):
             if isinstance(instance_or_vm, (int, long)):
                 ctx = context.get_admin_context()
                 try:
-                    instance_obj = db.instance_get_by_id(ctx, instance_or_vm)
+                    instance_obj = db.instance_get(ctx, instance_or_vm)
                     instance_name = instance_obj.name
                 except exception.NotFound:
                     # The unit tests screw this up, as they use an integer for

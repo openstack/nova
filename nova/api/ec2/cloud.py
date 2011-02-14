@@ -327,7 +327,9 @@ class CloudController(object):
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
 
-        return {'securityGroupInfo': groups}
+        return {'securityGroupInfo':
+                list(sorted(groups,
+                            key=lambda k: (k['ownerId'], k['groupName'])))}
 
     def _format_security_group(self, context, group):
         g = {}
@@ -512,8 +514,11 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
-        # instance_id is passed in as a list of instances
-        ec2_id = instance_id[0]
+        # instance_id may be passed in as a list of instances
+        if type(instance_id) == list:
+            ec2_id = instance_id[0]
+        else:
+            ec2_id = instance_id
         instance_id = ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
@@ -532,12 +537,8 @@ class CloudController(object):
             volumes = []
             for ec2_id in volume_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                try:
-                    volume = self.volume_api.get(context, internal_id)
-                    volumes.append(volume)
-                except exception.NotFound:
-                    raise exception.NotFound(_("Volume %s not found")
-                                             % ec2_id)
+                volume = self.volume_api.get(context, internal_id)
+                volumes.append(volume)
         else:
             volumes = self.volume_api.get_all(context)
         volumes = [self._format_volume(context, v) for v in volumes]
@@ -668,12 +669,8 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                try:
-                    instance = self.compute_api.get(context, internal_id)
-                    instances.append(instance)
-                except exception.NotFound:
-                    raise exception.NotFound(_("Instance %s not found")
-                                             % ec2_id)
+                instance = self.compute_api.get(context, internal_id)
+                instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
@@ -722,7 +719,12 @@ class CloudController(object):
                 r = {}
                 r['reservationId'] = instance['reservation_id']
                 r['ownerId'] = instance['project_id']
-                r['groupSet'] = self._convert_to_set([], 'groups')
+                security_group_names = []
+                if instance.get('security_groups'):
+                    for security_group in instance['security_groups']:
+                        security_group_names.append(security_group['name'])
+                r['groupSet'] = self._convert_to_set(security_group_names,
+                                                     'groupId')
                 r['instancesSet'] = []
                 reservations[instance['reservation_id']] = r
             reservations[instance['reservation_id']]['instancesSet'].append(i)
@@ -839,11 +841,26 @@ class CloudController(object):
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
+    def _format_image(self, context, image):
+        """Convert from format defined by BaseImageService to S3 format."""
+        i = {}
+        i['imageId'] = image.get('id')
+        i['kernelId'] = image.get('kernel_id')
+        i['ramdiskId'] = image.get('ramdisk_id')
+        i['imageOwnerId'] = image.get('owner_id')
+        i['imageLocation'] = image.get('location')
+        i['imageState'] = image.get('status')
+        i['type'] = image.get('type')
+        i['isPublic'] = image.get('is_public')
+        i['architecture'] = image.get('architecture')
+        return i
+
     def describe_images(self, context, image_id=None, **kwargs):
-        # Note: image_id is a list!
+        # NOTE: image_id is a list!
         images = self.image_service.index(context)
         if image_id:
-            images = filter(lambda x: x['imageId'] in image_id, images)
+            images = filter(lambda x: x['id'] in image_id, images)
+        images = [self._format_image(context, i) for i in images]
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
