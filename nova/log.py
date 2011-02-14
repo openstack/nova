@@ -92,7 +92,7 @@ critical = logging.critical
 log = logging.log
 # handlers
 StreamHandler = logging.StreamHandler
-FileHandler = logging.FileHandler
+FileHandler = logging.RotatingFileHandler
 # logging.SysLogHandler is nicer than logging.logging.handler.SysLogHandler.
 SysLogHandler = logging.handlers.SysLogHandler
 
