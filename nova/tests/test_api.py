@@ -258,6 +258,7 @@ class ApiEc2TestCase(test.TestCase):
                 self.assertEquals(int(group.rules[0].to_port), 81)
                 self.assertEquals(len(group.rules[0].grants), 1)
                 self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
+                break
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -324,6 +325,7 @@ class ApiEc2TestCase(test.TestCase):
                 self.assertEquals(int(group.rules[0].to_port), 81)
                 self.assertEquals(len(group.rules[0].grants), 1)
                 self.assertEquals(str(group.rules[0].grants[0]), '::/0')
+                break
 
         self.expect_http()
         self.mox.ReplayAll()
