@@ -402,10 +402,14 @@ class ComputeManager(manager.Manager):
         host, possibly changing the RAM and disk size in the process"""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
+        if instance_ref['host'] == FLAGS.host:
+            raise exception.Error(_(
+                    'Migration error: destination same as source!'))
+
         migration_ref = self.db.migration_create(context, 
                 { 'instance_id': instance_id,
                   'source_compute': instance_ref['host'],
-                  'dest_compute': socket.gethostname(),
+                  'dest_compute': FLAGS.host,
                   'dest_host':   self.driver.get_host_ip_addr(),
                   'status':      'pre-migrating' })
         LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
@@ -463,7 +467,7 @@ class ComputeManager(manager.Manager):
 
         # this may get passed into the following spawn instead
         new_disk_info = self.driver.attach_disk(instance_ref, disk_info)
-        self.driver.spawn(instance_ref, disk=disk_info)
+        self.driver.spawn(instance_ref, disk=new_disk_info)
 
         self.db.migration_update(context, migration_id, 
                 {'status': 'finished', }) 
