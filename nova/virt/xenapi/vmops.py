@@ -267,16 +267,18 @@ class VMOps(object):
             params = {'host': dest, 'vdi_uuid': base_copy_uuid,
                       'instance_id': instance.id, }
 
-            self._session.async_call_plugin('migration', 'transfer_vhd',
+            task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
+            self._session.wait_for_task(instance.id, task)
 
             # Now power down the instance and transfer the COW VHD
             self._shutdown(instance, vm_ref, method='clean')
 
             params = {'host': dest, 'vdi_uuid': cow_uuid,
                       'instance_id': instance.id, }
-            self._session.async_call_plugin('migration', 'transfer_vhd',
+            task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
+            self._session.wait_for_task(instance.id, task)
 
         # TODO(mdietz): we could also consider renaming these to something
         # sensible so we don't need to blindly pass around dictionaries
@@ -291,8 +293,9 @@ class VMOps(object):
                   'new_base_copy_uuid': new_base_copy_uuid,
                   'new_cow_uuid':       str(uuid.uuid4())}
 
-        self._session.async_call_plugin('migration', 'move_vhds_into_sr',
-                {'params': pickle.dumps(params)})
+        task = self._session.async_call_plugin('migration', 
+                'move_vhds_into_sr', {'params': pickle.dumps(params)})
+        self._session.wait_for_task(instance.id, task)
 
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_sr(self._session)

@@ -129,17 +129,19 @@ def transfer_vhd(session, args):
     logging.debug("Preparing to transmit %s to %s" % (source_path, 
             dest_path))
 
-    ssh_cmd = '-e "ssh -o StrictHostKeyChecking=no " '
+    ssh_cmd = '-e \'ssh -o StrictHostKeyChecking=no\' '
 
-    rsync_args = ['nohup', RSYNC, '-av', '--progress', ssh_cmd, source_path, 
-            dest_path]
+    rsync_args = ['nohup > /root/instance%d_progress' % instance_id, RSYNC, 
+            '-av', '--progress', ssh_cmd, source_path, dest_path]
 
     logging.debug('rsync %s' % (' '.join(rsync_args, )))
 
-    rsync_proc = subprocess.Popen(rsync_args)
+    rsync_proc = subprocess.Popen(rsync_args, stdout=subprocess.PIPE)
     logging.debug('Rsync output: \n %s' % rsync_proc.communicate()[0])
-    if rsync_proc.returncode != 0
+    logging.debug('Rsync return: %d' % rsync_proc.returncode)
+    if rsync_proc.returncode != 0:
         raise Exception("Unexpected VHD transfer failure")
+    return ""
 
 
 if __name__ == '__main__':
