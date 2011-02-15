@@ -112,6 +112,15 @@ def _dictify_context(context):
         context = context.to_dict()
     return context
 
+def _get_binary_name():
+    return os.path.basename(inspect.stack()[-1][1])
+
+def get_log_file_path(binary=None):
+    if FLAGS.logfile:
+        return FLAGS.logfile
+    if FLAGS.logdir:
+        binary = binary or _get_binary_name()
+        return '%s.log' % (os.path.join(FLAGS.logdir, binary),)
 
 def basicConfig():
     logging.basicConfig()
@@ -125,12 +134,8 @@ def basicConfig():
         syslog = SysLogHandler(address='/dev/log')
         syslog.setFormatter(_formatter)
         logging.root.addHandler(syslog)
-    if FLAGS.logfile or FLAGS.logdir:
-        if FLAGS.logfile:
-            logfile = FLAGS.logfile
-        else:
-            binary = os.path.basename(inspect.stack()[-1][1])
-            logpath = '%s.log' % (os.path.join(FLAGS.logdir, binary),)
+    logpath = get_log_file_path()
+    if logpath:
         logfile = FileHandler(logpath)
         logfile.setFormatter(_formatter)
         logging.root.addHandler(logfile)
