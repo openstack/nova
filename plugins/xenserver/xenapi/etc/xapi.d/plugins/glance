@@ -140,6 +140,25 @@ def fixup_vhds(sr_path, staging_path, uuid_stack):
         os.rename(orig_path, new_path)
         return new_path
 
+    def assert_vhd_not_hidden(path):
+        """
+        This is a sanity check on the image; if a snap.vhd isn't
+        present, then the image.vhd better not be marked 'hidden' or it will
+        be deleted when moved into the SR.
+        """
+        vhd_query_args = shlex.split(
+            "vhd-util query -n %(path)s -f" % locals())
+        vhd_query_proc = subprocess.Popen(
+            vhd_query_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = _assert_process_success(vhd_query_proc, "vhd-util")
+        for line in out.splitlines():
+            if line.startswith('hidden'):
+                value = line.split(':')[1].strip()
+                if value == "1":
+                    raise Exception(
+                        "VHD %(path)s is marked as hidden without child" %
+                        locals())
+
     image_path = os.path.join(staging_path, 'image')
 
     orig_base_copy_path = os.path.join(image_path, 'image.vhd')
@@ -158,6 +177,8 @@ def fixup_vhds(sr_path, staging_path, uuid_stack):
         # orphaned)
         link_vhds(snap_path, base_copy_path)
         move_into_sr(snap_path)
+    else:
+        assert_vhd_not_hidden(base_copy_path)
 
     move_into_sr(base_copy_path)
     return vdi_uuid
@@ -276,7 +297,7 @@ def _assert_process_success(proc, cmd):
     if ret != 0:
         msg = "%(cmd)s returned non-zero exit code (%i): '%s'" % (ret, err)
         raise Exception(msg)
-
+    return out, err
 
 def download_image(session, args):
     """Download an image from Glance, unbundle it, and then deposit the VHDs
