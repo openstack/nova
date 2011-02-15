@@ -129,9 +129,7 @@ def get_vdi(session, args):
             """Move a file into the SR"""
             filename = os.path.basename(orig_path)
             new_path = os.path.join(sr_path, filename)
-            #os.rename(orig_path, new_path)
-            # FIXME(sirp) : testing
-            shutil.copyfile(orig_path, new_path)
+            os.rename(orig_path, new_path)
             return new_path
 
         def link_vhds(child_path, parent_path):
@@ -159,8 +157,7 @@ def get_vdi(session, args):
             # orphaned)
             link_vhds(snap_path, base_copy_path) 
             move_into_sr(snap_path)
-        else:
-            raise Exception("path '%s' not found!!!" % orig_snap_path)
+
         move_into_sr(base_copy_path)
         return vdi_uuid
 
@@ -171,9 +168,7 @@ def get_vdi(session, args):
         vdi_uuid = fixup_vhds(sr_path, staging_path)
         return vdi_uuid
     finally:
-        # FIXME(sirp) : testing
-        pass
-        #cleanup_staging_area(staging_path)
+        cleanup_staging_area(staging_path)
 
 
 def put_vdis(session, args):
