@@ -129,8 +129,12 @@ class Controller(wsgi.Controller):
         Machine images are associated with Kernels and Ramdisk images via
         metadata stored in Glance as 'image_properties'
         """
-        def lookup(param):
-            _image_id = image_id
+        # FIXME(sirp): Currently Nova requires us to specify the `null_kernel`
+        # identifier ('nokernel') to indicate a RAW (or VHD) image.  It would
+        # be better if we could omit the kernel_id and ramdisk_id properties
+        # on the image
+        def lookup(image, param):
+            _image_id = image.id
             try:
                 return image['properties'][param]
             except KeyError:
@@ -138,7 +142,8 @@ class Controller(wsgi.Controller):
                     _("%(param)s property not found for image %(_image_id)s") %
                       locals())
 
-        return lookup('kernel_id'), lookup('ramdisk_id')
+        image = self._image_service.show(req.environ['nova.context'], image_id)
+        return lookup(image, 'kernel_id'), lookup(image, 'ramdisk_id')
 
     def create(self, req):
         """ Creates a new server for a given user """

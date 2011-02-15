@@ -331,12 +331,24 @@ class VMHelper(HelperBase):
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_image', kwargs)
         vdi_uuid = session.wait_for_task(instance_id, task)
+        # TODO(sirp): set name-label on VDI
         scan_sr(session, instance_id, sr_ref)
         LOG.debug(_("xapi 'download_image' returned VDI UUID %(vdi_uuid)s") % locals())
         return vdi_uuid
 
     @classmethod
     def _fetch_image_glance_disk(cls, session, instance_id, image, access, type):
+        """Fetch the image from Glance
+
+        NOTE:
+        Unlike _fetch_image_glance_vhd, this method does not use the Glance
+        plugin; instead, it streams the disks through domU to the VDI
+        directly.
+
+        """
+        # FIXME(sirp): Since the Glance plugin seems to be required for the VHD disk,
+        # it may be worth using the plugin for both VHD and RAW and DISK
+        # restores
         sr_ref = safe_find_sr(session)
 
         client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
@@ -349,7 +361,7 @@ class VMHelper(HelperBase):
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
 
-        vdi = cls.create_vdi(session, sr, _('Glance image %s') % image,
+        vdi = cls.create_vdi(session, sr_ref, _('Glance image %s') % image,
                              vdi_size, False)
 
         with_vdi_attached_here(session, vdi, False,
