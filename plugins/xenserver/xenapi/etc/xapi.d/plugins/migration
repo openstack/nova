@@ -29,6 +29,7 @@ import subprocess
 import XenAPIPlugin
 
 from pluginlib_nova import *
+configure_logging('migration')
 
 SSH_HOSTS = '/root/.ssh/known_hosts'
 DEVNULL = '/dev/null'
@@ -88,17 +89,27 @@ def move_vhds_into_sr(session, args):
     new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
     new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
 
+    logging.debug('Creating temporary SR path' % temp_vhd_path)
     os.mkdir(temp_vhd_path)
+
+    logging.debug('Moving %s into %s' % (source_base_copy_path, temp_vhd_path))
     shutil.move(source_base_copy_path, new_base_copy_path)
+
+    logging.debug('Moving %s into %s' % (source_cow_path, temp_vhd_path))
     shutil.move(source_cow_path, new_cow_path)
 
+    logging.debug('Cleaning up %s' % source_image_path)
     os.rmdir(source_image_path)
 
     # Link the COW to the base copy
+    logging.debug('Attaching COW to the base copy...')
     subprocess.call([VHD_UTIL, 'modify', '-n', new_cow_path, '-p', 
             new_base_copy_path])
     
+    logging.debug('Moving VHDs into SR %s' % sr_path)
     shutil.move("%s/*.vhd" % temp_vhd_path, sr_path)
+
+    loggin.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
     os.rmdir(temp_vhd_path)
     return None
 
@@ -115,12 +126,19 @@ def transfer_vhd(session, args):
     source_path = "%s/%s" % (sr_path, vhd_path)
     dest_path = '%s:%sinstance%d/' % (host, IMAGE_PATH, instance_id)
 
+    logging.debug("Preparing to transmit %s to %s" % (source_path, 
+            dest_path))
+
     ssh_cmd = '-e "ssh -o StrictHostKeyChecking=no " '
 
     rsync_args = ['nohup', RSYNC, '-av', '--progress', ssh_cmd, source_path, 
             dest_path]
 
-    if subprocess.call(rsync_args) != 0:
+    logging.debug('rsync %s' % (' '.join(rsync_args, )))
+
+    rsync_proc = subprocess.POpen(rsync_args)
+    logging.debug('Rsync output: \n %s' % rsync_proc.communicate()[0])
+    if rsync_proc.returncode != 0
         raise Exception("Unexpected VHD transfer failure")
 
 

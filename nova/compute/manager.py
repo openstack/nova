@@ -447,6 +447,7 @@ class ComputeManager(manager.Manager):
                   'args': {
                         'migration_id': migration_id, 
                         'instance_id': instance_id,
+                        'disk_info': disk_info,
                   }, 
                 })
 

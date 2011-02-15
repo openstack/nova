@@ -195,11 +195,11 @@ class XenAPIConnection(object):
     def migrate_disk_and_power_off(self, instance, dest):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
-        self._vmops.migrate_disk_and_power_off(instance, dest)
+        return self._vmops.migrate_disk_and_power_off(instance, dest)
 
     def attach_disk(self, instance, disk_info):
         """Moves the copied VDIs into the SR"""
-        return self._vmops.attach_disk(instance)
+        return self._vmops.attach_disk(instance, disk_info)
     
     def suspend(self, instance, callback):
         """suspend the specified instance"""
