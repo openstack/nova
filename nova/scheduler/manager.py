@@ -22,6 +22,9 @@ Scheduler Service
 """
 
 import functools
+import novatools
+
+from datetime import datetime
 
 from nova import db
 from nova import flags
@@ -35,7 +38,54 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_driver',
                     'nova.scheduler.chance.ChanceScheduler',
                     'Driver to use for the scheduler')
+flags.DEFINE_integer('zone_db_check_interval',
+                    60,
+                    'Seconds between getting fresh zone info from db.')
 
+
+class ZoneState(object):
+    """Holds the state of all connected child zones."""
+    def __init__(self):
+       self.is_active = True
+       self.name = None
+       self.capabilities = None
+       self.retry = 0
+       self.last_seen = datetime.min
+
+    def update(self, zone):
+       self.zone_id = zone.id
+       self.api_url = zone.api_url
+       self.username = zone.username
+       self.password = zone.password
+
+
+class ZoneManager(object):
+    """Keeps the zone states updated."""
+    def __init__(self):
+        self.last_zone_db_check = datetime.min
+        self.zone_states = {}
+
+    def _refresh_from_db(self, context):
+        zones = db.zone_get_all(context)
+        existing = self.zone_states.keys()
+        for zone in zones:
+            if zone.id not in existing:
+                self.zone_state[zone.id] = ZoneState()
+            self.zone_state[zones.id].update(zone)
+ 
+    def _poll_zones(self, context):
+        pass
+
+    def ping(self, context=None):
+        """Ping should be called periodically to update zone status."""
+        logging.debug("ZoneManager PING")
+        diff = datetime.now() - self.last_zone_db_check
+        if diff.seconds >=  FLAGS.zone_db_check_interval:
+            logging.debug("ZoneManager RECHECKING DB ")
+            self.last_zone_db_check = datetime.now()
+            self._refresh_from_db(context)
+        self._poll_zones(context)
+            
 
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
@@ -43,11 +93,16 @@ class SchedulerManager(manager.Manager):
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = utils.import_object(scheduler_driver)
+        self.zone_manager = ZoneManager()
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
         """Converts all method calls to use the schedule method"""
         return functools.partial(self._schedule, key)
+
+    def periodic_tasks(self, context=None):
+        """Poll child zones periodically to get status."""
+        self.zone_manager.ping(context)
 
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
