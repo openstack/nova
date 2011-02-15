@@ -24,6 +24,7 @@ import pickle
 import re
 import time
 import urllib
+import uuid
 from xml.dom import minidom
 
 from eventlet import event
@@ -318,9 +319,15 @@ class VMHelper(HelperBase):
         if sr_ref is None:
             raise exception.NotFound('Cannot find SR to write VDI to')
 
+        # NOTE(sirp): The Glance plugin runs under Python 2.4 which does not
+        # have the `uuid` module. To work around this, we generate the uuids
+        # here (under Python 2.6+) and pass them as arguments
+        uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
+
         params = {'image_id': image,
                   'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port}
+                  'glance_port': FLAGS.glance_port,
+                  'uuid_stack': uuid_stack}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'get_vdi', kwargs)
@@ -372,14 +379,35 @@ class VMHelper(HelperBase):
 
     @classmethod
     def determine_disk_image_type(cls, instance):
-        instance_id = instance.id
-        if instance.kernel_id:
-            #if kernel is not present we must download a raw disk
-            LOG.debug(_("Instance %(instance_id)s will use DISK format") %
-                      locals())
-            return ImageType.DISK
+        """Disk Image Types are used to determine where the kernel will reside
+        within an image. To figure out which type we're dealing with, we use
+        the following rules:
 
-        if FLAGS.xenapi_image_service == 'glance':
+        1. If the instance is specifying a kernel explicitly, we must be using
+           a 'disk' image (kernel outside of the image)
+
+        2. If the kernel isn't specified, then we have two different
+           scenarios:
+
+            a) If the image is in Glance, then we can use the 'disk_format'
+               property to determine if the image is really a VHD-style image
+               or if it's a RAW image
+
+            b) If the image is not in Glance, then it must be a RAW image
+               (since we don't have a way of identifying VHD images...yet)
+        """
+        def log_disk_format(disk_format):
+            disk_format = disk_format.upper()
+            image_id = instance.image_id
+            instance_id = instance.id
+            LOG.debug(_("Detected %(disk_format)s format for image "
+                        "%(image_id)s, instance %(instance_id)s") % locals())
+
+        if instance.kernel_id:
+            # 1. DISK
+            log_disk_format('disk')
+            return ImageType.DISK
+        elif FLAGS.xenapi_image_service == 'glance':
             # if using glance, then we could be VHD format
             client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
             meta = client.get_image_meta(instance.image_id)
@@ -388,12 +416,12 @@ class VMHelper(HelperBase):
             # TODO(sirp): When Glance treats disk_format as a first class
             # attribute, we should start using that rather than an image-property
             if disk_format == 'vhd':
-                LOG.debug(_("Instance %(instance_id)s will use DISK_VHD format") %
-                          locals())
+                # 2a. DISK_VHD
+                log_disk_format('disk_vhd')
                 return ImageType.DISK_VHD
-        
-        LOG.debug(_("Instance %(instance_id)s will use DISK_RAW format") %
-                  locals())
+      
+        # 2b. DISK_RAW
+        log_disk_format('disk_raw')
         return ImageType.DISK_RAW
 
     @classmethod
