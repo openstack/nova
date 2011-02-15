@@ -38,7 +38,6 @@ configure_logging('glance')
 
 CHUNK_SIZE = 8192
 KERNEL_DIR = '/boot/guest'
-FILE_SR_PATH = '/var/run/sr-mount'
 
 def copy_kernel_vdi(session,args):
     vdi = exists(args, 'vdi-ref')
@@ -86,6 +85,7 @@ def get_vdi(session, args):
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
     uuid_stack = params["uuid_stack"]
+    sr_path = params["sr_path"]
 
     def unbundle_xfer(sr_path, staging_path):
         """
@@ -161,7 +161,6 @@ def get_vdi(session, args):
         move_into_sr(base_copy_path)
         return vdi_uuid
 
-    sr_path = get_sr_path(session)
     staging_path = make_staging_area(sr_path)
     try:
         unbundle_xfer(sr_path, staging_path)
@@ -179,6 +178,7 @@ def put_vdis(session, args):
     image_id = params["image_id"]
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
+    sr_path = params["sr_path"]
 
     def prepare_staging_area(sr_path, staging_path):
         """
@@ -230,7 +230,6 @@ def put_vdis(session, args):
 
         conn.close()
 
-    sr_path = get_sr_path(session)
     staging_path = make_staging_area(sr_path)
     try:
         prepare_staging_area(sr_path, staging_path)
@@ -252,35 +251,6 @@ def make_staging_area(sr_path):
 
 def cleanup_staging_area(staging_path):
     shutil.rmtree(staging_path)
-
-
-def get_sr_path(session):
-    sr_ref = find_sr(session)
-
-    if sr_ref is None:
-        raise Exception('Cannot find SR to read VDI from')
-
-    sr_rec = session.xenapi.SR.get_record(sr_ref)
-    sr_uuid = sr_rec["uuid"]
-    sr_path = os.path.join(FILE_SR_PATH, sr_uuid)
-    return sr_path
-
-
-#TODO(sirp): both objectstore and glance need this, should this be refactored
-#into common lib
-def find_sr(session):
-    host = get_this_host(session)
-    srs = session.xenapi.SR.get_all()
-    for sr in srs:
-        sr_rec = session.xenapi.SR.get_record(sr)
-        if not ('i18n-key' in sr_rec['other_config'] and
-                sr_rec['other_config']['i18n-key'] == 'local-storage'):
-            continue
-        for pbd in sr_rec['PBDs']:
-            pbd_rec = session.xenapi.PBD.get_record(pbd)
-            if pbd_rec['host'] == host:
-                return sr
-    return None
 
 
 if __name__ == '__main__':

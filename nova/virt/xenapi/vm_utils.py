@@ -285,7 +285,8 @@ class VMHelper(HelperBase):
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port}
+                  'glance_port': FLAGS.glance_port,
+                  'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'put_vdis', kwargs)
@@ -327,7 +328,8 @@ class VMHelper(HelperBase):
         params = {'image_id': image,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
-                  'uuid_stack': uuid_stack}
+                  'uuid_stack': uuid_stack,
+                  'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'get_vdi', kwargs)
@@ -683,6 +685,21 @@ def find_sr(session):
             if pbd_rec['host'] == host:
                 return sr
     return None
+
+
+def get_sr_path(session):
+    """Return the path to our Storage Repository
+
+    This is used when we're dealing with VHDs directly, either by taking
+    snapshots or by restoring an image in the DISK_VHD format.
+    """
+    # TODO(sirp): add safe_find_sr
+    sr_ref = find_sr(session)
+    if sr_ref is None:
+        raise Exception('Cannot find SR to read VDI from')
+    sr_rec = session.get_xenapi().SR.get_record(sr_ref)
+    sr_uuid = sr_rec["uuid"]
+    return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
 
 def remap_vbd_dev(dev):
