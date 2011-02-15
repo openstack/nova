@@ -54,6 +54,8 @@ flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
+flags.DEFINE_string('input_chain', 'INPUT',
+                    'chain to add nova_input to')
 
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
@@ -156,6 +158,8 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
     _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                            % (floating_ip, fixed_ip))
+    _confirm_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
+                           % (floating_ip, fixed_ip))
     _confirm_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                            % (fixed_ip, floating_ip))
 
@@ -163,6 +167,8 @@ def ensure_floating_forward(floating_ip, fixed_ip):
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
     _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
+                          % (floating_ip, fixed_ip))
+    _remove_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
                           % (floating_ip, fixed_ip))
     _remove_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                           % (fixed_ip, floating_ip))
