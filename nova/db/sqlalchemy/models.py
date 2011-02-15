@@ -535,9 +535,9 @@ class Console(BASE, NovaBase):
     pool = relationship(ConsolePool, backref=backref('consoles'))
 
 
-class ChildZone(BASE, NovaBase):
+class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
-    __tablename__ = 'child_zones'
+    __tablename__ = 'zones'
     id = Column(Integer, primary_key=True)
     api_url = Column(String(255))
     username = Column(String(255))
@@ -556,7 +556,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console, ChildZone)
+              Project, Certificate, ConsolePool, Console, Zone)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

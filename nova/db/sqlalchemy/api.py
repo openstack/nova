@@ -2021,7 +2021,7 @@ def console_get(context, console_id, instance_id=None):
 
 @require_admin_context
 def zone_create(context, values):
-    zone = models.ChildZone()
+    zone = models.Zone()
     zone.update(values)
     zone.save()
     return zone
@@ -2029,7 +2029,7 @@ def zone_create(context, values):
 
 @require_admin_context
 def zone_update(context, zone_id, values):
-    zone = session.query(models.ChildZone).filter_by(id=zone_id).first()
+    zone = session.query(models.Zone).filter_by(id=zone_id).first()
     if not zone:
         raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
     zone.update(values)
@@ -2041,14 +2041,14 @@ def zone_update(context, zone_id, values):
 def zone_delete(context, zone_id):
     session = get_session()
     with session.begin():
-        session.execute('delete from child_zones '
+        session.execute('delete from zones '
                         'where id=:id', {'id': zone_id})
 
 
 @require_admin_context
 def zone_get(context, zone_id):
     session = get_session()
-    result = session.query(models.ChildZone).filter_by(id=zone_id).first()
+    result = session.query(models.Zone).filter_by(id=zone_id).first()
     if not result:
         raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
     return result
@@ -2057,4 +2057,4 @@ def zone_get(context, zone_id):
 @require_admin_context
 def zone_get_all(context):
     session = get_session()
-    return session.query(models.ChildZone).all()
+    return session.query(models.Zone).all()

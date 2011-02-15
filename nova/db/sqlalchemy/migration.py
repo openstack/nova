@@ -45,7 +45,7 @@ def db_version():
         engine = sqlalchemy.create_engine(FLAGS.sql_connection, echo=False)
         meta.reflect(bind=engine)
         try:
-            for table in ('auth_tokens', 'child_zones', 'export_devices', 
+            for table in ('auth_tokens', 'zones', 'export_devices',
                           'fixed_ips', 'floating_ips', 'instances',
                           'key_pairs', 'networks', 'projects', 'quotas',
                           'security_group_instance_association',
