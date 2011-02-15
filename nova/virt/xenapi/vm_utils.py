@@ -331,8 +331,14 @@ class VMHelper(HelperBase):
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_image', kwargs)
         vdi_uuid = session.wait_for_task(instance_id, task)
-        # TODO(sirp): set name-label on VDI
+
         scan_sr(session, instance_id, sr_ref)
+
+        # Set the name-label to ease debugging
+        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
+        name_label = get_name_label_for_image(image)
+        session.get_xenapi().VDI.set_name_label(vdi_ref, name_label)
+
         LOG.debug(_("xapi 'download_image' returned VDI UUID %(vdi_uuid)s") % locals())
         return vdi_uuid
 
@@ -361,8 +367,8 @@ class VMHelper(HelperBase):
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
 
-        vdi = cls.create_vdi(session, sr_ref, _('Glance image %s') % image,
-                             vdi_size, False)
+        name_label = get_name_label_for_image(image)
+        vdi = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
 
         with_vdi_attached_here(session, vdi, False,
                                lambda dev:
@@ -848,3 +854,8 @@ def _write_partition(virtual_size, dev):
             (dest, primary_first, primary_last))
 
     LOG.debug(_('Writing partition table %s done.'), dest)
+
+
+def get_name_label_for_image(image):
+    # TODO(sirp): This should eventually be the URI for the Glance image
+    return _('Glance image %s') % image
