@@ -103,17 +103,19 @@ class VMOps(object):
                                                   vdi_ref)
             if instance.kernel_id:
                 kernel = VMHelper.fetch_image(self._session, instance.id,
-                    instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+                    instance.kernel_id, user, project,
+                    ImageType.KERNEL_RAMDISK)
             if instance.ramdisk_id:
                 ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                    instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+                    instance.ramdisk_id, user, project,
+                    ImageType.KERNEL_RAMDISK)
         else:
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', disk)
 
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
-        VMHelper.create_vbd(session=self._session, vm_ref=vm_ref, vdi_ref=vdi_ref, 
-                userdevice=0, bootable=True)
+        VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
@@ -234,7 +236,7 @@ class VMOps(object):
         try:
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
-            return Snapshot(self, instance, template_vm_ref, 
+            return Snapshot(self, instance, template_vm_ref,
                     template_vdi_uuids)
         except self.XenAPI.Failure, exc:
             logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
@@ -254,35 +256,40 @@ class VMOps(object):
         # identify it via the VBD. The base copy is the parent_uuid returned
         # from the snapshot creation
 
-        #TODO(mdietz): explicitly forcing the base_copy and cow names is
-        #pretty fugly
+        base_copy_uuid = cow_uuid = None
         with self._get_snapshot(instance) as snapshot:
-            params = {'host':dest, 'vdi_uuid':snapshot.vdi_uuids[1],
-                      'dest_name': 'base_copy.vhd',
+            # transfer the base copy
+            base_copy_uuid = snapshot.vdi_uuids[1]
+            vdi_ref, vm_vdi_rec = \
+                    VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
+            cow_uuid = vm_vdi_rec['uuid']
+
+            params = {'host': dest, 'vdi_uuid': base_copy_uuid,
                       'instance_id': instance.id, }
+
             self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
 
             # Now power down the instance and transfer the COW VHD
             self._shutdown(instance, vm_ref, method='clean')
 
-            vdi_ref, vm_vdi_rec = \
-                    VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
-            params = {'host':dest, 'vdi_uuid': vm_vdi_rec['uuid'],
-                      'dest_name': 'cow.vhd',
+            params = {'host': dest, 'vdi_uuid': cow_uuid,
                       'instance_id': instance.id, }
             self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
-            return snapshot.vdi_uuids[1], vm_vdi_rec['uuid']
 
-    def attach_disk(self, instance):
+        # TODO(mdietz): we could also consider renaming these to something
+        # sensible so we don't need to blindly pass around dictionaries
+        return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
+
+    def attach_disk(self, instance, disk_info):
         vm_ref = VMHelper.lookup(self._session, instance.name)
-
         new_base_copy_uuid = str(uuid.uuid4())
-        
-        params = { 'instance_id': instance.id,
-                   'new_base_copy_uuid': new_base_copy_uuid, 
-                   'new_cow_uuid': str(uuid.uuid4()) }
+        params = {'instance_id': instance.id,
+                  'old_base_copy_uuid': disk_info['base_copy'],
+                  'old_cow_uuid':       disk_info['cow'],
+                  'new_base_copy_uuid': new_base_copy_uuid,
+                  'new_cow_uuid':       str(uuid.uuid4())}
 
         self._session.async_call_plugin('migration', 'move_vhds_into_sr',
                 {'params': pickle.dumps(params)})
@@ -290,7 +297,7 @@ class VMOps(object):
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_sr(self._session)
 
-        return new_base_copy_uuid 
+        return new_base_copy_uuid
 
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """
@@ -339,7 +346,6 @@ class VMOps(object):
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
-
 
     def _shutdown(self, instance, vm, method='hard'):
         """Shutdown an instance """

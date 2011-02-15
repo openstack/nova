@@ -429,14 +429,15 @@ class ComputeManager(manager.Manager):
         self.db.migration_update(context, migration_id, 
                 { 'status': 'migrating', })
 
-        self.driver.migrate_disk_and_power_off(instance_ref, 
+        disk_info = self.driver.migrate_disk_and_power_off(instance_ref, 
                                   migration_ref['dest_host'])
     
         self.db.migration_update(context, migration_id, 
                 { 'status': 'post-migrating', })
+
         #TODO(mdietz): This is where we would update the VM record 
         #after resizing
-        
+
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_host'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
@@ -451,7 +452,7 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def finish_resize(self, context, instance_id, migration_id):
+    def finish_resize(self, context, instance_id, migration_id, disk_info):
         """Completes the migration process by setting up the newly transferred
         disk and turning on the instance on its new host machine"""
         migration_ref = self.db.migration_get(context, migration_id)
@@ -459,7 +460,7 @@ class ComputeManager(manager.Manager):
                 migration_ref['instance_id'])
 
         # this may get passed into the following spawn instead
-        disk_info = self.driver.attach_disk(instance_ref)
+        new_disk_info = self.driver.attach_disk(instance_ref, disk_info)
         self.driver.spawn(instance_ref, disk=disk_info)
 
         self.db.migration_update(context, migration_id, 

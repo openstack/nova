@@ -197,7 +197,7 @@ class XenAPIConnection(object):
         off the instance copies over the COW disk"""
         self._vmops.migrate_disk_and_power_off(instance, dest)
 
-    def attach_disk(self, instance):
+    def attach_disk(self, instance, disk_info):
         """Moves the copied VDIs into the SR"""
         return self._vmops.attach_disk(instance)
     
