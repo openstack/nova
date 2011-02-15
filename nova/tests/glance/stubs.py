@@ -29,9 +29,10 @@ class FakeGlance(object):
     def __init__(self, host, port=None, use_ssl=False):
         pass
 
-    def get_image(self, image):
-        meta = {
-            'size': 0,
-            }
+    def get_image_meta(self, image_id):
+        return {'size': 0, 'properties': {}}
+
+    def get_image(self, image_id):
+        meta = self.get_image_meta(image_id)
         image_file = StringIO.StringIO('')
         return meta, image_file
