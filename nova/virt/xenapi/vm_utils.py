@@ -316,9 +316,7 @@ class VMHelper(HelperBase):
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
 
-        sr_ref = find_sr(session)
-        if sr_ref is None:
-            raise exception.NotFound('Cannot find SR to write VDI to')
+        sr_ref = safe_find_sr(session)
 
         # NOTE(sirp): The Glance plugin runs under Python 2.4 which does not
         # have the `uuid` module. To work around this, we generate the uuids
@@ -340,16 +338,14 @@ class VMHelper(HelperBase):
 
     @classmethod
     def _fetch_image_glance_disk(cls, session, instance_id, image, access, type):
-        sr = find_sr(session)
-        if sr is None:
-            raise exception.NotFound('Cannot find SR to write VDI to')
+        sr_ref = safe_find_sr(session)
 
         client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-
         meta, image_file = client.get_image(image)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
         LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
+
         if type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -672,7 +668,18 @@ def get_vdi_for_vm_safely(session, vm_ref):
     return vdi_ref, vdi_rec
 
 
+def safe_find_sr(session):
+    """Same as find_sr except raises a NotFound exception if SR cannot be
+    determined
+    """
+    sr_ref = find_sr(session)
+    if sr_ref is None:
+        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+    return sr_ref
+
+
 def find_sr(session):
+    """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
     srs = session.get_xenapi().SR.get_all()
     for sr in srs:
@@ -688,15 +695,12 @@ def find_sr(session):
 
 
 def get_sr_path(session):
-    """Return the path to our Storage Repository
+    """Return the path to our storage repository
 
     This is used when we're dealing with VHDs directly, either by taking
     snapshots or by restoring an image in the DISK_VHD format.
     """
-    # TODO(sirp): add safe_find_sr
-    sr_ref = find_sr(session)
-    if sr_ref is None:
-        raise Exception('Cannot find SR to read VDI from')
+    sr_ref = safe_find_sr(session)
     sr_rec = session.get_xenapi().SR.get_record(sr_ref)
     sr_uuid = sr_rec["uuid"]
     return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
