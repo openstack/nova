@@ -67,6 +67,16 @@ class VMOps(object):
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
 
+        #ensure enough free memory is available
+        if not VMHelper.ensure_free_mem(self._session, instance):
+                name = instance['name']
+                LOG.exception(_('instance %(name)s: not enough free memory')
+                              % locals())
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                return
+
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         #if kernel is not present we must download a raw disk
@@ -197,7 +207,8 @@ class VMOps(object):
                 instance_name = instance_or_vm.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception(_('Instance not present %s') % instance_name)
+            raise exception.NotFound(
+                            _('Instance not present %s') % instance_name)
         return vm
 
     def snapshot(self, instance, image_id):
