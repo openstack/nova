@@ -76,13 +76,13 @@ class APIRouter(wsgi.Router):
             LOG.debug(_("Including admin operations in API."))
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
-            server_members["diagnostics"] = "GET"
-            server_members["actions"] = "GET"
+            server_members['diagnostics'] = 'GET'
+            server_members['actions'] = 'GET'
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
-                        collection={'detail': 'GET'})
+                        collection={'detail': 'GET', 'info': 'GET'}),
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},

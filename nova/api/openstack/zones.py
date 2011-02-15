@@ -42,7 +42,7 @@ class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "zone": ["id", "api_url"]}}}
+                "zone": ["id", "api_url", "name", "capabilities"]}}}
 
     def index(self, req):
         """Return all zones in brief"""
@@ -54,6 +54,11 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all zones in detail"""
         return self.index(req)
+
+    def info(self, req):
+        """Return name and capabilities for this zone."""
+        return dict(zone=dict(name=FLAGS.zone_name, 
+                    capabilities=FLAGS.zone_capabilities))
 
     def show(self, req, id):
         """Return data about the given zone id"""
