@@ -182,15 +182,19 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
     using chunked-transfer-encoded HTTP.
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
-    #NOTE(sirp): httplib under python2.4 won't accept a file-like object
+    # NOTE(sirp): httplib under python2.4 won't accept a file-like object
     # to request
     conn.putrequest('PUT', '/images/%s' % image_id)
 
+    # FIXME(sirp): nokernel signals Nova to use a raw image. This is defined by
+    # FLAGS.null_kernel. Is there a way to get rid of this?
     headers = {
         'x-image-meta-store': 'file',
         'x-image-meta-is_public': 'True',
         'x-image-meta-type': 'raw',
         'x-image-meta-property-disk-format': 'vhd',
+        'x-image-meta-property-kernel-id': 'nokernel',
+        'x-image-meta-property-ramdisk-id': 'noramdisk',
         'x-image-meta-property-container-format': 'tarball',
         'transfer-encoding': "chunked",
         'content-type': 'application/octet-stream',
@@ -251,7 +255,6 @@ def _make_staging_area(sr_path):
     guarantee that it resides within the same filesystem and therefore permit
     hard-linking and cheap file moves.
     """
-    # NOTE(sirp): staging area is created in SR to allow hard-linking
     staging_path = tempfile.mkdtemp(dir=sr_path)
     return staging_path
 
@@ -314,7 +317,7 @@ def upload_image(session, args):
     finally:
         _cleanup_staging_area(staging_path)
 
-    return ""
+    return ""  # Nothing useful to return on an upload
 
 
 def copy_kernel_vdi(session,args):
