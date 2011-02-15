@@ -134,9 +134,6 @@ class VMOps(object):
                 VMHelper.create_vif(self._session, vm_ref,
                                     network_ref, instance.mac_address)
 
-        # call reset networking
-        self.reset_network(instance)
-
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name
@@ -164,6 +161,10 @@ class VMOps(object):
                 timer.stop()
 
         timer.f = _wait_for_boot
+
+        # call reset networking
+        self.reset_network(instance)
+
         return timer.start(interval=0.5, now=True)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
