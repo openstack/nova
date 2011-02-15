@@ -43,6 +43,8 @@ from nova import utils
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.rpc')
 
+FLAGS.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
+
 
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
@@ -156,7 +158,7 @@ class AdapterConsumer(TopicConsumer):
     def __init__(self, connection=None, topic="broadcast", proxy=None):
         LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
         self.proxy = proxy
-        self.pool = greenpool.GreenPool(1024)
+        self.pool = greenpool.GreenPool(FLAGS.rpc_thread_pool_size)
         super(AdapterConsumer, self).__init__(connection=connection,
                                               topic=topic)
 
