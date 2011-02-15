@@ -404,12 +404,13 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_create(context, 
                 { 'instance_id': instance_id,
-                  'source_host': instance_ref['host'],
-                  'dest_host':   socket.gethostname(),
+                  'source_compute': instance_ref['host'],
+                  'dest_compute': socket.gethostname(),
+                  'dest_host':   self.driver.get_host_ip_addr(),
                   'status':      'pre-migrating' })
         LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
         service = self.db.service_get_by_host_and_topic(context,
-                instance_ref['host'], FLAGS.compute_topic)
+                migration_ref['source_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
                 service['host'])
         rpc.cast(context, topic, 

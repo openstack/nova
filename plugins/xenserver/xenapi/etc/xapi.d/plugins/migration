@@ -136,7 +136,7 @@ def transfer_vhd(session, args):
 
     logging.debug('rsync %s' % (' '.join(rsync_args, )))
 
-    rsync_proc = subprocess.POpen(rsync_args)
+    rsync_proc = subprocess.Popen(rsync_args)
     logging.debug('Rsync output: \n %s' % rsync_proc.communicate()[0])
     if rsync_proc.returncode != 0
         raise Exception("Unexpected VHD transfer failure")
