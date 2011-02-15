@@ -440,7 +440,7 @@ class ComputeManager(manager.Manager):
         #after resizing
 
         service = self.db.service_get_by_host_and_topic(context,
-                migration_ref['dest_host'], FLAGS.compute_topic)
+                migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
                 service['host'])
         rpc.cast(context, topic, 

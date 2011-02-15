@@ -226,7 +226,7 @@ class XenAPIConnection(object):
         return self._vmops.get_ajax_console(instance)
         
     def get_host_ip_addr(self):
-        xs_url = urlparse.urlpase(FLAGS.xenapi_connection_url) 
+        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url) 
         return xs_url.netloc
 
     def attach_volume(self, instance_name, device_path, mountpoint):
