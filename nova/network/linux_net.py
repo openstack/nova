@@ -54,6 +54,8 @@ flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
+flags.DEFINE_string('input_chain', 'INPUT',
+                    'chain to add nova_input to')
 
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
