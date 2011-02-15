@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2011-02-09 09:26-0800\n"
+"POT-Creation-Date: 2011-02-15 11:05-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,9 +17,9 @@ msgstr ""
 "Content-Type: text/plain; charset=CHARSET\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: ../nova/scheduler/chance.py:37 ../nova/scheduler/simple.py:75
-#: ../nova/scheduler/simple.py:110 ../nova/scheduler/simple.py:122
-#: ../nova/scheduler/zone.py:55
+#: ../nova/scheduler/chance.py:37 ../nova/scheduler/zone.py:55
+#: ../nova/scheduler/simple.py:75 ../nova/scheduler/simple.py:110
+#: ../nova/scheduler/simple.py:122
 msgid "No hosts found"
 msgstr ""
 
@@ -66,11 +66,6 @@ msgstr ""
 
 #: ../nova/volume/api.py:104
 msgid "Volume is already detached"
-msgstr ""
-
-#: ../nova/virt/fake.py:224
-#, python-format
-msgid "Instance %s Not Found"
 msgstr ""
 
 #: ../nova/api/openstack/servers.py:138
@@ -142,7 +137,7 @@ msgstr ""
 
 #: ../nova/virt/xenapi/volumeops.py:48 ../nova/virt/xenapi/volumeops.py:101
 #: ../nova/db/sqlalchemy/api.py:709 ../nova/virt/libvirt_conn.py:741
-#: ../nova/api/ec2/__init__.py:322
+#: ../nova/api/ec2/__init__.py:321
 #, python-format
 msgid "Instance %s not found"
 msgstr ""
@@ -383,7 +378,7 @@ msgstr ""
 msgid "instance %s: getting locked state"
 msgstr ""
 
-#: ../nova/compute/manager.py:506 ../nova/api/ec2/cloud.py:513
+#: ../nova/compute/manager.py:506 ../nova/api/ec2/cloud.py:515
 #, python-format
 msgid "Get console output for instance %s"
 msgstr ""
@@ -540,40 +535,40 @@ msgstr ""
 msgid "Failed to open connection to the hypervisor"
 msgstr ""
 
-#: ../nova/network/linux_net.py:181
+#: ../nova/network/linux_net.py:187
 #, python-format
 msgid "Starting VLAN inteface %s"
 msgstr ""
 
-#: ../nova/network/linux_net.py:202
+#: ../nova/network/linux_net.py:208
 #, python-format
 msgid "Starting Bridge interface for %s"
 msgstr ""
 
 #. pylint: disable-msg=W0703
-#: ../nova/network/linux_net.py:308
+#: ../nova/network/linux_net.py:314
 #, python-format
 msgid "Hupping dnsmasq threw %s"
 msgstr ""
 
-#: ../nova/network/linux_net.py:310
+#: ../nova/network/linux_net.py:316
 #, python-format
 msgid "Pid %d is stale, relaunching dnsmasq"
 msgstr ""
 
 #. pylint: disable-msg=W0703
-#: ../nova/network/linux_net.py:352
+#: ../nova/network/linux_net.py:358
 #, python-format
 msgid "killing radvd threw %s"
 msgstr ""
 
-#: ../nova/network/linux_net.py:354
+#: ../nova/network/linux_net.py:360
 #, python-format
 msgid "Pid %d is stale, relaunching radvd"
 msgstr ""
 
 #. pylint: disable-msg=W0703
-#: ../nova/network/linux_net.py:443
+#: ../nova/network/linux_net.py:449
 #, python-format
 msgid "Killing dnsmasq threw %s"
 msgstr ""
@@ -598,37 +593,42 @@ msgstr ""
 msgid "Running cmd (subprocess): %s"
 msgstr ""
 
-#: ../nova/utils.py:141
+#: ../nova/utils.py:141 ../nova/utils.py:181
 #, python-format
 msgid "Result was %s"
 msgstr ""
 
-#: ../nova/utils.py:179
+#: ../nova/utils.py:157
 #, python-format
-msgid "debug in callback: %s"
-msgstr ""
-
-#: ../nova/utils.py:184
-#, python-format
-msgid "Running %s"
+msgid "Running cmd (SSH): %s"
 msgstr ""
 
 #: ../nova/utils.py:215
 #, python-format
+msgid "debug in callback: %s"
+msgstr ""
+
+#: ../nova/utils.py:220
+#, python-format
+msgid "Running %s"
+msgstr ""
+
+#: ../nova/utils.py:251
+#, python-format
 msgid "Link Local address is not found.:%s"
 msgstr ""
 
-#: ../nova/utils.py:218
+#: ../nova/utils.py:254
 #, python-format
 msgid "Couldn't get Link Local IP of %(interface)s :%(ex)s"
 msgstr ""
 
-#: ../nova/utils.py:316
+#: ../nova/utils.py:352
 #, python-format
 msgid "Invalid backend: %s"
 msgstr ""
 
-#: ../nova/utils.py:327
+#: ../nova/utils.py:363
 #, python-format
 msgid "backend %s"
 msgstr ""
@@ -793,129 +793,129 @@ msgstr ""
 msgid "VDI %s is still available"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:445
+#: ../nova/virt/xenapi/vm_utils.py:453
 #, python-format
 msgid "(VM_UTILS) xenserver vm state -> |%s|"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:447
+#: ../nova/virt/xenapi/vm_utils.py:455
 #, python-format
 msgid "(VM_UTILS) xenapi power_state -> |%s|"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:507
+#: ../nova/virt/xenapi/vm_utils.py:515
 #, python-format
 msgid "VHD %(vdi_uuid)s has parent %(parent_ref)s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:524
+#: ../nova/virt/xenapi/vm_utils.py:532
 #, python-format
 msgid "Re-scanning SR %s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:549
+#: ../nova/virt/xenapi/vm_utils.py:557
 #, python-format
 msgid ""
 "VHD coalesce attempts exceeded (%(counter)d > %(max_attempts)d), giving up..."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:556
+#: ../nova/virt/xenapi/vm_utils.py:564
 #, python-format
 msgid ""
 "Parent %(parent_uuid)s doesn't match original parent "
 "%(original_parent_uuid)s, waiting for coalesce..."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:572
+#: ../nova/virt/xenapi/vm_utils.py:580
 #, python-format
 msgid "No VDIs found for VM %s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:576
+#: ../nova/virt/xenapi/vm_utils.py:584
 #, python-format
 msgid "Unexpected number of VDIs (%(num_vdis)s) found for VM %(vm_ref)s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:635
+#: ../nova/virt/xenapi/vm_utils.py:643
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:188
 #, python-format
 msgid "Creating VBD for VDI %s ... "
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:637
+#: ../nova/virt/xenapi/vm_utils.py:645
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:190
 #, python-format
 msgid "Creating VBD for VDI %s done."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:639
+#: ../nova/virt/xenapi/vm_utils.py:647
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:192
 #, python-format
 msgid "Plugging VBD %s ... "
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:641
+#: ../nova/virt/xenapi/vm_utils.py:649
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:194
 #, python-format
 msgid "Plugging VBD %s done."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:643
+#: ../nova/virt/xenapi/vm_utils.py:651
 #, python-format
 msgid "VBD %(vbd)s plugged as %(orig_dev)s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:646
+#: ../nova/virt/xenapi/vm_utils.py:654
 #, python-format
 msgid "VBD %(vbd)s plugged into wrong dev, remapping to %(dev)s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:650
+#: ../nova/virt/xenapi/vm_utils.py:658
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:197
 #, python-format
 msgid "Destroying VBD for VDI %s ... "
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:653
+#: ../nova/virt/xenapi/vm_utils.py:661
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:200
 #, python-format
 msgid "Destroying VBD for VDI %s done."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:665
+#: ../nova/virt/xenapi/vm_utils.py:673
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:211
 msgid "VBD.unplug successful first time."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:670
+#: ../nova/virt/xenapi/vm_utils.py:678
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:216
 msgid "VBD.unplug rejected: retrying..."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:674
+#: ../nova/virt/xenapi/vm_utils.py:682
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:220
 msgid "VBD.unplug successful eventually."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:677
+#: ../nova/virt/xenapi/vm_utils.py:685
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:223
 #, python-format
 msgid "Ignoring XenAPI.Failure in VBD.unplug: %s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:686
+#: ../nova/virt/xenapi/vm_utils.py:694
 #: ../plugins/xenserver/xenapi/etc/xapi.d/plugins/pluginlib_nova.py:66
 #, python-format
 msgid "Ignoring XenAPI.Failure %s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:717
+#: ../nova/virt/xenapi/vm_utils.py:725
 #, python-format
 msgid ""
 "Writing partition table %(primary_first)d %(primary_last)d to %(dest)s..."
 msgstr ""
 
-#: ../nova/virt/xenapi/vm_utils.py:729
+#: ../nova/virt/xenapi/vm_utils.py:737
 #, python-format
 msgid "Writing partition table %s done."
 msgstr ""
@@ -954,105 +954,105 @@ msgstr ""
 msgid "No floating ip for address %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:933
+#: ../nova/db/sqlalchemy/api.py:939
 #, python-format
 msgid "no keypair for user %(user_id)s, name %(name)s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1048 ../nova/db/sqlalchemy/api.py:1106
+#: ../nova/db/sqlalchemy/api.py:1054 ../nova/db/sqlalchemy/api.py:1112
 #, python-format
 msgid "No network for id %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1078
+#: ../nova/db/sqlalchemy/api.py:1084
 #, python-format
 msgid "No network for bridge %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1092
+#: ../nova/db/sqlalchemy/api.py:1098
 #, python-format
 msgid "No network for instance %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1227
+#: ../nova/db/sqlalchemy/api.py:1233
 #, python-format
 msgid "Token %s does not exist"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1252
+#: ../nova/db/sqlalchemy/api.py:1258
 #, python-format
 msgid "No quota for project_id %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1405 ../nova/db/sqlalchemy/api.py:1451
-#: ../nova/api/ec2/__init__.py:328
+#: ../nova/db/sqlalchemy/api.py:1411 ../nova/db/sqlalchemy/api.py:1457
+#: ../nova/api/ec2/__init__.py:327
 #, python-format
 msgid "Volume %s not found"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1464
+#: ../nova/db/sqlalchemy/api.py:1470
 #, python-format
 msgid "No export device found for volume %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1477
+#: ../nova/db/sqlalchemy/api.py:1483
 #, python-format
 msgid "No target id found for volume %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1522
+#: ../nova/db/sqlalchemy/api.py:1528
 #, python-format
 msgid "No security group with id %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1539
+#: ../nova/db/sqlalchemy/api.py:1545
 #, python-format
 msgid "No security group named %(group_name)s for project: %(project_id)s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1632
+#: ../nova/db/sqlalchemy/api.py:1638
 #, python-format
 msgid "No secuity group rule with id %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1706
+#: ../nova/db/sqlalchemy/api.py:1712
 #, python-format
 msgid "No user for id %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1722
+#: ../nova/db/sqlalchemy/api.py:1728
 #, python-format
 msgid "No user for access key %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1784
+#: ../nova/db/sqlalchemy/api.py:1790
 #, python-format
 msgid "No project with id %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1929
+#: ../nova/db/sqlalchemy/api.py:1935
 #, python-format
 msgid "No console pool with id %(pool_id)s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1946
+#: ../nova/db/sqlalchemy/api.py:1952
 #, python-format
 msgid ""
 "No console pool of type %(console_type)s for compute host %(compute_host)s "
 "on proxy host %(host)s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:1985
+#: ../nova/db/sqlalchemy/api.py:1991
 #, python-format
 msgid "No console for instance %(instance_id)s in pool %(pool_id)s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:2007
+#: ../nova/db/sqlalchemy/api.py:2013
 #, python-format
 msgid "on instance %s"
 msgstr ""
 
-#: ../nova/db/sqlalchemy/api.py:2008
+#: ../nova/db/sqlalchemy/api.py:2014
 #, python-format
 msgid "No console with id %(console_id)s %(idesc)s"
 msgstr ""
@@ -1262,129 +1262,129 @@ msgstr ""
 msgid "Delete key pair %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:384
+#: ../nova/api/ec2/cloud.py:386
 #, python-format
 msgid "%s is not a valid ipProtocol"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:388
+#: ../nova/api/ec2/cloud.py:390
 msgid "Invalid port range"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:419
+#: ../nova/api/ec2/cloud.py:421
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:428 ../nova/api/ec2/cloud.py:457
+#: ../nova/api/ec2/cloud.py:430 ../nova/api/ec2/cloud.py:459
 msgid "Not enough parameters to build a valid rule."
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:441
+#: ../nova/api/ec2/cloud.py:443
 msgid "No rule for the specified parameters."
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:448
+#: ../nova/api/ec2/cloud.py:450
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:462
+#: ../nova/api/ec2/cloud.py:464
 #, python-format
 msgid "This rule already exists in group %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:490
+#: ../nova/api/ec2/cloud.py:492
 #, python-format
 msgid "Create Security Group %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:493
+#: ../nova/api/ec2/cloud.py:495
 #, python-format
 msgid "group %s already exists"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:505
+#: ../nova/api/ec2/cloud.py:507
 #, python-format
 msgid "Delete security group %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:582
+#: ../nova/api/ec2/cloud.py:584
 #, python-format
 msgid "Create volume of %s GB"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:610
+#: ../nova/api/ec2/cloud.py:612
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:627
+#: ../nova/api/ec2/cloud.py:629
 #, python-format
 msgid "Detach volume %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:759
+#: ../nova/api/ec2/cloud.py:761
 msgid "Allocate address"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:764
+#: ../nova/api/ec2/cloud.py:766
 #, python-format
 msgid "Release address %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:769
+#: ../nova/api/ec2/cloud.py:771
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:778
+#: ../nova/api/ec2/cloud.py:780
 #, python-format
 msgid "Disassociate address %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:805
+#: ../nova/api/ec2/cloud.py:807
 msgid "Going to start terminating instances"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:813
+#: ../nova/api/ec2/cloud.py:815
 #, python-format
 msgid "Reboot instance %r"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:850
+#: ../nova/api/ec2/cloud.py:867
 #, python-format
 msgid "De-registering image %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:858
+#: ../nova/api/ec2/cloud.py:875
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:865 ../nova/api/ec2/cloud.py:880
+#: ../nova/api/ec2/cloud.py:882 ../nova/api/ec2/cloud.py:900
 #, python-format
 msgid "attribute not supported: %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:870
+#: ../nova/api/ec2/cloud.py:890
 #, python-format
 msgid "invalid id: %s"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:883
+#: ../nova/api/ec2/cloud.py:903
 msgid "user or group not specified"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:885
+#: ../nova/api/ec2/cloud.py:905
 msgid "only group \"all\" is supported"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:887
+#: ../nova/api/ec2/cloud.py:907
 msgid "operation_type must be add or remove"
 msgstr ""
 
-#: ../nova/api/ec2/cloud.py:888
+#: ../nova/api/ec2/cloud.py:908
 #, python-format
 msgid "Updating image %s publicity"
 msgstr ""
@@ -1507,21 +1507,29 @@ msgstr ""
 msgid "VM %(vm)s already halted, skipping shutdown..."
 msgstr ""
 
-#: ../nova/virt/xenapi/vmops.py:444
+#: ../nova/virt/xenapi/vmops.py:295
+msgid "Removing kernel/ramdisk files"
+msgstr ""
+
+#: ../nova/virt/xenapi/vmops.py:305
+msgid "kernel/ramdisk files removed"
+msgstr ""
+
+#: ../nova/virt/xenapi/vmops.py:459
 #, python-format
 msgid ""
 "TIMEOUT: The call to %(method)s timed out. VM id=%(instance_id)s; args="
 "%(strargs)s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vmops.py:447
+#: ../nova/virt/xenapi/vmops.py:462
 #, python-format
 msgid ""
 "The call to %(method)s returned an error: %(e)s. VM id=%(instance_id)s; args="
 "%(strargs)s"
 msgstr ""
 
-#: ../nova/virt/xenapi/vmops.py:638
+#: ../nova/virt/xenapi/vmops.py:653
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr ""
@@ -1553,74 +1561,74 @@ msgstr ""
 msgid "Launching VPN for %s"
 msgstr ""
 
-#: ../nova/image/s3.py:89
+#: ../nova/image/s3.py:99
 #, python-format
 msgid "Image %s could not be found"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:126
+#: ../nova/api/ec2/__init__.py:125
 msgid "Too many failed authentications."
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:136
+#: ../nova/api/ec2/__init__.py:135
 #, python-format
 msgid ""
 "Access key %(access_key)s has had %(failures)d failed authentications and "
 "will be locked out for %(lock_mins)d minutes."
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:174 ../nova/objectstore/handler.py:140
+#: ../nova/api/ec2/__init__.py:173 ../nova/objectstore/handler.py:140
 #, python-format
 msgid "Authentication Failure: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:187
+#: ../nova/api/ec2/__init__.py:186
 #, python-format
 msgid "Authenticated Request For %(uname)s:%(pname)s)"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:212
+#: ../nova/api/ec2/__init__.py:211
 #, python-format
 msgid "action: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:214
+#: ../nova/api/ec2/__init__.py:213
 #, python-format
 msgid "arg: %(key)s\t\tval: %(value)s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:286
+#: ../nova/api/ec2/__init__.py:285
 #, python-format
 msgid ""
 "Unauthorized request for controller=%(controller)s and action=%(action)s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:319
+#: ../nova/api/ec2/__init__.py:318
 #, python-format
 msgid "InstanceNotFound raised: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:325
+#: ../nova/api/ec2/__init__.py:324
 #, python-format
 msgid "VolumeNotFound raised: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:331
+#: ../nova/api/ec2/__init__.py:330
 #, python-format
 msgid "NotFound raised: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:334
+#: ../nova/api/ec2/__init__.py:333
 #, python-format
 msgid "ApiError raised: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:343
+#: ../nova/api/ec2/__init__.py:342
 #, python-format
 msgid "Unexpected error raised: %s"
 msgstr ""
 
-#: ../nova/api/ec2/__init__.py:348
+#: ../nova/api/ec2/__init__.py:347
 msgid "An unknown error has occurred. Please try your request again."
 msgstr ""
 
@@ -1706,6 +1714,11 @@ msgstr ""
 #: ../nova/compute/monitor.py:429
 #, python-format
 msgid "Found instance: %s"
+msgstr ""
+
+#: ../nova/volume/san.py:67
+#, python-format
+msgid "Could not find iSCSI export  for volume %s"
 msgstr ""
 
 #: ../nova/api/ec2/apirequest.py:99
@@ -2155,51 +2168,56 @@ msgid ""
 "on interface %(interface)s"
 msgstr ""
 
-#: ../nova/network/manager.py:139
-msgid "setting network host"
+#: ../nova/virt/fake.py:224
+#, python-format
+msgid "Instance %s Not Found"
 msgstr ""
 
-#: ../nova/network/manager.py:194
-#, python-format
-msgid "Leasing IP %s"
+#: ../nova/network/manager.py:143
+msgid "setting network host"
 msgstr ""
 
 #: ../nova/network/manager.py:198
 #, python-format
-msgid "IP %s leased that isn't associated"
+msgid "Leasing IP %s"
 msgstr ""
 
 #: ../nova/network/manager.py:202
 #, python-format
+msgid "IP %s leased that isn't associated"
+msgstr ""
+
+#: ../nova/network/manager.py:206
+#, python-format
 msgid "IP %(address)s leased to bad mac %(inst_addr)s vs %(mac)s"
 msgstr ""
 
-#: ../nova/network/manager.py:210
+#: ../nova/network/manager.py:214
 #, python-format
 msgid "IP %s leased that was already deallocated"
 msgstr ""
 
-#: ../nova/network/manager.py:215
+#: ../nova/network/manager.py:219
 #, python-format
 msgid "Releasing IP %s"
 msgstr ""
 
-#: ../nova/network/manager.py:219
+#: ../nova/network/manager.py:223
 #, python-format
 msgid "IP %s released that isn't associated"
 msgstr ""
 
-#: ../nova/network/manager.py:223
+#: ../nova/network/manager.py:227
 #, python-format
 msgid "IP %(address)s released from bad mac %(inst_addr)s vs %(mac)s"
 msgstr ""
 
-#: ../nova/network/manager.py:226
+#: ../nova/network/manager.py:230
 #, python-format
 msgid "IP %s released that was not leased"
 msgstr ""
 
-#: ../nova/network/manager.py:461
+#: ../nova/network/manager.py:464
 #, python-format
 msgid "Dissassociated %s stale fixed ip(s)"
 msgstr ""
