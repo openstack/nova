@@ -74,27 +74,34 @@ class VMOps(object):
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
-        #if kernel is not present we must download a raw disk
-        if instance.kernel_id:
-            disk_image_type = ImageType.DISK
-        else:
-            disk_image_type = ImageType.DISK_RAW
+
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
+
         vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
             instance.image_id, user, project, disk_image_type)
+
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        #Have a look at the VDI and see if it has a PV kernel
+
         pv_kernel = False
-        if not instance.kernel_id:
+        if disk_image_type == ImageType.DISK_RAW:
+            #Have a look at the VDI and see if it has a PV kernel
             pv_kernel = VMHelper.lookup_image(self._session, instance.id,
                                               vdi_ref)
+        elif disk_image_type == ImageType.DISK_VHD:
+            # TODO(sirp): Assuming PV for now; this will need to be
+            # configurable as Windows will use HVM.
+            pv_kernel = True
+
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
                 instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
@@ -102,6 +109,7 @@ class VMOps(object):
         if network_ref:
             VMHelper.create_vif(self._session, vm_ref,
                                 network_ref, instance.mac_address)
+
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name

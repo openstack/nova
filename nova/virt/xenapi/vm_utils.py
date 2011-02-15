@@ -63,11 +63,14 @@ class ImageType:
         0 - kernel/ramdisk image (goes on dom0's filesystem)
         1 - disk image (local SR, partitioned by objectstore plugin)
         2 - raw disk image (local SR, NOT partitioned by plugin)
+        3 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
+            linux, HVM assumed for Windows)
     """
 
     KERNEL_RAMDISK = 0
     DISK = 1
     DISK_RAW = 2
+    DISK_VHD = 3
 
 
 class VMHelper(HelperBase):
@@ -368,15 +371,34 @@ class VMHelper(HelperBase):
             return session.get_xenapi().VDI.get_uuid(vdi)
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access, type):
-        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-        meta = client.get_image_meta(image)
-        properties = meta['properties']
-        disk_format = properties.get('disk_format', None)
+    def determine_disk_image_type(cls, instance):
+        instance_id = instance.id
+        if instance.kernel_id:
+            #if kernel is not present we must download a raw disk
+            LOG.debug(_("Instance %(instance_id)s will use DISK format") %
+                      locals())
+            return ImageType.DISK
 
-        # TODO(sirp): When Glance treats disk_format as a first class
-        # attribute, we should start using that rather than an image-property
-        if disk_format == 'vhd':
+        if FLAGS.xenapi_image_service == 'glance':
+            # if using glance, then we could be VHD format
+            client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+            meta = client.get_image_meta(instance.image_id)
+            properties = meta['properties']
+            disk_format = properties.get('disk_format', None)
+            # TODO(sirp): When Glance treats disk_format as a first class
+            # attribute, we should start using that rather than an image-property
+            if disk_format == 'vhd':
+                LOG.debug(_("Instance %(instance_id)s will use DISK_VHD format") %
+                          locals())
+                return ImageType.DISK_VHD
+        
+        LOG.debug(_("Instance %(instance_id)s will use DISK_RAW format") %
+                  locals())
+        return ImageType.DISK_RAW
+
+    @classmethod
+    def _fetch_image_glance(cls, session, instance_id, image, access, type):
+        if type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(
                 session, instance_id, image, access, type)
         else:
