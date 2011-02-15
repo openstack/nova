@@ -289,7 +289,7 @@ class VMHelper(HelperBase):
                   'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'put_vdis', kwargs)
+        task = session.async_call_plugin('glance', 'upload_image', kwargs)
         session.wait_for_task(instance_id, task)
 
     @classmethod
@@ -310,7 +310,6 @@ class VMHelper(HelperBase):
             return cls._fetch_image_objectstore(session, instance_id, image,
                                                 access, user.secret, type)
 
-
     @classmethod
     def _fetch_image_glance_vhd(cls, session, instance_id, image, access, type):
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
@@ -330,10 +329,10 @@ class VMHelper(HelperBase):
                   'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'get_vdi', kwargs)
+        task = session.async_call_plugin('glance', 'download_image', kwargs)
         vdi_uuid = session.wait_for_task(instance_id, task)
         scan_sr(session, instance_id, sr_ref)
-        LOG.debug(_("Xapi 'get_vdi' returned VDI UUID %(vdi_uuid)s") % locals())
+        LOG.debug(_("xapi 'download_image' returned VDI UUID %(vdi_uuid)s") % locals())
         return vdi_uuid
 
     @classmethod

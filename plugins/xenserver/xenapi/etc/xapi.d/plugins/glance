@@ -39,17 +39,6 @@ configure_logging('glance')
 CHUNK_SIZE = 8192
 KERNEL_DIR = '/boot/guest'
 
-def copy_kernel_vdi(session,args):
-    vdi = exists(args, 'vdi-ref')
-    size = exists(args,'image-size')
-    #Use the uuid as a filename
-    vdi_uuid=session.xenapi.VDI.get_uuid(vdi)
-    copy_args={'vdi_uuid':vdi_uuid,'vdi_size':int(size)}
-    filename=with_vdi_in_dom0(session, vdi, False,
-                              lambda dev:
-                              _copy_kernel_vdi('/dev/%s' % dev,copy_args))
-    return filename
-
 def _copy_kernel_vdi(dest,copy_args):
     vdi_uuid=copy_args['vdi_uuid']
     vdi_size=copy_args['vdi_size']
@@ -67,117 +56,83 @@ def _copy_kernel_vdi(dest,copy_args):
     return filename
 
 
-def get_vdi(session, args):
+def _download_tarball(sr_path, staging_path, image_id, glance_host,
+                      glance_port):
     """
+
     """
-    params = pickle.loads(exists(args, 'params'))
-    image_id = params["image_id"]
-    glance_host = params["glance_host"]
-    glance_port = params["glance_port"]
-    uuid_stack = params["uuid_stack"]
-    sr_path = params["sr_path"]
+    conn = httplib.HTTPConnection(glance_host, glance_port)
+    conn.request('GET', '/images/%s' % image_id)
+    resp = conn.getresponse()
+    if resp.status == httplib.NOT_FOUND:
+        raise Exception("Image '%s' not found in Glance" % image_id)
+    elif resp.status != httplib.OK:
+        raise Exception("Unexpected response from Glance %i" % res.status)
 
-    def unbundle_xfer(sr_path, staging_path):
-        """
+    tar_args = shlex.split(
+        "tar -zx --directory=%(staging_path)s" % locals())
+    tar_proc = subprocess.Popen(
+        tar_args, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 
-        """
-        conn = httplib.HTTPConnection(glance_host, glance_port)
-        conn.request('GET', '/images/%s' % image_id)
-        resp = conn.getresponse()
-        if resp.status == httplib.NOT_FOUND:
-            raise Exception("Image '%s' not found in Glance" % image_id)
-        elif resp.status != httplib.OK:
-            raise Exception("Unexpected response from Glance %i" % res.status)
-
-        tar_args = shlex.split(
-            "tar -zx --directory=%(staging_path)s" % locals())
-        tar_proc = subprocess.Popen(
-            tar_args, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
-
+    chunk = resp.read(CHUNK_SIZE)
+    while chunk:
+        tar_proc.stdin.write(chunk)
         chunk = resp.read(CHUNK_SIZE)
-        while chunk:
-            tar_proc.stdin.write(chunk)
-            chunk = resp.read(CHUNK_SIZE)
 
-        _assert_process_success(tar_proc, "tar")
-        conn.close()
-
-    def fixup_vhds(sr_path, staging_path):
-        """
-        """
-        def rename_with_uuid(orig_path):
-            """Generate a uuid and rename the file with the uuid"""
-            orig_dirname = os.path.dirname(orig_path)
-            uuid = uuid_stack.pop()
-            new_path = os.path.join(orig_dirname, "%s.vhd" % uuid)
-            os.rename(orig_path, new_path)
-            return new_path, uuid
-
-        def move_into_sr(orig_path):
-            """Move a file into the SR"""
-            filename = os.path.basename(orig_path)
-            new_path = os.path.join(sr_path, filename)
-            os.rename(orig_path, new_path)
-            return new_path
-
-        def link_vhds(child_path, parent_path):
-            modify_args = shlex.split(
-                "vhd-util modify -n %(child_path)s -p %(parent_path)s"
-                % locals())
-            modify_proc = subprocess.Popen(
-                modify_args, stderr=subprocess.PIPE)
-            _assert_process_success(modify_proc, "vhd-util")
+    _assert_process_success(tar_proc, "tar")
+    conn.close()
 
 
-        image_path = os.path.join(staging_path, 'image')
-
-        orig_base_copy_path = os.path.join(image_path, 'image.vhd')
-        if not os.path.exists(orig_base_copy_path):
-            raise Exception("Invalid image: image.vhd not present")
-
-        base_copy_path, base_copy_uuid = rename_with_uuid(orig_base_copy_path)
-
-        vdi_uuid = base_copy_uuid
-        orig_snap_path = os.path.join(image_path, 'snap.vhd')
-        if os.path.exists(orig_snap_path):
-            snap_path, snap_uuid = rename_with_uuid(orig_snap_path)
-            vdi_uuid = snap_uuid
-            # NOTE(sirp): this step is necessary so that an SR scan won't
-            # delete the base_copy out from under us (since it would be
-            # orphaned)
-            link_vhds(snap_path, base_copy_path) 
-            move_into_sr(snap_path)
-
-        move_into_sr(base_copy_path)
-        return vdi_uuid
-
-    staging_path = _make_staging_area(sr_path)
-    try:
-        unbundle_xfer(sr_path, staging_path)
-        vdi_uuid = fixup_vhds(sr_path, staging_path)
-        return vdi_uuid
-    finally:
-        _cleanup_staging_area(staging_path)
-
-
-def put_vdis(session, args):
+def fixup_vhds(sr_path, staging_path, uuid_stack):
     """
     """
-    params = pickle.loads(exists(args, 'params'))
-    vdi_uuids = params["vdi_uuids"]
-    image_id = params["image_id"]
-    glance_host = params["glance_host"]
-    glance_port = params["glance_port"]
-    sr_path = params["sr_path"]
+    def rename_with_uuid(orig_path):
+        """Generate a uuid and rename the file with the uuid"""
+        orig_dirname = os.path.dirname(orig_path)
+        uuid = uuid_stack.pop()
+        new_path = os.path.join(orig_dirname, "%s.vhd" % uuid)
+        os.rename(orig_path, new_path)
+        return new_path, uuid
 
-    staging_path = _make_staging_area(sr_path)
-    try:
-        _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
-        _bundle_xfer(staging_path, image_id, glance_host, glance_port)
-    finally:
-        _cleanup_staging_area(staging_path)
 
-    return ""
+    def link_vhds(child_path, parent_path):
+        modify_args = shlex.split(
+            "vhd-util modify -n %(child_path)s -p %(parent_path)s"
+            % locals())
+        modify_proc = subprocess.Popen(
+            modify_args, stderr=subprocess.PIPE)
+        _assert_process_success(modify_proc, "vhd-util")
+
+
+    def move_into_sr(orig_path):
+        """Move a file into the SR"""
+        filename = os.path.basename(orig_path)
+        new_path = os.path.join(sr_path, filename)
+        os.rename(orig_path, new_path)
+        return new_path
+
+
+    image_path = os.path.join(staging_path, 'image')
+
+    orig_base_copy_path = os.path.join(image_path, 'image.vhd')
+    if not os.path.exists(orig_base_copy_path):
+        raise Exception("Invalid image: image.vhd not present")
+
+    base_copy_path, base_copy_uuid = rename_with_uuid(orig_base_copy_path)
+
+    vdi_uuid = base_copy_uuid
+    orig_snap_path = os.path.join(image_path, 'snap.vhd')
+    if os.path.exists(orig_snap_path):
+        snap_path, snap_uuid = rename_with_uuid(orig_snap_path)
+        vdi_uuid = snap_uuid
+        # NOTE(sirp): this step is necessary so that an SR scan won't
+        # delete the base_copy out from under us (since it would be
+        # orphaned)
+        link_vhds(snap_path, base_copy_path) 
+        move_into_sr(snap_path)
+
+    move_into_sr(base_copy_path)
+    return vdi_uuid
 
 
 def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
@@ -192,7 +147,7 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
         os.link(source, link_name)
 
 
-def _bundle_xfer(staging_path, image_id, glance_host, glance_port):
+def _upload_tarball(staging_path, image_id, glance_host, glance_port):
     """
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
@@ -255,7 +210,59 @@ def _assert_process_success(proc, cmd):
         raise Exception(msg)
 
 
+def download_image(session, args):
+    """
+    """
+    params = pickle.loads(exists(args, 'params'))
+    image_id = params["image_id"]
+    glance_host = params["glance_host"]
+    glance_port = params["glance_port"]
+    uuid_stack = params["uuid_stack"]
+    sr_path = params["sr_path"]
+
+    staging_path = _make_staging_area(sr_path)
+    try:
+        _download_tarball(sr_path, staging_path, image_id, glance_host,
+                          glance_port)
+        vdi_uuid = fixup_vhds(sr_path, staging_path, uuid_stack)
+        return vdi_uuid
+    finally:
+        _cleanup_staging_area(staging_path)
+
+
+def upload_image(session, args):
+    """
+    """
+    params = pickle.loads(exists(args, 'params'))
+    vdi_uuids = params["vdi_uuids"]
+    image_id = params["image_id"]
+    glance_host = params["glance_host"]
+    glance_port = params["glance_port"]
+    sr_path = params["sr_path"]
+
+    staging_path = _make_staging_area(sr_path)
+    try:
+        _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
+        _upload_tarball(staging_path, image_id, glance_host, glance_port)
+    finally:
+        _cleanup_staging_area(staging_path)
+
+    return ""
+
+
+def copy_kernel_vdi(session,args):
+    vdi = exists(args, 'vdi-ref')
+    size = exists(args,'image-size')
+    #Use the uuid as a filename
+    vdi_uuid=session.xenapi.VDI.get_uuid(vdi)
+    copy_args={'vdi_uuid':vdi_uuid,'vdi_size':int(size)}
+    filename=with_vdi_in_dom0(session, vdi, False,
+                              lambda dev:
+                              _copy_kernel_vdi('/dev/%s' % dev,copy_args))
+    return filename
+
+
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'put_vdis': put_vdis,
-                           'get_vdi': get_vdi,
+    XenAPIPlugin.dispatch({'upload_image': upload_image,
+                           'download_image': download_image,
                            'copy_kernel_vdi': copy_kernel_vdi})
