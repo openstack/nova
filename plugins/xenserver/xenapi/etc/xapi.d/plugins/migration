@@ -111,13 +111,17 @@ def transfer_vhd(session, args):
     vhd_path = "%s.vhd" % vdi_uuid
 
     source_path = "%s/%s" % (sr_path, vhd_path)
-    dest_path = '%s:%sinstance%d/%s' % (host, IMAGE_PATH, instance_id, 
-            dest_name)
-    rsync_args = ['nohup', RSYNC, '-av', '--progress', 
-            '-e "ssh -o StrictHostKeyChecking=no"', source_path, dest_path]
+    dest_path = '%sinstance%d/' % (IMAGE_PATH, instance_id)
+
+    dest_path_with_vhd="$s:%s/%s" % (host, dest_path, dest_name)
+    ssh_cmd = '-e "ssh -o StrictHostKeyChecking=no \'mkdir -p %s\' " ' % dest_path
+
+    rsync_args = ['nohup', RSYNC, '-av', '--progress', ssh_cmd, source_path, 
+            dest_path_with_vhd]
 
     if subprocess.call(rsync_args) != 0:
         raise Exception("Unexpected VHD transfer failure")
+
 
 if __name__ == '__main__':
     XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd,
