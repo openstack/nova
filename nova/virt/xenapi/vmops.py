@@ -97,20 +97,21 @@ class VMOps(object):
             vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
                 instance.image_id, user, project, disk_image_type)
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-            #Have a look at the VDI and see if it has a PV kernel
-            if not instance.kernel_id:
-                pv_kernel = VMHelper.lookup_image(self._session, instance.id,
-                                                  vdi_ref)
-            if instance.kernel_id:
-                kernel = VMHelper.fetch_image(self._session, instance.id,
-                    instance.kernel_id, user, project,
-                    ImageType.KERNEL_RAMDISK)
-            if instance.ramdisk_id:
-                ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                    instance.ramdisk_id, user, project,
-                    ImageType.KERNEL_RAMDISK)
         else:
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', disk)
+
+        #Have a look at the VDI and see if it has a PV kernel
+        if not instance.kernel_id:
+            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
+                                              vdi_ref)
+        if instance.kernel_id:
+            kernel = VMHelper.fetch_image(self._session, instance.id,
+                instance.kernel_id, user, project,
+                ImageType.KERNEL_RAMDISK)
+        if instance.ramdisk_id:
+            ramdisk = VMHelper.fetch_image(self._session, instance.id,
+                instance.ramdisk_id, user, project,
+                ImageType.KERNEL_RAMDISK)
 
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
