@@ -58,8 +58,8 @@ def _copy_kernel_vdi(dest,copy_args):
 
 def _download_tarball(sr_path, staging_path, image_id, glance_host,
                       glance_port):
-    """
-
+    """Download the tarball image from Glance and extract it into the staging
+    area.
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
     conn.request('GET', '/images/%s' % image_id)
@@ -84,10 +84,34 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
 
 
 def fixup_vhds(sr_path, staging_path, uuid_stack):
-    """
+    """Fixup the downloaded VHDs before we move them into the SR.
+
+    We cannot extract VHDs directly into the SR since they don't yet have
+    UUIDs, aren't properly associated with each other, and would be subject to
+    a race-condition of one-file being present and the other not being
+    downloaded yet.
+
+    To avoid these we problems, we use a staging area to fixup the VHDs before
+    moving them into the SR. The steps involved are:
+
+        1. Extracting tarball into staging area
+
+        2. Renaming VHDs to use UUIDs ('snap.vhd' -> 'ffff-aaaa-...vhd')
+
+        3. Linking the two VHDs together
+
+        4. Pseudo-atomically moving the images into the SR. (It's not really
+           atomic because it takes place as two os.rename operations; however, the
+           chances of an SR.scan occuring between the two rename() invocations is so
+           small that we can safely ignore it)
     """
     def rename_with_uuid(orig_path):
-        """Generate a uuid and rename the file with the uuid"""
+        """Rename VHD using UUID so that it will be recognized by SR on a
+        subsequent scan.
+
+        Since Python2.4 doesn't have the `uuid` module, we pass a stack of
+        pre-computed UUIDs from the compute worker.
+        """
         orig_dirname = os.path.dirname(orig_path)
         uuid = uuid_stack.pop()
         new_path = os.path.join(orig_dirname, "%s.vhd" % uuid)
@@ -96,6 +120,11 @@ def fixup_vhds(sr_path, staging_path, uuid_stack):
 
 
     def link_vhds(child_path, parent_path):
+        """Use vhd-util to associate the snapshot VHD with its base_copy.
+
+        This needs to be done before we move both VHDs into the SR to prevent
+        the base_copy from being DOA (deleted-on-arrival).
+        """
         modify_args = shlex.split(
             "vhd-util modify -n %(child_path)s -p %(parent_path)s"
             % locals())
@@ -136,8 +165,8 @@ def fixup_vhds(sr_path, staging_path, uuid_stack):
 
 
 def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
-    """
-    Explain preparing staging area here...
+    """Hard-link VHDs into staging area with appropriate filename
+    ('snap' or 'image.vhd')
     """
     image_path = os.path.join(staging_path, 'image')
     os.mkdir(image_path)
@@ -149,6 +178,8 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
 
 def _upload_tarball(staging_path, image_id, glance_host, glance_port):
     """
+    Create a tarball of the image and then stream that into Glance
+    using chunked-transfer-encoded HTTP.
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
     #NOTE(sirp): httplib under python2.4 won't accept a file-like object
@@ -189,7 +220,36 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
 
 def _make_staging_area(sr_path):
     """
-    Explain staging area here...
+    The staging area is a place where we can temporarily store and
+    manipulate VHDs. The use of the staging area is different for upload and
+    download:
+   
+    Download
+    ========
+
+    When we download the tarball, the VHDs contained within will have names
+    like "snap.vhd" and "image.vhd". We need to assign UUIDs to them before
+    moving them into the SR. However, since 'image.vhd' may be a base_copy, we
+    need to link it to 'snap.vhd' (using vhd-util modify) before moving both
+    into the SR (otherwise the SR.scan will cause 'image.vhd' to be deleted).
+    The staging area gives us a place to perform these operations before they
+    are moved to the SR, scanned, and then registered with XenServer.
+
+    Upload
+    ======
+    
+    On upload, we want to rename the VHDs to reflect what they are, 'snap.vhd'
+    in the case of the snapshot VHD, and 'image.vhd' in the case of the
+    base_copy. The staging area provides a directory in which we can create
+    hard-links to rename the VHDs without affecting what's in the SR.
+
+
+    NOTE
+    ====
+
+    The staging area is created as a subdirectory within the SR in order to
+    guarantee that it resides within the same filesystem and therefore permit
+    hard-linking and cheap file moves.
     """
     # NOTE(sirp): staging area is created in SR to allow hard-linking
     staging_path = tempfile.mkdtemp(dir=sr_path)
@@ -197,6 +257,12 @@ def _make_staging_area(sr_path):
 
 
 def _cleanup_staging_area(staging_path):
+    """Remove staging area directory
+
+    On upload, the staging area contains hard-links to the VHDs in the SR;
+    it's safe to remove the staging-area because the SR will keep the link
+    count > 0 (so the VHDs in the SR will not be deleted). 
+    """
     shutil.rmtree(staging_path)
 
 
@@ -211,7 +277,8 @@ def _assert_process_success(proc, cmd):
 
 
 def download_image(session, args):
-    """
+    """Download an image from Glance, unbundle it, and then deposit the VHDs
+    into the storage repository
     """
     params = pickle.loads(exists(args, 'params'))
     image_id = params["image_id"]
@@ -231,7 +298,7 @@ def download_image(session, args):
 
 
 def upload_image(session, args):
-    """
+    """Bundle the VHDs comprising an image and then stream them into Glance.
     """
     params = pickle.loads(exists(args, 'params'))
     vdi_uuids = params["vdi_uuids"]
