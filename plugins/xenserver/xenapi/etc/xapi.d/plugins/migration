@@ -90,7 +90,7 @@ def move_vhds_into_sr(session, args):
     new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
 
     logging.debug('Creating temporary SR path %s' % temp_vhd_path)
-    os.mkdir(temp_vhd_path)
+    os.makedirs(temp_vhd_path)
 
     logging.debug('Moving %s into %s' % (source_base_copy_path, temp_vhd_path))
     shutil.move(source_base_copy_path, new_base_copy_path)
@@ -107,11 +107,12 @@ def move_vhds_into_sr(session, args):
             new_base_copy_path])
     
     logging.debug('Moving VHDs into SR %s' % sr_path)
-    shutil.move("%s/*.vhd" % temp_vhd_path, sr_path)
+    shutil.move("%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid), sr_path)
+    shutil.move("%s/%s.vhd" % (temp_vhd_path, new_cow_uuid), sr_path)
 
-    loggin.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
+    logginig.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
     os.rmdir(temp_vhd_path)
-    return None
+    return ""
 
 
 def transfer_vhd(session, args):
