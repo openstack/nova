@@ -8,7 +8,7 @@ graft tools
 graft etc
 graft bzrplugins
 graft contrib
-graft locale
+graft po
 graft plugins
 include nova/api/openstack/notes.txt
 include nova/auth/*.schema
