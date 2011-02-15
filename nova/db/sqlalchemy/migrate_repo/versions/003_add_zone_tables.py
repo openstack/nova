@@ -26,7 +26,7 @@ meta = MetaData()
 #
 # New Tables
 #
-child_zones = Table('child_zones', meta,
+zones = Table('zones', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
@@ -55,7 +55,7 @@ def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
-    for table in (child_zones, ):
+    for table in (zones, ):
         try:
             table.create()
         except Exception:
