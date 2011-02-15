@@ -294,8 +294,10 @@ class ISCSIDriver(VolumeDriver):
         self._execute("sudo ietadm --op delete --tid=%s" %
                       iscsi_target)
 
-    def _get_name_and_portal(self, volume_name, host):
+    def _get_name_and_portal(self, volume):
         """Gets iscsi name and portal from volume name and host."""
+        volume_name = volume['name']
+        host = volume['host']
         (out, _err) = self._execute("sudo iscsiadm -m discovery -t "
                                     "sendtargets -p %s" % host)
         for target in out.splitlines():
@@ -307,8 +309,7 @@ class ISCSIDriver(VolumeDriver):
 
     def discover_volume(self, volume):
         """Discover volume on a remote host."""
-        iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
-                                                             volume['host'])
+        iscsi_name, iscsi_portal = self._get_name_and_portal(volume)
         self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
                       (iscsi_name, iscsi_portal))
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
@@ -319,8 +320,7 @@ class ISCSIDriver(VolumeDriver):
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
-        iscsi_name, iscsi_portal = self._get_name_and_portal(volume['name'],
-                                                             volume['host'])
+        iscsi_name, iscsi_portal = self._get_name_and_portal(volume)
         self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
                       "-n node.startup -v manual" %
                       (iscsi_name, iscsi_portal))

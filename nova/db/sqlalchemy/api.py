@@ -19,6 +19,7 @@
 Implementation of SQLAlchemy backend.
 """
 
+import datetime
 import warnings
 
 from nova import db
@@ -578,7 +579,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                              'AND instance_id IS NOT NULL '
                              'AND allocated = 0',
                     {'host': host,
-                     'time': time.isoformat()})
+                     'time': time})
     return result.rowcount
 
 
@@ -670,8 +671,14 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
-        instance_ref.delete(session=session)
+        session.execute('update instances set deleted=1,'
+                        'deleted_at=:at where id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
+        session.execute('update security_group_instance_association '
+                        'set deleted=1,deleted_at=:at where instance_id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
 
 
 @require_context
@@ -712,6 +719,7 @@ def instance_get_all(context):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -722,6 +730,7 @@ def instance_get_all_by_user(context, user_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
                    all()
@@ -733,6 +742,7 @@ def instance_get_all_by_host(context, host):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -746,6 +756,7 @@ def instance_get_all_by_project(context, project_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -759,6 +770,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
                        all()
@@ -766,6 +778,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=False).\
@@ -1583,6 +1596,11 @@ def security_group_destroy(context, security_group_id):
         # TODO(vish): do we have to use sql here?
         session.execute('update security_groups set deleted=1 where id=:id',
                         {'id': security_group_id})
+        session.execute('update security_group_instance_association '
+                        'set deleted=1,deleted_at=:at '
+                        'where security_group_id=:id',
+                        {'id': security_group_id,
+                         'at': datetime.datetime.utcnow()})
         session.execute('update security_group_rules set deleted=1 '
                         'where group_id=:id',
                         {'id': security_group_id})

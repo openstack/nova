@@ -66,7 +66,15 @@ class VMOps(object):
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
-
+        #ensure enough free memory is available
+        if not VMHelper.ensure_free_mem(self._session, instance):
+                name = instance['name']
+                LOG.exception(_('instance %(name)s: not enough free memory')
+                              % locals())
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                return
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
         network_ref = \
@@ -161,7 +169,8 @@ class VMOps(object):
                 instance_name = instance_or_vm.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception(_('Instance not present %s') % instance_name)
+            raise exception.NotFound(
+                            _('Instance not present %s') % instance_name)
         return vm
 
     def snapshot(self, instance, image_id):
@@ -286,8 +295,23 @@ class VMOps(object):
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
         try:
-            task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance.id, task)
+            kernel = None
+            ramdisk = None
+            if instance.kernel_id or instance.ramdisk_id:
+                (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+                                    self._session, vm)
+            task1 = self._session.call_xenapi('Async.VM.destroy', vm)
+            LOG.debug(_("Removing kernel/ramdisk files"))
+            fn = "remove_kernel_ramdisk"
+            args = {}
+            if kernel:
+                args['kernel-file'] = kernel
+            if ramdisk:
+                args['ramdisk-file'] = ramdisk
+            task2 = self._session.async_call_plugin('glance', fn, args)
+            self._session.wait_for_task(instance.id, task1)
+            self._session.wait_for_task(instance.id, task2)
+            LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
