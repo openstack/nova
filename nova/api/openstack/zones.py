@@ -33,6 +33,10 @@ def _filter_keys(item, keys):
     return dict((k, v) for k, v in item.iteritems() if k in keys)
 
 
+def _scrub_zone(zone):
+    return _filter_keys(zone, ('id', 'api_url'))
+
+
 class Controller(wsgi.Controller):
 
     _serialization_metadata = {
@@ -44,7 +48,7 @@ class Controller(wsgi.Controller):
         """Return all zones in brief"""
         items = db.zone_get_all(req.environ['nova.context'])
         items = common.limited(items, req)
-        items = [_filter_keys(item, ('id', 'api_url')) for item in items]
+        items = [_scrub_zone(item) for item in items]
         return dict(zones=items)
 
     def detail(self, req):
@@ -55,8 +59,7 @@ class Controller(wsgi.Controller):
         """Return data about the given zone id"""
         zone_id = int(id)
         zone = db.zone_get(req.environ['nova.context'], zone_id)
-        zone = _filter_keys(zone, ('id', 'api_url'))
-        return dict(zone=zone)
+        return dict(zone=_scrub_zone(zone))
 
     def delete(self, req, id):
         zone_id = int(id)
@@ -67,11 +70,11 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req)
         zone = db.zone_create(context, env["zone"])
-        return dict(zone=zone)
+        return dict(zone=_scrub_zone(zone))
 
     def update(self, req, id):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req)
         zone_id = int(id)
         zone = db.zone_update(context, zone_id, env["zone"])
-        return dict(zone=zone)
+        return dict(zone=_scrub_zone(zone))

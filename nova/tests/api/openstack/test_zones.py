@@ -98,9 +98,7 @@ class ZonesTest(unittest.TestCase):
 
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://foo.com')
-        self.assertEqual(res_dict['zone']['username'], 'bob')
-        self.assertEqual(res_dict['zone']['password'], 'xxx')
-
+        self.assertFalse('password' in res_dict['zone'])
         self.assertEqual(res.status_int, 200)
 
     def test_zone_delete(self):
@@ -122,8 +120,7 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://blah.zoo')
-        self.assertEqual(res_dict['zone']['username'], 'fred')
-        self.assertEqual(res_dict['zone']['password'], 'fubar')
+        self.assertFalse('username' in res_dict['zone'])
 
     def test_zone_update(self):
         body = dict(zone=dict(username='zeb', password='sneaky'))
@@ -137,8 +134,7 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://foo.com')
-        self.assertEqual(res_dict['zone']['username'], 'zeb')
-        self.assertEqual(res_dict['zone']['password'], 'sneaky')
+        self.assertFalse('username' in res_dict['zone'])
 
 
 if __name__ == '__main__':
