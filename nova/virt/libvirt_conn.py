@@ -62,7 +62,6 @@ from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import images
-from nova.virt import conn_common
 
 libvirt = None
 libxml2 = None
@@ -621,7 +620,7 @@ class LibvirtConnection(object):
         if not inst['kernel_id']:
             target_partition = "1"
 
-        key, net = conn_common.get_injectables(inst)
+        key, net = disk.get_injectables(inst)
 
         if key or net:
             inst_name = inst['name']

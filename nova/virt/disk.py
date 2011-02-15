@@ -26,6 +26,8 @@ import os
 import tempfile
 import time
 
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -38,6 +40,9 @@ flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
 flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
                      'block_size to use for dd')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('virt/interfaces.template'),
+                    'Template file for injected network')
 
 
 def extend(image, size):
@@ -153,6 +158,28 @@ def _allocate_device():
 
 def _free_device(device):
     _DEVICES.append(device)
+
+
+def get_injectables(inst):
+    key = str(inst['key_data'])
+    net = None
+    network_ref = db.network_get_by_instance(context.get_admin_context(),
+                                             inst['id'])
+    if network_ref['injected']:
+        admin_context = context.get_admin_context()
+        address = db.instance_get_fixed_address(admin_context, inst['id'])
+        ra_server = network_ref['ra_server']
+        if not ra_server:
+            ra_server = "fd00::"
+        with open(FLAGS.injected_network_template) as f:
+            net = f.read() % {'address': address,
+                              'netmask': network_ref['netmask'],
+                              'gateway': network_ref['gateway'],
+                              'broadcast': network_ref['broadcast'],
+                              'dns': network_ref['dns'],
+                              'ra_server': ra_server}
+
+    return key, net
 
 
 def inject_data_into_fs(fs, key, net, execute):

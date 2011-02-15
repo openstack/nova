@@ -41,7 +41,6 @@ from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
-from nova.virt import conn_common
 from nova.virt.xenapi.volume_utils import StorageError
 
 
@@ -453,7 +452,7 @@ class VMHelper(HelperBase):
         # if at all, so determine whether it's required first, and then do
         # everything
         mount_required = False
-        key, net = conn_common.get_injectables(instance)
+        key, net = disk.get_injectables(instance)
         if key is not None or net is not None:
             mount_required = True
 
