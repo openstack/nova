@@ -311,7 +311,8 @@ class VMHelper(HelperBase):
                                                 access, user.secret, type)
 
     @classmethod
-    def _fetch_image_glance_vhd(cls, session, instance_id, image, access, type):
+    def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
+                                type):
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
 
@@ -339,11 +340,13 @@ class VMHelper(HelperBase):
         name_label = get_name_label_for_image(image)
         session.get_xenapi().VDI.set_name_label(vdi_ref, name_label)
 
-        LOG.debug(_("xapi 'download_image' returned VDI UUID %(vdi_uuid)s") % locals())
+        LOG.debug(_("xapi 'download_image' returned VDI UUID %(vdi_uuid)s")
+                  % locals())
         return vdi_uuid
 
     @classmethod
-    def _fetch_image_glance_disk(cls, session, instance_id, image, access, type):
+    def _fetch_image_glance_disk(cls, session, instance_id, image, access,
+                                 type):
         """Fetch the image from Glance
 
         NOTE:
@@ -352,9 +355,9 @@ class VMHelper(HelperBase):
         directly.
 
         """
-        # FIXME(sirp): Since the Glance plugin seems to be required for the VHD disk,
-        # it may be worth using the plugin for both VHD and RAW and DISK
-        # restores
+        # FIXME(sirp): Since the Glance plugin seems to be required for the
+        # VHD disk, it may be worth using the plugin for both VHD and RAW and
+        # DISK restores
         sr_ref = safe_find_sr(session)
 
         client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
@@ -429,12 +432,13 @@ class VMHelper(HelperBase):
             properties = meta['properties']
             disk_format = properties.get('disk_format', None)
             # TODO(sirp): When Glance treats disk_format as a first class
-            # attribute, we should start using that rather than an image-property
+            # attribute, we should start using that rather than an
+            # image-property
             if disk_format == 'vhd':
                 # 2a. DISK_VHD
                 log_disk_format('disk_vhd')
                 return ImageType.DISK_VHD
-      
+
         # 2b. DISK_RAW
         log_disk_format('disk_raw')
         return ImageType.DISK_RAW
