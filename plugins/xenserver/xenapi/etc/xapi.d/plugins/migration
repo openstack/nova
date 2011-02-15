@@ -89,7 +89,7 @@ def move_vhds_into_sr(session, args):
     new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
     new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
 
-    logging.debug('Creating temporary SR path' % temp_vhd_path)
+    logging.debug('Creating temporary SR path %s' % temp_vhd_path)
     os.mkdir(temp_vhd_path)
 
     logging.debug('Moving %s into %s' % (source_base_copy_path, temp_vhd_path))
@@ -129,10 +129,10 @@ def transfer_vhd(session, args):
     logging.debug("Preparing to transmit %s to %s" % (source_path, 
             dest_path))
 
-    ssh_cmd = '-e \'ssh -o StrictHostKeyChecking=no\' '
+    ssh_cmd = 'ssh -o StrictHostKeyChecking=no'
 
-    rsync_args = ['nohup > /root/instance%d_progress' % instance_id, RSYNC, 
-            '-av', '--progress', ssh_cmd, source_path, dest_path]
+    rsync_args = ['nohup', RSYNC, '-av', '--progress', '-e', ssh_cmd, 
+                  source_path, dest_path]
 
     logging.debug('rsync %s' % (' '.join(rsync_args, )))
 
