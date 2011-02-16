@@ -425,7 +425,10 @@ class API(base.Base):
         
         params = { 'migration_id': migration_ref['id'] }
         self._cast_compute_message('confirm_resize', context, instance_id,
-                migration_ref['source_compute'], params=param)
+                migration_ref['source_compute'], params=params)
+
+        self.db.migration_update(context, migration_id, 
+                { 'status': 'confirmed' })
 
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })

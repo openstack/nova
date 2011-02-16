@@ -388,8 +388,6 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
         self.driver.destroy(instance_ref)
-        self.db.migration_update(context, migration_id, 
-                { 'status': 'confirmed' })
 
     @exception.wrap_exception
     @checks_instance_lock
