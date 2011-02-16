@@ -279,6 +279,10 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(1, None, None)
 
+    def test_spawn_vhd_glance(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(4, None, None)
+
     def test_spawn_glance(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(1, 2, 3)
