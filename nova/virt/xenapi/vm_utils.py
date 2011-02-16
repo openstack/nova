@@ -204,6 +204,7 @@ class VMHelper(HelperBase):
         VIF reference."""
         vif_rec = {}
         vif_rec['device'] = '0'
+        #network_ref should be the appropriate reference (network with VLAN)
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = mac_address
