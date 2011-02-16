@@ -499,6 +499,18 @@ class NetworkCommands(object):
                                     vlan_start=int(vlan_start),
                                     vpn_start=int(vpn_start))
 
+    def list(self):
+        """List all created networks"""
+        print "%-18s\t%-15s\t%-15s\t%-15s" % ('CIDR',
+                                              'netmask',
+                                              'dhcp_start',
+                                              'DNS')
+        for network in db.network_get_all(context.get_admin_context()):
+            print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+                                network.netmask,
+                                network.dhcp_start,
+                                network.dns)
+
 
 class ServiceCommands(object):
     """Enable and disable running services"""
