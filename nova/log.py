@@ -112,8 +112,10 @@ def _dictify_context(context):
         context = context.to_dict()
     return context
 
+
 def _get_binary_name():
     return os.path.basename(inspect.stack()[-1][1])
+
 
 def get_log_file_path(binary=None):
     if FLAGS.logfile:
@@ -121,6 +123,7 @@ def get_log_file_path(binary=None):
     if FLAGS.logdir:
         binary = binary or _get_binary_name()
         return '%s.log' % (os.path.join(FLAGS.logdir, binary),)
+
 
 def basicConfig():
     logging.basicConfig()
