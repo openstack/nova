@@ -379,12 +379,7 @@ class ComputeManager(manager.Manager):
     def _update_state_callback(self, context, instance_id, result):
         """Update instance state when async task completes."""
         self._update_state(context, instance_id)
-
-    @exception.wrap_exception
-    @checks_instance_lock
-    def confirm_resize(self, context, instance_id):
-        """Destroys the old instance on the source machine"""
-        pass
+     
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -413,10 +408,8 @@ class ComputeManager(manager.Manager):
                   'dest_host':   self.driver.get_host_ip_addr(),
                   'status':      'pre-migrating' })
         LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
-        service = self.db.service_get_by_host_and_topic(context,
-                migration_ref['source_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
-                service['host'])
+                instance_ref['host'])
         rpc.cast(context, topic, 
                 { 'method': 'resize_instance',
                   'args': {
@@ -446,7 +439,7 @@ class ComputeManager(manager.Manager):
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
-                service['host'])
+                migration_ref['dest_compute'])
         rpc.cast(context, topic, 
                 { 'method': 'finish_resize',
                   'args': {
@@ -471,9 +464,6 @@ class ComputeManager(manager.Manager):
 
         self.db.migration_update(context, migration_id, 
                 {'status': 'finished', }) 
-
-        # Cleans up any transferred files and unmounts things
-        self.driver.cleanup_disk_transfer(context, instance_ref['id'])
 
     @exception.wrap_exception
     @checks_instance_lock

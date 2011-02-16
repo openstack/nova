@@ -1935,6 +1935,7 @@ def migration_update(context, id, values):
     with session.begin():
         migration = migration_get(context, id)
         migration.update(values)
+        migration.save()
         return migration
 
 

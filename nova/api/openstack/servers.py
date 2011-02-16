@@ -207,10 +207,18 @@ class Controller(wsgi.Controller):
         return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_confirm_resize(self, input_dict, req, id):
-        return faults.Fault(exc.HTTPNotImplemented())
+        try:
+            self.compute_api.confirm_resize(req.environ['nova.context'], id)
+        except:
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPNoContent()
 
     def _action_revert_resize(self, input_dict, req, id):
-        return faults.Fault(exc.HTTPNotImplemented())
+        try:
+            self.compute_api.confirm_resize(req.environ['nova.context'], id)
+        except:
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
 
     def _action_rebuild(self, input_dict, req, id):
         return faults.Fault(exc.HTTPNotImplemented())
