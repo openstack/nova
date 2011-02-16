@@ -394,7 +394,7 @@ class VMHelper(HelperBase):
             pv = True
         elif pv_str.lower() == 'false':
             pv = False
-        LOG.debug(_("PV Kernel in VDI:%d"), pv)
+        LOG.debug(_("PV Kernel in VDI:%s"), pv)
         return pv
 
     @classmethod
