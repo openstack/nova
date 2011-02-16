@@ -17,12 +17,21 @@
 #    under the License.
 
 import os
+import sys
 
 from nova import flags
 
 import sqlalchemy
 from migrate.versioning import api as versioning_api
-from migrate.versioning import exceptions as versioning_exceptions
+try:
+    from migrate.versioning import exceptions as versioning_exceptions
+except ImportError:
+    try:
+        # python-migration changed location of exceptions after 1.6.3
+        # See LP Bug #717467
+        from migrate import exceptions as versioning_exceptions
+    except ImportError:
+        sys.exit(_("python-migrate is not installed. Exiting."))
 
 FLAGS = flags.FLAGS
 
