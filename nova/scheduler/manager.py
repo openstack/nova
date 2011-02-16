@@ -23,8 +23,10 @@ Scheduler Service
 
 import functools
 import novatools
+import thread
 
 from datetime import datetime
+from eventlet.greenpool import GreenPool
 
 from nova import db
 from nova import flags
@@ -46,17 +48,28 @@ flags.DEFINE_integer('zone_db_check_interval',
 class ZoneState(object):
     """Holds the state of all connected child zones."""
     def __init__(self):
-       self.is_active = True
-       self.name = None
-       self.capabilities = None
-       self.retry = 0
-       self.last_seen = datetime.min
-
+        self.is_active = True
+        self.name = None
+        self.capabilities = None
+        self.retry = 0
+        self.last_seen = datetime.min
+ 
     def update(self, zone):
-       self.zone_id = zone.id
-       self.api_url = zone.api_url
-       self.username = zone.username
-       self.password = zone.password
+        """Update zone credentials from db"""
+        self.zone_id = zone.id
+        self.api_url = zone.api_url
+        self.username = zone.username
+        self.password = zone.password
+ 
+
+def _poll_zone(zone):
+    """Eventlet worker to poll a zone."""
+    logging.debug("_POLL_ZONE: STARTING")
+    os = novatools.OpenStack(zone.username, zone.password, zone.api_url)
+    zone_metadata = os.zones.info()
+    logging.debug("_POLL_ZONE: GOT %s" % zone_metadata._info)
+
+    # Stuff this in our cache.
 
 
 class ZoneManager(object):
@@ -66,15 +79,27 @@ class ZoneManager(object):
         self.zone_states = {}
 
     def _refresh_from_db(self, context):
+        """Make our zone state map match the db."""
+        # Add/update existing zones ...
         zones = db.zone_get_all(context)
         existing = self.zone_states.keys()
+        db_keys = []
         for zone in zones:
+            db_keys.append(zone.id)
             if zone.id not in existing:
-                self.zone_state[zone.id] = ZoneState()
-            self.zone_state[zones.id].update(zone)
+                self.zone_states[zone.id] = ZoneState()
+            self.zone_states[zone.id].update(zone)
+
+        # Cleanup zones removed from db ...
+        for zone_id in self.zone_states.keys():
+            if zone_id not in db_keys:
+                del self.zone_states[zone_id]
  
     def _poll_zones(self, context):
-        pass
+        """Try to connect to each child zone and get update."""
+
+        green_pool = GreenPool()
+        green_pool.imap(_poll_zone, self.zone_states.values())
 
     def ping(self, context=None):
         """Ping should be called periodically to update zone status."""
