@@ -25,7 +25,6 @@ import inspect
 import json
 import os
 import random
-import subprocess
 import socket
 import struct
 import sys
@@ -36,6 +35,7 @@ import netaddr
 
 from eventlet import event
 from eventlet import greenthread
+from eventlet.green import subprocess
 
 from nova import exception
 from nova.exception import ProcessExecutionError

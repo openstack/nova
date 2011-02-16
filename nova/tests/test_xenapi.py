@@ -280,7 +280,8 @@ class XenAPIVMTestCase(test.TestCase):
                 'SubnetMask/type': 'multi_sz'})
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-        check_injection=False):
+        instance_type="m1.large", check_injection=False):
+
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         values = {'name': 1,
                   'id': 1,
@@ -289,13 +290,19 @@ class XenAPIVMTestCase(test.TestCase):
                   'image_id': image_id,
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
-                  'instance_type': 'm1.large',
+                  'instance_type': instance_type,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
         conn.spawn(instance)
         self.check_vm_record(conn, check_injection=check_injection)
+
+    def test_spawn_not_enough_memory(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self.assertRaises(Exception,
+                          self._test_spawn,
+                          1, 2, 3, "m1.xlarge")
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'

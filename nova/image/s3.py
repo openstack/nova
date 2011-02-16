@@ -94,7 +94,7 @@ class S3ImageService(service.BaseImageService):
         if FLAGS.connection_type == 'fake':
             return {'imageId': 'bar'}
         result = self.index(context)
-        result = [i for i in result if i['imageId'] == image_id]
+        result = [i for i in result if i['id'] == image_id]
         if not result:
             raise exception.NotFound(_('Image %s could not be found')
                                      % image_id)

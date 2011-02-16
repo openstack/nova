@@ -303,6 +303,10 @@ class SessionBase(object):
         rec['currently_attached'] = False
         rec['device'] = ''
 
+    def host_compute_free_memory(self, _1, ref):
+        #Always return 12GB available
+        return 12 * 1024 * 1024 * 1024
+
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
             self._login(methodname, params)
