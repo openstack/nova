@@ -43,7 +43,7 @@ from nova import utils
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.rpc')
 
-FLAGS.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
+flags.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
 
 
 class Connection(carrot_connection.BrokerConnection):
