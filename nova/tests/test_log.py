@@ -58,7 +58,7 @@ class LogHandlerTestCase(test.TestCase):
                          '/some/path/foo-bar.log')
 
     def test_log_path_none(self):
-        self.assertIsNone(log.get_log_file_path(binary='foo-bar'))
+        self.assertTrue(log.get_log_file_path(binary='foo-bar') is None)
 
     def test_log_path_logfile_overrides_logdir(self):
         self.flags(logdir='/some/other/path',
