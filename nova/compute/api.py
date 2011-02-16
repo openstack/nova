@@ -405,10 +405,10 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.Error(_("No finished migrations found for
+            raise exception.Error(_("No finished migrations found for \
                     instance"))
 
-        params = { 'migration_id': migration_ref['id'])
+        params = { 'migration_id': migration_ref['id'] }
         self._cast_compute_message('revert_resize', context, instance_id,
                 migration_ref['dest_compute'], params=params)
 
@@ -419,11 +419,11 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.Error(_("No finished migrations found for
+            raise exception.Error(_("No finished migrations found for \
                     instance"))
         instance_ref = self.db.instance_get(context, instance_id)
         
-        params = { 'migration_id': migration_ref['id'])
+        params = { 'migration_id': migration_ref['id'] }
         self._cast_compute_message('confirm_resize', context, instance_id,
                 migration_ref['source_compute'], params=param)
 

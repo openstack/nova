@@ -381,7 +381,7 @@ class ComputeManager(manager.Manager):
         self._update_state(context, instance_id)
      
     @exception.wrap_exception
-    @echecks_instance_lock
+    @checks_instance_lock
     def confirm_resize(self, context, instance_id, migration_id):
         """ Destroys the source instance """
         context = context.elevated()
