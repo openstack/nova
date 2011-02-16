@@ -21,7 +21,6 @@ Starting point for routing EC2 requests.
 """
 
 import datetime
-import routes
 import webob
 import webob.dec
 import webob.exc
@@ -233,7 +232,7 @@ class Authorizer(wsgi.Middleware):
         super(Authorizer, self).__init__(application)
         self.action_roles = {
             'CloudController': {
-                'DescribeAvailabilityzones': ['all'],
+                'DescribeAvailabilityZones': ['all'],
                 'DescribeRegions': ['all'],
                 'DescribeSnapshots': ['all'],
                 'DescribeKeyPairs': ['all'],

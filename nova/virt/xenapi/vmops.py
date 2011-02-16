@@ -66,7 +66,15 @@ class VMOps(object):
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
-
+        #ensure enough free memory is available
+        if not VMHelper.ensure_free_mem(self._session, instance):
+                name = instance['name']
+                LOG.exception(_('instance %(name)s: not enough free memory')
+                              % locals())
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                return
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
         network_ref = \
@@ -169,7 +177,8 @@ class VMOps(object):
                 instance_name = instance_or_vm.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception(_('Instance not present %s') % instance_name)
+            raise exception.NotFound(
+                            _('Instance not present %s') % instance_name)
         return vm
 
     def snapshot(self, instance, image_id):
@@ -271,6 +280,9 @@ class VMOps(object):
                      locals())
             return
 
+        instance_id = instance.id
+        LOG.debug(_("Shutting down VM for Instance %(instance_id)s")
+                  % locals())
         try:
             task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
             self._session.wait_for_task(instance.id, task)
@@ -279,6 +291,9 @@ class VMOps(object):
 
     def _destroy_vdis(self, instance, vm):
         """Destroys all VDIs associated with a VM """
+        instance_id = instance.id
+        LOG.debug(_("Destroying VDIs for Instance %(instance_id)s")
+                  % locals())
         vdis = VMHelper.lookup_vm_vdis(self._session, vm)
 
         if not vdis:
@@ -291,13 +306,55 @@ class VMOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
+    def _destroy_kernel_ramdisk(self, instance, vm):
+        """
+        Three situations can occur:
+
+            1. We have netiher a ramdisk or a kernel, in which case we are a
+               RAW image and can omit this step
+
+            2. We have one or the other, in which case, we should flag as an
+               error
+
+            3. We have both, in which case we safely remove both the kernel
+               and the ramdisk.
+        """
+        instance_id = instance.id
+        if not instance.kernel_id and not instance.ramdisk_id:
+            # 1. No kernel or ramdisk
+            LOG.debug(_("Instance %(instance_id)s using RAW or VHD, "
+                        "skipping kernel and ramdisk deletion") % locals())
+            return
+
+        if not (instance.kernel_id and instance.ramdisk_id):
+            # 2. We only have kernel xor ramdisk
+            raise exception.NotFound(
+                _("Instance %(instance_id)s has a kernel or ramdisk but not "
+                  "both" % locals()))
+
+        # 3. We have both kernel and ramdisk
+        (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+            self._session, vm)
+
+        LOG.debug(_("Removing kernel/ramdisk files"))
+
+        args = {'kernel-file': kernel, 'ramdisk-file': ramdisk}
+        task = self._session.async_call_plugin(
+            'glance', 'remove_kernel_ramdisk', args)
+        self._session.wait_for_task(instance.id, task)
+
+        LOG.debug(_("kernel/ramdisk files removed"))
+
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
+        instance_id = instance.id
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(instance_id, task)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
+
+        LOG.debug(_("Instance %(instance_id)s VM destroyed") % locals())
 
     def destroy(self, instance):
         """
@@ -306,6 +363,8 @@ class VMOps(object):
         This is the method exposed by xenapi_conn.destroy(). The rest of the
         destroy_* methods are internal.
         """
+        instance_id = instance.id
+        LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
         vm = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm, shutdown=True)
 
@@ -313,19 +372,20 @@ class VMOps(object):
         """
         Destroys VM instance by performing:
 
-        1. A shutdown if requested
-        2. Destroying associated VDIs
-        3. Destroying that actual VM record
+            1. A shutdown if requested
+            2. Destroying associated VDIs
+            3. Destroying kernel and ramdisk files (if necessary)
+            4. Destroying that actual VM record
         """
         if vm is None:
-            # Don't complain, just return.  This lets us clean up instances
-            # that have already disappeared from the underlying platform.
+            LOG.warning(_("VM is not present, skipping destroy..."))
             return
 
         if shutdown:
             self._shutdown(instance, vm)
 
         self._destroy_vdis(instance, vm)
+        self._destroy_kernel_ramdisk(instance, vm)
         self._destroy_vm(instance, vm)
 
     def _wait_with_callback(self, instance_id, task, callback):

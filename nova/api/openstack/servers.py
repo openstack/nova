@@ -53,7 +53,8 @@ def _translate_detail_keys(inst):
         power_state.PAUSED: 'paused',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error'}
+        power_state.CRASHED: 'error',
+        power_state.FAILED: 'error'}
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
@@ -134,7 +135,7 @@ class Controller(wsgi.Controller):
         # be better if we could omit the kernel_id and ramdisk_id properties
         # on the image
         def lookup(image, param):
-            _image_id = image.id
+            _image_id = image['id']
             try:
                 return image['properties'][param]
             except KeyError:
