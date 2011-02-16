@@ -288,11 +288,12 @@ class VMOps(object):
     def attach_disk(self, instance, disk_info):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
+        new_cow_uuid = str(uuid.uuid4())
         params = {'instance_id': instance.id,
                   'old_base_copy_uuid': disk_info['base_copy'],
                   'old_cow_uuid':       disk_info['cow'],
                   'new_base_copy_uuid': new_base_copy_uuid,
-                  'new_cow_uuid':       str(uuid.uuid4())}
+                  'new_cow_uuid':       new_cow_uuid, }
 
         task = self._session.async_call_plugin('migration', 
                 'move_vhds_into_sr', {'params': pickle.dumps(params)})
@@ -301,7 +302,7 @@ class VMOps(object):
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_sr(self._session)
 
-        return new_base_copy_uuid
+        return new_cow_uuid
 
     def resize(self, instance, flavor):
         """Resize a running instance by changing it's RAM and disk size """

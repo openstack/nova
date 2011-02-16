@@ -102,7 +102,8 @@ def move_vhds_into_sr(session, args):
     os.rmdir(source_image_path)
 
     # Link the COW to the base copy
-    logging.debug('Attaching COW to the base copy...')
+    logging.debug('Attaching COW to the base copy %s -> %s' % 
+            (new_cow_path, new_base_copy_path))
     subprocess.call([VHD_UTIL, 'modify', '-n', new_cow_path, '-p', 
             new_base_copy_path])
     
