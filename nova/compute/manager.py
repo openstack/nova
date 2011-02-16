@@ -435,7 +435,6 @@ class ComputeManager(manager.Manager):
 
         #TODO(mdietz): This is where we would update the VM record 
         #after resizing
-
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic, 

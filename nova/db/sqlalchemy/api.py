@@ -1933,15 +1933,16 @@ def migration_create(context, values):
 def migration_update(context, id, values):
     session = get_session()
     with session.begin():
-        migration = migration_get(context, id)
+        migration = migration_get(context, id, session=session)
         migration.update(values)
-        migration.save()
+        migration.save(session=session)
         return migration
 
 
 @require_admin_context
-def migration_get(context, id):
-    session = get_session()
+def migration_get(context, id, session=None):
+    if not session:
+        session = get_session()
     result = session.query(models.Migration).\
                      filter_by(id=id).first()
     if not result:
