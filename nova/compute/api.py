@@ -104,11 +104,8 @@ class API(base.Base):
             image = self.image_service.show(context, image_id)
             if kernel_id is None:
                 kernel_id = image.get('kernel_id', None)
-                # FIXME(sirp): which one to use?
-                #kernel_id = image.get('kernelId', None)
             if ramdisk_id is None:
                 ramdisk_id = image.get('ramdisk_id', None)
-                #ramdisk_id = image.get('ramdiskId', None)
 
             # FIXME(sirp): is there a way we can remove null_kernel?
             # No kernel and ramdisk for raw images

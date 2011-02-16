@@ -73,7 +73,11 @@ fi
 
 if [ -z "$noseargs" ];
 then
-  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
+  PEP8_EXCLUDE=vcsversion.py
+  PEP8_OPTIONS="--exclude=$PEP8_EXCLUDE --repeat --show-pep8 --show-source"
+  # TODO(sirp): Put tests/ run_tests.py and all plugins/ under pep8 control
+  PEP8_INCLUDE="bin/* nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
+  run_tests && pep8 $PEP8_OPTIONS $PEP8_INCLUDE || exit 1
 else
   run_tests
 fi

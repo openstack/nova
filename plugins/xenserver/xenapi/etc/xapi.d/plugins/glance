@@ -299,6 +299,7 @@ def _assert_process_success(proc, cmd):
         raise Exception(msg)
     return out, err
 
+
 def download_image(session, args):
     """Download an image from Glance, unbundle it, and then deposit the VHDs
     into the storage repository
