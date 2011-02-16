@@ -271,7 +271,7 @@ def migration_get(context, migration_id):
     """Finds a migration by the id"""
     return IMPL.migration_get(context, migration_id)
 
-def migration_get_by_instance(context, instance_id):
+def migration_get_by_instance_and_status(context, instance_id, status):
     """Finds a migration by the instance id its migrating"""
     return IMPL.migration_get_by_instance(context, instance_id)
 

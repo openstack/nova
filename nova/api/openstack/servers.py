@@ -209,15 +209,17 @@ class Controller(wsgi.Controller):
     def _action_confirm_resize(self, input_dict, req, id):
         try:
             self.compute_api.confirm_resize(req.environ['nova.context'], id)
-        except:
-            return faults.Fault(exc.HTTPBadRequest())
+        except Exception, e:
+            LOG.exception(_("Error in confirm-resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest(e))
         return exc.HTTPNoContent()
 
     def _action_revert_resize(self, input_dict, req, id):
         try:
             self.compute_api.confirm_resize(req.environ['nova.context'], id)
-        except:
-            return faults.Fault(exc.HTTPBadRequest())
+        except Exception, e:
+            LOG.exception(_("Error in revert-resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest(e))
         return exc.HTTPAccepted()
 
     def _action_rebuild(self, input_dict, req, id):
@@ -229,8 +231,9 @@ class Controller(wsgi.Controller):
             flavor_id = input_dict['resize']['flavorId']
             self.compute_api.resize(req.environ['nova.context'], id,
                     flavor_id)
-        except:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPUnprocessableEntity(e))
         return faults.Fault(exc.HTTPAccepted())
 
 
