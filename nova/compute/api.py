@@ -67,10 +67,10 @@ class API(base.Base):
         """Get the network topic for an instance."""
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found in get_network_topic"),
                         instance_id)
-            raise e
+            raise
 
         host = instance['host']
         if not host:
@@ -103,9 +103,9 @@ class API(base.Base):
         if not is_vpn:
             image = self.image_service.show(context, image_id)
             if kernel_id is None:
-                kernel_id = image.get('kernelId', None)
+                kernel_id = image.get('kernel_id', None)
             if ramdisk_id is None:
-                ramdisk_id = image.get('ramdiskId', None)
+                ramdisk_id = image.get('ramdisk_id', None)
             # No kernel and ramdisk for raw images
             if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
@@ -293,10 +293,10 @@ class API(base.Base):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found during terminate"),
                         instance_id)
-            raise e
+            raise
 
         if (instance['state_description'] == 'terminating'):
             LOG.warning(_("Instance %d is already being terminated"),

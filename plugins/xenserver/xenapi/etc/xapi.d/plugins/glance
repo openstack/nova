@@ -43,32 +43,47 @@ CHUNK_SIZE = 8192
 KERNEL_DIR = '/boot/guest'
 FILE_SR_PATH = '/var/run/sr-mount'
 
-def copy_kernel_vdi(session,args):
+
+def remove_kernel_ramdisk(session, args):
+    """Removes kernel and/or ramdisk from dom0's file system"""
+    kernel_file = exists(args, 'kernel-file')
+    ramdisk_file = exists(args, 'ramdisk-file')
+    if kernel_file:
+        os.remove(kernel_file)
+    if ramdisk_file:
+        os.remove(ramdisk_file)
+    return "ok"
+
+
+def copy_kernel_vdi(session, args):
     vdi = exists(args, 'vdi-ref')
-    size = exists(args,'image-size')
+    size = exists(args, 'image-size')
     #Use the uuid as a filename
-    vdi_uuid=session.xenapi.VDI.get_uuid(vdi)
-    copy_args={'vdi_uuid':vdi_uuid,'vdi_size':int(size)}
-    filename=with_vdi_in_dom0(session, vdi, False,
+    vdi_uuid = session.xenapi.VDI.get_uuid(vdi)
+    copy_args = {'vdi_uuid': vdi_uuid, 'vdi_size': int(size)}
+    filename = with_vdi_in_dom0(session, vdi, False,
                               lambda dev:
-                              _copy_kernel_vdi('/dev/%s' % dev,copy_args))
+                              _copy_kernel_vdi('/dev/%s' % dev, copy_args))
     return filename
 
-def _copy_kernel_vdi(dest,copy_args):
-    vdi_uuid=copy_args['vdi_uuid']
-    vdi_size=copy_args['vdi_size']
-    logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",dest,vdi_uuid)
-    filename=KERNEL_DIR + '/' + vdi_uuid
+
+def _copy_kernel_vdi(dest, copy_args):
+    vdi_uuid = copy_args['vdi_uuid']
+    vdi_size = copy_args['vdi_size']
+    logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",
+                  dest, vdi_uuid)
+    filename = KERNEL_DIR + '/' + vdi_uuid
     #read data from /dev/ and write into a file on /boot/guest
-    of=open(filename,'wb')
-    f=open(dest,'rb')
+    of = open(filename, 'wb')
+    f = open(dest, 'rb')
     #copy only vdi_size bytes
-    data=f.read(vdi_size)
+    data = f.read(vdi_size)
     of.write(data)
     f.close()
-    of.close()    
-    logging.debug("Done. Filename: %s",filename)
-    return filename 
+    of.close()
+    logging.debug("Done. Filename: %s", filename)
+    return filename
+
 
 def put_vdis(session, args):
     params = pickle.loads(exists(args, 'params'))
@@ -76,22 +91,23 @@ def put_vdis(session, args):
     image_id = params["image_id"]
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
-    
+
     sr_path = get_sr_path(session)
     #FIXME(sirp): writing to a temp file until Glance supports chunked-PUTs
-    tmp_file = "%s.tar.gz" % os.path.join('/tmp', str(image_id)) 
+    tmp_file = "%s.tar.gz" % os.path.join('/tmp', str(image_id))
     tar_cmd = ['tar', '-zcf', tmp_file, '--directory=%s' % sr_path]
-    paths = [ "%s.vhd" % vdi_uuid for vdi_uuid in vdi_uuids ]
+    paths = ["%s.vhd" % vdi_uuid for vdi_uuid in vdi_uuids]
     tar_cmd.extend(paths)
     logging.debug("Bundling image with cmd: %s", tar_cmd)
     subprocess.call(tar_cmd)
-    logging.debug("Writing to test file %s", tmp_file) 
+    logging.debug("Writing to test file %s", tmp_file)
     put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port)
-    return "" # FIXME(sirp): return anything useful here?
+    # FIXME(sirp): return anything useful here?
+    return ""
 
 
 def put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port):
-    size = os.path.getsize(tmp_file) 
+    size = os.path.getsize(tmp_file)
     basename = os.path.basename(tmp_file)
 
     bundle = open(tmp_file, 'r')
@@ -112,12 +128,11 @@ def put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port):
         for header, value in headers.iteritems():
             conn.putheader(header, value)
         conn.endheaders()
-        
+
         chunk = bundle.read(CHUNK_SIZE)
         while chunk:
             conn.send(chunk)
             chunk = bundle.read(CHUNK_SIZE)
-        
 
         res = conn.getresponse()
         #FIXME(sirp): should this be 201 Created?
@@ -125,6 +140,7 @@ def put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port):
             raise Exception("Unexpected response from Glance %i" % res.status)
     finally:
         bundle.close()
+
 
 def get_sr_path(session):
     sr_ref = find_sr(session)
@@ -156,5 +172,6 @@ def find_sr(session):
 
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'put_vdis': put_vdis, 
-                           'copy_kernel_vdi': copy_kernel_vdi})
+    XenAPIPlugin.dispatch({'put_vdis': put_vdis,
+                           'copy_kernel_vdi': copy_kernel_vdi,
+                           'remove_kernel_ramdisk': remove_kernel_ramdisk})

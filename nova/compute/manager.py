@@ -127,7 +127,7 @@ class ComputeManager(manager.Manager):
             info = self.driver.get_info(instance_ref['name'])
             state = info['state']
         except exception.NotFound:
-            state = power_state.NOSTATE
+            state = power_state.FAILED
         self.db.instance_set_state(context, instance_id, state)
 
     def get_console_topic(self, context, **_kwargs):
