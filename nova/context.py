@@ -28,7 +28,6 @@ from nova import utils
 
 
 class RequestContext(object):
-
     def __init__(self, user, project, is_admin=None, read_deleted=False,
                  remote_address=None, timestamp=None, request_id=None):
         if hasattr(user, 'id'):
@@ -53,7 +52,7 @@ class RequestContext(object):
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
-            timestamp = datetime.datetime.utcnow()
+            timestamp = utils.utcnow()
         if isinstance(timestamp, str) or isinstance(timestamp, unicode):
             timestamp = utils.parse_isotime(timestamp)
         self.timestamp = timestamp
@@ -101,7 +100,7 @@ class RequestContext(object):
         return cls(**values)
 
     def elevated(self, read_deleted=False):
-        """Return a version of this context with admin flag set"""
+        """Return a version of this context with admin flag set."""
         return RequestContext(self.user_id,
                               self.project_id,
                               True,
