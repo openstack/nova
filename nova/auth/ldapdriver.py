@@ -73,6 +73,7 @@ LOG = logging.getLogger("nova.ldapdriver")
 #             creating this now because I'm expecting an auth refactor
 #             in which we may want to change the interface a bit more.
 
+
 def _clean(attr):
     """Clean attr for insertion into ldap"""
     if attr is None:
@@ -80,6 +81,7 @@ def _clean(attr):
     if type(attr) is unicode:
         return str(attr)
     return attr
+
 
 def sanitize(fn):
     """Decorator to sanitize all args"""
