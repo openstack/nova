@@ -43,6 +43,10 @@ def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
 
+def return_servers_with_host(context, user_id=1):
+    return [stub_instance(i, user_id, 1) for i in xrange(5)]
+
+
 def return_security_group(context, instance_id, security_group_id):
     pass
 
@@ -55,9 +59,13 @@ def instance_address(context, instance_id):
     return None
 
 
-def stub_instance(id, user_id=1):
-    return Instance(id=id, state=0, image_id=10, user_id=user_id,
-                    display_name='server%s' % id)
+def stub_instance(id, user_id=1, with_hosts=False):
+    if with_hosts:
+        return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                        display_name='server%s' % id, host='host%s' % (id % 2))
+    else:
+        return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                        display_name='server%s' % id)
 
 
 def fake_compute_api(cls, req, id):
@@ -229,6 +237,33 @@ class ServersTest(unittest.TestCase):
         i = 0
         for s in res_dict['servers']:
             self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], '')
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['imageId'], 10)
+            i += 1
+
+    def test_get_all_server_details_with_host(self):
+        '''
+        We want to make sure that if two instances are on the same host, then
+        they return the same hostId. If two instances are on different hosts,
+        they should return different hostId's. In this test, we get 5 instances
+        back where 2 are on one host and 3 are on another.
+        '''
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
+                       return_servers_with_host)
+        req = webob.Request.blank('/v1.0/servers/detail')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        server_list = res_dict['servers']
+        host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
+        self.assertTrue(host_ids[0])
+        self.assertTrue(host_ids[1])
+        self.assertTrue(host_ids[0] != host_ids[1])
+        i = 0
+        for s in res_dict['servers']:
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
             i += 1
