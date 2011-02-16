@@ -289,6 +289,8 @@ class VMHelper(HelperBase):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
+        # NOTE(sirp): Currently we only support uploading images as VHD, there
+        # is no RAW equivalent (yet)
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
@@ -299,7 +301,7 @@ class VMHelper(HelperBase):
                   'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'upload_image', kwargs)
+        task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
         session.wait_for_task(instance_id, task)
 
     @classmethod
@@ -340,7 +342,7 @@ class VMHelper(HelperBase):
                   'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'download_image', kwargs)
+        task = session.async_call_plugin('glance', 'download_vhd', kwargs)
         vdi_uuid = session.wait_for_task(instance_id, task)
 
         scan_sr(session, instance_id, sr_ref)
@@ -350,7 +352,7 @@ class VMHelper(HelperBase):
         name_label = get_name_label_for_image(image)
         session.get_xenapi().VDI.set_name_label(vdi_ref, name_label)
 
-        LOG.debug(_("xapi 'download_image' returned VDI UUID %(vdi_uuid)s")
+        LOG.debug(_("xapi 'download_vhd' returned VDI UUID %(vdi_uuid)s")
                   % locals())
         return vdi_uuid
 

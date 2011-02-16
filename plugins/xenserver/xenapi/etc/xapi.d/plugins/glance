@@ -300,7 +300,7 @@ def _assert_process_success(proc, cmd):
     return out, err
 
 
-def download_image(session, args):
+def download_vhd(session, args):
     """Download an image from Glance, unbundle it, and then deposit the VHDs
     into the storage repository
     """
@@ -321,7 +321,7 @@ def download_image(session, args):
         _cleanup_staging_area(staging_path)
 
 
-def upload_image(session, args):
+def upload_vhd(session, args):
     """Bundle the VHDs comprising an image and then stream them into Glance.
     """
     params = pickle.loads(exists(args, 'params'))
@@ -365,7 +365,7 @@ def remove_kernel_ramdisk(session, args):
 
 
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'upload_image': upload_image,
-                           'download_image': download_image,
+    XenAPIPlugin.dispatch({'upload_vhd': upload_vhd,
+                           'download_vhd': download_vhd,
                            'copy_kernel_vdi': copy_kernel_vdi,
                            'remove_kernel_ramdisk': remove_kernel_ramdisk})

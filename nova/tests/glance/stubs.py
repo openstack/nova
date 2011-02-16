@@ -29,16 +29,16 @@ class FakeGlance(object):
     IMAGE_FIXTURES = {
         1: {'image_meta': {'name': 'fakemachine', 'size': 0,
                            'properties': {}},
-            'image_data': StringIO.StringIO('') },
+            'image_data': StringIO.StringIO('')},
         2: {'image_meta': {'name': 'fakekernel', 'size': 0,
                            'properties': {}},
-            'image_data': StringIO.StringIO('') },
+            'image_data': StringIO.StringIO('')},
         3: {'image_meta': {'name': 'fakekernel', 'size': 0,
                            'properties': {}},
-            'image_data': StringIO.StringIO('') },
+            'image_data': StringIO.StringIO('')},
         4: {'image_meta': {'name': 'fakekernel', 'size': 0,
                            'properties': {'disk_format': 'vhd'}},
-            'image_data': StringIO.StringIO('') },
+            'image_data': StringIO.StringIO('')},
     }
 
     def __init__(self, host, port=None, use_ssl=False):
