@@ -110,7 +110,7 @@ def move_vhds_into_sr(session, args):
     shutil.move("%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid), sr_path)
     shutil.move("%s/%s.vhd" % (temp_vhd_path, new_cow_uuid), sr_path)
 
-    logginig.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
+    logging.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
     os.rmdir(temp_vhd_path)
     return ""
 
