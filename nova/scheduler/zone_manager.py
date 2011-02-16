@@ -71,7 +71,7 @@ class ZoneState(object):
         logging.warning(_("%s error talking to zone %s") % (exception,
             zone.api_url, FLAGS.zone_failures_to_offline))
 
-       self.attempt += 1
+        self.attempt += 1
         if self.attempt >= FLAGS.zone_failures_to_offline:
            self.is_active = False
            logging.error(_("No answer from zone %s after %d "
