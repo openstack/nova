@@ -17,6 +17,7 @@
 #    under the License.
 
 import os
+import sys
 
 from nova import flags
 
