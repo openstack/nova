@@ -394,6 +394,18 @@ class FlatDHCPManager(FlatManager):
     like FlatDHCPManager.
     """
 
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        super(FlatDHCPManager, self).periodic_tasks(context)
+        now = datetime.datetime.utcnow()
+        timeout = FLAGS.fixed_ip_disassociate_timeout
+        time = now - datetime.timedelta(seconds=timeout)
+        num = self.db.fixed_ip_disassociate_all_by_timeout(context,
+                                                           self.host,
+                                                           time)
+        if num:
+            LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
+
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
