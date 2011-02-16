@@ -402,22 +402,30 @@ class API(base.Base):
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process"""
         context = context.elevated()
-        instance_ref = self.db.instance_get(instance_id)
-        self._cast_compute_message('revert_resize', context, instance_id)
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.Error(_("No finished migrations found for
+                    instance"))
+
+        params = { 'migration_id': migration_ref['id'])
+        self._cast_compute_message('revert_resize', context, instance_id,
+                migration_ref['dest_compute'], params=params)
 
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize, deleting the 'old' instance in the
         process."""
         context = context.elevated()
-        migration_ref = self.db.migration_get_by_instance(context, 
-                instance_id)
-        if migration_ref['status'] != 'finished':
-            raise exception.Error(_("Migration has incorrect status %s" %
-                    migration_ref['status']))
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.Error(_("No finished migrations found for
+                    instance"))
         instance_ref = self.db.instance_get(context, instance_id)
         
-        self._cast_compute_message('terminate_instance', context, instance_id,
-                migration_ref['source_compute'])
+        params = { 'migration_id': migration_ref['id'])
+        self._cast_compute_message('confirm_resize', context, instance_id,
+                migration_ref['source_compute'], params=param)
 
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })

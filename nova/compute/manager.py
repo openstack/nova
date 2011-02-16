@@ -380,15 +380,41 @@ class ComputeManager(manager.Manager):
         """Update instance state when async task completes."""
         self._update_state(context, instance_id)
      
+    @exception.wrap_exception
+    @echecks_instance_lock
+    def confirm_resize(self, context, instance_id, migration_id):
+        """ Destroys the source instance """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        migration_ref = self.db.migration_get(context, migration_id)
+        self.driver.destroy(instance_ref)
+        self.db.migration_update(context, migration_id, 
+                { 'status': 'confirmed' })
 
     @exception.wrap_exception
     @checks_instance_lock
-    def revert_resize(self, context, instance_id):
+    def revert_resize(self, context, instance_id, migration_id):
         """Destroys the new instance on the destination machine, 
         reverts the model changes, and powers on the old 
         instance on the source machine"""
-        pass
-    
+        instance_ref = self.db.instance_get(context, instance_id)
+        migration_ref = self.db.migration_get(context, migration_id)
+
+        if migration_ref['source_compute'] == instance_ref['host']:
+            self.driver.power_on(instance_ref)
+            self.db.migration_update(context, migration_id, 
+                    { 'status': 'reverted' })
+        else:
+            self.driver.destroy(instance_ref)
+            topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
+                    instance_ref['host'])
+            rpc.cast(context, topic, 
+                    { 'method': 'resize_instance',
+                      'args': {
+                            'migration_id': migration_ref['id'], 
+                            'instance_id': instance_id,
+                      }, 
+                    })
 
     @exception.wrap_exception
     @checks_instance_lock

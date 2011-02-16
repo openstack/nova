@@ -1952,10 +1952,11 @@ def migration_get(context, id, session=None):
 
 
 @require_admin_context
-def migration_get_by_instance(context, instance_id):
+def migration_get_by_instance_and_status(context, instance_id, status):
     session = get_session()
     result = session.query(models.Migration).\
-                     filter_by(instance_id=instance_id).first()
+                     filter_by(instance_id=instance_id).
+                     filter_by(status=status).first()
     if not result:
         raise exception.NotFound(_("No migration found with instance id %s") 
                 % migration_id)
