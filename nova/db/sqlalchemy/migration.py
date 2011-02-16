@@ -23,6 +23,7 @@ from nova import flags
 
 import sqlalchemy
 from migrate.versioning import api as versioning_api
+
 try:
     from migrate.versioning import exceptions as versioning_exceptions
 except ImportError:

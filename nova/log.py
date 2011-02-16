@@ -94,7 +94,7 @@ critical = logging.critical
 log = logging.log
 # handlers
 StreamHandler = logging.StreamHandler
-FileHandler = logging.FileHandler
+RotatingFileHandler = logging.handlers.RotatingFileHandler
 # logging.SysLogHandler is nicer than logging.logging.handler.SysLogHandler.
 SysLogHandler = logging.handlers.SysLogHandler
 
@@ -139,7 +139,7 @@ def basicConfig():
         logging.root.addHandler(syslog)
     logpath = get_log_file_path()
     if logpath:
-        logfile = FileHandler(logpath)
+        logfile = RotatingFileHandler(logpath)
         logfile.setFormatter(_formatter)
         logging.root.addHandler(logfile)
 
