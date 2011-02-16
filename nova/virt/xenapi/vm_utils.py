@@ -597,6 +597,7 @@ class VMHelper(HelperBase):
                     session.call_xenapi('VM.add_to_xenstore_data', vm_ref,
                         instance_key + '/data', xenstore_value)
 
+    @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
         vm_rec = session.get_xenapi().VM.get_record(vm)
         if 'PV_kernel' in vm_rec and 'PV_ramdisk' in vm_rec:
