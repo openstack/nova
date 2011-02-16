@@ -409,7 +409,7 @@ class API(base.Base):
         """Confirms a migration/resize, deleting the 'old' instance in the
         process."""
         context = context.elevated()
-        migration_ref = self.db.migration_get_by_instance_id(context, 
+        migration_ref = self.db.migration_get_by_instance(context, 
                 instance_id)
         if migration_ref['status'] != 'finished':
             raise exception.Error(_("Migration has incorrect status %s" %
