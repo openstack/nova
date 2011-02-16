@@ -883,6 +883,9 @@ class CloudController(object):
                                      % attribute)
         try:
             image = self.image_service.show(context, image_id)
+            image = self._format_image(context,
+                                       self.image_service.show(context,
+                                                               image_id))
         except IndexError:
             raise exception.ApiError(_('invalid id: %s') % image_id)
         result = {'image_id': image_id, 'launchPermission': []}
