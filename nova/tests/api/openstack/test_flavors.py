@@ -43,7 +43,17 @@ class FlavorsTest(unittest.TestCase):
     def test_get_flavor_list(self):
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
 
+    def test_create_flavor(self):
+        req = webob.Request.blank("/v1.0/flavors/create/test")
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+
+    def test_delete_flavor(self):
+        req = webob.Request.blank("/v1.0/flavors/delete/test")
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
 
 if __name__ == '__main__':
     unittest.main()

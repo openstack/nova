@@ -42,7 +42,6 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
-        items = common.limited(items, req)
         return dict(flavors=items)
 
     def show(self, req, id):
@@ -56,6 +55,14 @@ class Controller(wsgi.Controller):
         #             id=v['flavorid'], name=val.keys()[0])
         return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
+
+    def create(self, req):
+        """Create a flavor."""
+        print "CREATE! %s" % req
+
+    def delete(self, req, id):
+        """Delete a flavor."""
+        print "DELETE! %s %s" % (req, id)
 
     def _all_ids(self):
         """Return the list of all flavorids."""
