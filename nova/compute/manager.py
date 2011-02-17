@@ -501,7 +501,7 @@ class ComputeManager(manager.Manager):
     @checks_instance_lock
     def reset_network(self, context, instance_id):
         """
-        resets the networking on the instance
+        Reset networking on the instance.
 
         """
         context = context.elevated()

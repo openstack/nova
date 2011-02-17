@@ -468,7 +468,7 @@ class API(base.Base):
 
     def reset_network(self, context, instance_id):
         """
-        resets networking on the instance
+        Reset networking on the instance.
 
         """
         self._cast_compute_message('reset_network', context, instance_id)

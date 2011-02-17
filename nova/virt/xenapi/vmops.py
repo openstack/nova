@@ -151,6 +151,8 @@ class VMOps(object):
                 % locals())
 
         # NOTE(armando): Do we really need to do this in virt?
+        # NOTE(tr3buchet): not sure but wherever we do it, we need to call
+        #                  reset_network afterwards
         timer = utils.LoopingCall(f=None)
 
         def _wait_for_boot():
@@ -437,6 +439,10 @@ class VMOps(object):
         return 'http://fakeajaxconsole/fake_url'
 
     def reset_network(self, instance):
+        """
+        Creates uuid arg to pass to make_agent_call and calls it.
+
+        """
         args = {'id': str(uuid.uuid4())}
         resp = self._make_agent_call('resetnetwork', instance, '', args)
 

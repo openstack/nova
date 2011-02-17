@@ -251,7 +251,7 @@ class Controller(wsgi.Controller):
 
     def reset_network(self, req, id):
         """
-        admin only operation which resets networking on an instance
+        Reset networking on an instance (admin only).
 
         """
         context = req.environ['nova.context']
