@@ -47,14 +47,14 @@ class ZoneState(object):
         self.last_seen = datetime.min
         self.last_exception = None
         self.last_exception_time = None
- 
+
     def update_credentials(self, zone):
         """Update zone credentials from db"""
         self.zone_id = zone.id
         self.api_url = zone.api_url
         self.username = zone.username
         self.password = zone.password
- 
+
     def update_metadata(self, zone_metadata):
         """Update zone metadata after successful communications with
            child zone."""
@@ -79,10 +79,10 @@ class ZoneState(object):
 
         self.attempt += 1
         if self.attempt >= FLAGS.zone_failures_to_offline:
-           self.is_active = False
-           logging.error(_("No answer from zone %s after %d "
-               "attempts. Marking inactive.") % (self.api_url,
-               FLAGS.zone_failures_to_offline))
+            self.is_active = False
+            logging.error(_("No answer from zone %s after %d "
+                "attempts. Marking inactive.") % (self.api_url,
+                FLAGS.zone_failures_to_offline))
 
 
 def _call_novatools(zone):
@@ -107,7 +107,7 @@ class ZoneManager(object):
         self.zone_states = {}
 
     def get_zone_list(self):
-        return [ zone.to_dict() for zone in self.zone_states.values() ]
+        return [zone.to_dict() for zone in self.zone_states.values()]
 
     def _refresh_from_db(self, context):
         """Make our zone state map match the db."""
@@ -125,7 +125,7 @@ class ZoneManager(object):
         for zone_id in self.zone_states.keys():
             if zone_id not in db_keys:
                 del self.zone_states[zone_id]
- 
+
     def _poll_zones(self, context):
         """Try to connect to each child zone and get update."""
         green_pool = GreenPool()
@@ -134,7 +134,7 @@ class ZoneManager(object):
     def ping(self, context=None):
         """Ping should be called periodically to update zone status."""
         diff = datetime.now() - self.last_zone_db_check
-        if diff.seconds >=  FLAGS.zone_db_check_interval:
+        if diff.seconds >= FLAGS.zone_db_check_interval:
             logging.debug("Updating zone cache from db.")
             self.last_zone_db_check = datetime.now()
             self._refresh_from_db(context)

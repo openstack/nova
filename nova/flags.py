@@ -314,6 +314,6 @@ DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
 DEFINE_string('zone_name', 'nova', 'name of this zone')
-DEFINE_string('zone_capabilities', 'xen, linux', 
+DEFINE_string('zone_capabilities', 'xen, linux',
               'comma-delimited list of tags which represent boolean'
               ' capabilities of this zone')

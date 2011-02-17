@@ -67,7 +67,7 @@ class ZoneManagerTestCase(test.TestCase):
                FakeZone(id=1, api_url='http://foo.com', username='user1',
                     password='pass1'),
             ])
-        
+
         self.assertEquals(len(zm.zone_states), 0)
 
         self.mox.ReplayAll()
@@ -89,7 +89,7 @@ class ZoneManagerTestCase(test.TestCase):
                FakeZone(id=1, api_url='http://foo.com', username='user2',
                     password='pass2'),
             ])
-        
+
         self.assertEquals(len(zm.zone_states), 1)
 
         self.mox.ReplayAll()
@@ -107,8 +107,8 @@ class ZoneManagerTestCase(test.TestCase):
         zm.zone_states[1] = zone_state
 
         self.mox.StubOutWithMock(db, 'zone_get_all')
-        db.zone_get_all(mox.IgnoreArg()).AndReturn([ ])
-        
+        db.zone_get_all(mox.IgnoreArg()).AndReturn([])
+
         self.assertEquals(len(zm.zone_states), 1)
 
         self.mox.ReplayAll()
@@ -125,7 +125,7 @@ class ZoneManagerTestCase(test.TestCase):
         zm.zone_states[1] = zone_state
 
         self.mox.StubOutWithMock(db, 'zone_get_all')
-        
+
         db.zone_get_all(mox.IgnoreArg()).AndReturn([
                FakeZone(id=2, api_url='http://foo.com', username='user2',
                     password='pass2'),

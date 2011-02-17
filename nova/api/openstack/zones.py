@@ -66,7 +66,7 @@ class Controller(wsgi.Controller):
     def index(self, req):
         """Return all zones in brief"""
         # Ask the ZoneManager in the Scheduler for most recent data.
-        items = self._call_scheduler('get_zone_list', 
+        items = self._call_scheduler('get_zone_list',
                           req.environ['nova.context'])
         for item in items:
             item['api_url'] = item['api_url'].replace('\\/', '/')
@@ -75,7 +75,7 @@ class Controller(wsgi.Controller):
         if len(items) == 0:
             items = db.zone_get_all(req.environ['nova.context'])
         items = common.limited(items, req)
-        items = [_exclude_keys(item, ['username', 'password']) 
+        items = [_exclude_keys(item, ['username', 'password'])
                       for item in items]
         return dict(zones=items)
 
@@ -85,7 +85,7 @@ class Controller(wsgi.Controller):
 
     def info(self, req):
         """Return name and capabilities for this zone."""
-        return dict(zone=dict(name=FLAGS.zone_name, 
+        return dict(zone=dict(name=FLAGS.zone_name,
                     capabilities=FLAGS.zone_capabilities))
 
     def show(self, req, id):
