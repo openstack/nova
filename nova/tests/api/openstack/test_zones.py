@@ -62,7 +62,7 @@ def zone_get_all_scheduler(x, y, z):
 
 
 def zone_get_all_scheduler_empty(x, y, z):
-    return [] 
+    return []
 
 
 def zone_get_all_db(context):
@@ -106,7 +106,7 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_list_db(self):
-        self.stubs.Set(zones.Controller, '_call_scheduler', 
+        self.stubs.Set(zones.Controller, '_call_scheduler',
             zone_get_all_scheduler_empty)
         self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
         req = webob.Request.blank('/v1.0/zones')
@@ -115,7 +115,6 @@ class ZonesTest(unittest.TestCase):
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(len(res_dict['zones']), 2)
-
 
     def test_get_zone_by_id(self):
         req = webob.Request.blank('/v1.0/zones/1')
