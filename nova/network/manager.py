@@ -509,7 +509,7 @@ class VlanManager(NetworkManager):
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, vlan_start, vpn_start):
+                        cidr_v6, vlan_start, vpn_start, **kwargs):
         """Create networks based on parameters."""
         # Check that num_networks + vlan_start is not > 4094, fixes lp708025
         if num_networks + vlan_start > 4094:
