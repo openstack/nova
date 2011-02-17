@@ -466,6 +466,13 @@ class API(base.Base):
         instance = self.get(context, instance_id)
         return instance['locked']
 
+    def reset_network(self, context, instance_id):
+        """
+        Reset networking on the instance.
+
+        """
+        self._cast_compute_message('reset_network', context, instance_id)
+
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "

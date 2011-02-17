@@ -66,6 +66,7 @@ class VMOps(object):
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
+
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
                 name = instance['name']
@@ -75,10 +76,6 @@ class VMOps(object):
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 return
-        bridge = db.network_get_by_instance(context.get_admin_context(),
-                                            instance['id'])['bridge']
-        network_ref = \
-            NetworkHelper.find_network_with_bridge(self._session, bridge)
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
@@ -107,9 +104,46 @@ class VMOps(object):
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
-        if network_ref:
-            VMHelper.create_vif(self._session, vm_ref,
-                                network_ref, instance.mac_address)
+        # write network info
+        admin_context = context.get_admin_context()
+
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # I've decided to go ahead and consider multiple IPs and networks
+        # at this stage even though they aren't implemented because these will
+        # be needed for multi-nic and there was no sense writing it for single
+        # network/single IP and then having to turn around and re-write it
+        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
+        for network in db.network_get_all_by_instance(admin_context,
+                                                      instance['id']):
+            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+
+            def ip_dict(ip):
+                return {'netmask': network['netmask'],
+                        'enabled': '1',
+                        'ip': ip.address}
+
+            mac_id = instance.mac_address.replace(':', '')
+            location = 'vm-data/networking/%s' % mac_id
+            mapping = {'label': network['label'],
+                       'gateway': network['gateway'],
+                       'mac': instance.mac_address,
+                       'dns': [network['dns']],
+                       'ips': [ip_dict(ip) for ip in network_IPs]}
+            self.write_to_param_xenstore(vm_ref, {location: mapping})
+
+            # TODO(tr3buchet) - remove comment in multi-nic
+            # this bit here about creating the vifs will be updated
+            # in multi-nic to handle multiple IPs on the same network
+            # and multiple networks
+            # for now it works as there is only one of each
+            bridge = network['bridge']
+            network_ref = \
+                NetworkHelper.find_network_with_bridge(self._session, bridge)
+
+            if network_ref:
+                VMHelper.create_vif(self._session, vm_ref,
+                                    network_ref, instance.mac_address)
+
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name
@@ -117,6 +151,8 @@ class VMOps(object):
                 % locals())
 
         # NOTE(armando): Do we really need to do this in virt?
+        # NOTE(tr3buchet): not sure but wherever we do it, we need to call
+        #                  reset_network afterwards
         timer = utils.LoopingCall(f=None)
 
         def _wait_for_boot():
@@ -137,6 +173,10 @@ class VMOps(object):
                 timer.stop()
 
         timer.f = _wait_for_boot
+
+        # call reset networking
+        self.reset_network(instance)
+
         return timer.start(interval=0.5, now=True)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
@@ -397,6 +437,14 @@ class VMOps(object):
         """Return link to instance's ajax console"""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
+
+    def reset_network(self, instance):
+        """
+        Creates uuid arg to pass to make_agent_call and calls it.
+
+        """
+        args = {'id': str(uuid.uuid4())}
+        resp = self._make_agent_call('resetnetwork', instance, '', args)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
