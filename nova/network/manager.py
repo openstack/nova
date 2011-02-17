@@ -409,11 +409,6 @@ class FlatDHCPManager(FlatManager):
     like FlatDHCPManager.
     """
 
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-        super(FlatDHCPManager, self).periodic_tasks(context)
-        self._disassociate_old_ips(context)
-
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
