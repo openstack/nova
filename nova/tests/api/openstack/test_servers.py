@@ -55,7 +55,7 @@ def instance_address(context, instance_id):
     return None
 
 
-def stub_instance(id, user_id=1, with_hosts=False):
+def stub_instance(id, user_id=1):
     return Instance(id=id, state=0, image_id=10, user_id=user_id,
                     display_name='server%s' % id)
 
@@ -242,11 +242,13 @@ class ServersTest(unittest.TestCase):
         instances - 2 on one host and 3 on another.
         '''
 
+        def stub_instance(id, user_id=1):
+            return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                display_name='server%s' % id, host='host%s' % (id % 2))
+
         def return_servers_with_host(context, user_id=1):
-            return [
-                Instance(id=i, state=0, image_id=10, user_id=user_id,
-                    display_name='server%s' % i, host='host%s' % (i % 2))
-                for i in xrange(5)]
+            return [stub_instance(i) for i in xrange(5)]
+
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
             return_servers_with_host)
 
