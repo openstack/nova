@@ -653,6 +653,7 @@ CATEGORIES = [
     ('role', RoleCommands),
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
+    ('fixed', FixedIpCommands),
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('service', ServiceCommands),
