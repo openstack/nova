@@ -85,7 +85,7 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
     conn.close()
 
 
-def fixup_vhds(sr_path, staging_path, uuid_stack):
+def _fixup_vhds(sr_path, staging_path, uuid_stack):
     """Fixup the downloaded VHDs before we move them into the SR.
 
     We cannot extract VHDs directly into the SR since they don't yet have
@@ -314,7 +314,7 @@ def download_vhd(session, args):
     try:
         _download_tarball(sr_path, staging_path, image_id, glance_host,
                           glance_port)
-        vdi_uuid = fixup_vhds(sr_path, staging_path, uuid_stack)
+        vdi_uuid = _fixup_vhds(sr_path, staging_path, uuid_stack)
         return vdi_uuid
     finally:
         _cleanup_staging_area(staging_path)
