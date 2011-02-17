@@ -501,9 +501,9 @@ class NetworkCommands(object):
 
     def list(self):
         """List all created networks"""
-        print "%-18s\t%-15s\t%-15s\t%-15s" % ('CIDR',
-                                              'netmask',
-                                              'dhcp_start',
+        print "%-18s\t%-15s\t%-15s\t%-15s" % (_('network'),
+                                              _('netmask'),
+                                              _('start address'),
                                               'DNS')
         for network in db.network_get_all(context.get_admin_context()):
             print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
