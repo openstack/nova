@@ -67,10 +67,9 @@ def _translate_detail_keys(inst):
     inst_dict['addresses'] = dict(public=[], private=[])
     inst_dict['metadata'] = {}
 
+    inst_dict['hostId'] = ''
     if inst['host']:
         inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-    else:
-        inst_dict['hostId'] = ''
 
     return dict(server=inst_dict)
 
