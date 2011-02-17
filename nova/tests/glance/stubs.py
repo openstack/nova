@@ -28,16 +28,16 @@ def stubout_glance_client(stubs, cls):
 class FakeGlance(object):
     IMAGE_FIXTURES = {
         1: {'image_meta': {'name': 'fakemachine', 'size': 0,
-                           'properties': {}},
+                           'type': 'machine'},
             'image_data': StringIO.StringIO('')},
         2: {'image_meta': {'name': 'fakekernel', 'size': 0,
-                           'properties': {}},
+                           'type': 'kernel'},
             'image_data': StringIO.StringIO('')},
-        3: {'image_meta': {'name': 'fakekernel', 'size': 0,
-                           'properties': {}},
+        3: {'image_meta': {'name': 'fakeramdisk', 'size': 0,
+                           'type': 'ramdisk'},
             'image_data': StringIO.StringIO('')},
-        4: {'image_meta': {'name': 'fakekernel', 'size': 0,
-                           'properties': {'disk_format': 'vhd'}},
+        4: {'image_meta': {'name': 'fakevhd', 'size': 0,
+                           'type': 'vhd'},
             'image_data': StringIO.StringIO('')},
     }
 

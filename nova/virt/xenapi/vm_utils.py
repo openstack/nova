@@ -413,47 +413,51 @@ class VMHelper(HelperBase):
         within an image. To figure out which type we're dealing with, we use
         the following rules:
 
-        1. If the instance is specifying a kernel explicitly, we must be using
-           a 'disk' image (kernel outside of the image)
+        1. If we're using Glance, we can use the image_type field to
+           determine the image_type
 
-        2. If the kernel isn't specified, then we have two different
-           scenarios:
-
-            a) If the image is in Glance, then we can use the 'disk_format'
-               property to determine if the image is really a VHD-style image
-               or if it's a RAW image
-
-            b) If the image is not in Glance, then it must be a RAW image
-               (since we don't have a way of identifying VHD images...yet)
+        2. If we're not using Glance, then we need to deduce this based on
+           whether a kernel_id is specified.
         """
-        def log_disk_format(disk_format):
-            disk_format = disk_format.upper()
+        def log_disk_format(image_type):
+            pretty_format = {ImageType.KERNEL_RAMDISK: 'KERNEL_RAMDISK',
+                             ImageType.DISK: 'DISK',
+                             ImageType.DISK_RAW: 'DISK_RAW',
+                             ImageType.DISK_VHD: 'DISK_VHD'}
+            disk_format = pretty_format[image_type]
             image_id = instance.image_id
             instance_id = instance.id
             LOG.debug(_("Detected %(disk_format)s format for image "
                         "%(image_id)s, instance %(instance_id)s") % locals())
 
-        if instance.kernel_id:
-            # 1. DISK
-            log_disk_format('disk')
-            return ImageType.DISK
-        elif FLAGS.xenapi_image_service == 'glance':
-            # if using glance, then we could be VHD format
+        def determine_from_glance():
+            glance_type2nova_type = {'machine': ImageType.DISK,
+                                     'raw': ImageType.DISK_RAW,
+                                     'vhd': ImageType.DISK_VHD,
+                                     'kernel': ImageType.KERNEL_RAMDISK,
+                                     'ramdisk': ImageType.KERNEL_RAMDISK}
             client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
             meta = client.get_image_meta(instance.image_id)
-            properties = meta['properties']
-            disk_format = properties.get('disk_format', None)
-            # TODO(sirp): When Glance treats disk_format as a first class
-            # attribute, we should start using that rather than an
-            # image-property
-            if disk_format == 'vhd':
-                # 2a. DISK_VHD
-                log_disk_format('disk_vhd')
-                return ImageType.DISK_VHD
+            type_ = meta['type']
+            try:
+                return glance_type2nova_type[type_]
+            except KeyError:
+                raise exception.NotFound(
+                    _("Unrecognized image type '%(type_)s'") % locals())
 
-        # 2b. DISK_RAW
-        log_disk_format('disk_raw')
-        return ImageType.DISK_RAW
+        def determine_from_instance():
+            if instance.kernel_id:
+                return ImageType.DISK
+            else:
+                return ImageType.DISK_RAW
+
+        if FLAGS.xenapi_image_service == 'glance':
+            image_type = determine_from_glance()
+        else:
+            image_type = determine_from_instance()
+
+        log_disk_format(image_type)
+        return image_type
 
     @classmethod
     def _fetch_image_glance(cls, session, instance_id, image, access, type):

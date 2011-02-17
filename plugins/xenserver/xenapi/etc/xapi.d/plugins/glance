@@ -211,8 +211,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
     headers = {
         'x-image-meta-store': 'file',
         'x-image-meta-is_public': 'True',
-        'x-image-meta-type': 'raw',
-        'x-image-meta-property-disk-format': 'vhd',
+        'x-image-meta-type': 'vhd',
         'x-image-meta-property-kernel-id': 'nokernel',
         'x-image-meta-property-ramdisk-id': 'noramdisk',
         'x-image-meta-property-container-format': 'tarball',

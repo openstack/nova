@@ -224,7 +224,8 @@ class VMOps(object):
             VMHelper.upload_image(
                 self._session, instance.id, template_vdi_uuids, image_id)
         finally:
-            self._destroy(instance, template_vm_ref, shutdown=False)
+            self._destroy(instance, template_vm_ref, shutdown=False,
+                          destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
@@ -368,7 +369,8 @@ class VMOps(object):
         vm = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm, shutdown=True)
 
-    def _destroy(self, instance, vm, shutdown=True):
+    def _destroy(self, instance, vm, shutdown=True,
+                 destroy_kernel_ramdisk=True):
         """
         Destroys VM instance by performing:
 
@@ -385,7 +387,8 @@ class VMOps(object):
             self._shutdown(instance, vm)
 
         self._destroy_vdis(instance, vm)
-        self._destroy_kernel_ramdisk(instance, vm)
+        if destroy_kernel_ramdisk:
+            self._destroy_kernel_ramdisk(instance, vm)
         self._destroy_vm(instance, vm)
 
     def _wait_with_callback(self, instance_id, task, callback):
