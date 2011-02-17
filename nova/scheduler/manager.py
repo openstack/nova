@@ -36,7 +36,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('scheduler_driver',
                     'nova.scheduler.chance.ChanceScheduler',
                     'Driver to use for the scheduler')
-           
+
 
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
