@@ -433,6 +433,37 @@ class ProjectCommands(object):
                     "nova-api server on this host.")
 
 
+class FixedIpCommands(object):
+    """Class for managing fixed ip."""
+
+    def list(self, host=None):
+        """Lists all fixed ips (optionally by host) arguments: [host]"""
+        ctxt = context.get_admin_context()
+        if host == None:
+            fixed_ips = db.fixed_ip_get_all(ctxt)
+        else:
+            fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+
+        print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (_('network'),
+                                                  _('IP address'),
+                                                  _('MAC address'),
+                                                  _('hostname'),
+                                                  _('host'))
+        for fixed_ip in fixed_ips:
+            hostname = None
+            host = None
+            mac_address = None
+            if fixed_ip['instance']:
+                instance = fixed_ip['instance']
+                hostname = instance['hostname']
+                host = instance['host']
+                mac_address = instance['mac_address']
+            print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
+                                  fixed_ip['network']['cidr'],
+                                  fixed_ip['address'],
+                                  mac_address, hostname, host)
+
+
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
