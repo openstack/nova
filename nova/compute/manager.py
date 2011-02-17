@@ -127,7 +127,7 @@ class ComputeManager(manager.Manager):
             info = self.driver.get_info(instance_ref['name'])
             state = info['state']
         except exception.NotFound:
-            state = power_state.NOSTATE
+            state = power_state.FAILED
         self.db.instance_set_state(context, instance_id, state)
 
     def get_console_topic(self, context, **_kwargs):
@@ -497,6 +497,18 @@ class ComputeManager(manager.Manager):
                   context=context)
         instance_ref = self.db.instance_get(context, instance_id)
         return instance_ref['locked']
+
+    @checks_instance_lock
+    def reset_network(self, context, instance_id):
+        """
+        Reset networking on the instance.
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_('instance %s: reset network'), instance_id,
+                                                   context=context)
+        self.driver.reset_network(instance_ref)
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):

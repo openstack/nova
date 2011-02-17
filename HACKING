@@ -47,3 +47,22 @@ Human Alphabetical Order Examples
   from nova.auth import users
   from nova.endpoint import api
   from nova.endpoint import cloud
+
+Docstrings
+----------
+  """Summary of the function, class or method, less than 80 characters.
+
+  New paragraph after newline that explains in more detail any general
+  information about the function, class or method. After this, if defining
+  parameters and return types use the Sphinx format. After that an extra
+  newline then close the quotations.
+
+  When writing the docstring for a class, an extra line should be placed
+  after the closing quotations. For more in-depth explanations for these
+  decisions see http://www.python.org/dev/peps/pep-0257/
+
+  :param foo: the foo parameter
+  :param bar: the bar parameter
+  :returns: description of the return value
+
+  """
