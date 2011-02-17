@@ -576,7 +576,7 @@ def project_get_network(context, project_id, associate=True):
 
     """
 
-    return IMPL.project_get_network(context, project_id)
+    return IMPL.project_get_network(context, project_id, associate)
 
 
 def project_get_network_v6(context, project_id):
