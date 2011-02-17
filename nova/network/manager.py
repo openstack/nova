@@ -511,6 +511,12 @@ class VlanManager(NetworkManager):
     def create_networks(self, context, cidr, num_networks, network_size,
                         cidr_v6, vlan_start, vpn_start):
         """Create networks based on parameters."""
+        # Check that num_networks + vlan_start is not > 4094, fixes lp708025
+        if num_networks + vlan_start > 4094:
+            raise ValueError(_('The sum between the number of networks and'
+                               ' the vlan start cannot be greater'
+                               ' than 4094'))
+
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
         network_size_v6 = 1 << 64
