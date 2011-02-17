@@ -58,21 +58,23 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """Create a flavor."""
-        instance_types.create(
-            name,
-            memory,
-            vcpus,
-            local_gb,
-            flavor_id,
-            swap,
-            rxtx_quota,
-            rxtx_cap)
-        print "CREATE! %s" % req
+        #TODO(jk0): Finish this later
+        #instance_types.create(
+        #    name,
+        #    memory,
+        #    vcpus,
+        #    local_gb,
+        #    flavor_id,
+        #    swap,
+        #    rxtx_quota,
+        #    rxtx_cap)
+        return "CREATE! %s" % req
 
-    def delete(self, req, name):
+    def delete(self, req, id):
         """Delete a flavor."""
-        instance_type.destroy(name)
-        print "DELETE! %s %s" % (req, name)
+        #TODO(jk0): Finish this later
+        #instance_type.destroy(name)
+        return "DELETE! %s %s" % (req, id)
 
     def _all_ids(self):
         """Return the list of all flavorids."""
