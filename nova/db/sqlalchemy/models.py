@@ -373,6 +373,7 @@ class Network(BASE, NovaBase):
                                               "vpn_public_port"),
                       {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
+    label = Column(String(255))
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)

@@ -503,8 +503,8 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None, vpn_start=None,
-               fixed_range_v6=None):
+               network_size=None, vlan_start=None,
+               vpn_start=None, fixed_range_v6=None, label='public'):
         """Creates fixed ips for host by range
         arguments: [fixed_range=FLAG], [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
@@ -526,9 +526,10 @@ class NetworkCommands(object):
                                     cidr=fixed_range,
                                     num_networks=int(num_networks),
                                     network_size=int(network_size),
-                                    cidr_v6=fixed_range_v6,
                                     vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start))
+                                    vpn_start=int(vpn_start),
+                                    cidr_v6=fixed_range_v6,
+                                    label=label)
 
     def list(self):
         """List all created networks"""

@@ -298,6 +298,11 @@ def fixed_ip_get_by_address(context, address):
     return IMPL.fixed_ip_get_by_address(context, address)
 
 
+def fixed_ip_get_all_by_instance(context, instance_id):
+    """Get fixed ips by instance or raise if none exist."""
+    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
+
+
 def fixed_ip_get_instance(context, address):
     """Get an instance for a fixed ip by address."""
     return IMPL.fixed_ip_get_instance(context, address)
@@ -524,6 +529,11 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_instance(context, instance_id):
     """Get a network by instance id or raise if it does not exist."""
     return IMPL.network_get_by_instance(context, instance_id)
+
+
+def network_get_all_by_instance(context, instance_id):
+    """Get all networks by instance id or raise if none exist."""
+    return IMPL.network_get_all_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):

@@ -281,6 +281,18 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
+    def test_server_reset_network(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/reset_network')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+
     def test_server_diagnostics(self):
         req = webob.Request.blank("/v1.0/servers/1/diagnostics")
         req.method = "GET"

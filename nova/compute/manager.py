@@ -498,6 +498,18 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         return instance_ref['locked']
 
+    @checks_instance_lock
+    def reset_network(self, context, instance_id):
+        """
+        Reset networking on the instance.
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_('instance %s: reset network'), instance_id,
+                                                   context=context)
+        self.driver.reset_network(instance_ref)
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
