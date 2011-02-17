@@ -51,8 +51,8 @@ class FaultWrapper(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            LOG.exception(_("Caught error: %s"), str(ex))
-            exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
+            LOG.exception(_("Caught error: %s"), unicode(ex))
+            exc = webob.exc.HTTPInternalServerError(explanation=unicode(ex))
             return faults.Fault(exc)
 
 
@@ -79,6 +79,7 @@ class APIRouter(wsgi.Router):
             server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
+            server_members['reset_network'] = 'POST'
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},

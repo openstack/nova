@@ -288,9 +288,19 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
+def fixed_ip_get_all(context):
+    """Get all defined fixed ips."""
+    return IMPL.fixed_ip_get_all(context)
+
+
 def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address or raise if it does not exist."""
     return IMPL.fixed_ip_get_by_address(context, address)
+
+
+def fixed_ip_get_all_by_instance(context, instance_id):
+    """Get fixed ips by instance or raise if none exist."""
+    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
 
 
 def fixed_ip_get_instance(context, address):
@@ -500,6 +510,11 @@ def network_get(context, network_id):
     return IMPL.network_get(context, network_id)
 
 
+def network_get_all(context):
+    """Return all defined networks."""
+    return IMPL.network_get_all(context)
+
+
 # pylint: disable-msg=C0103
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
@@ -514,6 +529,11 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_instance(context, instance_id):
     """Get a network by instance id or raise if it does not exist."""
     return IMPL.network_get_by_instance(context, instance_id)
+
+
+def network_get_all_by_instance(context, instance_id):
+    """Get all networks by instance id or raise if none exist."""
+    return IMPL.network_get_all_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):

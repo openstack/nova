@@ -67,10 +67,10 @@ class API(base.Base):
         """Get the network topic for an instance."""
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found in get_network_topic"),
                         instance_id)
-            raise e
+            raise
 
         host = instance['host']
         if not host:
@@ -85,10 +85,11 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None):
+               availability_zone=None, user_data=None,
+               onset_files=None):
         """Create the number of instances requested if quota and
-        other arguments check out ok."""
-
+        other arguments check out ok.
+        """
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
@@ -103,9 +104,9 @@ class API(base.Base):
         if not is_vpn:
             image = self.image_service.show(context, image_id)
             if kernel_id is None:
-                kernel_id = image.get('kernelId', None)
+                kernel_id = image.get('kernel_id', None)
             if ramdisk_id is None:
-                ramdisk_id = image.get('ramdiskId', None)
+                ramdisk_id = image.get('ramdisk_id', None)
             # No kernel and ramdisk for raw images
             if kernel_id == str(FLAGS.null_kernel):
                 kernel_id = None
@@ -156,7 +157,6 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'availability_zone': availability_zone}
-
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -193,7 +193,8 @@ class API(base.Base):
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
-                               "availability_zone": availability_zone}})
+                               "availability_zone": availability_zone,
+                               "onset_files": onset_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -293,10 +294,10 @@ class API(base.Base):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found during terminate"),
                         instance_id)
-            raise e
+            raise
 
         if (instance['state_description'] == 'terminating'):
             LOG.warning(_("Instance %d is already being terminated"),
@@ -434,6 +435,10 @@ class API(base.Base):
         """Set the root/admin password for the given instance."""
         self._cast_compute_message('set_admin_password', context, instance_id)
 
+    def inject_file(self, context, instance_id):
+        """Write a file to the given instance."""
+        self._cast_compute_message('inject_file', context, instance_id)
+
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
         instance = self.get(context, instance_id)
@@ -465,6 +470,13 @@ class API(base.Base):
         """return the boolean state of (instance with instance_id)'s lock"""
         instance = self.get(context, instance_id)
         return instance['locked']
+
+    def reset_network(self, context, instance_id):
+        """
+        Reset networking on the instance.
+
+        """
+        self._cast_compute_message('reset_network', context, instance_id)
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):

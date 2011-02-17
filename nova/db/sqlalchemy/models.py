@@ -311,10 +311,14 @@ class SecurityGroup(BASE, NovaBase):
                              secondary="security_group_instance_association",
                              primaryjoin='and_('
         'SecurityGroup.id == '
-            'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.security_group_id,'
+        'SecurityGroupInstanceAssociation.deleted == False,'
         'SecurityGroup.deleted == False)',
                              secondaryjoin='and_('
         'SecurityGroupInstanceAssociation.instance_id == Instance.id,'
+        # (anthony) the condition below shouldn't be necessary now that the
+        # association is being marked as deleted.  However, removing this
+        # may cause existing deployments to choke, so I'm leaving it
         'Instance.deleted == False)',
                              backref='security_groups')
 
@@ -369,6 +373,7 @@ class Network(BASE, NovaBase):
                                               "vpn_public_port"),
                       {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
+    label = Column(String(255))
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)

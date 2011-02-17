@@ -19,6 +19,7 @@
 Implementation of SQLAlchemy backend.
 """
 
+import datetime
 import warnings
 
 from nova import db
@@ -578,8 +579,19 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                              'AND instance_id IS NOT NULL '
                              'AND allocated = 0',
                     {'host': host,
-                     'time': time.isoformat()})
+                     'time': time})
     return result.rowcount
+
+
+@require_admin_context
+def fixed_ip_get_all(context, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.FixedIp).all()
+    if not result:
+        raise exception.NotFound(_('No fixed ips defined'))
+
+    return result
 
 
 @require_context
@@ -605,6 +617,17 @@ def fixed_ip_get_by_address(context, address, session=None):
 def fixed_ip_get_instance(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
     return fixed_ip_ref.instance
+
+
+@require_context
+def fixed_ip_get_all_by_instance(context, instance_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
+    if not rv:
+        raise exception.NotFound(_('No address for instance %s') % instance_id)
+    return rv
 
 
 @require_context
@@ -670,8 +693,14 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
-        instance_ref.delete(session=session)
+        session.execute('update instances set deleted=1,'
+                        'deleted_at=:at where id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
+        session.execute('update security_group_instance_association '
+                        'set deleted=1,deleted_at=:at where instance_id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
 
 
 @require_context
@@ -712,6 +741,7 @@ def instance_get_all(context):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -722,6 +752,7 @@ def instance_get_all_by_user(context, user_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
                    all()
@@ -733,6 +764,7 @@ def instance_get_all_by_host(context, host):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -746,6 +778,7 @@ def instance_get_all_by_project(context, project_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -759,6 +792,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
                        all()
@@ -766,6 +800,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=False).\
@@ -1043,6 +1078,15 @@ def network_get(context, network_id, session=None):
     return result
 
 
+@require_admin_context
+def network_get_all(context):
+    session = get_session()
+    result = session.query(models.Network)
+    if not result:
+        raise exception.NotFound(_('No networks defined'))
+    return result
+
+
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
@@ -1081,6 +1125,19 @@ def network_get_by_instance(_context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False).\
                  first()
+    if not rv:
+        raise exception.NotFound(_('No network for instance %s') % instance_id)
+    return rv
+
+
+@require_admin_context
+def network_get_all_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(deleted=False).\
+                 join(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
     if not rv:
         raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv
@@ -1583,6 +1640,11 @@ def security_group_destroy(context, security_group_id):
         # TODO(vish): do we have to use sql here?
         session.execute('update security_groups set deleted=1 where id=:id',
                         {'id': security_group_id})
+        session.execute('update security_group_instance_association '
+                        'set deleted=1,deleted_at=:at '
+                        'where security_group_id=:id',
+                        {'id': security_group_id,
+                         'at': datetime.datetime.utcnow()})
         session.execute('update security_group_rules set deleted=1 '
                         'where group_id=:id',
                         {'id': security_group_id})
