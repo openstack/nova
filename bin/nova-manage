@@ -499,6 +499,18 @@ class NetworkCommands(object):
                                     vlan_start=int(vlan_start),
                                     vpn_start=int(vpn_start))
 
+    def list(self):
+        """List all created networks"""
+        print "%-18s\t%-15s\t%-15s\t%-15s" % (_('network'),
+                                              _('netmask'),
+                                              _('start address'),
+                                              'DNS')
+        for network in db.network_get_all(context.get_admin_context()):
+            print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+                                network.netmask,
+                                network.dhcp_start,
+                                network.dns)
+
 
 class ServiceCommands(object):
     """Enable and disable running services"""
@@ -579,6 +591,13 @@ class VolumeCommands(object):
         ctxt = context.get_admin_context()
         volume = db.volume_get(ctxt, param2id(volume_id))
         host = volume['host']
+
+        if not host:
+            print "Volume not yet assigned to host."
+            print "Deleting volume from database and skipping rpc."
+            db.volume_destroy(ctxt, param2id(volume_id))
+            return
+
         if volume['status'] == 'in-use':
             print "Volume is in-use."
             print "Detach volume from instance and then try again."

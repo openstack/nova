@@ -46,6 +46,27 @@ class RootLoggerTestCase(test.TestCase):
         self.assert_(True)  # didn't raise exception
 
 
+class LogHandlerTestCase(test.TestCase):
+    def test_log_path_logdir(self):
+        self.flags(logdir='/some/path')
+        self.assertEquals(log.get_log_file_path(binary='foo-bar'),
+                         '/some/path/foo-bar.log')
+
+    def test_log_path_logfile(self):
+        self.flags(logfile='/some/path/foo-bar.log')
+        self.assertEquals(log.get_log_file_path(binary='foo-bar'),
+                         '/some/path/foo-bar.log')
+
+    def test_log_path_none(self):
+        self.assertTrue(log.get_log_file_path(binary='foo-bar') is None)
+
+    def test_log_path_logfile_overrides_logdir(self):
+        self.flags(logdir='/some/other/path',
+                   logfile='/some/path/foo-bar.log')
+        self.assertEquals(log.get_log_file_path(binary='foo-bar'),
+                         '/some/path/foo-bar.log')
+
+
 class NovaFormatterTestCase(test.TestCase):
     def setUp(self):
         super(NovaFormatterTestCase, self).setUp()

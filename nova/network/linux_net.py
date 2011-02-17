@@ -20,6 +20,7 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 import os
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
@@ -53,6 +54,8 @@ flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
+flags.DEFINE_string('input_chain', 'INPUT',
+                    'chain to add nova_input to')
 
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
@@ -155,6 +158,8 @@ def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
     _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
                            % (floating_ip, fixed_ip))
+    _confirm_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
+                           % (floating_ip, fixed_ip))
     _confirm_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                            % (fixed_ip, floating_ip))
 
@@ -162,6 +167,8 @@ def ensure_floating_forward(floating_ip, fixed_ip):
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
     _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
+                          % (floating_ip, fixed_ip))
+    _remove_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
                           % (floating_ip, fixed_ip))
     _remove_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
                           % (fixed_ip, floating_ip))
@@ -185,27 +192,72 @@ def ensure_vlan(vlan_num):
 
 
 def ensure_bridge(bridge, interface, net_attrs=None):
-    """Create a bridge unless it already exists"""
+    """Create a bridge unless it already exists.
+
+    :param interface: the interface to create the bridge on.
+    :param net_attrs: dictionary with  attributes used to create the bridge.
+
+    If net_attrs is set, it will add the net_attrs['gateway'] to the bridge
+    using net_attrs['broadcast'] and net_attrs['cidr'].  It will also add
+    the ip_v6 address specified in net_attrs['cidr_v6'] if use_ipv6 is set.
+
+    The code will attempt to move any ips that already exist on the interface
+    onto the bridge and reset the default gateway if necessary.
+    """
     if not _device_exists(bridge):
         LOG.debug(_("Starting Bridge interface for %s"), interface)
         _execute("sudo brctl addbr %s" % bridge)
         _execute("sudo brctl setfd %s 0" % bridge)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute("sudo brctl stp %s off" % bridge)
-        if interface:
-            _execute("sudo brctl addif %s %s" % (bridge, interface))
+        _execute("sudo ip link set %s up" % bridge)
     if net_attrs:
-        _execute("sudo ip addr add %s/%s dev %s broadcast %s" % \
-                 (net_attrs['gateway'],
-                 net_attrs['netmask'],
-                 bridge,
-                 net_attrs['broadcast']))
+        # NOTE(vish): The ip for dnsmasq has to be the first address on the
+        #             bridge for it to respond to reqests properly
+        suffix = net_attrs['cidr'].rpartition('/')[2]
+        out, err = _execute("sudo ip addr add %s/%s brd %s dev %s" %
+                            (net_attrs['gateway'],
+                             suffix,
+                             net_attrs['broadcast'],
+                             bridge),
+                            check_exit_code=False)
+        if err and err != "RTNETLINK answers: File exists\n":
+            raise exception.Error("Failed to add ip: %s" % err)
         if(FLAGS.use_ipv6):
             _execute("sudo ip -f inet6 addr change %s dev %s" %
                      (net_attrs['cidr_v6'], bridge))
-            _execute("sudo ip link set %s up" % bridge)
-    else:
-        _execute("sudo ip link set %s up" % bridge)
+        # NOTE(vish): If the public interface is the same as the
+        #             bridge, then the bridge has to be in promiscuous
+        #             to forward packets properly.
+        if(FLAGS.public_interface == bridge):
+            _execute("sudo ip link set dev %s promisc on" % bridge)
+    if interface:
+        # NOTE(vish): This will break if there is already an ip on the
+        #             interface, so we move any ips to the bridge
+        gateway = None
+        out, err = _execute("sudo route -n")
+        for line in out.split("\n"):
+            fields = line.split()
+            if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
+                gateway = fields[1]
+        out, err = _execute("sudo ip addr show dev %s scope global" %
+                            interface)
+        for line in out.split("\n"):
+            fields = line.split()
+            if fields and fields[0] == "inet":
+                params = ' '.join(fields[1:-1])
+                _execute("sudo ip addr del %s dev %s" % (params, fields[-1]))
+                _execute("sudo ip addr add %s dev %s" % (params, bridge))
+        if gateway:
+            _execute("sudo route add 0.0.0.0 gw %s" % gateway)
+        out, err = _execute("sudo brctl addif %s %s" %
+                            (bridge, interface),
+                            check_exit_code=False)
+
+        if (err and err != "device %s is already a member of a bridge; can't "
+                           "enslave it to bridge %s.\n" % (interface, bridge)):
+            raise exception.Error("Failed to add interface: %s" % err)
+
     if FLAGS.use_nova_chains:
         (out, err) = _execute("sudo iptables -N nova_forward",
                               check_exit_code=False)

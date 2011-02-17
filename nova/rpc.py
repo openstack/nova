@@ -29,6 +29,7 @@ import uuid
 
 from carrot import connection as carrot_connection
 from carrot import messaging
+from eventlet import greenpool
 from eventlet import greenthread
 
 from nova import context
@@ -42,11 +43,13 @@ from nova import utils
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.rpc')
 
+flags.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
+
 
 class Connection(carrot_connection.BrokerConnection):
     """Connection instance object"""
     @classmethod
-    def instance(cls, new=False):
+    def instance(cls, new=True):
         """Returns the instance"""
         if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
@@ -155,11 +158,15 @@ class AdapterConsumer(TopicConsumer):
     def __init__(self, connection=None, topic="broadcast", proxy=None):
         LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
         self.proxy = proxy
+        self.pool = greenpool.GreenPool(FLAGS.rpc_thread_pool_size)
         super(AdapterConsumer, self).__init__(connection=connection,
                                               topic=topic)
 
+    def receive(self, *args, **kwargs):
+        self.pool.spawn_n(self._receive, *args, **kwargs)
+
     @exception.wrap_exception
-    def receive(self, message_data, message):
+    def _receive(self, message_data, message):
         """Magically looks for a method on the proxy object and calls it
 
         Message data should be a dictionary with two keys:
@@ -246,7 +253,7 @@ def msg_reply(msg_id, reply=None, failure=None):
         LOG.error(_("Returning exception %s to caller"), message)
         LOG.error(tb)
         failure = (failure[0].__name__, str(failure[1]), tb)
-    conn = Connection.instance(True)
+    conn = Connection.instance()
     publisher = DirectPublisher(connection=conn, msg_id=msg_id)
     try:
         publisher.send({'result': reply, 'failure': failure})
@@ -319,7 +326,7 @@ def call(context, topic, msg):
                 self.result = data['result']
 
     wait_msg = WaitMessage()
-    conn = Connection.instance(True)
+    conn = Connection.instance()
     consumer = DirectConsumer(connection=conn, msg_id=msg_id)
     consumer.register_callback(wait_msg)
 
