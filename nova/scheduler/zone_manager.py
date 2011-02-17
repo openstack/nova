@@ -78,7 +78,7 @@ class ZoneState(object):
         logging.warning(_("'%(exception)s' error talking to "
                           "zone %(api_url)s") % locals())
 
-        max_errors = FLAGS.zone_failures_to_offline:
+        max_errors = FLAGS.zone_failures_to_offline
         self.attempt += 1
         if self.attempt >= max_errors:
             self.is_active = False
