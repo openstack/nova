@@ -84,13 +84,15 @@ def _call_novatools(zone):
     os = novatools.OpenStack(zone.username, zone.password, zone.api_url)
     return os.zones.info()._info
 
+
 def _poll_zone(zone):
     """Eventlet worker to poll a zone."""
-    logging.debug("_POLL_ZONE: STARTING")
+    logging.debug(_("Polling zone: %s") % zone.api_url)
     try:
         zone.update_metadata(_call_novatools(zone))
     except Exception, e:
         zone.log_error(e)
+
 
 class ZoneManager(object):
     """Keeps the zone states updated."""
@@ -122,10 +124,9 @@ class ZoneManager(object):
 
     def ping(self, context=None):
         """Ping should be called periodically to update zone status."""
-        logging.debug("ZoneManager PING")
         diff = datetime.now() - self.last_zone_db_check
         if diff.seconds >=  FLAGS.zone_db_check_interval:
-            logging.debug("ZoneManager RECHECKING DB ")
+            logging.debug("Updating zone cache from db.")
             self.last_zone_db_check = datetime.now()
             self._refresh_from_db(context)
         self._poll_zones(context)
