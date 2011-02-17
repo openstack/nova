@@ -21,6 +21,7 @@ ZoneManager oversees all communications with child Zones.
 
 import novatools
 import thread
+import traceback
 
 from datetime import datetime
 from eventlet.greenpool import GreenPool
@@ -63,6 +64,11 @@ class ZoneState(object):
         self.capabilities = zone_metadata["capabilities"]
         self.is_active = True
 
+    def to_dict(self):
+        return dict(name=self.name, capabilities=self.capabilities,
+                    is_active=self.is_active, api_url=self.api_url,
+                    id=self.zone_id)
+
     def log_error(self, exception):
         """Something went wrong. Check to see if zone should be
            marked as offline."""
@@ -91,7 +97,7 @@ def _poll_zone(zone):
     try:
         zone.update_metadata(_call_novatools(zone))
     except Exception, e:
-        zone.log_error(e)
+        zone.log_error(traceback.format_exc())
 
 
 class ZoneManager(object):
@@ -99,6 +105,9 @@ class ZoneManager(object):
     def __init__(self):
         self.last_zone_db_check = datetime.min
         self.zone_states = {}
+
+    def get_zone_list(self):
+        return [ zone.to_dict() for zone in self.zone_states.values() ]
 
     def _refresh_from_db(self, context):
         """Make our zone state map match the db."""

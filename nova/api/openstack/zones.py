@@ -19,6 +19,7 @@ import logging
 from nova import flags
 from nova import wsgi
 from nova import db
+from nova import rpc
 
 
 FLAGS = flags.FLAGS
@@ -33,6 +34,10 @@ def _filter_keys(item, keys):
     return dict((k, v) for k, v in item.iteritems() if k in keys)
 
 
+def _exclude_keys(item, keys):
+    return dict((k, v) for k, v in item.iteritems() if k not in keys)
+
+
 def _scrub_zone(zone):
     return _filter_keys(zone, ('id', 'api_url'))
 
@@ -44,11 +49,34 @@ class Controller(wsgi.Controller):
             "attributes": {
                 "zone": ["id", "api_url", "name", "capabilities"]}}}
 
+    def _call_scheduler(self, method, context, params=None):
+        """Generic handler for RPC calls to the scheduler.
+
+        :param params: Optional dictionary of arguments to be passed to the
+                       scheduler worker
+
+        :retval: Result returned by scheduler worker
+        """
+        if not params:
+            params = {}
+        queue = FLAGS.scheduler_topic
+        kwargs = {'method': method, 'args': params}
+        return rpc.call(context, queue, kwargs)
+
     def index(self, req):
         """Return all zones in brief"""
-        items = db.zone_get_all(req.environ['nova.context'])
+        # Ask the ZoneManager in the Scheduler for most recent data.
+        items = self._call_scheduler('get_zone_list', 
+                          req.environ['nova.context'])
+        for item in items:
+            item['api_url'] = item['api_url'].replace('\\/', '/')
+
+        # Or fall-back to the database ...
+        if len(items) == 0:
+            items = db.zone_get_all(req.environ['nova.context'])
         items = common.limited(items, req)
-        items = [_scrub_zone(item) for item in items]
+        items = [_exclude_keys(item, ['username', 'password']) 
+                      for item in items]
         return dict(zones=items)
 
     def detail(self, req):
