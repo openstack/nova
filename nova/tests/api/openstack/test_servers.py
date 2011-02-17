@@ -28,6 +28,7 @@ import nova.api.openstack
 from nova.api.openstack import servers
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
+from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.rpc
 from nova.tests.api.openstack import fakes
 
@@ -64,6 +65,9 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
+    metadata = []
+    metadata.append(InstanceMetadata(key='seq', value=id))
+
     if public_addresses == None:
         public_addresses = list()
 
@@ -95,7 +99,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "availability_zone": "",
         "display_name": "server%s" % id,
         "display_description": "",
-        "locked": False}
+        "locked": False,
+        "metadata": metadata}
 
     instance["fixed_ip"] = {
         "address": private_address,
@@ -214,7 +219,8 @@ class ServersTest(unittest.TestCase):
             "get_image_id_from_image_hash", image_id_from_hash)
 
         body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
+            name='server_test', imageId=2, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
@@ -291,6 +297,7 @@ class ServersTest(unittest.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
+            self.assertEqual(s['metadata']['seq'], i)
             i += 1
 
     def test_server_pause(self):

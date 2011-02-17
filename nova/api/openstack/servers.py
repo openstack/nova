@@ -78,8 +78,13 @@ def _translate_detail_keys(inst):
     except KeyError:
         LOG.debug(_("Failed to read public ip(s)"))
 
-    inst_dict['metadata'] = {}
     inst_dict['hostId'] = ''
+
+    # Return the metadata as a dictionary
+    metadata = {}
+    for item in inst['metadata']:
+        metadata[item['key']] = item['value']
+    inst_dict['metadata'] = metadata
 
     return dict(server=inst_dict)
 
@@ -162,14 +167,26 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        key_pair = auth_manager.AuthManager.get_key_pairs(
-            req.environ['nova.context'])[0]
+        context = req.environ['nova.context']
+
+        key_pair = auth_manager.AuthManager.get_key_pairs(context)[0]
         image_id = common.get_image_id_from_image_hash(self._image_service,
-            req.environ['nova.context'], env['server']['imageId'])
+            context, env['server']['imageId'])
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
+
+        # Metadata is a list, not a Dictionary, because we allow duplicate keys
+        # (even though JSON can't encode this)
+        # In future, we may not allow duplicate keys.
+        # However, the CloudServers API is not definitive on this front,
+        #  and we want to be compatible.
+        metadata = []
+        if env['server']['metadata']:
+            for k, v in env['server']['metadata'].items():
+                metadata.append({'key': k, 'value': v})
+
         instances = self.compute_api.create(
-            req.environ['nova.context'],
+            context,
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             image_id,
             kernel_id=kernel_id,
@@ -177,7 +194,8 @@ class Controller(wsgi.Controller):
             display_name=env['server']['name'],
             display_description=env['server']['name'],
             key_name=key_pair['name'],
-            key_data=key_pair['public_key'])
+            key_data=key_pair['public_key'],
+            metadata=metadata)
         return _translate_keys(instances[0])
 
     def update(self, req, id):

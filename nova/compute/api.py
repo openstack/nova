@@ -85,7 +85,7 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None):
+               availability_zone=None, user_data=None, metadata=[]):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
@@ -98,6 +98,30 @@ class API(base.Base):
             raise quota.QuotaError(_("Instance quota exceeded. You can only "
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
+
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            pid = context.project_id
+            msg = (_("Quota exceeeded for %(pid)s,"
+                     " tried to set %(num_metadata)s metadata properties")
+                   % locals())
+            LOG.warn(msg)
+            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        # Because metadata is stored in the DB, we hard-code the size limits
+        # In future, we may support more variable length strings, so we act
+        #  as if this is quota-controlled for forwards compatibility
+        for metadata_item in metadata:
+            k = metadata_item['key']
+            v = metadata_item['value']
+            if len(k) > 255 or len(v) > 255:
+                pid = context.project_id
+                msg = (_("Quota exceeeded for %(pid)s,"
+                         " metadata property key or value too long")
+                       % locals())
+                LOG.warn(msg)
+                raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
         is_vpn = image_id == FLAGS.vpn_image_id
         if not is_vpn:
@@ -155,7 +179,8 @@ class API(base.Base):
             'key_name': key_name,
             'key_data': key_data,
             'locked': False,
-            'availability_zone': availability_zone}
+            'availability_zone': availability_zone,
+            'metadata': metadata}
 
         elevated = context.elevated()
         instances = []
