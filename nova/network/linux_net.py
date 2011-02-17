@@ -291,7 +291,6 @@ def update_dhcp(context, network_id):
     if a dnsmasq instance is already running then send a HUP
     signal causing it to reload, otherwise spawn a new instance
     """
-    LOG.debug("ENTERING update_dhcp - DHCP script:%s",FLAGS.dhcpbridge)
     network_ref = db.network_get(context, network_id)
 
     conffile = _dhcp_file(network_ref['bridge'], 'conf')

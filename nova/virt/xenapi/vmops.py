@@ -70,18 +70,19 @@ class VMOps(object):
         #this will return the bridge name in nova db
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
-                                            
+
         #this will return the appropriate network
         #TODO: avoid unnecessary call to find_network_with_bridge
         #when VLAN manager is being used (and not just use an if)
-        network_ref = None 
-        try: 
+        network_ref = None
+        try:
             network_ref = \
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
         except:
-            #try to get name with name_label 
+            #try to get name with name_label
             network_ref = \
-                NetworkHelper.find_network_with_name_label(self._session,bridge)
+                NetworkHelper.find_network_with_name_label(self._session,
+                                                           bridge)
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
