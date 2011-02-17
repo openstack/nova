@@ -408,7 +408,7 @@ class ComputeManager(manager.Manager):
             topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
                     instance_ref['host'])
             rpc.cast(context, topic, 
-                    { 'method': 'resize_instance',
+                    { 'method': 'revert_resize',
                       'args': {
                             'migration_id': migration_ref['id'], 
                             'instance_id': instance_id,

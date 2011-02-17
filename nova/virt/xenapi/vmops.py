@@ -234,7 +234,8 @@ class VMOps(object):
                 return self
 
             def __exit__(self, type, value, traceback):
-                self.virt._destroy(self.instance, self.vm_ref, shutdown=False)
+                self.virt._destroy(self.instance, self.vm_ref, shutdown=False,
+                        destroy_kernel_ramdisk=False)
 
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
@@ -393,7 +394,7 @@ class VMOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
-    def _destroy_vm(self, instance, vm):
+    def _destroy_vm(self, instance, vm, destroy_kernel_ramdisk):
         """Destroys a VM record """
         try:
             kernel = None
@@ -402,16 +403,18 @@ class VMOps(object):
                 (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
                                     self._session, vm)
             task1 = self._session.call_xenapi('Async.VM.destroy', vm)
-            LOG.debug(_("Removing kernel/ramdisk files"))
-            fn = "remove_kernel_ramdisk"
-            args = {}
-            if kernel:
-                args['kernel-file'] = kernel
-            if ramdisk:
-                args['ramdisk-file'] = ramdisk
-            task2 = self._session.async_call_plugin('glance', fn, args)
+            if destroy_kernel_ramdisk:
+                LOG.debug(_("Removing kernel/ramdisk files"))
+                fn = "remove_kernel_ramdisk"
+                args = {}
+                if kernel:
+                    args['kernel-file'] = kernel
+                if ramdisk:
+                    args['ramdisk-file'] = ramdisk
+                task2 = self._session.async_call_plugin('glance', fn, args)
             self._session.wait_for_task(instance.id, task1)
-            self._session.wait_for_task(instance.id, task2)
+            if destroy_kernel_ramdisk:
+                self._session.wait_for_task(instance.id, task2)
             LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
@@ -426,7 +429,7 @@ class VMOps(object):
         vm = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm, shutdown=True)
 
-    def _destroy(self, instance, vm, shutdown=True):
+    def _destroy(self, instance, vm, shutdown=True, destroy_kernel_ramdisk=True):
         """
         Destroys VM instance by performing:
 
@@ -443,7 +446,7 @@ class VMOps(object):
             self._shutdown(instance, vm)
 
         self._destroy_vdis(instance, vm)
-        self._destroy_vm(instance, vm)
+        self._destroy_vm(instance, vm, destroy_kernel_ramdisk)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
