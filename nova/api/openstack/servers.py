@@ -195,7 +195,8 @@ class Controller(wsgi.Controller):
             display_description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'],
-            metadata=metadata)
+            metadata=metadata,
+            onset_files=env.get('onset_files', []))
         return _translate_keys(instances[0])
 
     def update(self, req, id):

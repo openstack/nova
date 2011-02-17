@@ -79,6 +79,7 @@ class VMOps(object):
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
+
         #if kernel is not present we must download a raw disk
         if instance.kernel_id:
             disk_image_type = ImageType.DISK
@@ -150,6 +151,21 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                 % locals())
 
+        def _inject_onset_files():
+            onset_files = instance.onset_files
+            if onset_files:
+                # Check if this is a JSON-encoded string and convert if needed.
+                if isinstance(onset_files, basestring):
+                    try:
+                        onset_files = json.loads(onset_files)
+                    except ValueError:
+                        LOG.exception(_("Invalid value for onset_files: '%s'")
+                                % onset_files)
+                        onset_files = []
+                # Inject any files, if specified
+                for path, contents in instance.onset_files:
+                    LOG.debug(_("Injecting file path: '%s'") % path)
+                    self.inject_file(instance, path, contents)
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -163,6 +179,8 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance['name'])
                     timer.stop()
+                    _inject_onset_files()
+                    return True
             except Exception, exc:
                 LOG.warn(exc)
                 LOG.exception(_('instance %s: failed to boot'),
@@ -171,6 +189,7 @@ class VMOps(object):
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
+                return False
 
         timer.f = _wait_for_boot
 
@@ -301,6 +320,32 @@ class VMOps(object):
         resp_dict = json.loads(resp)
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
+            raise RuntimeError(resp_dict['message'])
+        return resp_dict['message']
+
+    def inject_file(self, instance, b64_path, b64_contents):
+        """Write a file to the VM instance. The path to which it is to be
+        written and the contents of the file need to be supplied; both should
+        be base64-encoded to prevent errors with non-ASCII characters being
+        transmitted. If the agent does not support file injection, or the user
+        has disabled it, a NotImplementedError will be raised.
+        """
+        # Files/paths *should* be base64-encoded at this point, but
+        # double-check to make sure.
+        b64_path = utils.ensure_b64_encoding(b64_path)
+        b64_contents = utils.ensure_b64_encoding(b64_contents)
+
+        # Need to uniquely identify this request.
+        transaction_id = str(uuid.uuid4())
+        args = {'id': transaction_id, 'b64_path': b64_path,
+                'b64_contents': b64_contents}
+        # If the agent doesn't support file injection, a NotImplementedError
+        # will be raised with the appropriate message.
+        resp = self._make_agent_call('inject_file', instance, '', args)
+        resp_dict = json.loads(resp)
+        if resp_dict['returncode'] != '0':
+            # There was some other sort of error; the message will contain
+            # a description of the error.
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
@@ -515,6 +560,11 @@ class VMOps(object):
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
                         'VM id=%(instance_id)s; args=%(strargs)s') % locals())
+            elif 'NOT IMPLEMENTED:' in err_msg:
+                LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not'
+                        ' supported by the agent. VM id=%(instance_id)s;'
+                        ' args=%(strargs)s') % locals())
+                raise NotImplementedError(err_msg)
             else:
                 LOG.error(_('The call to %(method)s returned an error: %(e)s. '
                         'VM id=%(instance_id)s; args=%(strargs)s') % locals())
