@@ -490,6 +490,9 @@ class VMHelper(HelperBase):
 
     @classmethod
     def lookup_image(cls, session, instance_id, vdi_ref):
+        """
+        Determine if VDI is using a PV kernel
+        """
         if FLAGS.xenapi_image_service == 'glance':
             return cls._lookup_image_glance(session, vdi_ref)
         else:
@@ -517,6 +520,7 @@ class VMHelper(HelperBase):
 
         def is_vdi_pv(dev):
             LOG.debug(_("Running pygrub against %s"), dev)
+            # TODO(sirp): use subprocess here
             output = os.popen('pygrub -qn /dev/%s' % dev)
             for line in output.readlines():
                 #try to find kernel string

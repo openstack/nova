@@ -130,6 +130,16 @@ def stubout_stream_disk(stubs):
     stubs.Set(vm_utils, '_stream_disk', f)
 
 
+def stubout_lookup_image(stubs):
+    @classmethod
+    def fake_lookup_image(cls, session, instance_id, vdi_ref):
+        # NOTE(sirp): pretending each image is paravirtualized for now
+        is_pv = True
+        return is_pv
+
+    stubs.Set(vm_utils.VMHelper, 'lookup_image', fake_lookup_image)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):

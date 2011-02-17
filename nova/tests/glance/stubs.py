@@ -26,20 +26,33 @@ def stubout_glance_client(stubs, cls):
 
 
 class FakeGlance(object):
+    IMAGE_MACHINE = 1
+    IMAGE_KERNEL = 2
+    IMAGE_RAMDISK = 3
+    IMAGE_RAW = 4
+    IMAGE_VHD = 5
+
     IMAGE_FIXTURES = {
-        1: {'image_meta': {'name': 'fakemachine', 'size': 0,
+        IMAGE_MACHINE: {
+            'image_meta': {'name': 'fakemachine', 'size': 0,
                            'type': 'machine'},
             'image_data': StringIO.StringIO('')},
-        2: {'image_meta': {'name': 'fakekernel', 'size': 0,
+        IMAGE_KERNEL: {
+            'image_meta': {'name': 'fakekernel', 'size': 0,
                            'type': 'kernel'},
             'image_data': StringIO.StringIO('')},
-        3: {'image_meta': {'name': 'fakeramdisk', 'size': 0,
+        IMAGE_RAMDISK: {
+            'image_meta': {'name': 'fakeramdisk', 'size': 0,
                            'type': 'ramdisk'},
             'image_data': StringIO.StringIO('')},
-        4: {'image_meta': {'name': 'fakevhd', 'size': 0,
-                           'type': 'vhd'},
+        IMAGE_RAW: {
+            'image_meta': {'name': 'fakeraw', 'size': 0,
+                           'type': 'raw'},
             'image_data': StringIO.StringIO('')},
-    }
+        IMAGE_VHD: {
+            'image_meta': {'name': 'fakevhd', 'size': 0,
+                           'type': 'vhd'},
+            'image_data': StringIO.StringIO('')}}
 
     def __init__(self, host, port=None, use_ssl=False):
         pass
