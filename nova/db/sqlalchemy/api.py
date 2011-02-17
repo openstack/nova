@@ -592,6 +592,17 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     return result.rowcount
 
 
+@require_admin_context
+def fixed_ip_get_all(context, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.FixedIp).all()
+    if not result:
+        raise exception.NotFound(_('No fixed ips defined'))
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:
@@ -615,6 +626,17 @@ def fixed_ip_get_by_address(context, address, session=None):
 def fixed_ip_get_instance(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
     return fixed_ip_ref.instance
+
+
+@require_context
+def fixed_ip_get_all_by_instance(context, instance_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
+    if not rv:
+        raise exception.NotFound(_('No address for instance %s') % instance_id)
+    return rv
 
 
 @require_context
@@ -1065,6 +1087,15 @@ def network_get(context, network_id, session=None):
     return result
 
 
+@require_admin_context
+def network_get_all(context):
+    session = get_session()
+    result = session.query(models.Network)
+    if not result:
+        raise exception.NotFound(_('No networks defined'))
+    return result
+
+
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
@@ -1103,6 +1134,19 @@ def network_get_by_instance(_context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False).\
                  first()
+    if not rv:
+        raise exception.NotFound(_('No network for instance %s') % instance_id)
+    return rv
+
+
+@require_admin_context
+def network_get_all_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(deleted=False).\
+                 join(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
     if not rv:
         raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv
