@@ -1,6 +1,4 @@
 # Copyright (c) 2010 Openstack, LLC.
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -109,6 +107,7 @@ class ZoneManager(object):
         self.zone_states = {}
 
     def get_zone_list(self):
+        """Return the list of zones we know about."""
         return [zone.to_dict() for zone in self.zone_states.values()]
 
     def _refresh_from_db(self, context):
