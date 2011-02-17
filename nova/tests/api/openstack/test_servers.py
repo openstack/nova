@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
+# Copyright 2010-2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -29,6 +29,7 @@ from nova.api.openstack import servers
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 import nova.rpc
+from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 
 
@@ -137,6 +138,8 @@ class ServersTest(unittest.TestCase):
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
+
+        self.webreq = common.webob_factor('/v1.0/servers')
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -411,6 +414,99 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
 
+    def test_resize_server(self):
+        req = self.webreq('/1/action', 'POST', dict(resize={flavorId=3}}))
+        res = req.get_response(fakes.wsgi_app())
+
+        self.resize_called = False
+        def resize_mock(context, inst_id, flavor):
+            self.resize_called = True 
+
+        self.stubs.Set(nova.compute.api, 'resize_instance', resize_mock)
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
+    def test_resize_bad_param_fails(self):
+        req = self.webreq('/1/action', 'POST', dict('ferp'))
+        res = req.get_response(fakes.wsgi_app())
+
+        self.resize_called = False
+        def resize_mock(context, inst_id, flavor):
+            self.resize_called = True 
+
+        self.stubs.Set(nova.compute.api, 'resize_instance', resize_mock)
+        self.assertEqual(res.status_int, 422)
+        self.assertEqual(self.resize_called, False)
+
+    def test_resize_bad_flavor_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(resize={derp=3}))
+        res = req.get_response(fakes.wsgi_app())
+
+        self.resize_called = False
+        def resize_mock(context, inst_id, flavor):
+            self.resize_called = True 
+
+        self.stubs.Set(nova.compute.api, 'resize_instance', resize_mock)
+        self.assertEqual(res.status_int, 422)
+        self.assertEqual(self.resize_called, False)
+
+    def test_resize_raises_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(resize={flavorId=3}))
+        res = req.get_response(fakes.wsgi_app())
+
+        def resize_mock(context, inst_id, flavor):
+            raise Exception, 'hurr durr'
+
+        self.stubs.Set(nova.compute.api, 'resize_instance', resize_mock)
+        self.assertEqual(res.status_int, 500)
+
+    def test_confirm_resize_server(self):
+        req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
+        res = req.get_response(fakes.wsgi_app())
+
+        self.resize_called = False
+        def confirm_resize_mock(context, inst_id):
+            self.resize_called = True 
+
+        self.stubs.Set(nova.compute.api, 'confirm_resize', 
+                confirm_resize_mock)
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
+    def test_confirm_resize_server_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
+        res = req.get_response(fakes.wsgi_app())
+
+        def confirm_resize_mock(context, inst_id):
+            raise Exception, 'hurr durr'
+
+        self.stubs.Set(nova.compute.api, 'confirm_resize', 
+                confirm_resize_mock)
+        self.assertEqual(res.status_int, 500)
+
+    def test_revert_resize_server(self):
+        req = self.webreq('/1/action', 'POST', dict(revertResize=None))
+        res = req.get_response(fakes.wsgi_app())
+
+        self.resize_called = False
+        def revert_resize_mock(context, inst_id):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api, 'revert_resize', 
+                confirm_resize_mock)
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
+    def test_revert_resize_server_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
+        res = req.get_response(fakes.wsgi_app())
+
+        def revert_resize_mock(context, inst_id):
+            raise Exception, 'hurr durr'
+
+        self.stubs.Set(nova.compute.api, 'revert_resize', 
+                confirm_resize_mock)
+        self.assertEqual(res.status_int, 500)
 
 if __name__ == "__main__":
     unittest.main()
