@@ -434,6 +434,37 @@ class ProjectCommands(object):
                     "nova-api server on this host.")
 
 
+class FixedIpCommands(object):
+    """Class for managing fixed ip."""
+
+    def list(self, host=None):
+        """Lists all fixed ips (optionally by host) arguments: [host]"""
+        ctxt = context.get_admin_context()
+        if host == None:
+            fixed_ips = db.fixed_ip_get_all(ctxt)
+        else:
+            fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+
+        print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (_('network'),
+                                                  _('IP address'),
+                                                  _('MAC address'),
+                                                  _('hostname'),
+                                                  _('host'))
+        for fixed_ip in fixed_ips:
+            hostname = None
+            host = None
+            mac_address = None
+            if fixed_ip['instance']:
+                instance = fixed_ip['instance']
+                hostname = instance['hostname']
+                host = instance['host']
+                mac_address = instance['mac_address']
+            print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
+                                  fixed_ip['network']['cidr'],
+                                  fixed_ip['address'],
+                                  mac_address, hostname, host)
+
+
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
@@ -473,8 +504,8 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None, vpn_start=None,
-               fixed_range_v6=None):
+               network_size=None, vlan_start=None,
+               vpn_start=None, fixed_range_v6=None, label='public'):
         """Creates fixed ips for host by range
         arguments: [fixed_range=FLAG], [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
@@ -496,9 +527,22 @@ class NetworkCommands(object):
                                     cidr=fixed_range,
                                     num_networks=int(num_networks),
                                     network_size=int(network_size),
-                                    cidr_v6=fixed_range_v6,
                                     vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start))
+                                    vpn_start=int(vpn_start),
+                                    cidr_v6=fixed_range_v6,
+                                    label=label)
+
+    def list(self):
+        """List all created networks"""
+        print "%-18s\t%-15s\t%-15s\t%-15s" % (_('network'),
+                                              _('netmask'),
+                                              _('start address'),
+                                              'DNS')
+        for network in db.network_get_all(context.get_admin_context()):
+            print "%-18s\t%-15s\t%-15s\t%-15s" % (network.cidr,
+                                network.netmask,
+                                network.dhcp_start,
+                                network.dns)
 
 
 class ServiceCommands(object):
@@ -580,6 +624,13 @@ class VolumeCommands(object):
         ctxt = context.get_admin_context()
         volume = db.volume_get(ctxt, param2id(volume_id))
         host = volume['host']
+
+        if not host:
+            print "Volume not yet assigned to host."
+            print "Deleting volume from database and skipping rpc."
+            db.volume_destroy(ctxt, param2id(volume_id))
+            return
+
         if volume['status'] == 'in-use':
             print "Volume is in-use."
             print "Detach volume from instance and then try again."
@@ -701,6 +752,7 @@ CATEGORIES = [
     ('role', RoleCommands),
     ('shell', ShellCommands),
     ('vpn', VpnCommands),
+    ('fixed', FixedIpCommands),
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
     ('service', ServiceCommands),

@@ -188,6 +188,10 @@ class XenAPIConnection(object):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
+    def reset_network(self, instance):
+        """reset networking for specified instance"""
+        self._vmops.reset_network(instance)
+
     def get_info(self, instance_id):
         """Return data about VM instance"""
         return self._vmops.get_info(instance_id)
