@@ -68,22 +68,27 @@ class ZoneState(object):
            marked as offline."""
         self.last_exception = exception
         self.last_exception_time = datetime.now()
-        logging.warning(_("%s error talking to zone %s") % (exception,
-            zone.api_url, FLAGS.zone_failures_to_offline))
+        logging.warning(_("'%s' error talking to zone %s") % (exception,
+            self.api_url))
 
         self.attempt += 1
         if self.attempt >= FLAGS.zone_failures_to_offline:
            self.is_active = False
            logging.error(_("No answer from zone %s after %d "
-               "attempts. Marking inactive.") % (zone.api_url,
+               "attempts. Marking inactive.") % (self.api_url,
                FLAGS.zone_failures_to_offline))
+
+
+def _call_novatools(zone):
+    """Call novatools. Broken out for testing purposes."""
+    os = novatools.OpenStack(zone.username, zone.password, zone.api_url)
+    return os.zones.info()._info
 
 def _poll_zone(zone):
     """Eventlet worker to poll a zone."""
     logging.debug("_POLL_ZONE: STARTING")
-    os = novatools.OpenStack(zone.username, zone.password, zone.api_url)
     try:
-        zone.update_metadata(os.zones.info()._info)
+        zone.update_metadata(_call_novatools(zone))
     except Exception, e:
         zone.log_error(e)
 

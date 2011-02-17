@@ -19,6 +19,7 @@ Tests For ZoneManager
 
 import datetime
 import mox
+import novatools
 
 from nova import context
 from nova import db
@@ -30,12 +31,19 @@ from nova import utils
 from nova.auth import manager as auth_manager
 from nova.scheduler import zone_manager
 
+FLAGS = flags.FLAGS
+
 
 class FakeZone:
     """Represents a fake zone from the db"""
     def __init__(self, *args, **kwargs):
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
+
+
+def exploding_novatools(zone):
+    """Used when we want to simulate a novatools call failing."""
+    raise Exception("kaboom")
 
 
 class ZoneManagerTestCase(test.TestCase):
@@ -130,3 +138,36 @@ class ZoneManagerTestCase(test.TestCase):
 
         self.assertEquals(len(zm.zone_states), 1)
         self.assertEquals(zm.zone_states[2].username, 'user2')
+
+    def test_poll_zone(self):
+        self.mox.StubOutWithMock(zone_manager, '_call_novatools')
+        zone_manager._call_novatools(mox.IgnoreArg()).AndReturn(
+                        dict(name='zohan', capabilities='hairdresser'))
+
+        zone_state = zone_manager.ZoneState()
+        zone_state.update_credentials(FakeZone(id=2,
+                       api_url='http://foo.com', username='user2',
+                       password='pass2'))
+        zone_state.attempt = 1
+
+        self.mox.ReplayAll()
+        zone_manager._poll_zone(zone_state)
+        self.mox.VerifyAll()
+        self.assertEquals(zone_state.attempt, 0)
+        self.assertEquals(zone_state.name, 'zohan')
+
+    def test_poll_zone_fails(self):
+        self.stubs.Set(zone_manager, "_call_novatools", exploding_novatools)
+
+        zone_state = zone_manager.ZoneState()
+        zone_state.update_credentials(FakeZone(id=2,
+                       api_url='http://foo.com', username='user2',
+                       password='pass2'))
+        zone_state.attempt = FLAGS.zone_failures_to_offline - 1
+
+        self.mox.ReplayAll()
+        zone_manager._poll_zone(zone_state)
+        self.mox.VerifyAll()
+        self.assertEquals(zone_state.attempt, 3)
+        self.assertFalse(zone_state.is_active)
+        self.assertEquals(zone_state.name, None)
