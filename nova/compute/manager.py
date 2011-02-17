@@ -398,7 +398,8 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
 
-        if migration_ref['source_compute'] == instance_ref['host']:
+        #TODO(mdietz): we may want to split these into separate methods.
+        if migration_ref['source_compute'] == FLAGS.host:
             self.driver.power_on(instance_ref)
             self.db.migration_update(context, migration_id, 
                     { 'status': 'reverted' })

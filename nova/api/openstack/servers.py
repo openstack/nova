@@ -216,7 +216,7 @@ class Controller(wsgi.Controller):
 
     def _action_revert_resize(self, input_dict, req, id):
         try:
-            self.compute_api.confirm_resize(req.environ['nova.context'], id)
+            self.compute_api.revert_resize(req.environ['nova.context'], id)
         except Exception, e:
             LOG.exception(_("Error in revert-resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest(e))
