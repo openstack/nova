@@ -74,15 +74,17 @@ class ZoneState(object):
            marked as offline."""
         self.last_exception = exception
         self.last_exception_time = datetime.now()
-        logging.warning(_("'%s' error talking to zone %s") % (exception,
-            self.api_url))
+        api_url = self.api_url
+        logging.warning(_("'%(exception)s' error talking to "
+                          "zone %(api_url)s") % locals())
 
+        max_errors = FLAGS.zone_failures_to_offline:
         self.attempt += 1
-        if self.attempt >= FLAGS.zone_failures_to_offline:
+        if self.attempt >= max_errors:
             self.is_active = False
-            logging.error(_("No answer from zone %s after %d "
-                "attempts. Marking inactive.") % (self.api_url,
-                FLAGS.zone_failures_to_offline))
+            logging.error(_("No answer from zone %(api_url)s "
+                            "after %(max_errors)d "
+                            "attempts. Marking inactive.") % locals())
 
 
 def _call_novatools(zone):
