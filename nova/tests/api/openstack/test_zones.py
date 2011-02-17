@@ -52,7 +52,20 @@ def zone_delete(context, zone_id):
     pass
 
 
-def zone_get_all(context):
+def zone_get_all_scheduler(x, y, z):
+    return [
+        dict(id=1, api_url='http://foo.com', username='bob',
+                 password='xxx'),
+        dict(id=2, api_url='http://blah.com', username='alice',
+                 password='qwerty')
+    ]
+
+
+def zone_get_all_scheduler_empty(x, y, z):
+    return [] 
+
+
+def zone_get_all_db(context):
     return [
         dict(id=1, api_url='http://foo.com', username='bob',
                  password='xxx'),
@@ -74,7 +87,6 @@ class ZonesTest(unittest.TestCase):
         FLAGS.allow_admin_api = True
 
         self.stubs.Set(nova.db, 'zone_get', zone_get)
-        self.stubs.Set(nova.db, 'zone_get_all', zone_get_all)
         self.stubs.Set(nova.db, 'zone_update', zone_update)
         self.stubs.Set(nova.db, 'zone_create', zone_create)
         self.stubs.Set(nova.db, 'zone_delete', zone_delete)
@@ -83,13 +95,27 @@ class ZonesTest(unittest.TestCase):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
 
-    def test_get_zone_list(self):
+    def test_get_zone_list_scheduler(self):
+        self.stubs.Set(zones.Controller, '_call_scheduler',
+                            zone_get_all_scheduler)
         req = webob.Request.blank('/v1.0/zones')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
         self.assertEqual(len(res_dict['zones']), 2)
+
+    def test_get_zone_list_db(self):
+        self.stubs.Set(zones.Controller, '_call_scheduler', 
+            zone_get_all_scheduler_empty)
+        self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
+        req = webob.Request.blank('/v1.0/zones')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(len(res_dict['zones']), 2)
+
 
     def test_get_zone_by_id(self):
         req = webob.Request.blank('/v1.0/zones/1')
