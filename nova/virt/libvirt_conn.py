@@ -46,6 +46,7 @@ from xml.dom import minidom
 
 from eventlet import greenthread
 from eventlet import event
+from eventlet import semaphore
 from eventlet import tpool
 
 import IPy
@@ -63,6 +64,7 @@ from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import images
 
+libvirt_semaphore = semaphore.Semaphore()
 libvirt = None
 libxml2 = None
 Template = None
@@ -1237,17 +1239,19 @@ class IptablesFirewallDriver(FirewallDriver):
         self.apply_ruleset()
 
     def apply_ruleset(self):
-        current_filter, _ = self.execute('sudo iptables-save -t filter')
-        current_lines = current_filter.split('\n')
-        new_filter = self.modify_rules(current_lines, 4)
-        self.execute('sudo iptables-restore',
-                     process_input='\n'.join(new_filter))
-        if(FLAGS.use_ipv6):
-            current_filter, _ = self.execute('sudo ip6tables-save -t filter')
+        with libvirt_semaphore:
+            current_filter, _ = self.execute('sudo iptables-save -t filter')
             current_lines = current_filter.split('\n')
-            new_filter = self.modify_rules(current_lines, 6)
-            self.execute('sudo ip6tables-restore',
+            new_filter = self.modify_rules(current_lines, 4)
+            self.execute('sudo iptables-restore',
                          process_input='\n'.join(new_filter))
+            if(FLAGS.use_ipv6):
+                current_filter, _ = self.execute('sudo ip6tables-save '
+                                                 '-t filter')
+                current_lines = current_filter.split('\n')
+                new_filter = self.modify_rules(current_lines, 6)
+                self.execute('sudo ip6tables-restore',
+                             process_input='\n'.join(new_filter))
 
     def modify_rules(self, current_lines, ip_version=4):
         ctxt = context.get_admin_context()
