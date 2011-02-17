@@ -110,6 +110,7 @@ class NetworkManager(manager.Manager):
 
     This class must be subclassed to support specific topologies.
     """
+    timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
         if not network_driver:
@@ -137,6 +138,19 @@ class NetworkManager(manager.Manager):
                 self.driver.bind_floating_ip(floating_ip['address'], False)
                 self.driver.ensure_floating_forward(floating_ip['address'],
                                                     fixed_address)
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        super(NetworkManager, self).periodic_tasks(context)
+        if self.timeout_fixed_ips:
+            now = utils.utcnow()
+            timeout = FLAGS.fixed_ip_disassociate_timeout
+            time = now - datetime.timedelta(seconds=timeout)
+            num = self.db.fixed_ip_disassociate_all_by_timeout(context,
+                                                               self.host,
+                                                               time)
+            if num:
+                LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
@@ -306,6 +320,7 @@ class FlatManager(NetworkManager):
     not do any setup in this mode, it must be done manually.  Requests to
     169.254.169.254 port 80 will need to be forwarded to the api server.
     """
+    timeout_fixed_ips = False
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -397,14 +412,7 @@ class FlatDHCPManager(FlatManager):
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
         super(FlatDHCPManager, self).periodic_tasks(context)
-        now = datetime.datetime.utcnow()
-        timeout = FLAGS.fixed_ip_disassociate_timeout
-        time = now - datetime.timedelta(seconds=timeout)
-        num = self.db.fixed_ip_disassociate_all_by_timeout(context,
-                                                           self.host,
-                                                           time)
-        if num:
-            LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
+        self._disassociate_old_ips(context)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -462,18 +470,6 @@ class VlanManager(NetworkManager):
     For this mode to be useful, each project will need a vpn to access the
     instances in its subnet.
     """
-
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-        super(VlanManager, self).periodic_tasks(context)
-        now = datetime.datetime.utcnow()
-        timeout = FLAGS.fixed_ip_disassociate_timeout
-        time = now - datetime.timedelta(seconds=timeout)
-        num = self.db.fixed_ip_disassociate_all_by_timeout(context,
-                                                           self.host,
-                                                           time)
-        if num:
-            LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
