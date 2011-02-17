@@ -412,10 +412,10 @@ class VMOps(object):
                 if ramdisk:
                     args['ramdisk-file'] = ramdisk
                 task2 = self._session.async_call_plugin('glance', fn, args)
+                LOG.debug(_("kernel/ramdisk files removed"))
             self._session.wait_for_task(instance.id, task1)
             if destroy_kernel_ramdisk:
                 self._session.wait_for_task(instance.id, task2)
-            LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
