@@ -713,16 +713,21 @@ class InstanceTypeCommands(object):
         else:
             print "%s created" % name
 
-    def delete(self, name):
+    def delete(self, name, purge=None):
         """Marks instance types / flavors as deleted
         arguments: name"""
         try:
-            instance_types.destroy(name)
+            if purge == "--purge":
+                instance_types.purge(name)
+                verb = "deleted"
+            else:
+                instance_types.destroy(name)
+                verb = "purged"
         except exception.ApiError:
             print "Valid instance type name is required"
             sys.exit(1)
         else:
-            print "%s deleted" % name
+            print "%s %s" % (name, verb)
 
     def list(self, name=None):
         """Lists all or specific instance types / flavors

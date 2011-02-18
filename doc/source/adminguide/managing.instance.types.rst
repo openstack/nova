@@ -36,7 +36,7 @@ the "flavor" command as a synonym for "instance_types".
 
 To see all currently active instance types, use the list subcommand::
 
-    $ nova-manage instance_type list
+    # nova-manage instance_type list
     m1.medium: Memory: 4096MB, VCPUS: 2, Storage: 40GB, FlavorID: 3, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.large: Memory: 8192MB, VCPUS: 4, Storage: 80GB, FlavorID: 4, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.tiny: Memory: 512MB, VCPUS: 1, Storage: 0GB, FlavorID: 1, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
@@ -46,7 +46,7 @@ To see all currently active instance types, use the list subcommand::
 By default, the list subcommand only shows active instance types. To see all instance types 
 (even those deleted), add the argument 1 after the list subcommand like so::
 
-    $ nova-manage instance_type list 1
+    # nova-manage instance_type list 1
     m1.medium: Memory: 4096MB, VCPUS: 2, Storage: 40GB, FlavorID: 3, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.large: Memory: 8192MB, VCPUS: 4, Storage: 80GB, FlavorID: 4, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.tiny: Memory: 512MB, VCPUS: 1, Storage: 0GB, FlavorID: 1, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
@@ -76,4 +76,8 @@ To delete an instance type, use the "delete" subcommand and specify the name::
 Please note that the "delete" command only marks the instance type as 
 inactive in the database; it does not actually remove the instance type. This is done
 to preserve the instance type definition for long running instances (which may not 
-terminate for months or years).
+terminate for months or years). If you are sure that you want to delete this instance 
+type from the database, pass the "--purge" flag after the name::
+
+    # nova-manage instance_type delete m1.xxlarge --purge
+    m1.xxlarge deleted
