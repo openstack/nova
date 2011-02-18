@@ -60,7 +60,6 @@ class SchedulerManager(manager.Manager):
             host = getattr(self.driver, driver_method)(elevated, *args,
                                                        **kwargs)
         except AttributeError, e:
-            print 'manager.attrerr', e
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         rpc.cast(context,

@@ -977,7 +977,7 @@ class LibvirtConnection(object):
         """
         Update compute manager resource info on Service table.
         This method is called when nova-coompute launches, and
-        whenever admin executes "nova-manage service updateresource".
+        whenever admin executes "nova-manage service update_resource".
 
         """
         try:

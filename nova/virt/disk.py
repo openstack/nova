@@ -112,7 +112,6 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
 
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
-    print '_link_device:0:', nbd, '::', image
     if nbd:
         device = _allocate_device()
         utils.execute('sudo qemu-nbd -c %s %s' % (device, image))

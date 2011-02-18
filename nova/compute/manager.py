@@ -38,6 +38,8 @@ import datetime
 import random
 import string
 import socket
+import os
+import tempfile
 import time
 import functools
 
@@ -577,14 +579,17 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     def mktmpfile(self, context):
         """make tmpfile under FLAGS.instance_path."""
-        return utils.mktmpfile(FLAGS.instances_path)
+        fd, name = tempfile.mkstemp(dir=FLAGS.instances_path)
+        # No essential reason to write dateinfo. just for debugging reason.
+        os.fdopen(fd, 'w').write(str(datetime.datetime.utcnow()))
+        return name
 
     @exception.wrap_exception
     def confirm_tmpfile(self, context, path):
         """Confirm existence of the tmpfile given by path."""
-        if not utils.exists(path):
+        if not os.path.exists(path):
             raise exception.NotFound(_('%s not found') % path)
-        return utils.remove(path)
+        return os.remove(path)
 
     @exception.wrap_exception
     def update_available_resource(self, context):
@@ -683,7 +688,7 @@ class ComputeManager(manager.Manager):
         Post operations for live migration.
         Mainly, database updating.
         """
-        LOG.info('post_live_migration() is started..')
+        LOG.info(_('post_live_migration() is started..'))
         instance_id = instance_ref['id']
 
         # Detaching volumes.
@@ -705,7 +710,7 @@ class ComputeManager(manager.Manager):
         # Not return if fixed_ip is not found, otherwise,
         # instance never be accessible..
         if None == fixed_ip:
-            logging.warn('fixed_ip is not found for %s ' % i_name)
+            LOG.warn(_('fixed_ip is not found for %s.') % i_name)
         self.db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
 
         try:

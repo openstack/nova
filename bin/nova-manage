@@ -574,7 +574,7 @@ class ServiceCommands(object):
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
-    def describeresource(self, host):
+    def describe_resource(self, host):
         """describe cpu/memory/hdd info for host."""
 
         result = rpc.call(context.get_admin_context(),
@@ -606,7 +606,7 @@ class ServiceCommands(object):
                                                   val['memory_mb'],
                                                   val['local_gb'])
 
-    def updateresource(self, host):
+    def update_resource(self, host):
         """update available vcpu/memory/disk info for host."""
 
         ctxt = context.get_admin_context()
@@ -618,9 +618,9 @@ class ServiceCommands(object):
         if len(service_refs) <= 0:
             raise exception.Invalid(_('%s is not compute node.') % host)
 
-        result = rpc.call(ctxt,
-                          db.queue_get_for(ctxt, FLAGS.compute_topic, host),
-                          {"method": "update_available_resource"})
+        rpc.call(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 {"method": "update_available_resource"})
 
 
 class LogCommands(object):
