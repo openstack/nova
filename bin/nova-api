@@ -50,6 +50,7 @@ for api in API_ENDPOINTS:
                          getattr(FLAGS, "%s_port" % api),
                          "Port to listen to for API %s" % api)
 
+
 def run_app(paste_config_file):
     LOG.debug(_("Using paste.deploy config at: %s"), paste_config_file)
     apps = []
