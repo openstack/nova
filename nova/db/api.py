@@ -576,7 +576,7 @@ def project_get_network(context, project_id, associate=True):
 
     """
 
-    return IMPL.project_get_network(context, project_id)
+    return IMPL.project_get_network(context, project_id, associate)
 
 
 def project_get_network_v6(context, project_id):
@@ -1035,3 +1035,31 @@ def instance_type_purge(context, name):
        Use instance_type_destroy for most cases
     """
     return IMPL.instance_type_purge(context, name)
+
+
+####################
+
+
+def zone_create(context, values):
+    """Create a new child Zone entry."""
+    return IMPL.zone_create(context, values)
+
+
+def zone_update(context, zone_id, values):
+    """Update a child Zone entry."""
+    return IMPL.zone_update(context, values)
+
+
+def zone_delete(context, zone_id):
+    """Delete a child Zone."""
+    return IMPL.zone_delete(context, zone_id)
+
+
+def zone_get(context, zone_id):
+    """Get a specific child Zone."""
+    return IMPL.zone_get(context, zone_id)
+
+
+def zone_get_all(context):
+    """Get all child Zones."""
+    return IMPL.zone_get_all(context)

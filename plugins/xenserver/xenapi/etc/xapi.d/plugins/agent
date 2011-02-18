@@ -93,9 +93,8 @@ def password(self, arg_dict):
 
 @jsonify
 def resetnetwork(self, arg_dict):
-    """
-    Writes a resquest to xenstore that tells the agent to reset networking.
-
+    """Writes a resquest to xenstore that tells the agent
+    to reset networking.
     """
     arg_dict['value'] = json.dumps({'name': 'resetnetwork', 'value': ''})
     request_id = arg_dict['id']
