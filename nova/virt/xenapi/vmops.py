@@ -67,13 +67,19 @@ class VMOps(object):
             raise exception.Duplicate(_('Attempted to create'
             ' non-unique name %s') % instance.name)
 
-        bridge = db.network_get_by_instance(context.get_admin_context(),
-                                            instance['id'])['bridge']
-        network_ref = \
-            NetworkHelper.find_network_with_bridge(self._session, bridge)
+        #ensure enough free memory is available
+        if not VMHelper.ensure_free_mem(self._session, instance):
+                name = instance['name']
+                LOG.exception(_('instance %(name)s: not enough free memory')
+                              % locals())
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTDOWN)
+                return
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
+
         #if kernel is not present we must download a raw disk
         if instance.kernel_id:
             disk_image_type = ImageType.DISK
@@ -99,16 +105,70 @@ class VMOps(object):
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
-        if network_ref:
-            VMHelper.create_vif(self._session, vm_ref,
-                                network_ref, instance.mac_address)
+        # write network info
+        admin_context = context.get_admin_context()
+
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # I've decided to go ahead and consider multiple IPs and networks
+        # at this stage even though they aren't implemented because these will
+        # be needed for multi-nic and there was no sense writing it for single
+        # network/single IP and then having to turn around and re-write it
+        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
+        for network in db.network_get_all_by_instance(admin_context,
+                                                      instance['id']):
+            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+
+            def ip_dict(ip):
+                return {'netmask': network['netmask'],
+                        'enabled': '1',
+                        'ip': ip.address}
+
+            mac_id = instance.mac_address.replace(':', '')
+            location = 'vm-data/networking/%s' % mac_id
+            mapping = {'label': network['label'],
+                       'gateway': network['gateway'],
+                       'mac': instance.mac_address,
+                       'dns': [network['dns']],
+                       'ips': [ip_dict(ip) for ip in network_IPs]}
+            self.write_to_param_xenstore(vm_ref, {location: mapping})
+
+            # TODO(tr3buchet) - remove comment in multi-nic
+            # this bit here about creating the vifs will be updated
+            # in multi-nic to handle multiple IPs on the same network
+            # and multiple networks
+            # for now it works as there is only one of each
+            bridge = network['bridge']
+            network_ref = \
+                NetworkHelper.find_network_with_bridge(self._session, bridge)
+
+            if network_ref:
+                VMHelper.create_vif(self._session, vm_ref,
+                                    network_ref, instance.mac_address)
+
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                 % locals())
 
+        def _inject_onset_files():
+            onset_files = instance.onset_files
+            if onset_files:
+                # Check if this is a JSON-encoded string and convert if needed.
+                if isinstance(onset_files, basestring):
+                    try:
+                        onset_files = json.loads(onset_files)
+                    except ValueError:
+                        LOG.exception(_("Invalid value for onset_files: '%s'")
+                                % onset_files)
+                        onset_files = []
+                # Inject any files, if specified
+                for path, contents in instance.onset_files:
+                    LOG.debug(_("Injecting file path: '%s'") % path)
+                    self.inject_file(instance, path, contents)
         # NOTE(armando): Do we really need to do this in virt?
+        # NOTE(tr3buchet): not sure but wherever we do it, we need to call
+        #                  reset_network afterwards
         timer = utils.LoopingCall(f=None)
 
         def _wait_for_boot():
@@ -119,6 +179,8 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance['name'])
                     timer.stop()
+                    _inject_onset_files()
+                    return True
             except Exception, exc:
                 LOG.warn(exc)
                 LOG.exception(_('instance %s: failed to boot'),
@@ -127,8 +189,13 @@ class VMOps(object):
                                       instance['id'],
                                       power_state.SHUTDOWN)
                 timer.stop()
+                return False
 
         timer.f = _wait_for_boot
+
+        # call reset networking
+        self.reset_network(instance)
+
         return timer.start(interval=0.5, now=True)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
@@ -161,7 +228,8 @@ class VMOps(object):
                 instance_name = instance_or_vm.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
-            raise Exception(_('Instance not present %s') % instance_name)
+            raise exception.NotFound(
+                            _('Instance not present %s') % instance_name)
         return vm
 
     def snapshot(self, instance, image_id):
@@ -255,6 +323,32 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
+    def inject_file(self, instance, b64_path, b64_contents):
+        """Write a file to the VM instance. The path to which it is to be
+        written and the contents of the file need to be supplied; both should
+        be base64-encoded to prevent errors with non-ASCII characters being
+        transmitted. If the agent does not support file injection, or the user
+        has disabled it, a NotImplementedError will be raised.
+        """
+        # Files/paths *should* be base64-encoded at this point, but
+        # double-check to make sure.
+        b64_path = utils.ensure_b64_encoding(b64_path)
+        b64_contents = utils.ensure_b64_encoding(b64_contents)
+
+        # Need to uniquely identify this request.
+        transaction_id = str(uuid.uuid4())
+        args = {'id': transaction_id, 'b64_path': b64_path,
+                'b64_contents': b64_contents}
+        # If the agent doesn't support file injection, a NotImplementedError
+        # will be raised with the appropriate message.
+        resp = self._make_agent_call('inject_file', instance, '', args)
+        resp_dict = json.loads(resp)
+        if resp_dict['returncode'] != '0':
+            # There was some other sort of error; the message will contain
+            # a description of the error.
+            raise RuntimeError(resp_dict['message'])
+        return resp_dict['message']
+
     def _shutdown(self, instance, vm):
         """Shutdown an instance """
         state = self.get_info(instance['name'])['state']
@@ -286,8 +380,23 @@ class VMOps(object):
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
         try:
-            task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance.id, task)
+            kernel = None
+            ramdisk = None
+            if instance.kernel_id or instance.ramdisk_id:
+                (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+                                    self._session, vm)
+            task1 = self._session.call_xenapi('Async.VM.destroy', vm)
+            LOG.debug(_("Removing kernel/ramdisk files"))
+            fn = "remove_kernel_ramdisk"
+            args = {}
+            if kernel:
+                args['kernel-file'] = kernel
+            if ramdisk:
+                args['ramdisk-file'] = ramdisk
+            task2 = self._session.async_call_plugin('glance', fn, args)
+            self._session.wait_for_task(instance.id, task1)
+            self._session.wait_for_task(instance.id, task2)
+            LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -374,6 +483,14 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
+    def reset_network(self, instance):
+        """
+        Creates uuid arg to pass to make_agent_call and calls it.
+
+        """
+        args = {'id': str(uuid.uuid4())}
+        resp = self._make_agent_call('resetnetwork', instance, '', args)
+
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
         from 'path' downward. Returns a dict with the sub-paths as keys,
@@ -443,6 +560,11 @@ class VMOps(object):
             if 'TIMEOUT:' in err_msg:
                 LOG.error(_('TIMEOUT: The call to %(method)s timed out. '
                         'VM id=%(instance_id)s; args=%(strargs)s') % locals())
+            elif 'NOT IMPLEMENTED:' in err_msg:
+                LOG.error(_('NOT IMPLEMENTED: The call to %(method)s is not'
+                        ' supported by the agent. VM id=%(instance_id)s;'
+                        ' args=%(strargs)s') % locals())
+                raise NotImplementedError(err_msg)
             else:
                 LOG.error(_('The call to %(method)s returned an error: %(e)s. '
                         'VM id=%(instance_id)s; args=%(strargs)s') % locals())

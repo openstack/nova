@@ -139,6 +139,16 @@ class VMHelper(HelperBase):
         return vm_ref
 
     @classmethod
+    def ensure_free_mem(cls, session, instance):
+        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        mem = long(instance_type['memory_mb']) * 1024 * 1024
+        #get free memory from host
+        host = session.get_xenapi_host()
+        host_free_mem = long(session.get_xenapi().host.
+                             compute_free_memory(host))
+        return host_free_mem >= mem
+
+    @classmethod
     def create_vbd(cls, session, vm_ref, vdi_ref, userdevice, bootable):
         """Create a VBD record.  Returns a Deferred that gives the new
         VBD reference."""
@@ -384,7 +394,7 @@ class VMHelper(HelperBase):
             pv = True
         elif pv_str.lower() == 'false':
             pv = False
-        LOG.debug(_("PV Kernel in VDI:%d"), pv)
+        LOG.debug(_("PV Kernel in VDI:%s"), pv)
         return pv
 
     @classmethod
@@ -438,6 +448,14 @@ class VMHelper(HelperBase):
                 return vdis
             else:
                 return None
+
+    @classmethod
+    def lookup_kernel_ramdisk(cls, session, vm):
+        vm_rec = session.get_xenapi().VM.get_record(vm)
+        if 'PV_kernel' in vm_rec and 'PV_ramdisk' in vm_rec:
+            return (vm_rec['PV_kernel'], vm_rec['PV_ramdisk'])
+        else:
+            return (None, None)
 
     @classmethod
     def compile_info(cls, record):

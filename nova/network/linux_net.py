@@ -44,7 +44,7 @@ flags.DEFINE_string('dhcp_domain',
 
 flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
-flags.DEFINE_string('public_interface', 'vlan1',
+flags.DEFINE_string('public_interface', 'eth0',
                     'Interface for public IP addresses')
 flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
@@ -54,6 +54,8 @@ flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
 flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
+flags.DEFINE_string('input_chain', 'INPUT',
+                    'chain to add nova_input to')
 
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
