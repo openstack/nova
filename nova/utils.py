@@ -124,32 +124,41 @@ def fetchfile(url, target):
     execute("curl --fail %s -o %s" % (url, target))
 
 
-def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
-    env = os.environ.copy()
-    if addl_env:
-        env.update(addl_env)
-    obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-    result = None
-    if process_input != None:
-        result = obj.communicate(process_input)
-    else:
-        result = obj.communicate()
-    obj.stdin.close()
-    if obj.returncode:
-        LOG.debug(_("Result was %s") % obj.returncode)
-        if check_exit_code and obj.returncode != 0:
-            (stdout, stderr) = result
-            raise ProcessExecutionError(exit_code=obj.returncode,
-                                        stdout=stdout,
-                                        stderr=stderr,
-                                        cmd=cmd)
-    # NOTE(termie): this appears to be necessary to let the subprocess call
-    #               clean something up in between calls, without it two
-    #               execute calls in a row hangs the second one
-    greenthread.sleep(0)
-    return result
+def execute(cmd, process_input=None, addl_env=None, check_exit_code=True, attempts=1):
+    while attempts > 0:
+        attempts -= 1
+        try:
+            LOG.debug(_("Running cmd (subprocess): %s"), cmd)
+            env = os.environ.copy()
+            if addl_env:
+                env.update(addl_env)
+            obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            result = None
+            if process_input != None:
+                result = obj.communicate(process_input)
+            else:
+                result = obj.communicate()
+            obj.stdin.close()
+            if obj.returncode:
+                LOG.debug(_("Result was %s") % obj.returncode)
+                if check_exit_code and obj.returncode != 0:
+                    (stdout, stderr) = result
+                    raise ProcessExecutionError(exit_code=obj.returncode,
+                                                stdout=stdout,
+                                                stderr=stderr,
+                                                cmd=cmd)
+            # NOTE(termie): this appears to be necessary to let the subprocess call
+            #               clean something up in between calls, without it two
+            #               execute calls in a row hangs the second one
+            greenthread.sleep(0)
+            return result
+        except ProcessExecutionError:
+            if not attempts:
+                raise
+            else:
+                greenthread.sleep(random.randint(50,300)/100)
+                pass
 
 
 def ssh_execute(ssh, cmd, process_input=None,

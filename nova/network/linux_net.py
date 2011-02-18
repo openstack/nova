@@ -17,6 +17,7 @@
 Implements vlans, bridges, and iptables rules using linux utilities.
 """
 
+import inspect
 import os
 
 from nova import db
@@ -24,7 +25,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
-
 
 LOG = logging.getLogger("nova.linux_net")
 
@@ -63,73 +63,168 @@ flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
                     'dmz range that should be accepted')
 
 
+binary_name = os.path.basename(inspect.stack()[-1][1])
+
+
+class IptablesRule(object):
+    def __init__(self, chain, rule, wrap=True):
+        self.chain = chain
+        self.rule = rule
+        self.wrap = wrap
+
+    def __eq__(self, other):
+        return ((self.chain == other.chain) and
+                (self.rule == other.rule) and
+                (self.wrap == other.wrap))
+
+    def __ne__(self, other):
+        return ((self.chain != other.chain) or
+                (self.rule != other.rule) or
+                (self.wrap != other.wrap))
+
+    def __str__(self):
+        if self.wrap:
+            chain = '%s-%s' % (binary_name, self.chain)
+        else:
+            chain = self.chain
+        return '-A %s %s' % (chain, self.rule)
+
+
+class IptablesTable(object):
+    def __init__(self):
+        self.rules = []
+        self.chains = set()
+
+    def add_chain(self, name):
+        self.chains.add(name)
+
+    def remove_chain(self, name):
+        self.chains.remove(name)
+
+    def add_rule(self, chain, rule, wrap=True):
+        if wrap and chain not in self.chains:
+            raise ValueError(_("Unknown chain: %r") % chain)
+
+        self.rules.append(IptablesRule(chain, rule, wrap))
+
+    def remove_rule(self, chain, rule):
+        self.rules.remove(IptablesRule(chain, rule))
+
+class IptablesManager(object):
+    def __init__(self, execute=None):
+        if not execute:
+            if FLAGS.fake_network:
+                self.execute = lambda *args, **kwargs: ('', '')
+            else:
+                self.execute = utils.execute
+        else:
+            self.execute = execute
+
+        self.ipv4 = { 'filter': IptablesTable(),
+                      'nat': IptablesTable() }
+        self.ipv6 = { 'filter': IptablesTable(),
+                      'nat': IptablesTable() }
+
+        self.ipv4['nat'].add_chain('SNATTING')
+        self.ipv4['nat'].add_rule('POSTROUTING',
+                                  '-j %s-SNATTING' % (binary_name,),
+                                  wrap=False)
+
+        self.ipv4['filter'].add_chain('local')
+        self.ipv4['filter'].add_rule('FORWARD',
+                                    '-j %s-local' % (binary_name,),
+                                    wrap=False)
+
+        # Wrap the builtin chains
+        builtin_chains = {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
+                          'nat': ['PREROUTING', 'INPUT',
+                                  'OUTPUT', 'POSTROUTING']}
+
+        for table, chains in builtin_chains.iteritems():
+            for chain in chains:
+                self.ipv4[table].add_chain(chain)
+                self.ipv4[table].add_rule(chain,
+                                          '-j %s-%s' % (binary_name, chain),
+                                          wrap=False)
+
+
+    def apply(self):
+        s = [('iptables', self.ipv4)]
+        if FLAGS.use_ipv6:
+            s += [('ip6tables', self.ipv6)]
+
+        for cmd, tables in s:
+            for table in tables:
+                current_filter, _ = self.execute('sudo %s-save -t %s' %
+                                                 (cmd, table), attempts=5)
+                current_lines = current_filter.split('\n')
+                new_filter = self.modify_rules(current_lines, tables[table])
+                self.execute('sudo %s-restore' % (cmd,),
+                             process_input='\n'.join(new_filter),
+                             attempts=5)
+
+    def modify_rules(self, current_lines, table, binary=None):
+
+        chains = table.chains
+        rules = table.rules
+
+        # Remove any trace of our rules
+        new_filter = filter(lambda l: '%s' % binary not in l, current_lines)
+
+        seen_chains = False
+        for rules_index in range(len(new_filter)):
+            if not seen_chains:
+                if new_filter[rules_index].startswith(':'):
+                    seen_chains = True
+            elif seen_chains == 1:
+                if not new_filter[rules_index].startswith(':'):
+                    break
+
+        new_filter[rules_index:rules_index] = [str(rule) for rule in rules]
+        new_filter[rules_index:rules_index] = [':%s-%s - [0:0]' % \
+                                               (binary_name, name,) \
+                                               for name in chains]
+
+        return new_filter
+
+
+iptables_manager = IptablesManager()
+
+
 def metadata_forward():
     """Create forwarding rule for metadata"""
-    _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
-             "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
+    iptables_manager.ipv4['nat'].add_rule("PREROUTING",
+                                          "-s 0.0.0.0/0 -d 169.254.169.254/32 "
+                                          "-p tcp -m tcp --dport 80 -j DNAT "
+                                          "--to-destination %s:%s" % \
+                                          (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
+    iptables_manager.apply()
 
 
 def init_host():
     """Basic networking setup goes here"""
 
-    if FLAGS.use_nova_chains:
-        _execute("sudo iptables -N nova_input", check_exit_code=False)
-        _execute("sudo iptables -D %s -j nova_input" % FLAGS.input_chain,
-                 check_exit_code=False)
-        _execute("sudo iptables -A %s -j nova_input" % FLAGS.input_chain)
-
-        _execute("sudo iptables -N nova_forward", check_exit_code=False)
-        _execute("sudo iptables -D FORWARD -j nova_forward",
-                 check_exit_code=False)
-        _execute("sudo iptables -A FORWARD -j nova_forward")
-
-        _execute("sudo iptables -N nova_output", check_exit_code=False)
-        _execute("sudo iptables -D OUTPUT -j nova_output",
-                 check_exit_code=False)
-        _execute("sudo iptables -A OUTPUT -j nova_output")
-
-        _execute("sudo iptables -t nat -N nova_prerouting",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -D PREROUTING -j nova_prerouting",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A PREROUTING -j nova_prerouting")
-
-        _execute("sudo iptables -t nat -N nova_postrouting",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -D POSTROUTING -j nova_postrouting",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A POSTROUTING -j nova_postrouting")
-
-        _execute("sudo iptables -t nat -N nova_snatting",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -D POSTROUTING -j nova_snatting",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A POSTROUTING -j nova_snatting")
-
-        _execute("sudo iptables -t nat -N nova_output", check_exit_code=False)
-        _execute("sudo iptables -t nat -D OUTPUT -j nova_output",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A OUTPUT -j nova_output")
-    else:
-        # NOTE(vish): This makes it easy to ensure snatting rules always
-        #             come after the accept rules in the postrouting chain
-        _execute("sudo iptables -t nat -N SNATTING",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -D POSTROUTING -j SNATTING",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A POSTROUTING -j SNATTING")
-
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
-    _confirm_rule("SNATTING", "-t nat -s %s "
-             "-j SNAT --to-source %s"
-             % (FLAGS.fixed_range, FLAGS.routing_source_ip), append=True)
+    iptables_manager.ipv4['nat'].add_rule("SNATTING",
+                                          "-s %s -j SNAT --to-source %s" % \
+                                           (FLAGS.fixed_range,
+                                            FLAGS.routing_source_ip))
 
-    _confirm_rule("POSTROUTING", "-t nat -s %s -d %s -j ACCEPT" %
-                  (FLAGS.fixed_range, FLAGS.dmz_cidr))
-    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
-                  {'range': FLAGS.fixed_range})
+    iptables_manager.ipv4['nat'].add_rule("POSTROUTING",
+                                          "-s %s -j SNAT --to-source %s" % \
+                                           (FLAGS.fixed_range,
+                                            FLAGS.routing_source_ip))
+
+    iptables_manager.ipv4['nat'].add_rule("POSTROUTING",
+                                          "-s %s -d %s -j ACCEPT" % \
+                                          (FLAGS.fixed_range, FLAGS.dmz_cidr))
+
+    iptables_manager.ipv4['nat'].add_rule("POSTROUTING",
+                                          "-s %(range)s -d %(range)s "
+                                          "-j ACCEPT" % \
+                                          {'range': FLAGS.fixed_range})
+    iptables_manager.apply()
 
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
@@ -147,32 +242,33 @@ def unbind_floating_ip(floating_ip):
 
 def ensure_vlan_forward(public_ip, port, private_ip):
     """Sets up forwarding rules for vlan"""
-    _confirm_rule("FORWARD", "-d %s -p udp --dport 1194 -j ACCEPT" %
-                  private_ip)
-    _confirm_rule("PREROUTING",
-                  "-t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
-            % (public_ip, port, private_ip))
+    iptables_manager.ipv4['filter'].add_rule("FORWARD",
+                                             "-d %s -p udp "
+                                             "--dport 1194 "
+                                             "-j ACCEPT" % private_ip)
+    iptables_manager.ipv4['nat'].add_rule("PREROUTING",
+                                          "-d %s -p udp "
+                                          "--dport %s -j DNAT --to %s:1194" %
+                                          (public_ip, port, private_ip))
+    iptables_manager.apply()
 
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
-    _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
-                           % (floating_ip, fixed_ip))
-    _confirm_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
-                           % (floating_ip, fixed_ip))
-    _confirm_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
-                           % (fixed_ip, floating_ip))
-
+    for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
+        iptables_manager.ipv4['nat'].add_rule(chain, rule)
+    iptables_manager.apply()
 
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
-    _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
-                          % (floating_ip, fixed_ip))
-    _remove_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
-                          % (floating_ip, fixed_ip))
-    _remove_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
-                          % (fixed_ip, floating_ip))
+    for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
+        iptables_manager.ipv4['nat'].remove_rule(chain, rule)
+    iptables_manager.apply()
 
+def floating_forward_rules(floating_ip, fixed_ip):
+    return [("PREROUTING", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
+            ("OUTPUT", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
+            ("SNATTING", "-d %s -j DNAT --to %s" % (fixed_ip, floating_ip))]
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
@@ -258,19 +354,12 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                            "enslave it to bridge %s.\n" % (interface, bridge)):
             raise exception.Error("Failed to add interface: %s" % err)
 
-    if FLAGS.use_nova_chains:
-        (out, err) = _execute("sudo iptables -N nova_forward",
-                              check_exit_code=False)
-        if err != 'iptables: Chain already exists.\n':
-            # NOTE(vish): chain didn't exist link chain
-            _execute("sudo iptables -D FORWARD -j nova_forward",
-                     check_exit_code=False)
-            _execute("sudo iptables -A FORWARD -j nova_forward")
-
-    _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
-    _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
-    _execute("sudo iptables -N nova-local", check_exit_code=False)
-    _confirm_rule("FORWARD", "-j nova-local")
+    iptables_manager.ipv4['filter'].add_rule("FORWARD",
+                                             "--in-interface %s -j ACCEPT" % \
+                                             bridge)
+    iptables_manager.ipv4['filter'].add_rule("FORWARD",
+                                             "--out-interface %s -j ACCEPT" % \
+                                             bridge)
 
 
 def get_dhcp_hosts(context, network_id):
@@ -388,26 +477,6 @@ def _device_exists(device):
     (_out, err) = _execute("ip link show dev %s" % device,
                            check_exit_code=False)
     return not err
-
-
-def _confirm_rule(chain, cmd, append=False):
-    """Delete and re-add iptables rule"""
-    if FLAGS.use_nova_chains:
-        chain = "nova_%s" % chain.lower()
-    if append:
-        loc = "-A"
-    else:
-        loc = "-I"
-    _execute("sudo iptables --delete %s %s" % (chain, cmd),
-             check_exit_code=False)
-    _execute("sudo iptables %s %s %s" % (loc, chain, cmd))
-
-
-def _remove_rule(chain, cmd):
-    """Remove iptables rule"""
-    if FLAGS.use_nova_chains:
-        chain = "%s" % chain.lower()
-    _execute("sudo iptables --delete %s %s" % (chain, cmd))
 
 
 def _dnsmasq_cmd(net):
