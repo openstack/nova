@@ -618,6 +618,45 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class InstanceCommands(object):
+    """Class for managing instances."""
+
+    def list(self, host=None, instance=None):
+        """Show a list of all instances"""
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s" \
+              " %-12s %-10s %-10s %-10s %-5s" % (
+            _('instance'),
+            _('node'),
+            _('type'),
+            _('state'),
+            _('launched'),
+            _('image'),
+            _('kernel'),
+            _('ramdisk'),
+            _('project'),
+            _('user'),
+            _('zone'),
+            _('index'),
+        )
+
+        for instance in db.instance_get_all(context.get_admin_context()):
+            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+                  "  %-10s %-10s %-10s %-5d" % (
+                instance['hostname'],
+                instance['host'],
+                instance['instance_type'],
+                instance['state_description'],
+                instance['launched_at'],
+                instance['image_id'],
+                instance['kernel_id'],
+                instance['ramdisk_id'],
+                instance['project_id'],
+                instance['user_id'],
+                instance['availability_zone'],
+                instance['launch_index']
+                )
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -677,7 +716,9 @@ CATEGORIES = [
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands)]
+    ('volume', VolumeCommands)
+    ('instance', InstanceCommands),
+]
 
 
 def lazy_match(name, key_value_tuples):
