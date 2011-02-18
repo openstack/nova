@@ -515,10 +515,3 @@ def load_paste_app(filename, appname):
     except LookupError:
         pass
     return app
-
-
-def paste_config_to_flags(config, mixins):
-    for k, v in mixins.iteritems():
-        value = config.get(k, v)
-        converted_value = FLAGS[k].parser.Parse(value)
-        setattr(FLAGS, k, converted_value)
