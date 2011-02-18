@@ -135,6 +135,8 @@ class VMOps(object):
         timer.f = _wait_for_boot
 
         # call to reset network to inject network info and configure
+        networks = self.inject_network_info(instance)
+        self.create_vifs(instance, networks)
         self.reset_network(instance)
 
         return timer.start(interval=0.5, now=True)
@@ -414,8 +416,9 @@ class VMOps(object):
                                                              vm_opaque_ref)
         admin_context = context.get_admin_context()
         IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
-        for network in db.network_get_all_by_instance(admin_context,
-                                                      instance['id']):
+        networks = db.network_get_all_by_instance(admin_context,
+                                                  instance['id'])
+        for network in networks:
             network_IPs = [ip for ip in IPs if ip.network_id == network.id]
 
             def ip_dict(ip):
@@ -438,11 +441,23 @@ class VMOps(object):
                 # catch KeyError for domid if instance isn't running
                 pass
 
-            # TODO(tr3buchet) - remove comment in multi-nic
-            # this bit here about creating the vifs will be updated
-            # in multi-nic to handle multiple IPs on the same network
-            # and multiple networks
-            # for now it works as there is only one of each
+        return networks
+
+    def create_vifs(self, instance, networks=None):
+        """
+        Creates vifs for an instance
+
+        """
+        logging.debug(_("creating vif(s) for vm: |%s|"), vm_opaque_ref)
+        if networks is None:
+            networks = db.network_get_all_by_instance(admin_context,
+                                                      instance['id'])
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # this bit here about creating the vifs will be updated
+        # in multi-nic to handle multiple IPs on the same network
+        # and multiple networks
+        # for now it works as there is only one of each
+        for network in networks:
             bridge = network['bridge']
             network_ref = \
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
@@ -456,7 +471,6 @@ class VMOps(object):
         Creates uuid arg to pass to make_agent_call and calls it.
 
         """
-        self.inject_network_info(instance)
         args = {'id': str(uuid.uuid4())}
         resp = self._make_agent_call('resetnetwork', instance, '', args)
 
