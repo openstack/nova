@@ -305,9 +305,10 @@ class VMHelper(HelperBase):
         session.wait_for_task(instance_id, task)
 
     @classmethod
-    def fetch_image(cls, session, instance_id, image, user, project, type):
+    def fetch_image(cls, session, instance_id, image, user, project,
+                    image_type):
         """
-        type is interpreted as an ImageType instance
+        image_type is interpreted as an ImageType instance
         Related flags:
             xenapi_image_service = ['glance', 'objectstore']
             glance_address = 'address for glance services'
@@ -317,14 +318,15 @@ class VMHelper(HelperBase):
 
         if FLAGS.xenapi_image_service == 'glance':
             return cls._fetch_image_glance(session, instance_id, image,
-                                           access, type)
+                                           access, image_type)
         else:
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, user.secret, type)
+                                                access, user.secret,
+                                                image_type)
 
     @classmethod
     def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
-                                type):
+                                image_type):
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
 
@@ -358,7 +360,7 @@ class VMHelper(HelperBase):
 
     @classmethod
     def _fetch_image_glance_disk(cls, session, instance_id, image, access,
-                                 type):
+                                 image_type):
         """Fetch the image from Glance
 
         NOTE:
@@ -378,7 +380,7 @@ class VMHelper(HelperBase):
         vdi_size = virtual_size
         LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
 
-        if type == ImageType.DISK:
+        if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
 
@@ -387,9 +389,9 @@ class VMHelper(HelperBase):
 
         with_vdi_attached_here(session, vdi, False,
                                lambda dev:
-                               _stream_disk(dev, type,
+                               _stream_disk(dev, image_type,
                                             virtual_size, image_file))
-        if (type == ImageType.KERNEL_RAMDISK):
+        if image_type == ImageType.KERNEL_RAMDISK:
             #we need to invoke a plugin for copying VDI's
             #content into proper path
             LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi)
@@ -462,29 +464,33 @@ class VMHelper(HelperBase):
         return image_type
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access, type):
-        if type == ImageType.DISK_VHD:
+    def _fetch_image_glance(cls, session, instance_id, image, access,
+                            image_type):
+        if image_type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(
-                session, instance_id, image, access, type)
+                session, instance_id, image, access, image_type)
         else:
             return cls._fetch_image_glance_disk(
-                session, instance_id, image, access, type)
+                session, instance_id, image, access, image_type)
 
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
-                                 secret, type):
+                                 secret, image_type):
         url = images.image_url(image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
-        fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
+        if image_type == ImageType.KERNEL_RAMDISK:
+            fn = 'get_kernel'
+        else:
+            fn = 'get_vdi'
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = secret
         args['add_partition'] = 'false'
         args['raw'] = 'false'
-        if type != ImageType.KERNEL_RAMDISK:
+        if image_type != ImageType.KERNEL_RAMDISK:
             args['add_partition'] = 'true'
-            if type == ImageType.DISK_RAW:
+            if image_type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
         uuid = session.wait_for_task(instance_id, task)
@@ -857,9 +863,9 @@ def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
 
 
-def _stream_disk(dev, type, virtual_size, image_file):
+def _stream_disk(dev, image_type, virtual_size, image_file):
     offset = 0
-    if type == ImageType.DISK:
+    if image_type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
         _write_partition(virtual_size, dev)
 
