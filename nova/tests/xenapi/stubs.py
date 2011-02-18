@@ -20,6 +20,7 @@ from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
+from nova.virt.xenapi import vmops
 
 
 def stubout_instance_snapshot(stubs):
@@ -170,8 +171,8 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_destroy(self, session_ref, vm_ref):
         fake.destroy_vm(vm_ref)
-
-
+    
+    
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
     def __init__(self, uri):
@@ -205,3 +206,23 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 
     def SR_forget(self, _1, ref):
         pass
+
+class FakeSessionForMigrationTests(fake.SessionBase):
+    """ Stubs out a XenAPISession for Migration tests """
+    def __init__(self, uri):
+        super(FakeSessionForMigrationTests, self).__init__(uri)
+
+
+class FakeSnapshot(vmops.VMOps):
+    def __getattr__(self, key):
+        return 'fake'
+
+    def __exit__(self, type, value, traceback)
+        pass
+
+def fake_get_snapshot(self, instance):
+     return FakeSnapshot()
+
+def stub_out_migration_methods(stubs):
+    stubs.Set(vmops.VMOps, '_get_snapshot', 
+            fake_get_snapshot)
