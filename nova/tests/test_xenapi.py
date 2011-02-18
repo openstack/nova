@@ -362,11 +362,13 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stub_out_migration_methods(self.stubs)
 
     def test_migrate_disk_and_power_off(self):
-        FLAGS.target_host = '127.0.0.1'
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'   
-        destination = '127.0.0.1'
         instance = db.instance_create(self.values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
-        conn.migrate_disk_and_power_off(instance, destination)
+        conn.migrate_disk_and_power_off(instance, '127.0.0.1')
+
+    def test_attach_disk(self):
+        instance = db.instance_create(self.values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        conn = xenapi_conn.get_connection(False)
+        conn.attach_disk(instance, {'base_copy': 'hurr', 'cow': 'durr'})
