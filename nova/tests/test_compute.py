@@ -30,6 +30,7 @@ from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import instance_types
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -266,3 +267,11 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_get_by_flavor_id(self):
+        type = instance_types.get_by_flavor_id(1)
+        self.assertEqual(type, 'm1.tiny')
+
+        type = instance_types.get_by_flavor_id("1")
+        self.assertEqual(type, 'm1.tiny')
+
