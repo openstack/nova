@@ -49,12 +49,16 @@ class InstanceTypeTestCase(test.TestCase):
         new = instance_types.get_all_types()
         self.assertNotEqual(len(starting_inst_list),
                             len(new),
-                            'instance was not created')
+                            'instance type was not created')
         instance_types.destroy(self.name)
         self.assertEqual(1,
                     instance_types.get_instance_type(self.name)["deleted"])
         self.assertEqual(starting_inst_list, instance_types.get_all_types())
         db.instance_type_purge(context.get_admin_context(), self.name)
+        self.assertEqual(len(starting_inst_list),
+                         len(instance_types.get_all_types()),
+                         'instance type not purged')
+
 
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""
