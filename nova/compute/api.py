@@ -473,6 +473,13 @@ class API(base.Base):
         """
         self._cast_compute_message('reset_network', context, instance_id)
 
+    def inject_network_info(self, context, instance_id):
+        """
+        Inject network info for the instance.
+
+        """
+        self._cast_compute_message('inject_network_info', context, instance_id)
+
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "
