@@ -21,10 +21,12 @@ import webob
 
 def webob_factory(url):
     base_url = url
-    def web_request(url, method, body=None):
+    def web_request(url, method=None, body=None):
         req = webob.Request.blank("%s%s" % (base_url, url)) 
-        req.method = method
-        req.body = json.dumps(body)
+        if method:
+            req.method = method
+        if body:
+            req.body = json.dumps(body)
         return req
     return web_request
     

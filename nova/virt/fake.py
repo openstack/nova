@@ -176,6 +176,19 @@ class FakeConnection(object):
         """
         pass
 
+    def migrate_disk_and_power_off(self, instance, dest):
+        """
+        Transfers the disk of a running instance in multiple phases, turning
+        off the instance before the end.
+        """
+        pass
+
+    def attach_disk(self, instance, disk_info):
+        """
+        Attaches the disk to an instance given the metadata disk_info
+        """
+        pass
+
     def pause(self, instance, callback):
         """
         Pause the specified instance.

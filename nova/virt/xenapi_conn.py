@@ -184,14 +184,6 @@ class XenAPIConnection(object):
         """Unpause paused VM instance"""
         self._vmops.unpause(instance, callback)
 
-    def power_off(self, instance):
-        """Shuts down a running VM instance"""
-        self._vmops._shutdown(instance, method='clean')
-
-    def power_on(self, instance):
-        """powers on a powered off VM instance"""
-        self._vmops.power_on(instance)
-
     def migrate_disk_and_power_off(self, instance, dest):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""

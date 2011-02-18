@@ -258,3 +258,10 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_resize_instance(self):
+        """Ensure instance can be migrated/resized"""
+        instance_id = self._create_instance()
+        self.compute.run_instnce(self.context, instance_id)
+        self.compute.prep_resize(self.context, instance_id)
+
