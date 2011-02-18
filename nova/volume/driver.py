@@ -21,6 +21,7 @@ Drivers for volumes.
 """
 
 import time
+import os
 
 from nova import exception
 from nova import flags
@@ -36,6 +37,8 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
 flags.DEFINE_string('num_shell_tries', 3,
                     'number of times to attempt to run flakey shell commands')
+flags.DEFINE_string('num_iscsi_scan_tries', 3,
+                    'number of times to rescan iSCSI target to find volume')
 flags.DEFINE_integer('num_shelves',
                     100,
                     'Number of vblade shelves')
@@ -294,40 +297,133 @@ class ISCSIDriver(VolumeDriver):
         self._execute("sudo ietadm --op delete --tid=%s" %
                       iscsi_target)
 
-    def _get_name_and_portal(self, volume):
-        """Gets iscsi name and portal from volume name and host."""
+    def _do_iscsi_discovery(self, volume):
+        #TODO(justinsb): Deprecate discovery and use stored info
+        #NOTE(justinsb): Discovery won't work with CHAP-secured targets (?)
+        LOG.warn(_("ISCSI provider_location not stored, using discovery"))
+
         volume_name = volume['name']
-        host = volume['host']
+
         (out, _err) = self._execute("sudo iscsiadm -m discovery -t "
-                                    "sendtargets -p %s" % host)
+                                    "sendtargets -p %s" % (volume['host']))
         for target in out.splitlines():
             if FLAGS.iscsi_ip_prefix in target and volume_name in target:
-                (location, _sep, iscsi_name) = target.partition(" ")
-                break
-        iscsi_portal = location.split(",")[0]
-        return (iscsi_name, iscsi_portal)
+                return target
+        return None
+
+    def _get_iscsi_properties(self, volume):
+        """Gets iscsi configuration, ideally from saved information in the
+        volume entity, but falling back to discovery if need be."""
+
+        properties = {}
+
+        location = volume['provider_location']
+
+        if location:
+            # provider_location is the same format as iSCSI discovery output
+            properties['target_discovered'] = False
+        else:
+            location = self._do_iscsi_discovery(volume)
+
+            if not location:
+                raise exception.Error(_("Could not find iSCSI export "
+                                        " for volume %s") %
+                                      (volume['name']))
+
+            LOG.debug(_("ISCSI Discovery: Found %s") % (location))
+            properties['target_discovered'] = True
+
+        (iscsi_target, _sep, iscsi_name) = location.partition(" ")
+
+        iscsi_portal = iscsi_target.split(",")[0]
+
+        properties['target_iqn'] = iscsi_name
+        properties['target_portal'] = iscsi_portal
+
+        auth = volume['provider_auth']
+
+        if auth:
+            (auth_method, auth_username, auth_secret) = auth.split()
+
+            properties['auth_method'] = auth_method
+            properties['auth_username'] = auth_username
+            properties['auth_password'] = auth_secret
+
+        return properties
+
+    def _run_iscsiadm(self, iscsi_properties, iscsi_command):
+        command = ("sudo iscsiadm -m node -T %s -p %s %s" %
+                   (iscsi_properties['target_iqn'],
+                    iscsi_properties['target_portal'],
+                    iscsi_command))
+        (out, err) = self._execute(command)
+        LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
+                  (iscsi_command, out, err))
+        return (out, err)
+
+    def _iscsiadm_update(self, iscsi_properties, property_key, property_value):
+        iscsi_command = ("--op update -n %s -v %s" %
+                         (property_key, property_value))
+        return self._run_iscsiadm(iscsi_properties, iscsi_command)
 
     def discover_volume(self, volume):
         """Discover volume on a remote host."""
-        iscsi_name, iscsi_portal = self._get_name_and_portal(volume)
-        self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
-                      (iscsi_name, iscsi_portal))
-        self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
-                      "-n node.startup -v automatic" %
-                      (iscsi_name, iscsi_portal))
-        return "/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" % (iscsi_portal,
-                                                           iscsi_name)
+        iscsi_properties = self._get_iscsi_properties(volume)
+
+        if not iscsi_properties['target_discovered']:
+            self._run_iscsiadm(iscsi_properties, "--op new")
+
+        if iscsi_properties.get('auth_method'):
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.authmethod",
+                                  iscsi_properties['auth_method'])
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.username",
+                                  iscsi_properties['auth_username'])
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.password",
+                                  iscsi_properties['auth_password'])
+
+        self._run_iscsiadm(iscsi_properties, "--login")
+
+        self._iscsiadm_update(iscsi_properties, "node.startup", "automatic")
+
+        mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" %
+                        (iscsi_properties['target_portal'],
+                         iscsi_properties['target_iqn']))
+
+        # The /dev/disk/by-path/... node is not always present immediately
+        # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
+        tries = 0
+        while not os.path.exists(mount_device):
+            if tries >= FLAGS.num_iscsi_scan_tries:
+                raise exception.Error(_("iSCSI device not found at %s") %
+                                      (mount_device))
+
+            LOG.warn(_("ISCSI volume not yet found at: %(mount_device)s. "
+                       "Will rescan & retry.  Try number: %(tries)s") %
+                     locals())
+
+            # The rescan isn't documented as being necessary(?), but it helps
+            self._run_iscsiadm(iscsi_properties, "--rescan")
+
+            tries = tries + 1
+            if not os.path.exists(mount_device):
+                time.sleep(tries ** 2)
+
+        if tries != 0:
+            LOG.debug(_("Found iSCSI node %(mount_device)s "
+                        "(after %(tries)s rescans)") %
+                      locals())
+
+        return mount_device
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
-        iscsi_name, iscsi_portal = self._get_name_and_portal(volume)
-        self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
-                      "-n node.startup -v manual" %
-                      (iscsi_name, iscsi_portal))
-        self._execute("sudo iscsiadm -m node -T %s -p %s --logout " %
-                      (iscsi_name, iscsi_portal))
-        self._execute("sudo iscsiadm -m node --op delete "
-                      "--targetname %s" % iscsi_name)
+        iscsi_properties = self._get_iscsi_properties(volume)
+        self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
+        self._run_iscsiadm(iscsi_properties, "--logout")
+        self._run_iscsiadm(iscsi_properties, "--op delete")
 
 
 class FakeISCSIDriver(ISCSIDriver):
