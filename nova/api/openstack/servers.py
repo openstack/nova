@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
@@ -179,7 +177,8 @@ class Controller(wsgi.Controller):
             display_name=env['server']['name'],
             display_description=env['server']['name'],
             key_name=key_pair['name'],
-            key_data=key_pair['public_key'])
+            key_data=key_pair['public_key'],
+            onset_files=env.get('onset_files', []))
         return _translate_keys(instances[0])
 
     def update(self, req, id):

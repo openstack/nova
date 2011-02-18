@@ -44,7 +44,7 @@ flags.DEFINE_string('dhcp_domain',
 
 flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
-flags.DEFINE_string('public_interface', 'vlan1',
+flags.DEFINE_string('public_interface', 'eth0',
                     'Interface for public IP addresses')
 flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')

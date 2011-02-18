@@ -170,6 +170,21 @@ class FakeConnection(object):
         """
         pass
 
+    def inject_file(self, instance, b64_path, b64_contents):
+        """
+        Writes a file on the specified instance.
+
+        The first parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name. The second
+        parameter is the base64-encoded path to which the file is to be
+        written on the instance; the third is the contents of the file, also
+        base64-encoded.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
+        """
+        pass
+
     def rescue(self, instance):
         """
         Rescue the specified instance.
