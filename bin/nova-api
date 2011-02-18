@@ -44,9 +44,9 @@ FLAGS = flags.FLAGS
 API_ENDPOINTS = ['ec2', 'osapi']
 
 for api in API_ENDPOINTS:
-    flags.DEFINE_string("%s_api_listen" % api, "0.0.0.0",
+    flags.DEFINE_string("%s_listen" % api, "0.0.0.0",
                         "IP address to listen to for API %s" % api)
-    flags.DEFINE_integer("%s_api_listen_port" % api,
+    flags.DEFINE_integer("%s_listen_port" % api,
                          getattr(FLAGS, "%s_port" % api),
                          "Port to listen to for API %s" % api)
 
@@ -61,8 +61,8 @@ def run_app(paste_config_file):
         LOG.debug(_("App Config: %(api)s\n%(config)r") % locals())
         LOG.info(_("Running %s API"), api)
         app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app, getattr(FLAGS, "%s_api_listen_port" % api),
-                     getattr(FLAGS, "%s_api_listen" % api)))
+        apps.append((app, getattr(FLAGS, "%s_listen_port" % api),
+                     getattr(FLAGS, "%s_listen" % api)))
     if len(apps) == 0:
         LOG.error(_("No known API applications configured in %s."),
                   paste_config_file)
