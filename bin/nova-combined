@@ -65,7 +65,7 @@ if __name__ == '__main__':
     scheduler = service.Service.create(binary='nova-scheduler')
     #objectstore = service.Service.create(binary='nova-objectstore')
 
-#    service.serve(compute, network, volume, scheduler)
+    service.serve(compute, network, volume, scheduler)
 
     apps = []
     paste_config_file = wsgi.paste_config_file('nova-api.conf')
