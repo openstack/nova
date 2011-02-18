@@ -19,8 +19,7 @@ import logging
 from nova import flags
 from nova import wsgi
 from nova import db
-from nova import rpc
-from nova.scheduler.api import API
+from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
@@ -54,7 +53,7 @@ class Controller(wsgi.Controller):
         """Return all zones in brief"""
         # Ask the ZoneManager in the Scheduler for most recent data,
         # or fall-back to the database ...
-        items = API().get_zone_list(req.environ['nova.context'])
+        items = api.API().get_zone_list(req.environ['nova.context'])
         if not items:
             items = db.zone_get_all(req.environ['nova.context'])
 

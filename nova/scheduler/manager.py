@@ -29,7 +29,7 @@ from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
-from nova.scheduler.zone_manager import ZoneManager
+from nova.scheduler import zone_manager
 
 LOG = logging.getLogger('nova.scheduler.manager')
 FLAGS = flags.FLAGS
@@ -44,7 +44,7 @@ class SchedulerManager(manager.Manager):
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = utils.import_object(scheduler_driver)
-        self.zone_manager = ZoneManager()
+        self.zone_manager = zone_manager.ZoneManager()
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):

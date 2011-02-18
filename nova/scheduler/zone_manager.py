@@ -22,7 +22,7 @@ import thread
 import traceback
 
 from datetime import datetime
-from eventlet.greenpool import GreenPool
+from eventlet import greenpool
 
 from nova import db
 from nova import flags
@@ -105,7 +105,7 @@ class ZoneManager(object):
     def __init__(self):
         self.last_zone_db_check = datetime.min
         self.zone_states = {}
-        self.green_pool = GreenPool()
+        self.green_pool = greenpool.GreenPool()
 
     def get_zone_list(self):
         """Return the list of zones we know about."""

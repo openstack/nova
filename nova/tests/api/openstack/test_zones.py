@@ -24,7 +24,7 @@ from nova import context
 from nova import flags
 from nova.api.openstack import zones
 from nova.tests.api.openstack import fakes
-from nova.scheduler.api import API
+from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
@@ -97,7 +97,7 @@ class ZonesTest(unittest.TestCase):
         FLAGS.allow_admin_api = self.allow_admin
 
     def test_get_zone_list_scheduler(self):
-        self.stubs.Set(API, '_call_scheduler', zone_get_all_scheduler)
+        self.stubs.Set(api.API, '_call_scheduler', zone_get_all_scheduler)
         req = webob.Request.blank('/v1.0/zones')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -106,7 +106,8 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_list_db(self):
-        self.stubs.Set(API, '_call_scheduler', zone_get_all_scheduler_empty)
+        self.stubs.Set(api.API, '_call_scheduler',
+                                zone_get_all_scheduler_empty)
         self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
         req = webob.Request.blank('/v1.0/zones')
         res = req.get_response(fakes.wsgi_app())
