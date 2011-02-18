@@ -139,6 +139,12 @@ class FakeConnection(object):
         """
         pass
 
+    def get_host_ip_addr(self):
+        """
+        Retrieves the IP address of the dom0
+        """
+        pass
+
     def resize(self, instance, flavor):
         """
         Resizes/Migrates the specified instance.
