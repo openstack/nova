@@ -259,15 +259,13 @@ class ServersTest(unittest.TestCase):
         server_list = res_dict['servers']
         host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
         self.assertTrue(host_ids[0] and host_ids[1])
-        self.assertTrue(host_ids[0] != host_ids[1])
+        self.assertNotEqual(host_ids[0], host_ids[1])
 
-        i = 0
-        for s in res_dict['servers']:
+        for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
-            i += 1
 
     def test_server_pause(self):
         FLAGS.allow_admin_api = True
