@@ -1365,8 +1365,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 args += ['-j ACCEPT']
                 rules += [' '.join(args)]
 
-        ipv4_rules += ['-j $fallback']
-        ipv6_rules += ['-j $fallback']
+        ipv4_rules += ['-j $sg-fallback']
+        ipv6_rules += ['-j $sg-fallback']
 
         return ipv4_rules, ipv6_rules
 
