@@ -1,4 +1,4 @@
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,6 +20,7 @@ from nova import flags
 from nova import wsgi
 from nova import db
 from nova import rpc
+from nova.scheduler.api import API
 
 
 FLAGS = flags.FLAGS
@@ -49,31 +50,14 @@ class Controller(wsgi.Controller):
             "attributes": {
                 "zone": ["id", "api_url", "name", "capabilities"]}}}
 
-    def _call_scheduler(self, method, context, params=None):
-        """Generic handler for RPC calls to the scheduler.
-
-        :param params: Optional dictionary of arguments to be passed to the
-                       scheduler worker
-
-        :retval: Result returned by scheduler worker
-        """
-        if not params:
-            params = {}
-        queue = FLAGS.scheduler_topic
-        kwargs = {'method': method, 'args': params}
-        return rpc.call(context, queue, kwargs)
-
     def index(self, req):
         """Return all zones in brief"""
-        # Ask the ZoneManager in the Scheduler for most recent data.
-        items = self._call_scheduler('get_zone_list',
-                          req.environ['nova.context'])
-        for item in items:
-            item['api_url'] = item['api_url'].replace('\\/', '/')
-
-        # Or fall-back to the database ...
-        if len(items) == 0:
+        # Ask the ZoneManager in the Scheduler for most recent data,
+        # or fall-back to the database ...
+        items = API().get_zone_list(req.environ['nova.context'])
+        if not items:
             items = db.zone_get_all(req.environ['nova.context'])
+
         items = common.limited(items, req)
         items = [_exclude_keys(item, ['username', 'password'])
                       for item in items]

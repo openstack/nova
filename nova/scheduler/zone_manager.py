@@ -1,4 +1,4 @@
-# Copyright (c) 2010 Openstack, LLC.
+# Copyright (c) 2011 Openstack, LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -87,8 +87,8 @@ class ZoneState(object):
 
 def _call_novatools(zone):
     """Call novatools. Broken out for testing purposes."""
-    os = novatools.OpenStack(zone.username, zone.password, zone.api_url)
-    return os.zones.info()._info
+    client = novatools.OpenStack(zone.username, zone.password, zone.api_url)
+    return client.zones.info()._info
 
 
 def _poll_zone(zone):
@@ -105,6 +105,7 @@ class ZoneManager(object):
     def __init__(self):
         self.last_zone_db_check = datetime.min
         self.zone_states = {}
+        self.green_pool = GreenPool()
 
     def get_zone_list(self):
         """Return the list of zones we know about."""
@@ -123,20 +124,20 @@ class ZoneManager(object):
             self.zone_states[zone.id].update_credentials(zone)
 
         # Cleanup zones removed from db ...
-        for zone_id in self.zone_states.keys():
+        keys = self.zone_states.keys()  # since we're deleting
+        for zone_id in keys:
             if zone_id not in db_keys:
                 del self.zone_states[zone_id]
 
     def _poll_zones(self, context):
         """Try to connect to each child zone and get update."""
-        green_pool = GreenPool()
-        green_pool.imap(_poll_zone, self.zone_states.values())
+        self.green_pool.imap(_poll_zone, self.zone_states.values())
 
     def ping(self, context=None):
         """Ping should be called periodically to update zone status."""
         diff = datetime.now() - self.last_zone_db_check
         if diff.seconds >= FLAGS.zone_db_check_interval:
-            logging.debug("Updating zone cache from db.")
+            logging.debug(_("Updating zone cache from db."))
             self.last_zone_db_check = datetime.now()
             self._refresh_from_db(context)
         self._poll_zones(context)
