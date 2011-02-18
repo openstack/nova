@@ -394,7 +394,7 @@ class VMOps(object):
         """
         Three situations can occur:
 
-            1. We have netiher a ramdisk or a kernel, in which case we are a
+            1. We have neither a ramdisk nor a kernel, in which case we are a
                RAW image and can omit this step
 
             2. We have one or the other, in which case, we should flag as an

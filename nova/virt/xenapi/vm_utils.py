@@ -451,6 +451,8 @@ class VMHelper(HelperBase):
             else:
                 return ImageType.DISK_RAW
 
+        # FIXME(sirp): can we unify the ImageService and xenapi_image_service
+        # abstractions?
         if FLAGS.xenapi_image_service == 'glance':
             image_type = determine_from_glance()
         else:
