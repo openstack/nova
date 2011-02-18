@@ -57,8 +57,7 @@ def zone_get_all(context):
         dict(id=1, api_url='http://foo.com', username='bob',
                  password='xxx'),
         dict(id=2, api_url='http://blah.com', username='alice',
-                 password='qwerty')
-    ]
+                 password='qwerty')]
 
 
 class ZonesTest(unittest.TestCase):
