@@ -594,6 +594,28 @@ def fixed_ip_get_all(context, session=None):
     return result
 
 
+@require_admin_context
+def fixed_ip_get_all_by_host(context, host=None):
+    session = get_session()
+
+    # FIXME: I'm sure that SQLAlchemy can handle this in a nicer way
+    instances = session.query(models.Instance).\
+                     filter_by(state=1).\
+                     filter_by(host=host).\
+                     all()
+
+    result = []
+    for instance in instances:
+        result.append(session.query(models.FixedIp).\
+                       filter_by(instance_id=instance['id']).\
+                       first())
+
+    if not result:
+        raise exception.NotFound(_('No fixed ips for this host defined'))
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:

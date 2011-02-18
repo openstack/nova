@@ -439,10 +439,15 @@ class FixedIpCommands(object):
     def list(self, host=None):
         """Lists all fixed ips (optionally by host) arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
-            fixed_ips = db.fixed_ip_get_all(ctxt)
-        else:
-            fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+
+        try:
+            if host == None:
+                fixed_ips = db.fixed_ip_get_all(ctxt)
+            else:
+                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
 
         print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (_('network'),
                                                   _('IP address'),
@@ -459,9 +464,9 @@ class FixedIpCommands(object):
                 host = instance['host']
                 mac_address = instance['mac_address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
-                                  fixed_ip['network']['cidr'],
-                                  fixed_ip['address'],
-                                  mac_address, hostname, host)
+                    fixed_ip['network']['cidr'],
+                    fixed_ip['address'],
+                    mac_address, hostname, host)
 
 
 class FloatingIpCommands(object):
