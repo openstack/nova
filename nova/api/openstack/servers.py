@@ -209,12 +209,12 @@ class Controller(wsgi.Controller):
         resize a server """
 
         actions = {
-            'reboot':self._action_reboot,
-            'resize':self._action_resize,
-            'confirmResize':self._action_confirm_resize,
-            'revertResize':self._action_revert_resize,
-            'rebuild':self._action_rebuild
-        }
+            'reboot':        self._action_reboot,
+            'resize':        self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize':  self._action_revert_resize,
+            'rebuild':       self._action_rebuild,
+            }
 
         input_dict = self._deserialize(req.body, req)
         for key in actions.keys():
@@ -255,7 +255,6 @@ class Controller(wsgi.Controller):
             LOG.exception(_("Error in resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
         return faults.Fault(exc.HTTPAccepted())
-
 
     def _action_reboot(self, input_dict, req, id):
         try:

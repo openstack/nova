@@ -44,8 +44,9 @@ migrations = Table('migrations', meta,
             Column('dest_host', String(255)),
             Column('instance_id', Integer, ForeignKey('instances.id'),
                 nullable=True),
-            Column('status', String(255))
+            Column('status', String(255)),
       )
+
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;

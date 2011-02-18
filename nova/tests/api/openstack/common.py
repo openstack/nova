@@ -19,14 +19,17 @@ import json
 
 import webob
 
+
 def webob_factory(url):
+    """Factory for removing duplicate webob code from tests"""
+
     base_url = url
+
     def web_request(url, method=None, body=None):
-        req = webob.Request.blank("%s%s" % (base_url, url)) 
+        req = webob.Request.blank("%s%s" % (base_url, url))
         if method:
             req.method = method
         if body:
             req.body = json.dumps(body)
         return req
     return web_request
-    

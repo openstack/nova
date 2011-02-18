@@ -192,7 +192,7 @@ class XenAPIConnection(object):
     def attach_disk(self, instance, disk_info):
         """Moves the copied VDIs into the SR"""
         return self._vmops.attach_disk(instance, disk_info)
-    
+
     def suspend(self, instance, callback):
         """suspend the specified instance"""
         self._vmops.suspend(instance, callback)
@@ -220,9 +220,9 @@ class XenAPIConnection(object):
     def get_ajax_console(self, instance):
         """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
-        
+
     def get_host_ip_addr(self):
-        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url) 
+        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
         return xs_url.netloc
 
     def attach_volume(self, instance_name, device_path, mountpoint):

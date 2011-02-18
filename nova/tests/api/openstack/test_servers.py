@@ -419,8 +419,9 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
 
         self.resize_called = False
+
         def resize_mock(*args):
-            self.resize_called = True 
+            self.resize_called = True
 
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
@@ -432,8 +433,9 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(derp=3)))
 
         self.resize_called = False
+
         def resize_mock(*args):
-            self.resize_called = True 
+            self.resize_called = True
 
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
@@ -445,7 +447,7 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
 
         def resize_mock(*args):
-            raise Exception, 'hurr durr'
+            raise Exception('hurr durr')
 
         self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
 
@@ -456,10 +458,11 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
 
         self.resize_called = False
-        def confirm_resize_mock(*args):
-            self.resize_called = True 
 
-        self.stubs.Set(nova.compute.api.API, 'confirm_resize', 
+        def confirm_resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize',
                 confirm_resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
@@ -470,9 +473,9 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
 
         def confirm_resize_mock(*args):
-            raise Exception, 'hurr durr'
+            raise Exception('hurr durr')
 
-        self.stubs.Set(nova.compute.api.API, 'confirm_resize', 
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize',
                 confirm_resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
@@ -482,10 +485,11 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(revertResize=None))
 
         self.resize_called = False
+
         def revert_resize_mock(*args):
             self.resize_called = True
 
-        self.stubs.Set(nova.compute.api.API, 'revert_resize', 
+        self.stubs.Set(nova.compute.api.API, 'revert_resize',
                 revert_resize_mock)
 
         res = req.get_response(fakes.wsgi_app())
@@ -496,9 +500,9 @@ class ServersTest(unittest.TestCase):
         req = self.webreq('/1/action', 'POST', dict(revertResize=None))
 
         def revert_resize_mock(*args):
-            raise Exception, 'hurr durr'
+            raise Exception('hurr durr')
 
-        self.stubs.Set(nova.compute.api.API, 'revert_resize', 
+        self.stubs.Set(nova.compute.api.API, 'revert_resize',
                 revert_resize_mock)
 
         res = req.get_response(fakes.wsgi_app())

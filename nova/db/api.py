@@ -260,16 +260,19 @@ def floating_ip_get_by_address(context, address):
 ####################
 
 def migration_update(context, id, values):
-    """Update a migration instance""" 
+    """Update a migration instance"""
     return IMPL.migration_update(context, id, values)
+
 
 def migration_create(context, values):
     """Create a migration record"""
     return IMPL.migration_create(context, values)
 
+
 def migration_get(context, migration_id):
     """Finds a migration by the id"""
     return IMPL.migration_get(context, migration_id)
+
 
 def migration_get_by_instance_and_status(context, instance_id, status):
     """Finds a migration by the instance id its migrating"""

@@ -337,6 +337,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()
 
+
 class XenAPIMigrateInstance(test.TestCase):
     """
     Unit test for verifying migration-related actions

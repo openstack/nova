@@ -256,21 +256,18 @@ class VMHelper(HelperBase):
         else:
             num_vdis = len(vdi_refs)
             if num_vdis != 1:
-                raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
+                raise Exception(
+                        _("Unexpected number of VDIs (%(num_vdis)s) found"
                         " for VM %(vm_ref)s") % locals())
 
         vdi_ref = vdi_refs[0]
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         return vdi_ref, vdi_rec
 
-
-
-    
     @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
         """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-        Snapshot VHD
-        """
+        Snapshot VHD """
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
@@ -284,7 +281,7 @@ class VMHelper(HelperBase):
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
         template_vm_ref = session.wait_for_task(instance_id, task)
-        template_vdi_rec = cls.get_vdi_for_vm_safely(session, 
+        template_vdi_rec = cls.get_vdi_for_vm_safely(session,
                 template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
@@ -299,7 +296,7 @@ class VMHelper(HelperBase):
 
     @classmethod
     def get_sr(cls, session, sr_label='slices'):
-        """ Finds the SR named by the given name label and returns 
+        """ Finds the SR named by the given name label and returns
         the UUID """
         return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
 

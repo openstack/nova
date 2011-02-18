@@ -379,7 +379,7 @@ class ComputeManager(manager.Manager):
     def _update_state_callback(self, context, instance_id, result):
         """Update instance state when async task completes."""
         self._update_state(context, instance_id)
-     
+
     @exception.wrap_exception
     @checks_instance_lock
     def confirm_resize(self, context, instance_id, migration_id):
@@ -392,8 +392,8 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     @checks_instance_lock
     def revert_resize(self, context, instance_id, migration_id):
-        """Destroys the new instance on the destination machine, 
-        reverts the model changes, and powers on the old 
+        """Destroys the new instance on the destination machine,
+        reverts the model changes, and powers on the old
         instance on the source machine"""
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
@@ -401,24 +401,23 @@ class ComputeManager(manager.Manager):
         #TODO(mdietz): we may want to split these into separate methods.
         if migration_ref['source_compute'] == FLAGS.host:
             self.driver.power_on(instance_ref)
-            self.db.migration_update(context, migration_id, 
-                    { 'status': 'reverted' })
+            self.db.migration_update(context, migration_id,
+                    {'status': 'reverted'})
         else:
             self.driver.destroy(instance_ref)
-            topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
+            topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                     instance_ref['host'])
-            rpc.cast(context, topic, 
-                    { 'method': 'revert_resize',
-                      'args': {
-                            'migration_id': migration_ref['id'], 
-                            'instance_id': instance_id,
-                      }, 
+            rpc.cast(context, topic,
+                    {'method': 'revert_resize',
+                     'args': {
+                           'migration_id': migration_ref['id'],
+                           'instance_id': instance_id, },
                     })
 
     @exception.wrap_exception
     @checks_instance_lock
     def prep_resize(self, context, instance_id):
-        """Initiates the process of moving a running instance to another 
+        """Initiates the process of moving a running instance to another
         host, possibly changing the RAM and disk size in the process"""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
@@ -426,21 +425,21 @@ class ComputeManager(manager.Manager):
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
 
-        migration_ref = self.db.migration_create(context, 
-                { 'instance_id': instance_id,
-                  'source_compute': instance_ref['host'],
-                  'dest_compute': FLAGS.host,
-                  'dest_host':   self.driver.get_host_ip_addr(),
-                  'status':      'pre-migrating' })
-        LOG.audit(_('instance %s: migrating to '), instance_id, context=context)
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
+        migration_ref = self.db.migration_create(context,
+                {'instance_id': instance_id,
+                 'source_compute': instance_ref['host'],
+                 'dest_compute': FLAGS.host,
+                 'dest_host':   self.driver.get_host_ip_addr(),
+                 'status':      'pre-migrating'})
+        LOG.audit(_('instance %s: migrating to '), instance_id,
+                context=context)
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 instance_ref['host'])
-        rpc.cast(context, topic, 
-                { 'method': 'resize_instance',
-                  'args': {
-                        'migration_id': migration_ref['id'], 
-                        'instance_id': instance_id,
-                  }, 
+        rpc.cast(context, topic,
+                {'method': 'resize_instance',
+                 'args': {
+                       'migration_id': migration_ref['id'],
+                       'instance_id': instance_id, },
                 })
 
     @exception.wrap_exception
@@ -449,28 +448,26 @@ class ComputeManager(manager.Manager):
         """Starts the migration of a running instance to another host"""
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get(context, instance_id)
-        self.db.migration_update(context, migration_id, 
-                { 'status': 'migrating', })
+        self.db.migration_update(context, migration_id,
+                {'status': 'migrating', })
 
-        disk_info = self.driver.migrate_disk_and_power_off(instance_ref, 
+        disk_info = self.driver.migrate_disk_and_power_off(instance_ref,
                                   migration_ref['dest_host'])
-    
-        self.db.migration_update(context, migration_id, 
-                { 'status': 'post-migrating', })
+        self.db.migration_update(context, migration_id,
+                {'status': 'post-migrating', })
 
-        #TODO(mdietz): This is where we would update the VM record 
+        #TODO(mdietz): This is where we would update the VM record
         #after resizing
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_compute'], FLAGS.compute_topic)
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic, 
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 migration_ref['dest_compute'])
-        rpc.cast(context, topic, 
-                { 'method': 'finish_resize',
-                  'args': {
-                        'migration_id': migration_id, 
-                        'instance_id': instance_id,
-                        'disk_info': disk_info,
-                  }, 
+        rpc.cast(context, topic,
+                {'method': 'finish_resize',
+                 'args': {
+                       'migration_id': migration_id,
+                       'instance_id': instance_id,
+                       'disk_info': disk_info, },
                 })
 
     @exception.wrap_exception
@@ -486,8 +483,8 @@ class ComputeManager(manager.Manager):
         new_disk_info = self.driver.attach_disk(instance_ref, disk_info)
         self.driver.spawn(instance_ref, disk=new_disk_info)
 
-        self.db.migration_update(context, migration_id, 
-                {'status': 'finished', }) 
+        self.db.migration_update(context, migration_id,
+                {'status': 'finished', })
 
     @exception.wrap_exception
     @checks_instance_lock

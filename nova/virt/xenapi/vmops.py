@@ -345,7 +345,7 @@ class VMOps(object):
                   'new_base_copy_uuid': new_base_copy_uuid,
                   'new_cow_uuid':       new_cow_uuid, }
 
-        task = self._session.async_call_plugin('migration', 
+        task = self._session.async_call_plugin('migration',
                 'move_vhds_into_sr', {'params': pickle.dumps(params)})
         self._session.wait_for_task(instance.id, task)
 
@@ -469,7 +469,8 @@ class VMOps(object):
         vm = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm, shutdown=True)
 
-    def _destroy(self, instance, vm, shutdown=True, destroy_kernel_ramdisk=True):
+    def _destroy(self, instance, vm, shutdown=True,
+            destroy_kernel_ramdisk=True):
         """
         Destroys VM instance by performing:
 

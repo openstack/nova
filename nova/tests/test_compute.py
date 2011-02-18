@@ -265,8 +265,7 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         context = self.context.elevated()
         self.compute.run_instance(self.context, instance_id)
-        db.instance_update(self.context, instance_id, {'host':'foo'})
-
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
         self.compute.prep_resize(context, instance_id)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_id, 'pre-migrating')
@@ -279,7 +278,6 @@ class ComputeTestCase(test.TestCase):
         the same host"""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
-        self.assertRaises(exception.Error, self.compute.prep_resize, 
+        self.assertRaises(exception.Error, self.compute.prep_resize,
                 self.context, instance_id)
-
         self.compute.terminate_instance(self.context, instance_id)

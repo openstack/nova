@@ -156,6 +156,7 @@ def service_get_all_by_topic(context, topic):
                    filter_by(topic=topic).\
                    all()
 
+
 @require_admin_context
 def service_get_by_host_and_topic(context, host, topic):
     session = get_session()
@@ -165,6 +166,7 @@ def service_get_by_host_and_topic(context, host, topic):
                    filter_by(host=host).\
                    filter_by(topic=topic).\
                    first()
+
 
 @require_admin_context
 def service_get_all_by_host(context, host):
@@ -1996,7 +1998,7 @@ def migration_get(context, id, session=None):
     result = session.query(models.Migration).\
                      filter_by(id=id).first()
     if not result:
-        raise exception.NotFound(_("No migration found with id %s") 
+        raise exception.NotFound(_("No migration found with id %s")
                 % migration_id)
     return result
 
@@ -2008,7 +2010,7 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(instance_id=instance_id).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.NotFound(_("No migration found with instance id %s") 
+        raise exception.NotFound(_("No migration found with instance id %s")
                 % migration_id)
     return result
 

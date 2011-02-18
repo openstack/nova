@@ -171,8 +171,8 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_destroy(self, session_ref, vm_ref):
         fake.destroy_vm(vm_ref)
-    
-    
+
+
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
     def __init__(self, uri):
@@ -207,6 +207,7 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
     def SR_forget(self, _1, ref):
         pass
 
+
 class FakeSessionForMigrationTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Migration tests """
     def __init__(self, uri):
@@ -232,8 +233,8 @@ def stub_out_migration_methods(stubs):
         vdi_ref = fake.create_vdi(name_label='derp', read_only=False,
                              sr_ref='herp', sharable=False)
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
-        return vdi_ref, {'uuid': vdi_rec['uuid']}
-    
+        return vdi_ref, {'uuid': vdi_rec['uuid'], }
+
     def fake_shutdown(self, inst, vm, method='clean'):
         pass
 
@@ -244,5 +245,5 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_scan_sr)
     stubs.Set(vmops.VMOps, '_get_snapshot', fake_get_snapshot)
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
-    stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x,y,z: None)
+    stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
     stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)
