@@ -85,10 +85,11 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None):
+               availability_zone=None, user_data=None,
+               onset_files=None):
         """Create the number of instances requested if quota and
-        other arguments check out ok."""
-
+        other arguments check out ok.
+        """
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
@@ -156,7 +157,6 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'availability_zone': availability_zone}
-
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -193,7 +193,8 @@ class API(base.Base):
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
-                               "availability_zone": availability_zone}})
+                               "availability_zone": availability_zone,
+                               "onset_files": onset_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -433,6 +434,10 @@ class API(base.Base):
     def set_admin_password(self, context, instance_id):
         """Set the root/admin password for the given instance."""
         self._cast_compute_message('set_admin_password', context, instance_id)
+
+    def inject_file(self, context, instance_id):
+        """Write a file to the given instance."""
+        self._cast_compute_message('inject_file', context, instance_id)
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""

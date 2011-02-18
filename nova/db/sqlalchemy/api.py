@@ -2058,3 +2058,47 @@ def console_get(context, console_id, instance_id=None):
         raise exception.NotFound(_("No console with id %(console_id)s"
                                    " %(idesc)s") % locals())
     return result
+
+
+####################
+
+
+@require_admin_context
+def zone_create(context, values):
+    zone = models.Zone()
+    zone.update(values)
+    zone.save()
+    return zone
+
+
+@require_admin_context
+def zone_update(context, zone_id, values):
+    zone = session.query(models.Zone).filter_by(id=zone_id).first()
+    if not zone:
+        raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
+    zone.update(values)
+    zone.save()
+    return zone
+
+
+@require_admin_context
+def zone_delete(context, zone_id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from zones '
+                        'where id=:id', {'id': zone_id})
+
+
+@require_admin_context
+def zone_get(context, zone_id):
+    session = get_session()
+    result = session.query(models.Zone).filter_by(id=zone_id).first()
+    if not result:
+        raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
+    return result
+
+
+@require_admin_context
+def zone_get_all(context):
+    session = get_session()
+    return session.query(models.Zone).all()
