@@ -109,7 +109,6 @@ class IptablesTable(object):
         if '$' in rule:
             rule = ' '.join(map(self._wrap_target_chain, rule.split(' ')))
 
-        print 'Adding rule: %r' % rule
         self.rules.append(IptablesRule(chain, rule, wrap))
 
     def _wrap_target_chain(self, s):
@@ -168,9 +167,9 @@ class IptablesManager(object):
 
         for cmd, tables in s:
             for table in tables:
-                current_filter, _ = self.execute('sudo %s-save -t %s' %
-                                                 (cmd, table), attempts=5)
-                current_lines = current_filter.split('\n')
+                current_table, _ = self.execute('sudo %s-save -t %s' %
+                                                (cmd, table), attempts=5)
+                current_lines = current_table.split('\n')
                 new_filter = self.modify_rules(current_lines, tables[table])
                 self.execute('sudo %s-restore' % (cmd,),
                              process_input='\n'.join(new_filter),
@@ -182,7 +181,7 @@ class IptablesManager(object):
         rules = table.rules
 
         # Remove any trace of our rules
-        new_filter = filter(lambda l: '%s' % binary not in l, current_lines)
+        new_filter = filter(lambda l: binary_name not in l, current_lines)
 
         seen_chains = False
         for rules_index in range(len(new_filter)):
