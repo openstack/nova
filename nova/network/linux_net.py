@@ -100,12 +100,22 @@ class IptablesTable(object):
 
     def remove_chain(self, name):
         self.chains.remove(name)
+        self.rules = filter(lambda r: r.chain != name, self.rules)
 
     def add_rule(self, chain, rule, wrap=True):
         if wrap and chain not in self.chains:
             raise ValueError(_("Unknown chain: %r") % chain)
 
+        if '$' in rule:
+            rule = ' '.join(map(self._wrap_target_chain, rule.split(' ')))
+
+        print 'Adding rule: %r' % rule
         self.rules.append(IptablesRule(chain, rule, wrap))
+
+    def _wrap_target_chain(self, s):
+        if s.startswith('$'):
+            return '%s-%s' % (binary_name, s[1:])
+        return s
 
     def remove_rule(self, chain, rule):
         self.rules.remove(IptablesRule(chain, rule))
@@ -122,8 +132,7 @@ class IptablesManager(object):
 
         self.ipv4 = { 'filter': IptablesTable(),
                       'nat': IptablesTable() }
-        self.ipv6 = { 'filter': IptablesTable(),
-                      'nat': IptablesTable() }
+        self.ipv6 = { 'filter': IptablesTable() }
 
         self.ipv4['nat'].add_chain('SNATTING')
         self.ipv4['nat'].add_rule('POSTROUTING',
@@ -132,6 +141,10 @@ class IptablesManager(object):
 
         self.ipv4['filter'].add_chain('local')
         self.ipv4['filter'].add_rule('FORWARD',
+                                    '-j %s-local' % (binary_name,),
+                                    wrap=False)
+
+        self.ipv4['filter'].add_rule('OUTPUT',
                                     '-j %s-local' % (binary_name,),
                                     wrap=False)
 
