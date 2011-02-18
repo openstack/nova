@@ -47,6 +47,12 @@ FLAGS = flags.FLAGS
 
 API_ENDPOINTS = ['ec2', 'osapi']
 
+for api in API_ENDPOINTS:
+    flags.DEFINE_string("%s_api_listen" % api, "0.0.0.0",
+                        "IP address to listen to for API %s" % api)
+    flags.DEFINE_integer("%s_api_listen_port" % api,
+                         getattr(FLAGS, "%s_port" % api),
+                         "Port to listen to for API %s" % api)
 
 def run_app(paste_config_file):
     LOG.debug(_("Using paste.deploy config at: %s"), paste_config_file)
@@ -57,14 +63,10 @@ def run_app(paste_config_file):
             LOG.debug(_("No paste configuration for app: %s"), api)
             continue
         LOG.debug(_("App Config: %(api)s\n%(config)r") % locals())
-        wsgi.paste_config_to_flags(config, {
-            "verbose": FLAGS.verbose,
-            "%s_host" % api: getattr(FLAGS, "%s_host" % api),
-            "%s_port" % api: getattr(FLAGS, "%s_port" % api)})
         LOG.info(_("Running %s API"), api)
         app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app, getattr(FLAGS, "%s_port" % api),
-                     config.get('listen', '0.0.0.0')))
+        apps.append((app, getattr(FLAGS, "%s_api_listen_port" % api),
+                     getattr(FLAGS, "%s_api_listen" % api)))
     if len(apps) == 0:
         LOG.error(_("No known API applications configured in %s."),
                   paste_config_file)
@@ -82,6 +84,10 @@ if __name__ == '__main__':
     FLAGS(sys.argv)
     LOG.audit(_("Starting nova-api node (version %s)"),
               version.version_string_with_vcs())
+    LOG.debug(_("Full set of FLAGS:"))
+    for flag in FLAGS:
+        flag_get = FLAGS.get(flag, None)
+        LOG.debug("%(flag)s : %(flag_get)s" % locals())
     conf = wsgi.paste_config_file('nova-api.conf')
     if conf:
         run_app(conf)
