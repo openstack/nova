@@ -290,7 +290,7 @@ class Authorizer(wsgi.Middleware):
             return True
         if 'none' in roles:
             return False
-        return any(context.project.has_role(context.user.id, role)
+        return any(context.project.has_role(context.user_id, role)
                    for role in roles)
 
 
