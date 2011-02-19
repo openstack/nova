@@ -85,7 +85,7 @@ class API(base.Base):
         return self.db.volume_get(context, volume_id)
 
     def get_all(self, context):
-        if context.user.is_admin():
+        if context.is_admin:
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
 
