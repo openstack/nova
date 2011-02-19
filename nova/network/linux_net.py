@@ -20,6 +20,8 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 import inspect
 import os
 
+from eventlet import semaphore
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -149,8 +151,7 @@ class IptablesManager(object):
 
         # Wrap the builtin chains
         builtin_chains = {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
-                          'nat': ['PREROUTING', 'INPUT',
-                                  'OUTPUT', 'POSTROUTING']}
+                          'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']}
 
         for table, chains in builtin_chains.iteritems():
             for chain in chains:
@@ -158,22 +159,24 @@ class IptablesManager(object):
                 self.ipv4[table].add_rule(chain,
                                           '-j %s-%s' % (binary_name, chain),
                                           wrap=False)
+        self.semaphore = semaphore.Semaphore()
 
 
     def apply(self):
-        s = [('iptables', self.ipv4)]
-        if FLAGS.use_ipv6:
-            s += [('ip6tables', self.ipv6)]
+        with self.semaphore:
+            s = [('iptables', self.ipv4)]
+            if FLAGS.use_ipv6:
+                s += [('ip6tables', self.ipv6)]
 
-        for cmd, tables in s:
-            for table in tables:
-                current_table, _ = self.execute('sudo %s-save -t %s' %
-                                                (cmd, table), attempts=5)
-                current_lines = current_table.split('\n')
-                new_filter = self.modify_rules(current_lines, tables[table])
-                self.execute('sudo %s-restore' % (cmd,),
-                             process_input='\n'.join(new_filter),
-                             attempts=5)
+            for cmd, tables in s:
+                for table in tables:
+                    current_table, _ = self.execute('sudo %s-save -t %s' %
+                                                    (cmd, table), attempts=5)
+                    current_lines = current_table.split('\n')
+                    new_filter = self.modify_rules(current_lines, tables[table])
+                    self.execute('sudo %s-restore' % (cmd,),
+                                 process_input='\n'.join(new_filter),
+                                 attempts=5)
 
     def modify_rules(self, current_lines, table, binary=None):
 
