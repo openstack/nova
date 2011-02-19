@@ -56,6 +56,7 @@ class RequestLogging(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        self.start = datetime.datetime.utcnow()
         rv = req.get_response(self.application)
         self.log_request_completion(rv, req)
         return rv
@@ -66,13 +67,9 @@ class RequestLogging(wsgi.Middleware):
             controller = controller.__class__.__name__
         action = request.environ.get('ec2.action', None)
         ctxt = request.environ.get('ec2.context', None)
-        seconds = 'X'
-        microseconds = 'X'
-        if ctxt:
-            delta = datetime.datetime.utcnow() - \
-                    ctxt.timestamp
-            seconds = delta.seconds
-            microseconds = delta.microseconds
+        delta = datetime.datetime.utcnow() - self.start
+        seconds = delta.seconds
+        microseconds = delta.microseconds
         LOG.info(
             "%s.%ss %s %s %s %s:%s %s [%s] %s %s",
             seconds,
