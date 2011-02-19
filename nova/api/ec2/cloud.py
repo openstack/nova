@@ -282,7 +282,7 @@ class CloudController(object):
                                  'description': 'fixme'}]}
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
+        key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
         if not key_name is None:
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
@@ -301,7 +301,7 @@ class CloudController(object):
 
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
-        data = _gen_key(context, context.user.id, key_name)
+        data = _gen_key(context, context.user_id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
@@ -310,7 +310,7 @@ class CloudController(object):
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:
-            db.key_pair_destroy(context, context.user.id, key_name)
+            db.key_pair_destroy(context, context.user_id, key_name)
         except exception.NotFound:
             # aws returns true even if the key doesn't exist
             pass
@@ -494,7 +494,7 @@ class CloudController(object):
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError(_('group %s already exists') % group_name)
 
-        group = {'user_id': context.user.id,
+        group = {'user_id': context.user_id,
                  'project_id': context.project_id,
                  'name': group_name,
                  'description': group_description}

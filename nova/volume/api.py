@@ -49,7 +49,7 @@ class API(base.Base):
 
         options = {
             'size': size,
-            'user_id': context.user.id,
+            'user_id': context.user_id,
             'project_id': context.project_id,
             'availability_zone': FLAGS.storage_availability_zone,
             'status': "creating",
