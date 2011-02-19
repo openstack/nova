@@ -81,6 +81,19 @@ def destroy(name):
                                      name)
 
 
+def purge(name):
+    """Removes instance types / flavors from database
+    arguments: name"""
+    if name == None:
+        raise exception.InvalidInputException(_("No instance type specified"))
+    else:
+        try:
+            db.instance_type_purge(context.get_admin_context(), name)
+        except exception.NotFound:
+            raise exception.ApiError(_("Unknown instance type: %s"),
+                                      name)
+
+
 def get_all_types(inactive=0):
     """Retrieves non-deleted instance_types.
     Pass true as argument if you want deleted instance types returned also."""

@@ -33,12 +33,13 @@ class NovaManageTestCase(test.TestCase):
                                      order_by("flavorid desc").first()
         self.flavorid = str(max_flavorid["flavorid"] + 1)
         self.name = str(int(time.time()))
+        self.fnull = open(os.devnull, 'w')
 
     def teardown(self):
-        fnull.close()
+        self.fnull.close()
 
     def test_create_and_delete_instance_types(self):
-        fnull = open(os.devnull, 'w')
+        myname = self.name + "create_and_delete"
         retcode = subprocess.call([
             "bin/nova-manage",
             "instance_type",
@@ -51,45 +52,44 @@ class NovaManageTestCase(test.TestCase):
             "2",
             "10",
             "10"],
-            stdout=fnull)
+            stdout=self.fnull)
         self.assertEqual(0, retcode)
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "delete", self.name], stdout=fnull)
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",
+                                    "delete", self.name], stdout=self.fnull)
+        self.assertEqual(0, retcode)
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",
+                                    "delete", self.name, "--purge"],
+                                    stdout=self.fnull)
         self.assertEqual(0, retcode)
 
     def test_list_instance_types_or_flavors(self):
-        fnull = open(os.devnull, 'w')
         for c in ["instance_type", "flavor"]:
             retcode = subprocess.call(["bin/nova-manage", c, \
-                                        "list"], stdout=fnull)
+                                        "list"], stdout=self.fnull)
             self.assertEqual(0, retcode)
 
     def test_list_specific_instance_type(self):
-        fnull = open(os.devnull, 'w')
         retcode = subprocess.call(["bin/nova-manage", "instance_type", "list",
-                                    "m1.medium"], stdout=fnull)
+                                    "m1.medium"], stdout=self.fnull)
         self.assertEqual(0, retcode)
 
     def test_should_error_on_bad_create_args(self):
-        fnull = open(os.devnull, 'w')
         # shouldn't be able to create instance type with 0 vcpus
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "create", self.name, "256", "0",\
-                                    "120", self.flavorid], stdout=fnull)
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",
+                                    "create", self.name + "bad_args",
+                                    "256", "0", "120", self.flavorid],
+                                    stdout=self.fnull)
         self.assertEqual(1, retcode)
 
     def test_should_fail_on_duplicate_flavorid(self):
-        fnull = open(os.devnull, 'w')
         # flavorid 1 is set in migration seed data
         retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "create", self.name, "256", "1",\
-                                    "120", "1"], stdout=fnull)
-        self.assertEqual(1, retcode)
+                                    "create", self.name + "dupflavor", "256",
+                                    "1", "120", "1"], stdout=self.fnull)
+        self.assertEqual(3, retcode)
 
     def test_should_fail_on_duplicate_name(self):
-        # FIXME(ken-pepple) duplicate_name really needs to be unique
-        duplicate_name = "sdfsdfsafsdfsd"
-        fnull = open(os.devnull, 'w')
+        duplicate_name = self.name + "dup_name"
         retcode = subprocess.call([
             "bin/nova-manage",
             "instance_type",
@@ -102,27 +102,29 @@ class NovaManageTestCase(test.TestCase):
             "2",
             "10",
             "10"],
-            stdout=fnull)
+            stdout=self.fnull)
+        self.assertEqual(0, retcode)
         duplicate_retcode = subprocess.call([
             "bin/nova-manage",
             "instance_type",
             "create",
             duplicate_name,
-            "256",
+            "512",
             "1",
-            "120",
-            self.flavorid,
+            "240",
+            str(int(self.flavorid) + 1),
             "2",
             "10",
             "10"],
-            stdout=fnull)
+            stdout=self.fnull)
         self.assertEqual(3, duplicate_retcode)
-        delete_retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "delete", duplicate_name], stdout=fnull)
+        delete_retcode = subprocess.call(["bin/nova-manage", "instance_type",
+                                    "delete", duplicate_name, "--purge"],
+                                    stdout=self.fnull)
         self.assertEqual(0, delete_retcode)
 
     def test_instance_type_delete_should_fail_without_valid_name(self):
-        fnull = open(os.devnull, 'w')
-        retcode = subprocess.call(["bin/nova-manage", "instance_type",\
-                                    "delete", "doesntexist"], stdout=fnull)
+        retcode = subprocess.call(["bin/nova-manage", "instance_type",
+                                    "delete", "doesntexist"],
+                                    stdout=self.fnull)
         self.assertEqual(1, retcode)
