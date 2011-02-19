@@ -20,7 +20,6 @@ Starting point for routing EC2 requests.
 
 """
 
-import datetime
 import webob
 import webob.dec
 import webob.exc
@@ -56,7 +55,7 @@ class RequestLogging(wsgi.Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        start = datetime.datetime.utcnow()
+        start = utils.utcnow()
         rv = req.get_response(self.application)
         self.log_request_completion(rv, req, start)
         return rv
@@ -67,7 +66,7 @@ class RequestLogging(wsgi.Middleware):
             controller = controller.__class__.__name__
         action = request.environ.get('ec2.action', None)
         ctxt = request.environ.get('ec2.context', None)
-        delta = datetime.datetime.utcnow() - start
+        delta = utils.utcnow() - start
         seconds = delta.seconds
         microseconds = delta.microseconds
         LOG.info(
