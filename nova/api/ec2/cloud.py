@@ -290,7 +290,7 @@ class CloudController(object):
         for key_pair in key_pairs:
             # filter out the vpn keys
             suffix = FLAGS.vpn_key_suffix
-            if context..is_admin or \
+            if context.is_admin or \
                not key_pair['name'].endswith(suffix):
                 result.append({
                     'keyName': key_pair['name'],
@@ -318,7 +318,7 @@ class CloudController(object):
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
         self.compute_api.ensure_default_security_group(context)
-        if context..is_admin:
+        if context.is_admin:
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
@@ -674,7 +674,7 @@ class CloudController(object):
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
-            if not context..is_admin:
+            if not context.is_admin:
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
@@ -702,7 +702,7 @@ class CloudController(object):
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
-            if context..is_admin:
+            if context.is_admin:
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
                     instance['host'])
@@ -736,7 +736,7 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        if context..is_admin:
+        if context.is_admin:
             iterator = db.floating_ip_get_all(context)
         else:
             iterator = db.floating_ip_get_all_by_project(context,
@@ -750,7 +750,7 @@ class CloudController(object):
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
-            if context..is_admin:
+            if context.is_admin:
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
                 address_rv['instance_id'] = details
