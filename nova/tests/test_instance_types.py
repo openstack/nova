@@ -59,7 +59,6 @@ class InstanceTypeTestCase(test.TestCase):
                          len(instance_types.get_all_types()),
                          'instance type not purged')
 
-
     def test_get_all_instance_types(self):
         """Ensures that all instance types can be retrieved"""
         session = get_session()
