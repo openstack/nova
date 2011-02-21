@@ -215,8 +215,12 @@ class FanoutAdapterConsumer(AdapterConsumer):
     def __init__(self, connection=None, topic="broadcast", proxy=None):
         self.exchange = "%s_fanout" % topic
         self.routing_key = topic
-        self.queue = "ignored"
+        unique = uuid.uuid4().hex
+        self.queue = "%s_fanout_%s" % (topic, unique)
         self.durable = False
+        LOG.info(_("Created '%(exchange)s' fanout exchange "
+                                        "with '%(key)s' routing key"),
+                            dict(exchange=self.exchange, key=self.routing_key))
         super(FanoutAdapterConsumer, self).__init__(connection=connection,
                                     topic=topic, proxy=proxy)
 
@@ -228,7 +232,6 @@ class TopicPublisher(Publisher):
     def __init__(self, connection=None, topic="broadcast"):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
-        self.queue = "ignored"
         self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
 
@@ -239,7 +242,10 @@ class FanoutPublisher(Publisher):
 
     def __init__(self, topic, connection=None):
         self.exchange = "%s_fanout" % topic
+        self.queue = "%s_fanout" % topic
         self.durable = False
+        LOG.info(_("Writing to '%(exchange)s' fanout exchange"),
+                            dict(exchange=self.exchange))
         super(FanoutPublisher, self).__init__(connection=connection)
 
 
