@@ -282,7 +282,7 @@ class CloudController(object):
                                  'description': 'fixme'}]}
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
+        key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
         if not key_name is None:
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
@@ -290,7 +290,7 @@ class CloudController(object):
         for key_pair in key_pairs:
             # filter out the vpn keys
             suffix = FLAGS.vpn_key_suffix
-            if context.user.is_admin() or \
+            if context.is_admin or \
                not key_pair['name'].endswith(suffix):
                 result.append({
                     'keyName': key_pair['name'],
@@ -301,7 +301,7 @@ class CloudController(object):
 
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
-        data = _gen_key(context, context.user.id, key_name)
+        data = _gen_key(context, context.user_id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
@@ -310,7 +310,7 @@ class CloudController(object):
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:
-            db.key_pair_destroy(context, context.user.id, key_name)
+            db.key_pair_destroy(context, context.user_id, key_name)
         except exception.NotFound:
             # aws returns true even if the key doesn't exist
             pass
@@ -318,7 +318,7 @@ class CloudController(object):
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
         self.compute_api.ensure_default_security_group(context)
-        if context.user.is_admin():
+        if context.is_admin:
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
@@ -327,7 +327,9 @@ class CloudController(object):
         if not group_name is None:
             groups = [g for g in groups if g.name in group_name]
 
-        return {'securityGroupInfo': groups}
+        return {'securityGroupInfo':
+                list(sorted(groups,
+                            key=lambda k: (k['ownerId'], k['groupName'])))}
 
     def _format_security_group(self, context, group):
         g = {}
@@ -492,7 +494,7 @@ class CloudController(object):
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError(_('group %s already exists') % group_name)
 
-        group = {'user_id': context.user.id,
+        group = {'user_id': context.user_id,
                  'project_id': context.project_id,
                  'name': group_name,
                  'description': group_description}
@@ -512,8 +514,11 @@ class CloudController(object):
     def get_console_output(self, context, instance_id, **kwargs):
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
-        # instance_id is passed in as a list of instances
-        ec2_id = instance_id[0]
+        # instance_id may be passed in as a list of instances
+        if type(instance_id) == list:
+            ec2_id = instance_id[0]
+        else:
+            ec2_id = instance_id
         instance_id = ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
@@ -669,7 +674,7 @@ class CloudController(object):
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
-            if not context.user.is_admin():
+            if not context.is_admin:
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
@@ -697,7 +702,7 @@ class CloudController(object):
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
-            if context.user.is_admin():
+            if context.is_admin:
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
                     instance['host'])
@@ -731,7 +736,7 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        if context.user.is_admin():
+        if context.is_admin:
             iterator = db.floating_ip_get_all(context)
         else:
             iterator = db.floating_ip_get_all_by_project(context,
@@ -745,7 +750,7 @@ class CloudController(object):
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
-            if context.user.is_admin():
+            if context.is_admin:
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
                 address_rv['instance_id'] = details
@@ -836,11 +841,26 @@ class CloudController(object):
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
+    def _format_image(self, context, image):
+        """Convert from format defined by BaseImageService to S3 format."""
+        i = {}
+        i['imageId'] = image.get('id')
+        i['kernelId'] = image.get('kernel_id')
+        i['ramdiskId'] = image.get('ramdisk_id')
+        i['imageOwnerId'] = image.get('owner_id')
+        i['imageLocation'] = image.get('location')
+        i['imageState'] = image.get('status')
+        i['type'] = image.get('type')
+        i['isPublic'] = image.get('is_public')
+        i['architecture'] = image.get('architecture')
+        return i
+
     def describe_images(self, context, image_id=None, **kwargs):
-        # Note: image_id is a list!
+        # NOTE: image_id is a list!
         images = self.image_service.index(context)
         if image_id:
-            images = filter(lambda x: x['imageId'] in image_id, images)
+            images = filter(lambda x: x['id'] in image_id, images)
+        images = [self._format_image(context, i) for i in images]
         return {'imagesSet': images}
 
     def deregister_image(self, context, image_id, **kwargs):
@@ -863,6 +883,9 @@ class CloudController(object):
                                      % attribute)
         try:
             image = self.image_service.show(context, image_id)
+            image = self._format_image(context,
+                                       self.image_service.show(context,
+                                                               image_id))
         except IndexError:
             raise exception.ApiError(_('invalid id: %s') % image_id)
         result = {'image_id': image_id, 'launchPermission': []}

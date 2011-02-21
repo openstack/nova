@@ -20,13 +20,14 @@
 System-level utilities and helper functions.
 """
 
+import base64
 import datetime
 import inspect
 import json
 import os
 import random
-import subprocess
 import socket
+import string
 import struct
 import sys
 import time
@@ -36,6 +37,7 @@ import netaddr
 
 from eventlet import event
 from eventlet import greenthread
+from eventlet.green import subprocess
 
 from nova import exception
 from nova.exception import ProcessExecutionError
@@ -152,6 +154,42 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     return result
 
 
+def ssh_execute(ssh, cmd, process_input=None,
+                addl_env=None, check_exit_code=True):
+    LOG.debug(_("Running cmd (SSH): %s"), cmd)
+    if addl_env:
+        raise exception.Error("Environment not supported over SSH")
+
+    if process_input:
+        # This is (probably) fixable if we need it...
+        raise exception.Error("process_input not supported over SSH")
+
+    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
+    channel = stdout_stream.channel
+
+    #stdin.write('process_input would go here')
+    #stdin.flush()
+
+    # NOTE(justinsb): This seems suspicious...
+    # ...other SSH clients have buffering issues with this approach
+    stdout = stdout_stream.read()
+    stderr = stderr_stream.read()
+    stdin_stream.close()
+
+    exit_status = channel.recv_exit_status()
+
+    # exit_status == -1 if no exit code was returned
+    if exit_status != -1:
+        LOG.debug(_("Result was %s") % exit_status)
+        if check_exit_code and exit_status != 0:
+            raise exception.ProcessExecutionError(exit_code=exit_status,
+                                                  stdout=stdout,
+                                                  stderr=stderr,
+                                                  cmd=cmd)
+
+    return (stdout, stderr)
+
+
 def abspath(s):
     return os.path.join(os.path.dirname(__file__), s)
 
@@ -197,6 +235,15 @@ def generate_mac():
            random.randint(0x00, 0xff),
            random.randint(0x00, 0xff)]
     return ':'.join(map(lambda x: "%02x" % x, mac))
+
+
+def generate_password(length=20):
+    """Generate a random sequence of letters and digits
+    to be used as a password. Note that this is not intended
+    to represent the ultimate in security.
+    """
+    chrs = string.letters + string.digits
+    return "".join([random.choice(chrs) for i in xrange(length)])
 
 
 def last_octet(address):
@@ -440,3 +487,15 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+def ensure_b64_encoding(val):
+    """Safety method to ensure that values expected to be base64-encoded
+    actually are. If they are, the value is returned unchanged. Otherwise,
+    the encoded value is returned.
+    """
+    try:
+        dummy = base64.decode(val)
+        return val
+    except TypeError:
+        return base64.b64encode(val)

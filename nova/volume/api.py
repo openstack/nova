@@ -45,11 +45,11 @@ class API(base.Base):
             LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
                     " %(size)sG volume") % locals())
             raise quota.QuotaError(_("Volume quota exceeded. You cannot "
-                    "create a volume of size %s") % size)
+                                     "create a volume of size %sG") % size)
 
         options = {
             'size': size,
-            'user_id': context.user.id,
+            'user_id': context.user_id,
             'project_id': context.project_id,
             'availability_zone': FLAGS.storage_availability_zone,
             'status': "creating",
@@ -85,7 +85,7 @@ class API(base.Base):
         return self.db.volume_get(context, volume_id)
 
     def get_all(self, context):
-        if context.user.is_admin():
+        if context.is_admin:
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
 

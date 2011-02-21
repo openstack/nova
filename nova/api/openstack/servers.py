@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
@@ -64,6 +62,22 @@ def _translate_detail_keys(inst):
 
     inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
+
+    # grab single private fixed ip
+    try:
+        private_ip = inst['fixed_ip']['address']
+        if private_ip:
+            inst_dict['addresses']['private'].append(private_ip)
+    except KeyError:
+        LOG.debug(_("Failed to read private ip"))
+
+    # grab all public floating ips
+    try:
+        for floating in inst['fixed_ip']['floating_ips']:
+            inst_dict['addresses']['public'].append(floating['address'])
+    except KeyError:
+        LOG.debug(_("Failed to read public ip(s)"))
+
     inst_dict['metadata'] = {}
     inst_dict['hostId'] = ''
 
@@ -148,8 +162,12 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        key_pair = auth_manager.AuthManager.get_key_pairs(
-            req.environ['nova.context'])[0]
+        key_pairs = auth_manager.AuthManager.get_key_pairs(
+            req.environ['nova.context'])
+        if not key_pairs:
+            raise exception.NotFound(_("No keypairs defined"))
+        key_pair = key_pairs[0]
+
         image_id = common.get_image_id_from_image_hash(self._image_service,
             req.environ['nova.context'], env['server']['imageId'])
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
@@ -163,7 +181,8 @@ class Controller(wsgi.Controller):
             display_name=env['server']['name'],
             display_description=env['server']['name'],
             key_name=key_pair['name'],
-            key_data=key_pair['public_key'])
+            key_data=key_pair['public_key'],
+            onset_files=env.get('onset_files', []))
         return _translate_keys(instances[0])
 
     def update(self, req, id):
@@ -246,6 +265,20 @@ class Controller(wsgi.Controller):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def reset_network(self, req, id):
+        """
+        Reset networking on an instance (admin only).
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.reset_network(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::reset_network %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
