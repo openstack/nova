@@ -41,4 +41,6 @@ class SchedulerDependentManager(manager.Manager):
     def periodic_tasks(self, context=None):
         """Pass data back to the scheduler at a periodic interval"""
         logging.debug(_("*** Notifying Schedulers of capabilities ..."))
+        api.API.update_service_capabilities(context, 'compute', self.last_capabilities)
+
         super(SchedulerDependentManager, self).periodic_tasks(context)

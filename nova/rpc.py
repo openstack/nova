@@ -137,24 +137,7 @@ class Consumer(messaging.Consumer):
         return timer
 
 
-class Publisher(messaging.Publisher):
-    """Publisher base class"""
-    pass
-
-
-class TopicConsumer(Consumer):
-    """Consumes messages on a specific topic"""
-    exchange_type = "topic"
-
-    def __init__(self, connection=None, topic="broadcast"):
-        self.queue = topic
-        self.routing_key = topic
-        self.exchange = FLAGS.control_exchange
-        self.durable = False
-        super(TopicConsumer, self).__init__(connection=connection)
-
-
-class AdapterConsumer(TopicConsumer):
+class AdapterConsumer(Consumer):
     """Calls methods on a proxy object based on method and args"""
     def __init__(self, connection=None, topic="broadcast", proxy=None):
         LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
@@ -207,6 +190,37 @@ class AdapterConsumer(TopicConsumer):
         return
 
 
+class Publisher(messaging.Publisher):
+    """Publisher base class"""
+    pass
+
+
+class TopicAdapterConsumer(AdapterConsumer):
+    """Consumes messages on a specific topic"""
+    exchange_type = "topic"
+
+    def __init__(self, connection=None, topic="broadcast", proxy=None):
+        self.queue = topic
+        self.routing_key = topic
+        self.exchange = FLAGS.control_exchange
+        self.durable = False
+        super(TopicAdapterConsumer, self).__init__(connection=connection,
+                                    topic=topic, proxy=proxy)
+
+
+class FanoutAdapterConsumer(AdapterConsumer):
+    """Consumes messages from a fanout exchange"""
+    exchange_type = "fanout"
+
+    def __init__(self, connection=None, topic="broadcast", proxy=None):
+        self.exchange = "%s_fanout" % topic
+        self.routing_key = topic
+        self.queue = "ignored"
+        self.durable = False
+        super(FanoutAdapterConsumer, self).__init__(connection=connection,
+                                    topic=topic, proxy=proxy)
+
+
 class TopicPublisher(Publisher):
     """Publishes messages on a specific topic"""
     exchange_type = "topic"
@@ -214,6 +228,7 @@ class TopicPublisher(Publisher):
     def __init__(self, connection=None, topic="broadcast"):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
+        self.queue = "ignored"
         self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
 

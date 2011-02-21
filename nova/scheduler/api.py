@@ -47,3 +47,10 @@ class API:
         for item in items:
             item['api_url'] = item['api_url'].replace('\\/', '/')
         return items
+
+    @classmethod
+    def update_service_capabilities(cls, context, service_name, capabilities):
+        kwargs = dict(method='update_service_capabilities',
+                        service_name=service_name, capabilities=capabilities)
+        return rpc.fanout_cast(context, 'scheduler', kwargs)
+
