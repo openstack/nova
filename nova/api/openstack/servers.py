@@ -168,8 +168,11 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         context = req.environ['nova.context']
+        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
+        if not key_pairs:
+            raise exception.NotFound(_("No keypairs defined"))
+        key_pair = key_pairs[0]
 
-        key_pair = auth_manager.AuthManager.get_key_pairs(context)[0]
         image_id = common.get_image_id_from_image_hash(self._image_service,
             context, env['server']['imageId'])
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(

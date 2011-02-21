@@ -124,25 +124,23 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
-        is_vpn = image_id == FLAGS.vpn_image_id
-        if not is_vpn:
-            image = self.image_service.show(context, image_id)
-            if kernel_id is None:
-                kernel_id = image.get('kernel_id', None)
-            if ramdisk_id is None:
-                ramdisk_id = image.get('ramdisk_id', None)
-            # No kernel and ramdisk for raw images
-            if kernel_id == str(FLAGS.null_kernel):
-                kernel_id = None
-                ramdisk_id = None
-                LOG.debug(_("Creating a raw instance"))
-            # Make sure we have access to kernel and ramdisk (if not raw)
-            logging.debug("Using Kernel=%s, Ramdisk=%s" %
-                           (kernel_id, ramdisk_id))
-            if kernel_id:
-                self.image_service.show(context, kernel_id)
-            if ramdisk_id:
-                self.image_service.show(context, ramdisk_id)
+        image = self.image_service.show(context, image_id)
+        if kernel_id is None:
+            kernel_id = image.get('kernel_id', None)
+        if ramdisk_id is None:
+            ramdisk_id = image.get('ramdisk_id', None)
+        # No kernel and ramdisk for raw images
+        if kernel_id == str(FLAGS.null_kernel):
+            kernel_id = None
+            ramdisk_id = None
+            LOG.debug(_("Creating a raw instance"))
+        # Make sure we have access to kernel and ramdisk (if not raw)
+        logging.debug("Using Kernel=%s, Ramdisk=%s" %
+                       (kernel_id, ramdisk_id))
+        if kernel_id:
+            self.image_service.show(context, kernel_id)
+        if ramdisk_id:
+            self.image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
