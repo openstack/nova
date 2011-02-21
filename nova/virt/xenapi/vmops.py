@@ -141,6 +141,7 @@ class VMOps(object):
             #this will return the appropriate network
             #TODO(salvatore-orlando): avoid unnecessary call to
             #find_network_with_bridge when VLAN manager is being used
+            
             network_ref = None
             try:
                 network_ref = \
