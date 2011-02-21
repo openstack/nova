@@ -202,6 +202,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.set_admin_password(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_inject_file(self):
+        """Ensure we can write a file to an instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.inject_file(self.context, instance_id, "/tmp/test",
+                "File Contents")
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()
