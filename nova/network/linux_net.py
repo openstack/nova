@@ -170,9 +170,9 @@ class IptablesManager(object):
                                     wrap=False)
 
         # Wrap the builtin chains
-        builtin_chains = { 4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
-                               'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']},
-                           6: {'filter': ['INPUT', 'OUTPUT', 'FORWARD']}}
+        builtin_chains = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
+                              'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']},
+                          6: {'filter': ['INPUT', 'OUTPUT', 'FORWARD']}}
 
         for ip_version in builtin_chains:
             if ip_version == 4:
