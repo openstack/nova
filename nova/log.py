@@ -295,6 +295,9 @@ root = logging.root
 
 def reset():
     """Resets logging handlers.  Should be called if FLAGS changes."""
+    for logger in logging.Logger.manager.loggerDict.itervalues():
+        if isinstance(logger, NovaLogger):
+            logger.setup_from_flags()
     root.setup_from_flags()
 
 
