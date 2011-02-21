@@ -117,21 +117,6 @@ def _get_binary_name():
     return os.path.basename(inspect.stack()[-1][1])
 
 
-def _get_level_from_flags(name):
-    # if exactly "nova", or a child logger, honor the verbose flag
-    if (name == "nova" or name.startswith("nova.")) and FLAGS.verbose:
-        return 'DEBUG'
-    for pair in FLAGS.default_log_levels:
-        logger, _sep, level = pair.partition('=')
-        # NOTE(todd): if we set a.b, we want a.b.c to have the same level
-        #             (but not a.bc, so we check the dot)
-        if name == logger:
-            return level
-        if name.startswith(logger) and name[len(logger)] == '.':
-            return level
-    return 'INFO'
-
-
 def _get_log_file_path(binary=None):
     if FLAGS.logfile:
         return FLAGS.logfile
@@ -162,9 +147,24 @@ class NovaLogger(logging.Logger):
         if flags.FlagValues.initialized:
             self.setup_from_flags()
 
+    @staticmethod
+    def _get_level_from_flags(name):
+        # if exactly "nova", or a child logger, honor the verbose flag
+        if (name == "nova" or name.startswith("nova.")) and FLAGS.verbose:
+            return 'DEBUG'
+        for pair in FLAGS.default_log_levels:
+            logger, _sep, level = pair.partition('=')
+            # NOTE(todd): if we set a.b, we want a.b.c to have the same level
+            #             (but not a.bc, so we check the dot)
+            if name == logger:
+                return level
+            if name.startswith(logger) and name[len(logger)] == '.':
+                return level
+        return 'INFO'
+
     def setup_from_flags(self):
         """Setup logger from flags"""
-        level_name = _get_level_from_flags(self.name)
+        level_name = self._get_level_from_flags(self.name)
         self.setLevel(globals()[level_name])
         self.initialized = True
         if not logging.root.initialized:
@@ -302,7 +302,7 @@ if not isinstance(logging.root, NovaRootLogger):
     logging.root = NovaRootLogger("nova")
     NovaLogger.root = logging.root
     NovaLogger.manager.root = logging.root
-root=logging.root
+root = logging.root
 
 
 def audit(msg, *args, **kwargs):
