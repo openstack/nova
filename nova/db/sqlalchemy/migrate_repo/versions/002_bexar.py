@@ -209,13 +209,16 @@ def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
-    for table in (certificates, consoles, console_pools, instance_actions,
-                  iscsi_targets):
+
+    tables = [certificates, console_pools, consoles, instance_actions,
+              iscsi_targets]
+    for table in tables:
         try:
             table.create()
         except Exception:
             logging.info(repr(table))
             logging.exception('Exception while creating table')
+            meta.drop_all(tables=tables)
             raise
 
     auth_tokens.c.user_id.alter(type=String(length=255,
