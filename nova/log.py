@@ -117,7 +117,22 @@ def _get_binary_name():
     return os.path.basename(inspect.stack()[-1][1])
 
 
-def get_log_file_path(binary=None):
+def _get_level_from_flags(name):
+    # if exactly "nova", or a child logger, honor the verbose flag
+    if (name == "nova" or name.startswith("nova.")) and FLAGS.verbose:
+        return 'DEBUG'
+    for pair in FLAGS.default_log_levels:
+        logger, _sep, level = pair.partition('=')
+        # NOTE(todd): if we set a.b, we want a.b.c to have the same level
+        #             (but not a.bc, so we check the dot)
+        if name == logger:
+            return level
+        if name.startswith(logger) and name[len(logger)] == '.':
+            return level
+    return 'INFO'
+
+
+def _get_log_file_path(binary=None):
     if FLAGS.logfile:
         return FLAGS.logfile
     if FLAGS.logdir:
@@ -126,22 +141,13 @@ def get_log_file_path(binary=None):
 
 
 def basicConfig():
-    logging.basicConfig()
-    for handler in logging.root.handlers:
-        handler.setFormatter(_formatter)
-    if FLAGS.verbose:
-        logging.root.setLevel(logging.DEBUG)
-    else:
-        logging.root.setLevel(logging.INFO)
-    if FLAGS.use_syslog:
-        syslog = SysLogHandler(address='/dev/log')
-        syslog.setFormatter(_formatter)
-        logging.root.addHandler(syslog)
-    logpath = get_log_file_path()
-    if logpath:
-        logfile = WatchedFileHandler(logpath)
-        logfile.setFormatter(_formatter)
-        logging.root.addHandler(logfile)
+    pass
+
+
+logging.basicConfig = basicConfig
+_syslog = SysLogHandler(address='/dev/log')
+_filelog = None
+_streamlog = StreamHandler()
 
 
 class NovaLogger(logging.Logger):
@@ -151,23 +157,24 @@ class NovaLogger(logging.Logger):
     This becomes the class that is instanciated by logging.getLogger.
     """
     def __init__(self, name, level=NOTSET):
-        level_name = self._get_level_from_flags(name, FLAGS)
-        level = globals()[level_name]
         logging.Logger.__init__(self, name, level)
+        self.initialized = False
+        if flags.FlagValues.initialized:
+            self._setup_from_flags()
 
-    def _get_level_from_flags(self, name, FLAGS):
-        # if exactly "nova", or a child logger, honor the verbose flag
-        if (name == "nova" or name.startswith("nova.")) and FLAGS.verbose:
-            return 'DEBUG'
-        for pair in FLAGS.default_log_levels:
-            logger, _sep, level = pair.partition('=')
-            # NOTE(todd): if we set a.b, we want a.b.c to have the same level
-            #             (but not a.bc, so we check the dot)
-            if name == logger:
-                return level
-            if name.startswith(logger) and name[len(logger)] == '.':
-                return level
-        return 'INFO'
+    def _setup_from_flags(self):
+        """Setup logger from flags"""
+        level_name = _get_level_from_flags(self.name)
+        self.setLevel(globals()[level_name])
+        self.initialized = True
+        if not logging.root.initialized:
+            logging.root._setup_from_flags()
+
+    def isEnabledFor(self, level):
+        """Reset level after flags have been loaded"""
+        if not self.initialized and flags.FlagValues.initialized:
+            self._setup_from_flags()
+        return logging.Logger.isEnabledFor(self, level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
         """Extract context from any log call"""
@@ -176,12 +183,12 @@ class NovaLogger(logging.Logger):
         if context:
             extra.update(_dictify_context(context))
         extra.update({"nova_version": version.version_string_with_vcs()})
-        logging.Logger._log(self, level, msg, args, exc_info, extra)
+        return logging.Logger._log(self, level, msg, args, exc_info, extra)
 
     def addHandler(self, handler):
         """Each handler gets our custom formatter"""
         handler.setFormatter(_formatter)
-        logging.Logger.addHandler(self, handler)
+        return logging.Logger.addHandler(self, handler)
 
     def audit(self, msg, *args, **kwargs):
         """Shortcut for our AUDIT level"""
@@ -192,7 +199,7 @@ class NovaLogger(logging.Logger):
         """Logging.exception doesn't handle kwargs, so breaks context"""
         if not kwargs.get('exc_info'):
             kwargs['exc_info'] = 1
-        self.error(msg, *args, **kwargs)
+        return self.error(msg, *args, **kwargs)
         # NOTE(todd): does this really go here, or in _log ?
         extra = kwargs.get('extra')
         if not extra:
@@ -209,20 +216,13 @@ class NovaLogger(logging.Logger):
 
 
 def handle_exception(type, value, tb):
+    if len(logging.root.handlers) == 0:
+        logging.root.addHandler(_streamlog)
     logging.root.critical(str(value), exc_info=(type, value, tb))
 
 
 sys.excepthook = handle_exception
 logging.setLoggerClass(NovaLogger)
-
-
-class NovaRootLogger(NovaLogger):
-    pass
-
-if not isinstance(logging.root, NovaRootLogger):
-    logging.root = NovaRootLogger("nova.root", WARNING)
-    NovaLogger.root = logging.root
-    NovaLogger.manager.root = logging.root
 
 
 class NovaFormatter(logging.Formatter):
@@ -269,6 +269,33 @@ class NovaFormatter(logging.Formatter):
         return "\n".join(formatted_lines)
 
 _formatter = NovaFormatter()
+
+
+class NovaRootLogger(NovaLogger):
+    def __init__(self, name, level=NOTSET):
+        NovaLogger.__init__(self, name, level)
+        self.addHandler(_streamlog)
+
+    def _setup_from_flags(self):
+        """Setup logger from flags"""
+        global _filelog
+        if FLAGS.use_syslog:
+            self.addHandler(_syslog)
+        logpath = _get_log_file_path()
+        if logpath:
+            if not _filelog:
+                _filelog = WatchedFileHandler(logpath)
+            self.addHandler(_filelog)
+            self.removeHandler(_streamlog)
+        return NovaLogger._setup_from_flags(self)
+
+
+if not isinstance(logging.root, NovaRootLogger):
+    for handler in logging.root.handlers:
+        logging.root.removeHandler(handler)
+    logging.root = NovaRootLogger("nova")
+    NovaLogger.root = logging.root
+    NovaLogger.manager.root = logging.root
 
 
 def audit(msg, *args, **kwargs):

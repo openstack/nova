@@ -60,6 +60,8 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         """Run before each test method to initialize test environment"""
         super(TestCase, self).setUp()
+        # NOTE(vish): pretend like we've loaded flags from command line
+        flags.FlagValues.initialized = True
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.

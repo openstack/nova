@@ -33,7 +33,6 @@ import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
-LOG.setLevel(logging.DEBUG)
 
 
 FLAGS = flags.FLAGS

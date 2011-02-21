@@ -38,6 +38,7 @@ class FlagValues(gflags.FlagValues):
     defined after the initial parsing.
 
     """
+    initialized = False
 
     def __init__(self, extra_context=None):
         gflags.FlagValues.__init__(self)
@@ -45,6 +46,8 @@ class FlagValues(gflags.FlagValues):
         self.__dict__['__was_already_parsed'] = False
         self.__dict__['__stored_argv'] = []
         self.__dict__['__extra_context'] = extra_context
+        # NOTE(vish): force a pseudo flag to keep track of whether
+        #             flags have been parsed already
 
     def __call__(self, argv):
         # We're doing some hacky stuff here so that we don't have to copy
@@ -90,6 +93,7 @@ class FlagValues(gflags.FlagValues):
         self.__dict__['__stored_argv'] = original_argv
         self.__dict__['__was_already_parsed'] = True
         self.ClearDirty()
+        FlagValues.initialized = True
         return args
 
     def Reset(self):
