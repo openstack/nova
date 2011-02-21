@@ -406,8 +406,8 @@ class VMOps(object):
             if ramdisk:
                 args['ramdisk-file'] = ramdisk
             task2 = self._session.async_call_plugin('glance', fn, args)
-            self._session.wait_for_task(instance.id, task1)
-            self._session.wait_for_task(instance.id, task2)
+            self._session.wait_for_task(task1, instance.id)
+            self._session.wait_for_task(task2, instance.id)
             LOG.debug(_("kernel/ramdisk files removed"))
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
@@ -477,35 +477,36 @@ class VMOps(object):
         """Rescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
 
-        #self._shutdown(instance, vm)
-        #target_vm = VMHelper.lookup(self._session, "instance-00000012")
-        target_vm = self.compute_api.create(
-            context=context.get_admin_context(),
-            instance_type="m1.tiny",
-            image_id=1,
-            kernel_id=3,
-            ramdisk_id=2,
-            display_name="test",
-            display_description="test")
-        print context.get_admin_context().__dict__
-        print target_vm
+        self._shutdown(instance, vm)
+        target_vm = VMHelper.lookup(self._session, "instance-00000001")
+        #target_vm = self.compute_api.create(
+        #    context=context.get_admin_context(),
+        #    instance_type="m1.tiny",
+        #    image_id=1,
+        #    kernel_id=3,
+        #    ramdisk_id=2,
+        #    display_name="test",
+        #    display_description="test")
+        #print context.get_admin_context().__dict__
+        #print target_vm
 
-        #vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
-        #vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
-        #vbd_ref = VMHelper.create_vbd(
-        #    self._session,
-        #    target_vm,
-        #    vdi_ref,
-        #    1,
-        #    False)
+        vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        vbd_ref = VMHelper.create_vbd(
+            self._session,
+            target_vm,
+            vdi_ref,
+            1,
+            False)
 
         # Plug the VBD into the target instance
-        #self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+        pass
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
-        target_vm = VMHelper.lookup(self._session, "instance-00000012")
+        target_vm = VMHelper.lookup(self._session, "instance-00000001")
 
         vbds = self._session.get_xenapi().VM.get_VBDs(target_vm)
 
