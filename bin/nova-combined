@@ -49,7 +49,6 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
-    logging.basicConfig()
 
     compute = service.Service.create(binary='nova-compute')
     network = service.Service.create(binary='nova-network')
@@ -73,7 +72,6 @@ if __name__ == '__main__':
         apps.append((app, getattr(FLAGS, "%s_port" % api),
                      getattr(FLAGS, "%s_host" % api)))
     if len(apps) > 0:
-        logging.basicConfig()
         server = wsgi.Server()
         for app in apps:
             server.start(*app)

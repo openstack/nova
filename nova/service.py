@@ -215,7 +215,6 @@ class Service(object):
 
 def serve(*services):
     FLAGS(sys.argv)
-    logging.basicConfig()
 
     if not services:
         services = [Service.create()]

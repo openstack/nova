@@ -160,20 +160,20 @@ class NovaLogger(logging.Logger):
         logging.Logger.__init__(self, name, level)
         self.initialized = False
         if flags.FlagValues.initialized:
-            self._setup_from_flags()
+            self.setup_from_flags()
 
-    def _setup_from_flags(self):
+    def setup_from_flags(self):
         """Setup logger from flags"""
         level_name = _get_level_from_flags(self.name)
         self.setLevel(globals()[level_name])
         self.initialized = True
         if not logging.root.initialized:
-            logging.root._setup_from_flags()
+            logging.root.setup_from_flags()
 
     def isEnabledFor(self, level):
         """Reset level after flags have been loaded"""
         if not self.initialized and flags.FlagValues.initialized:
-            self._setup_from_flags()
+            self.setup_from_flags()
         return logging.Logger.isEnabledFor(self, level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
@@ -276,18 +276,24 @@ class NovaRootLogger(NovaLogger):
         NovaLogger.__init__(self, name, level)
         self.addHandler(_streamlog)
 
-    def _setup_from_flags(self):
+    def setup_from_flags(self):
         """Setup logger from flags"""
         global _filelog
         if FLAGS.use_syslog:
             self.addHandler(_syslog)
+        else:
+            self.removeHandler(_syslog)
         logpath = _get_log_file_path()
         if logpath:
             if not _filelog:
                 _filelog = WatchedFileHandler(logpath)
             self.addHandler(_filelog)
             self.removeHandler(_streamlog)
-        return NovaLogger._setup_from_flags(self)
+        else:
+            self.removeHandler(_filelog)
+            self.addHandler(_streamlog)
+
+        return NovaLogger.setup_from_flags(self)
 
 
 if not isinstance(logging.root, NovaRootLogger):
@@ -296,6 +302,7 @@ if not isinstance(logging.root, NovaRootLogger):
     logging.root = NovaRootLogger("nova")
     NovaLogger.root = logging.root
     NovaLogger.manager.root = logging.root
+root=logging.root
 
 
 def audit(msg, *args, **kwargs):

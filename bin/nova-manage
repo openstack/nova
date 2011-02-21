@@ -77,7 +77,6 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
@@ -87,7 +86,6 @@ from nova.cloudpipe import pipelib
 from nova.db import migration
 
 
-logging.basicConfig()
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')

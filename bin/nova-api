@@ -39,7 +39,6 @@ from nova import log as logging
 from nova import version
 from nova import wsgi
 
-logging.basicConfig()
 LOG = logging.getLogger('nova.api')
 LOG.setLevel(logging.DEBUG)
 
@@ -71,7 +70,8 @@ def run_app(paste_config_file):
         return
 
     # NOTE(todd): redo logging config, verbose could be set in paste config
-    logging.basicConfig()
+    logging.root.setup_from_flags()
+
     server = wsgi.Server()
     for app in apps:
         server.start(*app)
