@@ -69,7 +69,7 @@ class Image(object):
         #                  but only modified by admin or owner.
         try:
             return (self.metadata['isPublic'] and readonly) or \
-                   context.user.is_admin() or \
+                   context.is_admin or \
                    self.metadata['imageOwnerId'] == context.project_id
         except:
             return False
