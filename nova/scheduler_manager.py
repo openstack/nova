@@ -22,18 +22,23 @@ These Capabilities are hints that can help the scheduler route
 requests to the appropriate service instance.
 """
 
+import sys
+
+from nova import flags
 from nova import manager
 from nova.scheduler import api
+from nova import log as logging
 
 
 FLAGS = flags.FLAGS
 
 
-def SchedulerDependentManage(manager.Manager):
+class SchedulerDependentManager(manager.Manager):
     def __init__(self, host=None, db_driver=None):
         self.last_capabilities = {}
         super(SchedulerDependentManager, self).__init__(host, db_driver)
 
     def periodic_tasks(self, context=None):
         """Pass data back to the scheduler at a periodic interval"""
-        logging.debug(_("Notifying Schedulers of capabilities ..."))
+        logging.debug(_("*** Notifying Schedulers of capabilities ..."))
+        super(SchedulerDependentManager, self).periodic_tasks(context)

@@ -44,7 +44,7 @@ import functools
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import manager
+from nova import scheduler_manager
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
@@ -99,7 +99,7 @@ def checks_instance_lock(function):
     return decorated_function
 
 
-class ComputeManager(manager.Manager):
+class ComputeManager(scheduler_manager.SchedulerDependentManager):
 
     """Manages the running instances from creation to destruction."""
 

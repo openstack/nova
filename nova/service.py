@@ -95,7 +95,7 @@ class Service(object):
                     topic='%s.%s' % (self.topic, self.host),
                     proxy=self)
             fanout = rpc.AdapterConsumer(
-                    connection=conn2,
+                    connection=conn3,
                     topic='%s_fanout' % self.topic,
                     proxy=self)
 
