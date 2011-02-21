@@ -294,6 +294,7 @@ if not isinstance(logging.root, NovaRootLogger):
 root = logging.root
 
 def reset():
+    """Resets logging handlers.  Should be called if FLAGS changes."""
     root.setup_from_flags()
 
 
