@@ -1231,7 +1231,10 @@ class IptablesFirewallDriver(FirewallDriver):
 
     def prepare_instance_filter(self, instance):
         self.instances[instance['id']] = instance
+        self.add_filters_for_instance(instance)
+        self.iptables.apply()
 
+    def add_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
 
         self.iptables.ipv4['filter'].add_chain(chain_name)
@@ -1257,17 +1260,16 @@ class IptablesFirewallDriver(FirewallDriver):
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
 
+    def unfilter_instance(self, instance):
+        self.remove_filters_for_instance(instance)
         self.iptables.apply()
 
-    def unfilter_instance(self, instance):
+    def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
 
         self.iptables.ipv4['filter'].remove_chain(chain_name)
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].remove_chain(chain_name)
-
-        self.iptables.apply()
-
 
     def instance_rules(self, instance):
         ctxt = context.get_admin_context()
@@ -1374,7 +1376,10 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def refresh_security_group_rules(self, security_group):
-        self.apply_ruleset()
+        for instance in self.instances:
+            self.remove_filters_for_instance(instance)
+            self.add_filters_for_instance(instance)
+        self.iptables.apply()
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)
