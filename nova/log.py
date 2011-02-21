@@ -145,25 +145,14 @@ class NovaLogger(logging.Logger):
         logging.Logger.__init__(self, name, level)
         self.setup_from_flags()
 
-    @staticmethod
-    def _get_level_from_flags(name):
-        # if exactly "nova", or a child logger, honor the verbose flag
-        if (name == "nova" or name.startswith("nova.")) and FLAGS.verbose:
-            return 'DEBUG'
+    def setup_from_flags(self):
+        """Setup logger from flags"""
         for pair in FLAGS.default_log_levels:
             logger, _sep, level = pair.partition('=')
             # NOTE(todd): if we set a.b, we want a.b.c to have the same level
             #             (but not a.bc, so we check the dot)
-            if name == logger:
-                return level
-            if name.startswith(logger) and name[len(logger)] == '.':
-                return level
-        return 'INFO'
-
-    def setup_from_flags(self):
-        """Setup logger from flags"""
-        level_name = self._get_level_from_flags(self.name)
-        self.setLevel(globals()[level_name])
+            if self.name == logger or self.name.startswith("%s." % logger):
+                self.setLevel(globals()[level])
 
     def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
         """Extract context from any log call"""
@@ -281,8 +270,10 @@ class NovaRootLogger(NovaLogger):
         else:
             self.removeHandler(_filelog)
             self.addHandler(_streamlog)
-
-        return NovaLogger.setup_from_flags(self)
+        if FLAGS.verbose:
+            self.setLevel(DEBUG)
+        else:
+            self.setLevel(INFO)
 
 
 if not isinstance(logging.root, NovaRootLogger):
