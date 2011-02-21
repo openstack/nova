@@ -70,7 +70,7 @@ def run_app(paste_config_file):
         return
 
     # NOTE(todd): redo logging config, verbose could be set in paste config
-    logging.root.setup_from_flags()
+    logging.reset()
 
     server = wsgi.Server()
     for app in apps:
