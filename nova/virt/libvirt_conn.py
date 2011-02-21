@@ -1303,10 +1303,8 @@ class IptablesFirewallDriver(FirewallDriver):
                 cidrv6 = self._project_cidrv6_for_instance(instance)
                 ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
 
-
         security_groups = db.security_group_get_by_instance(ctxt,
                                                             instance['id'])
-
 
         # then, security group chains and rules
         for security_group in security_groups:

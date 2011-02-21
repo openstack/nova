@@ -345,7 +345,8 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.prepare_instance_filter(instance_ref)
         self.fw.apply_instance_filter(instance_ref)
 
-        in_rules = filter(lambda l: not l.startswith('#'), self.in_filter_rules)
+        in_rules = filter(lambda l: not l.startswith('#'),
+                          self.in_filter_rules)
         for rule in in_rules:
             if not 'nova' in rule:
                 self.assertTrue(rule in self.out_rules,

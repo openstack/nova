@@ -126,7 +126,8 @@ def fetchfile(url, target):
     execute("curl --fail %s -o %s" % (url, target))
 
 
-def execute(cmd, process_input=None, addl_env=None, check_exit_code=True, attempts=1):
+def execute(cmd, process_input=None, addl_env=None, check_exit_code=True,
+            attempts=1):
     while attempts > 0:
         attempts -= 1
         try:
@@ -150,17 +151,16 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True, attemp
                                                 stdout=stdout,
                                                 stderr=stderr,
                                                 cmd=cmd)
-            # NOTE(termie): this appears to be necessary to let the subprocess call
-            #               clean something up in between calls, without it two
-            #               execute calls in a row hangs the second one
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
             greenthread.sleep(0)
             return result
         except ProcessExecutionError:
             if not attempts:
                 raise
             else:
-                greenthread.sleep(random.randint(50,300)/100)
-                pass
+                greenthread.sleep(random.randint(20, 200) / 100.0)
 
 
 def ssh_execute(ssh, cmd, process_input=None,

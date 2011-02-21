@@ -129,8 +129,10 @@ class IptablesTable(object):
         try:
             self.rules.remove(IptablesRule(*args, **kwargs))
         except ValueError:
-            LOG.debug(_("Tried to remove rule that wasn't there: %r %r"),
-                      args, kwargs)
+            LOG.debug(_("Tried to remove rule that wasn't there:"
+                        " %(args)r %(kwargs)r"), {'args': args,
+                                                  'kwargs': kwargs})
+
 
 class IptablesManager(object):
     def __init__(self, execute=None):
@@ -142,9 +144,9 @@ class IptablesManager(object):
         else:
             self.execute = execute
 
-        self.ipv4 = { 'filter': IptablesTable(),
-                      'nat': IptablesTable() }
-        self.ipv6 = { 'filter': IptablesTable() }
+        self.ipv4 = {'filter': IptablesTable(),
+                     'nat': IptablesTable()}
+        self.ipv6 = {'filter': IptablesTable()}
 
         self.ipv4['nat'].add_chain('SNATTING')
         self.ipv4['nat'].add_rule('POSTROUTING',
@@ -155,8 +157,15 @@ class IptablesManager(object):
         self.ipv4['filter'].add_rule('FORWARD',
                                     '-j %s-local' % (binary_name,),
                                     wrap=False)
-
         self.ipv4['filter'].add_rule('OUTPUT',
+                                    '-j %s-local' % (binary_name,),
+                                    wrap=False)
+
+        self.ipv6['filter'].add_chain('local')
+        self.ipv6['filter'].add_rule('FORWARD',
+                                    '-j %s-local' % (binary_name,),
+                                    wrap=False)
+        self.ipv6['filter'].add_rule('OUTPUT',
                                     '-j %s-local' % (binary_name,),
                                     wrap=False)
 
@@ -172,7 +181,6 @@ class IptablesManager(object):
                                           wrap=False)
         self.semaphore = semaphore.Semaphore()
 
-
     def apply(self):
         with self.semaphore:
             s = [('iptables', self.ipv4)]
@@ -184,7 +192,8 @@ class IptablesManager(object):
                     current_table, _ = self.execute('sudo %s-save -t %s' %
                                                     (cmd, table), attempts=5)
                     current_lines = current_table.split('\n')
-                    new_filter = self.modify_rules(current_lines, tables[table])
+                    new_filter = self.modify_rules(current_lines,
+                                                   tables[table])
                     self.execute('sudo %s-restore' % (cmd,),
                                  process_input='\n'.join(new_filter),
                                  attempts=5)
@@ -285,16 +294,19 @@ def ensure_floating_forward(floating_ip, fixed_ip):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
 
+
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip):
         iptables_manager.ipv4['nat'].remove_rule(chain, rule)
     iptables_manager.apply()
 
+
 def floating_forward_rules(floating_ip, fixed_ip):
     return [("PREROUTING", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
             ("OUTPUT", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
             ("SNATTING", "-d %s -j SNAT --to %s" % (fixed_ip, floating_ip))]
+
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""

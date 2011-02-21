@@ -42,15 +42,14 @@ class IptablesManagerTestCase(test.TestCase):
 :INPUT ACCEPT [2223527:305688874]
 :FORWARD ACCEPT [0:0]
 :OUTPUT ACCEPT [2172501:140856656]
--A INPUT -i virbr0 -p udp -m udp --dport 53 -j ACCEPT 
--A INPUT -i virbr0 -p tcp -m tcp --dport 53 -j ACCEPT 
--A INPUT -i virbr0 -p udp -m udp --dport 67 -j ACCEPT 
--A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT 
--A FORWARD -d 192.168.122.0/24 -o virbr0 -m state --state RELATED,ESTABLISHED -j ACCEPT 
--A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT 
--A FORWARD -i virbr0 -o virbr0 -j ACCEPT 
--A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable 
--A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable 
+-A INPUT -i virbr0 -p udp -m udp --dport 53 -j ACCEPT
+-A INPUT -i virbr0 -p tcp -m tcp --dport 53 -j ACCEPT
+-A INPUT -i virbr0 -p udp -m udp --dport 67 -j ACCEPT
+-A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT
+-A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT
+-A FORWARD -i virbr0 -o virbr0 -j ACCEPT
+-A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable
+-A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable
 COMMIT
 # Completed on Fri Feb 18 15:17:05 2011"""
 
@@ -77,8 +76,7 @@ COMMIT
 
         # TODO(soren): Add stuff for ipv6
         check_matrix = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
-                            'nat': ['PREROUTING', 'INPUT',
-                                    'OUTPUT', 'POSTROUTING']} }
+                            'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']}}
 
         for ip_version in check_matrix:
             ip = getattr(self.manager, 'ipv%d' % ip_version)
@@ -90,7 +88,6 @@ COMMIT
                                     (chain,) in new_lines)
                     self.assertTrue('-A %s -j run_tests.py-%s' % \
                                     (chain, chain) in new_lines)
-                print '\n'.join(new_lines)
 
 
 class NetworkTestCase(test.TestCase):
