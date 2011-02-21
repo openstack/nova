@@ -104,6 +104,9 @@ class IptablesTable(object):
         self.chains.remove(name)
         self.rules = filter(lambda r: r.chain != name, self.rules)
 
+        jump_snippet = '-j %s-%s' % (binary_name, name)
+        self.rules = filter(lambda r: jump_snippet not in r.rule, self.rules)
+
     def add_rule(self, chain, rule, wrap=True):
         if wrap and chain not in self.chains:
             raise ValueError(_("Unknown chain: %r") % chain)
@@ -283,7 +286,7 @@ def remove_floating_forward(floating_ip, fixed_ip):
 def floating_forward_rules(floating_ip, fixed_ip):
     return [("PREROUTING", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
             ("OUTPUT", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
-            ("SNATTING", "-d %s -j DNAT --to %s" % (fixed_ip, floating_ip))]
+            ("SNATTING", "-d %s -j SNAT --to %s" % (fixed_ip, floating_ip))]
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""

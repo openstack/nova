@@ -44,9 +44,6 @@ import uuid
 from xml.dom import minidom
 
 
-from eventlet import greenthread
-from eventlet import event
-from eventlet import semaphore
 from eventlet import tpool
 
 import IPy
@@ -1246,7 +1243,7 @@ class IptablesFirewallDriver(FirewallDriver):
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
             ipv6_address = self._ip_for_instance_v6(instance)
-            self.iptables.ipv4['filter'].add_rule('local',
+            self.iptables.ipv6['filter'].add_rule('local',
                                                   '-d %s -j $%s' %
                                                   (ipv6_address,
                                                    chain_name))
@@ -1376,7 +1373,7 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def refresh_security_group_rules(self, security_group):
-        for instance in self.instances:
+        for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
             self.add_filters_for_instance(instance)
         self.iptables.apply()
