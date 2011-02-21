@@ -100,7 +100,7 @@ class CloudTestCase(test.TestCase):
         address = "10.10.10.10"
         db.floating_ip_create(self.context,
                               {'address': address,
-                               'host': FLAGS.host})
+                               'host': self.network.host})
         self.cloud.allocate_address(self.context)
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
@@ -113,9 +113,9 @@ class CloudTestCase(test.TestCase):
         address = "10.10.10.10"
         db.floating_ip_create(self.context,
                               {'address': address,
-                               'host': FLAGS.host})
+                               'host': self.network.host})
         self.cloud.allocate_address(self.context)
-        inst = db.instance_create(self.context, {'host': FLAGS.host})
+        inst = db.instance_create(self.context, {'host': self.compute.host})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
         ec2_id = cloud.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
