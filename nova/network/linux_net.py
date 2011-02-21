@@ -101,7 +101,7 @@ class IptablesTable(object):
         self.chains.add(name)
 
     def remove_chain(self, name):
-        if name not in self.chain:
+        if name not in self.chains:
             LOG.debug(_("Attempted to remove chain %s which doesn't exist"),
                       name)
             return
