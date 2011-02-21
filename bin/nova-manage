@@ -85,7 +85,6 @@ from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.db import migration
 
-
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')

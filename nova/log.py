@@ -130,9 +130,6 @@ def basicConfig():
 
 
 logging.basicConfig = basicConfig
-_syslog = SysLogHandler(address='/dev/log')
-_filelog = None
-_streamlog = StreamHandler()
 
 
 class NovaLogger(logging.Logger):
@@ -193,16 +190,6 @@ class NovaLogger(logging.Logger):
             self.error(message, **kwargs)
 
 
-def handle_exception(type, value, tb):
-    if len(logging.root.handlers) == 0:
-        logging.root.addHandler(_streamlog)
-    logging.root.critical(str(value), exc_info=(type, value, tb))
-
-
-sys.excepthook = handle_exception
-logging.setLoggerClass(NovaLogger)
-
-
 class NovaFormatter(logging.Formatter):
     """
     A nova.context.RequestContext aware formatter configured through flags.
@@ -251,25 +238,30 @@ _formatter = NovaFormatter()
 
 class NovaRootLogger(NovaLogger):
     def __init__(self, name, level=NOTSET):
+        self.logpath = None
+        self.filelog = None
+        self.syslog = SysLogHandler(address='/dev/log')
+        self.streamlog = StreamHandler()
         NovaLogger.__init__(self, name, level)
-        self.addHandler(_streamlog)
 
     def setup_from_flags(self):
         """Setup logger from flags"""
         global _filelog
         if FLAGS.use_syslog:
-            self.addHandler(_syslog)
+            self.addHandler(self.syslog)
         else:
-            self.removeHandler(_syslog)
+            self.removeHandler(self.syslog)
         logpath = _get_log_file_path()
         if logpath:
-            if not _filelog:
-                _filelog = WatchedFileHandler(logpath)
-            self.addHandler(_filelog)
-            self.removeHandler(_streamlog)
+            self.removeHandler(self.streamlog)
+            if logpath != self.logpath:
+                self.removeHandler(self.filelog)
+                self.filelog = WatchedFileHandler(logpath)
+                self.addHandler(self.filelog)
+                self.logpath = logpath
         else:
-            self.removeHandler(_filelog)
-            self.addHandler(_streamlog)
+            self.removeHandler(self.filelog)
+            self.addHandler(self.streamlog)
         if FLAGS.verbose:
             self.setLevel(DEBUG)
         else:
@@ -283,6 +275,15 @@ if not isinstance(logging.root, NovaRootLogger):
     NovaLogger.root = logging.root
     NovaLogger.manager.root = logging.root
 root = logging.root
+
+
+def handle_exception(type, value, tb):
+    root.critical(str(value), exc_info=(type, value, tb))
+
+
+sys.excepthook = handle_exception
+logging.setLoggerClass(NovaLogger)
+
 
 def reset():
     """Resets logging handlers.  Should be called if FLAGS changes."""
