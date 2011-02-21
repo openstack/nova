@@ -162,8 +162,12 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        key_pair = auth_manager.AuthManager.get_key_pairs(
-            req.environ['nova.context'])[0]
+        key_pairs = auth_manager.AuthManager.get_key_pairs(
+            req.environ['nova.context'])
+        if not key_pairs:
+            raise exception.NotFound(_("No keypairs defined"))
+        key_pair = key_pairs[0]
+
         image_id = common.get_image_id_from_image_hash(self._image_service,
             req.environ['nova.context'], env['server']['imageId'])
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
