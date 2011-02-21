@@ -40,7 +40,6 @@ from nova import version
 from nova import wsgi
 
 LOG = logging.getLogger('nova.api')
-LOG.setLevel(logging.DEBUG)
 
 FLAGS = flags.FLAGS
 
@@ -80,6 +79,7 @@ def run_app(paste_config_file):
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
+    logging.setup()
     LOG.audit(_("Starting nova-api node (version %s)"),
               version.version_string_with_vcs())
     conf = wsgi.paste_config_file('nova-api.conf')

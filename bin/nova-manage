@@ -77,6 +77,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
@@ -707,6 +708,7 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
+    logging.setup()
 
     script_name = argv.pop(0)
     if len(argv) < 1:

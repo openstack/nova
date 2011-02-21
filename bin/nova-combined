@@ -49,6 +49,7 @@ FLAGS = flags.FLAGS
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
+    logging.setup()
 
     compute = service.Service.create(binary='nova-compute')
     network = service.Service.create(binary='nova-network')

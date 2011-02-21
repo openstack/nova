@@ -148,6 +148,7 @@ def WrapTwistedOptions(wrapped):
                 options.insert(0, '')
 
             args = FLAGS(options)
+            logging.setup()
             argv = args[1:]
             # ignore subcommands
 

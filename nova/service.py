@@ -214,8 +214,6 @@ class Service(object):
 
 
 def serve(*services):
-    FLAGS(sys.argv)
-
     if not services:
         services = [Service.create()]
 

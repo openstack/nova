@@ -65,6 +65,7 @@ flags.DEFINE_string('logging_exception_prefix',
 flags.DEFINE_list('default_log_levels',
                   ['amqplib=WARN',
                    'sqlalchemy=WARN',
+                   'boto=WARN',
                    'eventlet.wsgi.server=WARN'],
                   'list of logger=LEVEL pairs')
 
@@ -263,26 +264,8 @@ class NovaRootLogger(NovaLogger):
             self.setLevel(INFO)
 
 
-if not isinstance(logging.root, NovaRootLogger):
-    logging._acquireLock()
-    for handler in logging.root.handlers:
-        logging.root.removeHandler(handler)
-    logging.root = NovaRootLogger("nova")
-    for logger in NovaLogger.manager.loggerDict.itervalues():
-        logger.root = logging.root
-    NovaLogger.root = logging.root
-    NovaLogger.manager.root = logging.root
-    NovaLogger.manager.loggerDict["nova"] = logging.root
-    logging._releaseLock()
-root = logging.root
-
-
 def handle_exception(type, value, tb):
-    root.critical(str(value), exc_info=(type, value, tb))
-
-
-sys.excepthook = handle_exception
-logging.setLoggerClass(NovaLogger)
+    logging.root.critical(str(value), exc_info=(type, value, tb))
 
 
 def reset():
@@ -290,6 +273,29 @@ def reset():
     for logger in NovaLogger.manager.loggerDict.itervalues():
         if isinstance(logger, NovaLogger):
             logger.setup_from_flags()
+
+
+def setup():
+    """Setup nova logging."""
+    if not isinstance(logging.root, NovaRootLogger):
+        logging._acquireLock()
+        for handler in logging.root.handlers:
+            logging.root.removeHandler(handler)
+        logging.root = NovaRootLogger("nova")
+        NovaLogger.root = logging.root
+        NovaLogger.manager.root = logging.root
+        for logger in NovaLogger.manager.loggerDict.itervalues():
+            logger.root = logging.root
+            if isinstance(logger, logging.Logger):
+                NovaLogger.manager._fixupParents(logger)
+        NovaLogger.manager.loggerDict["nova"] = logging.root
+        logging._releaseLock()
+        sys.excepthook = handle_exception
+        reset()
+
+
+root = logging.root
+logging.setLoggerClass(NovaLogger)
 
 
 def audit(msg, *args, **kwargs):
