@@ -147,7 +147,7 @@ class TestCase(unittest.TestCase):
         for k, v in self._original_flags.iteritems():
             setattr(FLAGS, k, v)
 
-    def start_service(self, name=None, host=None, **kwargs):
+    def start_service(self, name, host=None, **kwargs):
         host = host and host or uuid.uuid4().hex
         kwargs.setdefault('host', host)
         kwargs.setdefault('binary', 'nova-%s' % name)
