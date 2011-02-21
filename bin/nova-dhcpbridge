@@ -113,6 +113,8 @@ def main():
         FLAGS.num_networks = 5
         path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                             '..',
+                                            'nova',
+                                            'tests',
                                             'tests.sqlite'))
         FLAGS.sql_connection = 'sqlite:///%s' % path
     action = argv[1]
