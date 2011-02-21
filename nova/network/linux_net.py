@@ -125,8 +125,12 @@ class IptablesTable(object):
             return '%s-%s' % (binary_name, s[1:])
         return s
 
-    def remove_rule(self, chain, rule):
-        self.rules.remove(IptablesRule(chain, rule))
+    def remove_rule(self, *args, **kwargs):
+        try:
+            self.rules.remove(IptablesRule(*args, **kwargs))
+        except ValueError:
+            LOG.debug(_("Tried to remove rule that wasn't there: %r %r"),
+                      args, kwargs)
 
 class IptablesManager(object):
     def __init__(self, execute=None):
