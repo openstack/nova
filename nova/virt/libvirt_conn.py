@@ -1219,9 +1219,11 @@ class IptablesFirewallDriver(FirewallDriver):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
-    def remove_instance(self, instance):
+    def unfilter_instance(self, instance):
         if instance['id'] in self.instances:
             del self.instances[instance['id']]
+            self.remove_filters_for_instance(instance)
+            self.iptables.apply()
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
                        'filtered'), instance['id'])
@@ -1256,10 +1258,6 @@ class IptablesFirewallDriver(FirewallDriver):
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
-
-    def unfilter_instance(self, instance):
-        self.remove_filters_for_instance(instance)
-        self.iptables.apply()
 
     def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
