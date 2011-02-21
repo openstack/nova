@@ -15,6 +15,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+The guest tool is a small python script that should be run either as a service
+or added to system startup. This script configures networking on the guest.
+
+IP address information is injected through 'machine.id' vmx parameter which is
+equivalent to XenStore in XenServer. This information can be retrived inside
+the guest using VMware tools.
+"""
+
 import os
 import sys
 import subprocess
