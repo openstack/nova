@@ -485,12 +485,12 @@ class HpSanISCSIDriver(SanISCSIDriver):
         cluster_vip = self._cliq_get_cluster_vip(cluster_name)
         iscsi_portal = cluster_vip + ":3260," + cluster_interface
 
-        db_update = {}
-        db_update['provider_location'] = ("%s %s" %
-                                          (iscsi_portal,
-                                           iscsi_iqn))
+        model_update = {}
+        model_update['provider_location'] = ("%s %s" %
+                                             (iscsi_portal,
+                                              iscsi_iqn))
 
-        return db_update
+        return model_update
 
     def delete_volume(self, volume):
         """Deletes a volume."""
@@ -517,7 +517,7 @@ class HpSanISCSIDriver(SanISCSIDriver):
 
         is_shared = 'permission.authGroup' in volume_info
 
-        db_update = {}
+        model_update = {}
 
         should_export = False
 
@@ -551,10 +551,10 @@ class HpSanISCSIDriver(SanISCSIDriver):
 
             self._cliq_run_xml("assignVolumeChap", cliq_args)
 
-            db_update['provider_auth'] = ("CHAP %s %s" %
-                                          (chap_username, chap_password))
+            model_update['provider_auth'] = ("CHAP %s %s" %
+                                             (chap_username, chap_password))
 
-        return db_update
+        return model_update
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
