@@ -29,6 +29,9 @@ class IsolationTestCase(test.TestCase):
     of other tests should fail.
 
     """
+    def test_service_isolation(self):
+        self.start_service('compute')
+
     def test_rpc_consumer_isolation(self):
         connection = rpc.Connection.instance(new=True)
         consumer = rpc.TopicConsumer(connection, topic='compute')
