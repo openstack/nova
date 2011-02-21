@@ -69,6 +69,11 @@ binary_name = os.path.basename(inspect.stack()[-1][1])
 
 
 class IptablesRule(object):
+    """An iptables rule
+
+    You shouldn't need to use this class directly, it's only used by
+    IptablesManager
+    """
     def __init__(self, chain, rule, wrap=True):
         self.chain = chain
         self.rule = rule
@@ -93,14 +98,33 @@ class IptablesRule(object):
 
 
 class IptablesTable(object):
+    """An iptables table"""
+
     def __init__(self):
         self.rules = []
         self.chains = set()
 
     def add_chain(self, name):
+        """Adds a named chain to the table
+
+        The chain name is wrapped to be unique for the component creating
+        it, so different components of Nova can safely create identically
+        named chains without interfering with one another.
+
+        At the moment, its wrapped name is <binary name>-<chain name>,
+        so if nova-compute creates a chain named "OUTPUT", it'll actually
+        end up named "nova-compute-OUTPUT".
+        """
         self.chains.add(name)
 
     def remove_chain(self, name):
+        """Remove named chain
+
+        This removal "cascades". All rule in the chain are removed, as are
+        all rules in other chains that jump to it.
+
+        If the chain is not found, this is merely logged.
+        """
         if name not in self.chains:
             LOG.debug(_("Attempted to remove chain %s which doesn't exist"),
                       name)
@@ -112,6 +136,15 @@ class IptablesTable(object):
         self.rules = filter(lambda r: jump_snippet not in r.rule, self.rules)
 
     def add_rule(self, chain, rule, wrap=True):
+        """Add a rule to the table
+
+        This is just like what you'd feed to iptables, just without
+        the "-A <chain name>" bit at the start.
+
+        However, if you need to jump to one of your wrapped chains,
+        prepend its name with a '$' which will ensure the wrapping
+        is applied correctly.
+        """
         if wrap and chain not in self.chains:
             raise ValueError(_("Unknown chain: %r") % chain)
 
@@ -125,7 +158,13 @@ class IptablesTable(object):
             return '%s-%s' % (binary_name, s[1:])
         return s
 
-    def remove_rule(self, *args, **kwargs):
+    def remove_rule(self, chain, rule, wrap=True):
+        """Remove a rule from a chain
+
+        Note: The rule must be exactly identical to the one that was added.
+        You cannot switch arguments around like you can with the iptables
+        CLI tool.
+        """
         try:
             self.rules.remove(IptablesRule(*args, **kwargs))
         except ValueError:
@@ -135,6 +174,22 @@ class IptablesTable(object):
 
 
 class IptablesManager(object):
+    """Wrapper for iptables
+
+    See IptablesTable for some usage docs
+
+    A number of chains are set up to begin with.
+
+    For ipv4, the filter table has a INPUT, OUTPUT, FORWARD, and local chains
+    already set up, while the NAT chain has PREROUTING, OUTPUT, POSTROUTING,
+    and SNATTING. Except for "local" and "SNATTING" these are all set up so
+    that they are applied at the beginning of their non-wrapped counterparts.
+    "SNATTING" is jumped to from nat/POSTROUTING and "local" is jumped to from
+    filter/OUTPUT and filter/FORWARD.
+
+    For ipv6, the filter table has INPUT, OUTPUT, FORWARD, and local. "local"
+    has the same semantics as for ipv4.
+    """
     def __init__(self, execute=None):
         if not execute:
             if FLAGS.fake_network:
@@ -190,6 +245,16 @@ class IptablesManager(object):
         self.semaphore = semaphore.Semaphore()
 
     def apply(self):
+        """Apply the current in-memory set of iptables rules
+
+        This will blow away any rules left over from previous runs of the
+        same component of Nova, and replace them with our current set of
+        rules. This happens atomically, thanks to iptables-restore.
+        
+        We wrap the call in a semaphore lock, so that we don't race with
+        ourselves. In the event of a race with another component running
+        an iptables-* command at the same time, we retry up to 5 times.
+        """
         with self.semaphore:
             s = [('iptables', self.ipv4)]
             if FLAGS.use_ipv6:
@@ -200,14 +265,13 @@ class IptablesManager(object):
                     current_table, _ = self.execute('sudo %s-save -t %s' %
                                                     (cmd, table), attempts=5)
                     current_lines = current_table.split('\n')
-                    new_filter = self.modify_rules(current_lines,
+                    new_filter = self._modify_rules(current_lines,
                                                    tables[table])
                     self.execute('sudo %s-restore' % (cmd,),
                                  process_input='\n'.join(new_filter),
                                  attempts=5)
 
-    def modify_rules(self, current_lines, table, binary=None):
-
+    def _modify_rules(self, current_lines, table, binary=None):
         chains = table.chains
         rules = table.rules
 
