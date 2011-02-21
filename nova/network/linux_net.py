@@ -170,15 +170,23 @@ class IptablesManager(object):
                                     wrap=False)
 
         # Wrap the builtin chains
-        builtin_chains = {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
-                          'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']}
+        builtin_chains = { 4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
+                               'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']},
+                           6: {'filter': ['INPUT', 'OUTPUT', 'FORWARD']}}
 
-        for table, chains in builtin_chains.iteritems():
-            for chain in chains:
-                self.ipv4[table].add_chain(chain)
-                self.ipv4[table].add_rule(chain,
-                                          '-j %s-%s' % (binary_name, chain),
-                                          wrap=False)
+        for ip_version in builtin_chains:
+            if ip_version == 4:
+                tables = self.ipv4
+            elif ip_version == 6:
+                tables = self.ipv6
+
+            for table, chains in builtin_chains[ip_version].iteritems():
+                for chain in chains:
+                    tables[table].add_chain(chain)
+                    tables[table].add_rule(chain,
+                                           '-j %s-%s' % (binary_name, chain),
+                                           wrap=False)
+
         self.semaphore = semaphore.Semaphore()
 
     def apply(self):

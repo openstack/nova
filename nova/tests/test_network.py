@@ -76,7 +76,8 @@ COMMIT
 
         # TODO(soren): Add stuff for ipv6
         check_matrix = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
-                            'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']}}
+                            'nat': ['PREROUTING', 'OUTPUT', 'POSTROUTING']},
+                        6: {'filter': ['INPUT', 'OUTPUT', 'FORWARD']}}
 
         for ip_version in check_matrix:
             ip = getattr(self.manager, 'ipv%d' % ip_version)
