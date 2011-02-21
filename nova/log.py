@@ -143,9 +143,7 @@ class NovaLogger(logging.Logger):
     """
     def __init__(self, name, level=NOTSET):
         logging.Logger.__init__(self, name, level)
-        self.initialized = False
-        if flags.FlagValues.initialized:
-            self.setup_from_flags()
+        self.setup_from_flags()
 
     @staticmethod
     def _get_level_from_flags(name):
@@ -166,15 +164,6 @@ class NovaLogger(logging.Logger):
         """Setup logger from flags"""
         level_name = self._get_level_from_flags(self.name)
         self.setLevel(globals()[level_name])
-        self.initialized = True
-        if not logging.root.initialized:
-            logging.root.setup_from_flags()
-
-    def isEnabledFor(self, level):
-        """Reset level after flags have been loaded"""
-        if not self.initialized and flags.FlagValues.initialized:
-            self.setup_from_flags()
-        return logging.Logger.isEnabledFor(self, level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
         """Extract context from any log call"""
@@ -303,6 +292,9 @@ if not isinstance(logging.root, NovaRootLogger):
     NovaLogger.root = logging.root
     NovaLogger.manager.root = logging.root
 root = logging.root
+
+def reset():
+    root.setup_from_flags()
 
 
 def audit(msg, *args, **kwargs):

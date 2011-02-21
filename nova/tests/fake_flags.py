@@ -42,5 +42,3 @@ FLAGS.verbose = True
 FLAGS.sql_connection = 'sqlite:///nova.sqlite'
 FLAGS.use_ipv6 = True
 FLAGS.logfile = 'run_tests.err'
-# NOTE(vish): pretend like we've loaded flags from command line
-flags.FlagValues.initialized = True

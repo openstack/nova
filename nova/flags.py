@@ -29,7 +29,6 @@ import sys
 
 import gflags
 
-
 class FlagValues(gflags.FlagValues):
     """Extension of gflags.FlagValues that allows undefined and runtime flags.
 
@@ -93,7 +92,8 @@ class FlagValues(gflags.FlagValues):
         self.__dict__['__stored_argv'] = original_argv
         self.__dict__['__was_already_parsed'] = True
         self.ClearDirty()
-        FlagValues.initialized = True
+        from nova import log as logging
+        logging.reset()
         return args
 
     def Reset(self):

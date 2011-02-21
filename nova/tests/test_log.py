@@ -46,14 +46,12 @@ class RootLoggerTestCase(test.TestCase):
 
     def test_will_be_verbose_if_verbose_flag_set(self):
         self.flags(verbose=True)
-        self.log.initialized = False
-        log.audit("foo", context=_fake_context())
+        log.reset()
         self.assertEqual(log.DEBUG, self.log.level)
 
     def test_will_not_be_verbose_if_verbose_flag_not_set(self):
         self.flags(verbose=False)
-        self.log.initialized = False
-        log.audit("foo", context=_fake_context())
+        log.reset()
         self.assertEqual(log.INFO, self.log.level)
 
 
