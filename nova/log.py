@@ -144,12 +144,14 @@ class NovaLogger(logging.Logger):
 
     def setup_from_flags(self):
         """Setup logger from flags"""
+        level = NOTSET
         for pair in FLAGS.default_log_levels:
-            logger, _sep, level = pair.partition('=')
+            logger, _sep, level_name = pair.partition('=')
             # NOTE(todd): if we set a.b, we want a.b.c to have the same level
             #             (but not a.bc, so we check the dot)
             if self.name == logger or self.name.startswith("%s." % logger):
-                self.setLevel(globals()[level])
+                level = globals()[level_name]
+        self.setLevel(level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
         """Extract context from any log call"""
