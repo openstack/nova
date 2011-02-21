@@ -27,6 +27,7 @@ import tempfile
 import uuid
 
 from nova import db
+from nova import compute
 from nova import context
 from nova import log as logging
 from nova import exception
@@ -49,6 +50,8 @@ class VMOps(object):
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
+        self.compute_api = compute.API()
+
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
@@ -364,21 +367,31 @@ class VMOps(object):
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
-        target_vm = VMHelper.lookup(self._session, "instance-00000012")
 
-        self._shutdown(instance, vm)
+        #self._shutdown(instance, vm)
+        #target_vm = VMHelper.lookup(self._session, "instance-00000012")
+        target_vm = self.compute_api.create(
+            context=context.get_admin_context(),
+            instance_type="m1.tiny",
+            image_id=1,
+            kernel_id=3,
+            ramdisk_id=2,
+            display_name="test",
+            display_description="test")
+        print context.get_admin_context().__dict__
+        print target_vm
 
-        vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
-        vbd_ref = VMHelper.create_vbd(
-            self._session,
-            target_vm,
-            vdi_ref,
-            1,
-            False)
+        #vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
+        #vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        #vbd_ref = VMHelper.create_vbd(
+        #    self._session,
+        #    target_vm,
+        #    vdi_ref,
+        #    1,
+        #    False)
 
         # Plug the VBD into the target instance
-        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+        #self._session.call_xenapi("Async.VBD.plug", vbd_ref)
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
