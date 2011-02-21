@@ -65,10 +65,8 @@ class CloudTestCase(test.TestCase):
         self.cloud = cloud.CloudController()
 
         # set up services
-        self.compute = service.Service.create(binary='nova-compute')
-        self.compute.start()
-        self.network = service.Service.create(binary='nova-network')
-        self.network.start()
+        self.compute = self.start_service('compute')
+        self.network = self.start_service('network')
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
