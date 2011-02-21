@@ -125,13 +125,6 @@ def _get_log_file_path(binary=None):
         return '%s.log' % (os.path.join(FLAGS.logdir, binary),)
 
 
-def basicConfig():
-    pass
-
-
-logging.basicConfig = basicConfig
-
-
 class NovaLogger(logging.Logger):
     """
     NovaLogger manages request context and formatting.
@@ -176,7 +169,7 @@ class NovaLogger(logging.Logger):
         """Logging.exception doesn't handle kwargs, so breaks context"""
         if not kwargs.get('exc_info'):
             kwargs['exc_info'] = 1
-        return self.error(msg, *args, **kwargs)
+        self.error(msg, *args, **kwargs)
         # NOTE(todd): does this really go here, or in _log ?
         extra = kwargs.get('extra')
         if not extra:
@@ -271,11 +264,16 @@ class NovaRootLogger(NovaLogger):
 
 
 if not isinstance(logging.root, NovaRootLogger):
+    logging._acquireLock()
     for handler in logging.root.handlers:
         logging.root.removeHandler(handler)
     logging.root = NovaRootLogger("nova")
+    for logger in NovaLogger.manager.loggerDict.itervalues():
+        logger.root = logging.root
     NovaLogger.root = logging.root
     NovaLogger.manager.root = logging.root
+    NovaLogger.manager.loggerDict["nova"] = logging.root
+    logging._releaseLock()
 root = logging.root
 
 
@@ -289,14 +287,11 @@ logging.setLoggerClass(NovaLogger)
 
 def reset():
     """Resets logging handlers.  Should be called if FLAGS changes."""
-    for logger in logging.Logger.manager.loggerDict.itervalues():
+    for logger in NovaLogger.manager.loggerDict.itervalues():
         if isinstance(logger, NovaLogger):
             logger.setup_from_flags()
-    root.setup_from_flags()
 
 
 def audit(msg, *args, **kwargs):
     """Shortcut for logging to root log with sevrity 'AUDIT'."""
-    if len(logging.root.handlers) == 0:
-        basicConfig()
     logging.root.log(AUDIT, msg, *args, **kwargs)
