@@ -47,7 +47,7 @@ class ProjectTestCase(test.TestCase):
                 missing = set()
                 for contributor in contributors:
                     if contributor == 'nova-core':
-                        pass
+                        continue
                     if not contributor in authors_file:
                         missing.add(contributor)
 
