@@ -45,6 +45,5 @@ if __name__ == '__main__':
     utils.default_flagfile()
     flags.FLAGS(sys.argv)
     logging.setup()
-
     service.serve()
     service.wait()
