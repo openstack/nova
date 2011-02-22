@@ -181,6 +181,13 @@ class Service(object):
                 pass
         self.timers = []
 
+    def wait(self):
+        for x in self.timers:
+            try:
+                x.wait()
+            except Exception:
+                pass
+
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
         self.manager.periodic_tasks(context.get_admin_context())
