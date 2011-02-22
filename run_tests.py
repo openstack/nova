@@ -59,8 +59,6 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
-    if os.path.exists("tests.sqlite"):
-        os.unlink("tests.sqlite")
     logging.setup()
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
