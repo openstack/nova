@@ -32,6 +32,7 @@ from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi.vmops import SimpleDH
+from nova.virt.xenapi.vmops import VMOps
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
@@ -141,6 +142,10 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.stubs.UnsetAll()
 
 
+def reset_network(*args):
+    pass
+
+
 class XenAPIVMTestCase(test.TestCase):
     """
     Unit tests for VM operations
@@ -162,6 +167,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
+        self.stubs.Set(VMOps, 'reset_network', reset_network)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
         self.conn = xenapi_conn.get_connection(False)
@@ -243,7 +249,8 @@ class XenAPIVMTestCase(test.TestCase):
         # Check that the VM is running according to XenAPI.
         self.assertEquals(vm['power_state'], 'Running')
 
-    def _test_spawn(self, image_id, kernel_id, ramdisk_id):
+    def _test_spawn(self, image_id, kernel_id, ramdisk_id,
+                    instance_type="m1.large"):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         values = {'name': 1,
                   'id': 1,
@@ -252,13 +259,19 @@ class XenAPIVMTestCase(test.TestCase):
                   'image_id': image_id,
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
-                  'instance_type': 'm1.large',
+                  'instance_type': instance_type,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
         conn.spawn(instance)
         self.check_vm_record(conn)
+
+    def test_spawn_not_enough_memory(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self.assertRaises(Exception,
+                          self._test_spawn,
+                          1, 2, 3, "m1.xlarge")
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'

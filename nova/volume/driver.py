@@ -139,7 +139,7 @@ class VolumeDriver(object):
         raise NotImplementedError()
 
     def check_for_export(self, context, volume_id):
-        """Make sure whether volume is exported."""
+        """Make sure volume is exported."""
         return True
 
 
@@ -214,7 +214,7 @@ class AOEDriver(VolumeDriver):
         pass
 
     def check_for_export(self, context, volume_id):
-        """Make sure whether volume is exported."""
+        """Make sure volume is exported."""
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume_id)
@@ -364,7 +364,7 @@ class ISCSIDriver(VolumeDriver):
                       "--targetname %s" % iscsi_name)
 
     def check_for_export(self, context, volume_id):
-        """Make sure whether volume is exported."""
+        """Make sure volume is exported."""
 
         tid = self.db.volume_get_iscsi_target_num(context, volume_id)
         try:

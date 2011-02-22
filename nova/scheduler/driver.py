@@ -119,11 +119,12 @@ class Scheduler(object):
                 msg = _('volume node is not alive(time synchronize problem?)')
                 raise exception.Invalid(msg)
 
-        # Checking src host is alive.
+        # Checking src host exists and compute node
         src = instance_ref['host']
-        services = db.service_get_all_by_topic(context, 'compute')
-        services = [service for service in services if service.host == src]
-        if len(services) < 1 or not self.service_is_up(services[0]):
+        services = db.service_get_all_compute_by_host(context, src)
+
+        # Checking src host is alive.
+        if not self.service_is_up(services[0]):
             msg = _('%s is not alive(time synchronize problem?)')
             raise exception.Invalid(msg % src)
 
@@ -131,15 +132,8 @@ class Scheduler(object):
         """Live migration check routine (for destination host)"""
 
         # Checking dest exists and compute node.
-        dservice_refs = db.service_get_all_by_host(context, dest)
-        if len(dservice_refs) <= 0:
-            msg = _('%s does not exists.')
-            raise exception.Invalid(msg % dest)
-
+        dservice_refs = db.service_get_all_compute_by_host(context, dest)
         dservice_ref = dservice_refs[0]
-        if dservice_ref['topic'] != 'compute':
-            msg = _('%s must be compute node')
-            raise exception.Invalid(msg % dest)
 
         # Checking dest host is alive.
         if not self.service_is_up(dservice_ref):
@@ -169,18 +163,18 @@ class Scheduler(object):
         self.mounted_on_same_shared_storage(context, instance_ref, dest)
 
         # Checking dest exists.
-        dservice_refs = db.service_get_all_by_host(context, dest)
-        if len(dservice_refs) <= 0:
-            raise exception.Invalid(_('%s does not exists.') % dest)
-        dservice_ref = dservice_refs[0]
+        dservice_refs = db.service_get_all_compute_by_host(context, dest)
+        dservice_ref = dservice_refs[0]['compute_service'][0]
 
         # Checking original host( where instance was launched at) exists.
-        oservice_refs = db.service_get_all_by_host(context,
+        try:
+            oservice_refs = \
+                db.service_get_all_compute_by_host(context,
                                                    instance_ref['launched_on'])
-        if len(oservice_refs) <= 0:
+        except exception.NotFound:
             msg = _('%s(where instance was launched at) does not exists.')
             raise exception.Invalid(msg % instance_ref['launched_on'])
-        oservice_ref = oservice_refs[0]
+        oservice_ref = oservice_refs[0]['compute_service'][0]
 
         # Checking hypervisor is same.
         o = oservice_ref['hypervisor_type']
@@ -223,13 +217,11 @@ class Scheduler(object):
         ec2_id = instance_ref['hostname']
 
         # Getting host information
-        service_refs = db.service_get_all_by_host(context, dest)
-        if len(service_refs) <= 0:
-            raise exception.Invalid(_('%s does not exists.') % dest)
-        service_ref = service_refs[0]
+        service_refs = db.service_get_all_compute_by_host(context, dest)
+        compute_service_ref = service_refs[0]['compute_service'][0]
 
-        mem_total = int(service_ref['memory_mb'])
-        mem_used = int(service_ref['memory_mb_used'])
+        mem_total = int(compute_service_ref['memory_mb'])
+        mem_used = int(compute_service_ref['memory_mb_used'])
         mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:

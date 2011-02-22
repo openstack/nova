@@ -99,6 +99,11 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
+def service_get_all_compute_by_host(context, host):
+    """Get all compute services for a given host."""
+    return IMPL.service_get_all_compute_by_host(context, host)
+
+
 def service_get_all_compute_sorted(context):
     """Get all compute services sorted by instance count.
 
@@ -143,6 +148,28 @@ def service_update(context, service_id, values):
 
     """
     return IMPL.service_update(context, service_id, values)
+
+
+###################
+
+
+def compute_service_get(context, compute_id, session=None):
+    """Get an computeService or raise if it does not exist."""
+    return IMPL.compute_service_get(context, compute_id)
+
+
+def compute_service_create(context, values):
+    """Create a computeService from the values dictionary."""
+    return IMPL.compute_service_create(context, values)
+
+
+def compute_service_update(context, compute_id, values):
+    """Set the given properties on an computeService and update it.
+
+    Raises NotFound if computeService does not exist.
+
+    """
+    return IMPL.compute_service_update(context, compute_id, values)
 
 
 ###################
@@ -293,9 +320,19 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
+def fixed_ip_get_all(context):
+    """Get all defined fixed ips."""
+    return IMPL.fixed_ip_get_all(context)
+
+
 def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address or raise if it does not exist."""
     return IMPL.fixed_ip_get_by_address(context, address)
+
+
+def fixed_ip_get_all_by_instance(context, instance_id):
+    """Get fixed ips by instance or raise if none exist."""
+    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
 
 
 def fixed_ip_get_instance(context, address):
@@ -531,6 +568,11 @@ def network_get(context, network_id):
     return IMPL.network_get(context, network_id)
 
 
+def network_get_all(context):
+    """Return all defined networks."""
+    return IMPL.network_get_all(context)
+
+
 # pylint: disable-msg=C0103
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
@@ -545,6 +587,11 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_instance(context, instance_id):
     """Get a network by instance id or raise if it does not exist."""
     return IMPL.network_get_by_instance(context, instance_id)
+
+
+def network_get_all_by_instance(context, instance_id):
+    """Get all networks by instance id or raise if none exist."""
+    return IMPL.network_get_all_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):
@@ -587,7 +634,7 @@ def project_get_network(context, project_id, associate=True):
 
     """
 
-    return IMPL.project_get_network(context, project_id)
+    return IMPL.project_get_network(context, project_id, associate)
 
 
 def project_get_network_v6(context, project_id):
@@ -1016,3 +1063,31 @@ def console_get_all_by_instance(context, instance_id):
 def console_get(context, console_id, instance_id=None):
     """Get a specific console (possibly on a given instance)."""
     return IMPL.console_get(context, console_id, instance_id)
+
+
+####################
+
+
+def zone_create(context, values):
+    """Create a new child Zone entry."""
+    return IMPL.zone_create(context, values)
+
+
+def zone_update(context, zone_id, values):
+    """Update a child Zone entry."""
+    return IMPL.zone_update(context, values)
+
+
+def zone_delete(context, zone_id):
+    """Delete a child Zone."""
+    return IMPL.zone_delete(context, zone_id)
+
+
+def zone_get(context, zone_id):
+    """Get a specific child Zone."""
+    return IMPL.zone_get(context, zone_id)
+
+
+def zone_get_all(context):
+    """Get all child Zones."""
+    return IMPL.zone_get_all(context)

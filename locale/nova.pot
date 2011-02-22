@@ -1826,7 +1826,7 @@ msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:290
 #, python-format
-msgid "PV Kernel in VDI:%d"
+msgid "PV Kernel in VDI:%s"
 msgstr ""
 
 #: nova/virt/xenapi/vm_utils.py:318

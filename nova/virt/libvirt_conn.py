@@ -903,9 +903,9 @@ class LibvirtConnection(object):
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//cpu')
         if len(nodes) != 1:
-            msg = 'Invalid xml. "<cpu>" must be 1, but %d.' % len(nodes)
-            msg += '\n' + xml.serialize()
-            raise exception.Invalid(_(msg))
+            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
+                                      "but %d\n") % len(nodes)
+                                      + xml.serialize)
 
         cpu_info = dict()
         cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()
@@ -923,8 +923,8 @@ class LibvirtConnection(object):
         tkeys = topology.keys()
         if list(set(tkeys)) != list(set(keys)):
             ks = ', '.join(keys)
-            msg = _('Invalid xml: topology(%(topology)s) must have %(ks)s')
-            raise exception.Invalid(msg % locals())
+            raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
+                                      "must have %(ks)s") % locals())
 
         feature_nodes = xml.xpathEval('//cpu/feature')
         features = list()
@@ -981,38 +981,31 @@ class LibvirtConnection(object):
 
         """
         try:
-            s_refs = db.service_get_all_by_topic(ctxt, 'compute')
-            s_refs = [s for s in s_refs if s.host == host]
-            if 0 == len(s_refs):
-                raise exception.NotFound('')
-            service_ref = s_refs[0]
+            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
             msg = _(("""Cannot update compute manager specific info,"""
                       """ Because no service record found."""))
             raise exception.Invalid(msg)
 
         # Updating host information
-        vcpu = self.get_vcpu_total()
-        memory_mb = self.get_memory_mb_total()
-        local_gb = self.get_local_gb_total()
-        vcpu_u = self.get_vcpu_used()
-        memory_mb_u = self.get_memory_mb_used()
-        local_gb_u = self.get_local_gb_used()
-        hypervisor = self.get_hypervisor_type()
-        version = self.get_hypervisor_version()
-        cpu_info = self.get_cpu_info()
+        dic = {'vcpus': self.get_vcpu_total(),
+               'memory_mb': self.get_memory_mb_total(),
+               'local_gb': self.get_local_gb_total(),
+               'vcpus_used': self.get_vcpu_used(),
+               'memory_mb_used': self.get_memory_mb_used(),
+               'local_gb_used': self.get_local_gb_used(),
+               'hypervisor_type': self.get_hypervisor_type(),
+               'hypervisor_version': self.get_hypervisor_version(),
+               'cpu_info': self.get_cpu_info()}
 
-        db.service_update(ctxt,
-                          service_ref['id'],
-                          {'vcpus': vcpu,
-                           'memory_mb': memory_mb,
-                           'local_gb': local_gb,
-                           'vcpus_used': vcpu_u,
-                           'memory_mb_used': memory_mb_u,
-                           'local_gb_used': local_gb_u,
-                           'hypervisor_type': hypervisor,
-                           'hypervisor_version': version,
-                           'cpu_info': cpu_info})
+        compute_service_ref = service_ref['compute_service']
+        if len(compute_service_ref) == 0:
+            LOG.info(_('Compute_service record is created for %s ') % host)
+            dic['service_id'] = service_ref['id']
+            db.compute_service_create(ctxt, dic)
+        else:
+            LOG.info(_('Compute_service record is updated for %s ') % host)
+            db.compute_service_update(ctxt, compute_service_ref[0]['id'], dic)
 
     def compare_cpu(self, cpu_info):
         """

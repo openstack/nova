@@ -248,16 +248,14 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         rv = self.ec2.get_all_security_groups()
-        # I don't bother checkng that we actually find it here,
-        # because the create/delete unit test further up should
-        # be good enough for that.
-        for group in rv:
-            if group.name == security_group_name:
-                self.assertEquals(len(group.rules), 1)
-                self.assertEquals(int(group.rules[0].from_port), 80)
-                self.assertEquals(int(group.rules[0].to_port), 81)
-                self.assertEquals(len(group.rules[0].grants), 1)
-                self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
+
+        group = [grp for grp in rv if grp.name == security_group_name][0]
+
+        self.assertEquals(len(group.rules), 1)
+        self.assertEquals(int(group.rules[0].from_port), 80)
+        self.assertEquals(int(group.rules[0].to_port), 81)
+        self.assertEquals(len(group.rules[0].grants), 1)
+        self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -314,16 +312,13 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         rv = self.ec2.get_all_security_groups()
-        # I don't bother checkng that we actually find it here,
-        # because the create/delete unit test further up should
-        # be good enough for that.
-        for group in rv:
-            if group.name == security_group_name:
-                self.assertEquals(len(group.rules), 1)
-                self.assertEquals(int(group.rules[0].from_port), 80)
-                self.assertEquals(int(group.rules[0].to_port), 81)
-                self.assertEquals(len(group.rules[0].grants), 1)
-                self.assertEquals(str(group.rules[0].grants[0]), '::/0')
+
+        group = [grp for grp in rv if grp.name == security_group_name][0]
+        self.assertEquals(len(group.rules), 1)
+        self.assertEquals(int(group.rules[0].from_port), 80)
+        self.assertEquals(int(group.rules[0].to_port), 81)
+        self.assertEquals(len(group.rules[0].grants), 1)
+        self.assertEquals(str(group.rules[0].grants[0]), '::/0')
 
         self.expect_http()
         self.mox.ReplayAll()

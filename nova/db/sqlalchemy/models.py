@@ -112,8 +112,20 @@ class Service(BASE, NovaBase):
     disabled = Column(Boolean, default=False)
     availability_zone = Column(String(255), default='nova')
 
-    # The below items are compute node only.
-    # None is inserted for other service.
+
+class ComputeService(BASE, NovaBase):
+    """Represents a running compute service on a host."""
+
+    __tablename__ = 'compute_services'
+    id = Column(Integer, primary_key=True)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=True)
+    service = relationship(Service,
+                           backref=backref('compute_service'),
+                           foreign_keys=service_id,
+                           primaryjoin='and_('
+                                'ComputeService.service_id == Service.id,'
+                                'ComputeService.deleted == False)')
+
     vcpus = Column(Integer, nullable=True)
     memory_mb = Column(Integer, nullable=True)
     local_gb = Column(Integer, nullable=True)
@@ -129,8 +141,8 @@ class Service(BASE, NovaBase):
     #  "topology":{"sockets":1, "threads":2, "cores":3},
     #  features:[ "tdtscp", "xtpr"]}'
     #
-    # Points are "json translatable" and it must have all
-    # dictionary keys above.
+    # Points are "json translatable" and it must have all dictionary keys
+    # above, and <cpu> tag of getCapabilities()(See libvirt.virtConnection).
     cpu_info = Column(Text, nullable=True)
 
 
@@ -397,6 +409,7 @@ class Network(BASE, NovaBase):
                                               "vpn_public_port"),
                       {'mysql_engine': 'InnoDB'})
     id = Column(Integer, primary_key=True)
+    label = Column(String(255))
 
     injected = Column(Boolean, default=False)
     cidr = Column(String(255), unique=True)
@@ -559,6 +572,15 @@ class Console(BASE, NovaBase):
     pool = relationship(ConsolePool, backref=backref('consoles'))
 
 
+class Zone(BASE, NovaBase):
+    """Represents a child zone of this zone."""
+    __tablename__ = 'zones'
+    id = Column(Integer, primary_key=True)
+    api_url = Column(String(255))
+    username = Column(String(255))
+    password = Column(String(255))
+
+
 def register_models():
     """Register Models and create metadata.
 
@@ -571,7 +593,7 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console)  # , Image, Host
+              Project, Certificate, ConsolePool, Console, Zone)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

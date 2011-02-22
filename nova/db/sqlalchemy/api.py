@@ -118,6 +118,11 @@ def service_destroy(context, service_id):
         service_ref = service_get(context, service_id, session=session)
         service_ref.delete(session=session)
 
+        if service_ref.topic == 'compute' and \
+            len(service_ref.compute_service) != 0:
+            for c in service_ref.compute_service:
+                c.delete(session=session)
+
 
 @require_admin_context
 def service_get(context, service_id, session=None):
@@ -125,6 +130,7 @@ def service_get(context, service_id, session=None):
         session = get_session()
 
     result = session.query(models.Service).\
+                     options(joinedload('compute_service')).\
                      filter_by(id=service_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
@@ -164,6 +170,24 @@ def service_get_all_by_host(context, host):
                    filter_by(deleted=False).\
                    filter_by(host=host).\
                    all()
+
+
+@require_admin_context
+def service_get_all_compute_by_host(context, host):
+    topic = 'compute'
+    session = get_session()
+    result = session.query(models.Service).\
+                  options(joinedload('compute_service')).\
+                  filter_by(deleted=False).\
+                  filter_by(host=host).\
+                  filter_by(topic=topic).\
+                  all()
+
+    if not result:
+        msg = _('%s does not exist or not compute node')
+        raise exception.NotFound(msg % host)
+
+    return result
 
 
 @require_admin_context
@@ -271,6 +295,42 @@ def service_update(context, service_id, values):
         service_ref = service_get(context, service_id, session=session)
         service_ref.update(values)
         service_ref.save(session=session)
+
+
+###################
+
+
+@require_admin_context
+def compute_service_get(context, compute_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.ComputeService).\
+                     filter_by(id=compute_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if not result:
+        raise exception.NotFound(_('No computeService for id %s') % compute_id)
+
+    return result
+
+
+@require_admin_context
+def compute_service_create(context, values):
+    compute_service_ref = models.ComputeService()
+    compute_service_ref.update(values)
+    compute_service_ref.save()
+    return compute_service_ref
+
+
+@require_admin_context
+def compute_service_update(context, compute_id, values):
+    session = get_session()
+    with session.begin():
+        compute_ref = service_get(context, compute_id, session=session)
+        compute_ref.update(values)
+        compute_ref.save(session=session)
 
 
 ###################
@@ -593,6 +653,17 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     return result.rowcount
 
 
+@require_admin_context
+def fixed_ip_get_all(context, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.FixedIp).all()
+    if not result:
+        raise exception.NotFound(_('No fixed ips defined'))
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:
@@ -616,6 +687,17 @@ def fixed_ip_get_by_address(context, address, session=None):
 def fixed_ip_get_instance(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
     return fixed_ip_ref.instance
+
+
+@require_context
+def fixed_ip_get_all_by_instance(context, instance_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
+    if not rv:
+        raise exception.NotFound(_('No address for instance %s') % instance_id)
+    return rv
 
 
 @require_context
@@ -1120,6 +1202,15 @@ def network_get(context, network_id, session=None):
     return result
 
 
+@require_admin_context
+def network_get_all(context):
+    session = get_session()
+    result = session.query(models.Network)
+    if not result:
+        raise exception.NotFound(_('No networks defined'))
+    return result
+
+
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
 # pylint: disable-msg=C0103
@@ -1158,6 +1249,19 @@ def network_get_by_instance(_context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False).\
                  first()
+    if not rv:
+        raise exception.NotFound(_('No network for instance %s') % instance_id)
+    return rv
+
+
+@require_admin_context
+def network_get_all_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(deleted=False).\
+                 join(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
     if not rv:
         raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv
@@ -2090,3 +2194,47 @@ def console_get(context, console_id, instance_id=None):
         raise exception.NotFound(_("No console with id %(console_id)s"
                                    " %(idesc)s") % locals())
     return result
+
+
+####################
+
+
+@require_admin_context
+def zone_create(context, values):
+    zone = models.Zone()
+    zone.update(values)
+    zone.save()
+    return zone
+
+
+@require_admin_context
+def zone_update(context, zone_id, values):
+    zone = session.query(models.Zone).filter_by(id=zone_id).first()
+    if not zone:
+        raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
+    zone.update(values)
+    zone.save()
+    return zone
+
+
+@require_admin_context
+def zone_delete(context, zone_id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from zones '
+                        'where id=:id', {'id': zone_id})
+
+
+@require_admin_context
+def zone_get(context, zone_id):
+    session = get_session()
+    result = session.query(models.Zone).filter_by(id=zone_id).first()
+    if not result:
+        raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
+    return result
+
+
+@require_admin_context
+def zone_get_all(context):
+    session = get_session()
+    return session.query(models.Zone).all()

@@ -243,6 +243,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.set_admin_password(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_inject_file(self):
+        """Ensure we can write a file to an instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.inject_file(self.context, instance_id, "/tmp/test",
+                "File Contents")
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()
@@ -476,7 +484,8 @@ class ComputeTestCase(test.TestCase):
                                                 'state': power_state.RUNNING,
                                                 'host': i_ref['host']})
         for v in i_ref['volumes']:
-            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
+            dbmock.volume_update(c, v['id'], {'status': 'in-use',
+                                              'host': i_ref['host']})
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -541,14 +550,25 @@ class ComputeTestCase(test.TestCase):
     def test_post_live_migration_working_correctly(self):
         """post_live_migration works as expected correctly """
 
-        i_ref = self._get_dummy_instance()
-        fixed_ip_ref = {'id': 1, 'address': '1.1.1.1'}
-        floating_ip_ref = {'id': 1, 'address': '2.2.2.2'}
-        c = context.get_admin_context()
+        dest = 'desthost'
+        flo_addr = '1.2.1.2'
 
-        dbmock = self.mox.CreateMock(db)
-        dbmock.volume_get_all_by_instance(c, i_ref['id']).\
-                                          AndReturn(i_ref['volumes'])
+        # Preparing datas
+        c = context.get_admin_context()
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(c, instance_id)
+        db.instance_update(c, i_ref['id'], {'state_description': 'migrating',
+                                            'state': power_state.PAUSED})
+        v_ref = db.volume_create(c, {'size': 1, 'instance_id': instance_id})
+        fix_addr = db.fixed_ip_create(c, {'address': '1.1.1.1',
+                                          'instance_id': instance_id})
+        fix_ref = db.fixed_ip_get_by_address(c, fix_addr)
+        flo_ref = db.floating_ip_create(c, {'address': flo_addr,
+                                        'fixed_ip_id': fix_ref['id']})
+        # reload is necessary before setting mocks
+        i_ref = db.instance_get(c, instance_id)
+
+        # Preparing mocks
         self.mox.StubOutWithMock(self.compute.volume_manager,
                                  'remove_compute_volume')
         for v in i_ref['volumes']:
@@ -556,102 +576,22 @@ class ComputeTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(i_ref)
 
-        fixed_ip = fixed_ip_ref['address']
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn(fixed_ip)
-        dbmock.fixed_ip_update(c, fixed_ip, {'host': i_ref['host']})
-
-        fl_ip = floating_ip_ref['address']
-        dbmock.instance_get_floating_address(c, i_ref['id']).AndReturn(fl_ip)
-        dbmock.floating_ip_get_by_address(c, fl_ip).AndReturn(floating_ip_ref)
-        dbmock.floating_ip_update(c, floating_ip_ref['address'],
-                                  {'host': i_ref['host']})
-        dbmock.instance_update(c, i_ref['id'],
-                              {'state_description': 'running',
-                               'state': power_state.RUNNING,
-                               'host': i_ref['host']})
-        for v in i_ref['volumes']:
-            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
-
-        self.compute.db = dbmock
+        # executing
         self.mox.ReplayAll()
-        ret = self.compute.post_live_migration(c, i_ref, i_ref['host'])
-        self.assertEqual(ret, None)
-        self.mox.ResetAll()
+        ret = self.compute.post_live_migration(c, i_ref, dest)
+        self.mox.UnsetStubs()
 
-    def test_post_live_migration_no_floating_ip(self):
-        """
-        post_live_migration works as expected correctly
-        (in case instance doesnt have floaitng ip)
-        """
-        i_ref = self._get_dummy_instance()
-        i_ref.__setitem__('volumes', [])
-        fixed_ip_ref = {'id': 1, 'address': '1.1.1.1'}
-        floating_ip_ref = {'id': 1, 'address': '1.1.1.1'}
-        c = context.get_admin_context()
+        # make sure every data is rewritten to dest
+        i_ref = db.instance_get(c, i_ref['id'])
+        c1 = (i_ref['host'] == dest)
+        v_ref = db.volume_get(c, v_ref['id'])
+        c2 = (v_ref['host'] == dest)
+        c3 = False
+        flo_refs = db.floating_ip_get_all_by_host(c, dest)
+        c3 = (len(flo_refs) != 0 and flo_refs[0]['address'] == flo_addr)
 
-        dbmock = self.mox.CreateMock(db)
-        dbmock.volume_get_all_by_instance(c, i_ref['id']).AndReturn([])
-        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(i_ref)
-
-        fixed_ip = fixed_ip_ref['address']
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn(fixed_ip)
-        dbmock.fixed_ip_update(c, fixed_ip, {'host': i_ref['host']})
-
-        dbmock.instance_get_floating_address(c, i_ref['id']).AndReturn(None)
-        dbmock.instance_update(c, i_ref['id'],
-                              {'state_description': 'running',
-                               'state': power_state.RUNNING,
-                               'host': i_ref['host']})
-        for v in i_ref['volumes']:
-            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
-
-        self.compute.db = dbmock
-        self.mox.ReplayAll()
-        ret = self.compute.post_live_migration(c, i_ref, i_ref['host'])
-        self.assertEqual(ret, None)
-        self.mox.ResetAll()
-
-    def test_post_live_migration_no_floating_ip_with_exception(self):
-        """
-        post_live_migration works as expected correctly
-        (in case instance doesnt have floaitng ip, and raise exception)
-        """
-        i_ref = self._get_dummy_instance()
-        i_ref.__setitem__('volumes', [])
-        fixed_ip_ref = {'id': 1, 'address': '1.1.1.1'}
-        floating_ip_ref = {'id': 1, 'address': '1.1.1.1'}
-        c = context.get_admin_context()
-
-        dbmock = self.mox.CreateMock(db)
-        dbmock.volume_get_all_by_instance(c, i_ref['id']).AndReturn([])
-        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(i_ref)
-
-        fixed_ip = fixed_ip_ref['address']
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn(fixed_ip)
-        dbmock.fixed_ip_update(c, fixed_ip, {'host': i_ref['host']})
-        dbmock.instance_get_floating_address(c, i_ref['id']).\
-                                             AndRaise(exception.NotFound())
-
-        self.mox.StubOutWithMock(compute_manager.LOG, 'info')
-        compute_manager.LOG.info(_('post_live_migration() is started..'))
-        compute_manager.LOG.info(_('floating_ip is not found for %s'),
-                              i_ref.name)
-        # first 2 messages are checked.
-        compute_manager.LOG.info(mox.IgnoreArg())
-        compute_manager.LOG.info(mox.IgnoreArg())
-
-        self.mox.StubOutWithMock(db, 'instance_update')
-        dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
-                                                'state': power_state.RUNNING,
-                                                'host': i_ref['host']})
-        self.mox.StubOutWithMock(db, 'volume_update')
-        for v in i_ref['volumes']:
-            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
-
-        self.compute.db = dbmock
-        self.mox.ReplayAll()
-        ret = self.compute.post_live_migration(c, i_ref, i_ref['host'])
-        self.assertEqual(ret, None)
-        self.mox.ResetAll()
+        # post operaton
+        self.assertTrue(c1 and c2 and c3)
+        db.instance_destroy(c, instance_id)
+        db.volume_destroy(c, v_ref['id'])
+        db.floating_ip_destroy(c, flo_addr)

@@ -20,6 +20,7 @@
 APIRequest class
 """
 
+import datetime
 import re
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
@@ -171,6 +172,8 @@ class APIRequest(object):
             self._render_dict(xml, data_el, data.__dict__)
         elif isinstance(data, bool):
             data_el.appendChild(xml.createTextNode(str(data).lower()))
+        elif isinstance(data, datetime.datetime):
+            data_el.appendChild(xml.createTextNode(data.isoformat()))
         elif data != None:
             data_el.appendChild(xml.createTextNode(str(data)))
 

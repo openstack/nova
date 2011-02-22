@@ -28,9 +28,11 @@ It also allows setting of formatting information through flags.
 
 
 import cStringIO
+import inspect
 import json
 import logging
 import logging.handlers
+import os
 import sys
 import traceback
 
@@ -92,7 +94,7 @@ critical = logging.critical
 log = logging.log
 # handlers
 StreamHandler = logging.StreamHandler
-FileHandler = logging.FileHandler
+WatchedFileHandler = logging.handlers.WatchedFileHandler
 # logging.SysLogHandler is nicer than logging.logging.handler.SysLogHandler.
 SysLogHandler = logging.handlers.SysLogHandler
 
@@ -111,6 +113,18 @@ def _dictify_context(context):
     return context
 
 
+def _get_binary_name():
+    return os.path.basename(inspect.stack()[-1][1])
+
+
+def get_log_file_path(binary=None):
+    if FLAGS.logfile:
+        return FLAGS.logfile
+    if FLAGS.logdir:
+        binary = binary or _get_binary_name()
+        return '%s.log' % (os.path.join(FLAGS.logdir, binary),)
+
+
 def basicConfig():
     logging.basicConfig()
     for handler in logging.root.handlers:
@@ -123,8 +137,9 @@ def basicConfig():
         syslog = SysLogHandler(address='/dev/log')
         syslog.setFormatter(_formatter)
         logging.root.addHandler(syslog)
-    if FLAGS.logfile:
-        logfile = FileHandler(FLAGS.logfile)
+    logpath = get_log_file_path()
+    if logpath:
+        logfile = WatchedFileHandler(logpath)
         logfile.setFormatter(_formatter)
         logging.root.addHandler(logfile)
 
