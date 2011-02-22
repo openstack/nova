@@ -20,13 +20,14 @@
 System-level utilities and helper functions.
 """
 
+import base64
 import datetime
 import inspect
 import json
 import os
 import random
-import subprocess
 import socket
+import string
 import struct
 import sys
 import time
@@ -36,6 +37,7 @@ import netaddr
 
 from eventlet import event
 from eventlet import greenthread
+from eventlet.green import subprocess
 
 from nova import exception
 from nova.exception import ProcessExecutionError
@@ -53,7 +55,7 @@ def import_class(import_str):
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
-        logging.debug(_('Inner Exception: %s'), exc)
+        LOG.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
@@ -233,6 +235,15 @@ def generate_mac():
            random.randint(0x00, 0xff),
            random.randint(0x00, 0xff)]
     return ':'.join(map(lambda x: "%02x" % x, mac))
+
+
+def generate_password(length=20):
+    """Generate a random sequence of letters and digits
+    to be used as a password. Note that this is not intended
+    to represent the ultimate in security.
+    """
+    chrs = string.letters + string.digits
+    return "".join([random.choice(chrs) for i in xrange(length)])
 
 
 def last_octet(address):
@@ -476,3 +487,15 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+def ensure_b64_encoding(val):
+    """Safety method to ensure that values expected to be base64-encoded
+    actually are. If they are, the value is returned unchanged. Otherwise,
+    the encoded value is returned.
+    """
+    try:
+        dummy = base64.decode(val)
+        return val
+    except TypeError:
+        return base64.b64encode(val)

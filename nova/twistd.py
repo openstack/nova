@@ -43,8 +43,6 @@ else:
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('logdir', None, 'directory to keep log files in '
-                                     '(will be prepended to $logfile)')
 
 
 class TwistdServerOptions(ServerOptions):
@@ -150,6 +148,7 @@ def WrapTwistedOptions(wrapped):
                 options.insert(0, '')
 
             args = FLAGS(options)
+            logging.setup()
             argv = args[1:]
             # ignore subcommands
 
@@ -260,7 +259,6 @@ def serve(filename):
         print 'usage: %s [options] [start|stop|restart]' % argv[0]
         sys.exit(1)
 
-    logging.basicConfig()
     logging.debug(_("Full set of FLAGS:"))
     for flag in FLAGS:
         logging.debug("%s : %s" % (flag, FLAGS.get(flag, None)))

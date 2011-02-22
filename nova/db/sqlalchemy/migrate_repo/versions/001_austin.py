@@ -508,17 +508,19 @@ def upgrade(migrate_engine):
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
-    for table in (auth_tokens, export_devices, fixed_ips, floating_ips,
-                  instances, key_pairs, networks,
-                  projects, quotas, security_groups, security_group_inst_assoc,
-                  security_group_rules, services, users,
-                  user_project_association, user_project_role_association,
-                  user_role_association, volumes):
+    tables = [auth_tokens,
+              instances, key_pairs, networks, fixed_ips, floating_ips,
+              quotas, security_groups, security_group_inst_assoc,
+              security_group_rules, services, users, projects,
+              user_project_association, user_project_role_association,
+              user_role_association, volumes, export_devices]
+    for table in tables:
         try:
             table.create()
         except Exception:
             logging.info(repr(table))
             logging.exception('Exception while creating table')
+            meta.drop_all(tables=tables)
             raise
 
 

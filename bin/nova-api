@@ -39,16 +39,17 @@ from nova import log as logging
 from nova import version
 from nova import wsgi
 
+LOG = logging.getLogger('nova.api')
+
 FLAGS = flags.FLAGS
+flags.DEFINE_string('ec2_listen', "0.0.0.0",
+                    'IP address for EC2 API to listen')
+flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
+flags.DEFINE_string('osapi_listen', "0.0.0.0",
+                    'IP address for OpenStack API to listen')
+flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
 
 API_ENDPOINTS = ['ec2', 'osapi']
-
-for api in API_ENDPOINTS:
-    flags.DEFINE_string("%s_listen" % api, "0.0.0.0",
-                        "IP address to listen to for API %s" % api)
-    flags.DEFINE_integer("%s_listen_port" % api,
-                         getattr(FLAGS, "%s_port" % api),
-                         "Port to listen to for API %s" % api)
 
 
 def run_app(paste_config_file):
@@ -77,8 +78,7 @@ def run_app(paste_config_file):
 
 if __name__ == '__main__':
     FLAGS(sys.argv)
-    logging.basicConfig()
-    LOG = logging.getLogger('nova.api')
+    logging.setup()
     LOG.audit(_("Starting nova-api node (version %s)"),
               version.version_string_with_vcs())
     LOG.debug(_("Full set of FLAGS:"))

@@ -73,8 +73,8 @@ def key_init(self, arg_dict):
 @jsonify
 def password(self, arg_dict):
     """Writes a request to xenstore that tells the agent to set
-    the root password for the given VM. The password should be 
-    encrypted using the shared secret key that was returned by a 
+    the root password for the given VM. The password should be
+    encrypted using the shared secret key that was returned by a
     previous call to key_init. The encrypted password value should
     be passed as the value for the 'enc_pass' key in arg_dict.
     """
@@ -89,6 +89,17 @@ def password(self, arg_dict):
     except TimeoutError, e:
         raise PluginError("%s" % e)
     return resp
+
+
+@jsonify
+def resetnetwork(self, arg_dict):
+    """Writes a resquest to xenstore that tells the agent
+    to reset networking.
+    """
+    arg_dict['value'] = json.dumps({'name': 'resetnetwork', 'value': ''})
+    request_id = arg_dict['id']
+    arg_dict['path'] = "data/host/%s" % request_id
+    xenstore.write_record(self, arg_dict)
 
 
 def _wait_for_agent(self, request_id, arg_dict):
@@ -108,7 +119,8 @@ def _wait_for_agent(self, request_id, arg_dict):
             # First, delete the request record
             arg_dict["path"] = "data/host/%s" % request_id
             xenstore.delete_record(self, arg_dict)
-            raise TimeoutError("TIMEOUT: No response from agent within %s seconds." %
+            raise TimeoutError(
+                    "TIMEOUT: No response from agent within %s seconds." %
                     AGENT_TIMEOUT)
         ret = xenstore.read_record(self, arg_dict)
         # Note: the response for None with be a string that includes
@@ -123,4 +135,5 @@ def _wait_for_agent(self, request_id, arg_dict):
 if __name__ == "__main__":
     XenAPIPlugin.dispatch(
         {"key_init": key_init,
-        "password": password})
+        "password": password,
+        "resetnetwork": resetnetwork})

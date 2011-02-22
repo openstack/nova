@@ -102,7 +102,7 @@ def main():
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
-    logging.basicConfig()
+    logging.setup()
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
