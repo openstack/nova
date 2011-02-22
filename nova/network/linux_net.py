@@ -208,7 +208,7 @@ class IptablesManager(object):
 
     For ipv4, the builtin PREROUTING, OUTPUT, and POSTROUTING nat chains are
     wrapped in the same was as the builtin filter chains. Additionally, there's
-    a SNATTING chain that is applied after the POSTROUTING chain.
+    a snat chain that is applied after the POSTROUTING chain.
     """
     def __init__(self, execute=None):
         if not execute:
@@ -261,16 +261,16 @@ class IptablesManager(object):
         self.ipv4['nat'].add_rule('POSTROUTING', '-j nova-postrouting-bottom',
                                   wrap=False)
 
-        # We add a SNATTING chain to the shared nova-postrouting-bottom chain
+        # We add a snat chain to the shared nova-postrouting-bottom chain
         # so that it's applied last.
-        self.ipv4['nat'].add_chain('SNATTING')
-        self.ipv4['nat'].add_rule('nova-postrouting-bottom', '-j $SNATTING',
+        self.ipv4['nat'].add_chain('snat')
+        self.ipv4['nat'].add_rule('nova-postrouting-bottom', '-j $snat',
                                   wrap=False)
 
         # And then we add a floating-snat chain and jump to first thing in
-        # the SNATTING chain.
+        # the snat chain.
         self.ipv4['nat'].add_chain('floating-snat')
-        self.ipv4['nat'].add_rule('SNATTING', '-j $floating-snat')
+        self.ipv4['nat'].add_rule('snat', '-j $floating-snat')
 
         self.semaphore = semaphore.Semaphore()
 
@@ -376,7 +376,7 @@ def init_host():
 
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
-    iptables_manager.ipv4['nat'].add_rule("SNATTING",
+    iptables_manager.ipv4['nat'].add_rule("snat",
                                           "-s %s -j SNAT --to-source %s" % \
                                            (FLAGS.fixed_range,
                                             FLAGS.routing_source_ip))
