@@ -231,7 +231,7 @@ class ISCSIDriver(VolumeDriver):
     provider properties as follows:
     provider_location - if present, contains the iSCSI target information
     in the same format as an ietadm discovery
-    i.e. '<target iqn>,<target portal> <target name>'
+    i.e. '<target ip/port>,<target portal> <target IQN>'
     provider_auth - if present, contains a space-separated triple:
     '<auth method> <auth username> <auth password>'.  CHAP is the only
     auth_method in use at the moment."""
