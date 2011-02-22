@@ -50,6 +50,8 @@ from nose import result
 from nose import core
 
 from nova import log as logging
+from nova.tests import fake_flags
+
 
 class _AnsiColorizer(object):
     """
