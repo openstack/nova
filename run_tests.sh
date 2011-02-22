@@ -39,7 +39,6 @@ done
 
 function run_tests {
   # Just run the test suites in current environment
-  ${wrapper} rm -f nova.sqlite
   ${wrapper} $NOSETESTS
 }
 
