@@ -72,19 +72,22 @@ class IptablesRule(object):
     You shouldn't need to use this class directly, it's only used by
     IptablesManager
     """
-    def __init__(self, chain, rule, wrap=True):
+    def __init__(self, chain, rule, wrap=True, head=False):
         self.chain = chain
         self.rule = rule
         self.wrap = wrap
+        self.head = head
 
     def __eq__(self, other):
         return ((self.chain == other.chain) and
                 (self.rule == other.rule) and
+                (self.head == other.head) and
                 (self.wrap == other.wrap))
 
     def __ne__(self, other):
         return ((self.chain != other.chain) or
                 (self.rule != other.rule) or
+                (self.head != other.head) or
                 (self.wrap != other.wrap))
 
     def __str__(self):
@@ -101,8 +104,9 @@ class IptablesTable(object):
     def __init__(self):
         self.rules = []
         self.chains = set()
+        self.unwrapped_chains = set()
 
-    def add_chain(self, name):
+    def add_chain(self, name, wrap=True):
         """Adds a named chain to the table
 
         The chain name is wrapped to be unique for the component creating
@@ -113,9 +117,12 @@ class IptablesTable(object):
         so if nova-compute creates a chain named "OUTPUT", it'll actually
         end up named "nova-compute-OUTPUT".
         """
-        self.chains.add(name)
+        if wrap:
+            self.chains.add(name)
+        else:
+            self.unwrapped_chains.add(name)
 
-    def remove_chain(self, name):
+    def remove_chain(self, name, wrap=True):
         """Remove named chain
 
         This removal "cascades". All rule in the chain are removed, as are
@@ -123,17 +130,27 @@ class IptablesTable(object):
 
         If the chain is not found, this is merely logged.
         """
-        if name not in self.chains:
+        if wrap:
+            chain_set = self.chains
+        else:
+            chain_set = self.unwrapped_chains
+
+        if name not in chain_set:
             LOG.debug(_("Attempted to remove chain %s which doesn't exist"),
                       name)
             return
-        self.chains.remove(name)
+
+        chain_set.remove(name)
         self.rules = filter(lambda r: r.chain != name, self.rules)
 
-        jump_snippet = '-j %s-%s' % (binary_name, name)
+        if wrap:
+            jump_snippet = '-j %s-%s' % (binary_name, name)
+        else:
+            jump_snippet = '-j %s' % (name,)
+
         self.rules = filter(lambda r: jump_snippet not in r.rule, self.rules)
 
-    def add_rule(self, chain, rule, wrap=True):
+    def add_rule(self, chain, rule, wrap=True, head=False):
         """Add a rule to the table
 
         This is just like what you'd feed to iptables, just without
@@ -149,14 +166,14 @@ class IptablesTable(object):
         if '$' in rule:
             rule = ' '.join(map(self._wrap_target_chain, rule.split(' ')))
 
-        self.rules.append(IptablesRule(chain, rule, wrap))
+        self.rules.append(IptablesRule(chain, rule, wrap, head))
 
     def _wrap_target_chain(self, s):
         if s.startswith('$'):
             return '%s-%s' % (binary_name, s[1:])
         return s
 
-    def remove_rule(self, chain, rule, wrap=True):
+    def remove_rule(self, chain, rule, wrap=True, head=False):
         """Remove a rule from a chain
 
         Note: The rule must be exactly identical to the one that was added.
@@ -164,11 +181,12 @@ class IptablesTable(object):
         CLI tool.
         """
         try:
-            self.rules.remove(IptablesRule(*args, **kwargs))
+            self.rules.remove(IptablesRule(chain, rule, wrap, head))
         except ValueError:
             LOG.debug(_("Tried to remove rule that wasn't there:"
-                        " %(args)r %(kwargs)r"), {'args': args,
-                                                  'kwargs': kwargs})
+                        " %(chain)r %(rule)r %(wrap)r %(head)r"),
+                      {'chain': chain, 'rule': rule,
+                       'head': head, 'wrap': wrap})
 
 
 class IptablesManager(object):
@@ -178,15 +196,19 @@ class IptablesManager(object):
 
     A number of chains are set up to begin with.
 
-    For ipv4, the filter table has a INPUT, OUTPUT, FORWARD, and local chains
-    already set up, while the NAT chain has PREROUTING, OUTPUT, POSTROUTING,
-    and SNATTING. Except for "local" and "SNATTING" these are all set up so
-    that they are applied at the beginning of their non-wrapped counterparts.
-    "SNATTING" is jumped to from nat/POSTROUTING and "local" is jumped to from
-    filter/OUTPUT and filter/FORWARD.
+    First, nova-filter-top. It's added at the top of FORWARD and OUTPUT. Its
+    name is not wrapped, so it's shared between the various nova workers. It's
+    intended for rules that need to live at the top of the FORWARD and OUTPUT
+    chains. It's in both the ipv4 and ipv6 set of tables.
 
-    For ipv6, the filter table has INPUT, OUTPUT, FORWARD, and local. "local"
-    has the same semantics as for ipv4.
+    For ipv4 and ipv6, the builtin INPUT, OUTPUT, and FORWARD filter chains are
+    wrapped, meaning that the "real" INPUT chain has a rule that jumps to the
+    wrapped INPUT chain, etc. Additionally, there's a wrapped chain named
+    "local" which is jumped to from nova-filter-top.
+
+    For ipv4, the builtin PREROUTING, OUTPUT, and POSTROUTING nat chains are
+    wrapped in the same was as the builtin filter chains. Additionally, there's
+    a SNATTING chain that is applied after the POSTROUTING chain.
     """
     def __init__(self, execute=None):
         if not execute:
@@ -201,13 +223,19 @@ class IptablesManager(object):
                      'nat': IptablesTable()}
         self.ipv6 = {'filter': IptablesTable()}
 
-        self.ipv4['filter'].add_chain('local')
-        self.ipv4['filter'].add_rule('FORWARD', '-j $local', wrap=False)
-        self.ipv4['filter'].add_rule('OUTPUT', '-j $local', wrap=False)
+        # Add a nova-filter-top chain. It's intended to be shared
+        # among the various nova components. It sits at the very top
+        # of FORWARD and OUTPUT.
+        for tables in [self.ipv4, self.ipv6]:
+            tables['filter'].add_chain('nova-filter-top', wrap=False)
+            tables['filter'].add_rule('FORWARD', '-j nova-filter-top',
+                                      wrap=False, head=True)
+            tables['filter'].add_rule('OUTPUT', '-j nova-filter-top',
+                                      wrap=False, head=True)
 
-        self.ipv6['filter'].add_chain('local')
-        self.ipv6['filter'].add_rule('FORWARD', '-j $local', wrap=False)
-        self.ipv6['filter'].add_rule('OUTPUT', '-j $local', wrap=False)
+            tables['filter'].add_chain('local')
+            tables['filter'].add_rule('nova-filter-top', '-j $local',
+                                      wrap=False)
 
         # Wrap the builtin chains
         builtin_chains = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
@@ -226,18 +254,27 @@ class IptablesManager(object):
                     tables[table].add_rule(chain, '-j $%s' % (chain,),
                                            wrap=False)
 
-        # We add a SNATTING chain after our (wrapped) POSTROUTING chain
-        # so that rules added there will be applied after whatever we have in
-        # (the wrapped) POSTROUTING.
-        self.ipv4['nat'].add_chain('SNATTING')
-        self.ipv4['nat'].add_rule('POSTROUTING', '-j $SNATTING', wrap=False)
+        # Add a nova-postrouting-bottom chain. It's intended to be shared
+        # among the various nova components. We set it as the last chain
+        # of POSTROUTING chain.
+        self.ipv4['nat'].add_chain('nova-postrouting-bottom', wrap=False)
+        self.ipv4['nat'].add_rule('POSTROUTING', '-j nova-postrouting-bottom',
+                                  wrap=False)
 
+
+        # We add a SNATTING chain to the shared nova-postrouting-bottom chain
+        # so that it's applied last.
+        self.ipv4['nat'].add_chain('SNATTING')
+        self.ipv4['nat'].add_rule('nova-postrouting-bottom', '-j $SNATTING', wrap=False)
+
+        # And then we add a floating-ip-snat chain and jump to first thing in the SNATTING
+        # chain.
         self.ipv4['nat'].add_chain('floating-ip-snat')
         self.ipv4['nat'].add_rule('SNATTING', '-j $floating-ip-snat')
 
         self.semaphore = semaphore.Semaphore()
 
-        iptables_manager.apply()
+        self.apply()
 
     def apply(self):
         """Apply the current in-memory set of iptables rules
@@ -245,7 +282,7 @@ class IptablesManager(object):
         This will blow away any rules left over from previous runs of the
         same component of Nova, and replace them with our current set of
         rules. This happens atomically, thanks to iptables-restore.
-        
+
         We wrap the call in a semaphore lock, so that we don't race with
         ourselves. In the event of a race with another component running
         an iptables-* command at the same time, we retry up to 5 times.
@@ -267,6 +304,7 @@ class IptablesManager(object):
                                  attempts=5)
 
     def _modify_rules(self, current_lines, table, binary=None):
+        unwrapped_chains = table.unwrapped_chains
         chains = table.chains
         rules = table.rules
 
@@ -284,11 +322,25 @@ class IptablesManager(object):
                 if not rule.startswith(':'):
                     break
 
-        new_filter[rules_index:rules_index] = [str(rule) for rule in rules]
+        new_filter[rules_index:rules_index] = [str(rule) for rule in rules
+                                               if rule.head or
+                                                  str(rule) not in new_filter]
+        new_filter[rules_index:rules_index] = [':%s - [0:0]' % \
+                                               (name,) \
+                                               for name in unwrapped_chains]
         new_filter[rules_index:rules_index] = [':%s-%s - [0:0]' % \
                                                (binary_name, name,) \
                                                for name in chains]
 
+        seen_lines = set()
+        def _weed_out_duplicates(line):
+            if line in seen_lines:
+                return False
+            else:
+                seen_lines.add(line)
+                return True
+
+        new_filter = filter(_weed_out_duplicates, new_filter)
         return new_filter
 
 
