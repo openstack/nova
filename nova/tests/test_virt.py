@@ -354,7 +354,6 @@ class IptablesFirewallTestCase(test.TestCase):
 
         instance_chain = None
         for rule in self.out_rules:
-            print rule
             # This is pretty crude, but it'll do for now
             if '-d 10.11.12.13 -j' in rule:
                 instance_chain = rule.split(' ')[-1]

@@ -54,8 +54,6 @@ flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '$my_ip',
                     'Public IP of network host')
-flags.DEFINE_bool('use_nova_chains', False,
-                  'use the nova_ routing chains instead of default')
 flags.DEFINE_string('input_chain', 'INPUT',
                     'chain to add nova_input to')
 
@@ -266,7 +264,7 @@ class IptablesManager(object):
                                                     (cmd, table), attempts=5)
                     current_lines = current_table.split('\n')
                     new_filter = self._modify_rules(current_lines,
-                                                   tables[table])
+                                                    tables[table])
                     self.execute('sudo %s-restore' % (cmd,),
                                  process_input='\n'.join(new_filter),
                                  attempts=5)
@@ -276,15 +274,17 @@ class IptablesManager(object):
         rules = table.rules
 
         # Remove any trace of our rules
-        new_filter = filter(lambda l: binary_name not in l, current_lines)
+        new_filter = filter(lambda line: binary_name not in line,
+                            current_lines)
 
         seen_chains = False
-        for rules_index in range(len(new_filter)):
+        rules_index = 0
+        for rules_index, rule in enumerate(new_filter):
             if not seen_chains:
-                if new_filter[rules_index].startswith(':'):
+                if rule.startswith(':'):
                     seen_chains = True
-            elif seen_chains == 1:
-                if not new_filter[rules_index].startswith(':'):
+            else:
+                if not rule.startswith(':'):
                     break
 
         new_filter[rules_index:rules_index] = [str(rule) for rule in rules]
