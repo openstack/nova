@@ -28,8 +28,6 @@ import re
 import time
 import XenAPI
 
-import XenAPI
-
 ##### Logging setup
 
 def configure_logging(name):
