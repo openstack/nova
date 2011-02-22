@@ -42,7 +42,11 @@ from nova import wsgi
 LOG = logging.getLogger('nova.api')
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('ec2_listen', "0.0.0.0",
+                    'IP address for EC2 API to listen')
 flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
+flags.DEFINE_string('osapi_listen', "0.0.0.0",
+                    'IP address for OpenStack API to listen')
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
 
 API_ENDPOINTS = ['ec2', 'osapi']
@@ -57,21 +61,14 @@ def run_app(paste_config_file):
             LOG.debug(_("No paste configuration for app: %s"), api)
             continue
         LOG.debug(_("App Config: %(api)s\n%(config)r") % locals())
-        wsgi.paste_config_to_flags(config, {
-            "verbose": FLAGS.verbose,
-            "%s_host" % api: config.get('host', '0.0.0.0'),
-            "%s_listen_port" % api: getattr(FLAGS, "%s_listen_port" % api)})
         LOG.info(_("Running %s API"), api)
         app = wsgi.load_paste_app(paste_config_file, api)
         apps.append((app, getattr(FLAGS, "%s_listen_port" % api),
-                     getattr(FLAGS, "%s_host" % api)))
+                     getattr(FLAGS, "%s_listen" % api)))
     if len(apps) == 0:
         LOG.error(_("No known API applications configured in %s."),
                   paste_config_file)
         return
-
-    # NOTE(todd): redo logging config, verbose could be set in paste config
-    logging.reset()
 
     server = wsgi.Server()
     for app in apps:
@@ -84,6 +81,10 @@ if __name__ == '__main__':
     logging.setup()
     LOG.audit(_("Starting nova-api node (version %s)"),
               version.version_string_with_vcs())
+    LOG.debug(_("Full set of FLAGS:"))
+    for flag in FLAGS:
+        flag_get = FLAGS.get(flag, None)
+        LOG.debug("%(flag)s : %(flag_get)s" % locals())
     conf = wsgi.paste_config_file('nova-api.conf')
     if conf:
         run_app(conf)
