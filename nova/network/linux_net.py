@@ -201,26 +201,13 @@ class IptablesManager(object):
                      'nat': IptablesTable()}
         self.ipv6 = {'filter': IptablesTable()}
 
-        self.ipv4['nat'].add_chain('SNATTING')
-        self.ipv4['nat'].add_rule('POSTROUTING',
-                                  '-j %s-SNATTING' % (binary_name,),
-                                  wrap=False)
-
         self.ipv4['filter'].add_chain('local')
-        self.ipv4['filter'].add_rule('FORWARD',
-                                    '-j %s-local' % (binary_name,),
-                                    wrap=False)
-        self.ipv4['filter'].add_rule('OUTPUT',
-                                    '-j %s-local' % (binary_name,),
-                                    wrap=False)
+        self.ipv4['filter'].add_rule('FORWARD', '-j $local', wrap=False)
+        self.ipv4['filter'].add_rule('OUTPUT', '-j $local', wrap=False)
 
         self.ipv6['filter'].add_chain('local')
-        self.ipv6['filter'].add_rule('FORWARD',
-                                    '-j %s-local' % (binary_name,),
-                                    wrap=False)
-        self.ipv6['filter'].add_rule('OUTPUT',
-                                    '-j %s-local' % (binary_name,),
-                                    wrap=False)
+        self.ipv6['filter'].add_rule('FORWARD', '-j $local', wrap=False)
+        self.ipv6['filter'].add_rule('OUTPUT', '-j $local', wrap=False)
 
         # Wrap the builtin chains
         builtin_chains = {4: {'filter': ['INPUT', 'OUTPUT', 'FORWARD'],
@@ -236,11 +223,21 @@ class IptablesManager(object):
             for table, chains in builtin_chains[ip_version].iteritems():
                 for chain in chains:
                     tables[table].add_chain(chain)
-                    tables[table].add_rule(chain,
-                                           '-j %s-%s' % (binary_name, chain),
+                    tables[table].add_rule(chain, '-j $%s' % (chain,),
                                            wrap=False)
 
+        # We add a SNATTING chain after our (wrapped) POSTROUTING chain
+        # so that rules added there will be applied after whatever we have in
+        # (the wrapped) POSTROUTING.
+        self.ipv4['nat'].add_chain('SNATTING')
+        self.ipv4['nat'].add_rule('POSTROUTING', '-j $SNATTING', wrap=False)
+
+        self.ipv4['nat'].add_chain('floating-ip-snat')
+        self.ipv4['nat'].add_rule('SNATTING', '-j $floating-ip-snat')
+
         self.semaphore = semaphore.Semaphore()
+
+        iptables_manager.apply()
 
     def apply(self):
         """Apply the current in-memory set of iptables rules
@@ -319,11 +316,6 @@ def init_host():
                                             FLAGS.routing_source_ip))
 
     iptables_manager.ipv4['nat'].add_rule("POSTROUTING",
-                                          "-s %s -j SNAT --to-source %s" % \
-                                           (FLAGS.fixed_range,
-                                            FLAGS.routing_source_ip))
-
-    iptables_manager.ipv4['nat'].add_rule("POSTROUTING",
                                           "-s %s -d %s -j ACCEPT" % \
                                           (FLAGS.fixed_range, FLAGS.dmz_cidr))
 
@@ -377,7 +369,8 @@ def remove_floating_forward(floating_ip, fixed_ip):
 def floating_forward_rules(floating_ip, fixed_ip):
     return [("PREROUTING", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
             ("OUTPUT", "-d %s -j DNAT --to %s" % (floating_ip, fixed_ip)),
-            ("SNATTING", "-d %s -j SNAT --to %s" % (fixed_ip, floating_ip))]
+            ("floating-ip-snat",
+             "-s %s -j SNAT --to %s" % (fixed_ip, floating_ip))]
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
