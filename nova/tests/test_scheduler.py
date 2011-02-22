@@ -60,6 +60,7 @@ class SchedulerTestCase(test.TestCase):
         self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
 
     def _create_compute_service(self):
+        """Create compute-manager(ComputeService and Service record)."""
         ctxt = context.get_admin_context()
         dic = {'host': 'dummy', 'binary': 'nova-compute', 'topic': 'compute',
                'report_count': 0, 'availability_zone': 'dummyzone'}
@@ -150,7 +151,7 @@ class SchedulerTestCase(test.TestCase):
         db.service_destroy(ctxt, s_ref['id'])
 
     def test_show_host_resources_works_correctly(self):
-        """show_host_resources() works correctly as expected."""
+        """Show_host_resources() works correctly as expected."""
 
         scheduler = manager.SchedulerManager()
         ctxt = context.get_admin_context()
