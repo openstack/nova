@@ -34,13 +34,11 @@ from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
+from nova.api.openstack import zones
 
 
 LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
-flags.DEFINE_string('os_krm_mapping_file',
-    'krm_mapping.json',
-    'Location of OpenStack Flavor/OS:EC2 Kernel/Ramdisk/Machine JSON file.')
 flags.DEFINE_bool('allow_admin_api',
     False,
     'When True, this API service will accept admin operations.')
@@ -54,8 +52,8 @@ class FaultWrapper(wsgi.Middleware):
         try:
             return req.get_response(self.application)
         except Exception as ex:
-            LOG.exception(_("Caught error: %s"), str(ex))
-            exc = webob.exc.HTTPInternalServerError(explanation=str(ex))
+            LOG.exception(_("Caught error: %s"), unicode(ex))
+            exc = webob.exc.HTTPInternalServerError(explanation=unicode(ex))
             return faults.Fault(exc)
 
 
@@ -82,6 +80,10 @@ class APIRouter(wsgi.Router):
             server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
+            server_members['reset_network'] = 'POST'
+
+            mapper.resource("zone", "zones", controller=zones.Controller(),
+                        collection={'detail': 'GET'})
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},

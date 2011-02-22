@@ -49,7 +49,7 @@ class ComputeTestCase(test.TestCase):
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.context = context.get_admin_context()
+        self.context = context.RequestContext('fake', 'fake', False)
 
     def tearDown(self):
         self.manager.delete_user(self.user)
@@ -69,6 +69,13 @@ class ComputeTestCase(test.TestCase):
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']
 
+    def _create_group(self):
+        values = {'name': 'testgroup',
+                  'description': 'testgroup',
+                  'user_id': self.user.id,
+                  'project_id': self.project.id}
+        return db.security_group_create(self.context, values)
+
     def test_create_instance_defaults_display_name(self):
         """Verify that an instance cannot be created without a display_name."""
         cases = [dict(), dict(display_name=None)]
@@ -82,21 +89,53 @@ class ComputeTestCase(test.TestCase):
 
     def test_create_instance_associates_security_groups(self):
         """Make sure create associates security groups"""
-        values = {'name': 'default',
-                  'description': 'default',
-                  'user_id': self.user.id,
-                  'project_id': self.project.id}
-        group = db.security_group_create(self.context, values)
+        group = self._create_group()
         ref = self.compute_api.create(
                 self.context,
                 instance_type=FLAGS.default_instance_type,
                 image_id=None,
-                security_group=['default'])
+                security_group=['testgroup'])
         try:
             self.assertEqual(len(db.security_group_get_by_instance(
-                self.context, ref[0]['id'])), 1)
+                             self.context, ref[0]['id'])), 1)
+            group = db.security_group_get(self.context, group['id'])
+            self.assert_(len(group.instances) == 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
+            db.instance_destroy(self.context, ref[0]['id'])
+
+    def test_destroy_instance_disassociates_security_groups(self):
+        """Make sure destroying disassociates security groups"""
+        group = self._create_group()
+
+        ref = self.compute_api.create(
+                self.context,
+                instance_type=FLAGS.default_instance_type,
+                image_id=None,
+                security_group=['testgroup'])
+        try:
+            db.instance_destroy(self.context, ref[0]['id'])
+            group = db.security_group_get(self.context, group['id'])
+            self.assert_(len(group.instances) == 0)
+        finally:
+            db.security_group_destroy(self.context, group['id'])
+
+    def test_destroy_security_group_disassociates_instances(self):
+        """Make sure destroying security groups disassociates instances"""
+        group = self._create_group()
+
+        ref = self.compute_api.create(
+                self.context,
+                instance_type=FLAGS.default_instance_type,
+                image_id=None,
+                security_group=['testgroup'])
+
+        try:
+            db.security_group_destroy(self.context, group['id'])
+            group = db.security_group_get(context.get_admin_context(
+                                          read_deleted=True), group['id'])
+            self.assert_(len(group.instances) == 0)
+        finally:
             db.instance_destroy(self.context, ref[0]['id'])
 
     def test_run_terminate(self):
@@ -161,6 +200,14 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
         self.compute.set_admin_password(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_inject_file(self):
+        """Ensure we can write a file to an instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.inject_file(self.context, instance_id, "/tmp/test",
+                "File Contents")
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_snapshot(self):

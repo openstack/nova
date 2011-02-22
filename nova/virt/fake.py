@@ -76,9 +76,10 @@ class FakeConnection(object):
             cls._instance = cls()
         return cls._instance
 
-    def init_host(self):
+    def init_host(self, host):
         """
-        Initialize anything that is necessary for the driver to function
+        Initialize anything that is necessary for the driver to function,
+        including catching up with currently running VM's on the given host.
         """
         return
 
@@ -145,6 +146,21 @@ class FakeConnection(object):
         The first parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name. The second
         parameter is the value of the new password.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
+        """
+        pass
+
+    def inject_file(self, instance, b64_path, b64_contents):
+        """
+        Writes a file on the specified instance.
+
+        The first parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name. The second
+        parameter is the base64-encoded path to which the file is to be
+        written on the instance; the third is the contents of the file, also
+        base64-encoded.
 
         The work will be done asynchronously.  This function returns a
         task that allows the caller to detect when it is complete.

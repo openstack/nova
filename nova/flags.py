@@ -208,7 +208,7 @@ def _get_my_ip():
         (addr, port) = csock.getsockname()
         csock.close()
         return addr
-    except socket.gaierror as ex:
+    except socket.error as ex:
         return "127.0.0.1"
 
 
@@ -218,7 +218,7 @@ def _get_my_ip():
 DEFINE_string('my_ip', _get_my_ip(), 'host ip address')
 DEFINE_list('region_list',
             [],
-            'list of region=url pairs separated by commas')
+            'list of region=fqdn pairs separated by commas')
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
@@ -282,12 +282,14 @@ DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
 DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
               "Top-level directory for maintaining nova's state")
+DEFINE_string('logdir', None, 'output to a per-service log file in named '
+                              'directory')
 
 DEFINE_string('sql_connection',
               'sqlite:///$state_path/nova.sqlite',
               'connection string for sql database')
-DEFINE_string('sql_idle_timeout',
-              '3600',
+DEFINE_integer('sql_idle_timeout',
+              3600,
               'timeout for idle sql database connections')
 DEFINE_integer('sql_max_retries', 12, 'sql connection attempts')
 DEFINE_integer('sql_retry_interval', 10, 'sql connection retry interval')

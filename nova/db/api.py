@@ -71,7 +71,6 @@ class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
 
-
 ###################
 
 
@@ -289,9 +288,19 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
+def fixed_ip_get_all(context):
+    """Get all defined fixed ips."""
+    return IMPL.fixed_ip_get_all(context)
+
+
 def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address or raise if it does not exist."""
     return IMPL.fixed_ip_get_by_address(context, address)
+
+
+def fixed_ip_get_all_by_instance(context, instance_id):
+    """Get fixed ips by instance or raise if none exist."""
+    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
 
 
 def fixed_ip_get_instance(context, address):
@@ -351,6 +360,11 @@ def instance_get_all_by_project(context, project_id):
     return IMPL.instance_get_all_by_project(context, project_id)
 
 
+def instance_get_all_by_host(context, host):
+    """Get all instance belonging to a host."""
+    return IMPL.instance_get_all_by_host(context, host)
+
+
 def instance_get_all_by_reservation(context, reservation_id):
     """Get all instance belonging to a reservation."""
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
@@ -373,11 +387,6 @@ def instance_get_floating_address(context, instance_id):
 def instance_get_project_vpn(context, project_id):
     """Get a vpn instance by project or return None."""
     return IMPL.instance_get_project_vpn(context, project_id)
-
-
-def instance_get_by_id(context, instance_id):
-    """Get an instance by id."""
-    return IMPL.instance_get_by_id(context, instance_id)
 
 
 def instance_is_vpn(context, instance_id):
@@ -501,6 +510,11 @@ def network_get(context, network_id):
     return IMPL.network_get(context, network_id)
 
 
+def network_get_all(context):
+    """Return all defined networks."""
+    return IMPL.network_get_all(context)
+
+
 # pylint: disable-msg=C0103
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
@@ -515,6 +529,11 @@ def network_get_by_bridge(context, bridge):
 def network_get_by_instance(context, instance_id):
     """Get a network by instance id or raise if it does not exist."""
     return IMPL.network_get_by_instance(context, instance_id)
+
+
+def network_get_all_by_instance(context, instance_id):
+    """Get all networks by instance id or raise if none exist."""
+    return IMPL.network_get_all_by_instance(context, instance_id)
 
 
 def network_get_index(context, network_id):
@@ -557,7 +576,7 @@ def project_get_network(context, project_id, associate=True):
 
     """
 
-    return IMPL.project_get_network(context, project_id)
+    return IMPL.project_get_network(context, project_id, associate)
 
 
 def project_get_network_v6(context, project_id):
@@ -981,3 +1000,31 @@ def console_get_all_by_instance(context, instance_id):
 def console_get(context, console_id, instance_id=None):
     """Get a specific console (possibly on a given instance)."""
     return IMPL.console_get(context, console_id, instance_id)
+
+
+####################
+
+
+def zone_create(context, values):
+    """Create a new child Zone entry."""
+    return IMPL.zone_create(context, values)
+
+
+def zone_update(context, zone_id, values):
+    """Update a child Zone entry."""
+    return IMPL.zone_update(context, values)
+
+
+def zone_delete(context, zone_id):
+    """Delete a child Zone."""
+    return IMPL.zone_delete(context, zone_id)
+
+
+def zone_get(context, zone_id):
+    """Get a specific child Zone."""
+    return IMPL.zone_get(context, zone_id)
+
+
+def zone_get_all(context):
+    """Get all child Zones."""
+    return IMPL.zone_get_all(context)

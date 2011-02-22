@@ -43,12 +43,14 @@ class SimpleScheduler(chance.ChanceScheduler):
     def schedule_run_instance(self, context, instance_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest running instances."""
         instance_ref = db.instance_get(context, instance_id)
-        if instance_ref['availability_zone'] and context.is_admin:
+        if (instance_ref['availability_zone']
+            and ':' in instance_ref['availability_zone']
+            and context.is_admin):
             zone, _x, host = instance_ref['availability_zone'].partition(':')
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-compute')
             if not self.service_is_up(service):
-                raise driver.WillNotSchedule("Host %s is not alive" % host)
+                raise driver.WillNotSchedule(_("Host %s is not alive") % host)
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow
@@ -75,12 +77,14 @@ class SimpleScheduler(chance.ChanceScheduler):
     def schedule_create_volume(self, context, volume_id, *_args, **_kwargs):
         """Picks a host that is up and has the fewest volumes."""
         volume_ref = db.volume_get(context, volume_id)
-        if (':' in volume_ref['availability_zone']) and context.is_admin:
+        if (volume_ref['availability_zone']
+            and ':' in volume_ref['availability_zone']
+            and context.is_admin):
             zone, _x, host = volume_ref['availability_zone'].partition(':')
             service = db.service_get_by_args(context.elevated(), host,
                                              'nova-volume')
             if not self.service_is_up(service):
-                raise driver.WillNotSchedule("Host %s not available" % host)
+                raise driver.WillNotSchedule(_("Host %s not available") % host)
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow

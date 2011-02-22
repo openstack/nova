@@ -21,7 +21,6 @@ import subprocess
 
 from setuptools import setup, find_packages
 from setuptools.command.sdist import sdist
-from sphinx.setup_command import BuildDoc
 
 from nova.utils import parse_mailmap, str_dict_replace
 from nova import version
@@ -33,13 +32,6 @@ if os.path.isdir('.bzr'):
         vcsversion = vcs_cmd.communicate()[0]
         version_file.write(vcsversion)
 
-
-class local_BuildDoc(BuildDoc):
-    def run(self):
-        for builder in ['html', 'man']:
-            self.builder = builder
-            self.finalize_options()
-            BuildDoc.run(self)
 
 class local_sdist(sdist):
     """Customized sdist hook - builds the ChangeLog file from VC first"""
@@ -56,18 +48,32 @@ class local_sdist(sdist):
             with open("ChangeLog", "w") as changelog_file:
                 changelog_file.write(str_dict_replace(changelog, mailmap))
         sdist.run(self)
+nova_cmdclass = {'sdist': local_sdist}
 
-nova_cmdclass= { 'sdist': local_sdist,
-                 'build_sphinx' : local_BuildDoc }
 
 try:
-  from babel.messages import frontend as babel
-  nova_cmdclass['compile_catalog'] = babel.compile_catalog
-  nova_cmdclass['extract_messages'] = babel.extract_messages
-  nova_cmdclass['init_catalog'] = babel.init_catalog
-  nova_cmdclass['update_catalog'] = babel.update_catalog
+    from sphinx.setup_command import BuildDoc
+
+    class local_BuildDoc(BuildDoc):
+        def run(self):
+            for builder in ['html', 'man']:
+                self.builder = builder
+                self.finalize_options()
+                BuildDoc.run(self)
+    nova_cmdclass['build_sphinx'] = local_BuildDoc
+
 except:
-  pass
+    pass
+
+
+try:
+    from babel.messages import frontend as babel
+    nova_cmdclass['compile_catalog'] = babel.compile_catalog
+    nova_cmdclass['extract_messages'] = babel.extract_messages
+    nova_cmdclass['init_catalog'] = babel.init_catalog
+    nova_cmdclass['update_catalog'] = babel.update_catalog
+except:
+    pass
 
 setup(name='nova',
       version=version.canonical_version_string(),
@@ -79,9 +85,13 @@ setup(name='nova',
       packages=find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       test_suite='nose.collector',
-      scripts=['bin/nova-api',
+      scripts=['bin/nova-ajax-console-proxy',
+               'bin/nova-api',
+               'bin/nova-combined',
                'bin/nova-compute',
+               'bin/nova-console',
                'bin/nova-dhcpbridge',
+               'bin/nova-direct-api',
                'bin/nova-import-canonical-imagestore',
                'bin/nova-instancemonitor',
                'bin/nova-logspool',
@@ -90,5 +100,6 @@ setup(name='nova',
                'bin/nova-objectstore',
                'bin/nova-scheduler',
                'bin/nova-spoolsentry',
+               'bin/stack',
                'bin/nova-volume',
                'tools/nova-debug'])

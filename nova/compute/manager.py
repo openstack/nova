@@ -34,10 +34,10 @@ terminating it.
                   :func:`nova.utils.import_object`
 """
 
+import base64
 import datetime
 import random
 import string
-import logging
 import socket
 import functools
 
@@ -77,8 +77,8 @@ def checks_instance_lock(function):
 
         LOG.info(_("check_instance_lock: decorating: |%s|"), function,
                  context=context)
-        LOG.info(_("check_instance_lock: arguments: |%s| |%s| |%s|"),
-                 self, context, instance_id, context=context)
+        LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
+                " |%(instance_id)s|") % locals(), context=context)
         locked = self.get_lock(context, instance_id)
         admin = context.is_admin
         LOG.info(_("check_instance_lock: locked: |%s|"), locked,
@@ -118,7 +118,7 @@ class ComputeManager(manager.Manager):
         """Do any initialization that needs to be run if this is a
            standalone service.
         """
-        self.driver.init_host()
+        self.driver.init_host(host=self.host)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -128,10 +128,10 @@ class ComputeManager(manager.Manager):
             info = self.driver.get_info(instance_ref['name'])
             state = info['state']
         except exception.NotFound:
-            state = power_state.NOSTATE
+            state = power_state.FAILED
         self.db.instance_set_state(context, instance_id, state)
 
-    def get_console_topic(self, context, **_kwargs):
+    def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host
            Currently this is just set in the flags for each compute
            host."""
@@ -140,7 +140,7 @@ class ComputeManager(manager.Manager):
                                      FLAGS.console_topic,
                                      FLAGS.console_host)
 
-    def get_network_topic(self, context, **_kwargs):
+    def get_network_topic(self, context, **kwargs):
         """Retrieves the network host for a project on this host"""
         # TODO(vish): This method should be memoized. This will make
         #             the call to get_network_host cheaper, so that
@@ -159,21 +159,22 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     def refresh_security_group_rules(self, context,
-                                     security_group_id, **_kwargs):
+                                     security_group_id, **kwargs):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_security_group_rules(security_group_id)
 
     @exception.wrap_exception
     def refresh_security_group_members(self, context,
-                                       security_group_id, **_kwargs):
+                                       security_group_id, **kwargs):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_security_group_members(security_group_id)
 
     @exception.wrap_exception
-    def run_instance(self, context, instance_id, **_kwargs):
+    def run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref.onset_files = kwargs.get('onset_files', [])
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
@@ -231,22 +232,25 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
-        if not FLAGS.stub_network:
-            address = self.db.instance_get_floating_address(context,
-                                                            instance_ref['id'])
-            if address:
-                LOG.debug(_("Disassociating address %s"), address,
+        fixed_ip = instance_ref.get('fixed_ip')
+        if not FLAGS.stub_network and fixed_ip:
+            floating_ips = fixed_ip.get('floating_ips') or []
+            for floating_ip in floating_ips:
+                address = floating_ip['address']
+                LOG.debug("Disassociating address %s", address,
                           context=context)
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
+                network_topic = self.db.queue_get_for(context,
+                                                      FLAGS.network_topic,
+                                                      floating_ip['host'])
                 rpc.cast(context,
-                         self.get_network_topic(context),
+                         network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"floating_address": address}})
 
-            address = self.db.instance_get_fixed_address(context,
-                                                         instance_ref['id'])
+            address = fixed_ip['address']
             if address:
                 LOG.debug(_("Deallocating address %s"), address,
                           context=context)
@@ -256,7 +260,7 @@ class ComputeManager(manager.Manager):
                 self.network_manager.deallocate_fixed_ip(context.elevated(),
                                                          address)
 
-        volumes = instance_ref.get('volumes', []) or []
+        volumes = instance_ref.get('volumes') or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
         if instance_ref['state'] == power_state.SHUTOFF:
@@ -278,11 +282,11 @@ class ComputeManager(manager.Manager):
         LOG.audit(_("Rebooting instance %s"), instance_id, context=context)
 
         if instance_ref['state'] != power_state.RUNNING:
+            state = instance_ref['state']
+            running = power_state.RUNNING
             LOG.warn(_('trying to reboot a non-running '
-                     'instance: %s (state: %s excepted: %s)'),
-                     instance_id,
-                     instance_ref['state'],
-                     power_state.RUNNING,
+                     'instance: %(instance_id)s (state: %(state)s '
+                     'expected: %(running)s)') % locals(),
                      context=context)
 
         self.db.instance_set_state(context,
@@ -307,9 +311,11 @@ class ComputeManager(manager.Manager):
         LOG.audit(_('instance %s: snapshotting'), instance_id,
                   context=context)
         if instance_ref['state'] != power_state.RUNNING:
+            state = instance_ref['state']
+            running = power_state.RUNNING
             LOG.warn(_('trying to snapshot a non-running '
-                       'instance: %s (state: %s excepted: %s)'),
-                     instance_id, instance_ref['state'], power_state.RUNNING)
+                       'instance: %(instance_id)s (state: %(state)s '
+                       'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
 
@@ -319,28 +325,43 @@ class ComputeManager(manager.Manager):
         """Set the root/admin password for an instance on this server."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref['state'] != power_state.RUNNING:
-            logging.warn('trying to reset the password on a non-running '
-                    'instance: %s (state: %s expected: %s)',
-                    instance_ref['id'],
-                    instance_ref['state'],
-                    power_state.RUNNING)
-
-        logging.debug('instance %s: setting admin password',
+        instance_id = instance_ref['id']
+        instance_state = instance_ref['state']
+        expected_state = power_state.RUNNING
+        if instance_state != expected_state:
+            LOG.warn(_('trying to reset the password on a non-running '
+                    'instance: %(instance_id)s (state: %(instance_state)s '
+                    'expected: %(expected_state)s)') % locals())
+        LOG.audit(_('instance %s: setting admin password'),
                 instance_ref['name'])
         if new_pass is None:
             # Generate a random password
-            new_pass = self._generate_password(FLAGS.password_length)
-
+            new_pass = utils.generate_password(FLAGS.password_length)
         self.driver.set_admin_password(instance_ref, new_pass)
         self._update_state(context, instance_id)
 
-    def _generate_password(self, length=20):
-        """Generate a random sequence of letters and digits
-        to be used as a password.
-        """
-        chrs = string.letters + string.digits
-        return "".join([random.choice(chrs) for i in xrange(length)])
+    @exception.wrap_exception
+    @checks_instance_lock
+    def inject_file(self, context, instance_id, path, file_contents):
+        """Write a file to the specified path on an instance on this server"""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        instance_id = instance_ref['id']
+        instance_state = instance_ref['state']
+        expected_state = power_state.RUNNING
+        if instance_state != expected_state:
+            LOG.warn(_('trying to inject a file into a non-running '
+                    'instance: %(instance_id)s (state: %(instance_state)s '
+                    'expected: %(expected_state)s)') % locals())
+        # Files/paths *should* be base64-encoded at this point, but
+        # double-check to make sure.
+        b64_path = utils.ensure_b64_encoding(path)
+        b64_contents = utils.ensure_b64_encoding(file_contents)
+        plain_path = base64.b64decode(b64_path)
+        nm = instance_ref['name']
+        msg = _('instance %(nm)s: injecting file to %(plain_path)s') % locals()
+        LOG.audit(msg)
+        self.driver.inject_file(instance_ref, b64_path, b64_contents)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -494,6 +515,18 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         return instance_ref['locked']
 
+    @checks_instance_lock
+    def reset_network(self, context, instance_id):
+        """
+        Reset networking on the instance.
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_('instance %s: reset network'), instance_id,
+                                                   context=context)
+        self.driver.reset_network(instance_ref)
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
@@ -507,7 +540,7 @@ class ComputeManager(manager.Manager):
     def get_ajax_console(self, context, instance_id):
         """Return connection information for an ajax console"""
         context = context.elevated()
-        logging.debug(_("instance %s: getting ajax console"), instance_id)
+        LOG.debug(_("instance %s: getting ajax console"), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
 
         return self.driver.get_ajax_console(instance_ref)
@@ -517,8 +550,8 @@ class ComputeManager(manager.Manager):
         """Attach a volume to an instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("instance %s: attaching volume %s to %s"), instance_id,
-                  volume_id, mountpoint, context=context)
+        LOG.audit(_("instance %(instance_id)s: attaching volume %(volume_id)s"
+                " to %(mountpoint)s") % locals(), context=context)
         dev_path = self.volume_manager.setup_compute_volume(context,
                                                             volume_id)
         try:
@@ -533,8 +566,8 @@ class ComputeManager(manager.Manager):
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.
-            LOG.exception(_("instance %s: attach failed %s, removing"),
-                          instance_id, mountpoint, context=context)
+            LOG.exception(_("instance %(instance_id)s: attach failed"
+                    " %(mountpoint)s, removing") % locals(), context=context)
             self.volume_manager.remove_compute_volume(context,
                                                       volume_id)
             raise exc
@@ -548,9 +581,9 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         volume_ref = self.db.volume_get(context, volume_id)
-        LOG.audit(_("Detach volume %s from mountpoint %s on instance %s"),
-                  volume_id, volume_ref['mountpoint'], instance_id,
-                  context=context)
+        mp = volume_ref['mountpoint']
+        LOG.audit(_("Detach volume %(volume_id)s from mountpoint %(mp)s"
+                " on instance %(instance_id)s") % locals(), context=context)
         if instance_ref['name'] not in self.driver.list_instances():
             LOG.warn(_("Detaching volume from unknown instance %s"),
                      instance_id, context=context)

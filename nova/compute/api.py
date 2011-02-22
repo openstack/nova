@@ -67,10 +67,10 @@ class API(base.Base):
         """Get the network topic for an instance."""
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found in get_network_topic"),
                         instance_id)
-            raise e
+            raise
 
         host = instance['host']
         if not host:
@@ -85,38 +85,38 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None):
+               availability_zone=None, user_data=None,
+               onset_files=None):
         """Create the number of instances requested if quota and
-        other arguments check out ok."""
-
+        other arguments check out ok.
+        """
         type_data = instance_types.INSTANCE_TYPES[instance_type]
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
-            LOG.warn(_("Quota exceeeded for %s, tried to run %s instances"),
-                     context.project_id, min_count)
+            pid = context.project_id
+            LOG.warn(_("Quota exceeeded for %(pid)s,"
+                    " tried to run %(min_count)s instances") % locals())
             raise quota.QuotaError(_("Instance quota exceeded. You can only "
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
-        is_vpn = image_id == FLAGS.vpn_image_id
-        if not is_vpn:
-            image = self.image_service.show(context, image_id)
-            if kernel_id is None:
-                kernel_id = image.get('kernelId', None)
-            if ramdisk_id is None:
-                ramdisk_id = image.get('ramdiskId', None)
-            # No kernel and ramdisk for raw images
-            if kernel_id == str(FLAGS.null_kernel):
-                kernel_id = None
-                ramdisk_id = None
-                LOG.debug(_("Creating a raw instance"))
-            # Make sure we have access to kernel and ramdisk (if not raw)
-            logging.debug("Using Kernel=%s, Ramdisk=%s" %
-                           (kernel_id, ramdisk_id))
-            if kernel_id:
-                self.image_service.show(context, kernel_id)
-            if ramdisk_id:
-                self.image_service.show(context, ramdisk_id)
+        image = self.image_service.show(context, image_id)
+        if kernel_id is None:
+            kernel_id = image.get('kernel_id', None)
+        if ramdisk_id is None:
+            ramdisk_id = image.get('ramdisk_id', None)
+        # No kernel and ramdisk for raw images
+        if kernel_id == str(FLAGS.null_kernel):
+            kernel_id = None
+            ramdisk_id = None
+            LOG.debug(_("Creating a raw instance"))
+        # Make sure we have access to kernel and ramdisk (if not raw)
+        logging.debug("Using Kernel=%s, Ramdisk=%s" %
+                       (kernel_id, ramdisk_id))
+        if kernel_id:
+            self.image_service.show(context, kernel_id)
+        if ramdisk_id:
+            self.image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -155,7 +155,6 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'availability_zone': availability_zone}
-
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -183,14 +182,17 @@ class API(base.Base):
             instance = self.update(context, instance_id, **updates)
             instances.append(instance)
 
-            LOG.debug(_("Casting to scheduler for %s/%s's instance %s"),
-                          context.project_id, context.user_id, instance_id)
+            pid = context.project_id
+            uid = context.user_id
+            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
+                    " instance %(instance_id)s") % locals())
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
-                               "availability_zone": availability_zone}})
+                               "availability_zone": availability_zone,
+                               "onset_files": onset_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -246,13 +248,16 @@ class API(base.Base):
         # ..then we distill the security groups to which they belong..
         security_groups = set()
         for rule in security_group_rules:
-            security_groups.add(rule['parent_group_id'])
+            security_group = self.db.security_group_get(
+                                                    context,
+                                                    rule['parent_group_id'])
+            security_groups.add(security_group)
 
         # ..then we find the instances that are members of these groups..
         instances = set()
         for security_group in security_groups:
             for instance in security_group['instances']:
-                instances.add(instance['id'])
+                instances.add(instance)
 
         # ...then we find the hosts where they live...
         hosts = set()
@@ -287,10 +292,10 @@ class API(base.Base):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
             instance = self.get(context, instance_id)
-        except exception.NotFound as e:
+        except exception.NotFound:
             LOG.warning(_("Instance %d was not found during terminate"),
                         instance_id)
-            raise e
+            raise
 
         if (instance['state_description'] == 'terminating'):
             LOG.warning(_("Instance %d is already being terminated"),
@@ -312,7 +317,7 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
-        rv = self.db.instance_get_by_id(context, instance_id)
+        rv = self.db.instance_get(context, instance_id)
         return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,
@@ -428,6 +433,10 @@ class API(base.Base):
         """Set the root/admin password for the given instance."""
         self._cast_compute_message('set_admin_password', context, instance_id)
 
+    def inject_file(self, context, instance_id):
+        """Write a file to the given instance."""
+        self._cast_compute_message('inject_file', context, instance_id)
+
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
         instance = self.get(context, instance_id)
@@ -459,6 +468,13 @@ class API(base.Base):
         """return the boolean state of (instance with instance_id)'s lock"""
         instance = self.get(context, instance_id)
         return instance['locked']
+
+    def reset_network(self, context, instance_id):
+        """
+        Reset networking on the instance.
+
+        """
+        self._cast_compute_message('reset_network', context, instance_id)
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):

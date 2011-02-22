@@ -17,12 +17,22 @@
 #    under the License.
 
 import os
+import sys
 
 from nova import flags
 
 import sqlalchemy
 from migrate.versioning import api as versioning_api
-from migrate.versioning import exceptions as versioning_exceptions
+
+try:
+    from migrate.versioning import exceptions as versioning_exceptions
+except ImportError:
+    try:
+        # python-migration changed location of exceptions after 1.6.3
+        # See LP Bug #717467
+        from migrate import exceptions as versioning_exceptions
+    except ImportError:
+        sys.exit(_("python-migrate is not installed. Exiting."))
 
 FLAGS = flags.FLAGS
 
@@ -45,13 +55,16 @@ def db_version():
         engine = sqlalchemy.create_engine(FLAGS.sql_connection, echo=False)
         meta.reflect(bind=engine)
         try:
-            for table in ('auth_tokens', 'export_devices', 'fixed_ips',
-                          'floating_ips', 'instances', 'iscsi_targets',
+            for table in ('auth_tokens', 'zones', 'export_devices',
+                          'fixed_ips', 'floating_ips', 'instances',
                           'key_pairs', 'networks', 'projects', 'quotas',
-                          'security_group_rules',
-                          'security_group_instance_association', 'services',
+                          'security_group_instance_association',
+                          'security_group_rules', 'security_groups',
+                          'services',
                           'users', 'user_project_association',
-                          'user_project_role_association', 'volumes'):
+                          'user_project_role_association',
+                          'user_role_association',
+                          'volumes'):
                 assert table in meta.tables
             return db_version_control(1)
         except AssertionError:
