@@ -318,9 +318,6 @@ class ISCSITestCase(DriverTestCase):
             mountpoint = "/dev/sd" + chr((ord('b') + index))
             db.volume_attached(self.context, vol_ref['id'], self.instance_id,
                                mountpoint)
-            #iscsi_target = db.volume_allocate_iscsi_target(self.context,
-            #                                               vol_ref['id'],
-            #                                               vol_ref['host'])
             volume_id_list.append(vol_ref['id'])
 
         return volume_id_list

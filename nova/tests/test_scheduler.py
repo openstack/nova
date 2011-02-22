@@ -258,10 +258,10 @@ class SimpleDriverTestCase(test.TestCase):
         inst['project_id'] = self.project.id
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
+        inst['vcpus'] = kwargs.get('vcpus', 1)
         inst['ami_launch_index'] = 0
         inst['availability_zone'] = kwargs.get('availability_zone', None)
         inst['host'] = kwargs.get('host', 'dummy')
-        inst['vcpus'] = kwargs.get('vcpus', 4)
         inst['memory_mb'] = kwargs.get('memory_mb', 20)
         inst['local_gb'] = kwargs.get('local_gb', 30)
         inst['launched_on'] = kwargs.get('launghed_on', 'dummy')

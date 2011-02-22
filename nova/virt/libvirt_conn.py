@@ -888,7 +888,7 @@ class LibvirtConnection(object):
 
         :returns: The total number of vcpu that currently used.
 
-         """
+        """
 
         total = 0
         for i in self._conn.listDomainsID():
