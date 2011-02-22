@@ -38,6 +38,8 @@ flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
 flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
                      'block_size to use for dd')
+flags.DEFINE_integer('timeout_nbd', 10,
+                     'time to wait for a NBD device coming up')
 
 
 def extend(image, size):
@@ -117,7 +119,7 @@ def _link_device(image, nbd):
         utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
         # NOTE(vish): this forks into another process, so give it a chance
         #             to set up before continuuing
-        for i in xrange(10):
+        for i in xrange(FLAGS.timeout_nbd):
             if os.path.exists("/sys/block/%s/pid" % os.path.basename(device)):
                 return device
             time.sleep(1)

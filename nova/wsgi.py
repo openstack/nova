@@ -59,7 +59,6 @@ class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
     def __init__(self, threads=1000):
-        logging.basicConfig()
         self.pool = eventlet.GreenPool(threads)
 
     def start(self, application, port, host='0.0.0.0', backlog=128):
