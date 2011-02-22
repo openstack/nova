@@ -108,10 +108,6 @@ class VMOps(object):
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
-        if network_ref:
-            VMHelper.create_vif(self._session, vm_ref,
-                                network_ref, instance.mac_address)
-
         # Alter the image before VM start for, e.g. network injection
         VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
 
