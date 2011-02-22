@@ -15,6 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Class for VM tasks like spawn, snapshot, suspend, resume etc.
+
+"""
 import logging
 import os
 import time
@@ -23,7 +27,6 @@ import uuid
 from nova import db
 from nova import context
 from nova.compute import power_state
-
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
@@ -102,8 +105,8 @@ class VMWareVMOps(object):
                 'but that already exists on the host' % instance.name)
         bridge = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])['bridge']
-        #TODO: Shouldn't we consider any public network in case the network
-        #name supplied isn't there
+        #TODO(sateesh): Shouldn't we consider any public network in case
+        #the network name supplied isn't there
         network_ref = \
             self._get_network_with_the_name(bridge)
         if network_ref is None:

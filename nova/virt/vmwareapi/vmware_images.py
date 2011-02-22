@@ -15,12 +15,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-import os
+"""
+Utility functions to handle vm images. Also include fake image handlers.
+
+"""
+
 import logging
+import os
+import time
 
 from nova import flags
-
 from nova.virt.vmwareapi import read_write_util
 from nova.virt.vmwareapi import io_util
 
@@ -31,6 +35,7 @@ READ_CHUNKSIZE = 2 * 1024 * 1024
 WRITE_CHUNKSIZE = 2 * 1024 * 1024
 
 LOG = logging.getLogger("nova.virt.vmwareapi.vmware_images")
+TEST_IMAGE_PATH = "/tmp/vmware-test-images"
 
 
 def start_transfer(read_file_handle, write_file_handle, data_size):
@@ -148,7 +153,7 @@ def _get_fake_image(image, instance, **kwargs):
     """
     LOG.debug("Downloading image %s from fake image service" % image)
     image = str(image)
-    file_path = os.path.join("/tmp/vmware-test-images", image, image)
+    file_path = os.path.join(TEST_IMAGE_PATH, image, image)
     file_path = os.path.abspath(file_path)
     read_file_handle = read_write_util.FakeFileRead(file_path)
     file_size = read_file_handle.get_size()
@@ -215,9 +220,9 @@ def _put_fake_image(image, instance, **kwargs):
                                 kwargs.get("file_path"))
     file_size = read_file_handle.get_size()
     image = str(image)
-    image_dir_path = os.path.join("/tmp/vmware-test-images", image)
-    if not os.path.exists("/tmp/vmware-test-images"):
-        os.mkdir("/tmp/vmware-test-images")
+    image_dir_path = os.path.join(TEST_IMAGE_PATH, image)
+    if not os.path.exists(TEST_IMAGE_PATH):
+        os.mkdir(TEST_IMAGE_PATH)
         os.mkdir(image_dir_path)
     else:
         if not os.path.exists(image_dir_path):
@@ -247,7 +252,7 @@ def get_vmdk_size_and_properties(image, instance):
         raise NotImplementedError
     elif FLAGS.image_service == "nova.FakeImageService":
         image = str(image)
-        file_path = os.path.join("/tmp/vmware-test-images", image, image)
+        file_path = os.path.join(TEST_IMAGE_PATH, image, image)
         file_path = os.path.abspath(file_path)
         read_file_handle = read_write_util.FakeFileRead(file_path)
     size = read_file_handle.get_size()

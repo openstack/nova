@@ -16,14 +16,23 @@
 #    under the License.
 
 """
-    Reads a chunk from input file and writes the same to the output file till
-    it reaches the transferable size.
+Helper classes for multi-threaded I/O (read/write) in the basis of chunks.
+
+The class ThreadSafePipe queues the chunk data.
+
+The class IOThread reads chunks from input file and pipes it to output file
+till it reaches the transferable size
+
 """
 
-from Queue import Queue, Full, Empty
+from Queue import Empty
+from Queue import Full
+from Queue import Queue
 from threading import Thread
 import time
 import traceback
+
+THREAD_SLEEP_TIME = .01
 
 
 class ThreadSafePipe(Queue):
@@ -122,12 +131,12 @@ class IOThread(Thread):
                         # no more data in read
                         break
                     #Restrict tight loop
-                    time.sleep(.01)
+                    time.sleep(THREAD_SLEEP_TIME)
                 except Full:
                     # Pipe full while writing to pipe - safe to retry since
                     #chunk is preserved
                     #Restrict tight loop
-                    time.sleep(.01)
+                    time.sleep(THREAD_SLEEP_TIME)
             if isinstance(self.output_file, ThreadSafePipe):
                 # If this is the reader thread, send eof signal
                 self.output_file.set_eof(True)
@@ -137,7 +146,7 @@ class IOThread(Thread):
                     raise IOError("Not enough data (%d of %d bytes)" \
                                 % (self.read_size, self.transfer_size))
 
-        except:
+        except Exception:
             self._error = True
             self._exception = str(traceback.format_exc())
         self._done = True

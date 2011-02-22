@@ -15,6 +15,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Connection class for VMware Infrastructure API in VMware ESX/ESXi platform
+
+Encapsulates the session management activties and acts as interface for VI API.
+The connection class sets up a session with the ESX/ESXi compute provider host
+and handles all the calls made to the host.
+
+**Related Flags**
+
+:vmwareapi_host_ip: IP of VMware ESX/ESXi compute provider host
+:vmwareapi_host_username: ESX/ESXi server user to be used for API session
+:vmwareapi_host_password: Password for the user "vmwareapi_host_username"
+:vmwareapi_task_poll_interval: The interval used for polling of remote tasks
+:vmwareapi_api_retry_count: Max number of retry attempts upon API failures
+
+"""
+
 import logging
 import time
 import urlparse
@@ -56,6 +73,19 @@ flags.DEFINE_float('vmwareapi_api_retry_count',
                    'Used only if connection_type is vmwareapi')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
+
+
+class TaskState:
+    """
+    Enumeration class for different states of task
+        0 - Task completed successfully
+        1 - Task is in queued state
+        2 - Task is in running state
+    """
+
+    TASK_SUCCESS = 0
+    TASK_QUEUED = 1
+    TASK_RUNNING = 2
 
 
 class Failure(Exception):
@@ -278,7 +308,7 @@ class VMWareAPISession(object):
         # ESX host
         try:
             self.vim.Logout(self.vim.get_service_content().SessionManager)
-        except:
+        except Exception:
             pass
 
     def _call_method(self, module, method, *args, **kwargs):
@@ -363,17 +393,18 @@ class VMWareAPISession(object):
                 instance_id=int(instance_id),
                 action=task_name[0:255],
                 error=None)
-            if task_info.State in ['queued', 'running']:
+            if task_info.State in [TaskState.TASK_QUEUED,
+                                   TaskState.TASK_RUNNING]:
                 return
-            elif task_info.State == 'success':
+            elif task_info.State == TaskState.TASK_SUCCESS:
                 LOG.info("Task [%s] %s status: success " % (
                     task_name,
                     str(task_ref)))
-                done.send("success")
+                done.send(TaskState.TASK_SUCCESS)
             else:
                 error_info = str(task_info.Error.LocalizedMessage)
                 action["error"] = error_info
-                LOG.warn("Task [%s] %s status: error    %s" % (
+                LOG.warn("Task [%s] %s status: error [%s]" % (
                     task_name,
                     str(task_ref),
                     error_info))

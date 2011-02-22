@@ -15,8 +15,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import ZSI
+"""
+Class facilitating SOAP calls to ESX/ESXi server
+
+"""
+
 import httplib
+
+import ZSI
 
 from nova.virt.vmwareapi import VimService_services
 

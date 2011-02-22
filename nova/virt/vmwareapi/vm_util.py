@@ -15,6 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+"""
+Utility functions to handle virtual disks, virtual network adapters, VMs etc.
+
+"""
+
 from nova.virt.vmwareapi.VimService_services_types import ns0
 
 

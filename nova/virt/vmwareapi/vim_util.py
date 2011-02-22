@@ -17,7 +17,9 @@
 
 """
 The VMware API utility module
+
 """
+
 from nova.virt.vmwareapi.VimService_services_types import ns0
 
 MAX_CLONE_RETRIES = 1

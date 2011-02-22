@@ -15,6 +15,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+""" Image file handlers
+
+Collection of classes to handle image upload/download to/from Image service
+(like Glance image storage and retrieval service) from/to ESX/ESXi server.
+
+Also a class is available that acts as Fake image service. It uses local
+file system for storage.
+
+"""
+
 import httplib
 import json
 import logging
@@ -84,7 +94,7 @@ class ImageServiceFile:
         """
         try:
             self.file_handle.close()
-        except:
+        except Exception:
             pass
 
     def get_image_properties(self):
@@ -267,7 +277,7 @@ class VMwareHTTPFile(object):
         """
         try:
             self.file_handle.close()
-        except:
+        except Exception:
             pass
 
     def __del__(self):
