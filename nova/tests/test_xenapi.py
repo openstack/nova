@@ -35,6 +35,7 @@ from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi.vmops import SimpleDH
+from nova.virt.xenapi.vmops import VMOps
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
@@ -148,6 +149,10 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.stubs.UnsetAll()
 
 
+def reset_network(*args):
+    pass
+
+
 class XenAPIVMTestCase(test.TestCase):
     """
     Unit tests for VM operations
@@ -170,6 +175,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
+        self.stubs.Set(VMOps, 'reset_network', reset_network)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
         fake_utils.stub_out_utils_execute(self.stubs)

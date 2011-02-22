@@ -19,7 +19,6 @@
 """Tests for Direct API."""
 
 import json
-import logging
 
 import webob
 

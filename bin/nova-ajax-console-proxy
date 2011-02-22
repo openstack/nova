@@ -25,7 +25,6 @@ from eventlet.green import urllib2
 
 import exceptions
 import gettext
-import logging
 import os
 import sys
 import time
@@ -130,6 +129,7 @@ class AjaxConsoleProxy(object):
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
+    logging.setup()
     server = wsgi.Server()
     acp = AjaxConsoleProxy()
     acp.register_listeners()

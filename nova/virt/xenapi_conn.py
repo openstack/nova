@@ -168,6 +168,12 @@ class XenAPIConnection(object):
         """Set the root/admin password on the VM instance"""
         self._vmops.set_admin_password(instance, new_pass)
 
+    def inject_file(self, instance, b64_path, b64_contents):
+        """Create a file on the VM instance. The file path and contents
+        should be base64-encoded.
+        """
+        self._vmops.inject_file(instance, b64_path, b64_contents)
+
     def destroy(self, instance):
         """Destroy VM instance"""
         self._vmops.destroy(instance)
@@ -187,6 +193,10 @@ class XenAPIConnection(object):
     def resume(self, instance, callback):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
+
+    def reset_network(self, instance):
+        """reset networking for specified instance"""
+        self._vmops.reset_network(instance)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
