@@ -108,22 +108,21 @@ class SchedulerTestCase(test.TestCase):
         self.mox.ReplayAll()
         scheduler.named_method(ctxt, 'topic', num=7)
 
-    def test_show_host_resource_host_not_exit(self):
-        """
-        A testcase of driver.has_enough_resource
-        given host does not exists.
-        """
+    def test_show_host_resources_host_not_exit(self):
+        """A host given as an argument does not exists."""
+
         scheduler = manager.SchedulerManager()
         dest = 'dummydest'
         ctxt = context.get_admin_context()
 
         try:
-            scheduler.show_host_resource(ctxt, dest)
+            scheduler.show_host_resources(ctxt, dest)
         except exception.NotFound, e:
             c1 = (0 <= e.message.find('does not exist or not compute node'))
         self.assertTrue(c1)
 
     def _dic_is_equal(self, dic1, dic2, keys=None):
+        """Compares 2 dictionary contents(Helper method)"""
         if not keys:
             keys = ['vcpus', 'memory_mb', 'local_gb',
                     'vcpus_used', 'memory_mb_used', 'local_gb_used']
@@ -133,16 +132,14 @@ class SchedulerTestCase(test.TestCase):
                 return False
         return True
 
-    def test_show_host_resource_no_project(self):
-        """
-        A testcase of driver.show_host_resource
-        no instance stays on the given host
-        """
+    def test_show_host_resources_no_project(self):
+        """No instance are running on the given host."""
+
         scheduler = manager.SchedulerManager()
         ctxt = context.get_admin_context()
         s_ref = self._create_compute_service()
 
-        result = scheduler.show_host_resource(ctxt, s_ref['host'])
+        result = scheduler.show_host_resources(ctxt, s_ref['host'])
 
         # result checking
         c1 = ('resource' in result and 'usage' in result)
@@ -152,11 +149,9 @@ class SchedulerTestCase(test.TestCase):
         self.assertTrue(c1 and c2 and c3)
         db.service_destroy(ctxt, s_ref['id'])
 
-    def test_show_host_resource_works_correctly(self):
-        """
-        A testcase of driver.show_host_resource
-        to make sure everything finished with no error.
-        """
+    def test_show_host_resources_works_correctly(self):
+        """show_host_resources() works correctly as expected."""
+
         scheduler = manager.SchedulerManager()
         ctxt = context.get_admin_context()
         s_ref = self._create_compute_service()
@@ -164,7 +159,7 @@ class SchedulerTestCase(test.TestCase):
         i_ref2 = self._create_instance(project_id='p-02', vcpus=3,
                                        host=s_ref['host'])
 
-        result = scheduler.show_host_resource(ctxt, s_ref['host'])
+        result = scheduler.show_host_resources(ctxt, s_ref['host'])
 
         c1 = ('resource' in result and 'usage' in result)
         compute_service = s_ref['compute_service'][0]
@@ -284,6 +279,7 @@ class SimpleDriverTestCase(test.TestCase):
         return db.volume_create(self.context, vol)['id']
 
     def _create_compute_service(self, **kwargs):
+        """Create a compute service."""
 
         dic = {'binary': 'nova-compute', 'topic': 'compute',
                'report_count': 0, 'availability_zone': 'dummyzone'}
@@ -698,13 +694,13 @@ class SimpleDriverTestCase(test.TestCase):
         volume1.kill()
         volume2.kill()
 
-    def test_scheduler_live_migraiton_with_volume(self):
+    def test_scheduler_live_migration_with_volume(self):
+        """scheduler_live_migration() works correctly as expected.
+
+        Also, checks instance state is changed from 'running' -> 'migrating'.
+
         """
-        driver.scheduler_live_migration finishes successfully
-        (volumes are attached to instances)
-        This testcase make sure schedule_live_migration
-        changes instance state from 'running' -> 'migrating'
-        """
+
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         dic = {'instance_id': instance_id, 'size': 1}
@@ -737,11 +733,9 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.volume_destroy(self.context, v_ref['id'])
 
-    def test_live_migraiton_src_check_instance_not_running(self):
-        """
-        A testcase of driver._live_migration_src_check.
-        The instance given by instance_id is not running.
-        """
+    def test_live_migration_src_check_instance_not_running(self):
+        """The instance given by instance_id is not running."""
+
         instance_id = self._create_instance(state_description='migrating')
         i_ref = db.instance_get(self.context, instance_id)
 
@@ -754,12 +748,9 @@ class SimpleDriverTestCase(test.TestCase):
         self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
 
-    def test_live_migraiton_src_check_volume_node_not_alive(self):
-        """
-        A testcase of driver._live_migration_src_check.
-        Volume node is not alive if any volumes are attached to
-        the given instance.
-        """
+    def test_live_migration_src_check_volume_node_not_alive(self):
+        """Raise exception when volume node is not alive."""
+
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         dic = {'instance_id': instance_id, 'size': 1}
@@ -782,11 +773,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.service_destroy(self.context, s_ref['id'])
         db.volume_destroy(self.context, v_ref['id'])
 
-    def test_live_migraiton_src_check_compute_node_not_alive(self):
-        """
-        A testcase of driver._live_migration_src_check.
-        The testcase make sure src-compute node is alive.
-        """
+    def test_live_migration_src_check_compute_node_not_alive(self):
+        """Confirms src-compute node is alive."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         t = datetime.datetime.utcnow() - datetime.timedelta(10)
@@ -803,11 +791,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_src_check_works_correctly(self):
-        """
-        A testcase of driver._live_migration_src_check.
-        The testcase make sure everything finished with no error.
-        """
+    def test_live_migration_src_check_works_correctly(self):
+        """Confirms this method finishes with no error."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         s_ref = self._create_compute_service(host=i_ref['host'])
@@ -819,11 +804,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_dest_check_not_alive(self):
-        """
-        A testcase of driver._live_migration_dst_check.
-        Destination host does not exist.
-        """
+    def test_live_migration_dest_check_not_alive(self):
+        """Confirms exception raises in case dest host does not exist."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         t = datetime.datetime.utcnow() - datetime.timedelta(10)
@@ -841,11 +823,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_dest_check_service_same_host(self):
-        """
-        A testcase of driver._live_migration_dst_check.
-        Destination host is same as src host.
-        """
+    def test_live_migration_dest_check_service_same_host(self):
+        """Confirms exceptioin raises in case dest and src is same host."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         s_ref = self._create_compute_service(host=i_ref['host'])
@@ -861,11 +840,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_dest_check_service_lack_memory(self):
-        """
-        A testcase of driver._live_migration_dst_check.
-        destination host doesnt have enough memory.
-        """
+    def test_live_migration_dest_check_service_lack_memory(self):
+        """Confirms exception raises when dest doesn't have enough memory."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         s_ref = self._create_compute_service(host='somewhere',
@@ -882,11 +858,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_dest_check_service_works_correctly(self):
-        """
-        A testcase of driver._live_migration_dst_check.
-        The testcase make sure everything finished with no error.
-        """
+    def test_live_migration_dest_check_service_works_correctly(self):
+        """Confirms method finishes with no error."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         s_ref = self._create_compute_service(host='somewhere',
@@ -899,13 +872,11 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_common_check_service_orig_not_exists(self):
-        """
-        A testcase of driver._live_migration_common_check.
-        Destination host does not exist.
-        """
+    def test_live_migration_common_check_service_orig_not_exists(self):
+        """Destination host does not exist."""
+
         dest = 'dummydest'
-        # mocks for live_migraiton_common_check()
+        # mocks for live_migration_common_check()
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
         t1 = datetime.datetime.utcnow() - datetime.timedelta(10)
@@ -929,18 +900,15 @@ class SimpleDriverTestCase(test.TestCase):
                                                                i_ref,
                                                                dest)
         except exception.Invalid, e:
-            c = (e.message.find('does not exists') >= 0)
+            c = (e.message.find('does not exist') >= 0)
 
         self.assertTrue(c)
         self.mox.UnsetStubs()
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
-    def test_live_migraiton_common_check_service_different_hypervisor(self):
-        """
-        A testcase of driver._live_migration_common_check.
-        Original host and dest host has different hypervisor type.
-        """
+    def test_live_migration_common_check_service_different_hypervisor(self):
+        """Original host and dest host has different hypervisor type."""
         dest = 'dummydest'
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
@@ -969,11 +937,8 @@ class SimpleDriverTestCase(test.TestCase):
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
 
-    def test_live_migraiton_common_check_service_different_version(self):
-        """
-        A testcase of driver._live_migration_common_check.
-        Original host and dest host has different hypervisor version.
-        """
+    def test_live_migration_common_check_service_different_version(self):
+        """Original host and dest host has different hypervisor version."""
         dest = 'dummydest'
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
@@ -1003,11 +968,9 @@ class SimpleDriverTestCase(test.TestCase):
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
 
-    def test_live_migraiton_common_check_service_checking_cpuinfo_fail(self):
-        """
-        A testcase of driver._live_migration_common_check.
-        Original host and dest host has different hypervisor version.
-        """
+    def test_live_migration_common_check_checking_cpuinfo_fail(self):
+        """Raise excetion when original host doen't have compatible cpu."""
+
         dest = 'dummydest'
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
@@ -1025,7 +988,7 @@ class SimpleDriverTestCase(test.TestCase):
         rpc.call(mox.IgnoreArg(), mox.IgnoreArg(),
             {"method": 'compare_cpu',
             "args": {'cpu_info': s_ref2['compute_service'][0]['cpu_info']}}).\
-             AndRaise(rpc.RemoteError('doesnt have compatibility to', '', ''))
+             AndRaise(rpc.RemoteError("doesn't have compatibility to", "", ""))
 
         self.mox.ReplayAll()
         try:
@@ -1033,7 +996,7 @@ class SimpleDriverTestCase(test.TestCase):
                                                                i_ref,
                                                                dest)
         except rpc.RemoteError, e:
-            c = (e.message.find(_('doesnt have compatibility to')) >= 0)
+            c = (e.message.find(_("doesn't have compatibility to")) >= 0)
 
         self.assertTrue(c)
         self.mox.UnsetStubs()

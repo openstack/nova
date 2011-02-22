@@ -36,7 +36,6 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
-import json
 import os
 import shutil
 import random
@@ -105,7 +104,7 @@ flags.DEFINE_string('firewall_driver',
                     'Firewall driver (defaults to iptables)')
 flags.DEFINE_string('cpuinfo_xml_template',
                     utils.abspath('virt/cpuinfo.xml.template'),
-                    'CpuInfo XML Template (used only live migration now)')
+                    'CpuInfo XML Template (Used only live migration now)')
 flags.DEFINE_string('live_migration_uri',
                     "qemu+tcp://%s/system",
                     'Define protocol used by live_migration feature')
@@ -851,23 +850,46 @@ class LibvirtConnection(object):
         return interfaces
 
     def get_vcpu_total(self):
-        """ Get vcpu number of physical computer.  """
+        """Get vcpu number of physical computer.
+
+        :returns: the number of cpu core.
+
+        """
+
         return open('/proc/cpuinfo').read().count('processor')
 
     def get_memory_mb_total(self):
-        """Get the total memory size(MB) of physical computer ."""
+        """Get the total memory size(MB) of physical computer.
+
+        :returns: the total amount of memory(MB).
+
+        """
+
         meminfo = open('/proc/meminfo').read().split()
         idx = meminfo.index('MemTotal:')
         # transforming kb to mb.
         return int(meminfo[idx + 1]) / 1024
 
     def get_local_gb_total(self):
-        """Get the total hdd size(GB) of physical computer ."""
+        """Get the total hdd size(GB) of physical computer.
+
+        :returns:
+            The total amount of HDD(GB).
+            Note that this value shows a partition where
+            NOVA-INST-DIR/instances mounts.
+
+        """
+
         hddinfo = os.statvfs(FLAGS.instances_path)
         return hddinfo.f_frsize * hddinfo.f_blocks / 1024 / 1024 / 1024
 
     def get_vcpu_used(self):
-        """ Get vcpu available number of physical computer.  """
+        """ Get vcpu usage number of physical computer.
+
+        :returns: The total number of vcpu that currently used.
+
+         """
+
         total = 0
         for i in self._conn.listDomainsID():
             dom = self._conn.lookupByID(i)
@@ -875,7 +897,12 @@ class LibvirtConnection(object):
         return total
 
     def get_memory_mb_used(self):
-        """Get the free memory size(MB) of physical computer."""
+        """Get the free memory size(MB) of physical computer.
+
+        :returns: the total usage of memory(MB).
+
+        """
+
         m = open('/proc/meminfo').read().split()
         idx1 = m.index('MemFree:')
         idx2 = m.index('Buffers:')
@@ -884,21 +911,47 @@ class LibvirtConnection(object):
         return  self.get_memory_mb_total() - avail
 
     def get_local_gb_used(self):
-        """Get the free hdd size(GB) of physical computer ."""
+        """Get the free hdd size(GB) of physical computer.
+
+        :returns:
+           The total usage of HDD(GB).
+           Note that this value shows a partition where
+           NOVA-INST-DIR/instances mounts.
+
+        """
+
         hddinfo = os.statvfs(FLAGS.instances_path)
         avail = hddinfo.f_frsize * hddinfo.f_bavail / 1024 / 1024 / 1024
         return self.get_local_gb_total() - avail
 
     def get_hypervisor_type(self):
-        """ Get hypervisor type """
+        """Get hypervisor type.
+
+        :returns: hypervisor type (ex. qemu)
+
+        """
+
         return self._conn.getType()
 
     def get_hypervisor_version(self):
-        """ Get hypervisor version """
+        """Get hypervisor version.
+
+        :returns: hypervisor version (ex. 12003)
+
+        """
+
         return self._conn.getVersion()
 
     def get_cpu_info(self):
-        """ Get cpuinfo information """
+        """Get cpuinfo information.
+
+        Obtains cpu feature from virConnect.getCapabilities,
+        and returns as a json string.
+
+        :return: see above description
+
+        """
+
         xml = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//cpu')
@@ -931,17 +984,9 @@ class LibvirtConnection(object):
         for nodes in feature_nodes:
             features.append(nodes.get_properties().getContent())
 
-        template = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
-                    """"topology":{"cores":"%s", "threads":"%s", """
-                    """"sockets":"%s"}, "features":[%s]}""")
-        f = ['"%s"' % x for x in features]
-        return template % (cpu_info['arch'],
-                           cpu_info['model'],
-                           cpu_info['vendor'],
-                           topology['cores'],
-                           topology['sockets'],
-                           topology['threads'],
-                           ', '.join(f))
+        cpu_info['topology'] = topology
+        cpu_info['features'] = features
+        return utils.dumps(cpu_info)
 
     def block_stats(self, instance_name, disk):
         """
@@ -974,12 +1019,16 @@ class LibvirtConnection(object):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
     def update_available_resource(self, ctxt, host):
-        """
-        Update compute manager resource info on Service table.
+        """Updates compute manager resource info on ComputeService table.
+
         This method is called when nova-coompute launches, and
         whenever admin executes "nova-manage service update_resource".
 
+        :param ctxt: security context
+        :param host: hostname that compute manager is currently running
+
         """
+
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
@@ -1008,44 +1057,44 @@ class LibvirtConnection(object):
             db.compute_service_update(ctxt, compute_service_ref[0]['id'], dic)
 
     def compare_cpu(self, cpu_info):
-        """
-        Check the host cpu is compatible to a cpu given by xml.
+        """Checks the host cpu is compatible to a cpu given by xml.
+
         "xml" must be a part of libvirt.openReadonly().getCapabilities().
         return values follows by virCPUCompareResult.
         if 0 > return value, do live migration.
-
         'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+
+        :param cpu_info: json string that shows cpu feature(see get_cpu_info())
+        :returns:
+            None. if given cpu info is not compatible to this server,
+            raise exception.
+
         """
-        msg = _('Checking cpu_info: instance was launched this cpu.\n: %s ')
-        LOG.info(msg % cpu_info)
-        dic = json.loads(cpu_info)
+
+        LOG.info(_('Checking cpu_info: instance was launched this cpu.\n%s')
+                 % cpu_info)
+        dic = utils.loads(cpu_info)
         xml = str(Template(self.cpuinfo_xml, searchList=dic))
-        msg = _('to xml...\n: %s ')
-        LOG.info(msg % xml)
+        LOG.info(_('to xml...\n:%s ' % xml))
 
-        url = 'http://libvirt.org/html/libvirt-libvirt.html'
-        url += '#virCPUCompareResult\n'
-        msg = 'CPU does not have compativility.\n'
-        msg += 'result:%s \n'
-        msg += 'Refer to %s'
-        msg = _(msg)
-
+        u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
+        m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
         # unknown character exists in xml, then libvirt complains
         try:
             ret = self._conn.compareCPU(xml, 0)
         except libvirt.libvirtError, e:
-            LOG.error(msg % (e.message, url))
-            raise e
+            ret = e.message
+            LOG.error(m % locals())
+            raise
 
         if ret <= 0:
-            raise exception.Invalid(msg % (ret, url))
+            raise exception.Invalid(m % locals())
 
         return
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
-        """
-        Setting up inevitable filtering rules on compute node,
-        and waiting for its completion.
+        """Setting up filtering rules and waiting for its completion.
+
         To migrate an instance, filtering rules to hypervisors
         and firewalls are inevitable on destination host.
         ( Waiting only for filterling rules to hypervisor,
@@ -1062,9 +1111,12 @@ class LibvirtConnection(object):
         Don't use thread for this method since migration should
         not be started when setting-up filtering rules operations
         are not completed.
+
+        :params instance_ref: nova.db.sqlalchemy.models.Instance object
+
         """
 
-        # Tf any instances never launch at destination host,
+        # If any instances never launch at destination host,
         # basic-filtering must be set here.
         self.firewall_driver.setup_basic_filtering(instance_ref)
         # setting up n)ova-instance-instance-xx mainly.
@@ -1088,16 +1140,42 @@ class LibvirtConnection(object):
 
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method):
+        """Spawning live_migration operation for distributing high-load.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+
         """
-        Just spawning live_migration operation for
-        distributing high-load.
-        """
+
         greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
                           post_method, recover_method)
 
     def _live_migration(self, ctxt, instance_ref, dest,
                         post_method, recover_method):
-        """ Do live migration."""
+        """Do live migration.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+
+        """
 
         # Do live migration.
         try:
@@ -1122,7 +1200,7 @@ class LibvirtConnection(object):
 
         except Exception, e:
             recover_method(ctxt, instance_ref)
-            raise e
+            raise
 
         # Waiting for completion of live_migration.
         timer = utils.LoopingCall(f=None)
@@ -1139,7 +1217,7 @@ class LibvirtConnection(object):
         timer.start(interval=0.5, now=True)
 
     def unfilter_instance(self, instance_ref):
-        """See comments of same method in firewall_driver"""
+        """See comments of same method in firewall_driver."""
         self.firewall_driver.unfilter_instance(instance_ref)
 
 

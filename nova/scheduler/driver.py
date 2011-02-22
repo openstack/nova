@@ -70,9 +70,18 @@ class Scheduler(object):
         raise NotImplementedError(_("Must implement a fallback schedule"))
 
     def schedule_live_migration(self, context, instance_id, dest):
-        """live migration method"""
+        """Live migration scheduling method.
 
-        # Whether instance exists and running
+        :param context:
+        :param instance_id:
+        :param dest: destination host
+        :return:
+            The host where instance is running currently.
+            Then scheduler send request that host.
+
+        """
+
+        # Whether instance exists and is running.
         instance_ref = db.instance_get(context, instance_id)
 
         # Checking instance.
@@ -102,11 +111,16 @@ class Scheduler(object):
         return src
 
     def _live_migration_src_check(self, context, instance_ref):
-        """Live migration check routine (for src host)"""
+        """Live migration check routine (for src host).
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+
+        """
 
         # Checking instance is running.
-        if power_state.RUNNING != instance_ref['state'] or \
-           'running' != instance_ref['state_description']:
+        if (power_state.RUNNING != instance_ref['state'] or \
+           'running' != instance_ref['state_description']):
             msg = _('Instance(%s) is not running')
             ec2_id = instance_ref['hostname']
             raise exception.Invalid(msg % ec2_id)
@@ -129,7 +143,13 @@ class Scheduler(object):
             raise exception.Invalid(msg % src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest):
-        """Live migration check routine (for destination host)"""
+        """Live migration check routine (for destination host).
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+
+        """
 
         # Checking dest exists and compute node.
         dservice_refs = db.service_get_all_compute_by_host(context, dest)
@@ -145,20 +165,25 @@ class Scheduler(object):
         src = instance_ref['host']
         if dest == src:
             ec2_id = instance_ref['hostname']
-            msg = _("""%(dest)s is where %(ec2_id)s is """
-                    """running now. choose other host.""") % locals()
-            raise exception.Invalid(msg)
+            raise exception.Invalid(_("%(dest)s is where %(ec2_id)s is "
+                                       "running now. choose other host.")
+                                       % locals())
 
         # Checking dst host still has enough capacities.
-        self.has_enough_resource(context, instance_ref, dest)
+        self.has_enough_resources(context, instance_ref, dest)
 
     def _live_migration_common_check(self, context, instance_ref, dest):
-        """
-        Live migration check routine.
-        Below pre-checkings are followed by
+        """Live migration common check routine.
+
+        Below checkings are followed by
         http://wiki.libvirt.org/page/TodoPreMigrationChecks
 
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+
         """
+
         # Checking shared storage connectivity
         self.mounted_on_same_shared_storage(context, instance_ref, dest)
 
@@ -168,27 +193,27 @@ class Scheduler(object):
 
         # Checking original host( where instance was launched at) exists.
         try:
-            oservice_refs = \
-                db.service_get_all_compute_by_host(context,
-                                                   instance_ref['launched_on'])
+            oservice_refs = db.service_get_all_compute_by_host(context,
+                                           instance_ref['launched_on'])
         except exception.NotFound:
-            msg = _('%s(where instance was launched at) does not exists.')
-            raise exception.Invalid(msg % instance_ref['launched_on'])
+            raise exception.Invalid(_("host %s where instance was launched "
+                                      "does not exist.")
+                                       % instance_ref['launched_on'])
         oservice_ref = oservice_refs[0]['compute_service'][0]
 
         # Checking hypervisor is same.
         o = oservice_ref['hypervisor_type']
         d = dservice_ref['hypervisor_type']
         if o != d:
-            msg = _('Different hypervisor type(%(o)s->%(d)s)') % locals()
-            raise exception.Invalid(msg)
+            raise exception.Invalid(_("Different hypervisor type"
+                                      "(%(o)s->%(d)s)')" % locals()))
 
         # Checkng hypervisor version.
         o = oservice_ref['hypervisor_version']
         d = dservice_ref['hypervisor_version']
         if o > d:
-            msg = _('Older hypervisor version(%(o)s->%(d)s)') % locals()
-            raise exception.Invalid(msg)
+            raise exception.Invalid(_('Older hypervisor version(%(o)s->%(d)s)')
+                                    % locals())
 
         # Checking cpuinfo.
         try:
@@ -200,19 +225,24 @@ class Scheduler(object):
         except rpc.RemoteError, e:
             ec2_id = instance_ref['hostname']
             src = instance_ref['host']
-            msg = _("""%(dest)s doesnt have compatibility to %(src)s"""
-                    """(where %(ec2_id)s was launched at)""")
-            logging.exception(msg % locals())
-            raise e
+            logging.exception(_("host %(dest)s is not compatible with "
+                                "original host %(src)s.") % locals())
+            raise
 
-    def has_enough_resource(self, context, instance_ref, dest):
-        """
-        Check if destination host has enough resource for live migration.
+    def has_enough_resources(self, context, instance_ref, dest):
+        """Checks if destination host has enough resource for live migration.
+
         Currently, only memory checking has been done.
         If storage migration(block migration, meaning live-migration
         without any shared storage) will be available, local storage
         checking is also necessary.
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+
         """
+
         # Getting instance information
         ec2_id = instance_ref['hostname']
 
@@ -225,15 +255,23 @@ class Scheduler(object):
         mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:
-            msg = _("""%(ec2_id)s is not capable to migrate %(dest)s"""
-                    """(host:%(mem_avail)s <= instance:%(mem_inst)s)""")
-            raise exception.NotEmpty(msg % locals())
+            raise exception.NotEmpty(_("%(ec2_id)s is not capable to "
+                                       "migrate %(dest)s (host:%(mem_avail)s "
+                                       " <= instance:%(mem_inst)s)")
+                                       % locals())
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
+        """Check if the src and dest host mount same shared storage.
+
+        At first, dest host creates temp file, and src host can see
+        it if they mounts same shared storage. Then src host erase it.
+
+        :param context: security context
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param dest: destination host
+
         """
-        Check if /nova-inst-dir/insntances is mounted same storage at
-        live-migration src and dest host.
-        """
+
         src = instance_ref['host']
         dst_t = db.queue_get_for(context, FLAGS.compute_topic, dest)
         src_t = db.queue_get_for(context, FLAGS.compute_topic, src)
@@ -243,8 +281,8 @@ class Scheduler(object):
             filename = rpc.call(context, dst_t, {"method": 'mktmpfile'})
         except rpc.RemoteError, e:
             msg = _("Cannot create tmpfile at %s to confirm shared storage.")
-            logging.error(msg % FLAGS.instance_path)
-            raise e
+            LOG.error(msg % FLAGS.instances_path)
+            raise
 
         # make sure existence at src host.
         try:
@@ -252,8 +290,7 @@ class Scheduler(object):
                      {"method": 'confirm_tmpfile', "args": {'path': filename}})
 
         except (rpc.RemoteError, exception.NotFound), e:
-            ipath = FLAGS.instance_path
-            msg = _("""Cannot comfirm %(ipath)s at %(dest)s is located at"""
-                    """ same shared storage.""") % locals()
-            logging.error(msg)
-            raise e
+            ipath = FLAGS.instances_path
+            logging.error(_("Cannot comfirm %(ipath)s at %(dest)s is "
+                            "located at same shared storage.") % locals())
+            raise

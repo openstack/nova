@@ -140,7 +140,7 @@ class VolumeDriver(object):
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
-        return True
+        raise NotImplementedError()
 
 
 class AOEDriver(VolumeDriver):
@@ -229,9 +229,9 @@ class AOEDriver(VolumeDriver):
                 break
         if not exported:
             # Instance will be terminated in this case.
-            desc = _("""Cannot confirm exported volume id:%(volume_id)s."""
-                     """vblade process for e%(shelf_id)s.%(blade_id)s """
-                     """isn't running.""") % locals()
+            desc = _("Cannot confirm exported volume id:%(volume_id)s."
+                     "vblade process for e%(shelf_id)s.%(blade_id)s "
+                     "isn't running.") % locals()
             raise exception.ProcessExecutionError(out, _err, cmd=cmd,
                                                   description=desc)
 
@@ -373,9 +373,9 @@ class ISCSIDriver(VolumeDriver):
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume
             # is better since ensure_export() works at boot time.
-            logging.error(_("""Cannot confirm exported volume """
-                            """id:%(volume_id)s.""") % locals())
-            raise e
+            logging.error(_("Cannot confirm exported volume "
+                            "id:%(volume_id)s.") % locals())
+            raise
 
 
 class FakeISCSIDriver(ISCSIDriver):

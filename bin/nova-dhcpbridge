@@ -125,7 +125,6 @@ def main():
         LOG.debug(msg)
         globals()[action + '_lease'](mac, ip, hostname, interface)
     else:
-        open('/tmp/aaa', 'w+').write('-- %s' % interface)
         print init_leases(interface)
 
 if __name__ == "__main__":

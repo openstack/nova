@@ -23,8 +23,8 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import test
 from nova import logging
+from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
@@ -76,12 +76,12 @@ class LibvirtConnTestCase(test.TestCase):
                      'bridge':        'br101',
                      'instance_type': 'm1.small'}
 
-    def _driver_dependent_test_setup(self):
-        """
-        Setup method.
-        Call this method at the top of each testcase method,
-        if the testcase is necessary libvirt and cheetah.
-        """
+    def _driver_dependant_test_setup(self):
+        """Call this method at the top of each testcase method.
+
+        Checks if libvirt and cheetah, etc is installed.
+        Otherwise, skip testing."""
+
         try:
             global libvirt
             global libxml2
@@ -92,10 +92,9 @@ class LibvirtConnTestCase(test.TestCase):
         except ImportError, e:
             logging.warn("""This test has not been done since """
                  """using driver-dependent library Cheetah/libvirt/libxml2.""")
-            raise e
+            raise
 
         # inebitable mocks for calling
-        #nova.virt.libvirt_conn.LibvirtConnection.__init__
         obj = utils.import_object(FLAGS.firewall_driver)
         fwmock = self.mox.CreateMock(obj)
         self.mox.StubOutWithMock(libvirt_conn, 'utils',
@@ -258,51 +257,31 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEquals(uri, testuri)
 
     def test_get_vcpu_total(self):
-        """
-        Check if get_vcpu_total returns appropriate cpu value
-        Connection/OS/driver differenct does not matter for this method,
-        everyone can execute for checking.
-        """
+        """Check if get_vcpu_total returns appropriate cpu value."""
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(0 < conn.get_vcpu_total())
-        self.mox.UnsetStubs()
 
     def test_get_memory_mb_total(self):
-        """Check if get_memory_mb returns appropriate memory value"""
+        """Check if get_memory_mb returns appropriate memory value."""
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(0 < conn.get_memory_mb_total())
-        self.mox.UnsetStubs()
-
-    def test_get_local_gb_total(self):
-        """Check if get_local_gb_total returns appropriate disk value"""
-        # Note(masumotok): leave this b/c FLAGS.instances_path is inevitable..
-        #try:
-        #    self._driver_dependent_test_setup()
-        #except:
-        #    return
-        #
-        #self.mox.ReplayAll()
-        #conn = libvirt_conn.LibvirtConnection(False)
-        #self.assertTrue(0 < conn.get_local_gb_total())
-        #self.mox.UnsetStubs()
-        pass
 
     def test_get_vcpu_used(self):
-        """Check if get_local_gb_total returns appropriate disk value"""
+        """Check if get_local_gb_total returns appropriate disk value."""
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -321,52 +300,45 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(conn.get_vcpu_used() == 4)
-        self.mox.UnsetStubs()
 
     def test_get_memory_mb_used(self):
-        """Check if get_memory_mb returns appropriate memory value"""
+        """Check if get_memory_mb returns appropriate memory value."""
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(0 < conn.get_memory_mb_used())
-        self.mox.UnsetStubs()
-
-    def test_get_local_gb_used(self):
-        """Check if get_local_gb_total returns appropriate disk value"""
-        # Note(masumotok): leave this b/c FLAGS.instances_path is inevitable
-        #try:
-        #    self._driver_dependent_test_setup()
-        #except:
-        #    return
-
-        #self.mox.ReplayAll()
-        #conn = libvirt_conn.LibvirtConnection(False)
-        #self.assertTrue(0 < conn.get_local_gb_used())
-        #self.mox.UnsetStubs()
-        pass
 
     def test_get_cpu_info_works_correctly(self):
-        """
-        Check if get_cpu_info works correctly.
-        (in case libvirt.getCapabilities() works correctly)
-        """
-        xml = ("""<cpu><arch>x86_64</arch><model>Nehalem</model>"""
-               """<vendor>Intel</vendor><topology sockets='2' """
-               """cores='4' threads='2'/><feature name='rdtscp'/>"""
-               """<feature name='dca'/><feature name='xtpr'/>"""
-               """<feature name='tm2'/><feature name='est'/>"""
-               """<feature name='vmx'/><feature name='ds_cpl'/>"""
-               """<feature name='monitor'/><feature name='pbe'/>"""
-               """<feature name='tm'/><feature name='ht'/>"""
-               """<feature name='ss'/><feature name='acpi'/>"""
-               """<feature name='ds'/><feature name='vme'/></cpu>""")
+        """Check if get_cpu_info works correctly as expected."""
+        xml = """<cpu>
+                     <arch>x86_64</arch>
+                     <model>Nehalem</model>
+                     <vendor>Intel</vendor>
+                     <topology sockets='2' cores='4' threads='2'/>
+                     <feature name='rdtscp'/>
+                     <feature name='dca'/>
+                     <feature name='xtpr'/>
+                     <feature name='tm2'/>
+                     <feature name='est'/>
+                     <feature name='vmx'/>
+                     <feature name='ds_cpl'/>
+                     <feature name='monitor'/>
+                     <feature name='pbe'/>
+                     <feature name='tm'/>
+                     <feature name='ht'/>
+                     <feature name='ss'/>
+                     <feature name='acpi'/>
+                     <feature name='ds'/>
+                     <feature name='vme'/>
+                </cpu>
+             """
 
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
         self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
@@ -376,27 +348,34 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(0 < len(conn.get_cpu_info()))
-        self.mox.UnsetStubs()
 
     def test_get_cpu_info_inappropreate_xml(self):
-        """
-        Check if get_cpu_info raises exception
-        in case libvirt.getCapabilities() returns wrong xml
-        (in case of xml doesnt have <cpu> tag)
-        """
-        xml = ("""<cccccpu><arch>x86_64</arch><model>Nehalem</model>"""
-              """<vendor>Intel</vendor><topology sockets='2' """
-              """cores='4' threads='2'/><feature name='rdtscp'/>"""
-              """<feature name='dca'/><feature name='xtpr'/>"""
-              """<feature name='tm2'/><feature name='est'/>"""
-              """<feature name='vmx'/><feature name='ds_cpl'/>"""
-              """<feature name='monitor'/><feature name='pbe'/>"""
-              """<feature name='tm'/><feature name='ht'/>"""
-              """<feature name='ss'/><feature name='acpi'/>"""
-              """<feature name='ds'/><feature name='vme'/></cccccpu>""")
+        """Raise exception if given xml is inappropriate."""
+        xml = """<cccccpu>
+                     <arch>x86_64</arch>
+                     <model>Nehalem</model>
+                     <vendor>Intel</vendor>
+                     <topology sockets='2' cores='4' threads='2'/>
+                     <feature name='rdtscp'/>
+                     <feature name='dca'/>
+                     <feature name='xtpr'/>
+                     <feature name='tm2'/>
+                     <feature name='est'/>
+                     <feature name='vmx'/>
+                     <feature name='ds_cpl'/>
+                     <feature name='monitor'/>
+                     <feature name='pbe'/>
+                     <feature name='tm'/>
+                     <feature name='ht'/>
+                     <feature name='ss'/>
+                     <feature name='acpi'/>
+                     <feature name='ds'/>
+                     <feature name='vme'/>
+                 </cccccpu>
+              """
 
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
         self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
@@ -409,29 +388,34 @@ class LibvirtConnTestCase(test.TestCase):
             conn.get_cpu_info()
         except exception.Invalid, e:
             c1 = (0 <= e.message.find('Invalid xml'))
-            self.assertTrue(c1)
-        self.mox.UnsetStubs()
+        self.assertTrue(c1)
 
     def test_get_cpu_info_inappropreate_xml2(self):
-        """
-        Check if get_cpu_info raises exception
-        in case libvirt.getCapabilities() returns wrong xml
-        (in case of xml doesnt have inproper <topology> tag
-        meaning missing "socket" attribute)
-        """
-        xml = ("""<cpu><arch>x86_64</arch><model>Nehalem</model>"""
-               """<vendor>Intel</vendor><topology """
-               """cores='4' threads='2'/><feature name='rdtscp'/>"""
-               """<feature name='dca'/><feature name='xtpr'/>"""
-               """<feature name='tm2'/><feature name='est'/>"""
-               """<feature name='vmx'/><feature name='ds_cpl'/>"""
-               """<feature name='monitor'/><feature name='pbe'/>"""
-               """<feature name='tm'/><feature name='ht'/>"""
-               """<feature name='ss'/><feature name='acpi'/>"""
-               """<feature name='ds'/><feature name='vme'/></cpu>""")
+        """Raise exception if given xml is inappropriate(topology tag)."""
 
+        xml = """<cpu>
+                      <arch>x86_64</arch>
+                      <model>Nehalem</model>
+                      <vendor>Intel</vendor><topology cores='4' threads='2'/>
+                      <feature name='rdtscp'/>
+                      <feature name='dca'/>
+                      <feature name='xtpr'/>
+                      <feature name='tm2'/>
+                      <feature name='est'/>
+                      <feature name='vmx'/>
+                      <feature name='ds_cpl'/>
+                      <feature name='monitor'/>
+                      <feature name='pbe'/>
+                      <feature name='tm'/>
+                      <feature name='ht'/>
+                      <feature name='ss'/>
+                      <feature name='acpi'/>
+                      <feature name='ds'/>
+                      <feature name='vme'/>
+                  </cpu>
+              """
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
         self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
@@ -444,29 +428,12 @@ class LibvirtConnTestCase(test.TestCase):
             conn.get_cpu_info()
         except exception.Invalid, e:
             c1 = (0 <= e.message.find('Invalid xml: topology'))
-            self.assertTrue(c1)
-        self.mox.UnsetStubs()
+        self.assertTrue(c1)
 
     def test_update_available_resource_works_correctly(self):
-        """
-        In this method, vcpus/memory_mb/local_gb/vcpu_used/
-        memory_mb_used/local_gb_used/hypervisor_type/
-        hypervisor_version/cpu_info should be changed.
-        Based on this specification, this testcase confirms
-        if this method finishes successfully,
-        meaning self.db.service_update must be called with dictinary
-
-        {'vcpu':aaa, 'memory_mb':bbb, 'local_gb':ccc,
-        'vcpu_used':aaa, 'memory_mb_used':bbb, 'local_gb_sed':ccc,
-        'hypervisor_type':ddd, 'hypervisor_version':eee,
-        'cpu_info':fff}
-
-        Since each value of above dict can be obtained through
-        driver(different depends on environment),
-        only dictionary keys are checked.
-        """
+        """Confirm compute_service table is updated successfully."""
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -478,7 +445,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         host = 'foo'
         binary = 'nova-compute'
-        service_ref = {'id': 1, 'host': host, 'binary': binary,
+        service_ref = {'id': 1,
+                       'host': host,
+                       'binary': binary,
                        'topic': 'compute'}
 
         self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
@@ -491,15 +460,11 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         conn.update_available_resource(host)
-        self.mox.UnsetStubs()
 
     def test_update_resource_info_raise_exception(self):
-        """
-        This testcase confirms if no record found on Service
-        table, exception can be raised.
-        """
+        """Raise exception if no recorde found on services table."""
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -518,18 +483,19 @@ class LibvirtConnTestCase(test.TestCase):
             msg = 'Cannot insert compute manager specific info'
             c1 = (0 <= e.message.find(msg))
             self.assertTrue(c1)
-        self.mox.ResetAll()
 
     def test_compare_cpu_works_correctly(self):
-        """Calling libvirt.compute_cpu() and works correctly """
-
-        t = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
-                    """"topology":{"cores":"%s", "threads":"%s", """
-                    """"sockets":"%s"}, "features":[%s]}""")
-        cpu_info = t % ('x86', 'model', 'vendor', '2', '1', '4', '"tm"')
+        """Calling libvirt.compute_cpu() and works correctly."""
+        t = {}
+        t['arch'] = 'x86'
+        t['model'] = 'model'
+        t['vendor'] = 'Intel'
+        t['topology'] = {'cores': "2", "threads": "1", "sockets": "4"}
+        t['features'] = ["tm"]
+        cpu_info = utils.dumps(t)
 
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -542,20 +508,19 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(None == conn.compare_cpu(cpu_info))
-        self.mox.UnsetStubs()
 
     def test_compare_cpu_raises_exception(self):
-        """
-        Libvirt-related exception occurs when calling
-        libvirt.compare_cpu().
-        """
-        t = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
-                    """"topology":{"cores":"%s", "threads":"%s", """
-                    """"sockets":"%s"}, "features":[%s]}""")
-        cpu_info = t % ('x86', 'model', 'vendor', '2', '1', '4', '"tm"')
+        """Libvirt-related exception occurs when calling compare_cpu()."""
+        t = {}
+        t['arch'] = 'x86'
+        t['model'] = 'model'
+        t['vendor'] = 'Intel'
+        t['topology'] = {'cores': "2", "threads": "1", "sockets": "4"}
+        t['features'] = ["tm"]
+        cpu_info = utils.dumps(t)
 
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -567,18 +532,19 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertRaises(libvirt.libvirtError, conn.compare_cpu, cpu_info)
-        self.mox.UnsetStubs()
 
     def test_compare_cpu_no_compatibility(self):
-        """libvirt.compare_cpu() return less than 0.(no compatibility)"""
-
-        t = ("""{"arch":"%s", "model":"%s", "vendor":"%s", """
-                    """"topology":{"cores":"%s", "threads":"%s", """
-                    """"sockets":"%s"}, "features":[%s]}""")
-        cpu_info = t % ('x86', 'model', 'vendor', '2', '1', '4', '"tm"')
+        """Libvirt.compare_cpu() return less than 0.(no compatibility)."""
+        t = {}
+        t['arch'] = 'x86'
+        t['model'] = 'model'
+        t['vendor'] = 'Intel'
+        t['topology'] = {'cores': "2", "threads": "1", "sockets": "4"}
+        t['features'] = ["tm"]
+        cpu_info = utils.dumps(t)
 
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -590,16 +556,14 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertRaises(exception.Invalid, conn.compare_cpu, cpu_info)
-        self.mox.UnsetStubs()
 
     def test_ensure_filtering_rules_for_instance_works_correctly(self):
-        """ensure_filtering_rules_for_instance works as expected correctly"""
-
+        """ensure_filtering_rules_for_instance() works successfully."""
         instance_ref = models.Instance()
         instance_ref.__setitem__('id', 1)
 
         try:
-            nwmock, fwmock = self._driver_dependent_test_setup()
+            nwmock, fwmock = self._driver_dependant_test_setup()
         except:
             return
 
@@ -613,16 +577,14 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         conn.ensure_filtering_rules_for_instance(instance_ref)
-        self.mox.UnsetStubs()
 
     def test_ensure_filtering_rules_for_instance_timeout(self):
-        """ensure_filtering_fules_for_instance finishes with timeout"""
-
+        """ensure_filtering_fules_for_instance() finishes with timeout."""
         instance_ref = models.Instance()
         instance_ref.__setitem__('id', 1)
 
         try:
-            nwmock, fwmock = self._driver_dependent_test_setup()
+            nwmock, fwmock = self._driver_dependant_test_setup()
         except:
             return
 
@@ -642,11 +604,9 @@ class LibvirtConnTestCase(test.TestCase):
         except exception.Error, e:
             c1 = (0 <= e.message.find('Timeout migrating for'))
             self.assertTrue(c1)
-        self.mox.UnsetStubs()
 
     def test_live_migration_works_correctly(self):
-        """_live_migration works as expected correctly """
-
+        """_live_migration() works as expected correctly."""
         class dummyCall(object):
             f = None
 
@@ -659,7 +619,7 @@ class LibvirtConnTestCase(test.TestCase):
         ctxt = context.get_admin_context()
 
         try:
-            self._driver_dependent_test_setup()
+            self._driver_dependant_test_setup()
         except:
             return
 
@@ -681,13 +641,9 @@ class LibvirtConnTestCase(test.TestCase):
         # Not setting post_method/recover_method in this testcase.
         ret = conn._live_migration(ctxt, i_ref, i_ref['host'], '', '')
         self.assertTrue(ret == None)
-        self.mox.UnsetStubs()
 
     def test_live_migration_raises_exception(self):
-        """
-        _live_migration raises exception, then this testcase confirms
-        recovered method is called.
-        """
+        """Confirms recover method is called when exceptions are raised."""
         i_ref = models.Instance()
         i_ref.__setitem__('id', 1)
         i_ref.__setitem__('host', 'dummy')
@@ -697,7 +653,7 @@ class LibvirtConnTestCase(test.TestCase):
             pass
 
         try:
-            nwmock, fwmock = self._driver_dependent_test_setup()
+            nwmock, fwmock = self._driver_dependant_test_setup()
         except:
             return
 
@@ -724,7 +680,6 @@ class LibvirtConnTestCase(test.TestCase):
                           conn._mlive_migration,
                           ctxt, instance_ref, dest,
                           '', dummy_recover_method)
-        self.mox.UnsetStubs()
 
     def tearDown(self):
         super(LibvirtConnTestCase, self).tearDown()

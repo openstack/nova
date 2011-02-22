@@ -184,8 +184,8 @@ def service_get_all_compute_by_host(context, host):
                   all()
 
     if not result:
-        msg = _('%s does not exist or not compute node')
-        raise exception.NotFound(msg % host)
+        raise exception.NotFound(_("%s does not exist or not "
+                                   "compute node.") % host)
 
     return result
 
@@ -328,7 +328,7 @@ def compute_service_create(context, values):
 def compute_service_update(context, compute_id, values):
     session = get_session()
     with session.begin():
-        compute_ref = service_get(context, compute_id, session=session)
+        compute_ref = compute_service_get(context, compute_id, session=session)
         compute_ref.update(values)
         compute_ref.save(session=session)
 
@@ -965,21 +965,6 @@ def instance_add_security_group(context, instance_id, security_group_id):
 
 
 @require_context
-def instance_get_all_by_host(context, hostname):
-    session = get_session()
-    if not session:
-        session = get_session()
-
-    result = session.query(models.Instance).\
-                     filter_by(host=hostname).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     all()
-    if not result:
-        return []
-    return result
-
-
-@require_context
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
     session = get_session()
     result = session.query(models.Instance).\
@@ -987,7 +972,7 @@ def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
                       filter_by(project_id=proj_id).\
                       filter_by(deleted=False).\
                       value(func.sum(models.Instance.vcpus))
-    if None == result:
+    if not result:
         return 0
     return result
 
@@ -1000,7 +985,7 @@ def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
                       filter_by(project_id=proj_id).\
                       filter_by(deleted=False).\
                       value(func.sum(models.Instance.memory_mb))
-    if None == result:
+    if not result:
         return 0
     return result
 
@@ -1013,7 +998,7 @@ def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
                       filter_by(project_id=proj_id).\
                       filter_by(deleted=False).\
                       value(func.sum(models.Instance.local_gb))
-    if None == result:
+    if not result:
         return 0
     return result
 

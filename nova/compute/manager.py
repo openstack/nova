@@ -36,10 +36,10 @@ terminating it.
 
 import base64
 import datetime
+import os
 import random
 import string
 import socket
-import os
 import tempfile
 import time
 import functools
@@ -65,8 +65,8 @@ flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
 flags.DEFINE_string('live_migration_retry_count', 30,
-                    ("""Retry count needed in live_migration."""
-                     """ sleep 1 sec for each count"""))
+                    ("Retry count needed in live_migration."
+                     " sleep 1 sec for each count"))
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -602,31 +602,66 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     def compare_cpu(self, context, cpu_info):
-        """ Check the host cpu is compatible to a cpu given by xml."""
+        """Checks the host cpu is compatible to a cpu given by xml.
+
+        :param context: security context
+        :param cpu_info: json string obtained from virConnect.getCapabilities
+        :returns: See driver.compare_cpu
+
+        """
         return self.driver.compare_cpu(cpu_info)
 
     @exception.wrap_exception
     def mktmpfile(self, context):
-        """make tmpfile under FLAGS.instance_path."""
-        fd, name = tempfile.mkstemp(dir=FLAGS.instances_path)
-        # No essential reason to write dateinfo. just for debugging reason.
-        os.fdopen(fd, 'w').write(str(datetime.datetime.utcnow()))
+        """Makes tmpfile under FLAGS.instance_path.
+
+        This method enables compute nodes to recognize that they mounts
+        same shared storage. mktmpfile()/confirm_tmpfile is a pair.
+
+        :param context: security context
+        :returns: tmpfile name
+
+        """
+
+        dirpath = FLAGS.instances_path
+        fd, name = tempfile.mkstemp(dir=dirpath)
+        LOG.debug(_("Creating tmpfile %s to notify to other "
+                    "compute node that they mounts same storage.") % name)
+        os.fdopen(fd, 'w+').close()
         return name
 
     @exception.wrap_exception
     def confirm_tmpfile(self, context, path):
-        """Confirm existence of the tmpfile given by path."""
+        """Confirms existence of the tmpfile given by path.
+
+        :param context: security context
+        :param path: confirm existence of this path
+        :returns: depends on os.remove()
+
+        """
+
         if not os.path.exists(path):
             raise exception.NotFound(_('%s not found') % path)
         return os.remove(path)
 
     @exception.wrap_exception
     def update_available_resource(self, context):
-        """See comments update_resource_info"""
+        """See comments update_resource_info.
+
+        :param context: security context
+        :returns: See driver.update_available_resource()
+
+        """
+
         return self.driver.update_available_resource(context, self.host)
 
     def pre_live_migration(self, context, instance_id):
-        """Any preparation for live migration at dst host."""
+        """Preparations for live migration at dest host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+
+        """
 
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
@@ -635,7 +670,7 @@ class ComputeManager(manager.Manager):
         # Getting fixed ips
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
-            msg = _("%(instance_id)s(%(ec2_id)s) doesnt have fixed_ip")
+            msg = _("%(instance_id)s(%(ec2_id)s) does'nt have fixed_ip")
             raise exception.NotFound(msg % locals())
 
         # If any volume is mounted, prepare here.
@@ -645,8 +680,8 @@ class ComputeManager(manager.Manager):
             for v in instance_ref['volumes']:
                 self.volume_manager.setup_compute_volume(context, v['id'])
 
-        # Bridge settings
-        # call this method prior to ensure_filtering_rules_for_instance,
+        # Bridge settings.
+        # Call this method prior to ensure_filtering_rules_for_instance,
         # since bridge is not set up, ensure_filtering_rules_for instance
         # fails.
         #
@@ -660,24 +695,29 @@ class ComputeManager(manager.Manager):
                 break
             except exception.ProcessExecutionError, e:
                 if i == max_retry - 1:
-                    raise e
+                    raise
                 else:
-                    LOG.warn(_("setup_compute_network() fail %(i)d th. "
-                               "Retry up to %(max_retry)d for %(ec2_id)s")
+                    LOG.warn(_("setup_compute_network() failed %(i)d."
+                               "Retry up to %(max_retry)d for %(ec2_id)s.")
                                % locals())
                     time.sleep(1)
 
         # Creating filters to hypervisors and firewalls.
         # An example is that nova-instance-instance-xxx,
-        # which is written to libvirt.xml( check "virsh nwfilter-list )
-        # On destination host, this nwfilter is necessary.
+        # which is written to libvirt.xml(Check "virsh nwfilter-list")
+        # This nwfilter is necessary on the destination host.
         # In addition, this method is creating filtering rule
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance_ref)
 
-    #@exception.wrap_exception
     def live_migration(self, context, instance_id, dest):
-        """Executing live migration."""
+        """Executing live migration.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param dest: destination host
+
+        """
 
         # Get instance for error handling.
         instance_ref = self.db.instance_get(context, instance_id)
@@ -702,7 +742,7 @@ class ComputeManager(manager.Manager):
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
             self.recover_live_migration(context, instance_ref)
-            raise e
+            raise
 
         # Executing live migration
         # live_migration might raises exceptions, but
@@ -712,10 +752,17 @@ class ComputeManager(manager.Manager):
                                    self.recover_live_migration)
 
     def post_live_migration(self, ctxt, instance_ref, dest):
+        """Post operations for live migration.
+
+        This method is called from live_migration
+        and mainly updating database record.
+
+        :param ctxt: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param dest: destination host
+
         """
-        Post operations for live migration.
-        Mainly, database updating.
-        """
+
         LOG.info(_('post_live_migration() is started..'))
         instance_id = instance_ref['id']
 
@@ -734,19 +781,12 @@ class ComputeManager(manager.Manager):
 
         # Database updating.
         i_name = instance_ref.name
-        #fixed_ip = self.db.instance_get_fixed_address(ctxt, instance_id)
-        # Not return if fixed_ip is not found, otherwise,
-        # instance never be accessible..
-        #if None == fixed_ip:
-        #    LOG.warn(_('fixed_ip is not found for %s.') % i_name)
-        #self.db.fixed_ip_update(ctxt, fixed_ip, {'host': dest})
-
         try:
             # Not return if floating_ip is not found, otherwise,
             # instance never be accessible..
             floating_ip = self.db.instance_get_floating_address(ctxt,
                                                          instance_id)
-            if None == floating_ip:
+            if not floating_ip:
                 LOG.info(_('floating_ip is not found for %s'), i_name)
             else:
                 floating_ip_ref = self.db.floating_ip_get_by_address(ctxt,
@@ -763,15 +803,23 @@ class ComputeManager(manager.Manager):
         # Restore instance/volume state
         self.recover_live_migration(ctxt, instance_ref, dest)
 
-        msg = _('Migrating %(i_name)s to %(dest)s finishes successfully.')
-        LOG.info(msg % locals())
+        LOG.info(_('Migrating %(i_name)s to %(dest)s finishes successfully.')
+                 % locals())
         LOG.info(_("The below error is normally occurs."
                 "Just check if instance is successfully migrated.\n"
                 "libvir: QEMU error : Domain not found: no domain "
                 "with matching name.."))
 
     def recover_live_migration(self, ctxt, instance_ref, host=None):
-        """Instance/volume state is recovered from migrating -> running."""
+        """Recovers Instance/volume state from migrating -> running.
+
+        :param ctxt: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param host:
+            DB column value is updated by this hostname.
+            if none, the host instance currently running is selected.
+
+        """
 
         if not host:
             host = instance_ref['host']
@@ -783,5 +831,4 @@ class ComputeManager(manager.Manager):
                                  'host': host})
 
         for v in instance_ref['volumes']:
-            self.db.volume_update(ctxt, v['id'], {'status': 'in-use',
-                                                  'host': host})
+            self.db.volume_update(ctxt, v['id'], {'status': 'in-use'})

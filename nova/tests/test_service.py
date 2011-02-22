@@ -279,11 +279,7 @@ class ServiceTestCase(test.TestCase):
         self.assert_(not serv.model_disconnected)
 
     def test_compute_can_update_available_resource(self):
-        """
-        Test nova-compute successfully updated Service table on DB.
-        Doing so, self.manager.update_service must be called
-        if 'self.binary == nova-compute', and this testcase checks on it.
-        """
+        """Confirm compute updates their record of compute-service table."""
         host = 'foo'
         binary = 'nova-compute'
         topic = 'compute1'

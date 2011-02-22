@@ -137,12 +137,14 @@ class ComputeService(BASE, NovaBase):
 
     # Note(masumotok): Expected Strings example:
     #
-    # '{"arch":"x86_64", "model":"Nehalem",
-    #  "topology":{"sockets":1, "threads":2, "cores":3},
-    #  features:[ "tdtscp", "xtpr"]}'
+    # '{"arch":"x86_64",
+    #   "model":"Nehalem",
+    #   "topology":{"sockets":1, "threads":2, "cores":3},
+    #   "features":["tdtscp", "xtpr"]}'
     #
     # Points are "json translatable" and it must have all dictionary keys
-    # above, and <cpu> tag of getCapabilities()(See libvirt.virtConnection).
+    # above, since it is copied from <cpu> tag of getCapabilities()
+    # (See libvirt.virtConnection).
     cpu_info = Column(Text, nullable=True)
 
 
@@ -220,7 +222,7 @@ class Instance(BASE, NovaBase):
     display_description = Column(String(255))
 
     # To remember on which host a instance booted.
-    # An instance may moved to other host by live migraiton.
+    # An instance may have moved to another host by live migraiton.
     launched_on = Column(Text)
     locked = Column(Boolean)
 

@@ -326,59 +326,6 @@ class FakeConnection(object):
                  'username': 'fakeuser',
                  'password': 'fakepassword'}
 
-    def get_cpu_info(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_vcpu_total(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_memory_mb_total(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_local_gb_total(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_vcpu_used(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_memory_mb_used(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_local_gb_used(self):
-        """This method is supported only libvirt.  """
-        return
-
-    def get_hypervisor_type(self):
-        """This method is supported only libvirt.."""
-        return
-
-    def get_hypervisor_version(self):
-        """This method is supported only libvirt.."""
-        return
-
-    def compare_cpu(self, xml):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
-
-    def ensure_filtering_rules_for_instance(self, instance_ref):
-        """This method is supported only libvirt.."""
-        return
-
-    def live_migration(self, context, instance_ref, dest,
-                       post_method, recover_method):
-        """This method is supported only libvirt.."""
-        return
-
-    def unfilter_instance(self, instance_ref):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
-
     def refresh_security_group_rules(self, security_group_id):
         """This method is called after a change to security groups.
 
@@ -428,20 +375,25 @@ class FakeConnection(object):
         return True
 
     def update_available_resource(self, ctxt, host):
-        """This method is supported only libvirt.  """
+        """This method is supported only by libvirt."""
         return
 
     def compare_cpu(self, xml):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
-    def live_migration(self, context, instance_ref, dest):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only by libvirt."""
+        return
+
+    def unfilter_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
 
 class FakeInstance(object):

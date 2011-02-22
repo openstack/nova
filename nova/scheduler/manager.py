@@ -69,10 +69,19 @@ class SchedulerManager(manager.Manager):
         LOG.debug(_("Casting to %(topic)s %(host)s for %(method)s") % locals())
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
-    #                    Based on bear design summit discussion,
+    #                    Based on bexar design summit discussion,
     #                    just put this here for bexar release.
-    def show_host_resource(self, context, host, *args):
-        """show the physical/usage resource given by hosts."""
+    def show_host_resources(self, context, host, *args):
+        """Shows the physical/usage resource given by hosts.
+
+        :param context: security context
+        :param host: hostname
+        :returns:
+            example format is below.
+            {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
+            D: {'vcpus':3, 'memory_mb':2048, 'local_gb':2048}
+
+        """
 
         compute_ref = db.service_get_all_compute_by_host(context, host)
         compute_ref = compute_ref[0]

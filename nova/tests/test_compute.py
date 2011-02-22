@@ -314,10 +314,7 @@ class ComputeTestCase(test.TestCase):
         self.compute_driver = utils.import_object(FLAGS.compute_driver)
 
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
-        """
-           if instances that are intended to be migrated doesnt have fixed_ip
-           (not happens usually), pre_live_migration has to raise Exception.
-        """
+        """Confirm raising exception if instance doesn't have fixed_ip."""
         instance_ref = self._get_dummy_instance()
         c = context.get_admin_context()
         i_id = instance_ref['id']
@@ -331,14 +328,9 @@ class ComputeTestCase(test.TestCase):
         self.assertRaises(exception.NotFound,
                           self.compute.pre_live_migration,
                           c, instance_ref['id'])
-        self.mox.ResetAll()
 
     def test_pre_live_migration_instance_has_volume(self):
-        """if any volumes are attached to the instances that are
-           intended to be migrated, setup_compute_volume must be
-           called because aoe module should be inserted at destination
-           host. This testcase checks on it.
-        """
+        """Confirm setup_compute_volume is called when volume is mounted."""
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
 
@@ -364,14 +356,9 @@ class ComputeTestCase(test.TestCase):
         self.mox.ReplayAll()
         ret = self.compute.pre_live_migration(c, i_ref['id'])
         self.assertEqual(ret, None)
-        self.mox.ResetAll()
 
     def test_pre_live_migration_instance_has_no_volume(self):
-        """if any volumes are not attached to the instances that are
-           intended to be migrated, log message should be appears
-           because administrator can proove instance conditions before
-           live_migration if any trouble occurs.
-        """
+        """Confirm log meg when instance doesn't mount any volumes."""
         i_ref = self._get_dummy_instance()
         i_ref.__setitem__('volumes', [])
         c = context.get_admin_context()
@@ -395,14 +382,14 @@ class ComputeTestCase(test.TestCase):
         self.mox.ReplayAll()
         ret = self.compute.pre_live_migration(c, i_ref['id'])
         self.assertEqual(ret, None)
-        self.mox.ResetAll()
 
     def test_pre_live_migration_setup_compute_node_fail(self):
-        """setup_compute_node sometimes fail since concurrent request
-           comes to iptables and iptables complains. Then this method
-           tries to retry, but raise exception in case of over
-            max_retry_count. this method confirms raising exception.
+        """Confirm operation setup_compute_network() fails.
+
+        It retries and raise exception when timeout exceeded.
+
         """
+
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
 
@@ -427,14 +414,9 @@ class ComputeTestCase(test.TestCase):
         self.assertRaises(exception.ProcessExecutionError,
                           self.compute.pre_live_migration,
                           c, i_ref['id'])
-        self.mox.ResetAll()
 
-    def test_live_migration_instance_has_volume(self):
-        """Any volumes are mounted by instances to be migrated are found,
-           vblade health must be checked before starting live-migration.
-           And that is checked by check_for_export().
-           This testcase confirms check_for_export() is called.
-        """
+    def test_live_migration_works_correctly_with_volume(self):
+        """Confirm check_for_export to confirm volume health check."""
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
         topic = db.queue_get_for(c, FLAGS.compute_topic, i_ref['host'])
@@ -457,15 +439,9 @@ class ComputeTestCase(test.TestCase):
         self.mox.ReplayAll()
         ret = self.compute.live_migration(c, i_ref['id'], i_ref['host'])
         self.assertEqual(ret, None)
-        self.mox.ResetAll()
 
-    def test_live_migration_instance_has_volume_and_exception(self):
-        """In addition to test_live_migration_instance_has_volume testcase,
-           this testcase confirms if any exception raises from
-           check_for_export(). Then, valid seaquence of this method should
-           recovering instance/volumes status(ex. instance['state_description']
-           is changed from 'migrating' -> 'running', was changed by scheduler)
-        """
+    def test_live_migration_dest_raises_exception(self):
+        """Confirm exception when pre_live_migration fails."""
         i_ref = self._get_dummy_instance()
         c = context.get_admin_context()
         topic = db.queue_get_for(c, FLAGS.compute_topic, i_ref['host'])
@@ -484,20 +460,16 @@ class ComputeTestCase(test.TestCase):
                                                 'state': power_state.RUNNING,
                                                 'host': i_ref['host']})
         for v in i_ref['volumes']:
-            dbmock.volume_update(c, v['id'], {'status': 'in-use',
-                                              'host': i_ref['host']})
+            dbmock.volume_update(c, v['id'], {'status': 'in-use'})
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
         self.assertRaises(rpc.RemoteError,
                           self.compute.live_migration,
                           c, i_ref['id'], i_ref['host'])
-        self.mox.ResetAll()
 
-    def test_live_migration_instance_has_no_volume_and_exception(self):
-        """Simpler than
-           test_live_migration_instance_has_volume_and_exception
-        """
+    def test_live_migration_dest_raises_exception_no_volume(self):
+        """Same as above test(input pattern is different) """
         i_ref = self._get_dummy_instance()
         i_ref.__setitem__('volumes', [])
         c = context.get_admin_context()
@@ -520,10 +492,9 @@ class ComputeTestCase(test.TestCase):
         self.assertRaises(rpc.RemoteError,
                           self.compute.live_migration,
                           c, i_ref['id'], i_ref['host'])
-        self.mox.ResetAll()
 
-    def test_live_migration_instance_has_no_volume(self):
-        """Simpler than test_live_migration_instance_has_volume."""
+    def test_live_migration_works_correctly_no_volume(self):
+        """Confirm live_migration() works as expected correctly."""
         i_ref = self._get_dummy_instance()
         i_ref.__setitem__('volumes', [])
         c = context.get_admin_context()
@@ -545,11 +516,9 @@ class ComputeTestCase(test.TestCase):
         self.mox.ReplayAll()
         ret = self.compute.live_migration(c, i_ref['id'], i_ref['host'])
         self.assertEqual(ret, None)
-        self.mox.ResetAll()
 
     def test_post_live_migration_working_correctly(self):
-        """post_live_migration works as expected correctly """
-
+        """Confirm post_live_migration() works as expected correctly."""
         dest = 'desthost'
         flo_addr = '1.2.1.2'
 
@@ -579,19 +548,15 @@ class ComputeTestCase(test.TestCase):
         # executing
         self.mox.ReplayAll()
         ret = self.compute.post_live_migration(c, i_ref, dest)
-        self.mox.UnsetStubs()
 
         # make sure every data is rewritten to dest
         i_ref = db.instance_get(c, i_ref['id'])
         c1 = (i_ref['host'] == dest)
-        v_ref = db.volume_get(c, v_ref['id'])
-        c2 = (v_ref['host'] == dest)
-        c3 = False
         flo_refs = db.floating_ip_get_all_by_host(c, dest)
-        c3 = (len(flo_refs) != 0 and flo_refs[0]['address'] == flo_addr)
+        c2 = (len(flo_refs) != 0 and flo_refs[0]['address'] == flo_addr)
 
         # post operaton
-        self.assertTrue(c1 and c2 and c3)
+        self.assertTrue(c1 and c2)
         db.instance_destroy(c, instance_id)
         db.volume_destroy(c, v_ref['id'])
         db.floating_ip_destroy(c, flo_addr)

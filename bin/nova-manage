@@ -548,7 +548,12 @@ class InstanceCommands(object):
     """Class for mangaging VM instances."""
 
     def live_migration(self, ec2_id, dest):
-        """Migrates a running instance to a new machine."""
+        """Migrates a running instance to a new machine.
+
+        :param ec2_id: instance id which comes from euca-describe-instance.
+        :param dest: destination host name.
+
+        """
 
         ctxt = context.get_admin_context()
         instance_id = ec2_id_to_id(ec2_id)
@@ -569,9 +574,8 @@ class InstanceCommands(object):
                            "dest": dest,
                            "topic": FLAGS.compute_topic}})
 
-        msg = 'Migration of %s initiated. ' % ec2_id
-        msg += 'Check its progress using euca-describe-instances.'
-        print msg
+        print _('Migration of %s initiated.'
+               'Check its progress using euca-describe-instances.') % ec2_id
 
 
 class ServiceCommands(object):
@@ -619,15 +623,17 @@ class ServiceCommands(object):
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
     def describe_resource(self, host):
-        """describe cpu/memory/hdd info for host."""
+        """Describes cpu/memory/hdd info for host.
+
+        :param host: hostname.
+
+        """
 
         result = rpc.call(context.get_admin_context(),
                      FLAGS.scheduler_topic,
-                     {"method": "show_host_resource",
+                     {"method": "show_host_resources",
                       "args": {"host": host}})
 
-        # Checking result msg format is necessary, that will have done
-        # when this feture is included in API.
         if type(result) != dict:
             print 'Unexpected error occurs'
             print '[Result]', result
@@ -650,7 +656,11 @@ class ServiceCommands(object):
                                                   val['local_gb'])
 
     def update_resource(self, host):
-        """update available vcpu/memory/disk info for host."""
+        """Updates available vcpu/memory/disk info for host.
+
+        :param host: hostname.
+
+        """
 
         ctxt = context.get_admin_context()
         service_refs = db.service_get_all_by_host(ctxt, host)

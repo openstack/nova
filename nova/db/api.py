@@ -169,6 +169,7 @@ def compute_service_update(context, compute_id, values):
     Raises NotFound if computeService does not exist.
 
     """
+
     return IMPL.compute_service_update(context, compute_id, values)
 
 
@@ -446,27 +447,22 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                             security_group_id)
 
 
-def instance_get_all_by_host(context, hostname):
-    """Get instances by host"""
-    return IMPL.instance_get_all_by_host(context, hostname)
-
-
 def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
-    """Get instances.vcpus by host and project"""
+    """Get instances.vcpus by host and project."""
     return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
                                                           hostname,
                                                           proj_id)
 
 
 def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
-    """Get amount of memory by host and project """
+    """Get amount of memory by host and project."""
     return IMPL.instance_get_memory_sum_by_host_and_project(context,
                                                             hostname,
                                                             proj_id)
 
 
 def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
-    """Get total amount of disk by host and project """
+    """Get total amount of disk by host and project."""
     return IMPL.instance_get_disk_sum_by_host_and_project(context,
                                                           hostname,
                                                           proj_id)

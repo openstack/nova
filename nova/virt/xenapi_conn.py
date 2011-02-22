@@ -231,25 +231,25 @@ class XenAPIConnection(object):
                  'password': FLAGS.xenapi_connection_password}
 
     def update_available_resource(self, ctxt, host):
-        """This method is supported only libvirt.  """
+        """This method is supported only by libvirt."""
         return
 
     def compare_cpu(self, xml):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
     def ensure_filtering_rules_for_instance(self, instance_ref):
-        """This method is supported only libvirt.."""
+        """This method is supported only libvirt."""
         return
 
     def live_migration(self, context, instance_ref, dest,
                        post_method, recover_method):
-        """This method is supported only libvirt.."""
+        """This method is supported only by libvirt."""
         return
 
     def unfilter_instance(self, instance_ref):
-        """This method is supported only libvirt.."""
-        raise NotImplementedError('This method is supported only libvirt.')
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
 
 class XenAPISession(object):
