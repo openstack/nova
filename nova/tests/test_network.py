@@ -89,7 +89,6 @@ COMMIT
         super(IptablesManagerTestCase, self).setUp()
         self.manager = linux_net.IptablesManager()
 
-        
     def test_filter_rules_are_wrapped(self):
         current_lines = self.sample_filter.split('\n')
 
@@ -114,8 +113,8 @@ COMMIT
                      ':nova-compute-SNATTING - [0:0]',
                      ':nova-compute-PREROUTING - [0:0]',
                      ':nova-compute-POSTROUTING - [0:0]']:
-             self.assertTrue(line in new_lines, "One of nova-compute's chains "
-                                                "went missing.")
+            self.assertTrue(line in new_lines, "One of nova-compute's chains "
+                                               "went missing.")
 
         seen_lines = set()
         for line in new_lines:
@@ -138,7 +137,6 @@ COMMIT
                             % (chain, chain) in new_lines,
                             "Built-in chain %s not wrapped" % (chain,))
 
-
     def test_filter_rules(self):
         current_lines = self.sample_filter.split('\n')
         new_lines = self.manager._modify_rules(current_lines,
@@ -148,8 +146,8 @@ COMMIT
                      ':nova-compute-INPUT - [0:0]',
                      ':nova-compute-local - [0:0]',
                      ':nova-compute-OUTPUT - [0:0]']:
-             self.assertTrue(line in new_lines, "One of nova-compute's chains"
-                                                " went missing.")
+            self.assertTrue(line in new_lines, "One of nova-compute's chains"
+                                               " went missing.")
 
         seen_lines = set()
         for line in new_lines:

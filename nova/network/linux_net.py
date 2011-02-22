@@ -261,14 +261,14 @@ class IptablesManager(object):
         self.ipv4['nat'].add_rule('POSTROUTING', '-j nova-postrouting-bottom',
                                   wrap=False)
 
-
         # We add a SNATTING chain to the shared nova-postrouting-bottom chain
         # so that it's applied last.
         self.ipv4['nat'].add_chain('SNATTING')
-        self.ipv4['nat'].add_rule('nova-postrouting-bottom', '-j $SNATTING', wrap=False)
+        self.ipv4['nat'].add_rule('nova-postrouting-bottom', '-j $SNATTING',
+                                  wrap=False)
 
-        # And then we add a floating-ip-snat chain and jump to first thing in the SNATTING
-        # chain.
+        # And then we add a floating-ip-snat chain and jump to first thing in
+        # the SNATTING chain.
         self.ipv4['nat'].add_chain('floating-ip-snat')
         self.ipv4['nat'].add_rule('SNATTING', '-j $floating-ip-snat')
 
@@ -331,6 +331,7 @@ class IptablesManager(object):
                                                for name in chains]
 
         seen_lines = set()
+
         def _weed_out_duplicates(line):
             if line in seen_lines:
                 return False
