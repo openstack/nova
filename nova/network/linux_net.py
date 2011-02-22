@@ -72,22 +72,22 @@ class IptablesRule(object):
     You shouldn't need to use this class directly, it's only used by
     IptablesManager
     """
-    def __init__(self, chain, rule, wrap=True, head=False):
+    def __init__(self, chain, rule, wrap=True, top=False):
         self.chain = chain
         self.rule = rule
         self.wrap = wrap
-        self.head = head
+        self.top = top
 
     def __eq__(self, other):
         return ((self.chain == other.chain) and
                 (self.rule == other.rule) and
-                (self.head == other.head) and
+                (self.top == other.top) and
                 (self.wrap == other.wrap))
 
     def __ne__(self, other):
         return ((self.chain != other.chain) or
                 (self.rule != other.rule) or
-                (self.head != other.head) or
+                (self.top != other.top) or
                 (self.wrap != other.wrap))
 
     def __str__(self):
@@ -150,7 +150,7 @@ class IptablesTable(object):
 
         self.rules = filter(lambda r: jump_snippet not in r.rule, self.rules)
 
-    def add_rule(self, chain, rule, wrap=True, head=False):
+    def add_rule(self, chain, rule, wrap=True, top=False):
         """Add a rule to the table
 
         This is just like what you'd feed to iptables, just without
@@ -166,14 +166,14 @@ class IptablesTable(object):
         if '$' in rule:
             rule = ' '.join(map(self._wrap_target_chain, rule.split(' ')))
 
-        self.rules.append(IptablesRule(chain, rule, wrap, head))
+        self.rules.append(IptablesRule(chain, rule, wrap, top))
 
     def _wrap_target_chain(self, s):
         if s.startswith('$'):
             return '%s-%s' % (binary_name, s[1:])
         return s
 
-    def remove_rule(self, chain, rule, wrap=True, head=False):
+    def remove_rule(self, chain, rule, wrap=True, top=False):
         """Remove a rule from a chain
 
         Note: The rule must be exactly identical to the one that was added.
@@ -181,12 +181,12 @@ class IptablesTable(object):
         CLI tool.
         """
         try:
-            self.rules.remove(IptablesRule(chain, rule, wrap, head))
+            self.rules.remove(IptablesRule(chain, rule, wrap, top))
         except ValueError:
             LOG.debug(_("Tried to remove rule that wasn't there:"
-                        " %(chain)r %(rule)r %(wrap)r %(head)r"),
+                        " %(chain)r %(rule)r %(wrap)r %(top)r"),
                       {'chain': chain, 'rule': rule,
-                       'head': head, 'wrap': wrap})
+                       'top': top, 'wrap': wrap})
 
 
 class IptablesManager(object):
@@ -229,9 +229,9 @@ class IptablesManager(object):
         for tables in [self.ipv4, self.ipv6]:
             tables['filter'].add_chain('nova-filter-top', wrap=False)
             tables['filter'].add_rule('FORWARD', '-j nova-filter-top',
-                                      wrap=False, head=True)
+                                      wrap=False, top=True)
             tables['filter'].add_rule('OUTPUT', '-j nova-filter-top',
-                                      wrap=False, head=True)
+                                      wrap=False, top=True)
 
             tables['filter'].add_chain('local')
             tables['filter'].add_rule('nova-filter-top', '-j $local',
@@ -320,9 +320,19 @@ class IptablesManager(object):
                 if not rule.startswith(':'):
                     break
 
-        new_filter[rules_index:rules_index] = [str(rule) for rule in rules
-                                               if rule.head or
-                                                  str(rule) not in new_filter]
+        our_rules = []
+        for rule in rules:
+            rule_str = str(rule)
+            if rule.top:
+                # rule.top == True means we want this rule to be at the top.
+                # Further down, we weed out duplicates from the bottom of the
+                # list, so here we remove the dupes ahead of time.
+                new_filter = filter(lambda s: s.strip() != rule_str.strip(),
+                                    new_filter)
+            our_rules += [rule_str]
+
+        new_filter[rules_index:rules_index] = our_rules
+
         new_filter[rules_index:rules_index] = [':%s - [0:0]' % \
                                                (name,) \
                                                for name in unwrapped_chains]
@@ -333,13 +343,18 @@ class IptablesManager(object):
         seen_lines = set()
 
         def _weed_out_duplicates(line):
+            line = line.strip()
             if line in seen_lines:
                 return False
             else:
                 seen_lines.add(line)
                 return True
 
+        # We filter duplicates, letting the *last* occurrence take
+        # precendence.
+        new_filter.reverse()
         new_filter = filter(_weed_out_duplicates, new_filter)
+        new_filter.reverse()
         return new_filter
 
 

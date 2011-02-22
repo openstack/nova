@@ -46,20 +46,20 @@ class IptablesManagerTestCase(test.TestCase):
 :nova-compute-local - [0:0]
 :nova-compute-OUTPUT - [0:0]
 :nova-filter-top - [0:0]
--A FORWARD -j nova-filter-top
--A OUTPUT -j nova-filter-top
--A nova-filter-top -j nova-compute-local
--A INPUT -j nova-compute-INPUT
--A OUTPUT -j nova-compute-OUTPUT
--A FORWARD -j nova-compute-FORWARD
--A INPUT -i virbr0 -p udp -m udp --dport 53 -j ACCEPT
--A INPUT -i virbr0 -p tcp -m tcp --dport 53 -j ACCEPT
--A INPUT -i virbr0 -p udp -m udp --dport 67 -j ACCEPT
--A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT
--A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT
--A FORWARD -i virbr0 -o virbr0 -j ACCEPT
--A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable
--A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable
+-A FORWARD -j nova-filter-top 
+-A OUTPUT -j nova-filter-top 
+-A nova-filter-top -j nova-compute-local 
+-A INPUT -j nova-compute-INPUT 
+-A OUTPUT -j nova-compute-OUTPUT 
+-A FORWARD -j nova-compute-FORWARD 
+-A INPUT -i virbr0 -p udp -m udp --dport 53 -j ACCEPT 
+-A INPUT -i virbr0 -p tcp -m tcp --dport 53 -j ACCEPT 
+-A INPUT -i virbr0 -p udp -m udp --dport 67 -j ACCEPT 
+-A INPUT -i virbr0 -p tcp -m tcp --dport 67 -j ACCEPT 
+-A FORWARD -s 192.168.122.0/24 -i virbr0 -j ACCEPT 
+-A FORWARD -i virbr0 -o virbr0 -j ACCEPT 
+-A FORWARD -o virbr0 -j REJECT --reject-with icmp-port-unreachable 
+-A FORWARD -i virbr0 -j REJECT --reject-with icmp-port-unreachable 
 COMMIT
 # Completed on Fri Feb 18 15:17:05 2011"""
 
@@ -75,12 +75,12 @@ COMMIT
 :nova-compute-PREROUTING - [0:0]
 :nova-compute-POSTROUTING - [0:0]
 :nova-postrouting-bottom - [0:0]
--A PREROUTING -j nova-compute-PREROUTING
--A OUTPUT -j nova-compute-OUTPUT
--A POSTROUTING -j nova-compute-POSTROUTING
--A POSTROUTING -j nova-postrouting-bottom
--A nova-postrouting-bottom -j nova-compute-SNATTING
--A nova-compute-SNATTING -j nova-compute-floating-ip-snat
+-A PREROUTING -j nova-compute-PREROUTING 
+-A OUTPUT -j nova-compute-OUTPUT 
+-A POSTROUTING -j nova-compute-POSTROUTING 
+-A POSTROUTING -j nova-postrouting-bottom 
+-A nova-postrouting-bottom -j nova-compute-SNATTING 
+-A nova-compute-SNATTING -j nova-compute-floating-ip-snat 
 COMMIT
 # Completed on Fri Feb 18 15:17:05 2011
 """
@@ -118,6 +118,7 @@ COMMIT
 
         seen_lines = set()
         for line in new_lines:
+            line = line.strip()
             self.assertTrue(line not in seen_lines,
                             "Duplicate line: %s" % line)
             seen_lines.add(line)
@@ -151,6 +152,7 @@ COMMIT
 
         seen_lines = set()
         for line in new_lines:
+            line = line.strip()
             self.assertTrue(line not in seen_lines,
                             "Duplicate line: %s" % line)
             seen_lines.add(line)
