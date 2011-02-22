@@ -19,7 +19,6 @@
 import commands
 import os
 import random
-import socket
 import sys
 import time
 import unittest
@@ -91,7 +90,6 @@ class ImageTests(UserSmokeTestCase):
                 break
             time.sleep(1)
         else:
-            print image.state
             self.assert_(False)  # wasn't available within 10 seconds
         self.assert_(image.type == 'machine')
 
@@ -143,70 +141,36 @@ class InstanceTests(UserSmokeTestCase):
                                               key_name=TEST_KEY,
                                               instance_type='m1.tiny')
         self.assertEqual(len(reservation.instances), 1)
-        self.data['instance_id'] = reservation.instances[0].id
+        self.data['instance'] = reservation.instances[0]
 
     def test_003_instance_runs_within_60_seconds(self):
-        reservations = self.conn.get_all_instances([self.data['instance_id']])
-        instance = reservations[0].instances[0]
+        instance = self.data['instance']
         # allow 60 seconds to exit pending with IP
-        for x in xrange(60):
-            instance.update()
-            if instance.state == u'running':
-                break
-            time.sleep(1)
-        else:
+        if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')
-        ip = reservations[0].instances[0].private_dns_name
+        self.data['instance'].update()
+        ip = self.data['instance'].private_dns_name
         self.failIf(ip == '0.0.0.0')
-        self.data['private_ip'] = ip
         if FLAGS.use_ipv6:
-            ipv6 = reservations[0].instances[0].dns_name_v6
+            ipv6 = self.data['instance'].dns_name_v6
             self.failIf(ipv6 is None)
-            self.data['ip_v6'] = ipv6
 
     def test_004_can_ping_private_ip(self):
-        for x in xrange(120):
-            # ping waits for 1 second
-            status, output = commands.getstatusoutput(
-                'ping -c1 %s' % self.data['private_ip'])
-            if status == 0:
-                break
-        else:
+        if not self.wait_for_ping(self.data['instance'].private_dns_name):
             self.fail('could not ping instance')
 
         if FLAGS.use_ipv6:
-            for x in xrange(120):
-            # ping waits for 1 second
-                status, output = commands.getstatusoutput(
-                    'ping6 -c1 %s' % self.data['ip_v6'])
-                if status == 0:
-                    break
-            else:
-                self.fail('could not ping instance')
+            if not self.wait_for_ping(self.data['instance'].ip_v6, "ping6"):
+                self.fail('could not ping instance v6')
 
     def test_005_can_ssh_to_private_ip(self):
-        for x in xrange(30):
-            try:
-                conn = self.connect_ssh(self.data['private_ip'], TEST_KEY)
-                conn.close()
-            except Exception, e:
-                time.sleep(5)
-            else:
-                break
-        else:
+        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
+                                 TEST_KEY):
             self.fail('could not ssh to instance')
 
         if FLAGS.use_ipv6:
-            for x in xrange(30):
-                try:
-                    conn = self.connect_ssh(
-                                        self.data['ip_v6'], TEST_KEY)
-                    conn.close()
-                except Exception:
-                    time.sleep(1)
-                else:
-                    break
-            else:
+            if not self.wait_for_ssh(self.data['instance'].ip_v6,
+                                     TEST_KEY):
                 self.fail('could not ssh to instance v6')
 
     def test_006_can_allocate_elastic_ip(self):
@@ -215,21 +179,13 @@ class InstanceTests(UserSmokeTestCase):
         self.data['public_ip'] = result.public_ip
 
     def test_007_can_associate_ip_with_instance(self):
-        result = self.conn.associate_address(self.data['instance_id'],
+        result = self.conn.associate_address(self.data['instance'].id,
                                              self.data['public_ip'])
         self.assertTrue(result)
 
     def test_008_can_ssh_with_public_ip(self):
-        for x in xrange(30):
-            try:
-                conn = self.connect_ssh(self.data['public_ip'], TEST_KEY)
-                conn.close()
-            except Exception:
-                time.sleep(1)
-            else:
-                break
-        else:
-            self.fail('could not ssh to instance')
+        if not self.wait_for_ssh(self.data['public_ip'], TEST_KEY):
+            self.fail('could not ssh to public ip')
 
     def test_009_can_disassociate_ip_from_instance(self):
         result = self.conn.disassociate_address(self.data['public_ip'])
@@ -241,8 +197,7 @@ class InstanceTests(UserSmokeTestCase):
 
     def test_999_tearDown(self):
         self.delete_key_pair(self.conn, TEST_KEY)
-        if self.data.has_key('instance_id'):
-            self.conn.terminate_instances([self.data['instance_id']])
+        self.conn.terminate_instances([self.data['instance'].id])
 
 
 class VolumeTests(UserSmokeTestCase):
@@ -255,24 +210,14 @@ class VolumeTests(UserSmokeTestCase):
         reservation = self.conn.run_instances(FLAGS.test_image,
                                               instance_type='m1.tiny',
                                               key_name=TEST_KEY)
-        instance = reservation.instances[0]
-        for x in xrange(120):
-            time.sleep(1)
-            instance.update()
-            if self.can_ping(instance.private_dns_name):
-                break
-        else:
-            self.fail('unable to start instance')
-        self.data['instance'] = instance
-        for x in xrange(30):
-            try:
-                conn = self.connect_ssh(instance.private_dns_name, TEST_KEY)
-                conn.close()
-            except Exception:
-                time.sleep(5)
-            else:
-                break
-        else:
+        self.data['instance'] = reservation.instances[0]
+        if not self.wait_for_running(self.data['instance']):
+            self.fail('instance failed to start')
+        self.data['instance'].update()
+        if not self.wait_for_ping(self.data['instance'].private_dns_name):
+            self.fail('could not ping instance')
+        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
+                                 TEST_KEY):
             self.fail('could not ssh to instance')
 
     def test_001_can_create_volume(self):
@@ -280,32 +225,34 @@ class VolumeTests(UserSmokeTestCase):
         self.assertEqual(volume.size, 1)
         self.data['volume'] = volume
         # Give network time to find volume.
-        time.sleep(5)
+        time.sleep(10)
 
     def test_002_can_attach_volume(self):
         volume = self.data['volume']
 
-        for x in xrange(30):
+        for x in xrange(10):
+            volume.update()
             if volume.status.startswith('available'):
                 break
             time.sleep(1)
-            volume.update()
         else:
             self.fail('cannot attach volume with state %s' % volume.status)
 
         volume.attach(self.data['instance'].id, self.device)
 
-        # Volumes seems to report "available" too soon.
+        # wait
         for x in xrange(10):
+            volume.update()
             if volume.status.startswith('in-use'):
                 break
-            time.sleep(5)
-            volume.update()
+            time.sleep(1)
+        else:
+            self.fail('volume never got to in use')
 
         self.assertTrue(volume.status.startswith('in-use'))
 
         # Give instance time to recognize volume.
-        time.sleep(5)
+        time.sleep(10)
 
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_dns_name
@@ -316,12 +263,12 @@ class VolumeTests(UserSmokeTestCase):
                 'grep %s /proc/partitions | '
                 '`awk \'{print "mknod /dev/"\\$4" b "\\$1" "\\$2}\'`'
                 % self.device.rpartition('/')[2])
-        commands = []
-        commands.append('mkdir -p /mnt/vol')
-        commands.append('/sbin/mke2fs %s' % self.device)
-        commands.append('mount %s /mnt/vol' % self.device)
-        commands.append('echo success')
-        stdin, stdout, stderr = conn.exec_command(' && '.join(commands))
+        exec_list = []
+        exec_list.append('mkdir -p /mnt/vol')
+        exec_list.append('/sbin/mke2fs %s' % self.device)
+        exec_list.append('mount %s /mnt/vol' % self.device)
+        exec_list.append('echo success')
+        stdin, stdout, stderr = conn.exec_command(' && '.join(exec_list))
         out = stdout.read()
         conn.close()
         if not out.strip().endswith('success'):
