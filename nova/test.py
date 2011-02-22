@@ -36,9 +36,6 @@ from nova import log as logging
 from nova import rpc
 from nova.network import manager as network_manager
 
-from nova.tests import fake_flags
-logging.reset()
-
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool('flush_db', True,

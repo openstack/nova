@@ -27,6 +27,8 @@ from nose import result
 from nose import core
 
 from nova import log as logging
+from nova.tests import fake_flags
+
 
 class NovaTestResult(result.TextTestResult):
     def __init__(self, *args, **kw):
