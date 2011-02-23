@@ -133,6 +133,22 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
 
+    def test_describe_security_groups(self):
+        """Makes sure describe_security_groups works and filters results."""
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        result = self.cloud.describe_security_groups(self.context)
+        # NOTE(vish): should have the default group as well
+        self.assertEqual(len(result['securityGroupInfo']), 2)
+        result = self.cloud.describe_security_groups(self.context,
+                      group_name=[sec['name']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                sec['name'])
+        db.security_group_destroy(self.context, sec['id'])
+
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
         vol1 = db.volume_create(self.context, {})
@@ -285,19 +301,6 @@ class CloudTestCase(test.TestCase):
                 instance_id = instance['instance_id']
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
-
-    def test_describe_instances(self):
-        """Makes sure describe_instances works."""
-        instance1 = db.instance_create(self.context, {'host': 'host2'})
-        comp1 = db.service_create(self.context, {'host': 'host2',
-                                                 'availability_zone': 'zone1',
-                                                 'topic': "compute"})
-        result = self.cloud.describe_instances(self.context)
-        self.assertEqual(result['reservationSet'][0]
-                         ['instancesSet'][0]
-                         ['placement']['availabilityZone'], 'zone1')
-        db.instance_destroy(self.context, instance1['id'])
-        db.service_destroy(self.context, comp1['id'])
 
     def test_instance_update_state(self):
         # TODO(termie): what is this code even testing?
