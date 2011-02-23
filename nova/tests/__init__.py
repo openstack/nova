@@ -48,6 +48,9 @@ def setup():
 
     FLAGS = flags.FLAGS
 
+    testdb = os.path.join(FLAGS.state_path, FLAGS.sqlite_db)
+    if os.path.exists(testdb):
+        os.unlink(testdb)
     migration.db_sync()
     ctxt = context.get_admin_context()
     network_manager.VlanManager().create_networks(ctxt,
@@ -58,5 +61,6 @@ def setup():
                                                   FLAGS.vlan_start,
                                                   FLAGS.vpn_start,
                                                   )
-    shutil.copyfile(os.path.join(FLAGS.state_path, FLAGS.sqlite_db),
-                    os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db))
+
+    cleandb = os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db)
+    shutil.copyfile(testdb, cleandb)

@@ -265,10 +265,6 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     logging.setup()
-    testdb = os.path.join(FLAGS.state_path,
-                          FLAGS.sqlite_db)
-    if os.path.exists(testdb):
-        os.unlink(testdb)
     testdir = os.path.abspath(os.path.join("nova","tests"))
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
