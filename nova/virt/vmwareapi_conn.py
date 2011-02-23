@@ -76,11 +76,10 @@ TIME_BETWEEN_API_CALL_RETRIES = 2.0
 
 
 class TaskState:
-    """
-    Enumeration class for different states of task
-        0 - Task completed successfully
-        1 - Task is in queued state
-        2 - Task is in running state
+    """Enumeration class for different states of task
+    0 - Task completed successfully
+    1 - Task is in queued state
+    2 - Task is in running state
     """
 
     TASK_SUCCESS = 0
@@ -89,27 +88,19 @@ class TaskState:
 
 
 class Failure(Exception):
-    """
-    Base Exception class for handling task failures
-    """
+    """Base Exception class for handling task failures"""
 
     def __init__(self, details):
-        """
-        Initializer
-        """
+        """Initializer"""
         self.details = details
 
     def __str__(self):
-        """
-        The informal string representation of the object
-        """
+        """The informal string representation of the object"""
         return str(self.details)
 
 
 def get_connection(_):
-    """
-    Sets up the ESX host connection
-    """
+    """Sets up the ESX host connection"""
     host_ip = FLAGS.vmwareapi_host_ip
     host_username = FLAGS.vmwareapi_host_username
     host_password = FLAGS.vmwareapi_host_password
@@ -124,143 +115,98 @@ def get_connection(_):
 
 
 class VMWareESXConnection(object):
-    """
-    The ESX host connection object
-    """
+    """The ESX host connection object"""
 
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
-        """
-        The Initializer
-        """
+        """The Initializer"""
         session = VMWareAPISession(host_ip, host_username, host_password,
                  api_retry_count, scheme=scheme)
         self._vmops = VMWareVMOps(session)
 
     def init_host(self, host):
-        """
-        Do the initialization that needs to be done
-        """
+        """Do the initialization that needs to be done"""
         #FIXME(sateesh): implement this
         pass
 
     def list_instances(self):
-        """
-        List VM instances
-        """
+        """List VM instances"""
         return self._vmops.list_instances()
 
     def spawn(self, instance):
-        """
-        Create VM instance
-        """
+        """Create VM instance"""
         self._vmops.spawn(instance)
 
     def snapshot(self, instance, name):
-        """
-        Create snapshot from a running VM instance
-        """
+        """Create snapshot from a running VM instance"""
         self._vmops.snapshot(instance, name)
 
     def reboot(self, instance):
-        """
-        Reboot VM instance
-        """
+        """Reboot VM instance"""
         self._vmops.reboot(instance)
 
     def destroy(self, instance):
-        """
-        Destroy VM instance
-        """
+        """Destroy VM instance"""
         self._vmops.destroy(instance)
 
     def pause(self, instance, callback):
-        """
-        Pause VM instance
-        """
+        """Pause VM instance"""
         self._vmops.pause(instance, callback)
 
     def unpause(self, instance, callback):
-        """
-        Unpause paused VM instance
-        """
+        """Unpause paused VM instance"""
         self._vmops.unpause(instance, callback)
 
     def suspend(self, instance, callback):
-        """
-        Suspend the specified instance
-        """
+        """Suspend the specified instance"""
         self._vmops.suspend(instance, callback)
 
     def resume(self, instance, callback):
-        """
-        Resume the suspended VM instance
-        """
+        """Resume the suspended VM instance"""
         self._vmops.resume(instance, callback)
 
     def get_info(self, instance_id):
-        """
-        Return info about the VM instance
-        """
+        """Return info about the VM instance"""
         return self._vmops.get_info(instance_id)
 
     def get_diagnostics(self, instance):
-        """
-        Return data about VM diagnostics
-        """
+        """Return data about VM diagnostics"""
         return self._vmops.get_info(instance)
 
     def get_console_output(self, instance):
-        """
-        Return snapshot of console
-        """
+        """Return snapshot of console"""
         return self._vmops.get_console_output(instance)
 
     def get_ajax_console(self, instance):
-        """
-        Return link to instance's ajax console
-        """
+        """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
-        """
-        Attach volume storage to VM instance
-        """
+        """Attach volume storage to VM instance"""
         pass
 
     def detach_volume(self, instance_name, mountpoint):
-        """
-        Detach volume storage to VM instance
-        """
+        """Detach volume storage to VM instance"""
         pass
 
     def get_console_pool_info(self, console_type):
-        """
-        Get info about the host on which the VM resides
-        """
+        """Get info about the host on which the VM resides"""
         esx_url = urlparse.urlparse(FLAGS.vmwareapi_host_ip)
         return  {'address': esx_url.netloc,
                  'username': FLAGS.vmwareapi_host_password,
                  'password': FLAGS.vmwareapi_host_password}
 
     def _create_dummy_vm_for_test(self, instance):
-        """
-        Creates a dummy 1MB VM with default parameters for testing purpose
-        """
+        """Creates a dummy VM with default parameters for testing purpose"""
         return self._vmops._create_dummy_vm_for_test(instance)
 
 
 class VMWareAPISession(object):
-    """
-    Sets up a session with the ESX host and handles all the calls made to the
-    host
-    """
+    """Sets up a session with ESX host and handles all calls made to host"""
 
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
-        """
-        Set the connection credentials
-        """
+        """Set the connection credentials"""
         self._host_ip = host_ip
         self._host_username = host_username
         self._host_password = host_password
@@ -271,9 +217,7 @@ class VMWareAPISession(object):
         self._create_session()
 
     def _create_session(self):
-        """
-        Creates a session with the ESX host
-        """
+        """Creates a session with the ESX host"""
         while True:
             try:
                 # Login and setup the session with the ESX host for making
@@ -296,14 +240,12 @@ class VMWareAPISession(object):
                 self._session_id = session.Key
                 return
             except Exception, excep:
-                LOG.critical("In vmwareapi:_create_session, "
-                              "got this exception: %s" % excep)
+                LOG.info(_("In vmwareapi:_create_session, "
+                              "got this exception: %s") % excep)
                 raise Exception(excep)
 
     def __del__(self):
-        """
-        The Destructor. Logs-out the session.
-        """
+        """The Destructor. Logs-out the session."""
         # Logout to avoid un-necessary increase in session count at the
         # ESX host
         try:
@@ -312,9 +254,7 @@ class VMWareAPISession(object):
             pass
 
     def _call_method(self, module, method, *args, **kwargs):
-        """
-        Calls a method within the module specified with args provided
-        """
+        """Calls a method within the module specified with args provided"""
         args = list(args)
         retry_count = 0
         exc = None
@@ -355,14 +295,12 @@ class VMWareAPISession(object):
                 break
             time.sleep(TIME_BETWEEN_API_CALL_RETRIES)
 
-        LOG.critical("In vmwareapi:_call_method, "
-                     "got this exception: " % exc)
+        LOG.info(_("In vmwareapi:_call_method, "
+                     "got this exception: ") % exc)
         raise Exception(exc)
 
     def _get_vim(self):
-        """
-        Gets the VIM object reference
-        """
+        """Gets the VIM object reference"""
         if self.vim is None:
             self._create_session()
         return self.vim
@@ -397,19 +335,19 @@ class VMWareAPISession(object):
                                    TaskState.TASK_RUNNING]:
                 return
             elif task_info.State == TaskState.TASK_SUCCESS:
-                LOG.info("Task [%s] %s status: success " % (
+                LOG.info(_("Task [%s] %s status: success ") % (
                     task_name,
                     str(task_ref)))
                 done.send(TaskState.TASK_SUCCESS)
             else:
                 error_info = str(task_info.Error.LocalizedMessage)
                 action["error"] = error_info
-                LOG.warn("Task [%s] %s status: error [%s]" % (
+                LOG.info(_("Task [%s] %s status: error [%s]") % (
                     task_name,
                     str(task_ref),
                     error_info))
                 done.send_exception(Exception(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except Exception, excep:
-            LOG.warn("In vmwareapi:_poll_task, Got this error %s" % excep)
+            LOG.info(_("In vmwareapi:_poll_task, Got this error %s") % excep)
             done.send_exception(excep)

@@ -36,39 +36,27 @@ THREAD_SLEEP_TIME = .01
 
 
 class ThreadSafePipe(Queue):
-    """
-        ThreadSafePipe class queue's the chunk data.
-    """
+    """ThreadSafePipe class queue's the chunk data."""
 
     def __init__(self, max_size=None):
-        """
-        Initializes the queue
-        """
+        """Initializes the queue"""
         Queue.__init__(self, max_size)
         self.eof = False
 
     def write(self, data):
-        """
-        Writes the chunk data to the queue.
-        """
+        """Writes the chunk data to the queue."""
         self.put(data, block=False)
 
     def read(self):
-        """
-        Retrieves the chunk data from the queue.
-        """
+        """Retrieves the chunk data from the queue."""
         return self.get(block=False)
 
     def set_eof(self, eof):
-        """
-        Sets EOF to mark reading of input file finishes.
-        """
+        """Sets EOF to mark reading of input file finishes."""
         self.eof = eof
 
     def get_eof(self):
-        """
-        Returns whether EOF reached.
-        """
+        """Returns whether EOF reached."""
         return self.eof
 
 
@@ -143,8 +131,8 @@ class IOThread(Thread):
 
             if not self.transfer_size is None:
                 if self.read_size < self.transfer_size:
-                    raise IOError("Not enough data (%d of %d bytes)" \
-                                % (self.read_size, self.transfer_size))
+                    raise IOError(_("Not enough data (%d of %d bytes)") % \
+                                  (self.read_size, self.transfer_size))
 
         except Exception:
             self._error = True
@@ -152,26 +140,18 @@ class IOThread(Thread):
         self._done = True
 
     def stop_io_transfer(self):
-        """
-        Set the stop flag to true, which causes the thread to stop safely.
-        """
+        """Set stop flag to true, which causes the thread to stop safely."""
         self._stop_transfer = True
         self.join()
 
     def get_error(self):
-        """
-        Returns the error string.
-        """
+        """Returns the error string."""
         return self._error
 
     def get_exception(self):
-        """
-        Returns the traceback exception string.
-        """
+        """Returns the traceback exception string."""
         return self._exception
 
     def is_done(self):
-        """
-        Checks whether transfer is complete.
-        """
+        """Checks whether transfer is complete."""
         return self._done

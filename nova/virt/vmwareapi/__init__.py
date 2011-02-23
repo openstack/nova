@@ -22,10 +22,7 @@
 
 
 class HelperBase(object):
-    """
-    The base for helper classes. This adds the VMwareAPI class attribute
-    """
-
+    """The base for helper classes. This adds the VMwareAPI class attribute"""
     VMwareAPI = None
 
     def __init__(self):

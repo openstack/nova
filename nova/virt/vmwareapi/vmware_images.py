@@ -39,9 +39,7 @@ TEST_IMAGE_PATH = "/tmp/vmware-test-images"
 
 
 def start_transfer(read_file_handle, write_file_handle, data_size):
-    """
-    Start the data transfer from the read handle to the write handle.
-    """
+    """Start the data transfer from the read handle to the write handle."""
     #The thread safe pipe
     thread_safe_pipe = io_util.ThreadSafePipe(QUEUE_BUFFER_SIZE)
     #The read thread
@@ -52,7 +50,7 @@ def start_transfer(read_file_handle, write_file_handle, data_size):
                                     WRITE_CHUNKSIZE, long(data_size))
     read_thread.start()
     write_thread.start()
-    LOG.debug("Starting image file transfer")
+    LOG.debug(_("Starting image file transfer"))
     #Wait till both the read thread and the write thread are done
     while not (read_thread.is_done() and write_thread.is_done()):
         if read_thread.get_error() or write_thread.get_error():
@@ -68,16 +66,14 @@ def start_transfer(read_file_handle, write_file_handle, data_size):
                 LOG.exception(str(write_excep))
                 raise Exception(write_excep)
         time.sleep(2)
-    LOG.debug("Finished image file transfer and closing the file handles")
+    LOG.debug(_("Finished image file transfer and closing the file handles"))
     #Close the file handles
     read_file_handle.close()
     write_file_handle.close()
 
 
 def fetch_image(image, instance, **kwargs):
-    """
-    Fetch an image for attaching to the newly created VM
-    """
+    """Fetch an image for attaching to the newly created VM."""
     #Depending upon the image service, make appropriate image service call
     if FLAGS.image_service == "nova.image.glance.GlanceImageService":
         func = _get_glance_image
@@ -88,15 +84,13 @@ def fetch_image(image, instance, **kwargs):
     elif FLAGS.image_service == "nova.FakeImageService":
         func = _get_fake_image
     else:
-        raise NotImplementedError("The Image Service %s is not implemented"
+        raise NotImplementedError(_("The Image Service %s is not implemented")
                                   % FLAGS.image_service)
     return func(image, instance, **kwargs)
 
 
 def upload_image(image, instance, **kwargs):
-    """
-    Upload the newly snapshotted VM disk file.
-    """
+    """Upload the newly snapshotted VM disk file."""
     #Depending upon the image service, make appropriate image service call
     if FLAGS.image_service == "nova.image.glance.GlanceImageService":
         func = _put_glance_image
@@ -107,16 +101,14 @@ def upload_image(image, instance, **kwargs):
     elif FLAGS.image_service == "nova.FakeImageService":
         func = _put_fake_image
     else:
-        raise NotImplementedError("The Image Service %s is not implemented"
+        raise NotImplementedError(_("The Image Service %s is not implemented")
                                   % FLAGS.image_service)
     return func(image, instance, **kwargs)
 
 
 def _get_glance_image(image, instance, **kwargs):
-    """
-    Download image from the glance image server.
-    """
-    LOG.debug("Downloading image %s from glance image server" % image)
+    """Download image from the glance image server."""
+    LOG.debug(_("Downloading image %s from glance image server") % image)
     read_file_handle = read_write_util.GlanceHTTPReadFile(FLAGS.glance_host,
                                                           FLAGS.glance_port,
                                                           image)
@@ -129,29 +121,24 @@ def _get_glance_image(image, instance, **kwargs):
                                 kwargs.get("file_path"),
                                 file_size)
     start_transfer(read_file_handle, write_file_handle, file_size)
-    LOG.debug("Downloaded image %s from glance image server" % image)
+    LOG.debug(_("Downloaded image %s from glance image server") % image)
 
 
 def _get_s3_image(image, instance, **kwargs):
-    """
-    Download image from the S3 image server.
-    """
+    """Download image from the S3 image server."""
     raise NotImplementedError
 
 
 def _get_local_image(image, instance, **kwargs):
-    """
-    Download image from the local nova compute node.
-    """
+    """Download image from the local nova compute node."""
     raise NotImplementedError
 
 
 def _get_fake_image(image, instance, **kwargs):
+    """ Download a fake image from the nova local file repository for testing
+    purposes.
     """
-    Download a fake image from the nova local file repository for testing
-    purposes
-    """
-    LOG.debug("Downloading image %s from fake image service" % image)
+    LOG.debug(_("Downloading image %s from fake image service") % image)
     image = str(image)
     file_path = os.path.join(TEST_IMAGE_PATH, image, image)
     file_path = os.path.abspath(file_path)
@@ -165,14 +152,12 @@ def _get_fake_image(image, instance, **kwargs):
                                 kwargs.get("file_path"),
                                 file_size)
     start_transfer(read_file_handle, write_file_handle, file_size)
-    LOG.debug("Downloaded image %s from fake image service" % image)
+    LOG.debug(_("Downloaded image %s from fake image service") % image)
 
 
 def _put_glance_image(image, instance, **kwargs):
-    """
-    Upload the snapshotted vm disk file to Glance image server
-    """
-    LOG.debug("Uploading image %s to the Glance image server" % image)
+    """Upload the snapshotted vm disk file to Glance image server."""
+    LOG.debug(_("Uploading image %s to the Glance image server") % image)
     read_file_handle = read_write_util.VmWareHTTPReadFile(
                                 kwargs.get("host"),
                                 kwargs.get("data_center_name"),
@@ -189,29 +174,24 @@ def _put_glance_image(image, instance, **kwargs):
                                 kwargs.get("adapter_type"),
                                 kwargs.get("image_version"))
     start_transfer(read_file_handle, write_file_handle, file_size)
-    LOG.debug("Uploaded image %s to the Glance image server" % image)
+    LOG.debug(_("Uploaded image %s to the Glance image server") % image)
 
 
 def _put_local_image(image, instance, **kwargs):
-    """
-    Upload the snapshotted vm disk file to the local nova compute node.
-    """
+    """Upload the snapshotted vm disk file to the local nova compute node."""
     raise NotImplementedError
 
 
 def _put_s3_image(image, instance, **kwargs):
-    """
-    Upload the snapshotted vm disk file to S3 image server.
-    """
+    """Upload the snapshotted vm disk file to S3 image server."""
     raise NotImplementedError
 
 
 def _put_fake_image(image, instance, **kwargs):
+    """ Upload a dummy vmdk from the ESX host to the local file repository of
+    the nova node for testing purposes.
     """
-    Upload a dummy vmdk from the ESX host to the local file repository of
-    the nova node for testing purposes
-    """
-    LOG.debug("Uploading image %s to the Fake Image Service" % image)
+    LOG.debug(_("Uploading image %s to the Fake Image Service") % image)
     read_file_handle = read_write_util.VmWareHTTPReadFile(
                                 kwargs.get("host"),
                                 kwargs.get("data_center_name"),
@@ -231,7 +211,7 @@ def _put_fake_image(image, instance, **kwargs):
     file_path = os.path.abspath(file_path)
     write_file_handle = read_write_util.FakeFileWrite(file_path)
     start_transfer(read_file_handle, write_file_handle, file_size)
-    LOG.debug("Uploaded image %s to the Fake Image Service" % image)
+    LOG.debug(_("Uploaded image %s to the Fake Image Service") % image)
 
 
 def get_vmdk_size_and_properties(image, instance):
@@ -240,7 +220,7 @@ def get_vmdk_size_and_properties(image, instance):
     Need this to create the dummy virtual disk for the meta-data file. The
     geometry of the disk created depends on the size.
     """
-    LOG.debug("Getting image size for the image %s" % image)
+    LOG.debug(_("Getting image size for the image %s") % image)
     if FLAGS.image_service == "nova.image.glance.GlanceImageService":
         read_file_handle = read_write_util.GlanceHTTPReadFile(
                                       FLAGS.glance_host,
@@ -258,5 +238,5 @@ def get_vmdk_size_and_properties(image, instance):
     size = read_file_handle.get_size()
     properties = read_file_handle.get_image_properties()
     read_file_handle.close()
-    LOG.debug("Got image size of %s for the image %s" % (size, image))
+    LOG.debug(_("Got image size of %s for the image %s") % (size, image))
     return size, properties

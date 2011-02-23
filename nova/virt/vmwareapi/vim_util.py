@@ -26,9 +26,7 @@ MAX_CLONE_RETRIES = 1
 
 
 def build_recursive_traversal_spec():
-    """
-    Builds the Traversal Spec
-    """
+    """Builds the Traversal Spec"""
     #Traversal through "hostFolder" branch
     visit_folders_select_spec = ns0.SelectionSpec_Def("visitFolders").pyclass()
     visit_folders_select_spec.set_element_name("visitFolders")
@@ -145,9 +143,7 @@ def build_recursive_traversal_spec():
 
 def build_property_spec(type="VirtualMachine", properties_to_collect=["name"],
                         all_properties=False):
-    """
-    Builds the Property Spec
-    """
+    """Builds the Property Spec"""
     property_spec = ns0.PropertySpec_Def("propertySpec").pyclass()
     property_spec.set_element_type(type)
     property_spec.set_element_all(all_properties)
@@ -156,9 +152,7 @@ def build_property_spec(type="VirtualMachine", properties_to_collect=["name"],
 
 
 def build_object_spec(root_folder, traversal_specs):
-    """
-    Builds the object Spec
-    """
+    """Builds the object Spec"""
     object_spec = ns0.ObjectSpec_Def("ObjectSpec").pyclass()
     object_spec.set_element_obj(root_folder)
     object_spec.set_element_skip(False)
@@ -167,9 +161,7 @@ def build_object_spec(root_folder, traversal_specs):
 
 
 def build_property_filter_spec(property_specs, object_specs):
-    """
-    Builds the Property Filter Spec
-    """
+    """Builds the Property Filter Spec"""
     property_filter_spec = \
         ns0.PropertyFilterSpec_Def("PropertyFilterSpec").pyclass()
     property_filter_spec.set_element_propSet(property_specs)
@@ -178,9 +170,7 @@ def build_property_filter_spec(property_specs, object_specs):
 
 
 def get_object_properties(vim, collector, mobj, type, properties):
-    """
-    Gets the properties of the Managed object specified
-    """
+    """Gets the properties of the Managed object specified"""
     if mobj is None:
         return None
     usecoll = collector
@@ -203,9 +193,7 @@ def get_object_properties(vim, collector, mobj, type, properties):
 
 
 def get_dynamic_property(vim, mobj, type, property_name):
-    """
-    Gets a particular property of the Managed Object
-    """
+    """Gets a particular property of the Managed Object"""
     obj_content = \
         get_object_properties(vim, None, mobj, type, [property_name])
     property_value = None
@@ -217,9 +205,7 @@ def get_dynamic_property(vim, mobj, type, property_name):
 
 
 def get_objects(vim, type, properties_to_collect=["name"], all=False):
-    """
-    Gets the list of objects of the type specified
-    """
+    """Gets the list of objects of the type specified"""
     object_spec = build_object_spec(vim.get_service_content().RootFolder,
                                 [build_recursive_traversal_spec()])
     property_spec = build_property_spec(type=type,
@@ -232,9 +218,7 @@ def get_objects(vim, type, properties_to_collect=["name"], all=False):
 
 
 def get_traversal_spec(type, path, name="traversalSpec"):
-    """
-    Builds the traversal spec object
-    """
+    """Builds the traversal spec object"""
     t_spec = ns0.TraversalSpec_Def(name).pyclass()
     t_spec._name = name
     t_spec._type = type
@@ -244,9 +228,7 @@ def get_traversal_spec(type, path, name="traversalSpec"):
 
 
 def get_prop_spec(type, properties):
-    """
-    Builds the Property Spec Object
-    """
+    """Builds the Property Spec Object"""
     prop_spec = ns0.PropertySpec_Def("PropertySpec").pyclass()
     prop_spec._type = type
     prop_spec._pathSet = properties
@@ -254,9 +236,7 @@ def get_prop_spec(type, properties):
 
 
 def get_obj_spec(obj, select_set=None):
-    """
-    Builds the Object Spec object
-    """
+    """Builds the Object Spec object"""
     obj_spec = ns0.ObjectSpec_Def("ObjectSpec").pyclass()
     obj_spec._obj = obj
     obj_spec._skip = False
@@ -266,9 +246,7 @@ def get_obj_spec(obj, select_set=None):
 
 
 def get_prop_filter_spec(obj_spec, prop_spec):
-    """
-    Builds the Property Filter Spec Object
-    """
+    """Builds the Property Filter Spec Object"""
     prop_filter_spec = \
         ns0.PropertyFilterSpec_Def("PropertyFilterSpec").pyclass()
     prop_filter_spec._propSet = prop_spec
@@ -279,8 +257,8 @@ def get_prop_filter_spec(obj_spec, prop_spec):
 def get_properites_for_a_collection_of_objects(vim, type,
                                                obj_list, properties):
     """
-    Gets the list of properties for the collection of
-    objects of the type specified
+    Gets the list of properties for the collection of objects of the
+    type specified
     """
     if len(obj_list) == 0:
         return []

@@ -24,9 +24,7 @@ from nova.virt.vmwareapi.VimService_services_types import ns0
 
 
 def build_datastore_path(datastore_name, path):
-    """
-    Build the datastore compliant path
-    """
+    """Builds the datastore compliant path."""
     return "[%s] %s" % (datastore_name, path)
 
 
@@ -46,9 +44,7 @@ def split_datastore_path(datastore_path):
 
 def get_vm_create_spec(instance, data_store_name, network_name="vmnet0",
                        os_type="otherGuest"):
-    """
-    Builds the VM Create spec
-    """
+    """Builds the VM Create spec."""
     config_spec = ns0.VirtualMachineConfigSpec_Def(
                        "VirtualMachineConfigSpec").pyclass()
 
@@ -101,7 +97,8 @@ def create_controller_spec(key):
 
 def create_network_spec(network_name, mac_address):
     """
-    Builds a config spec for the addition of a new network adapter to the VM
+    Builds a config spec for the addition of a new network adapter to
+    the VM.
     """
     network_spec = \
         ns0.VirtualDeviceConfigSpec_Def("VirtualDeviceConfigSpec").pyclass()
@@ -137,9 +134,7 @@ def create_network_spec(network_name, mac_address):
 
 
 def get_datastore_search_sepc(pattern=None):
-    """
-    Builds the datastore search spec.
-    """
+    """Builds the datastore search spec."""
     host_datastore_browser_search_spec = \
         ns0.HostDatastoreBrowserSearchSpec_Def(
                        "HostDatastoreBrowserSearchSpec").pyclass()
@@ -155,9 +150,7 @@ def get_datastore_search_sepc(pattern=None):
 
 
 def get_vmdk_attach_config_sepc(disksize, file_path, adapter_type="lsiLogic"):
-    """
-    Builds the vmdk attach config spec.
-    """
+    """Builds the vmdk attach config spec."""
     config_spec = ns0.VirtualMachineConfigSpec_Def(
                        "VirtualMachineConfigSpec").pyclass()
 
@@ -182,9 +175,7 @@ def get_vmdk_attach_config_sepc(disksize, file_path, adapter_type="lsiLogic"):
 
 
 def get_vmdk_file_path_and_adapter_type(hardware_devices):
-    """
-    Gets the vmdk file path and the storage adapter type
-    """
+    """Gets the vmdk file path and the storage adapter type."""
     if isinstance(hardware_devices.typecode, ns0.ArrayOfVirtualDevice_Def):
         hardware_devices = hardware_devices.VirtualDevice
     vmdk_file_path = None
@@ -212,9 +203,7 @@ def get_vmdk_file_path_and_adapter_type(hardware_devices):
 
 
 def get_copy_virtual_disk_spec(adapter_type="lsilogic"):
-    """
-    Builds the Virtual Disk copy spec.
-    """
+    """Builds the Virtual Disk copy spec."""
     dest_spec = ns0.VirtualDiskSpec_Def("VirtualDiskSpec").pyclass()
     dest_spec.AdapterType = adapter_type
     dest_spec.DiskType = "thick"
@@ -222,9 +211,7 @@ def get_copy_virtual_disk_spec(adapter_type="lsilogic"):
 
 
 def get_vmdk_create_spec(size_in_kb, adapter_type="lsiLogic"):
-    """
-    Builds the virtual disk create sepc.
-    """
+    """Builds the virtual disk create sepc."""
     create_vmdk_spec = \
         ns0.FileBackedVirtualDiskSpec_Def("VirtualDiskSpec").pyclass()
     create_vmdk_spec._adapterType = adapter_type
@@ -234,9 +221,7 @@ def get_vmdk_create_spec(size_in_kb, adapter_type="lsiLogic"):
 
 
 def create_virtual_disk_spec(disksize, controller_key, file_path=None):
-    """
-    Creates a Spec for the addition/attaching of a Virtual Disk to the VM
-    """
+    """Creates a Spec for the addition/attaching of a Virtual Disk to the VM"""
     virtual_device_config = \
         ns0.VirtualDeviceConfigSpec_Def("VirtualDeviceConfigSpec").pyclass()
     virtual_device_config._operation = "add"
@@ -277,9 +262,7 @@ def create_virtual_disk_spec(disksize, controller_key, file_path=None):
 
 
 def get_dummy_vm_create_spec(name, data_store_name):
-    """
-    Builds the dummy VM create spec
-    """
+    """Builds the dummy VM create spec."""
     config_spec = ns0.VirtualMachineConfigSpec_Def(
                                "VirtualMachineConfigSpec").pyclass()
 
@@ -313,9 +296,7 @@ def get_dummy_vm_create_spec(name, data_store_name):
 
 
 def get_machine_id_change_spec(mac, ip_addr, netmask, gateway):
-    """
-    Builds the machine id change config spec
-    """
+    """Builds the machine id change config spec."""
     machine_id_str = "%s;%s;%s;%s" % (mac, ip_addr, netmask, gateway)
     virtual_machine_config_spec = ns0.VirtualMachineConfigSpec_Def(
                                        "VirtualMachineConfigSpec").pyclass()

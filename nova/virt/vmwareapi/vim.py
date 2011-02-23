@@ -32,50 +32,36 @@ ADDRESS_IN_USE_ERROR = 'Address already in use'
 
 
 class VimException(Exception):
-    """
-    The VIM Exception class
-    """
+    """The VIM Exception class"""
 
     def __init__(self, exception_summary, excep):
-        """
-        Initializer
-        """
+        """Initializer"""
         Exception.__init__(self)
         self.exception_summary = exception_summary
         self.exception_obj = excep
 
     def __str__(self):
-        """
-        The informal string representation of the object
-        """
+        """The informal string representation of the object"""
         return self.exception_summary + str(self.exception_obj)
 
 
 class SessionOverLoadException(VimException):
-    """
-    Session Overload Exception
-    """
+    """Session Overload Exception"""
     pass
 
 
 class SessionFaultyException(VimException):
-    """
-    Session Faulty Exception
-    """
+    """Session Faulty Exception"""
     pass
 
 
 class VimAttributeError(VimException):
-    """
-    Attribute Error
-    """
+    """Attribute Error"""
     pass
 
 
 class Vim:
-    """
-    The VIM Object
-    """
+    """The VIM Object"""
 
     def __init__(self,
                  protocol="https",
@@ -106,15 +92,11 @@ class Vim:
                 self.RetrieveServiceContent("ServiceInstance")
 
     def get_service_content(self):
-        """
-        Gets the service content object
-        """
+        """Gets the service content object"""
         return self._service_content
 
     def __getattr__(self, attr_name):
-        """
-        Makes the API calls and gets the result
-        """
+        """Makes the API calls and gets the result"""
         try:
             return object.__getattr__(self, attr_name)
         except AttributeError:
@@ -141,40 +123,38 @@ class Vim:
                         except AttributeError, excep:
                             return None
                 except AttributeError, excep:
-                    raise VimAttributeError("No such SOAP method '%s'"
-                         " provided by VI SDK" % (attr_name), excep)
+                    raise VimAttributeError(_("No such SOAP method '%s'"
+                         " provided by VI SDK") % (attr_name), excep)
                 except ZSI.FaultException, excep:
-                    raise SessionFaultyException("<ZSI.FaultException> in"
-                           " %s:" % (attr_name), excep)
+                    raise SessionFaultyException(_("<ZSI.FaultException> in"
+                           " %s:") % (attr_name), excep)
                 except ZSI.EvaluateException, excep:
-                    raise SessionFaultyException("<ZSI.EvaluateException> in"
-                           " %s:" % (attr_name), excep)
+                    raise SessionFaultyException(_("<ZSI.EvaluateException> in"
+                           " %s:") % (attr_name), excep)
                 except (httplib.CannotSendRequest,
                         httplib.ResponseNotReady,
                         httplib.CannotSendHeader), excep:
-                    raise SessionOverLoadException("httplib errror in"
-                                    " %s: " % (attr_name), excep)
+                    raise SessionOverLoadException(_("httplib errror in"
+                                    " %s: ") % (attr_name), excep)
                 except Exception, excep:
                     # Socket errors which need special handling for they
                     # might be caused by ESX API call overload
                     if (str(excep).find(ADDRESS_IN_USE_ERROR) != -1 or
                         str(excep).find(CONN_ABORT_ERROR)):
-                        raise SessionOverLoadException("Socket error in"
-                                    " %s: " % (attr_name), excep)
+                        raise SessionOverLoadException(_("Socket error in"
+                                    " %s: ") % (attr_name), excep)
                     # Type error that needs special handling for it might be
                     # caused by ESX host API call overload
                     elif str(excep).find(RESP_NOT_XML_ERROR) != -1:
-                        raise SessionOverLoadException("Type error in "
-                                    " %s: " % (attr_name), excep)
+                        raise SessionOverLoadException(_("Type error in "
+                                    " %s: ") % (attr_name), excep)
                     else:
                         raise VimException(
-                           "Exception in %s " % (attr_name), excep)
+                           _("Exception in %s ") % (attr_name), excep)
             return vim_request_handler
 
     def _request_message_builder(self, method_name, managed_object, **kwargs):
-        """
-        Builds the Request Message
-        """
+        """Builds the Request Message"""
         #Request Message Builder
         request_msg = getattr(VimService_services, \
                               method_name + "RequestMsg")()
@@ -189,13 +169,9 @@ class Vim:
         return request_msg
 
     def __repr__(self):
-        """
-        The official string representation
-        """
+        """The official string representation"""
         return "VIM Object"
 
     def __str__(self):
-        """
-        The informal string representation
-        """
+        """The informal string representation"""
         return "VIM Object"

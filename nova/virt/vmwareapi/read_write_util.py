@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" Image file handlers
+""" Classes to handle image files
 
 Collection of classes to handle image upload/download to/from Image service
 (like Glance image storage and retrieval service) from/to ESX/ESXi server.
@@ -47,79 +47,55 @@ LOG = logging.getLogger("nova.virt.vmwareapi.read_write_util")
 
 
 class ImageServiceFile:
-    """
-    The base image service Class
-    """
+    """The base image service Class"""
 
     def __init__(self, file_handle):
-        """
-        Initialize the file handle.
-        """
+        """Initialize the file handle."""
         self.eof = False
         self.file_handle = file_handle
 
     def write(self, data):
-        """
-        Write data to the file
-        """
+        """Write data to the file"""
         raise NotImplementedError
 
     def read(self, chunk_size=READ_CHUNKSIZE):
-        """
-        Read a chunk of data from the file
-        """
+        """Read a chunk of data from the file"""
         raise NotImplementedError
 
     def get_size(self):
-        """
-        Get the size of the file whose data is to be read
-        """
+        """Get the size of the file whose data is to be read"""
         raise NotImplementedError
 
     def set_eof(self, eof):
-        """
-        Set the end of file marker.
-        """
+        """Set the end of file marker."""
         self.eof = eof
 
     def get_eof(self):
-        """
-        Check if the file end has been reached or not.
-        """
+        """Check if the file end has been reached or not."""
         return self.eof
 
     def close(self):
-        """
-        Close the file handle.
-        """
+        """Close the file handle."""
         try:
             self.file_handle.close()
         except Exception:
             pass
 
     def get_image_properties(self):
-        """
-        Get the image properties
-        """
+        """Get the image properties"""
         raise NotImplementedError
 
     def __del__(self):
-        """
-        Destructor. Close the file handle if the same has been forgotten.
-        """
+        """Destructor. Close the file handle if the same has been forgotten."""
         self.close()
 
 
 class GlanceHTTPWriteFile(ImageServiceFile):
-    """
-    Glance file write handler Class
-    """
+    """Glance file write handler Class"""
 
     def __init__(self, host, port, image_id, file_size, os_type, adapter_type,
                  version=1, scheme="http"):
-        """
-        Initialize with the glance host specifics.
-        """
+        """Initialize with the glance host specifics."""
         base_url = "%s://%s:%s/images/%s" % (scheme, host, port, image_id)
         (scheme, netloc, path, params, query, fragment) = \
             urlparse.urlparse(base_url)
@@ -145,21 +121,15 @@ class GlanceHTTPWriteFile(ImageServiceFile):
         ImageServiceFile.__init__(self, conn)
 
     def write(self, data):
-        """
-        Write data to the file
-        """
+        """Write data to the file"""
         self.file_handle.send(data)
 
 
 class GlanceHTTPReadFile(ImageServiceFile):
-    """
-    Glance file read handler Class
-    """
+    """Glance file read handler Class"""
 
     def __init__(self, host, port, image_id, scheme="http"):
-        """
-        Initialize with the glance host specifics.
-        """
+        """Initialize with the glance host specifics."""
         base_url = "%s://%s:%s/images/%s" % (scheme, host, port,
                                            urllib.pathname2url(image_id))
         headers = {'User-Agent': USER_AGENT}
@@ -168,21 +138,15 @@ class GlanceHTTPReadFile(ImageServiceFile):
         ImageServiceFile.__init__(self, conn)
 
     def read(self, chunk_size=READ_CHUNKSIZE):
-        """
-        Read a chunk of data.
-        """
+        """Read a chunk of data."""
         return self.file_handle.read(chunk_size)
 
     def get_size(self):
-        """
-        Get the size of the file to be read.
-        """
+        """Get the size of the file to be read."""
         return self.file_handle.headers.get("X-Image-Meta-Size", -1)
 
     def get_image_properties(self):
-        """
-        Get the image properties like say OS Type and the Adapter Type
-        """
+        """Get the image properties like say OS Type and the Adapter Type"""
         return {"vmware_ostype":
                     self.file_handle.headers.get(
                             "X-Image-Meta-Property-Vmware_ostype"),
@@ -195,134 +159,94 @@ class GlanceHTTPReadFile(ImageServiceFile):
 
 
 class FakeFileRead(ImageServiceFile):
-    """
-    Local file read handler class
-    """
+    """Local file read handler class"""
 
     def __init__(self, path):
-        """
-        Initialize the file path
-        """
+        """Initialize the file path"""
         self.path = path
         file_handle = open(path, "rb")
         ImageServiceFile.__init__(self, file_handle)
 
     def get_size(self):
-        """
-        Get size of the file to be read
-        """
+        """Get size of the file to be read"""
         return os.path.getsize(os.path.abspath(self.path))
 
     def read(self, chunk_size=READ_CHUNKSIZE):
-        """
-        Read a chunk of data
-        """
+        """Read a chunk of data"""
         return self.file_handle.read(chunk_size)
 
     def get_image_properties(self):
-        """
-        Get the image properties like say OS Type and the Adapter Type
-        """
+        """Get the image properties like say OS Type and the Adapter Type"""
         return {"vmware_ostype": "otherGuest",
                 "vmware_adaptertype": "lsiLogic",
                 "vmware_image_version": "1"}
 
 
 class FakeFileWrite(ImageServiceFile):
-    """
-    Local file write handler Class
-    """
+    """Local file write handler Class"""
 
     def __init__(self, path):
-        """
-        Initialize the file path.
-        """
+        """Initialize the file path."""
         file_handle = open(path, "wb")
         ImageServiceFile.__init__(self, file_handle)
 
     def write(self, data):
-        """
-        Write data to the file.
-        """
+        """Write data to the file."""
         self.file_handle.write(data)
 
 
 class VMwareHTTPFile(object):
-    """
-    Base Class for HTTP file.
-    """
+    """Base Class for HTTP file."""
 
     def __init__(self, file_handle):
-        """
-        Intialize the file handle.
-        """
+        """Intialize the file handle."""
         self.eof = False
         self.file_handle = file_handle
 
     def set_eof(self, eof):
-        """
-        Set the end of file marker.
-        """
+        """Set the end of file marker."""
         self.eof = eof
 
     def get_eof(self):
-        """
-        Check if the end of file has been reached.
-        """
+        """Check if the end of file has been reached."""
         return self.eof
 
     def close(self):
-        """
-        Close the file handle.
-        """
+        """Close the file handle."""
         try:
             self.file_handle.close()
         except Exception:
             pass
 
     def __del__(self):
-        """
-        Destructor. Close the file handle if the same has been forgotten.
-        """
+        """Destructor. Close the file handle if the same has been forgotten."""
         self.close()
 
     def _build_vim_cookie_headers(self, vim_cookies):
-        """
-        Build ESX host session cookie headers.
-        """
+        """Build ESX host session cookie headers."""
         cookie = str(vim_cookies).split(":")[1].strip()
         cookie = cookie[:cookie.find(';')]
         return cookie
 
     def write(self, data):
-        """
-        Write data to the file.
-        """
+        """Write data to the file."""
         raise NotImplementedError
 
     def read(self, chunk_size=READ_CHUNKSIZE):
-        """
-        Read a chunk of data.
-        """
+        """Read a chunk of data."""
         raise NotImplementedError
 
     def get_size(self):
-        """
-        Get size of the file to be read.
-        """
+        """Get size of the file to be read."""
         raise NotImplementedError
 
 
 class VMWareHTTPWriteFile(VMwareHTTPFile):
-    """
-    VMWare file write handler Class
-    """
+    """VMWare file write handler Class"""
 
     def __init__(self, host, data_center_name, datastore_name, cookies,
                  file_path, file_size, scheme="https"):
-        """
-        Initialize the file specifics.
-        """
+        """Initialize the file specifics."""
         base_url = "%s://%s/folder/%s" % (scheme, host, file_path)
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
         base_url = base_url + "?" + urllib.urlencode(param_list)
@@ -341,33 +265,25 @@ class VMWareHTTPWriteFile(VMwareHTTPFile):
         VMwareHTTPFile.__init__(self, conn)
 
     def write(self, data):
-        """
-        Write to the file.
-        """
+        """Write to the file."""
         self.file_handle.send(data)
 
     def close(self):
-        """
-        Get the response and close the connection
-        """
+        """Get the response and close the connection"""
         try:
             self.conn.getresponse()
         except Exception, excep:
-            LOG.debug("Exception during close of connection in "
-                      "VMWareHTTpWrite. Exception is %s" % excep)
+            LOG.debug(_("Exception during close of connection in "
+                      "VMWareHTTpWrite. Exception is %s") % excep)
         super(VMWareHTTPWriteFile, self).close()
 
 
 class VmWareHTTPReadFile(VMwareHTTPFile):
-    """
-    VMWare file read handler Class
-    """
+    """VMWare file read handler Class"""
 
     def __init__(self, host, data_center_name, datastore_name, cookies,
                  file_path, scheme="https"):
-        """
-        Initialize the file specifics.
-        """
+        """Initialize the file specifics."""
         base_url = "%s://%s/folder/%s" % (scheme, host,
                                           urllib.pathname2url(file_path))
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
@@ -379,13 +295,9 @@ class VmWareHTTPReadFile(VMwareHTTPFile):
         VMwareHTTPFile.__init__(self, conn)
 
     def read(self, chunk_size=READ_CHUNKSIZE):
-        """
-        Read a chunk of data.
-        """
+        """Read a chunk of data."""
         return self.file_handle.read(chunk_size)
 
     def get_size(self):
-        """
-        Get size of the file to be read.
-        """
+        """Get size of the file to be read."""
         return self.file_handle.headers.get("Content-Length", -1)
