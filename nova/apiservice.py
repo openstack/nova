@@ -76,12 +76,12 @@ class ApiService(object):
     def wait(self):
         self.wsgi_app.wait()
 
-    @staticmethod
-    def create():
+    @classmethod
+    def create(cls):
         conf = wsgi.paste_config_file('nova-api.conf')
         LOG.audit(_("Starting nova-api node (version %s)"),
               version.version_string_with_vcs())
-        service = ApiService(conf)
+        service = cls(conf)
         return service
 
 
