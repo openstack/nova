@@ -521,6 +521,11 @@ class VlanManager(NetworkManager):
                                ' than 4094'))
 
         fixed_net = IPy.IP(cidr)
+        if fixed_net.len() < num_networks * network_size:
+            raise ValueError(_('The network range is not big enough to fit %s'
+                               ' networks of size %s' % 
+                               (num_networks, network_size)))
+
         fixed_net_v6 = IPy.IP(cidr_v6)
         network_size_v6 = 1 << 64
         significant_bits_v6 = 64
