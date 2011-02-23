@@ -118,7 +118,6 @@ class ZoneSchedulerTestCase(test.TestCase):
         arg = IgnoreArg()
         db.service_get_all_by_topic(arg, arg).AndReturn(service_list)
         self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
-        self.mox.StubOutWithMock(db, 'instance_create', use_mock_anything=True)
         rpc.cast(ctxt,
                  'compute.host1',
                  {'method': 'run_instance',
