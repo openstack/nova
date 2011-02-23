@@ -63,19 +63,12 @@ def _translate_detail_keys(inst):
     inst_dict['addresses'] = dict(public=[], private=[])
 
     # grab single private fixed ip
-    try:
-        private_ip = inst['fixed_ip']['address']
-        if private_ip:
-            inst_dict['addresses']['private'].append(private_ip)
-    except KeyError:
-        LOG.debug(_("Failed to read private ip"))
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    inst_dict['addresses']['private'] = private_ips
 
     # grab all public floating ips
-    try:
-        for floating in inst['fixed_ip']['floating_ips']:
-            inst_dict['addresses']['public'].append(floating['address'])
-    except KeyError:
-        LOG.debug(_("Failed to read public ip(s)"))
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    inst_dict['addresses']['public'] = public_ips
 
     inst_dict['hostId'] = ''
 
