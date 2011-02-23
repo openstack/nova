@@ -332,7 +332,6 @@ class FlatManager(NetworkManager):
         for network in self.db.host_get_networks(ctxt, self.host):
             self._on_set_network_host(ctxt, network['id'])
 
-
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
