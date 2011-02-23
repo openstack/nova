@@ -40,7 +40,18 @@ done
 function run_tests {
   # Just run the test suites in current environment
   ${wrapper} rm -f nova.sqlite
-  ${wrapper} $NOSETESTS
+  ${wrapper} $NOSETESTS 2> run_tests.err.log
+  # If we get some short import error right away, print the error log directly
+  RESULT=$?
+  if [ "$RESULT" -ne "0" ];
+  then
+    ERRSIZE=`wc -l run_tests.err.log | awk '{print \$1}'`
+    if [ "$ERRSIZE" -lt "40" ];
+    then
+      cat run_tests.err.log
+    fi
+  fi
+  return $RESULT
 }
 
 NOSETESTS="python run_tests.py $noseargs"
