@@ -271,6 +271,7 @@ class SimpleDriverTestCase(test.TestCase):
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           instance_id)
+        db.instance_destroy(self.context, instance_id)
         for instance_id in instance_ids1:
             compute1.terminate_instance(self.context, instance_id)
         for instance_id in instance_ids2:

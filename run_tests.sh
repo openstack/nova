@@ -72,7 +72,9 @@ fi
 
 if [ -z "$noseargs" ];
 then
-  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
+  srcfiles=`find bin -type f ! -name "nova.conf*"`
+  srcfiles+=" nova setup.py"
+  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles} || exit 1
 else
   run_tests
 fi

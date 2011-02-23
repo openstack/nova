@@ -115,6 +115,9 @@ class NetworkTestCase(test.TestCase):
                              utils.to_global_ipv6(
                                                  network_ref['cidr_v6'],
                                                  instance_ref['mac_address']))
+            self._deallocate_address(0, address)
+            db.instance_destroy(context.get_admin_context(),
+                                instance_ref['id'])
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
