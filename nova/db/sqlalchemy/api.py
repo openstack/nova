@@ -1209,9 +1209,7 @@ def project_get_network_v6(context, project_id):
 
 def queue_get_for(_context, topic, physical_node_id):
     # FIXME(ja): this should be servername?
-    if physical_node_id:
-        return "%s.%s" % (topic, physical_node_id)
-    return topic
+    return "%s.%s" % (topic, physical_node_id)
 
 
 ###################
