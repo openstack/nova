@@ -38,7 +38,22 @@
 #    LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 #    OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 #    WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""Unittest runner for Nova.
 
+To run all tests
+    python run_tests.py
+
+To run a single test:
+    python run_tests.py test_compute:ComputeTestCase.test_run_terminate
+
+To run a single test module:
+    python run_tests.py test_compute
+
+    or
+
+    python run_tests.py api.test_wsgi
+
+"""
 
 import gettext
 import os
@@ -49,12 +64,8 @@ from nose import config
 from nose import core
 from nose import result
 
-from nova import flags
 from nova import log as logging
 from nova.tests import fake_flags
-
-
-FLAGS = flags.FLAGS
 
 
 class _AnsiColorizer(object):
@@ -265,6 +276,15 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     logging.setup()
+    # If any argument looks like a test name but doesn't have "nova.tests" in
+    # front of it, automatically add that so we don't have to type as much
+    argv = []
+    for x in sys.argv:
+        if x.startswith('test_'):
+            argv.append('nova.tests.%s' % x)
+        else:
+            argv.append(x)
+
     testdir = os.path.abspath(os.path.join("nova","tests"))
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
@@ -275,4 +295,4 @@ if __name__ == '__main__':
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c)
-    sys.exit(not core.run(config=c, testRunner=runner))
+    sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
