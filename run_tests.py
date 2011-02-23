@@ -87,7 +87,7 @@ class _AnsiColorizer(object):
         coloring terminal output using this method. Returns False otherwise.
         """
         if not stream.isatty():
-            return False # auto color only on TTYs
+            return False  # auto color only on TTYs
         try:
             import curses
         except ImportError:
@@ -179,6 +179,7 @@ class _NullColorizer(object):
 
     def write(self, text, color):
         self.stream.write(text)
+
 
 class NovaTestResult(result.TextTestResult):
     def __init__(self, *args, **kw):
@@ -285,7 +286,7 @@ if __name__ == '__main__':
         else:
             argv.append(x)
 
-    testdir = os.path.abspath(os.path.join("nova","tests"))
+    testdir = os.path.abspath(os.path.join("nova", "tests"))
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,
