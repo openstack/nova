@@ -256,6 +256,7 @@ class Quota(BASE, NovaBase):
     volumes = Column(Integer)
     gigabytes = Column(Integer)
     floating_ips = Column(Integer)
+    metadata_items = Column(Integer)
 
 
 class ExportDevice(BASE, NovaBase):
@@ -536,6 +537,20 @@ class Console(BASE, NovaBase):
     pool = relationship(ConsolePool, backref=backref('consoles'))
 
 
+class InstanceMetadata(BASE, NovaBase):
+    """Represents a metadata key/value pair for an instance"""
+    __tablename__ = 'instance_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance, backref="metadata",
+                            foreign_keys=instance_id,
+                            primaryjoin='and_('
+                                'InstanceMetadata.instance_id == Instance.id,'
+                                'InstanceMetadata.deleted == False)')
+
+
 class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
@@ -557,7 +572,8 @@ def register_models():
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console, Zone)
+              Project, Certificate, ConsolePool, Console, Zone,
+              InstanceMetadata)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
