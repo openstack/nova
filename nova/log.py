@@ -236,16 +236,17 @@ class NovaRootLogger(NovaLogger):
     def __init__(self, name, level=NOTSET):
         self.logpath = None
         self.filelog = None
-        self.syslog = SysLogHandler(address='/dev/log')
         self.streamlog = StreamHandler()
+        self.syslog = None
         NovaLogger.__init__(self, name, level)
 
     def setup_from_flags(self):
         """Setup logger from flags"""
         global _filelog
         if FLAGS.use_syslog:
+            self.syslog = SysLogHandler(address='/dev/log')
             self.addHandler(self.syslog)
-        else:
+        elif self.syslog:
             self.removeHandler(self.syslog)
         logpath = _get_log_file_path()
         if logpath:
