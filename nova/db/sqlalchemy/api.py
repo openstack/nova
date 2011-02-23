@@ -715,6 +715,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload_all('fixed_ip.network')).\
+                         options(joinedload('metadata')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -723,6 +724,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
+                         options(joinedload('metadata')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -1046,7 +1048,8 @@ def network_create_safe(context, values):
 
 @require_admin_context
 def network_disassociate(context, network_id):
-    network_update(context, network_id, {'project_id': None})
+    network_update(context, network_id, {'project_id': None,
+                                         'host': None})
 
 
 @require_admin_context
