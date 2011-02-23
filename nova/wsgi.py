@@ -59,7 +59,6 @@ class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
     def __init__(self, threads=1000):
-        logging.basicConfig()
         self.pool = eventlet.GreenPool(threads)
 
     def start(self, application, port, host='0.0.0.0', backlog=128):
@@ -515,10 +514,3 @@ def load_paste_app(filename, appname):
     except LookupError:
         pass
     return app
-
-
-def paste_config_to_flags(config, mixins):
-    for k, v in mixins.iteritems():
-        value = config.get(k, v)
-        converted_value = FLAGS[k].parser.Parse(value)
-        setattr(FLAGS, k, converted_value)

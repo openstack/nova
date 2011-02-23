@@ -20,7 +20,6 @@ XVP (Xenserver VNC Proxy) driver.
 """
 
 import fcntl
-import logging
 import os
 import signal
 import subprocess
@@ -31,6 +30,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 
 flags.DEFINE_string('console_xvp_conf_template',

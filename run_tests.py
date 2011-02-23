@@ -27,6 +27,7 @@ from nose import result
 from nose import core
 
 from nova import log as logging
+from nova.tests import fake_flags
 
 
 class NovaTestResult(result.TextTestResult):
@@ -60,7 +61,7 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
+    logging.setup()
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,

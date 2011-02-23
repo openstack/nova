@@ -40,7 +40,7 @@ done
 function run_tests {
   # Just run the test suites in current environment
   ${wrapper} rm -f nova.sqlite
-  ${wrapper} $NOSETESTS 2> run_tests.err.log
+  ${wrapper} $NOSETESTS
 }
 
 NOSETESTS="python run_tests.py $noseargs"

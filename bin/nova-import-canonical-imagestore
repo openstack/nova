@@ -41,6 +41,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.objectstore import image
 
@@ -92,6 +93,7 @@ def main():
     """Main entry point."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
+    logging.setup()
     images = get_images()
 
     if len(argv) == 2:
