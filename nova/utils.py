@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -34,6 +35,7 @@ import time
 from xml.sax import saxutils
 import re
 import netaddr
+import types
 
 from eventlet import event
 from eventlet import greenthread
@@ -499,3 +501,46 @@ def ensure_b64_encoding(val):
         return val
     except TypeError:
         return base64.b64encode(val)
+
+
+def minixpath_select(items, minixpath):
+    """ Takes an xpath-like expression e.g. prop1/prop2/prop3, and for each
+    item in items, looks up items[prop1][prop2][prop3].  Like XPath, if any of
+    the intermediate results are lists it will treat each list item
+    individually.  A 'None' in items or any child expressions will be ignored,
+    this function will not throw because of None (anywhere) in items"""
+
+    if minixpath is None:
+        raise exception.Error("Invalid mini_xpath")
+
+    (first_token, sep, remainder) = minixpath.partition("/")
+
+    if first_token == "":
+        raise exception.Error("Invalid mini_xpath")
+
+    results = []
+
+    if items is None:
+        return results
+
+    for item in items:
+        if item is None:
+            continue
+        get_method = getattr(item, "get", None)
+        if get_method is None:
+            continue
+        child = get_method(first_token)
+        if child is None:
+            continue
+        if isinstance(child, types.ListType):
+            # Flatten intermediate lists
+            for x in child:
+                results.append(x)
+        else:
+            results.append(child)
+
+    if not sep:
+        # No more tokens
+        return results
+    else:
+        return minixpath_select(results, remainder)

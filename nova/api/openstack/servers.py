@@ -30,7 +30,7 @@ from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
-
+import types
 
 LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
@@ -63,22 +63,11 @@ def _translate_detail_keys(inst):
     inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
 
-    fixed_ip = inst['fixed_ip']
-    if fixed_ip:
-        # grab single private fixed ip
-        try:
-            private_ip = fixed_ip['address']
-            if private_ip:
-                inst_dict['addresses']['private'].append(private_ip)
-        except KeyError:
-            LOG.debug(_("Failed to read private ip"))
+    private_ips = utils.minixpath_select(inst, 'fixed_ip/address')
+    inst_dict['addresses']['private'] = private_ips
 
-        # grab all public floating ips
-        try:
-            for floating in fixed_ip['floating_ips']:
-                inst_dict['addresses']['public'].append(floating['address'])
-        except KeyError:
-            LOG.debug(_("Failed to read public ip(s)"))
+    public_ips = utils.minixpath_select(inst, 'fixed_ip/floating_ips/address')
+    inst_dict['addresses']['public'] = public_ips
 
     inst_dict['metadata'] = {}
     inst_dict['hostId'] = ''
