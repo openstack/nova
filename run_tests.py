@@ -181,6 +181,7 @@ class NovaTestResult(result.TextTestResult):
         return str(test)
 
     def addSuccess(self, test):
+        unittest.TestResult.addSuccess(self, test)
         if self.showAll:
             self.colorizer.write("OK", 'green')
             self.stream.writeln()
@@ -188,7 +189,8 @@ class NovaTestResult(result.TextTestResult):
             self.stream.write('.')
             self.stream.flush()
 
-    def addFailure(self, test):
+    def addFailure(self, test, err):
+        unittest.TestResult.addFailure(self, test, err)
         if self.showAll:
             self.colorizer.write("FAIL", 'red')
             self.stream.writeln()
