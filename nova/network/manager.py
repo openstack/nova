@@ -322,6 +322,16 @@ class FlatManager(NetworkManager):
     """
     timeout_fixed_ips = False
 
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+        standalone service.
+        """
+        #Fix for bug 723298 - do not call init_host on superclass
+        #Following code has been copied for NetworkManager.init_host
+        ctxt = context.get_admin_context()
+        for network in self.db.host_get_networks(ctxt, self.host):
+            self._on_set_network_host(ctxt, network['id'])
+
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
@@ -405,6 +415,22 @@ class FlatManager(NetworkManager):
         net['injected'] = FLAGS.flat_injected
         net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_id, net)
+
+    def allocate_floating_ip(self, context, project_id):
+        #Fix for bug 723298
+        raise NotImplementedError()
+
+    def associate_floating_ip(self, context, floating_address, fixed_address):
+        #Fix for bug 723298
+        raise NotImplementedError()
+
+    def disassociate_floating_ip(self, context, floating_address):
+        #Fix for bug 723298
+        raise NotImplementedError()
+
+    def deallocate_floating_ip(self, context, floating_address):
+        #Fix for bug 723298
+        raise NotImplementedError()
 
 
 class FlatDHCPManager(FlatManager):

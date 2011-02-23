@@ -50,10 +50,6 @@ flags.DEFINE_integer('periodic_interval', 60,
                      'seconds between running periodic tasks',
                      lower_bound=1)
 
-flags.DEFINE_string('pidfile', None,
-                    'pidfile to use for this service')
-
-
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
@@ -180,6 +176,13 @@ class Service(object):
             except Exception:
                 pass
         self.timers = []
+
+    def wait(self):
+        for x in self.timers:
+            try:
+                x.wait()
+            except Exception:
+                pass
 
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""

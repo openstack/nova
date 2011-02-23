@@ -1,4 +1,3 @@
-#!/bin/bash
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -17,19 +16,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# This gets zipped and run on the cloudpipe-managed OpenVPN server
-NAME=$1
-SUBJ=$2
+"""Tests for the testing base code."""
 
-mkdir -p projects/$NAME
-cd projects/$NAME
+from nova import rpc
+from nova import test
 
-# generate a server priv key
-openssl genrsa -out server.key 2048
 
-# generate a server CSR
-openssl req -new -key server.key -out server.csr -batch -subj "$SUBJ"
+class IsolationTestCase(test.TestCase):
+    """Ensure that things are cleaned up after failed tests.
 
-if [ "`id -u`" != "`grep nova /etc/passwd | cut -d':' -f3`" ]; then
-    sudo chown -R nova:nogroup .
-fi
+    These tests don't really do much here, but if isolation fails a bunch
+    of other tests should fail.
+
+    """
+    def test_service_isolation(self):
+        self.start_service('compute')
+
+    def test_rpc_consumer_isolation(self):
+        connection = rpc.Connection.instance(new=True)
+        consumer = rpc.TopicConsumer(connection, topic='compute')
+        consumer.register_callback(
+                lambda x, y: self.fail('I should never be called'))
+        consumer.attach_to_eventlet()
