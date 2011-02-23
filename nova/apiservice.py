@@ -79,7 +79,10 @@ class ApiService(object):
     @staticmethod
     def create():
         conf = wsgi.paste_config_file('nova-api.conf')
-        return serve(conf)
+        LOG.audit(_("Starting nova-api node (version %s)"),
+              version.version_string_with_vcs())
+        service = ApiService(conf)
+        return service
 
 
 def serve(conf):
