@@ -84,7 +84,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "vcpus": 0,
         "local_gb": 0,
         "hostname": "",
-        "host": "",
+        "host": None,
         "instance_type": "",
         "user_data": "",
         "reservation_id": "",

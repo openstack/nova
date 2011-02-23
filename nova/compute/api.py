@@ -447,7 +447,7 @@ class API(base.Base):
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
                   'port': output['port']}})
-        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+        return {'url': '%s/?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}
 
     def get_console_output(self, context, instance_id):
