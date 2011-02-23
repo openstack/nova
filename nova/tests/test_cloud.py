@@ -135,7 +135,9 @@ class CloudTestCase(test.TestCase):
 
     def test_describe_security_groups(self):
         """Makes sure describe_security_groups works and filters results."""
-        sec = db.security_group_create(self.context, {'name': 'test'})
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
         result = self.cloud.describe_security_groups(self.context)
         # NOTE(vish): should have the default group as well
         self.assertEqual(len(result['securityGroupInfo']), 2)
@@ -143,7 +145,7 @@ class CloudTestCase(test.TestCase):
                       group_name=[sec['name']])
         self.assertEqual(len(result['securityGroupInfo']), 1)
         self.assertEqual(
-                cloud.ec2_id_to_id(result['securityGroupInfo'][0]['name']),
+                result['securityGroupInfo'][0]['groupName'],
                 sec['name'])
         db.security_group_destroy(self.context, sec['id'])
 
