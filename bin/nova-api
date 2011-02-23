@@ -48,6 +48,7 @@ if __name__ == '__main__':
     conf = wsgi.paste_config_file('nova-api.conf')
     if not conf:
         LOG.error(_("No paste configuration found for: %s"), 'nova-api.conf')
+        sys.exit(1)
     else:
         service = apiservice.serve(conf)
         service.wait()
