@@ -48,7 +48,8 @@ def setup():
     ctxt = context.get_admin_context()
     network_manager.VlanManager().create_networks(ctxt,
                                                   FLAGS.fixed_range,
-                                                  5, 16,
+                                                  FLAGS.num_networks,
+                                                  FLAGS.network_size,
                                                   FLAGS.fixed_range_v6,
                                                   FLAGS.vlan_start,
                                                   FLAGS.vpn_start,
