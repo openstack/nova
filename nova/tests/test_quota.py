@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import compute
 from nova import context
 from nova import db
 from nova import flags
@@ -87,6 +88,18 @@ class QuotaTestCase(test.TestCase):
         num_instances = quota.allowed_instances(self.context, 100,
             instance_types.INSTANCE_TYPES['m1.small'])
         self.assertEqual(num_instances, 10)
+
+        # metadata_items
+        too_many_items = FLAGS.quota_metadata_items + 1000
+        num_metadata_items = quota.allowed_metadata_items(self.context,
+                                                          too_many_items)
+        self.assertEqual(num_metadata_items, FLAGS.quota_metadata_items)
+        db.quota_update(self.context, self.project.id, {'metadata_items': 5})
+        num_metadata_items = quota.allowed_metadata_items(self.context,
+                                                          too_many_items)
+        self.assertEqual(num_metadata_items, 5)
+
+        # Cleanup
         db.quota_destroy(self.context, self.project.id)
 
     def test_too_many_instances(self):
@@ -151,3 +164,15 @@ class QuotaTestCase(test.TestCase):
         self.assertRaises(quota.QuotaError, self.cloud.allocate_address,
                           self.context)
         db.floating_ip_destroy(context.get_admin_context(), address)
+
+    def test_too_many_metadata_items(self):
+        metadata = {}
+        for i in range(FLAGS.quota_metadata_items + 1):
+            metadata['key%s' % i] = 'value%s' % i
+        self.assertRaises(quota.QuotaError, compute.API().create,
+                                            self.context,
+                                            min_count=1,
+                                            max_count=1,
+                                            instance_type='m1.small',
+                                            image_id='fake',
+                                            metadata=metadata)

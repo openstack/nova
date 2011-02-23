@@ -17,6 +17,23 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
+"""Unittest runner for Nova.
+
+To run all tests
+    python run_tests.py
+
+To run a single test:
+    python run_tests.py test_compute:ComputeTestCase.test_run_terminate
+
+To run a single test module:
+    python run_tests.py test_compute
+
+    or
+
+    python run_tests.py api.test_wsgi
+
+"""
+
 import gettext
 import os
 import unittest
@@ -62,6 +79,15 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     logging.setup()
+    # If any argument looks like a test name but doesn't have "nova.tests" in
+    # front of it, automatically add that so we don't have to type as much
+    argv = []
+    for x in sys.argv:
+        if x.startswith('test_'):
+            argv.append('nova.tests.%s' % x)
+        else:
+            argv.append(x)
+
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,
@@ -70,4 +96,4 @@ if __name__ == '__main__':
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c)
-    sys.exit(not core.run(config=c, testRunner=runner))
+    sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
