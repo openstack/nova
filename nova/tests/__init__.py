@@ -37,13 +37,17 @@ setattr(__builtin__, '_', lambda x: x)
 
 
 def setup():
+    import os
     import shutil
+
     from nova import context
     from nova import flags
     from nova.db import migration
     from nova.network import manager as network_manager
     from nova.tests import fake_flags
+
     FLAGS = flags.FLAGS
+
     migration.db_sync()
     ctxt = context.get_admin_context()
     network_manager.VlanManager().create_networks(ctxt,
@@ -54,4 +58,5 @@ def setup():
                                                   FLAGS.vlan_start,
                                                   FLAGS.vpn_start,
                                                   )
-    shutil.copyfile("tests.sqlite", "clean.sqlite")
+    shutil.copyfile(os.path.join(FLAGS.state_path, FLAGS.sqlite_db),
+                    os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db))

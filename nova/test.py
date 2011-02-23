@@ -22,12 +22,14 @@ Allows overriding of flags for use of fakes,
 and some black magic for inline callbacks.
 """
 
+
 import datetime
+import os
+import shutil
 import uuid
 import unittest
 
 import mox
-import shutil
 import stubout
 
 from nova import context
@@ -39,8 +41,8 @@ from nova import service
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('flush_db', True,
-                  'Flush the database before running fake tests')
+flags.DEFINE_string('sqlite_clean_db', 'clean.sqlite',
+                    'File name of clean sqlite db')
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
 
@@ -65,7 +67,8 @@ class TestCase(unittest.TestCase):
         #             now that we have some required db setup for the system
         #             to work properly.
         self.start = datetime.datetime.utcnow()
-        shutil.copyfile("clean.sqlite", "tests.sqlite")
+        shutil.copyfile(os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db),
+                        os.path.join(FLAGS.state_path, FLAGS.sqlite_db))
 
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators

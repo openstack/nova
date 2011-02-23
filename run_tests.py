@@ -46,11 +46,15 @@ import unittest
 import sys
 
 from nose import config
-from nose import result
 from nose import core
+from nose import result
 
+from nova import flags
 from nova import log as logging
 from nova.tests import fake_flags
+
+
+FLAGS = flags.FLAGS
 
 
 class _AnsiColorizer(object):
@@ -259,10 +263,11 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     logging.setup()
-    testdir = os.path.abspath(os.path.join("nova","tests"))
-    testdb = os.path.join(testdir, "tests.sqlite")
+    testdb = os.path.join(FLAGS.state_path,
+                          FLAGS.sqlite_db)
     if os.path.exists(testdb):
         os.unlink(testdb)
+    testdir = os.path.abspath(os.path.join("nova","tests"))
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,
