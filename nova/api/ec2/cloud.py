@@ -675,7 +675,8 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context, internal_id)
+                instance = self.compute_api.get(context,
+                                                instance_id=internal_id)
                 instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
