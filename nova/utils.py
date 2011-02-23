@@ -32,10 +32,10 @@ import string
 import struct
 import sys
 import time
+import types
 from xml.sax import saxutils
 import re
 import netaddr
-import types
 
 from eventlet import event
 from eventlet import greenthread
@@ -503,18 +503,19 @@ def ensure_b64_encoding(val):
         return base64.b64encode(val)
 
 
-def minixpath_select(items, minixpath):
-    """ Takes an xpath-like expression e.g. prop1/prop2/prop3, and for each
-    item in items, looks up items[prop1][prop2][prop3].  Like XPath, if any of
-    the intermediate results are lists it will treat each list item
-    individually.  A 'None' in items or any child expressions will be ignored,
-    this function will not throw because of None (anywhere) in items.  The
-    returned list will contain no None values."""
+def get_from_path(items, path):
+    """ Returns a list of items matching the specified path.  Takes an
+    XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,
+    looks up items[prop1][prop2][prop3].  Like XPath, if any of the
+    intermediate results are lists it will treat each list item individually.
+    A 'None' in items or any child expressions will be ignored, this function
+    will not throw because of None (anywhere) in items.  The returned list
+    will contain no None values."""
 
-    if minixpath is None:
+    if path is None:
         raise exception.Error("Invalid mini_xpath")
 
-    (first_token, sep, remainder) = minixpath.partition("/")
+    (first_token, sep, remainder) = path.partition("/")
 
     if first_token == "":
         raise exception.Error("Invalid mini_xpath")
@@ -537,7 +538,6 @@ def minixpath_select(items, minixpath):
         child = get_method(first_token)
         if child is None:
             continue
-        #print "%s => %s" % (first_token, child)
         if isinstance(child, types.ListType):
             # Flatten intermediate lists
             for x in child:
@@ -549,4 +549,4 @@ def minixpath_select(items, minixpath):
         # No more tokens
         return results
     else:
-        return minixpath_select(results, remainder)
+        return get_from_path(results, remainder)

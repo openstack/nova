@@ -30,7 +30,6 @@ from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
-import types
 
 LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
@@ -63,10 +62,10 @@ def _translate_detail_keys(inst):
     inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
 
-    private_ips = utils.minixpath_select(inst, 'fixed_ip/address')
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
     inst_dict['addresses']['private'] = private_ips
 
-    public_ips = utils.minixpath_select(inst, 'fixed_ip/floating_ips/address')
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
     inst_dict['addresses']['public'] = public_ips
 
     inst_dict['metadata'] = {}
