@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import compute
 from nova import context
 from nova import db
 from nova import flags
@@ -168,7 +169,7 @@ class QuotaTestCase(test.TestCase):
         metadata = {}
         for i in range(FLAGS.quota_metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
-        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,

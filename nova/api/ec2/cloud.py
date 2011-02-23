@@ -783,9 +783,6 @@ class CloudController(object):
 
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
-        # NOTE(justinsb): the EC2 API doesn't support metadata here, but this
-        #  is needed for the unit tests.  Maybe the unit tests shouldn't be
-        #  calling the EC2 code
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_by_type(
                 kwargs.get('instance_type', None)),
@@ -800,8 +797,7 @@ class CloudController(object):
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
-                                  'AvailabilityZone'),
-            metadata=kwargs.get('metadata', []))
+                                  'AvailabilityZone'))
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 
