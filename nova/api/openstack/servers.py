@@ -144,11 +144,13 @@ class Controller(wsgi.Controller):
         metadata stored in Glance as 'image_properties'
         """
         def lookup(param):
-            properties = image.get('properties')
-            if properties:
-                return properties.get(param)
-            else:
-                return image.get(param)
+            _image_id = image_id
+            try:
+                return image['properties'][param]
+            except KeyError:
+                LOG.debug(
+                    _("%(param)s property not found for image %(_image_id)s") %
+                      locals())
 
         image_id = str(image_id)
         image = self._image_service.show(req.environ['nova.context'], image_id)
