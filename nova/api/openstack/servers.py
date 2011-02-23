@@ -152,9 +152,10 @@ class Controller(wsgi.Controller):
             try:
                 return image['properties'][param]
             except KeyError:
-                raise exception.NotFound(
+                LOG.debug(
                     _("%(param)s property not found for image %(_image_id)s") %
                       locals())
+            return None
 
         image_id = str(image_id)
         image = self._image_service.show(req.environ['nova.context'], image_id)
