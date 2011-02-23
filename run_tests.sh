@@ -39,7 +39,7 @@ done
 
 function run_tests {
   # Just run the test suites in current environment
-  ${wrapper} $NOSETESTS
+  ${wrapper} $NOSETESTS 2> run_tests.log
 }
 
 NOSETESTS="python run_tests.py $noseargs"
