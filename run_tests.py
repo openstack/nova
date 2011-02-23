@@ -86,7 +86,7 @@ class _AnsiColorizer(object):
                 try:
                     return curses.tigetnum("colors") > 2
                 except curses.error:
-                    curses.setupterm(fd=stream.fileno())
+                    curses.setupterm()
                     return curses.tigetnum("colors") > 2
             except:
                 raise
@@ -111,13 +111,13 @@ class _Win32Colorizer(object):
     See _AnsiColorizer docstring.
     """
     def __init__(self, stream):
-        from win32console import GetStdHandle, STD_ERROR_HANDLE, \
+        from win32console import GetStdHandle, STD_OUT_HANDLE, \
              FOREGROUND_RED, FOREGROUND_BLUE, FOREGROUND_GREEN, \
              FOREGROUND_INTENSITY
         red, green, blue, bold = (FOREGROUND_RED, FOREGROUND_GREEN,
                                   FOREGROUND_BLUE, FOREGROUND_INTENSITY)
         self.stream = stream
-        self.screenBuffer = GetStdHandle(STD_ERROR_HANDLE)
+        self.screenBuffer = GetStdHandle(STD_OUT_HANDLE)
         self._colors = {
             'normal': red | green | blue,
             'red': red | bold,
@@ -133,7 +133,7 @@ class _Win32Colorizer(object):
         try:
             import win32console
             screenBuffer = win32console.GetStdHandle(
-                win32console.STD_ERROR_HANDLE)
+                win32console.STD_OUT_HANDLE)
         except ImportError:
             return False
         import pywintypes
@@ -174,12 +174,14 @@ class NovaTestResult(result.TextTestResult):
         result.TextTestResult.__init__(self, *args, **kw)
         self._last_case = None
         self.colorizer = None
+        # NOTE(vish): reset stdout for the terminal check
+        stdout = sys.stdout
+        sys.stdout = sys.__stdout__
         for colorizer in [_Win32Colorizer, _AnsiColorizer, _NullColorizer]:
-            # NOTE(vish): nose does funky stuff with stdout, so use stderr
-            #             to setup the colorizer
-            if colorizer.supported(sys.stderr):
+            if colorizer.supported():
                 self.colorizer = colorizer(self.stream)
                 break
+        sys.stdout = stdout
 
     def getDescription(self, test):
         return str(test)

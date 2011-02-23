@@ -41,4 +41,3 @@ FLAGS.iscsi_num_targets = 8
 FLAGS.verbose = True
 FLAGS.sqlite_db = "tests.sqlite"
 FLAGS.use_ipv6 = True
-FLAGS.logfile = 'tests.log'

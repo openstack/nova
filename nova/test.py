@@ -30,6 +30,7 @@ import uuid
 import unittest
 
 import mox
+import shutil
 import stubout
 
 from nova import context
