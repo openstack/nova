@@ -31,6 +31,7 @@ from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
 
+
 LOG = logging.getLogger('server')
 LOG.setLevel(logging.DEBUG)
 
