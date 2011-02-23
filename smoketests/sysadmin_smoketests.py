@@ -35,10 +35,8 @@ from smoketests import flags
 from smoketests import base
 
 
-SUITE_NAMES = '[image, instance, volume]'
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
               'Local kernel file to use for bundling tests')
 flags.DEFINE_string('bundle_image', 'openwrt-x86-ext2.image',
@@ -48,17 +46,7 @@ TEST_PREFIX = 'test%s' % int(random.random() * 1000000)
 TEST_BUCKET = '%s_bucket' % TEST_PREFIX
 TEST_KEY = '%s_key' % TEST_PREFIX
 TEST_GROUP = '%s_group' % TEST_PREFIX
-TEST_DATA = {}
-
-
-class UserSmokeTestCase(base.SmokeTestCase):
-    def setUp(self):
-        global TEST_DATA
-        self.conn = self.connection_for_env()
-        self.data = TEST_DATA
-
-
-class ImageTests(UserSmokeTestCase):
+class ImageTests(base.UserSmokeTestCase):
     def test_001_can_bundle_image(self):
         self.assertTrue(self.bundle_image(FLAGS.bundle_image))
 
@@ -131,7 +119,7 @@ class ImageTests(UserSmokeTestCase):
         self.assertTrue(self.delete_bundle_bucket(TEST_BUCKET))
 
 
-class InstanceTests(UserSmokeTestCase):
+class InstanceTests(base.UserSmokeTestCase):
     def test_001_can_create_keypair(self):
         key = self.create_key_pair(self.conn, TEST_KEY)
         self.assertEqual(key.name, TEST_KEY)
@@ -173,34 +161,12 @@ class InstanceTests(UserSmokeTestCase):
                                      TEST_KEY):
                 self.fail('could not ssh to instance v6')
 
-    def test_006_can_allocate_elastic_ip(self):
-        result = self.conn.allocate_address()
-        self.assertTrue(hasattr(result, 'public_ip'))
-        self.data['public_ip'] = result.public_ip
-
-    def test_007_can_associate_ip_with_instance(self):
-        result = self.conn.associate_address(self.data['instance'].id,
-                                             self.data['public_ip'])
-        self.assertTrue(result)
-
-    def test_008_can_ssh_with_public_ip(self):
-        if not self.wait_for_ssh(self.data['public_ip'], TEST_KEY):
-            self.fail('could not ssh to public ip')
-
-    def test_009_can_disassociate_ip_from_instance(self):
-        result = self.conn.disassociate_address(self.data['public_ip'])
-        self.assertTrue(result)
-
-    def test_010_can_deallocate_elastic_ip(self):
-        result = self.conn.release_address(self.data['public_ip'])
-        self.assertTrue(result)
-
     def test_999_tearDown(self):
         self.delete_key_pair(self.conn, TEST_KEY)
         self.conn.terminate_instances([self.data['instance'].id])
 
 
-class VolumeTests(UserSmokeTestCase):
+class VolumeTests(base.UserSmokeTestCase):
     def setUp(self):
         super(VolumeTests, self).setUp()
         self.device = '/dev/vdb'
@@ -319,79 +285,9 @@ class VolumeTests(UserSmokeTestCase):
         self.conn.delete_key_pair(TEST_KEY)
 
 
-class SecurityGroupTests(UserSmokeTestCase):
-
-    def __public_instance_is_accessible(self):
-        id_url = "latest/meta-data/instance-id"
-        options = "-s --max-time 1"
-        command = "curl %s %s/%s" % (options, self.data['public_ip'], id_url)
-        instance_id = commands.getoutput(command).strip()
-        if not instance_id:
-            return False
-        if instance_id != self.data['instance_id']:
-            raise Exception("Wrong instance id")
-        return True
-
-    def test_001_can_create_security_group(self):
-        self.conn.create_security_group(TEST_GROUP, description='test')
-
-        groups = self.conn.get_all_security_groups()
-        self.assertTrue(TEST_GROUP in [group.name for group in groups])
-
-    def test_002_can_launch_instance_in_security_group(self):
-        self.create_key_pair(self.conn, TEST_KEY)
-        reservation = self.conn.run_instances(FLAGS.test_image,
-                                              key_name=TEST_KEY,
-                                              security_groups=[TEST_GROUP],
-                                              instance_type='m1.tiny')
-
-        self.data['instance_id'] = reservation.instances[0].id
-
-    def test_003_can_authorize_security_group_ingress(self):
-        self.assertTrue(self.conn.authorize_security_group(TEST_GROUP,
-                                                           ip_protocol='tcp',
-                                                           from_port=80,
-                                                           to_port=80))
-
-    def test_004_can_access_instance_over_public_ip(self):
-        result = self.conn.allocate_address()
-        self.assertTrue(hasattr(result, 'public_ip'))
-        self.data['public_ip'] = result.public_ip
-
-        result = self.conn.associate_address(self.data['instance_id'],
-                                             self.data['public_ip'])
-        start_time = time.time()
-        while not self.__public_instance_is_accessible():
-            # 1 minute to launch
-            if time.time() - start_time > 60:
-                raise Exception("Timeout")
-            time.sleep(1)
-
-    def test_005_can_revoke_security_group_ingress(self):
-        self.assertTrue(self.conn.revoke_security_group(TEST_GROUP,
-                                                        ip_protocol='tcp',
-                                                        from_port=80,
-                                                        to_port=80))
-        start_time = time.time()
-        while self.__public_instance_is_accessible():
-            # 1 minute to teardown
-            if time.time() - start_time > 60:
-                raise Exception("Timeout")
-            time.sleep(1)
-
-    def test_999_tearDown(self):
-        self.conn.delete_key_pair(TEST_KEY)
-        self.conn.delete_security_group(TEST_GROUP)
-        groups = self.conn.get_all_security_groups()
-        self.assertFalse(TEST_GROUP in [group.name for group in groups])
-        self.conn.terminate_instances([self.data['instance_id']])
-        self.assertTrue(self.conn.release_address(self.data['public_ip']))
-
-
 if __name__ == "__main__":
     suites = {'image': unittest.makeSuite(ImageTests),
               'instance': unittest.makeSuite(InstanceTests),
-              #'security_group': unittest.makeSuite(SecurityGroupTests),
               'volume': unittest.makeSuite(VolumeTests)
               }
     sys.exit(base.run_tests(suites))

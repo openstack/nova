@@ -28,7 +28,9 @@ from boto.ec2.regioninfo import RegionInfo
 
 from smoketests import flags
 
+SUITE_NAMES = '[image, instance, volume]'
 FLAGS = flags.FLAGS
+flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 boto_v6 = None
 
 
@@ -171,6 +173,16 @@ class SmokeTestCase(unittest.TestCase):
             print '%s -> \n%s' % (cmd, output)
             raise Exception(output)
         return True
+
+
+TEST_DATA = {}
+
+
+class UserSmokeTestCase(SmokeTestCase):
+    def setUp(self):
+        global TEST_DATA
+        self.conn = self.connection_for_env()
+        self.data = TEST_DATA
 
 
 def run_tests(suites):
