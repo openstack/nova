@@ -34,9 +34,9 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import apiservice
 from nova import flags
 from nova import log as logging
-from nova import apiservice
 from nova import wsgi
 
 FLAGS = flags.FLAGS
