@@ -175,5 +175,3 @@ class MiniXPathTestCase(test.TestCase):
         input = {'a': [1, 2, {'b': 'b_1'}]}
         self.assertEquals([1, 2, {'b': 'b_1'}], xp(input, "a"))
         self.assertEquals(['b_1'], xp(input, "a/b"))
-
-
