@@ -26,15 +26,14 @@ import datetime
 import unittest
 
 import mox
+import shutil
 import stubout
 
 from nova import context
 from nova import db
 from nova import fakerabbit
 from nova import flags
-from nova import log as logging
 from nova import rpc
-from nova.network import manager as network_manager
 
 
 FLAGS = flags.FLAGS
@@ -65,14 +64,8 @@ class TestCase(unittest.TestCase):
         #             to work properly.
         self.start = datetime.datetime.utcnow()
         ctxt = context.get_admin_context()
-        if db.network_count(ctxt) != 5:
-            network_manager.VlanManager().create_networks(ctxt,
-                                                          FLAGS.fixed_range,
-                                                          5, 16,
-                                                          FLAGS.fixed_range_v6,
-                                                          FLAGS.vlan_start,
-                                                          FLAGS.vpn_start,
-                                                          )
+        shutil.copyfile("tests.sqlite", "clean.sqlite")
+        assert(db.security_group_get_all(ctxt) == [])
 
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators
@@ -86,6 +79,7 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """Runs after each test method to finalize/tear down test
         environment."""
+        shutil.copyfile("clean.sqlite", "tests.sqlite")
         try:
             self.mox.UnsetStubs()
             self.stubs.UnsetAll()
@@ -93,9 +87,6 @@ class TestCase(unittest.TestCase):
             self.mox.VerifyAll()
             # NOTE(vish): Clean up any ips associated during the test.
             ctxt = context.get_admin_context()
-            db.fixed_ip_disassociate_all_by_timeout(ctxt, FLAGS.host,
-                                                    self.start)
-            db.network_disassociate_all(ctxt)
             rpc.Consumer.attach_to_eventlet = self.originalAttach
             for x in self.injected:
                 try:
@@ -106,7 +97,6 @@ class TestCase(unittest.TestCase):
             if FLAGS.fake_rabbit:
                 fakerabbit.reset_all()
 
-            db.security_group_destroy_all(ctxt)
             super(TestCase, self).tearDown()
         finally:
             self.reset_flags()

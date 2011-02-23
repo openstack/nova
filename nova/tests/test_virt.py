@@ -206,9 +206,9 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEquals(uri, testuri)
 
     def tearDown(self):
-        super(LibvirtConnTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        super(LibvirtConnTestCase, self).tearDown()
 
 
 class IptablesFirewallTestCase(test.TestCase):
@@ -388,6 +388,7 @@ class NWFilterTestCase(test.TestCase):
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        super(NWFilterTestCase, self).tearDown()
 
     def test_cidr_rule_nwfilter_xml(self):
         cloud_controller = cloud.CloudController()

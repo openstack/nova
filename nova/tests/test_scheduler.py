@@ -150,6 +150,7 @@ class SimpleDriverTestCase(test.TestCase):
     def tearDown(self):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
+        super(SimpleDriverTestCase, self).tearDown()
 
     def _create_instance(self, **kwargs):
         """Create a test instance"""

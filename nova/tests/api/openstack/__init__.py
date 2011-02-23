@@ -16,7 +16,7 @@
 #    under the License.
 
 import webob.dec
-import unittest
+from nova import test
 
 from nova import context
 from nova import flags
@@ -33,7 +33,7 @@ def simple_wsgi(req):
     return ""
 
 
-class RateLimitingMiddlewareTest(unittest.TestCase):
+class RateLimitingMiddlewareTest(test.TestCase):
 
     def test_get_action_name(self):
         middleware = RateLimitingMiddleware(simple_wsgi)
