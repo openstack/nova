@@ -16,9 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Wrapper for API service, makes it look more like the non-WSGI services
-"""
+"""Wrapper for API service, makes it look more like the non-WSGI services"""
 
 from nova import flags
 from nova import log as logging
@@ -28,6 +26,7 @@ from nova import wsgi
 
 LOG = logging.getLogger('nova.api')
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ec2_listen', "0.0.0.0",
                     'IP address for EC2 API to listen')
@@ -35,6 +34,7 @@ flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
 flags.DEFINE_string('osapi_listen', "0.0.0.0",
                     'IP address for OpenStack API to listen')
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
+
 
 API_ENDPOINTS = ['ec2', 'osapi']
 

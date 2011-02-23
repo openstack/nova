@@ -37,7 +37,6 @@ gettext.install('nova', unicode=1)
 from nova import flags
 from nova import log as logging
 from nova import apiservice
-from nova import utils
 from nova import wsgi
 
 FLAGS = flags.FLAGS
