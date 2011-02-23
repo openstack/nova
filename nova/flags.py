@@ -160,9 +160,45 @@ class StrWrapper(object):
         raise KeyError(name)
 
 
-FLAGS = FlagValues()
-gflags.FLAGS = FLAGS
-gflags.DEFINE_flag(gflags.HelpFlag(), FLAGS)
+# Copied from gflags with small mods to get the naming correct.
+# Originally gflags checks for the first module that is not gflags that is
+# in the call chain, we want to check for the first module that is not gflags
+# and not this module.
+def _GetCallingModule():
+    """Returns the name of the module that's calling into this module.
+
+    We generally use this function to get the name of the module calling a
+    DEFINE_foo... function.
+    """
+    # Walk down the stack to find the first globals dict that's not ours.
+    for depth in range(1, sys.getrecursionlimit()):
+        if not sys._getframe(depth).f_globals is globals():
+            module_name = __GetModuleName(sys._getframe(depth).f_globals)
+            if module_name == 'gflags':
+                continue
+            if module_name is not None:
+                return module_name
+    raise AssertionError("No module was found")
+
+
+# Copied from gflags because it is a private function
+def __GetModuleName(globals_dict):
+    """Given a globals dict, returns the name of the module that defines it.
+
+    Args:
+    globals_dict: A dictionary that should correspond to an environment
+      providing the values of the globals.
+
+    Returns:
+    A string (the name of the module) or None (if the module could not
+    be identified.
+    """
+    for name, module in sys.modules.iteritems():
+        if getattr(module, '__dict__', None) is globals_dict:
+            if name == '__main__':
+                return sys.argv[0]
+            return name
+    return None
 
 
 def _wrapper(func):
@@ -171,6 +207,11 @@ def _wrapper(func):
         func(*args, **kw)
     _wrapped.func_name = func.func_name
     return _wrapped
+
+
+FLAGS = FlagValues()
+gflags.FLAGS = FLAGS
+gflags._GetCallingModule = _GetCallingModule
 
 
 DEFINE = _wrapper(gflags.DEFINE)
@@ -185,8 +226,6 @@ DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
 DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
 DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
 DEFINE_flag = _wrapper(gflags.DEFINE_flag)
-
-
 HelpFlag = gflags.HelpFlag
 HelpshortFlag = gflags.HelpshortFlag
 HelpXMLFlag = gflags.HelpXMLFlag
