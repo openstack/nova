@@ -501,7 +501,6 @@ class VMOps(object):
 
         # Plug the VBD into the target instance
         self._session.call_xenapi("Async.VBD.plug", vbd_ref)
-        pass
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
