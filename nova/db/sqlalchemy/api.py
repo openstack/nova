@@ -1046,7 +1046,8 @@ def network_create_safe(context, values):
 
 @require_admin_context
 def network_disassociate(context, network_id):
-    network_update(context, network_id, {'project_id': None})
+    network_update(context, network_id, {'project_id': None,
+                                         'host': None})
 
 
 @require_admin_context
