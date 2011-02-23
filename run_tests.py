@@ -198,6 +198,7 @@ class NovaTestResult(result.TextTestResult):
     def getDescription(self, test):
         return str(test)
 
+    # NOTE(vish): copied from unittest with edit to add color
     def addSuccess(self, test):
         unittest.TestResult.addSuccess(self, test)
         if self.showAll:
@@ -207,6 +208,7 @@ class NovaTestResult(result.TextTestResult):
             self.stream.write('.')
             self.stream.flush()
 
+    # NOTE(vish): copied from unittest with edit to add color
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
         if self.showAll:
@@ -216,6 +218,7 @@ class NovaTestResult(result.TextTestResult):
             self.stream.write('F')
             self.stream.flush()
 
+    # NOTE(vish): copied from nose with edit to add color
     def addError(self, test, err):
         """Overrides normal addError to add support for
         errorClasses. If the exception is a registered class, the
