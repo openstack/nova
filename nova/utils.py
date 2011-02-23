@@ -508,7 +508,8 @@ def minixpath_select(items, minixpath):
     item in items, looks up items[prop1][prop2][prop3].  Like XPath, if any of
     the intermediate results are lists it will treat each list item
     individually.  A 'None' in items or any child expressions will be ignored,
-    this function will not throw because of None (anywhere) in items"""
+    this function will not throw because of None (anywhere) in items.  The
+    returned list will contain no None values."""
 
     if minixpath is None:
         raise exception.Error("Invalid mini_xpath")
@@ -523,6 +524,10 @@ def minixpath_select(items, minixpath):
     if items is None:
         return results
 
+    if not isinstance(items, types.ListType):
+        # Wrap single objects in a list
+        items = [items]
+
     for item in items:
         if item is None:
             continue
@@ -532,6 +537,7 @@ def minixpath_select(items, minixpath):
         child = get_method(first_token)
         if child is None:
             continue
+        #print "%s => %s" % (first_token, child)
         if isinstance(child, types.ListType):
             # Flatten intermediate lists
             for x in child:

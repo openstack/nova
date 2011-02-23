@@ -139,3 +139,41 @@ class MiniXPathTestCase(test.TestCase):
         self.assertRaises(exception.Error, xp, [], "a//a")
         self.assertRaises(exception.Error, xp, [], "a//a/")
         self.assertRaises(exception.Error, xp, [], "a/a/")
+
+    def test_real_failure1(self):
+        # Real world failure case...
+        #  We weren't coping when the input was a Dictionary instead of a List
+        # This led to test_accepts_dictionaries
+        xp = utils.minixpath_select
+
+        inst = {'fixed_ip': {'floating_ips': [{'address': '1.2.3.4'}],
+                             'address': '192.168.0.3'},
+                'hostname': ''}
+
+        private_ips = xp(inst, 'fixed_ip/address')
+        public_ips = xp(inst, 'fixed_ip/floating_ips/address')
+        self.assertEquals(['192.168.0.3'], private_ips)
+        self.assertEquals(['1.2.3.4'], public_ips)
+
+    def test_accepts_dictionaries(self):
+        xp = utils.minixpath_select
+
+        input = {'a': [1, 2, 3]}
+        self.assertEquals([1, 2, 3], xp(input, "a"))
+        self.assertEquals([], xp(input, "a/b"))
+        self.assertEquals([], xp(input, "a/b/c"))
+
+        input = {'a': {'b': [1, 2, 3]}}
+        self.assertEquals([{'b': [1, 2, 3]}], xp(input, "a"))
+        self.assertEquals([1, 2, 3], xp(input, "a/b"))
+        self.assertEquals([], xp(input, "a/b/c"))
+
+        input = {'a': [{'b': [1, 2, 3]}, {'b': [4, 5, 6]}]}
+        self.assertEquals([1, 2, 3, 4, 5, 6], xp(input, "a/b"))
+        self.assertEquals([], xp(input, "a/b/c"))
+
+        input = {'a': [1, 2, {'b': 'b_1'}]}
+        self.assertEquals([1, 2, {'b': 'b_1'}], xp(input, "a"))
+        self.assertEquals(['b_1'], xp(input, "a/b"))
+
+
