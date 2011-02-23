@@ -63,9 +63,11 @@ def _translate_detail_keys(inst):
     inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
 
+    # grab single private fixed ip
     private_ips = utils.get_from_path(inst, 'fixed_ip/address')
     inst_dict['addresses']['private'] = private_ips
 
+    # grab all public floating ips
     public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
     inst_dict['addresses']['public'] = public_ips
 
