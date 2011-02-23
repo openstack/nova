@@ -198,8 +198,9 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        enabled_services = db.service_get_all(context)
-        disabled_services = db.service_get_all(context, True)
+        ctxt = context.elevated()
+        enabled_services = db.service_get_all(ctxt)
+        disabled_services = db.service_get_all(ctxt, True)
         available_zones = []
         for zone in [service.availability_zone for service
                      in enabled_services]:
