@@ -49,4 +49,5 @@ if __name__ == '__main__':
     if not conf:
         LOG.error(_("No paste configuration found for: %s"), 'nova-api.conf')
     else:
-        apiservice.serve(conf)
+        service = apiservice.serve(conf)
+        service.wait()

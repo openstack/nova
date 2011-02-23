@@ -60,7 +60,7 @@ def _run_app(paste_config_file):
     server = wsgi.Server()
     for app in apps:
         server.start(*app)
-    server.wait()
+    return server
 
 
 class ApiService(object):
@@ -68,9 +68,13 @@ class ApiService(object):
 
     def __init__(self, conf):
         self.conf = conf
+        self.wsgi_app = None
 
     def start(self):
-        _run_app(self.conf)
+        self.wsgi_app = _run_app(self.conf)
+
+    def wait(self):
+        self.wsgi_app.wait()
 
     @staticmethod
     def create():
