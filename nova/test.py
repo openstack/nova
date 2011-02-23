@@ -23,6 +23,7 @@ and some black magic for inline callbacks.
 """
 
 import datetime
+import uuid
 import unittest
 
 import mox
@@ -34,6 +35,7 @@ from nova import db
 from nova import fakerabbit
 from nova import flags
 from nova import rpc
+from nova import service
 
 
 FLAGS = flags.FLAGS
@@ -71,6 +73,7 @@ class TestCase(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.flag_overrides = {}
         self.injected = []
+        self._services = []
         self._monkey_patch_attach()
         self._original_flags = FLAGS.FlagValuesDict()
 
@@ -82,21 +85,31 @@ class TestCase(unittest.TestCase):
             self.stubs.UnsetAll()
             self.stubs.SmartUnsetAll()
             self.mox.VerifyAll()
-            # NOTE(vish): Clean up any ips associated during the test.
-            ctxt = context.get_admin_context()
+            super(TestCase, self).tearDown()
+        finally:
+            # Clean out fake_rabbit's queue if we used it
+            if FLAGS.fake_rabbit:
+                fakerabbit.reset_all()
+
+            # Reset any overriden flags
+            self.reset_flags()
+
+            # Reset our monkey-patches
             rpc.Consumer.attach_to_eventlet = self.originalAttach
+
+            # Stop any timers
             for x in self.injected:
                 try:
                     x.stop()
                 except AssertionError:
                     pass
 
-            if FLAGS.fake_rabbit:
-                fakerabbit.reset_all()
-
-            super(TestCase, self).tearDown()
-        finally:
-            self.reset_flags()
+            # Kill any services
+            for x in self._services:
+                try:
+                    x.kill()
+                except Exception:
+                    pass
 
     def flags(self, **kw):
         """Override flag variables for a test"""
@@ -113,6 +126,15 @@ class TestCase(unittest.TestCase):
         FLAGS.Reset()
         for k, v in self._original_flags.iteritems():
             setattr(FLAGS, k, v)
+
+    def start_service(self, name, host=None, **kwargs):
+        host = host and host or uuid.uuid4().hex
+        kwargs.setdefault('host', host)
+        kwargs.setdefault('binary', 'nova-%s' % name)
+        svc = service.Service.create(**kwargs)
+        svc.start()
+        self._services.append(svc)
+        return svc
 
     def _monkey_patch_attach(self):
         self.originalAttach = rpc.Consumer.attach_to_eventlet

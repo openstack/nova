@@ -50,7 +50,7 @@ class Test(test.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        f.add_user(nova.auth.manager.User(1, 'herp', 'herp', 'derp', None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -64,7 +64,7 @@ class Test(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        f.add_user(nova.auth.manager.User(1, 'herp', 'herp', 'derp', None))
 
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
@@ -148,7 +148,7 @@ class TestLimiter(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        f.add_user(nova.auth.manager.User(1, 'herp', 'herp', 'derp', None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
