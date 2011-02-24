@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -31,6 +32,7 @@ import string
 import struct
 import sys
 import time
+import types
 from xml.sax import saxutils
 import re
 import netaddr
@@ -55,7 +57,7 @@ def import_class(import_str):
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
-        logging.debug(_('Inner Exception: %s'), exc)
+        LOG.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
@@ -499,3 +501,52 @@ def ensure_b64_encoding(val):
         return val
     except TypeError:
         return base64.b64encode(val)
+
+
+def get_from_path(items, path):
+    """ Returns a list of items matching the specified path.  Takes an
+    XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,
+    looks up items[prop1][prop2][prop3].  Like XPath, if any of the
+    intermediate results are lists it will treat each list item individually.
+    A 'None' in items or any child expressions will be ignored, this function
+    will not throw because of None (anywhere) in items.  The returned list
+    will contain no None values."""
+
+    if path is None:
+        raise exception.Error("Invalid mini_xpath")
+
+    (first_token, sep, remainder) = path.partition("/")
+
+    if first_token == "":
+        raise exception.Error("Invalid mini_xpath")
+
+    results = []
+
+    if items is None:
+        return results
+
+    if not isinstance(items, types.ListType):
+        # Wrap single objects in a list
+        items = [items]
+
+    for item in items:
+        if item is None:
+            continue
+        get_method = getattr(item, "get", None)
+        if get_method is None:
+            continue
+        child = get_method(first_token)
+        if child is None:
+            continue
+        if isinstance(child, types.ListType):
+            # Flatten intermediate lists
+            for x in child:
+                results.append(x)
+        else:
+            results.append(child)
+
+    if not sep:
+        # No more tokens
+        return results
+    else:
+        return get_from_path(results, remainder)
