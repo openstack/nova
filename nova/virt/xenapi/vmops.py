@@ -450,6 +450,7 @@ class VMOps(object):
         Creates vifs for an instance
 
         """
+        vm_opaque_ref = self._get_vm_opaque_ref(instance.id)
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_opaque_ref)
         if networks is None:
             networks = db.network_get_all_by_instance(admin_context,
