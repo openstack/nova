@@ -118,8 +118,7 @@ class ZoneManager(object):
            <cap>_min and <cap>_max values."""
         service_dict = self.service_states
         if service:
-            service_dict = dict(service_name=service,
-                                hosts=self.service_states.get(service, {}))
+            service_dict = {service: self.service_states.get(service, {})}
 
         # TODO(sandy) - be smarter about fabricating this structure.
         # But it's likely to change once we understand what the Best-Match

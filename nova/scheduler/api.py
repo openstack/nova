@@ -25,34 +25,37 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.api')
 
 
+def _call_scheduler(method, context, params=None):
+    """Generic handler for RPC calls to the scheduler.
+
+    :param params: Optional dictionary of arguments to be passed to the
+                   scheduler worker
+
+    :retval: Result returned by scheduler worker
+    """
+    if not params:
+        params = {}
+    queue = FLAGS.scheduler_topic
+    kwargs = {'method': method, 'args': params}
+    return rpc.call(context, queue, kwargs)
+
+
 class API:
     """API for interacting with the scheduler."""
 
-    def _call_scheduler(self, method, context, params=None):
-        """Generic handler for RPC calls to the scheduler.
-
-        :param params: Optional dictionary of arguments to be passed to the
-                       scheduler worker
-
-        :retval: Result returned by scheduler worker
-        """
-        if not params:
-            params = {}
-        queue = FLAGS.scheduler_topic
-        kwargs = {'method': method, 'args': params}
-        return rpc.call(context, queue, kwargs)
-
-    def get_zone_list(self, context):
+    @classmethod
+    def get_zone_list(cls, context):
         """Return a list of zones assoicated with this zone."""
-        items = self._call_scheduler('get_zone_list', context)
+        items = _call_scheduler('get_zone_list', context)
         for item in items:
             item['api_url'] = item['api_url'].replace('\\/', '/')
         return items
 
-    def get_zone_capabilities(self, context, service=None):
+    @classmethod
+    def get_zone_capabilities(cls, context, service=None):
         """Returns a dict of key, value capabilities for this zone,
            or for a particular class of services running in this zone."""
-        return self._call_scheduler('get_zone_capabilities', context=context,
+        return _call_scheduler('get_zone_capabilities', context=context,
                             params=dict(service=service))
 
     @classmethod
