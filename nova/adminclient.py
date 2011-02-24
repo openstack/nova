@@ -198,7 +198,7 @@ class HostInfo(object):
 class Vpn(object):
     """
     Information about a Vpn, as parsed through SAX
-    
+
     **Fields Include**
 
     * instance_id
