@@ -476,19 +476,15 @@ class VMOps(object):
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
-
         self._shutdown(instance, vm)
+
+        # Temporary instance
         target_vm = VMHelper.lookup(self._session, "instance-00000001")
-        #target_vm = self.compute_api.create(
-        #    context=context.get_admin_context(),
-        #    instance_type="m1.tiny",
-        #    image_id=1,
-        #    kernel_id=3,
-        #    ramdisk_id=2,
-        #    display_name="test",
-        #    display_description="test")
-        #print context.get_admin_context().__dict__
-        #print target_vm
+
+        # Plan of action
+        # Create `instance` object for rescue_vm
+        # rescue_instance = self._make_rescue_instance() # Write this
+        #rescue_vm = self.spawn(instance)
 
         vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
@@ -505,6 +501,8 @@ class VMOps(object):
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
+
+        # Temporary instance
         target_vm = VMHelper.lookup(self._session, "instance-00000001")
 
         vbds = self._session.get_xenapi().VM.get_VBDs(target_vm)
