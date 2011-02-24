@@ -41,10 +41,11 @@ flags.DEFINE_string('scheduler_driver',
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
     def __init__(self, scheduler_driver=None, *args, **kwargs):
+        self.zone_manager = zone_manager.ZoneManager()
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = utils.import_object(scheduler_driver)
-        self.zone_manager = zone_manager.ZoneManager()
+        self.driver.set_zone_manager(self.zone_manager)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
