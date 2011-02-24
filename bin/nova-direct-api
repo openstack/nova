@@ -45,6 +45,10 @@ from nova.compute import api as compute_api
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('direct_port', 8001, 'Direct API port')
 flags.DEFINE_string('direct_host', '0.0.0.0', 'Direct API host')
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
+
 
 if __name__ == '__main__':
     utils.default_flagfile()

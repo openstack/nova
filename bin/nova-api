@@ -48,6 +48,9 @@ flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
 flags.DEFINE_string('osapi_listen', "0.0.0.0",
                     'IP address for OpenStack API to listen')
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
 
 API_ENDPOINTS = ['ec2', 'osapi']
 
