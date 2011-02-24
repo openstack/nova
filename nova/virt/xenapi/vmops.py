@@ -475,37 +475,29 @@ class VMOps(object):
 
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
-        vm = self._get_vm_opaque_ref(instance)
-        self._shutdown(instance, vm)
+        #vm = self._get_vm_opaque_ref(instance)
+        #self._shutdown(instance, vm)
 
-        # Temporary instance
-        target_vm = VMHelper.lookup(self._session, "instance-00000001")
-
-        # Plan of action
-        # Create `instance` object for rescue_vm
-        # rescue_instance = self._make_rescue_instance() # Write this
+        print instance.__dict__
+        print instance.name
+        print "%s-rescue" % instance.name
         #rescue_vm = self.spawn(instance)
 
-        vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
-        vbd_ref = VMHelper.create_vbd(
-            self._session,
-            target_vm,
-            vdi_ref,
-            1,
-            False)
+        #vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
+        #vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        #vbd_ref = VMHelper.create_vbd(
+        #    self._session,
+        #    rescue_vm,
+        #    vdi_ref,
+        #    1,
+        #    False)
 
-        # Plug the VBD into the target instance
-        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+        #self._session.call_xenapi("Async.VBD.plug", vbd_ref)
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
         vm = self._get_vm_opaque_ref(instance)
-
-        # Temporary instance
-        target_vm = VMHelper.lookup(self._session, "instance-00000001")
-
-        vbds = self._session.get_xenapi().VM.get_VBDs(target_vm)
+        vbds = self._session.get_xenapi().VM.get_VBDs(vm)
 
         for vbd_ref in vbds:
             vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
@@ -513,7 +505,7 @@ class VMOps(object):
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
-        self._start(instance, vm)
+        self.reboot(instance)
 
     def get_info(self, instance):
         """Return data about VM instance"""
