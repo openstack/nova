@@ -198,8 +198,9 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        enabled_services = db.service_get_all(context)
-        disabled_services = db.service_get_all(context, True)
+        ctxt = context.elevated()
+        enabled_services = db.service_get_all(ctxt)
+        disabled_services = db.service_get_all(ctxt, True)
         available_zones = []
         for zone in [service.availability_zone for service
                      in enabled_services]:
@@ -318,14 +319,19 @@ class CloudController(object):
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
         self.compute_api.ensure_default_security_group(context)
-        if context.is_admin:
+        if group_name:
+            groups = []
+            for name in group_name:
+                group = db.security_group_get_by_name(context,
+                                                      context.project_id,
+                                                      name)
+                groups.append(group)
+        elif context.is_admin:
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
                                                       context.project_id)
         groups = [self._format_security_group(context, g) for g in groups]
-        if not group_name is None:
-            groups = [g for g in groups if g.name in group_name]
 
         return {'securityGroupInfo':
                 list(sorted(groups,
@@ -670,7 +676,8 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context, internal_id)
+                instance = self.compute_api.get(context,
+                                                instance_id=internal_id)
                 instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)

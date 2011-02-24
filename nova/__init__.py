@@ -30,5 +30,3 @@
 .. moduleauthor:: Manish Singh <yosh@gimp.org>
 .. moduleauthor:: Andy Smith <andy@anarkystic.com>
 """
-
-from exception import *
