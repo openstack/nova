@@ -35,6 +35,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api import direct
@@ -44,10 +45,15 @@ from nova.compute import api as compute_api
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('direct_port', 8001, 'Direct API port')
 flags.DEFINE_string('direct_host', '0.0.0.0', 'Direct API host')
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
+
 
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
+    logging.setup()
 
     direct.register_service('compute', compute_api.API())
     direct.register_service('reflect', direct.Reflection())

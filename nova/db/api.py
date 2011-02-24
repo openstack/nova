@@ -85,8 +85,8 @@ def service_get(context, service_id):
 
 
 def service_get_all(context, disabled=False):
-    """Get all service."""
-    return IMPL.service_get_all(context, None, disabled)
+    """Get all services."""
+    return IMPL.service_get_all(context, disabled)
 
 
 def service_get_all_by_topic(context, topic):

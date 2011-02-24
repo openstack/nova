@@ -19,7 +19,6 @@ import datetime
 import hashlib
 import json
 import time
-import logging
 
 import webob.exc
 import webob.dec
@@ -121,8 +120,8 @@ class AuthMiddleware(wsgi.Middleware):
         req - webob.Request object
         """
         ctxt = context.get_admin_context()
-        user = self.auth.get_user_from_access_key(username)
-        if user and user.secret == key:
+        user = self.auth.get_user_from_access_key(key)
+        if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
                 time.time())).hexdigest()
             token_dict = {}

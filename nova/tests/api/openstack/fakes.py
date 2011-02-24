@@ -221,8 +221,7 @@ class FakeAuthDatabase(object):
 class FakeAuthManager(object):
     auth_data = {}
 
-    def add_user(self, user):
-        key = user.id
+    def add_user(self, key, user):
         FakeAuthManager.auth_data[key] = user
 
     def get_user(self, uid):
@@ -235,10 +234,7 @@ class FakeAuthManager(object):
         return None
 
     def get_user_from_access_key(self, key):
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.access == key:
-                return v
-        return None
+        return FakeAuthManager.auth_data.get(key, None)
 
 
 class FakeRateLimiter(object):

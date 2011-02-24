@@ -46,6 +46,11 @@ def _underscore_to_xmlcase(str):
     return res[:1].lower() + res[1:]
 
 
+def _database_to_isoformat(datetimeobj):
+    """Return a xs:dateTime parsable string from datatime"""
+    return datetimeobj.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _try_convert(value):
     """Return a non-string if possible"""
     if value == 'None':
@@ -173,7 +178,8 @@ class APIRequest(object):
         elif isinstance(data, bool):
             data_el.appendChild(xml.createTextNode(str(data).lower()))
         elif isinstance(data, datetime.datetime):
-            data_el.appendChild(xml.createTextNode(data.isoformat()))
+            data_el.appendChild(
+                  xml.createTextNode(_database_to_isoformat(data)))
         elif data != None:
             data_el.appendChild(xml.createTextNode(str(data)))
 
