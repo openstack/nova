@@ -131,8 +131,10 @@ class IOThread(Thread):
 
             if not self.transfer_size is None:
                 if self.read_size < self.transfer_size:
-                    raise IOError(_("Not enough data (%d of %d bytes)") % \
-                                  (self.read_size, self.transfer_size))
+                    raise IOError(_("Not enough data (%(read_size)d of "
+                                  "%(transfer_size)d bytes)") %
+                                  {'read_size': self.read_size,
+                                   'transfer_size': self.transfer_size})
 
         except Exception:
             self._error = True

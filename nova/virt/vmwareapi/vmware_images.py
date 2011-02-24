@@ -238,5 +238,7 @@ def get_vmdk_size_and_properties(image, instance):
     size = read_file_handle.get_size()
     properties = read_file_handle.get_image_properties()
     read_file_handle.close()
-    LOG.debug(_("Got image size of %s for the image %s") % (size, image))
+    LOG.debug(_("Got image size of %(size)s for the image %(image)s") %
+              {'size': size,
+               'image': image})
     return size, properties

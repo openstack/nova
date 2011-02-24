@@ -335,17 +335,18 @@ class VMWareAPISession(object):
                                    TaskState.TASK_RUNNING]:
                 return
             elif task_info.State == TaskState.TASK_SUCCESS:
-                LOG.info(_("Task [%s] %s status: success ") % (
-                    task_name,
-                    str(task_ref)))
+                LOG.info(_("Task [%(taskname)s] %(taskref)s status: success") %
+                         {'taskname': task_name,
+                          'taskref': str(task_ref)})
                 done.send(TaskState.TASK_SUCCESS)
             else:
                 error_info = str(task_info.Error.LocalizedMessage)
                 action["error"] = error_info
-                LOG.info(_("Task [%s] %s status: error [%s]") % (
-                    task_name,
-                    str(task_ref),
-                    error_info))
+                LOG.info(_("Task [%(task_name)s] %(task_ref)s status: "
+                         "error [%(error_info)s]") %
+                         {'task_name': task_name,
+                          'task_ref': str(task_ref),
+                          'error_info': error_info})
                 done.send_exception(Exception(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except Exception, excep:

@@ -181,9 +181,12 @@ class VMWareVMOps(object):
         #depend on the size of the disk, thin/thick provisioning and the
         #storage adapter type.
         #Here we assume thick provisioning and lsiLogic for the adapter type
-        LOG.debug(_("Creating Virtual Disk of size %sKB and adapter type %s on"
-                  " the ESX host local store %s ") % \
-                  (vmdk_file_size_in_kb, adapter_type, data_store_name))
+        LOG.debug(_("Creating Virtual Disk of size %(vmdk_file_size_in_kb)sKB"
+                  " and adapter type %(adapter_type)s on"
+                  " the ESX host local store %(data_store_name)s") %
+                  {'vmdk_file_size_in_kb': vmdk_file_size_in_kb,
+                   'adapter_type': adapter_type,
+                   'data_store_name': data_store_name})
         vmdk_create_spec = vm_util.get_vmdk_create_spec(vmdk_file_size_in_kb,
                                                         adapter_type)
         vmdk_create_task = self._session._call_method(self._session._get_vim(),
@@ -193,22 +196,30 @@ class VMWareVMOps(object):
             datacenter=self._get_datacenter_name_and_ref()[0],
             spec=vmdk_create_spec)
         self._session._wait_for_task(instance.id, vmdk_create_task)
-        LOG.debug(_("Created Virtual Disk of size %s KB on the ESX host local"
-                  "store %s ") % (vmdk_file_size_in_kb, data_store_name))
+        LOG.debug(_("Created Virtual Disk of size %(vmdk_file_size_in_kb)s KB"
+                  " on the ESX host local store %(data_store_name)s ") %
+                  {'vmdk_file_size_in_kb': vmdk_file_size_in_kb,
+                   'data_store_name': data_store_name})
 
-        LOG.debug(_("Deleting the file %s on the ESX host local"
-                  "store %s ") % (flat_uploaded_vmdk_path, data_store_name))
+        LOG.debug(_("Deleting the file %(flat_uploaded_vmdk_path)s on "
+                  "the ESX host local store %(data_store_names)s") %
+                  {'flat_uploaded_vmdk_path': flat_uploaded_vmdk_path,
+                   'data_store_name': data_store_name})
         #Delete the -flat.vmdk file created. .vmdk file is retained.
         vmdk_delete_task = self._session._call_method(self._session._get_vim(),
                     "DeleteDatastoreFile_Task",
                     self._session._get_vim().get_service_content().FileManager,
                     name=flat_uploaded_vmdk_path)
         self._session._wait_for_task(instance.id, vmdk_delete_task)
-        LOG.debug(_("Deleted the file %s on the ESX host local"
-                  "store %s ") % (flat_uploaded_vmdk_path, data_store_name))
+        LOG.debug(_("Deleted the file %(flat_uploaded_vmdk_path)s on "
+                  "the ESX host local store %(data_store_name)s ") %
+                  {'flat_uploaded_vmdk_path': flat_uploaded_vmdk_path,
+                   'data_store_name': data_store_name})
 
-        LOG.debug(_("Downloading image file %s to the ESX data store %s ") % \
-                  (instance.image_id, data_store_name))
+        LOG.debug(_("Downloading image file %(image_id)s to the "
+                  "ESX data store %(datastore_name)s ") %
+                  {'image_id': instance.image_id,
+                   'data_store_name': data_store_name})
         # Upload the -flat.vmdk file whose meta-data file we just created above
         vmware_images.fetch_image(
                     instance.image_id,
@@ -218,8 +229,10 @@ class VMWareVMOps(object):
                     datastore_name=data_store_name,
                     cookies=self._session._get_vim().proxy.binding.cookies,
                     file_path=flat_uploaded_vmdk_name)
-        LOG.debug(_("Downloaded image file %s to the ESX data store %s ") % \
-                  (instance.image_id, data_store_name))
+        LOG.debug(_("Downloaded image file %(image_id)s to the ESX data "
+                    "store %(data_store_name)s ") %
+                  {'image_id': instance.image_id,
+                   'data_store_name': data_store_name})
 
         #Attach the vmdk uploaded to the VM. VM reconfigure is done to do so.
         vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_sepc(
@@ -442,16 +455,20 @@ class VMWareVMOps(object):
                 dir_ds_compliant_path = vm_util.build_datastore_path(
                                  datastore_name,
                                  os.path.dirname(vmx_file_path))
-                LOG.debug(_("Deleting contents of the VM %s from "
-                          "datastore %s") % (instance.name, datastore_name))
+                LOG.debug(_("Deleting contents of the VM %(instance.name)s "
+                          "from datastore %(datastore_name)s") %
+                          {('instance.name': instance.name,
+                            'datastore_name': datastore_name)})
                 delete_task = self._session._call_method(
                     self._session._get_vim(),
                     "DeleteDatastoreFile_Task",
                     self._session._get_vim().get_service_content().FileManager,
                     name=dir_ds_compliant_path)
                 self._session._wait_for_task(instance.id, delete_task)
-                LOG.debug(_("Deleted contents of the VM %s from "
-                          "datastore %s") % (instance.name, datastore_name))
+                LOG.debug(_("Deleted contents of the VM %(instance_name)s "
+                          "from datastore %(datastore_name)s") %
+                          {'instance_name': instance.name,
+                           'datastore_name': datastore_name})
             except Exception, excep:
                 LOG.warn(_("In vmwareapi:vmops:destroy, "
                              "got this exception while deleting"
@@ -570,14 +587,18 @@ class VMWareVMOps(object):
                                             instance['id'])
         machine_id_chanfge_spec = vm_util.get_machine_id_change_spec(mac_addr,
                                         ip_addr, net_mask, gateway)
-        LOG.debug(_("Reconfiguring VM instance %s to set the machine id "
-                  "with ip - %s") % (instance.name, ip_addr))
+        LOG.debug(_("Reconfiguring VM instance %(instance_name)s to set "
+                  "the machine id with ip - %(ip_addr)s") %
+                  {'instance_name': instance.name,
+                   'ip_addr': ip_addr})
         reconfig_task = self._session._call_method(self._session._get_vim(),
                            "ReconfigVM_Task", vm_ref,
                            spec=machine_id_chanfge_spec)
         self._session._wait_for_task(instance.id, reconfig_task)
-        LOG.debug(_("Reconfigured VM instance %s to set the machine id "
-                  "with ip - %s") % (instance.name, ip_addr))
+        LOG.debug(_("Reconfigured VM instance %(instance_name)s to set "
+                  "the machine id with ip - %(ip_addr)s") %
+                  {'instance_name': instance.name,
+                   'ip_addr': ip_addr})
 
     def _create_dummy_vm_for_test(self, instance):
         """Create a dummy VM for testing purpose"""
