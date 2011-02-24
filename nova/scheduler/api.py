@@ -43,13 +43,24 @@ class API:
         return rpc.call(context, queue, kwargs)
 
     def get_zone_list(self, context):
+        """Return a list of zones assoicated with this zone."""
         items = self._call_scheduler('get_zone_list', context)
         for item in items:
             item['api_url'] = item['api_url'].replace('\\/', '/')
         return items
 
+    def get_zone_capabilities(self, context, service=None):
+        """Returns a dict of key, value capabilities for this zone,
+           or for a particular class of services running in this zone."""
+        return self._call_scheduler('get_zone_capabilities', context=context,
+                            params=dict(service=service))
+
     @classmethod
-    def update_service_capabilities(cls, context, service_name, capabilities):
+    def update_service_capabilities(cls, context, service_name, host,
+                                                capabilities):
+        """Send an update to all the scheduler services informing them
+           of the capabilities of this service."""
         kwargs = dict(method='update_service_capabilities',
-                        service_name=service_name, capabilities=capabilities)
+                      args=dict(service_name=service_name, host=host,
+                                capabilities=capabilities))
         return rpc.fanout_cast(context, 'scheduler', kwargs)

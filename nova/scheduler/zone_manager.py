@@ -105,12 +105,36 @@ class ZoneManager(object):
     def __init__(self):
         self.last_zone_db_check = datetime.min
         self.zone_states = {}
-        self.compute_states = {}
+        self.service_states = {}  # { <service> : { <host> : { cap k : v }}}
         self.green_pool = greenpool.GreenPool()
 
     def get_zone_list(self):
         """Return the list of zones we know about."""
         return [zone.to_dict() for zone in self.zone_states.values()]
+
+    def get_zone_capabilities(self, context, service=None):
+        """Roll up all the individual host info to generic 'service'
+           capabilities. Each capability is aggregated into
+           <cap>_min and <cap>_max values."""
+        service_dict = self.service_states
+        if service:
+            service_dict = dict(service_name=service,
+                                hosts=self.service_states.get(service, {}))
+
+        # TODO(sandy) - be smarter about fabricating this structure.
+        # But it's likely to change once we understand what the Best-Match
+        # code will need better.
+        combined = {}  # { <service>_<cap> : (min, max), ... }
+        for service_name, host_dict in service_dict.iteritems():
+            for host, caps_dict in host_dict.iteritems():
+                for cap, value in caps_dict.iteritems():
+                    key = "%s_%s" % (service_name, cap)
+                    min_value, max_value = combined.get(key, (value, value))
+                    min_value = min(min_value, value)
+                    max_value = max(max_value, value)
+                    combined[key] = (min_value, max_value)
+
+        return combined
 
     def _refresh_from_db(self, context):
         """Make our zone state map match the db."""
@@ -143,5 +167,10 @@ class ZoneManager(object):
             self._refresh_from_db(context)
         self._poll_zones(context)
 
-    def update_compute_capabilities(self):
-        logging.debug(_("****** UPDATE COMPUTE CAPABILITIES *******"))
+    def update_service_capabilities(self, service_name, host, capabilities):
+        """Update the per-service capabilities based on this notification."""
+        logging.debug(_("Received %(service_name)s service update from "
+                            "%(host)s: %(capabilities)s") % locals())
+        service_caps = self.service_states.get(service_name, {})
+        service_caps[host] = capabilities
+        self.service_states[service_name] = service_caps

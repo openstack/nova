@@ -59,10 +59,16 @@ class SchedulerManager(manager.Manager):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
 
+    def get_zone_capabilities(self, context=None, service=None):
+        """Get the normalized set of capabilites for this zone,
+           or for a particular service."""
+        return self.zone_manager.get_zone_capabilities(context, service)
+
     def update_service_capabilities(self, context=None, service_name=None,
-                                                capabilities={}):
-        """Process a compute node update."""
-        return self.zone_manager.update_compute_capabilities()
+                                                host=None, capabilities={}):
+        """Process a capability update from a service node."""
+        self.zone_manager.update_service_capabilities(service_name,
+                            host, capabilities)
 
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.

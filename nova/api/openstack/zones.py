@@ -15,9 +15,10 @@
 
 import common
 
-from nova import flags
-from nova import wsgi
 from nova import db
+from nova import flags
+from nova import log as logging
+from nova import wsgi
 from nova.scheduler import api
 
 
@@ -67,8 +68,16 @@ class Controller(wsgi.Controller):
 
     def info(self, req):
         """Return name and capabilities for this zone."""
-        return dict(zone=dict(name=FLAGS.zone_name,
-                    capabilities=FLAGS.zone_capabilities))
+        items = api.API().get_zone_capabilities(req.environ['nova.context'])
+
+        zone = dict(name=FLAGS.zone_name)
+        caps = FLAGS.zone_capabilities.split(';')
+        for cap in caps:
+            key_values = cap.split(':')
+            zone[key_values[0]] = key_values[1]
+        for item, (min_value, max_value) in items.iteritems():
+            zone[item] = "%s,%s" % (min_value, max_value)
+        return dict(zone=zone)
 
     def show(self, req, id):
         """Return data about the given zone id"""
