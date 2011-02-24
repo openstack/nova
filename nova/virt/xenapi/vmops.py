@@ -104,6 +104,10 @@ class VMOps(object):
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
+        # inject_network_info and create vifs
+        networks = self.inject_network_info(instance)
+        self.create_vifs(instance, networks)
+
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
         instance_name = instance.name
@@ -134,9 +138,7 @@ class VMOps(object):
 
         timer.f = _wait_for_boot
 
-        # call to reset network to inject network info and configure
-        networks = self.inject_network_info(instance)
-        self.create_vifs(instance, networks)
+        # call to reset network to configure network from xenstore
         self.reset_network(instance)
 
         return timer.start(interval=0.5, now=True)
