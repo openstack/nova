@@ -144,16 +144,25 @@ class SolarisISCSIDriver(SanISCSIDriver):
     """Executes commands relating to Solaris-hosted ISCSI volumes.
 
     Basic setup for a Solaris iSCSI server:
+
     pkg install storage-server SUNWiscsit
+
     svcadm enable stmf
+
     svcadm enable -r svc:/network/iscsi/target:default
+
     pfexec itadm create-tpg e1000g0 ${MYIP}
+
     pfexec itadm create-target -t e1000g0
+
 
     Then grant the user that will be logging on lots of permissions.
     I'm not sure exactly which though:
+
     zfs allow justinsb create,mount,destroy rpool
+
     usermod -P'File System Management' justinsb
+
     usermod -P'Primary Administrator' justinsb
 
     Also make sure you can login using san_login & san_password/san_privatekey
@@ -340,9 +349,13 @@ class HpSanISCSIDriver(SanISCSIDriver):
     We use the CLIQ interface, over SSH.
 
     Rough overview of CLIQ commands used:
+
     :createVolume:    (creates the volume)
+
     :getVolumeInfo:    (to discover the IQN etc)
+
     :getClusterInfo:    (to discover the iSCSI target IP address)
+
     :assignVolumeChap:    (exports it with CHAP security)
 
     The 'trick' here is that the HP SAN enforces security by default, so
