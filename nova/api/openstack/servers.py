@@ -177,7 +177,7 @@ class Controller(wsgi.Controller):
         # However, the CloudServers API is not definitive on this front,
         #  and we want to be compatible.
         metadata = []
-        if env['server']['metadata']:
+        if env['server'].get('metadata'):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
