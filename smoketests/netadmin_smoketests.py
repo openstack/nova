@@ -137,11 +137,6 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')
         self.data['instance'].update()
-        if not self.wait_for_ping(self.data['instance'].private_dns_name):
-            self.fail('could not ping instance')
-        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
-                                 TEST_KEY):
-            self.fail('could not ssh to instance')
 
     def test_003_can_authorize_security_group_ingress(self):
         self.assertTrue(self.conn.authorize_security_group(TEST_GROUP,

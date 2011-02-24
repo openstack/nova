@@ -191,7 +191,7 @@ class VolumeTests(base.UserSmokeTestCase):
         self.assertEqual(volume.size, 1)
         self.data['volume'] = volume
         # Give network time to find volume.
-        time.sleep(10)
+        time.sleep(5)
 
     def test_002_can_attach_volume(self):
         volume = self.data['volume']
@@ -204,6 +204,8 @@ class VolumeTests(base.UserSmokeTestCase):
         else:
             self.fail('cannot attach volume with state %s' % volume.status)
 
+        # Give volume some time to be ready.
+        time.sleep(5)
         volume.attach(self.data['instance'].id, self.device)
 
         # wait
@@ -218,7 +220,7 @@ class VolumeTests(base.UserSmokeTestCase):
         self.assertTrue(volume.status.startswith('in-use'))
 
         # Give instance time to recognize volume.
-        time.sleep(10)
+        time.sleep(5)
 
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_dns_name
