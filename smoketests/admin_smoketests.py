@@ -35,10 +35,7 @@ from smoketests import flags
 from smoketests import base
 
 
-SUITE_NAMES = '[user]'
-
 FLAGS = flags.FLAGS
-flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 
 # TODO(devamcar): Use random tempfile
 ZIP_FILENAME = '/tmp/nova-me-x509.zip'
