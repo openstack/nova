@@ -74,8 +74,10 @@ class AddressTests(base.UserSmokeTestCase):
         groups = self.conn.get_all_security_groups(['default'])
         for rule in groups[0].rules:
             if (rule.ip_protocol == 'tcp' and
-                rule.from_port <= 22 and rule.to_port >= 22):
+                int(rule.from_port) <= 22 and
+                int(rule.to_port) >= 22):
                 ssh_authorized = True
+                break
         if not ssh_authorized:
             self.conn.authorize_security_group('default',
                                                ip_protocol='tcp',
