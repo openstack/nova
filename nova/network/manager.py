@@ -369,6 +369,7 @@ class FlatManager(NetworkManager):
             project_net = IPy.IP(cidr)
             net = {}
             net['bridge'] = FLAGS.flat_network_bridge
+            net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask())
             net['gateway'] = str(project_net[1])
