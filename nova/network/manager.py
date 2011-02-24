@@ -55,7 +55,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import manager
+from nova import scheduler_manager
 from nova import utils
 from nova import rpc
 
@@ -105,7 +105,7 @@ class AddressAlreadyAllocated(exception.Error):
     pass
 
 
-class NetworkManager(manager.Manager):
+class NetworkManager(scheduler_manager.SchedulerDependentManager):
     """Implements common network manager functionality.
 
     This class must be subclassed to support specific topologies.
@@ -116,7 +116,8 @@ class NetworkManager(manager.Manager):
         if not network_driver:
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
-        super(NetworkManager, self).__init__(*args, **kwargs)
+        super(NetworkManager, self).__init__(service_name='network',
+                                                *args, **kwargs)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a

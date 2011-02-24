@@ -49,7 +49,7 @@ from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import manager
+from nova import scheduler_manager
 from nova import utils
 
 
@@ -64,14 +64,15 @@ flags.DEFINE_boolean('use_local_volumes', True,
                      'if True, will not discover local volumes')
 
 
-class VolumeManager(manager.Manager):
+class VolumeManager(scheduler_manager.SchedulerDependentManager):
     """Manages attachable block storage devices."""
     def __init__(self, volume_driver=None, *args, **kwargs):
         """Load the driver from the one specified in args, or from flags."""
         if not volume_driver:
             volume_driver = FLAGS.volume_driver
         self.driver = utils.import_object(volume_driver)
-        super(VolumeManager, self).__init__(*args, **kwargs)
+        super(VolumeManager, self).__init__(service_name='volume',
+                                                    *args, **kwargs)
         # NOTE(vish): Implementation specific db handling is done
         #             by the driver.
         self.driver.db = self.db

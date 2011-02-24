@@ -59,7 +59,8 @@ class SchedulerManager(manager.Manager):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
 
-    def update_service_capabilities(self, context=None, service_name=None, capabilities={}):
+    def update_service_capabilities(self, context=None, service_name=None,
+                                                capabilities={}):
         """Process a compute node update."""
         return self.zone_manager.update_compute_capabilities()
 

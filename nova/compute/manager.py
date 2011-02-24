@@ -112,7 +112,8 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
         self.driver = utils.import_object(compute_driver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
-        super(ComputeManager, self).__init__(*args, **kwargs)
+        super(ComputeManager, self).__init__(service_name="compute",
+                                                        *args, **kwargs)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a

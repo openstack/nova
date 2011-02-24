@@ -34,13 +34,27 @@ FLAGS = flags.FLAGS
 
 
 class SchedulerDependentManager(manager.Manager):
-    def __init__(self, host=None, db_driver=None):
-        self.last_capabilities = {}
+
+    """Periodically send capability updates to the Scheduler services.
+       Services that need to update the Scheduler of their capabilities
+       should derive from this class. Otherwise they can derive from
+       manager.Manager directly. Updates are only sent after
+       update_service_capabilities is called with non-None values."""
+
+    def __init__(self, host=None, db_driver=None, service_name="undefined"):
+        self.last_capabilities = None
+        self.service_name = service_name
         super(SchedulerDependentManager, self).__init__(host, db_driver)
+
+    def update_service_capabilities(self, capabilities):
+        """Remember these capabilities to send on next periodic update."""
+        self.last_capabilities = capabilities
 
     def periodic_tasks(self, context=None):
         """Pass data back to the scheduler at a periodic interval"""
-        logging.debug(_("*** Notifying Schedulers of capabilities ..."))
-        api.API.update_service_capabilities(context, 'compute', self.last_capabilities)
+        if self.last_capabilities:
+            logging.debug(_("*** Notifying Schedulers of capabilities ..."))
+            api.API.update_service_capabilities(context, self.service_name,
+                                self.last_capabilities)
 
         super(SchedulerDependentManager, self).periodic_tasks(context)

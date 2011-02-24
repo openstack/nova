@@ -53,4 +53,3 @@ class API:
         kwargs = dict(method='update_service_capabilities',
                         service_name=service_name, capabilities=capabilities)
         return rpc.fanout_cast(context, 'scheduler', kwargs)
-
