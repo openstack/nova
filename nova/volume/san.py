@@ -16,8 +16,9 @@
 #    under the License.
 """
 Drivers for san-stored volumes.
+
 The unique thing about a SAN is that we don't expect that we can run the volume
- controller on the SAN hardware.  We expect to access it over SSH or some API.
+controller on the SAN hardware.  We expect to access it over SSH or some API.
 """
 
 import os
@@ -51,7 +52,11 @@ flags.DEFINE_integer('san_ssh_port', 22,
 
 class SanISCSIDriver(ISCSIDriver):
     """ Base class for SAN-style storage volumes
-        (storage providers we access over SSH)"""
+
+    A SAN-style storage value is 'different' because the volume controller
+    probably won't run on it, so we need to access is over SSH or another
+    remote protocol.
+    """
 
     def _build_iscsi_target_name(self, volume):
         return "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
@@ -137,6 +142,7 @@ def _get_prefixed_values(data, prefix):
 
 class SolarisISCSIDriver(SanISCSIDriver):
     """Executes commands relating to Solaris-hosted ISCSI volumes.
+
     Basic setup for a Solaris iSCSI server:
     pkg install storage-server SUNWiscsit
     svcadm enable stmf
@@ -330,13 +336,14 @@ class SolarisISCSIDriver(SanISCSIDriver):
 
 class HpSanISCSIDriver(SanISCSIDriver):
     """Executes commands relating to HP/Lefthand SAN ISCSI volumes.
+
     We use the CLIQ interface, over SSH.
 
     Rough overview of CLIQ commands used:
-    CLIQ createVolume (creates the volume)
-    CLIQ getVolumeInfo (to discover the IQN etc)
-    CLIQ getClusterInfo (to discover the iSCSI target IP address)
-    CLIQ assignVolumeChap (exports it with CHAP security)
+    :createVolume:    (creates the volume)
+    :getVolumeInfo:    (to discover the IQN etc)
+    :getClusterInfo:    (to discover the iSCSI target IP address)
+    :assignVolumeChap:    (exports it with CHAP security)
 
     The 'trick' here is that the HP SAN enforces security by default, so
     normally a volume mount would need both to configure the SAN in the volume
@@ -344,7 +351,8 @@ class HpSanISCSIDriver(SanISCSIDriver):
     not catered for at the moment in the nova architecture, so instead we
     share the volume using CHAP at volume creation time.  Then the mount need
     only use those CHAP credentials, so can take place exclusively in the
-    compute layer"""
+    compute layer.
+    """
 
     def _cliq_run(self, verb, cliq_args):
         """Runs a CLIQ command over SSH, without doing any result parsing"""

@@ -227,14 +227,16 @@ class FakeAOEDriver(AOEDriver):
 
 
 class ISCSIDriver(VolumeDriver):
-    """Executes commands relating to ISCSI volumes. We make use of model
-    provider properties as follows:
-    provider_location - if present, contains the iSCSI target information
-    in the same format as an ietadm discovery
-    i.e. '<target ip/port>,<target portal> <target IQN>'
-    provider_auth - if present, contains a space-separated triple:
-    '<auth method> <auth username> <auth password>'.  CHAP is the only
-    auth_method in use at the moment."""
+    """Executes commands relating to ISCSI volumes.
+
+    We make use of model provider properties as follows:
+    :provider_location:    if present, contains the iSCSI target information
+                           in the same format as an ietadm discovery
+                           i.e. '<ip>:<port>,<portal> <target IQN>'
+    :provider_auth:    if present, contains a space-separated triple:
+                       '<auth method> <auth username> <auth password>'.
+                       `CHAP` is the only auth_method in use at the moment.
+    """
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -321,17 +323,19 @@ class ISCSIDriver(VolumeDriver):
         return None
 
     def _get_iscsi_properties(self, volume):
-        """Gets iscsi configuration, ideally from saved information in the
-        volume entity, but falling back to discovery if need be. The
-        properties are:
-            target_discovered - boolean indicating whether discovery was used,
-            target_iqn - the IQN of the iSCSI target,
-            target_portal - the portal of the iSCSI target,
-            and auth_method, auth_username and auth_password
-                - the authentication details. Right now, either
-                auth_method is not present meaning no authentication, or
-                auth_method == 'CHAP' meaning use CHAP with the specified
-                credentials."""
+        """Gets iscsi configuration
+
+        We ideally get saved information in the volume entity, but fall back
+        to discovery if need be. Discovery may be completely removed in future
+        The properties are:
+        :target_discovered:    boolean indicating whether discovery was used
+        :target_iqn:    the IQN of the iSCSI target,
+        :target_portal:    the portal of the iSCSI target
+        :auth_method:, :auth_username:, :auth_password:
+            the authentication details. Right now, either auth_method is not
+            present meaning no authentication, or auth_method == `CHAP`
+            meaning use CHAP with the specified credentials.
+        """
 
         properties = {}
 
