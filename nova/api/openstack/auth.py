@@ -107,7 +107,7 @@ class AuthMiddleware(wsgi.Middleware):
         if token:
             delta = datetime.datetime.now() - token.created_at
             if delta.days >= 2:
-                self.db.auth_token_destroy(ctxt, token)
+                self.db.auth_token_destroy(ctxt, token.id)
             else:
                 return self.auth.get_user(token.user_id)
         return None

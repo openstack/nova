@@ -630,9 +630,9 @@ def iscsi_target_create_safe(context, values):
 ###############
 
 
-def auth_token_destroy(context, token):
+def auth_token_destroy(context, token_id):
     """Destroy an auth token."""
-    return IMPL.auth_token_destroy(context, token)
+    return IMPL.auth_token_destroy(context, token_id)
 
 
 def auth_token_get(context, token_hash):

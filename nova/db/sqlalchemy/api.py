@@ -1262,16 +1262,19 @@ def iscsi_target_create_safe(context, values):
 
 
 @require_admin_context
-def auth_token_destroy(_context, token):
+def auth_token_destroy(context, token_id):
     session = get_session()
-    session.delete(token)
+    with session.begin():
+        token_ref = auth_token_get(context, token_id, session=session)
+        token_ref.delete(session=session)
 
 
 @require_admin_context
-def auth_token_get(_context, token_hash):
+def auth_token_get(context, token_hash):
     session = get_session()
     tk = session.query(models.AuthToken).\
                   filter_by(token_hash=token_hash).\
+                  filter_by(deleted=can_read_deleted(context)).\
                   first()
     if not tk:
         raise exception.NotFound(_('Token %s does not exist') % token_hash)
