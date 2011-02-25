@@ -22,7 +22,6 @@ import httplib
 import os
 import paramiko
 import sys
-import tempfile
 import time
 import unittest
 from boto.ec2.regioninfo import RegionInfo
@@ -149,7 +148,6 @@ class SmokeTestCase(unittest.TestCase):
             pass
 
     def bundle_image(self, image, tempdir='/tmp', kernel=False):
-        tempdir = tempfile.mkdtemp()
         cmd = 'euca-bundle-image -i %s -d %s' % (image, tempdir)
         if kernel:
             cmd += ' --kernel true'
@@ -157,7 +155,7 @@ class SmokeTestCase(unittest.TestCase):
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
             raise Exception(output)
-        return tempdir
+        return True
 
     def upload_image(self, bucket_name, image, tempdir='/tmp'):
         cmd = 'euca-upload-bundle -b '
