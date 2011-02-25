@@ -113,7 +113,7 @@ class VMOps(object):
         self.create_vifs(instance, networks)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
-        self._session.call_xenapi('VM.start', vm_ref, False, False)
+        self._start(instance, vm_ref)
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
@@ -438,11 +438,13 @@ class VMOps(object):
 
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
+        rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
+        if rescue_vm:
+            raise RuntimeError(_(
+                "Instance is already in Rescue Mode: %s" % instance.name))
+
         vm = self._get_vm_opaque_ref(instance)
         self._shutdown(instance, vm)
-
-        # log old instance
-        # log new instance
 
         instance._rescue = True
         self.spawn(instance)
@@ -461,8 +463,16 @@ class VMOps(object):
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
-        vm = self._get_vm_opaque_ref(instance)
-        vbds = self._session.get_xenapi().VM.get_VBDs(vm)
+        rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
+
+        if not rescue_vm:
+            raise exception.NotFound(_(
+                "Instance is not in Rescue Mode: %s" % instance.name))
+
+        original_vm = self._get_vm_opaque_ref(instance)
+        vbds = self._session.get_xenapi().VM.get_VBDs(rescue_vm)
+
+        instance._rescue = False
 
         for vbd_ref in vbds:
             vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
@@ -470,15 +480,13 @@ class VMOps(object):
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
-        # fetch old instance
-        # fetch new instance
-        # destroy new instance
-        # start old instance
+        task1 = self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm)
+        self._session.wait_for_task(task1, instance.id)
 
-        self.destroy(instance)
-        instance._rescue = False
+        task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm)
+        self._session.wait_for_task(task2, instance.id)
 
-        self._start(instance, vm)
+        self._start(instance, original_vm)
 
     def get_info(self, instance):
         """Return data about VM instance"""
