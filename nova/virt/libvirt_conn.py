@@ -146,6 +146,7 @@ class LibvirtConnection(object):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        self.interfaces_xml = open(FLAGS.injected_network_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -628,17 +629,27 @@ class LibvirtConnection(object):
                                                  inst['id'])
         if network_ref['injected']:
             admin_context = context.get_admin_context()
-            address = db.instance_get_fixed_address(admin_context, inst['id'])
+            address = db.instance_get_fixed_address(admin_context,
+                                                    inst['id'])
+            addressv6 = db.instance_get_fixed_address_v6(admin_context,
+                                                         inst['id'])
             ra_server = network_ref['ra_server']
             if not ra_server:
                 ra_server = "fd00::"
-            with open(FLAGS.injected_network_template) as f:
-                net = f.read() % {'address': address,
-                                  'netmask': network_ref['netmask'],
-                                  'gateway': network_ref['gateway'],
-                                  'broadcast': network_ref['broadcast'],
-                                  'dns': network_ref['dns'],
-                                  'ra_server': ra_server}
+
+            interfaces_info = {'address': address,
+                               'netmask': network_ref['netmask'],
+                               'gateway': network_ref['gateway'],
+                               'broadcast': network_ref['broadcast'],
+                               'dns': network_ref['dns'],
+                               'ra_server': ra_server,
+                               'addressv6': addressv6,
+                               'gatewayv6': network_ref['gatewayv6'],
+                               'netmaskv6': network_ref['netmaskv6'],
+                               'use_ipv6': FLAGS.use_ipv6}
+
+            net = str(Template(self.interfaces_xml,
+                               searchList=[interfaces_info]))
         if key or net:
             inst_name = inst['name']
             img_id = inst.image_id

@@ -361,9 +361,11 @@ class FlatManager(NetworkManager):
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
         significant_bits_v6 = 64
+        network_size_v6 = 1 << 64
         count = 1
         for index in range(num_networks):
             start = index * network_size
+            start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
@@ -382,13 +384,44 @@ class FlatManager(NetworkManager):
             count += 1
 
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
+                project_net_v6 = IPy.IP(cidr_v6)
+                net['gatewayv6'] = str(project_net_v6[1])
+                net['netmaskv6'] = str(project_net_v6.prefixlen())
 
             network_ref = self.db.network_create_safe(context, net)
 
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
+
+    def _create_fixed_ips(self, context, network_id):
+        """Create all fixed ips for network."""
+        network_ref = self.db.network_get(context, network_id)
+        # NOTE(vish): Should these be properties of the network as opposed
+        #             to properties of the manager class?
+        bottom_reserved = self._bottom_reserved_ips
+        top_reserved = self._top_reserved_ips
+        project_net = IPy.IP(network_ref['cidr'])
+
+        if(FLAGS.use_ipv6):
+            project_net_v6 = IPy.IP(network_ref['cidr_v6'])
+
+        num_ips = len(project_net)
+        addressv6 = None
+        for index in range(num_ips):
+            address = str(project_net[index])
+            if(FLAGS.use_ipv6):
+                addressv6 = str(project_net_v6[index])
+            if index < bottom_reserved or num_ips - index < top_reserved:
+                reserved = True
+            else:
+                reserved = False
+            self.db.fixed_ip_create(context, {'network_id': network_id,
+                                              'address': address,
+                                              'addressv6': addressv6,
+                                              'reserved': reserved})
 
     def get_network_host(self, context):
         """Get the network host for the current context."""
