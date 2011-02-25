@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,15 +21,18 @@
 System-level utilities and helper functions.
 """
 
+import base64
 import datetime
 import inspect
 import json
 import os
 import random
 import socket
+import string
 import struct
 import sys
 import time
+import types
 from xml.sax import saxutils
 import re
 import netaddr
@@ -53,7 +57,7 @@ def import_class(import_str):
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
-        logging.debug(_('Inner Exception: %s'), exc)
+        LOG.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
@@ -233,6 +237,15 @@ def generate_mac():
            random.randint(0x00, 0xff),
            random.randint(0x00, 0xff)]
     return ':'.join(map(lambda x: "%02x" % x, mac))
+
+
+def generate_password(length=20):
+    """Generate a random sequence of letters and digits
+    to be used as a password. Note that this is not intended
+    to represent the ultimate in security.
+    """
+    chrs = string.letters + string.digits
+    return "".join([random.choice(chrs) for i in xrange(length)])
 
 
 def last_octet(address):
@@ -476,3 +489,64 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+def ensure_b64_encoding(val):
+    """Safety method to ensure that values expected to be base64-encoded
+    actually are. If they are, the value is returned unchanged. Otherwise,
+    the encoded value is returned.
+    """
+    try:
+        dummy = base64.decode(val)
+        return val
+    except TypeError:
+        return base64.b64encode(val)
+
+
+def get_from_path(items, path):
+    """ Returns a list of items matching the specified path.  Takes an
+    XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,
+    looks up items[prop1][prop2][prop3].  Like XPath, if any of the
+    intermediate results are lists it will treat each list item individually.
+    A 'None' in items or any child expressions will be ignored, this function
+    will not throw because of None (anywhere) in items.  The returned list
+    will contain no None values."""
+
+    if path is None:
+        raise exception.Error("Invalid mini_xpath")
+
+    (first_token, sep, remainder) = path.partition("/")
+
+    if first_token == "":
+        raise exception.Error("Invalid mini_xpath")
+
+    results = []
+
+    if items is None:
+        return results
+
+    if not isinstance(items, types.ListType):
+        # Wrap single objects in a list
+        items = [items]
+
+    for item in items:
+        if item is None:
+            continue
+        get_method = getattr(item, "get", None)
+        if get_method is None:
+            continue
+        child = get_method(first_token)
+        if child is None:
+            continue
+        if isinstance(child, types.ListType):
+            # Flatten intermediate lists
+            for x in child:
+                results.append(x)
+        else:
+            results.append(child)
+
+    if not sep:
+        # No more tokens
+        return results
+    else:
+        return get_from_path(results, remainder)

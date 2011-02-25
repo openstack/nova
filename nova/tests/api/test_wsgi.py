@@ -21,7 +21,7 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
-import unittest
+from nova import test
 
 import routes
 import webob
@@ -29,7 +29,7 @@ import webob
 from nova import wsgi
 
 
-class Test(unittest.TestCase):
+class Test(test.TestCase):
 
     def test_debug(self):
 
@@ -92,7 +92,7 @@ class Test(unittest.TestCase):
         self.assertNotEqual(result.body, "123")
 
 
-class SerializerTest(unittest.TestCase):
+class SerializerTest(test.TestCase):
 
     def match(self, url, accept, expect):
         input_dict = dict(servers=dict(a=(2, 3)))

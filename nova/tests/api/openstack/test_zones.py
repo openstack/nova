@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 
 import stubout
 import webob
@@ -22,6 +21,7 @@ import json
 import nova.db
 from nova import context
 from nova import flags
+from nova import test
 from nova.api.openstack import zones
 from nova.tests.api.openstack import fakes
 from nova.scheduler import api
@@ -75,8 +75,9 @@ def zone_get_all_db(context):
     ]
 
 
-class ZonesTest(unittest.TestCase):
+class ZonesTest(test.TestCase):
     def setUp(self):
+        super(ZonesTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -95,6 +96,7 @@ class ZonesTest(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
+        super(ZonesTest, self).tearDown()
 
     def test_get_zone_list_scheduler(self):
         self.stubs.Set(api.API, '_call_scheduler', zone_get_all_scheduler)
@@ -160,7 +162,3 @@ class ZonesTest(unittest.TestCase):
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://example.com')
         self.assertFalse('username' in res_dict['zone'])
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -198,8 +198,9 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        enabled_services = db.service_get_all(context)
-        disabled_services = db.service_get_all(context, True)
+        ctxt = context.elevated()
+        enabled_services = db.service_get_all(ctxt)
+        disabled_services = db.service_get_all(ctxt, True)
         available_zones = []
         for zone in [service.availability_zone for service
                      in enabled_services]:
@@ -282,7 +283,7 @@ class CloudController(object):
                                  'description': 'fixme'}]}
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
-        key_pairs = db.key_pair_get_all_by_user(context, context.user.id)
+        key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
         if not key_name is None:
             key_pairs = [x for x in key_pairs if x['name'] in key_name]
 
@@ -290,7 +291,7 @@ class CloudController(object):
         for key_pair in key_pairs:
             # filter out the vpn keys
             suffix = FLAGS.vpn_key_suffix
-            if context.user.is_admin() or \
+            if context.is_admin or \
                not key_pair['name'].endswith(suffix):
                 result.append({
                     'keyName': key_pair['name'],
@@ -301,7 +302,7 @@ class CloudController(object):
 
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
-        data = _gen_key(context, context.user.id, key_name)
+        data = _gen_key(context, context.user_id, key_name)
         return {'keyName': key_name,
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
@@ -310,7 +311,7 @@ class CloudController(object):
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:
-            db.key_pair_destroy(context, context.user.id, key_name)
+            db.key_pair_destroy(context, context.user_id, key_name)
         except exception.NotFound:
             # aws returns true even if the key doesn't exist
             pass
@@ -318,14 +319,19 @@ class CloudController(object):
 
     def describe_security_groups(self, context, group_name=None, **kwargs):
         self.compute_api.ensure_default_security_group(context)
-        if context.user.is_admin():
+        if group_name:
+            groups = []
+            for name in group_name:
+                group = db.security_group_get_by_name(context,
+                                                      context.project_id,
+                                                      name)
+                groups.append(group)
+        elif context.is_admin:
             groups = db.security_group_get_all(context)
         else:
             groups = db.security_group_get_by_project(context,
                                                       context.project_id)
         groups = [self._format_security_group(context, g) for g in groups]
-        if not group_name is None:
-            groups = [g for g in groups if g.name in group_name]
 
         return {'securityGroupInfo':
                 list(sorted(groups,
@@ -494,7 +500,7 @@ class CloudController(object):
         if db.security_group_exists(context, context.project_id, group_name):
             raise exception.ApiError(_('group %s already exists') % group_name)
 
-        group = {'user_id': context.user.id,
+        group = {'user_id': context.user_id,
                  'project_id': context.project_id,
                  'name': group_name,
                  'description': group_description}
@@ -529,8 +535,9 @@ class CloudController(object):
 
     def get_ajax_console(self, context, instance_id, **kwargs):
         ec2_id = instance_id[0]
-        internal_id = ec2_id_to_id(ec2_id)
-        return self.compute_api.get_ajax_console(context, internal_id)
+        instance_id = ec2_id_to_id(ec2_id)
+        return self.compute_api.get_ajax_console(context,
+                                                 instance_id=instance_id)
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
@@ -669,12 +676,13 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context, internal_id)
+                instance = self.compute_api.get(context,
+                                                instance_id=internal_id)
                 instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
-            if not context.user.is_admin():
+            if not context.is_admin:
                 if instance['image_id'] == FLAGS.vpn_image_id:
                     continue
             i = {}
@@ -702,7 +710,7 @@ class CloudController(object):
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
-            if context.user.is_admin():
+            if context.is_admin:
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
                     instance['host'])
@@ -736,7 +744,7 @@ class CloudController(object):
 
     def format_addresses(self, context):
         addresses = []
-        if context.user.is_admin():
+        if context.is_admin:
             iterator = db.floating_ip_get_all(context)
         else:
             iterator = db.floating_ip_get_all_by_project(context,
@@ -750,7 +758,7 @@ class CloudController(object):
                 ec2_id = id_to_ec2_id(instance_id)
             address_rv = {'public_ip': address,
                           'instance_id': ec2_id}
-            if context.user.is_admin():
+            if context.is_admin:
                 details = "%s (%s)" % (address_rv['instance_id'],
                                        floating_ip_ref['project_id'])
                 address_rv['instance_id'] = details
@@ -882,7 +890,6 @@ class CloudController(object):
             raise exception.ApiError(_('attribute not supported: %s')
                                      % attribute)
         try:
-            image = self.image_service.show(context, image_id)
             image = self._format_image(context,
                                        self.image_service.show(context,
                                                                image_id))

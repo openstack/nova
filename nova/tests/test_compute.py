@@ -30,6 +30,7 @@ from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import instance_types
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -202,6 +203,14 @@ class ComputeTestCase(test.TestCase):
         self.compute.set_admin_password(self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_inject_file(self):
+        """Ensure we can write a file to an instance"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.inject_file(self.context, instance_id, "/tmp/test",
+                "File Contents")
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_snapshot(self):
         """Ensure instance can be snapshotted"""
         instance_id = self._create_instance()
@@ -258,3 +267,10 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_get_by_flavor_id(self):
+        type = instance_types.get_by_flavor_id(1)
+        self.assertEqual(type, 'm1.tiny')
+
+        type = instance_types.get_by_flavor_id("1")
+        self.assertEqual(type, 'm1.tiny')

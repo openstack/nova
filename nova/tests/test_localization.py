@@ -15,7 +15,6 @@
 #    under the License.
 
 import glob
-import logging
 import os
 import re
 import sys
