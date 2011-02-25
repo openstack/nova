@@ -354,3 +354,5 @@ DEFINE_string('host', socket.gethostname(),
 
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
+DEFINE_list('memcached_servers', None,
+                  'Memcached servers or None for in process cache.')
