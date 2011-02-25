@@ -168,7 +168,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
-        stubs.stubout_lookup_image(self.stubs)
+        stubs.stubout_is_vdi_pv(self.stubs)
         self.stubs.Set(VMOps, 'reset_network', reset_network)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)

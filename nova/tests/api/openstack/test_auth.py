@@ -16,7 +16,6 @@
 #    under the License.
 
 import datetime
-import unittest
 
 import stubout
 import webob
@@ -27,12 +26,14 @@ import nova.api.openstack.auth
 import nova.auth.manager
 from nova import auth
 from nova import context
+from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class Test(unittest.TestCase):
+class Test(test.TestCase):
 
     def setUp(self):
+        super(Test, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
@@ -45,6 +46,7 @@ class Test(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         fakes.fake_data_store = {}
+        super(Test, self).tearDown()
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
@@ -97,10 +99,10 @@ class Test(unittest.TestCase):
                     token_hash=token_hash,
                     created_at=datetime.datetime(1990, 1, 1))
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_destroy_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_destroy',
             destroy_token_mock)
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_get_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_get',
             bad_token)
 
         req = webob.Request.blank('/v1.0/')
@@ -128,8 +130,9 @@ class Test(unittest.TestCase):
         self.assertEqual(result.status, '401 Unauthorized')
 
 
-class TestLimiter(unittest.TestCase):
+class TestLimiter(test.TestCase):
     def setUp(self):
+        super(TestLimiter, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
@@ -141,6 +144,7 @@ class TestLimiter(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         fakes.fake_data_store = {}
+        super(TestLimiter, self).tearDown()
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
@@ -161,7 +165,3 @@ class TestLimiter(unittest.TestCase):
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -61,8 +61,8 @@ import unittest
 import sys
 
 from nose import config
-from nose import result
 from nose import core
+from nose import result
 
 from nova import log as logging
 from nova.tests import fake_flags
@@ -280,10 +280,6 @@ class NovaTestRunner(core.TextTestRunner):
 
 if __name__ == '__main__':
     logging.setup()
-    testdir = os.path.abspath(os.path.join("nova", "tests"))
-    testdb = os.path.join(testdir, "tests.sqlite")
-    if os.path.exists(testdb):
-        os.unlink(testdb)
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much
     argv = []
@@ -293,6 +289,7 @@ if __name__ == '__main__':
         else:
             argv.append(x)
 
+    testdir = os.path.abspath(os.path.join("nova", "tests"))
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,
