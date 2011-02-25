@@ -108,45 +108,9 @@ class VMOps(object):
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
-        # write network info
-        admin_context = context.get_admin_context()
-
-        # TODO(tr3buchet) - remove comment in multi-nic
-        # I've decided to go ahead and consider multiple IPs and networks
-        # at this stage even though they aren't implemented because these will
-        # be needed for multi-nic and there was no sense writing it for single
-        # network/single IP and then having to turn around and re-write it
-        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
-        for network in db.network_get_all_by_instance(admin_context,
-                                                      instance['id']):
-            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
-
-            def ip_dict(ip):
-                return {'netmask': network['netmask'],
-                        'enabled': '1',
-                        'ip': ip.address}
-
-            mac_id = instance.mac_address.replace(':', '')
-            location = 'vm-data/networking/%s' % mac_id
-            mapping = {'label': network['label'],
-                       'gateway': network['gateway'],
-                       'mac': instance.mac_address,
-                       'dns': [network['dns']],
-                       'ips': [ip_dict(ip) for ip in network_IPs]}
-            self.write_to_param_xenstore(vm_ref, {location: mapping})
-
-            # TODO(tr3buchet) - remove comment in multi-nic
-            # this bit here about creating the vifs will be updated
-            # in multi-nic to handle multiple IPs on the same network
-            # and multiple networks
-            # for now it works as there is only one of each
-            bridge = network['bridge']
-            network_ref = \
-                NetworkHelper.find_network_with_bridge(self._session, bridge)
-
-            if network_ref:
-                VMHelper.create_vif(self._session, vm_ref,
-                                    network_ref, instance.mac_address)
+        # inject_network_info and create vifs
+        networks = self.inject_network_info(instance)
+        self.create_vifs(instance, networks)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
@@ -195,7 +159,7 @@ class VMOps(object):
 
         timer.f = _wait_for_boot
 
-        # call reset networking
+        # call to reset network to configure network from xenstore
         self.reset_network(instance)
 
         return timer.start(interval=0.5, now=True)
@@ -537,6 +501,73 @@ class VMOps(object):
         """Return link to instance's ajax console"""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
+
+    def inject_network_info(self, instance):
+        """
+        Generate the network info and make calls to place it into the
+        xenstore and the xenstore param list
+
+        """
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # I've decided to go ahead and consider multiple IPs and networks
+        # at this stage even though they aren't implemented because these will
+        # be needed for multi-nic and there was no sense writing it for single
+        # network/single IP and then having to turn around and re-write it
+        vm_opaque_ref = self._get_vm_opaque_ref(instance.id)
+        logging.debug(_("injecting network info to xenstore for vm: |%s|"),
+                                                             vm_opaque_ref)
+        admin_context = context.get_admin_context()
+        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
+        networks = db.network_get_all_by_instance(admin_context,
+                                                  instance['id'])
+        for network in networks:
+            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+
+            def ip_dict(ip):
+                return {'netmask': network['netmask'],
+                        'enabled': '1',
+                        'ip': ip.address}
+
+            mac_id = instance.mac_address.replace(':', '')
+            location = 'vm-data/networking/%s' % mac_id
+            mapping = {'label': network['label'],
+                       'gateway': network['gateway'],
+                       'mac': instance.mac_address,
+                       'dns': [network['dns']],
+                       'ips': [ip_dict(ip) for ip in network_IPs]}
+            self.write_to_param_xenstore(vm_opaque_ref, {location: mapping})
+            try:
+                self.write_to_xenstore(vm_opaque_ref, location,
+                                                      mapping['location'])
+            except KeyError:
+                # catch KeyError for domid if instance isn't running
+                pass
+
+        return networks
+
+    def create_vifs(self, instance, networks=None):
+        """
+        Creates vifs for an instance
+
+        """
+        vm_opaque_ref = self._get_vm_opaque_ref(instance.id)
+        logging.debug(_("creating vif(s) for vm: |%s|"), vm_opaque_ref)
+        if networks is None:
+            networks = db.network_get_all_by_instance(admin_context,
+                                                      instance['id'])
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # this bit here about creating the vifs will be updated
+        # in multi-nic to handle multiple IPs on the same network
+        # and multiple networks
+        # for now it works as there is only one of each
+        for network in networks:
+            bridge = network['bridge']
+            network_ref = \
+                NetworkHelper.find_network_with_bridge(self._session, bridge)
+
+            if network_ref:
+                VMHelper.create_vif(self._session, vm_opaque_ref,
+                                    network_ref, instance.mac_address)
 
     def reset_network(self, instance):
         """

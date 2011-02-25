@@ -292,6 +292,20 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def inject_network_info(self, req, id):
+        """
+        Inject network info for an instance (admin only).
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.inject_network_info(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::inject_network_info %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']

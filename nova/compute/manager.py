@@ -535,6 +535,18 @@ class ComputeManager(manager.Manager):
                                                    context=context)
         self.driver.reset_network(instance_ref)
 
+    @checks_instance_lock
+    def inject_network_info(self, context, instance_id):
+        """
+        Inject network info for the instance.
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_('instance %s: inject network info'), instance_id,
+                                                         context=context)
+        self.driver.inject_network_info(instance_ref)
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
