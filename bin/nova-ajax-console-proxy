@@ -63,7 +63,7 @@ class AjaxConsoleProxy(object):
 
     def __call__(self, env, start_response):
         try:
-            if env.has_key('QUERY_STRING'):
+            if 'QUERY_STRING' in env:
                 req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
                                             env['HTTP_HOST'],
                                             env['PATH_INFO'],
