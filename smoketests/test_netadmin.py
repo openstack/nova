@@ -21,7 +21,6 @@ import os
 import random
 import sys
 import time
-import unittest
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
