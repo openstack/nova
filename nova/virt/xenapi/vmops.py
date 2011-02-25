@@ -27,7 +27,6 @@ import tempfile
 import uuid
 
 from nova import db
-from nova import compute
 from nova import context
 from nova import log as logging
 from nova import exception
@@ -50,7 +49,6 @@ class VMOps(object):
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
-        self.compute_api = compute.API()
 
         VMHelper.XenAPI = self.XenAPI
 
