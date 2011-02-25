@@ -83,7 +83,7 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
         tar_proc.stdin.write(chunk)
         chunk = resp.read(CHUNK_SIZE)
 
-    _finish_subprocess(tar_proc, "tar")
+    _finish_subprocess(tar_proc, tar_cmd)
     conn.close()
 
 
@@ -131,7 +131,7 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
         modify_cmd = ("vhd-util modify -n %(child_path)s -p %(parent_path)s"
                       % locals())
         modify_proc = _make_subprocess(modify_cmd, stderr=True)
-        _finish_subprocess(modify_proc, "vhd-util")
+        _finish_subprocess(modify_proc, modify_cmd)
 
     def move_into_sr(orig_path):
         """Move a file into the SR"""
@@ -148,7 +148,8 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
         """
         query_cmd = "vhd-util query -n %(path)s -f" % locals()
         query_proc = _make_subprocess(query_cmd, stdout=True, stderr=True)
-        out, err = _finish_subprocess(query_proc, "vhd-util")
+        out, err = _finish_subprocess(query_proc, query_cmd)
+
         for line in out.splitlines():
             if line.startswith('hidden'):
                 value = line.split(':')[1].strip()
@@ -206,9 +207,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
         'transfer-encoding': 'chunked',
         'x-image-meta-is_public': 'True',
         'x-image-meta-status': 'queued',
-        'x-image-meta-store': 'file',
-        'x-image-meta-type': 'vhd',
-        'x-image-meta-property-container-format': 'tarball',
+        'x-image-meta-type': 'vhd'
      }
     for header, value in headers.iteritems():
         conn.putheader(header, value)
@@ -223,7 +222,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
         chunk = tar_proc.stdout.read(CHUNK_SIZE)
     conn.send("0\r\n\r\n")
 
-    _finish_subprocess(tar_proc, "tar")
+    _finish_subprocess(tar_proc, tar_cmd)
 
     resp = conn.getresponse()
     if resp.status != httplib.OK:
@@ -290,14 +289,14 @@ def _make_subprocess(cmdline, stdout=False, stderr=False, stdin=False):
     return proc
 
 
-def _finish_subprocess(proc, cmd):
+def _finish_subprocess(proc, cmdline):
     """Ensure that the process returned a zero exit code indicating success
     """
     out, err = proc.communicate()
     ret = proc.returncode
     if ret != 0:
-        msg = "%(cmd)s returned non-zero exit code (%i): '%s'" % (ret, err)
-        raise Exception(msg)
+        raise Exception("'%(cmdline)s' returned non-zero exit code: "
+                        "retcode=%(ret)i,  stderr='%(err)s'" % locals())
     return out, err
 
 
