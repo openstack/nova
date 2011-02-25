@@ -107,7 +107,7 @@ class Bucket(object):
 
     def is_authorized(self, context):
         try:
-            return context.user.is_admin() or \
+            return context.is_admin or \
                    self.owner_id == context.project_id
         except Exception, e:
             return False
