@@ -75,17 +75,15 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
     elif resp.status != httplib.OK:
         raise Exception("Unexpected response from Glance %i" % res.status)
 
-    tar_args = shlex.split(
-        "tar -zx --directory=%(staging_path)s" % locals())
-    tar_proc = subprocess.Popen(
-        tar_args, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+    tar_cmd = "tar -zx --directory=%(staging_path)s" % locals()
+    tar_proc = _make_subprocess(tar_cmd, stderr=True, stdin=True)
 
     chunk = resp.read(CHUNK_SIZE)
     while chunk:
         tar_proc.stdin.write(chunk)
         chunk = resp.read(CHUNK_SIZE)
 
-    _assert_process_success(tar_proc, "tar")
+    _finish_subprocess(tar_proc, "tar")
     conn.close()
 
 
@@ -130,12 +128,10 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
         This needs to be done before we move both VHDs into the SR to prevent
         the base_copy from being DOA (deleted-on-arrival).
         """
-        modify_args = shlex.split(
-            "vhd-util modify -n %(child_path)s -p %(parent_path)s"
-            % locals())
-        modify_proc = subprocess.Popen(
-            modify_args, stderr=subprocess.PIPE)
-        _assert_process_success(modify_proc, "vhd-util")
+        modify_cmd = ("vhd-util modify -n %(child_path)s -p %(parent_path)s"
+                      % locals())
+        modify_proc = _make_subprocess(modify_cmd, stderr=True)
+        _finish_subprocess(modify_proc, "vhd-util")
 
     def move_into_sr(orig_path):
         """Move a file into the SR"""
@@ -150,11 +146,9 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
         present, then the image.vhd better not be marked 'hidden' or it will
         be deleted when moved into the SR.
         """
-        vhd_query_args = shlex.split(
-            "vhd-util query -n %(path)s -f" % locals())
-        vhd_query_proc = subprocess.Popen(
-            vhd_query_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = _assert_process_success(vhd_query_proc, "vhd-util")
+        query_cmd = "vhd-util query -n %(path)s -f" % locals()
+        query_proc = _make_subprocess(query_cmd, stdout=True, stderr=True)
+        out, err = _finish_subprocess(query_proc, "vhd-util")
         for line in out.splitlines():
             if line.startswith('hidden'):
                 value = line.split(':')[1].strip()
@@ -208,25 +202,24 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
 
     # FIXME(sirp): nokernel signals Nova to use a raw image. This is defined by
     # FLAGS.null_kernel. Is there a way to get rid of this?
+    # TODO(sirp): make `store` configurable
     headers = {
-        'x-image-meta-store': 'file',
+        'content-type': 'application/octet-stream',
+        'transfer-encoding': 'chunked',
         'x-image-meta-is_public': 'True',
-        'x-image-meta-type': 'vhd',
         'x-image-meta-status': 'queued',
+        'x-image-meta-store': 'file',
+        'x-image-meta-type': 'vhd',
         'x-image-meta-property-kernel-id': 'nokernel',
         'x-image-meta-property-ramdisk-id': 'noramdisk',
         'x-image-meta-property-container-format': 'tarball',
-        'transfer-encoding': 'chunked',
-        'content-type': 'application/octet-stream',
      }
     for header, value in headers.iteritems():
         conn.putheader(header, value)
     conn.endheaders()
 
-    tar_args = shlex.split(
-        "tar -zc --directory=%(staging_path)s ." % locals())
-    tar_proc = subprocess.Popen(
-        tar_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    tar_cmd = "tar -zc --directory=%(staging_path)s ." % locals()
+    tar_proc = _make_subprocess(tar_cmd, stdout=True, stderr=True)
 
     chunk = tar_proc.stdout.read(CHUNK_SIZE)
     while chunk:
@@ -234,7 +227,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
         chunk = tar_proc.stdout.read(CHUNK_SIZE)
     conn.send("0\r\n\r\n")
 
-    _assert_process_success(tar_proc, "tar")
+    _finish_subprocess(tar_proc, "tar")
 
     resp = conn.getresponse()
     if resp.status != httplib.OK:
@@ -289,7 +282,19 @@ def _cleanup_staging_area(staging_path):
     shutil.rmtree(staging_path)
 
 
-def _assert_process_success(proc, cmd):
+def _make_subprocess(cmdline, stdout=False, stderr=False, stdin=False):
+    """Make a subprocess according to the given command-line string
+    """
+    kwargs = {}
+    kwargs['stdout'] = stdout and subprocess.PIPE or None
+    kwargs['stderr'] = stderr and subprocess.PIPE or None
+    kwargs['stdin'] = stdin and subprocess.PIPE or None
+    args = shlex.split(cmdline)
+    proc = subprocess.Popen(args, **kwargs)
+    return proc
+
+
+def _finish_subprocess(proc, cmd):
     """Ensure that the process returned a zero exit code indicating success
     """
     out, err = proc.communicate()
