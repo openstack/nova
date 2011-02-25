@@ -21,6 +21,7 @@ Handles all requests relating to instances (guest vms).
 """
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota

@@ -450,7 +450,7 @@ class Controller(wsgi.Controller):
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image['type'] != 'machine':
+        if image['disk_format'] != 'ami':
             return None, None
 
         try:

@@ -40,7 +40,7 @@ def _call_scheduler(method, context, params=None):
     return rpc.call(context, queue, kwargs)
 
 
-class API:
+class API(object):
     """API for interacting with the scheduler."""
 
     @classmethod
