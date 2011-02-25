@@ -15,19 +15,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
 import stubout
 
+from nova import test
 from nova.api.openstack import shared_ip_groups
 
 
-class SharedIpGroupsTest(unittest.TestCase):
+class SharedIpGroupsTest(test.TestCase):
     def setUp(self):
+        super(SharedIpGroupsTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        super(SharedIpGroupsTest, self).tearDown()
 
     def test_get_shared_ip_groups(self):
         pass
