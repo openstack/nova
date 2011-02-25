@@ -43,6 +43,8 @@ from nova import wsgi
 LOG = logging.getLogger('nova.api')
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('paste_config', "api-paste.ini",
+                    'File name for the paste.deploy config for nova-api')
 flags.DEFINE_string('ec2_listen', "0.0.0.0",
                     'IP address for EC2 API to listen')
 flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
@@ -90,8 +92,9 @@ if __name__ == '__main__':
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
         LOG.debug("%(flag)s : %(flag_get)s" % locals())
-    conf = wsgi.paste_config_file('nova-api.conf')
+    conf = wsgi.paste_config_file(FLAGS.paste_config)
     if conf:
         run_app(conf)
     else:
-        LOG.error(_("No paste configuration found for: %s"), 'nova-api.conf')
+        LOG.error(_("No paste configuration found for: %s"),
+                  FLAGS.paste_config)

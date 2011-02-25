@@ -123,7 +123,7 @@ class Consumer(messaging.Consumer):
                 LOG.error(_("Reconnected to queue"))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
-        #             exceptions to be logged 10 times a second if some
+        #             want exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
         except Exception:  # pylint: disable-msg=W0703
             if not self.failed_connection:
