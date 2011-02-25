@@ -102,7 +102,7 @@ def main():
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
-    logging.basicConfig()
+    logging.setup()
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
     if int(os.environ.get('TESTING', '0')):
         FLAGS.fake_rabbit = True
@@ -113,7 +113,9 @@ def main():
         FLAGS.num_networks = 5
         path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                             '..',
-                                            'nova.sqlite'))
+                                            'nova',
+                                            'tests',
+                                            'tests.sqlite'))
         FLAGS.sql_connection = 'sqlite:///%s' % path
     action = argv[1]
     if action in ['add', 'del', 'old']:

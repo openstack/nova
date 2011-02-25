@@ -198,8 +198,9 @@ class CloudController(object):
             return self._describe_availability_zones(context, **kwargs)
 
     def _describe_availability_zones(self, context, **kwargs):
-        enabled_services = db.service_get_all(context)
-        disabled_services = db.service_get_all(context, True)
+        ctxt = context.elevated()
+        enabled_services = db.service_get_all(ctxt)
+        disabled_services = db.service_get_all(ctxt, True)
         available_zones = []
         for zone in [service.availability_zone for service
                      in enabled_services]:
@@ -534,8 +535,9 @@ class CloudController(object):
 
     def get_ajax_console(self, context, instance_id, **kwargs):
         ec2_id = instance_id[0]
-        internal_id = ec2_id_to_id(ec2_id)
-        return self.compute_api.get_ajax_console(context, internal_id)
+        instance_id = ec2_id_to_id(ec2_id)
+        return self.compute_api.get_ajax_console(context,
+                                                 instance_id=instance_id)
 
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
@@ -674,7 +676,8 @@ class CloudController(object):
             instances = []
             for ec2_id in instance_id:
                 internal_id = ec2_id_to_id(ec2_id)
-                instance = self.compute_api.get(context, internal_id)
+                instance = self.compute_api.get(context,
+                                                instance_id=internal_id)
                 instances.append(instance)
         else:
             instances = self.compute_api.get_all(context, **kwargs)
