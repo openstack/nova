@@ -203,17 +203,17 @@ class FakeAuthDatabase(object):
     data = {}
 
     @staticmethod
-    def auth_get_token(context, token_hash):
+    def auth_token_get(context, token_hash):
         return FakeAuthDatabase.data.get(token_hash, None)
 
     @staticmethod
-    def auth_create_token(context, token):
+    def auth_token_create(context, token):
         fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
         FakeAuthDatabase.data[fake_token.token_hash] = fake_token
         return fake_token
 
     @staticmethod
-    def auth_destroy_token(context, token):
+    def auth_token_destroy(context, token):
         if token.token_hash in FakeAuthDatabase.data:
             del FakeAuthDatabase.data['token_hash']
 
