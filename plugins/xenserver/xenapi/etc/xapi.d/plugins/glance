@@ -163,16 +163,14 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
                         "VHD %(path)s is marked as hidden without child" %
                         locals())
 
-    image_path = os.path.join(staging_path, 'image')
-
-    orig_base_copy_path = os.path.join(image_path, 'image.vhd')
+    orig_base_copy_path = os.path.join(staging_path, 'image.vhd')
     if not os.path.exists(orig_base_copy_path):
         raise Exception("Invalid image: image.vhd not present")
 
     base_copy_path, base_copy_uuid = rename_with_uuid(orig_base_copy_path)
 
     vdi_uuid = base_copy_uuid
-    orig_snap_path = os.path.join(image_path, 'snap.vhd')
+    orig_snap_path = os.path.join(staging_path, 'snap.vhd')
     if os.path.exists(orig_snap_path):
         snap_path, snap_uuid = rename_with_uuid(orig_snap_path)
         vdi_uuid = snap_uuid
@@ -192,11 +190,9 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
     """Hard-link VHDs into staging area with appropriate filename
     ('snap' or 'image.vhd')
     """
-    image_path = os.path.join(staging_path, 'image')
-    os.mkdir(image_path)
     for name, uuid in vdi_uuids.items():
         source = os.path.join(sr_path, "%s.vhd" % uuid)
-        link_name = os.path.join(image_path, "%s.vhd" % name)
+        link_name = os.path.join(staging_path, "%s.vhd" % name)
         os.link(source, link_name)
 
 
