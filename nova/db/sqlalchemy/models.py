@@ -126,11 +126,16 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
+    onset_files = []
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def name(self):
-        return FLAGS.instance_name_template % self.id
+        base_name = FLAGS.instance_name_template % self.id
+        if getattr(self, '_rescue', False):
+            base_name += "-rescue"
+        return base_name
 
     admin_pass = Column(String(255))
     user_id = Column(String(255))

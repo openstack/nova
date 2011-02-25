@@ -65,20 +65,20 @@ class VMOps(object):
 
     def spawn(self, instance):
         """Create VM instance"""
-        vm = VMHelper.lookup(self._session, instance.name)
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
-            ' non-unique name %s') % instance.name)
+            ' non-unique name %s') % instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
-                name = instance['name']
-                LOG.exception(_('instance %(name)s: not enough free memory')
-                              % locals())
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                return
+            LOG.exception(_('instance %(instance_name)s: not enough free '
+                          'memory') % locals())
+            db.instance_set_state(context.get_admin_context(),
+                                  instance['id'],
+                                  power_state.SHUTDOWN)
+            return
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
@@ -150,9 +150,8 @@ class VMOps(object):
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
-        instance_name = instance.name
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
-                % locals())
+                 % locals())
 
         def _inject_onset_files():
             onset_files = instance.onset_files
@@ -176,18 +175,18 @@ class VMOps(object):
 
         def _wait_for_boot():
             try:
-                state = self.get_info(instance['name'])['state']
+                state = self.get_info(instance_name)['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    LOG.debug(_('Instance %s: booted'), instance['name'])
+                    LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
                     _inject_onset_files()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
                 LOG.exception(_('instance %s: failed to boot'),
-                              instance['name'])
+                              instance_name)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -475,24 +474,26 @@ class VMOps(object):
 
     def rescue(self, instance, callback):
         """Rescue the specified instance"""
-        #vm = self._get_vm_opaque_ref(instance)
-        #self._shutdown(instance, vm)
+        vm = self._get_vm_opaque_ref(instance)
+        self._shutdown(instance, vm)
 
-        print instance.__dict__
-        print instance.name
-        print "%s-rescue" % instance.name
-        #rescue_vm = self.spawn(instance)
+        # log old instance
+        # log new instance
 
-        #vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
-        #vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
-        #vbd_ref = VMHelper.create_vbd(
-        #    self._session,
-        #    rescue_vm,
-        #    vdi_ref,
-        #    1,
-        #    False)
+        instance._rescue = True
+        self.spawn(instance)
+        rescue_vm = self._get_vm_opaque_ref(instance)
 
-        #self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+        vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        vbd_ref = VMHelper.create_vbd(
+            self._session,
+            rescue_vm,
+            vdi_ref,
+            1,
+            False)
+
+        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
@@ -505,7 +506,15 @@ class VMOps(object):
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
-        self.reboot(instance)
+        # fetch old instance
+        # fetch new instance
+        # destroy new instance
+        # start old instance
+
+        self.destroy(instance)
+        instance._rescue = False
+
+        self._start(instance, vm)
 
     def get_info(self, instance):
         """Return data about VM instance"""
