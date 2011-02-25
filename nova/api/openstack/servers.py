@@ -358,6 +358,11 @@ class Controller(wsgi.Controller):
         # kernel_id and ramdisk_id
         image = self._image_service.show(req.environ['nova.context'], image_id)
 
+        if image['status'] != 'active':
+            raise exception.Invalid(
+                _("Cannot build from image %(image_id)s, status not active") %
+                  locals())
+
         if image['type'] != 'machine':
             return None, None
 
