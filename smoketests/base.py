@@ -22,6 +22,7 @@ import httplib
 import os
 import paramiko
 import sys
+import tempfile
 import time
 import unittest
 from boto.ec2.regioninfo import RegionInfo
@@ -147,19 +148,20 @@ class SmokeTestCase(unittest.TestCase):
         except:
             pass
 
-    def bundle_image(self, image, kernel=False):
-        cmd = 'euca-bundle-image -i %s' % image
+    def bundle_image(self, image, tempdir='/tmp', kernel=False):
+        tempdir = tempfile.mkdtemp()
+        cmd = 'euca-bundle-image -i %s -d %s' % (image, tempdir)
         if kernel:
             cmd += ' --kernel true'
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
             raise Exception(output)
-        return True
+        return tempdir
 
-    def upload_image(self, bucket_name, image):
+    def upload_image(self, bucket_name, image, tempdir='/tmp'):
         cmd = 'euca-upload-bundle -b '
-        cmd += '%s -m /tmp/%s.manifest.xml' % (bucket_name, image)
+        cmd += '%s -m %s/%s.manifest.xml' % (bucket_name, tempdir, image)
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
@@ -183,29 +185,3 @@ class UserSmokeTestCase(SmokeTestCase):
         global TEST_DATA
         self.conn = self.connection_for_env()
         self.data = TEST_DATA
-
-
-def run_tests(suites):
-    argv = FLAGS(sys.argv)
-    if FLAGS.use_ipv6:
-        global boto_v6
-        boto_v6 = __import__('boto_v6')
-
-    if not os.getenv('EC2_ACCESS_KEY'):
-        print >> sys.stderr, 'Missing EC2 environment variables. Please ' \
-                             'source the appropriate novarc file before ' \
-                             'running this test.'
-        return 1
-
-    if FLAGS.suite:
-        try:
-            suite = suites[FLAGS.suite]
-        except KeyError:
-            print >> sys.stderr, 'Available test suites:', \
-                                 ', '.join(suites.keys())
-            return 1
-
-        unittest.TextTestRunner(verbosity=2).run(suite)
-    else:
-        for suite in suites.itervalues():
-            unittest.TextTestRunner(verbosity=2).run(suite)

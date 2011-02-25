@@ -16,12 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import commands
 import os
 import random
 import sys
 import time
-import unittest
+import tempfile
+import shutil
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -48,10 +48,18 @@ TEST_KEY = '%s_key' % TEST_PREFIX
 TEST_GROUP = '%s_group' % TEST_PREFIX
 class ImageTests(base.UserSmokeTestCase):
     def test_001_can_bundle_image(self):
-        self.assertTrue(self.bundle_image(FLAGS.bundle_image))
+        self.data['tempdir'] = tempfile.mkdtemp()
+        self.assertTrue(self.bundle_image(FLAGS.bundle_image,
+                                          self.data['tempdir']))
 
     def test_002_can_upload_image(self):
-        self.assertTrue(self.upload_image(TEST_BUCKET, FLAGS.bundle_image))
+        try:
+            self.assertTrue(self.upload_image(TEST_BUCKET,
+                                              FLAGS.bundle_image,
+                                              self.data['tempdir']))
+        finally:
+            if os.path.exists(self.data['tempdir']):
+                shutil.rmtree(self.data['tempdir'])
 
     def test_003_can_register_image(self):
         image_id = self.conn.register_image('%s/%s.manifest.xml' %
