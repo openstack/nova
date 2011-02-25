@@ -701,9 +701,13 @@ class CloudController(object):
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
-                    i['dnsNameV6'] = utils.to_global_ipv6(
-                        instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'])
+                    if FLAGS.network_manager == \
+                                  'nova.network.manager.FlatManager':
+                        i['dnsNameV6'] = instance['fixed_ip']['addressv6']
+                    else:
+                        i['dnsNameV6'] = utils.to_global_ipv6(
+                            instance['fixed_ip']['network']['cidr_v6'],
+                            instance['mac_address'])
 
             i['privateDnsName'] = fixed_addr
             i['publicDnsName'] = floating_addr
