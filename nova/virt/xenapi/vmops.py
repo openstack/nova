@@ -483,6 +483,14 @@ class VMOps(object):
         task1 = self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm)
         self._session.wait_for_task(task1, instance.id)
 
+        vdis = VMHelper.lookup_vm_vdis(self._session, rescue_vm)
+        for vdi in vdis:
+            try:
+                task = self._session.call_xenapi('Async.VDI.destroy', vdi)
+                self._session.wait_for_task(task, instance.id)
+            except self.XenAPI.Failure:
+                continue
+
         task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm)
         self._session.wait_for_task(task2, instance.id)
 
@@ -574,8 +582,17 @@ class VMOps(object):
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
 
             if network_ref:
-                VMHelper.create_vif(self._session, vm_opaque_ref,
-                                    network_ref, instance.mac_address)
+                try:
+                    device = "1" if instance._rescue else "0"
+                except AttributeError:
+                    device = "0"
+
+                VMHelper.create_vif(
+                    self._session,
+                    vm_opaque_ref,
+                    network_ref,
+                    instance.mac_address,
+                    device)
 
     def reset_network(self, instance):
         """
