@@ -196,6 +196,19 @@ class VMOps(object):
                             _('Instance not present %s') % instance_name)
         return vm
 
+    def _bootlock(self, vm, unlock=False):
+        """Prevent an instance from booting"""
+        if unlock:
+            self._session.call_xenapi(
+                "VM.remove_from_blocked_operations",
+                vm,
+                "start")
+        else:
+            self._session.call_xenapi(
+                "VM.set_blocked_operations",
+                vm,
+                {"start": ""})
+
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance
 
@@ -443,6 +456,7 @@ class VMOps(object):
 
         vm = self._get_vm_opaque_ref(instance)
         self._shutdown(instance, vm)
+        self._bootlock(vm)
 
         instance._rescue = True
         self.spawn(instance)
@@ -492,6 +506,7 @@ class VMOps(object):
         task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm)
         self._session.wait_for_task(task2, instance.id)
 
+        self._bootlock(original_vm, unlock=True)
         self._start(instance, original_vm)
 
     def get_info(self, instance):
