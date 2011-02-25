@@ -99,10 +99,10 @@ class Test(test.TestCase):
                     token_hash=token_hash,
                     created_at=datetime.datetime(1990, 1, 1))
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_destroy_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_destroy',
             destroy_token_mock)
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_get_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_get',
             bad_token)
 
         req = webob.Request.blank('/v1.0/')
