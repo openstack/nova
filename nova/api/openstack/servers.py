@@ -136,28 +136,6 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """
-        Machine images are associated with Kernels and Ramdisk images via
-        metadata stored in Glance as 'image_properties'
-        """
-        # FIXME(sirp): Currently Nova requires us to specify the `null_kernel`
-        # identifier ('nokernel') to indicate a RAW (or VHD) image.  It would
-        # be better if we could omit the kernel_id and ramdisk_id properties
-        # on the image
-        def lookup(image, param):
-            _image_id = image['id']
-            try:
-                return image['properties'][param]
-            except KeyError:
-                LOG.debug(
-                    _("%(param)s property not found for image %(_image_id)s") %
-                      locals())
-            return None
-
-        image = self._image_service.show(req.environ['nova.context'], image_id)
-        return lookup(image, 'kernel_id'), lookup(image, 'ramdisk_id')
-
     def create(self, req):
         """ Creates a new server for a given user """
         env = self._deserialize(req.body, req)
@@ -367,3 +345,32 @@ class Controller(wsgi.Controller):
                 action=item.action,
                 error=item.error))
         return dict(actions=actions)
+
+    def _get_kernel_ramdisk_from_image(self, req, image_id):
+        """Retrevies kernel and ramdisk IDs from Glance
+
+        Only 'machine' (ami) type use kernel and ramdisk outside of the
+        image.
+        """
+        # FIXME(sirp): Since we're retrieving the kernel_id from an
+        # image_property, this means only Glance is supported.
+        # The BaseImageService needs to expose a consistent way of accessing
+        # kernel_id and ramdisk_id
+        image = self._image_service.show(req.environ['nova.context'], image_id)
+
+        if image['type'] != 'machine':
+            return None, None
+
+        try:
+            kernel_id = image['properties']['kernel_id']
+        except KeyError:
+            raise exception.NotFound(
+                _("Kernel not found for image %(image_id)s") % locals())
+
+        try:
+            ramdisk_id = image['properties']['ramdisk_id']
+        except KeyError:
+            raise exception.NotFound(
+                _("Ramdisk not found for image %(image_id)s") % locals())
+
+        return kernel_id, ramdisk_id
