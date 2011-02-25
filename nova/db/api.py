@@ -85,8 +85,8 @@ def service_get(context, service_id):
 
 
 def service_get_all(context, disabled=False):
-    """Get all service."""
-    return IMPL.service_get_all(context, None, disabled)
+    """Get all services."""
+    return IMPL.service_get_all(context, disabled)
 
 
 def service_get_all_by_topic(context, topic):
@@ -288,9 +288,19 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
     return IMPL.fixed_ip_disassociate_all_by_timeout(context, host, time)
 
 
+def fixed_ip_get_all(context):
+    """Get all defined fixed ips."""
+    return IMPL.fixed_ip_get_all(context)
+
+
 def fixed_ip_get_by_address(context, address):
     """Get a fixed ip by address or raise if it does not exist."""
     return IMPL.fixed_ip_get_by_address(context, address)
+
+
+def fixed_ip_get_all_by_instance(context, instance_id):
+    """Get fixed ips by instance or raise if none exist."""
+    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
 
 
 def fixed_ip_get_instance(context, address):
@@ -521,6 +531,11 @@ def network_get_by_instance(context, instance_id):
     return IMPL.network_get_by_instance(context, instance_id)
 
 
+def network_get_all_by_instance(context, instance_id):
+    """Get all networks by instance id or raise if none exist."""
+    return IMPL.network_get_all_by_instance(context, instance_id)
+
+
 def network_get_index(context, network_id):
     """Get non-conflicting index for network."""
     return IMPL.network_get_index(context, network_id)
@@ -561,7 +576,7 @@ def project_get_network(context, project_id, associate=True):
 
     """
 
-    return IMPL.project_get_network(context, project_id)
+    return IMPL.project_get_network(context, project_id, associate)
 
 
 def project_get_network_v6(context, project_id):
@@ -615,19 +630,19 @@ def iscsi_target_create_safe(context, values):
 ###############
 
 
-def auth_destroy_token(context, token):
+def auth_token_destroy(context, token_id):
     """Destroy an auth token."""
-    return IMPL.auth_destroy_token(context, token)
+    return IMPL.auth_token_destroy(context, token_id)
 
 
-def auth_get_token(context, token_hash):
+def auth_token_get(context, token_hash):
     """Retrieves a token given the hash representing it."""
-    return IMPL.auth_get_token(context, token_hash)
+    return IMPL.auth_token_get(context, token_hash)
 
 
-def auth_create_token(context, token):
+def auth_token_create(context, token):
     """Creates a new token."""
-    return IMPL.auth_create_token(context, token)
+    return IMPL.auth_token_create(context, token)
 
 
 ###################
@@ -985,3 +1000,31 @@ def console_get_all_by_instance(context, instance_id):
 def console_get(context, console_id, instance_id=None):
     """Get a specific console (possibly on a given instance)."""
     return IMPL.console_get(context, console_id, instance_id)
+
+
+####################
+
+
+def zone_create(context, values):
+    """Create a new child Zone entry."""
+    return IMPL.zone_create(context, values)
+
+
+def zone_update(context, zone_id, values):
+    """Update a child Zone entry."""
+    return IMPL.zone_update(context, values)
+
+
+def zone_delete(context, zone_id):
+    """Delete a child Zone."""
+    return IMPL.zone_delete(context, zone_id)
+
+
+def zone_get(context, zone_id):
+    """Get a specific child Zone."""
+    return IMPL.zone_get(context, zone_id)
+
+
+def zone_get_all(context):
+    """Get all child Zones."""
+    return IMPL.zone_get_all(context)

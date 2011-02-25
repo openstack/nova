@@ -110,6 +110,7 @@ class NetworkManager(manager.Manager):
 
     This class must be subclassed to support specific topologies.
     """
+    timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
         if not network_driver:
@@ -137,6 +138,19 @@ class NetworkManager(manager.Manager):
                 self.driver.bind_floating_ip(floating_ip['address'], False)
                 self.driver.ensure_floating_forward(floating_ip['address'],
                                                     fixed_address)
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        super(NetworkManager, self).periodic_tasks(context)
+        if self.timeout_fixed_ips:
+            now = utils.utcnow()
+            timeout = FLAGS.fixed_ip_disassociate_timeout
+            time = now - datetime.timedelta(seconds=timeout)
+            num = self.db.fixed_ip_disassociate_all_by_timeout(context,
+                                                               self.host,
+                                                               time)
+            if num:
+                LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
@@ -306,6 +320,17 @@ class FlatManager(NetworkManager):
     not do any setup in this mode, it must be done manually.  Requests to
     169.254.169.254 port 80 will need to be forwarded to the api server.
     """
+    timeout_fixed_ips = False
+
+    def init_host(self):
+        """Do any initialization that needs to be run if this is a
+        standalone service.
+        """
+        #Fix for bug 723298 - do not call init_host on superclass
+        #Following code has been copied for NetworkManager.init_host
+        ctxt = context.get_admin_context()
+        for network in self.db.host_get_networks(ctxt, self.host):
+            self._on_set_network_host(ctxt, network['id'])
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -331,11 +356,12 @@ class FlatManager(NetworkManager):
         pass
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, *args, **kwargs):
+                        cidr_v6, label, *args, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
         significant_bits_v6 = 64
+        count = 1
         for index in range(num_networks):
             start = index * network_size
             significant_bits = 32 - int(math.log(network_size, 2))
@@ -343,11 +369,17 @@ class FlatManager(NetworkManager):
             project_net = IPy.IP(cidr)
             net = {}
             net['bridge'] = FLAGS.flat_network_bridge
+            net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask())
             net['gateway'] = str(project_net[1])
             net['broadcast'] = str(project_net.broadcast())
             net['dhcp_start'] = str(project_net[2])
+            if num_networks > 1:
+                net['label'] = "%s_%d" % (label, count)
+            else:
+                net['label'] = label
+            count += 1
 
             if(FLAGS.use_ipv6):
                 cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
@@ -384,6 +416,22 @@ class FlatManager(NetworkManager):
         net['injected'] = FLAGS.flat_injected
         net['dns'] = FLAGS.flat_network_dns
         self.db.network_update(context, network_id, net)
+
+    def allocate_floating_ip(self, context, project_id):
+        #Fix for bug 723298
+        raise NotImplementedError()
+
+    def associate_floating_ip(self, context, floating_address, fixed_address):
+        #Fix for bug 723298
+        raise NotImplementedError()
+
+    def disassociate_floating_ip(self, context, floating_address):
+        #Fix for bug 723298
+        raise NotImplementedError()
+
+    def deallocate_floating_ip(self, context, floating_address):
+        #Fix for bug 723298
+        raise NotImplementedError()
 
 
 class FlatDHCPManager(FlatManager):
@@ -451,18 +499,6 @@ class VlanManager(NetworkManager):
     instances in its subnet.
     """
 
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-        super(VlanManager, self).periodic_tasks(context)
-        now = datetime.datetime.utcnow()
-        timeout = FLAGS.fixed_ip_disassociate_timeout
-        time = now - datetime.timedelta(seconds=timeout)
-        num = self.db.fixed_ip_disassociate_all_by_timeout(context,
-                                                           self.host,
-                                                           time)
-        if num:
-            LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
-
     def init_host(self):
         """Do any initialization that needs to be run if this is a
         standalone service.
@@ -503,8 +539,14 @@ class VlanManager(NetworkManager):
                                        network_ref['bridge'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, vlan_start, vpn_start):
+                        cidr_v6, vlan_start, vpn_start, **kwargs):
         """Create networks based on parameters."""
+        # Check that num_networks + vlan_start is not > 4094, fixes lp708025
+        if num_networks + vlan_start > 4094:
+            raise ValueError(_('The sum between the number of networks and'
+                               ' the vlan start cannot be greater'
+                               ' than 4094'))
+
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
         network_size_v6 = 1 << 64

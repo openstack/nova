@@ -130,6 +130,12 @@ def stubout_stream_disk(stubs):
     stubs.Set(vm_utils, '_stream_disk', f)
 
 
+def stubout_is_vdi_pv(stubs):
+    def f(_1):
+        return False
+    stubs.Set(vm_utils, '_is_vdi_pv', f)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):

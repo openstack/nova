@@ -15,15 +15,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 import webob
 import webob.dec
 import webob.exc
 
+from nova import test
 from nova.api.openstack import faults
 
 
-class TestFaults(unittest.TestCase):
+class TestFaults(test.TestCase):
 
     def test_fault_parts(self):
         req = webob.Request.blank('/.xml')
