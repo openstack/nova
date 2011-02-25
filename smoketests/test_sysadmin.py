@@ -285,11 +285,3 @@ class VolumeTests(base.UserSmokeTestCase):
     def test_999_tearDown(self):
         self.conn.terminate_instances([self.data['instance'].id])
         self.conn.delete_key_pair(TEST_KEY)
-
-
-if __name__ == "__main__":
-    suites = {'image': unittest.makeSuite(ImageTests),
-              'instance': unittest.makeSuite(InstanceTests),
-              'volume': unittest.makeSuite(VolumeTests)
-              }
-    sys.exit(base.run_tests(suites))

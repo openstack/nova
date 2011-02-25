@@ -182,10 +182,3 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         self.assertFalse(TEST_GROUP in [group.name for group in groups])
         self.conn.terminate_instances([self.data['instance'].id])
         self.assertTrue(self.conn.release_address(self.data['public_ip']))
-
-
-if __name__ == "__main__":
-    suites = {'address': unittest.makeSuite(AddressTests),
-              'security_group': unittest.makeSuite(SecurityGroupTests)
-              }
-    sys.exit(base.run_tests(suites))

@@ -19,7 +19,6 @@
 import commands
 import os
 import random
-import socket
 import sys
 import time
 import unittest
@@ -181,7 +180,3 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
         self.conn.delete_security_group(security_group_name)
         if 'instance_id' in self.data:
             self.conn.terminate_instances([self.data['instance_id']])
-
-if __name__ == "__main__":
-    suites = {'instance': unittest.makeSuite(InstanceTestsFromPublic)}
-    sys.exit(base.run_tests(suites))

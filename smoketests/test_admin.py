@@ -89,7 +89,3 @@ class UserTests(AdminSmokeTestCase):
             os.remove(ZIP_FILENAME)
         except:
             pass
-
-if __name__ == "__main__":
-    suites = {'user': unittest.makeSuite(UserTests)}
-    sys.exit(base.run_tests(suites))
