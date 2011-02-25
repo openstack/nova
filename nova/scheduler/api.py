@@ -25,7 +25,7 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.api')
 
 
-class API:
+class API(object):
     """API for interacting with the scheduler."""
 
     def _call_scheduler(self, method, context, params=None):
