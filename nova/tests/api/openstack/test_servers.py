@@ -17,13 +17,13 @@
 
 import datetime
 import json
-import unittest
 
 import stubout
 import webob
 
 from nova import db
 from nova import flags
+from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.db.api
@@ -113,9 +113,10 @@ def fake_compute_api(cls, req, id):
     return True
 
 
-class ServersTest(unittest.TestCase):
+class ServersTest(test.TestCase):
 
     def setUp(self):
+        super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -146,6 +147,7 @@ class ServersTest(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
+        super(ServersTest, self).tearDown()
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -429,7 +431,3 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
-
-
-if __name__ == "__main__":
-    unittest.main()

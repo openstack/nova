@@ -22,7 +22,6 @@ and as a WSGI layer
 
 import json
 import datetime
-import unittest
 
 import stubout
 import webob
@@ -30,6 +29,7 @@ import webob
 from nova import context
 from nova import exception
 from nova import flags
+from nova import test
 from nova import utils
 import nova.api.openstack
 from nova.api.openstack import images
@@ -130,12 +130,13 @@ class BaseImageServiceTests(object):
         self.assertEquals(1, num_images)
 
 
-class LocalImageServiceTest(unittest.TestCase,
+class LocalImageServiceTest(test.TestCase,
                             BaseImageServiceTests):
 
     """Tests the local image service"""
 
     def setUp(self):
+        super(LocalImageServiceTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         service_class = 'nova.image.local.LocalImageService'
         self.service = utils.import_object(service_class)
@@ -145,14 +146,16 @@ class LocalImageServiceTest(unittest.TestCase,
         self.service.delete_all()
         self.service.delete_imagedir()
         self.stubs.UnsetAll()
+        super(LocalImageServiceTest, self).tearDown()
 
 
-class GlanceImageServiceTest(unittest.TestCase,
+class GlanceImageServiceTest(test.TestCase,
                              BaseImageServiceTests):
 
     """Tests the local image service"""
 
     def setUp(self):
+        super(GlanceImageServiceTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
@@ -163,9 +166,10 @@ class GlanceImageServiceTest(unittest.TestCase,
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        super(GlanceImageServiceTest, self).tearDown()
 
 
-class ImageControllerWithGlanceServiceTest(unittest.TestCase):
+class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     """Test of the OpenStack API /images application controller"""
 
@@ -194,6 +198,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
          'image_type': 'ramdisk'}]
 
     def setUp(self):
+        super(ImageControllerWithGlanceServiceTest, self).setUp()
         self.orig_image_service = FLAGS.image_service
         FLAGS.image_service = 'nova.image.glance.GlanceImageService'
         self.stubs = stubout.StubOutForTesting()
@@ -208,6 +213,7 @@ class ImageControllerWithGlanceServiceTest(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.image_service = self.orig_image_service
+        super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')

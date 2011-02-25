@@ -15,17 +15,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 import webob.exc
 import webob.dec
 
 from webob import Request
 
+from nova import test
 from nova.api import openstack
 from nova.api.openstack import faults
 
 
-class APITest(unittest.TestCase):
+class APITest(test.TestCase):
 
     def _wsgi_app(self, inner_app):
         # simpler version of the app than fakes.wsgi_app
