@@ -623,8 +623,8 @@ class InstanceCommands(object):
 
     def list(self, host=None, instance=None):
         """Show a list of all instances"""
-        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s" \
-              " %-12s %-10s %-10s %-10s %-5s" % (
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+              "  %-10s %-10s %-10s %-5s" % (
             _('instance'),
             _('node'),
             _('type'),
@@ -636,7 +636,7 @@ class InstanceCommands(object):
             _('project'),
             _('user'),
             _('zone'),
-            _('index'),
+            _('index')
         )
 
         for instance in db.instance_get_all(context.get_admin_context()):
@@ -716,8 +716,8 @@ CATEGORIES = [
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands)
-    ('instance', InstanceCommands),
+    ('volume', VolumeCommands),
+    ('instance', InstanceCommands)
 ]
 
 
