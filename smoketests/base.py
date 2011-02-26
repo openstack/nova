@@ -31,17 +31,24 @@ from smoketests import flags
 SUITE_NAMES = '[image, instance, volume]'
 FLAGS = flags.FLAGS
 flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
+flags.DEFINE_integer('ssh_tries', 3, 'Numer of times to try ssh')
 boto_v6 = None
 
 
 class SmokeTestCase(unittest.TestCase):
     def connect_ssh(self, ip, key_name):
-        # TODO(devcamcar): set a more reasonable connection timeout time
         key = paramiko.RSAKey.from_private_key_file('/tmp/%s.pem' % key_name)
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.WarningPolicy())
-        client.connect(ip, username='root', pkey=key)
-        return client
+        tries = 0
+        while(True):
+            try:
+                client = paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.WarningPolicy())
+                client.connect(ip, username='root', pkey=key, timeout=5)
+                return client
+            except (paramiko.AuthenticationException, paramiko.SSHException):
+                tries += 1
+                if tries == FLAGS.ssh_tries:
+                    raise
 
     def can_ping(self, ip, command="ping"):
         """Attempt to ping the specified IP, and give up after 1 second."""
