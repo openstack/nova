@@ -367,15 +367,15 @@ class AuthManager(object):
         self.mc.set(self._build_mc_key(user, role, project), None)
 
     def _has_role(self, user, role, project=None):
-        with self.driver() as drv:
-            mc_key = self._build_mc_key(user, role, project)
-            rslt = self.mc.get(mc_key)
-            if rslt == None:
+        mc_key = self._build_mc_key(user, role, project)
+        rslt = self.mc.get(mc_key)
+        if rslt == None:
+            with self.driver() as drv:
                 rslt = drv.has_role(user, role, project)
                 self.mc.set(mc_key, rslt)
                 return rslt
-            else:
-                return rslt
+        else:
+            return rslt
 
     def has_role(self, user, role, project=None):
         """Checks existence of role for user
