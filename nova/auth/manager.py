@@ -359,8 +359,8 @@ class AuthManager(object):
                 return True
 
     def _build_mc_key(self, user, role, project=None):
-        return "rolecache-%s-%s-%s" % (User.safe_id(user), role,
-                (Project.safe_id(project) if project else 'None'))
+        return str("rolecache-%s-%s-%s" % (User.safe_id(user), role,
+                (Project.safe_id(project) if project else 'None')))
 
     def _clear_mc_key(self, user, role, project=None):
         # (anthony) it would be better to delete the key
