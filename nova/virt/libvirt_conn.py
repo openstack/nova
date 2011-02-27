@@ -20,7 +20,7 @@
 """
 A connection to a hypervisor through libvirt.
 
-Supports KVM, QEMU, UML, and XEN.
+Supports KVM, LXC, QEMU, UML, and XEN.
 
 **Related Flags**
 
@@ -83,7 +83,7 @@ flags.DEFINE_string('libvirt_xml_template',
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
-                    'kvm, qemu, uml, xen)')
+                    'kvm, lxc, qemu, uml, xen)')
 flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
@@ -202,6 +202,8 @@ class LibvirtConnection(object):
             uri = FLAGS.libvirt_uri or 'uml:///system'
         elif FLAGS.libvirt_type == 'xen':
             uri = FLAGS.libvirt_uri or 'xen:///'
+        elif FLAGS.libvirt_type == 'lxc':
+            uri = FLAGS.libvirt_uri or 'lxc:///'
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
         return uri
@@ -565,6 +567,10 @@ class LibvirtConnection(object):
         f.write(libvirt_xml)
         f.close()
 
+        if FLAGS.libvirt_type == 'lxc':
+            container_dir = '%s/rootfs' % basepath(suffix='')
+            utils.execute('mkdir -p %s' % container_dir)
+
         # NOTE(vish): No need add the suffix to console.log
         os.close(os.open(basepath('console.log', ''),
                          os.O_CREAT | os.O_WRONLY, 0660))
@@ -621,6 +627,9 @@ class LibvirtConnection(object):
         target_partition = None
         if not inst['kernel_id']:
             target_partition = "1"
+
+        if FLAGS.libvirt_type == 'lxc':
+            target_partition = None
 
         key = str(inst['key_data'])
         net = None

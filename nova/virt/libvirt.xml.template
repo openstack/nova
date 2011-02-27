@@ -2,6 +2,12 @@
     <name>${name}</name>
     <memory>${memory_kb}</memory>
     <os>
+#if $type == 'lxc'
+	#set $disk_prefix = ''
+	#set $disk_bus = ''
+		<type>exe</type>
+		<init>/sbin/init</init>
+#else
 #if $type == 'uml'
     #set $disk_prefix = 'ubd'
     #set $disk_bus = 'uml'
@@ -37,6 +43,7 @@
             <boot dev="hd" />
         #end if
     #end if
+  #end if
 #end if
     </os>
     <features>
@@ -44,6 +51,12 @@
     </features>
     <vcpu>${vcpus}</vcpu>
     <devices>
+#if $type == 'lxc'
+		<filesystem type='mount'>
+			<source dir='${basepath}/rootfs'/>
+			<target dir='/'/>
+		</filesystem>
+#else
 #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}'/>
@@ -68,6 +81,7 @@
             <target dev='${disk_prefix}b' bus='${disk_bus}'/>
         </disk>
     #end if
+ #end if
 #end if
         <interface type='bridge'>
             <source bridge='${bridge_name}'/>
