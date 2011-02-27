@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
@@ -35,7 +33,6 @@ import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
-LOG.setLevel(logging.DEBUG)
 
 
 FLAGS = flags.FLAGS
@@ -64,8 +61,22 @@ def _translate_detail_keys(inst):
 
     inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
-    inst_dict['metadata'] = {}
+
+    # grab single private fixed ip
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    inst_dict['addresses']['private'] = private_ips
+
+    # grab all public floating ips
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    inst_dict['addresses']['public'] = public_ips
+
     inst_dict['hostId'] = ''
+
+    # Return the metadata as a dictionary
+    metadata = {}
+    for item in inst['metadata']:
+        metadata[item['key']] = item['value']
+    inst_dict['metadata'] = metadata
 
     return dict(server=inst_dict)
 
@@ -134,9 +145,10 @@ class Controller(wsgi.Controller):
             try:
                 return image['properties'][param]
             except KeyError:
-                raise exception.NotFound(
+                LOG.debug(
                     _("%(param)s property not found for image %(_image_id)s") %
                       locals())
+            return None
 
         image_id = str(image_id)
         image = self._image_service.show(req.environ['nova.context'], image_id)
@@ -148,14 +160,29 @@ class Controller(wsgi.Controller):
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        key_pair = auth_manager.AuthManager.get_key_pairs(
-            req.environ['nova.context'])[0]
+        context = req.environ['nova.context']
+        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
+        if not key_pairs:
+            raise exception.NotFound(_("No keypairs defined"))
+        key_pair = key_pairs[0]
+
         image_id = common.get_image_id_from_image_hash(self._image_service,
-            req.environ['nova.context'], env['server']['imageId'])
+            context, env['server']['imageId'])
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
+
+        # Metadata is a list, not a Dictionary, because we allow duplicate keys
+        # (even though JSON can't encode this)
+        # In future, we may not allow duplicate keys.
+        # However, the CloudServers API is not definitive on this front,
+        #  and we want to be compatible.
+        metadata = []
+        if env['server'].get('metadata'):
+            for k, v in env['server']['metadata'].items():
+                metadata.append({'key': k, 'value': v})
+
         instances = self.compute_api.create(
-            req.environ['nova.context'],
+            context,
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             image_id,
             kernel_id=kernel_id,
@@ -163,7 +190,9 @@ class Controller(wsgi.Controller):
             display_name=env['server']['name'],
             display_description=env['server']['name'],
             key_name=key_pair['name'],
-            key_data=key_pair['public_key'])
+            key_data=key_pair['public_key'],
+            metadata=metadata,
+            onset_files=env.get('onset_files', []))
         return _translate_keys(instances[0])
 
     def update(self, req, id):
@@ -246,6 +275,34 @@ class Controller(wsgi.Controller):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::get_lock %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def reset_network(self, req, id):
+        """
+        Reset networking on an instance (admin only).
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.reset_network(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::reset_network %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def inject_network_info(self, req, id):
+        """
+        Inject network info for an instance (admin only).
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.inject_network_info(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::inject_network_info %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 

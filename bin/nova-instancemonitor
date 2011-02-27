@@ -41,9 +41,6 @@ from nova import utils
 from nova import twistd
 from nova.compute import monitor
 
-# TODO(todd): shouldn't this be done with flags?  And what about verbose?
-logging.getLogger('boto').setLevel(logging.WARN)
-
 LOG = logging.getLogger('nova.instancemonitor')
 
 
