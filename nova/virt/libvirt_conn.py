@@ -259,6 +259,8 @@ class LibvirtConnection(object):
         instance_name = instance['name']
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals())
+        if FLAGS.libvirt_type == 'lxc':
+            utils.execute('sudo umount %s/rootfs' % target)
         if os.path.exists(target):
             shutil.rmtree(target)
 

@@ -139,7 +139,6 @@ def setup_container(image, container_dir=None, partition=None, nbd=False):
             utils.execute('sudo kpartx -s %s' % device)
         _unlink_device(device, nbd)
 
-
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:
