@@ -114,6 +114,32 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
         _unlink_device(device, nbd)
 
 
+def setup_container(image, container_dir=None, partition=None, nbd=False):
+    """Setup the LXC container
+
+    It will mount the loopback image to the container directory in order
+    to create the root filesystem for the container
+    """
+    device = _link_device(image, nbd)
+    try:
+        if not partition is None:
+            # create partition
+            utils.execute('sudo kpartx -a %s' % device)
+            mapped_device = '/dev/mapper/%p%s' % (device.split('/')[-1],
+                                                  partition)
+        else:
+            mapped_device = device
+
+        utils.execute('sudo mount %s %s' %(mapped_device, container_dir))
+
+    except Exception as e:
+        LOG.warn(_('Unable to mount container'))
+        if not partition is None:
+            # remove partitions
+            utils.execute('sudo kpartx -s %s' % device)
+        _unlink_device(device, nbd)
+
+
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:

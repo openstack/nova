@@ -661,6 +661,12 @@ class LibvirtConnection(object):
                 disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
                                  nbd=FLAGS.use_cow_images)
+
+                if FLAGS.libvirt_type == 'lxc':
+                    disk.setup_container(basepath('disk'),
+                                        container_dir=container_dir,
+                                        partition=target_partition,
+                                        nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
