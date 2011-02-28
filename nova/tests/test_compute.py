@@ -274,4 +274,3 @@ class ComputeTestCase(test.TestCase):
 
         type = instance_types.get_by_flavor_id("1")
         self.assertEqual(type, 'm1.tiny')
-
