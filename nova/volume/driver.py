@@ -97,22 +97,21 @@ class VolumeDriver(object):
             sizestr = '100M'
         else:
             sizestr = '%sG' % volume['size']
-        self._try_execute("sudo lvcreate -L %s -n %s %s" %
-                          (sizestr,
+        self._try_execute('sudo','lvcreate','-L',sizestr,'-n',
                            volume['name'],
-                           FLAGS.volume_group))
+                           FLAGS.volume_group)
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         try:
-            self._try_execute("sudo lvdisplay %s/%s" %
+            self._try_execute('sudo','lvdisplay','%s/%s" %
                               (FLAGS.volume_group,
                                volume['name']))
         except Exception as e:
             # If the volume isn't present, then don't attempt to delete
             return True
 
-        self._try_execute("sudo lvremove -f %s/%s" %
+        self._try_execute('sudo','lvremove','-f',"%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
 
@@ -168,12 +167,13 @@ class AOEDriver(VolumeDriver):
          blade_id) = self.db.volume_allocate_shelf_and_blade(context,
                                                              volume['id'])
         self._try_execute(
-                "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (shelf_id,
+                'sudo','vblade-persist','setup',
+                 shelf_id,
                  blade_id,
                  FLAGS.aoe_eth_dev,
-                 FLAGS.volume_group,
-                 volume['name']))
+                 "/dev/%s/%s" %
+                 (FLAGS.volume_group,
+                  volume['name']))
         # NOTE(vish): The standard _try_execute does not work here
         #             because these methods throw errors if other
         #             volumes on this host are in the process of
@@ -182,9 +182,9 @@ class AOEDriver(VolumeDriver):
         #             just wait a bit for the current volume to
         #             be ready and ignore any errors.
         time.sleep(2)
-        self._execute("sudo vblade-persist auto all",
+        self._execute('sudo','vblade-persist','auto','all',
                       check_exit_code=False)
-        self._execute("sudo vblade-persist start all",
+        self._execute('sudo','vblade-persist','start','all',
                       check_exit_code=False)
 
     def remove_export(self, context, volume):
@@ -192,15 +192,15 @@ class AOEDriver(VolumeDriver):
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume['id'])
-        self._try_execute("sudo vblade-persist stop %s %s" %
-                          (shelf_id, blade_id))
-        self._try_execute("sudo vblade-persist destroy %s %s" %
-                          (shelf_id, blade_id))
+        self._try_execute('sudo','vblade-persist','stop',
+                          shelf_id, blade_id)
+        self._try_execute('sudo','vblade-persist','destroy',
+                          shelf_id, blade_id)
 
     def discover_volume(self, _volume):
         """Discover volume on a remote host."""
-        self._execute("sudo aoe-discover")
-        self._execute("sudo aoe-stat", check_exit_code=False)
+        self._execute('sudo','aoe-discover')
+        self._execute('sudo','aoe-stat', check_exit_code=False)
 
     def undiscover_volume(self, _volume):
         """Undiscover volume on a remote host."""
@@ -252,13 +252,16 @@ class ISCSIDriver(VolumeDriver):
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._sync_exec("sudo ietadm --op new "
-                        "--tid=%s --params Name=%s" %
-                        (iscsi_target, iscsi_name),
+        self._sync_exec('sudo','ietadm','--op','new',
+                        "--tid=%s" % iscsi_target,
+                        '--params',
+                        "Name=%s" % iscsi-name,
                         check_exit_code=False)
-        self._sync_exec("sudo ietadm --op new --tid=%s "
-                        "--lun=0 --params Path=%s,Type=fileio" %
-                        (iscsi_target, volume_path),
+        self._sync_exec('sudo','ietadm','--op','new',
+                        "--tid=%s" % iscsi_target,
+                        '--lun=0',
+                        '--params',
+                        "Path=%s,Type=fileio" % volume_path,
                         check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
@@ -490,16 +493,13 @@ class RBDDriver(VolumeDriver):
             size = 100
         else:
             size = int(volume['size']) * 1024
-        self._try_execute("rbd --pool %s --size %d create %s" %
-                          (FLAGS.rbd_pool,
-                           size,
-                           volume['name']))
+        self._try_execute('rbd','--pool',FLAGS.rbd_pool,
+                          '--size', size,'create', volume['name'])
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
-        self._try_execute("rbd --pool %s rm %s" %
-                          (FLAGS.rbd_pool,
-                           volume['name']))
+        self._try_execute('rbd','--pool',FLAGS.rbd_pool,
+                          'rm', voluname['name'])
 
     def local_path(self, volume):
         """Returns the path of the rbd volume."""
@@ -534,7 +534,7 @@ class SheepdogDriver(VolumeDriver):
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
         try:
-            (out, err) = self._execute("collie cluster info")
+            (out, err) = self._execute('collie','cluster','info')
             if not out.startswith('running'):
                 raise exception.Error(_("Sheepdog is not working: %s") % out)
         except exception.ProcessExecutionError:
@@ -546,12 +546,13 @@ class SheepdogDriver(VolumeDriver):
             sizestr = '100M'
         else:
             sizestr = '%sG' % volume['size']
-        self._try_execute("qemu-img create sheepdog:%s %s" %
-                          (volume['name'], sizestr))
+        self._try_execute('qemu-img','create',
+                          "sheepdog:%s" %s" % volume['name'],
+                          sizestr)
 
     def delete_volume(self, volume):
         """Deletes a logical volume"""
-        self._try_execute("collie vdi delete %s" % volume['name'])
+        self._try_execute('collie','vdi','delete',volume['name'])
 
     def local_path(self, volume):
         return "sheepdog:%s" % volume['name']
