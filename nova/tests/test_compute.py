@@ -30,6 +30,7 @@ from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import instance_types
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -281,6 +282,10 @@ class ComputeTestCase(test.TestCase):
                 migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
 
+    def test_get_by_flavor_id(self):
+        type = instance_types.get_by_flavor_id(1)
+        self.assertEqual(type, 'm1.tiny')
+
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are
         the same host"""
@@ -289,3 +294,5 @@ class ComputeTestCase(test.TestCase):
         self.assertRaises(exception.Error, self.compute.prep_resize,
                 self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
+        type = instance_types.get_by_flavor_id("1")
+        self.assertEqual(type, 'm1.tiny')
