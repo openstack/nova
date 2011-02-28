@@ -105,16 +105,7 @@ def main():
     logging.setup()
     interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
     if int(os.environ.get('TESTING', '0')):
-        FLAGS.fake_rabbit = True
-        FLAGS.network_size = 16
-        FLAGS.connection_type = 'fake'
-        FLAGS.fake_network = True
-        FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
-        FLAGS.num_networks = 5
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                            '..',
-                                            'nova.sqlite'))
-        FLAGS.sql_connection = 'sqlite:///%s' % path
+        from nova.tests import fake_flags
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]

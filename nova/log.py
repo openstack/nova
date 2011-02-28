@@ -54,7 +54,7 @@ flags.DEFINE_string('logging_default_format_string',
                     'format string to use for log messages without context')
 
 flags.DEFINE_string('logging_debug_format_suffix',
-                    'from %(processName)s (pid=%(process)d) %(funcName)s'
+                    'from (pid=%(process)d) %(funcName)s'
                     ' %(pathname)s:%(lineno)d',
                     'data to append to log format when level is DEBUG')
 
@@ -236,16 +236,17 @@ class NovaRootLogger(NovaLogger):
     def __init__(self, name, level=NOTSET):
         self.logpath = None
         self.filelog = None
-        self.syslog = SysLogHandler(address='/dev/log')
         self.streamlog = StreamHandler()
+        self.syslog = None
         NovaLogger.__init__(self, name, level)
 
     def setup_from_flags(self):
         """Setup logger from flags"""
         global _filelog
         if FLAGS.use_syslog:
+            self.syslog = SysLogHandler(address='/dev/log')
             self.addHandler(self.syslog)
-        else:
+        elif self.syslog:
             self.removeHandler(self.syslog)
         logpath = _get_log_file_path()
         if logpath:

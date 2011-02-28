@@ -188,7 +188,11 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
 
 class FakeToken(object):
+    id = 0
+
     def __init__(self, **kwargs):
+        FakeToken.id += 1
+        self.id = FakeToken.id
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
@@ -203,26 +207,28 @@ class FakeAuthDatabase(object):
     data = {}
 
     @staticmethod
-    def auth_get_token(context, token_hash):
+    def auth_token_get(context, token_hash):
         return FakeAuthDatabase.data.get(token_hash, None)
 
     @staticmethod
-    def auth_create_token(context, token):
+    def auth_token_create(context, token):
         fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
         FakeAuthDatabase.data[fake_token.token_hash] = fake_token
+        FakeAuthDatabase.data['id_%i' % fake_token.id] = fake_token
         return fake_token
 
     @staticmethod
-    def auth_destroy_token(context, token):
-        if token.token_hash in FakeAuthDatabase.data:
-            del FakeAuthDatabase.data['token_hash']
+    def auth_token_destroy(context, token_id):
+        token = FakeAuthDatabase.data.get('id_%i' % token_id)
+        if token and token.token_hash in FakeAuthDatabase.data:
+            del FakeAuthDatabase.data[token.token_hash]
+            del FakeAuthDatabase.data['id_%i' % token_id]
 
 
 class FakeAuthManager(object):
     auth_data = {}
 
-    def add_user(self, user):
-        key = user.id
+    def add_user(self, key, user):
         FakeAuthManager.auth_data[key] = user
 
     def get_user(self, uid):
@@ -235,10 +241,7 @@ class FakeAuthManager(object):
         return None
 
     def get_user_from_access_key(self, key):
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.access == key:
-                return v
-        return None
+        return FakeAuthManager.auth_data.get(key, None)
 
 
 class FakeRateLimiter(object):
