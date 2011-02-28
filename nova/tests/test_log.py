@@ -1,8 +1,11 @@
 import cStringIO
 
 from nova import context
+from nova import flags
 from nova import log
 from nova import test
+
+FLAGS = flags.FLAGS
 
 
 def _fake_context():
@@ -14,15 +17,11 @@ class RootLoggerTestCase(test.TestCase):
         super(RootLoggerTestCase, self).setUp()
         self.log = log.logging.root
 
-    def tearDown(self):
-        super(RootLoggerTestCase, self).tearDown()
-        log.NovaLogger.manager.loggerDict = {}
-
     def test_is_nova_instance(self):
         self.assert_(isinstance(self.log, log.NovaLogger))
 
-    def test_name_is_nova_root(self):
-        self.assertEqual("nova.root", self.log.name)
+    def test_name_is_nova(self):
+        self.assertEqual("nova", self.log.name)
 
     def test_handlers_have_nova_formatter(self):
         formatters = []
@@ -45,25 +44,36 @@ class RootLoggerTestCase(test.TestCase):
         log.audit("foo", context=_fake_context())
         self.assert_(True)  # didn't raise exception
 
+    def test_will_be_verbose_if_verbose_flag_set(self):
+        self.flags(verbose=True)
+        log.reset()
+        self.assertEqual(log.DEBUG, self.log.level)
+
+    def test_will_not_be_verbose_if_verbose_flag_not_set(self):
+        self.flags(verbose=False)
+        log.reset()
+        self.assertEqual(log.INFO, self.log.level)
+
 
 class LogHandlerTestCase(test.TestCase):
     def test_log_path_logdir(self):
-        self.flags(logdir='/some/path')
-        self.assertEquals(log.get_log_file_path(binary='foo-bar'),
+        self.flags(logdir='/some/path', logfile=None)
+        self.assertEquals(log._get_log_file_path(binary='foo-bar'),
                          '/some/path/foo-bar.log')
 
     def test_log_path_logfile(self):
         self.flags(logfile='/some/path/foo-bar.log')
-        self.assertEquals(log.get_log_file_path(binary='foo-bar'),
+        self.assertEquals(log._get_log_file_path(binary='foo-bar'),
                          '/some/path/foo-bar.log')
 
     def test_log_path_none(self):
-        self.assertTrue(log.get_log_file_path(binary='foo-bar') is None)
+        self.flags(logdir=None, logfile=None)
+        self.assertTrue(log._get_log_file_path(binary='foo-bar') is None)
 
     def test_log_path_logfile_overrides_logdir(self):
         self.flags(logdir='/some/other/path',
                    logfile='/some/path/foo-bar.log')
-        self.assertEquals(log.get_log_file_path(binary='foo-bar'),
+        self.assertEquals(log._get_log_file_path(binary='foo-bar'),
                          '/some/path/foo-bar.log')
 
 
@@ -76,13 +86,15 @@ class NovaFormatterTestCase(test.TestCase):
                    logging_debug_format_suffix="--DBG")
         self.log = log.logging.root
         self.stream = cStringIO.StringIO()
-        handler = log.StreamHandler(self.stream)
-        self.log.addHandler(handler)
+        self.handler = log.StreamHandler(self.stream)
+        self.log.addHandler(self.handler)
+        self.level = self.log.level
         self.log.setLevel(log.DEBUG)
 
     def tearDown(self):
+        self.log.setLevel(self.level)
+        self.log.removeHandler(self.handler)
         super(NovaFormatterTestCase, self).tearDown()
-        log.NovaLogger.manager.loggerDict = {}
 
     def test_uncontextualized_log(self):
         self.log.info("foo")
@@ -102,12 +114,11 @@ class NovaFormatterTestCase(test.TestCase):
 class NovaLoggerTestCase(test.TestCase):
     def setUp(self):
         super(NovaLoggerTestCase, self).setUp()
-        self.flags(default_log_levels=["nova-test=AUDIT"], verbose=False)
+        levels = FLAGS.default_log_levels
+        levels.append("nova-test=AUDIT")
+        self.flags(default_log_levels=levels,
+                   verbose=True)
         self.log = log.getLogger('nova-test')
-
-    def tearDown(self):
-        super(NovaLoggerTestCase, self).tearDown()
-        log.NovaLogger.manager.loggerDict = {}
 
     def test_has_level_from_flags(self):
         self.assertEqual(log.AUDIT, self.log.level)
@@ -115,17 +126,3 @@ class NovaLoggerTestCase(test.TestCase):
     def test_child_log_has_level_of_parent_flag(self):
         l = log.getLogger('nova-test.foo')
         self.assertEqual(log.AUDIT, l.level)
-
-
-class VerboseLoggerTestCase(test.TestCase):
-    def setUp(self):
-        super(VerboseLoggerTestCase, self).setUp()
-        self.flags(default_log_levels=["nova.test=AUDIT"], verbose=True)
-        self.log = log.getLogger('nova.test')
-
-    def tearDown(self):
-        super(VerboseLoggerTestCase, self).tearDown()
-        log.NovaLogger.manager.loggerDict = {}
-
-    def test_will_be_verbose_if_named_nova_and_verbose_flag_set(self):
-        self.assertEqual(log.DEBUG, self.log.level)

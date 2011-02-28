@@ -19,14 +19,14 @@
 Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
-import unittest
 
 from webob import Request
 
+from nova import test
 from nova.api.openstack.common import limited
 
 
-class LimiterTest(unittest.TestCase):
+class LimiterTest(test.TestCase):
     """
     Unit tests for the `nova.api.openstack.common.limited` method which takes
     in a list of items and, depending on the 'offset' and 'limit' GET params,
@@ -37,6 +37,7 @@ class LimiterTest(unittest.TestCase):
         """
         Run before each test.
         """
+        super(LimiterTest, self).setUp()
         self.tiny = range(1)
         self.small = range(10)
         self.medium = range(1000)

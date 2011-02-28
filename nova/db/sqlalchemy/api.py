@@ -136,15 +136,12 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
-def service_get_all(context, session=None, disabled=False):
-    if not session:
-        session = get_session()
-
-    result = session.query(models.Service).\
+def service_get_all(context, disabled=False):
+    session = get_session()
+    return session.query(models.Service).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(disabled=disabled).\
                    all()
-    return result
 
 
 @require_admin_context
@@ -715,6 +712,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload_all('fixed_ip.network')).\
+                         options(joinedload('metadata')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -723,6 +721,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
+                         options(joinedload('metadata')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -1046,7 +1045,8 @@ def network_create_safe(context, values):
 
 @require_admin_context
 def network_disassociate(context, network_id):
-    network_update(context, network_id, {'project_id': None})
+    network_update(context, network_id, {'project_id': None,
+                                         'host': None})
 
 
 @require_admin_context
@@ -1262,16 +1262,20 @@ def iscsi_target_create_safe(context, values):
 
 
 @require_admin_context
-def auth_destroy_token(_context, token):
+def auth_token_destroy(context, token_id):
     session = get_session()
-    session.delete(token)
+    with session.begin():
+        token_ref = auth_token_get(context, token_id, session=session)
+        token_ref.delete(session=session)
 
 
 @require_admin_context
-def auth_get_token(_context, token_hash):
-    session = get_session()
+def auth_token_get(context, token_hash, session=None):
+    if session is None:
+        session = get_session()
     tk = session.query(models.AuthToken).\
                   filter_by(token_hash=token_hash).\
+                  filter_by(deleted=can_read_deleted(context)).\
                   first()
     if not tk:
         raise exception.NotFound(_('Token %s does not exist') % token_hash)
@@ -1279,7 +1283,16 @@ def auth_get_token(_context, token_hash):
 
 
 @require_admin_context
-def auth_create_token(_context, token):
+def auth_token_update(context, token_hash, values):
+    session = get_session()
+    with session.begin():
+        token_ref = auth_token_get(context, token_hash, session=session)
+        token_ref.update(values)
+        token_ref.save(session=session)
+
+
+@require_admin_context
+def auth_token_create(_context, token):
     tk = models.AuthToken()
     tk.update(token)
     tk.save()

@@ -24,9 +24,16 @@ import sys
 import time
 import unittest
 
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
 from smoketests import flags
 from smoketests import base
-from smoketests import user_smoketests
 
 #Note that this test should run from
 #public network (outside of private network segments)
@@ -42,7 +49,7 @@ TEST_KEY2 = '%s_key2' % TEST_PREFIX
 TEST_DATA = {}
 
 
-class InstanceTestsFromPublic(user_smoketests.UserSmokeTestCase):
+class InstanceTestsFromPublic(base.UserSmokeTestCase):
     def test_001_can_create_keypair(self):
         key = self.create_key_pair(self.conn, TEST_KEY)
         self.assertEqual(key.name, TEST_KEY)

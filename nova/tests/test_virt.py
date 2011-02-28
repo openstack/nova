@@ -204,11 +204,12 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_conn.LibvirtConnection(True)
             uri = conn.get_uri()
             self.assertEquals(uri, testuri)
+        db.instance_destroy(user_context, instance_ref['id'])
 
     def tearDown(self):
-        super(LibvirtConnTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        super(LibvirtConnTestCase, self).tearDown()
 
 
 class IptablesFirewallTestCase(test.TestCase):
@@ -365,6 +366,7 @@ class IptablesFirewallTestCase(test.TestCase):
                         '--dports 80:81 -j ACCEPT' % security_group_chain \
                             in self.out_rules,
                         "TCP port 80/81 acceptance rule wasn't added")
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
 
 
 class NWFilterTestCase(test.TestCase):
@@ -388,6 +390,7 @@ class NWFilterTestCase(test.TestCase):
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        super(NWFilterTestCase, self).tearDown()
 
     def test_cidr_rule_nwfilter_xml(self):
         cloud_controller = cloud.CloudController()
@@ -514,3 +517,4 @@ class NWFilterTestCase(test.TestCase):
         self.fw.apply_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
