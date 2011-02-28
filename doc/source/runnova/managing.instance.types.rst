@@ -44,9 +44,9 @@ To see all currently active instance types, use the list subcommand::
     m1.small: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
 
 By default, the list subcommand only shows active instance types. To see all instance types 
-(even those deleted), add the argument 1 after the list subcommand like so::
+(even those deleted), use the listall subcommand::
 
-    # nova-manage instance_type list 1
+    # nova-manage instance_type listall
     m1.medium: Memory: 4096MB, VCPUS: 2, Storage: 40GB, FlavorID: 3, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.large: Memory: 8192MB, VCPUS: 4, Storage: 80GB, FlavorID: 4, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.tiny: Memory: 512MB, VCPUS: 1, Storage: 0GB, FlavorID: 1, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
@@ -81,3 +81,13 @@ type from the database, pass the "--purge" flag after the name::
 
     # nova-manage instance_type delete m1.xxlarge --purge
     m1.xxlarge deleted
+
+To see all instance types (inactive + active), use the list subcommand with the "--all" flag::
+
+    # nova-manage instance_type list --all
+    m1.medium: Memory: 4096MB, VCPUS: 2, Storage: 40GB, FlavorID: 3, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
+    m1.large: Memory: 8192MB, VCPUS: 4, Storage: 80GB, FlavorID: 4, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
+    m1.tiny: Memory: 512MB, VCPUS: 1, Storage: 0GB, FlavorID: 1, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
+    m1.xlarge: Memory: 16384MB, VCPUS: 8, Storage: 160GB, FlavorID: 5, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
+    m1.small: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
+

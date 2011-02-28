@@ -2090,16 +2090,18 @@ def instance_type_create(context, values):
 @require_context
 def instance_type_get_all(context, inactive=0):
     """
-    Returns a dict describing all non-deleted instance_types with name as key:
-        {'m1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
-         'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
-         'm1.medium': dict(memory_mb=4096, vcpus=2, local_gb=40, flavorid=3)}
+    Returns a dict describing all instance_types with name as key.
     """
     session = get_session()
-    inst_types = session.query(models.InstanceTypes).\
-                    filter_by(deleted=inactive).\
-                    order_by("name").\
-                    all()
+    if inactive:
+        inst_types = session.query(models.InstanceTypes).\
+                        order_by("name").\
+                        all()
+    else:
+        inst_types = session.query(models.InstanceTypes).\
+                        filter_by(deleted=inactive).\
+                        order_by("name").\
+                        all()
     if inst_types:
         inst_dict = {}
         for i in inst_types:

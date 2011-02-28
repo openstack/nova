@@ -666,8 +666,9 @@ class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
     def _print_instance_types(self, n, val):
+        deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
-            "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB") % (
+            "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
             n,
             val["memory_mb"],
             val["vcpus"],
@@ -675,7 +676,8 @@ class InstanceTypeCommands(object):
             val["flavorid"],
             val["swap"],
             val["rxtx_quota"],
-            val["rxtx_cap"])
+            val["rxtx_cap"],
+            deleted)
 
     def create(
         self,
@@ -688,8 +690,8 @@ class InstanceTypeCommands(object):
         rxtx_quota=0,
         rxtx_cap=0):
         """Creates instance types / flavors
-           arguments: name memory vcpus local_gb flavorid swap rxtx_quota
-                      rxtx_cap
+           arguments: name memory vcpus local_gb flavorid [swap] [rxtx_quota]
+                      [rxtx_cap]
         """
         try:
             instance_types.create(
@@ -736,25 +738,22 @@ class InstanceTypeCommands(object):
             print "%s %s" % (name, verb)
 
     def list(self, name=None):
-        """Lists all or specific instance types / flavors
+        """Lists all active or specific instance types / flavors
         arguments: [name]"""
-        if name == None:
-            try:
+        try:
+            if name == None:
                 inst_types = instance_types.get_all_types()
-            except exception.NotFound, e:
-                print e
-                sys.exit(1)
+            elif name == "--all":
+                inst_types = instance_types.get_all_types(1)
             else:
-                for k, v in inst_types.iteritems():
-                    self._print_instance_types(k, v)
-        else:
-            try:
                 inst_types = instance_types.get_instance_type(name)
-            except exception.NotFound, e:
-                print e
-                sys.exit(1)
-            else:
-                self._print_instance_types(name, inst_types)
+        except exception.DBError, e:
+            _db_error(e)
+        if isinstance(inst_types.values()[0], dict):
+            for k, v in inst_types.iteritems():
+                self._print_instance_types(k, v)
+        else:
+            self._print_instance_types(name, inst_types)
 
 
 CATEGORIES = [
