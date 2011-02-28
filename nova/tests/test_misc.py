@@ -14,10 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import datetime
+import errno
 import os
+import select
+import time
 
 from nova import test
-from nova.utils import parse_mailmap, str_dict_replace
+from nova.utils import parse_mailmap, str_dict_replace, synchronized
 
 
 class ProjectTestCase(test.TestCase):
@@ -55,3 +59,34 @@ class ProjectTestCase(test.TestCase):
                                 '%r not listed in Authors' % missing)
             finally:
                 tree.unlock()
+
+
+class LockTestCase(test.TestCase):
+    def test_synchronized(self):
+        rpipe, wpipe = os.pipe()
+        pid = os.fork()
+        if pid > 0:
+            os.close(wpipe)
+
+            @synchronized('testlock')
+            def f():
+                rfds, _, __ = select.select([rpipe], [], [], 1)
+                self.assertEquals(len(rfds), 0, "The other process, which was"
+                                                " supposed to be locked, "
+                                                "wrote on its end of the "
+                                                "pipe")
+                os.close(rpipe)
+
+            f()
+        else:
+            os.close(rpipe)
+
+            @synchronized('testlock')
+            def g():
+                try:
+                    os.write(wpipe, "foo")
+                except OSError, e:
+                    self.assertEquals(e.errno, errno.EPIPE)
+                    return
+            g()
+            os._exit(0)

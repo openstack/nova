@@ -25,6 +25,7 @@ import base64
 import datetime
 import inspect
 import json
+import lockfile
 import os
 import random
 import socket
@@ -489,6 +490,16 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+def synchronized(name):
+    def wrap(f):
+        def inner(*args, **kwargs):
+            lock = lockfile.FileLock('nova-%s.lock' % name)
+            with lock:
+                return f(*args, **kwargs)
+        return inner
+    return wrap
 
 
 def ensure_b64_encoding(val):
