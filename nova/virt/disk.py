@@ -45,6 +45,8 @@ flags.DEFINE_string('injected_network_template',
                     'Template file for injected network')
 flags.DEFINE_integer('timeout_nbd', 10,
                      'time to wait for a NBD device coming up')
+flags.DEFINE_integer('max_nbd_devices', 16,
+                     'maximum number of possible nbd devices')
 
 
 def extend(image, size):
@@ -142,7 +144,7 @@ def _unlink_device(device, nbd):
         utils.execute('sudo losetup --detach %s' % device)
 
 
-_DEVICES = ['/dev/nbd%s' % i for i in xrange(16)]
+_DEVICES = ['/dev/nbd%s' % i for i in xrange(FLAGS.max_nbd_devices)]
 
 
 def _allocate_device():

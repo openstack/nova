@@ -52,6 +52,7 @@ class DirectTestCase(test.TestCase):
 
     def tearDown(self):
         direct.ROUTES = {}
+        super(DirectTestCase, self).tearDown()
 
     def test_delegated_auth(self):
         req = webob.Request.blank('/fake/context')

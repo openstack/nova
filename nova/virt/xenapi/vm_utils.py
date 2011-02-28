@@ -404,19 +404,7 @@ class VMHelper(HelperBase):
     @classmethod
     def _lookup_image_glance(cls, session, vdi_ref):
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
-
-        def is_vdi_pv(dev):
-            LOG.debug(_("Running pygrub against %s"), dev)
-            output = os.popen('pygrub -qn /dev/%s' % dev)
-            for line in output.readlines():
-                #try to find kernel string
-                m = re.search('(?<=kernel:)/.*(?:>)', line)
-                if m and m.group(0).find('xen') != -1:
-                    LOG.debug(_("Found Xen kernel %s") % m.group(0))
-                    return True
-            LOG.debug(_("No Xen kernel found.  Booting HVM."))
-            return False
-        return with_vdi_attached_here(session, vdi_ref, True, is_vdi_pv)
+        return with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
 
     @classmethod
     def lookup(cls, session, i):
@@ -461,17 +449,20 @@ class VMHelper(HelperBase):
         # As mounting the image VDI is expensive, we only want do do it once,
         # if at all, so determine whether it's required first, and then do
         # everything
+        LOG.debug("Running preconfigure_instance")
         mount_required = False
         key, net = disk.get_injectables(instance)
         if key is not None or net is not None:
             mount_required = True
 
+        LOG.debug("Mount_required:%s", str(mount_required))
         if mount_required:
 
             def _mounted_processing(device):
                 """Callback which runs with the image VDI attached"""
 
                 dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
+                LOG.debug("Device path:%s", dev_path)
                 tmpdir = tempfile.mkdtemp()
                 try:
                     # Mount only Linux filesystems, to avoid disturbing
@@ -480,6 +471,7 @@ class VMHelper(HelperBase):
                         out, err = utils.execute(
                             'sudo mount -t ext2,ext3 "%s" "%s"' %
                             (dev_path, tmpdir))
+                        LOG.debug("filesystem mounted")
                     except exception.ProcessExecutionError as e:
                         err = str(e)
                     if err:
@@ -489,11 +481,11 @@ class VMHelper(HelperBase):
                         try:
                             # This try block ensures that the umount occurs
 
-                            xe_update_networking_filename = os.path.join(
-                                tmpdir, 'usr', 'sbin', 'xe-update-networking')
-                            if os.path.isfile(xe_update_networking_filename):
-                                # The presence of the xe-update-networking
-                                # file indicates that this guest agent can
+                            xe_guest_agent_filename = os.path.join(
+                                tmpdir, FLAGS.xenapi_agent_path)
+                            if os.path.isfile(xe_guest_agent_filename):
+                                # The presence of the guest agent
+                                # file indicates that this instance can
                                 # reconfigure the network from xenstore data,
                                 # so manipulation of files in /etc is not
                                 # required
@@ -513,6 +505,7 @@ class VMHelper(HelperBase):
                                         'installed in this image'))
                                 LOG.info(_('Manipulating interface files '
                                          'directly'))
+                                LOG.debug("Going to inject data in filesystem")
                                 disk.inject_data_into_fs(tmpdir, key, net,
                                     utils.execute)
                         finally:
@@ -523,79 +516,6 @@ class VMHelper(HelperBase):
 
             with_vdi_attached_here(session, vdi_ref, False,
                 _mounted_processing)
-
-    @classmethod
-    def preconfigure_xenstore(cls, session, instance, vm_ref):
-        """Sets xenstore values to modify the image behaviour after
-        VM start.
-        """
-
-        xenstore_types = {
-            'BroadcastAddress': 'multi_sz',
-            'DefaultGateway': 'multi_sz',
-            'EnableDhcp': 'dword',
-            'IPAddress': 'multi_sz',
-            'NameServer': 'string',
-            'SubnetMask': 'multi_sz'}
-
-        # Network setup
-        network_ref = db.network_get_by_instance(
-            context.get_admin_context(), instance['id'])
-        if network_ref['injected']:
-            admin_context = context.get_admin_context()
-            address = db.instance_get_fixed_address(admin_context,
-                instance['id'])
-
-            xenstore_data = {
-                # NB: Setting broadcast address is not supported by
-                # Windows or the Windows guest agent, and will be ignored
-                # on that platform
-                'BroadcastAddress': network_ref['broadcast'],
-                'EnableDhcp': '0',
-                'IPAddress': address,
-                'SubnetMask': network_ref['netmask'],
-                'DefaultGateway': network_ref['gateway'],
-                'NameServer': network_ref['dns']}
-
-            device_to_configure = 0  # Configure network device 0 in the VM
-
-            vif_refs = session.call_xenapi('VM.get_VIFs', vm_ref)
-            mac_addr = None
-
-            for vif_ref in vif_refs:
-                device = session.call_xenapi('VIF.get_device', vif_ref)
-                if str(device) == str(device_to_configure):
-                    mac_addr = session.call_xenapi('VIF.get_MAC', vif_ref)
-                    break
-
-            if mac_addr is None:
-                raise exception.NotFound(_('Networking device %s not found '
-                    'in VM'))
-
-            # MAC address must be upper case in the xenstore key,
-            # with colons replaced by underscores
-            underscore_mac_addr = mac_addr.replace(':', '_')
-            xenstore_prefix = ('vm-data/vif/' +
-                underscore_mac_addr.upper() + '/tcpip/')
-
-            for xenstore_key, xenstore_value in xenstore_data.iteritems():
-                # NB: The xenstore_key part of the instance_key isn't used but
-                # must be unique.  We set it to xenstore_key as a convenient
-                #  unique name...The xenstore_key value takes effect in the
-                # /name element.
-                instance_key = xenstore_prefix + xenstore_key
-                key_type = xenstore_types[xenstore_key]
-
-                session.call_xenapi('VM.add_to_xenstore_data', vm_ref,
-                    instance_key + '/name', xenstore_key)
-                session.call_xenapi('VM.add_to_xenstore_data', vm_ref,
-                    instance_key + '/type', key_type)
-                if key_type == 'multi_sz':
-                    session.call_xenapi('VM.add_to_xenstore_data', vm_ref,
-                        instance_key + '/data/0', xenstore_value)
-                else:
-                    session.call_xenapi('VM.add_to_xenstore_data', vm_ref,
-                        instance_key + '/data', xenstore_value)
 
     @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
@@ -827,6 +747,7 @@ def vbd_unplug_with_retry(session, vbd):
     # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
+            LOG.debug("About to unplug VBD")
             session.get_xenapi().VBD.unplug(vbd)
             LOG.debug(_('VBD.unplug successful first time.'))
             return
@@ -835,6 +756,7 @@ def vbd_unplug_with_retry(session, vbd):
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 LOG.debug(_('VBD.unplug rejected: retrying...'))
                 time.sleep(1)
+                LOG.debug(_('Not sleeping anymore!'))
             elif (len(e.details) > 0 and
                   e.details[0] == 'DEVICE_ALREADY_DETACHED'):
                 LOG.debug(_('VBD.unplug successful eventually.'))
@@ -860,6 +782,19 @@ def get_this_vm_uuid():
 
 def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
+
+
+def _is_vdi_pv(dev):
+    LOG.debug(_("Running pygrub against %s"), dev)
+    output = os.popen('pygrub -qn /dev/%s' % dev)
+    for line in output.readlines():
+        #try to find kernel string
+        m = re.search('(?<=kernel:)/.*(?:>)', line)
+        if m and m.group(0).find('xen') != -1:
+            LOG.debug(_("Found Xen kernel %s") % m.group(0))
+            return True
+    LOG.debug(_("No Xen kernel found.  Booting HVM."))
+    return False
 
 
 def _stream_disk(dev, type, virtual_size, image_file):
@@ -888,8 +823,8 @@ def _write_partition(virtual_size, dev):
                              process_input=process_input,
                              check_exit_code=check_exit_code)
 
-    execute('parted --script %s mklabel msdos' % dest)
-    execute('parted --script %s mkpart primary %ds %ds' %
+    execute('sudo parted --script %s mklabel msdos' % dest)
+    execute('sudo parted --script %s mkpart primary %ds %ds' %
             (dest, primary_first, primary_last))
 
     LOG.debug(_('Writing partition table %s done.'), dest)

@@ -177,7 +177,7 @@ class Controller(wsgi.Controller):
         # However, the CloudServers API is not definitive on this front,
         #  and we want to be compatible.
         metadata = []
-        if env['server']['metadata']:
+        if env['server'].get('metadata'):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
@@ -289,6 +289,20 @@ class Controller(wsgi.Controller):
         except:
             readable = traceback.format_exc()
             LOG.exception(_("Compute.api::reset_network %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def inject_network_info(self, req, id):
+        """
+        Inject network info for an instance (admin only).
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.inject_network_info(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::inject_network_info %s"), readable)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
