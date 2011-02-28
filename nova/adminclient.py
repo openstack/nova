@@ -23,6 +23,8 @@ import base64
 import boto
 import boto.exception
 import httplib
+import re
+import string
 
 from boto.ec2.regioninfo import RegionInfo
 
@@ -165,19 +167,20 @@ class HostInfo(object):
 
     **Fields Include**
 
-    * Disk stats
-    * Running Instances
-    * Memory stats
-    * CPU stats
-    * Network address info
-    * Firewall info
-    * Bridge and devices
-
+    * Hostname
+    * Compute service status
+    * Volume service status
+    * Instance count
+    * Volume count
     """
 
     def __init__(self, connection=None):
         self.connection = connection
         self.hostname = None
+        self.compute = None
+        self.volume = None
+        self.instance_count = 0
+        self.volume_count = 0
 
     def __repr__(self):
         return 'Host:%s' % self.hostname
@@ -188,7 +191,39 @@ class HostInfo(object):
 
     # this is needed by the sax parser, so ignore the ugly name
     def endElement(self, name, value, connection):
-        setattr(self, name, value)
+        fixed_name = string.lower(re.sub(r'([A-Z])', r'_\1', name))
+        setattr(self, fixed_name, value)
+
+
+class Vpn(object):
+    """
+    Information about a Vpn, as parsed through SAX
+
+    **Fields Include**
+
+    * instance_id
+    * project_id
+    * public_ip
+    * public_port
+    * created_at
+    * internal_ip
+    * state
+    """
+
+    def __init__(self, connection=None):
+        self.connection = connection
+        self.instance_id = None
+        self.project_id = None
+
+    def __repr__(self):
+        return 'Vpn:%s:%s' % (self.project_id, self.instance_id)
+
+    def startElement(self, name, attrs, connection):
+        return None
+
+    def endElement(self, name, value, connection):
+        fixed_name = string.lower(re.sub(r'([A-Z])', r'_\1', name))
+        setattr(self, fixed_name, value)
 
 
 class InstanceType(object):
@@ -421,6 +456,16 @@ class NovaAdminClient(object):
         params = {'Name': user, 'Project': project}
         zip = self.apiconn.get_object('GenerateX509ForUser', params, UserInfo)
         return zip.file
+
+    def start_vpn(self, project):
+        """
+        Starts the vpn for a user
+        """
+        return self.apiconn.get_object('StartVpn', {'Project': project}, Vpn)
+
+    def get_vpns(self):
+        """Return a list of vpn with project name"""
+        return self.apiconn.get_list('DescribeVpns', {}, [('item', Vpn)])
 
     def get_hosts(self):
         return self.apiconn.get_list('DescribeHosts', {}, [('item', HostInfo)])

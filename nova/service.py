@@ -45,18 +45,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('report_interval', 10,
                      'seconds between nodes reporting state to datastore',
                      lower_bound=1)
-
 flags.DEFINE_integer('periodic_interval', 60,
                      'seconds between running periodic tasks',
                      lower_bound=1)
-
-flags.DEFINE_string('pidfile', None,
-                    'pidfile to use for this service')
-
-
-flags.DEFINE_flag(flags.HelpFlag())
-flags.DEFINE_flag(flags.HelpshortFlag())
-flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
 class Service(object):
@@ -68,6 +59,8 @@ class Service(object):
         self.binary = binary
         self.topic = topic
         self.manager_class_name = manager
+        manager_class = utils.import_class(self.manager_class_name)
+        self.manager = manager_class(host=self.host, *args, **kwargs)
         self.report_interval = report_interval
         self.periodic_interval = periodic_interval
         super(Service, self).__init__(*args, **kwargs)
@@ -75,9 +68,9 @@ class Service(object):
         self.timers = []
 
     def start(self):
-        manager_class = utils.import_class(self.manager_class_name)
-        self.manager = manager_class(host=self.host, *self.saved_args,
-                                                     **self.saved_kwargs)
+        vcs_string = version.version_string_with_vcs()
+        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)"),
+                      {'topic': self.topic, 'vcs_string': vcs_string})
         self.manager.init_host()
         self.model_disconnected = False
         ctxt = context.get_admin_context()
@@ -157,9 +150,6 @@ class Service(object):
             report_interval = FLAGS.report_interval
         if not periodic_interval:
             periodic_interval = FLAGS.periodic_interval
-        vcs_string = version.version_string_with_vcs()
-        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)")
-                % locals())
         service_obj = cls(host, binary, topic, manager,
                           report_interval, periodic_interval)
 
@@ -180,6 +170,13 @@ class Service(object):
             except Exception:
                 pass
         self.timers = []
+
+    def wait(self):
+        for x in self.timers:
+            try:
+                x.wait()
+            except Exception:
+                pass
 
     def periodic_tasks(self):
         """Tasks to be run at a periodic interval"""
@@ -214,11 +211,19 @@ class Service(object):
 
 
 def serve(*services):
-    FLAGS(sys.argv)
-    logging.basicConfig()
-
-    if not services:
-        services = [Service.create()]
+    try:
+        if not services:
+            services = [Service.create()]
+    except Exception:
+        logging.exception('in Service.create()')
+        raise
+    finally:
+        # After we've loaded up all our dynamic bits, check
+        # whether we should print help
+        flags.DEFINE_flag(flags.HelpFlag())
+        flags.DEFINE_flag(flags.HelpshortFlag())
+        flags.DEFINE_flag(flags.HelpXMLFlag())
+        FLAGS.ParseNewFlags()
 
     name = '_'.join(x.binary for x in services)
     logging.debug(_("Serving %s"), name)

@@ -327,15 +327,6 @@ class AuthManagerTestCase(object):
 class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 
-    def __init__(self, *args, **kwargs):
-        AuthManagerTestCase.__init__(self)
-        test.TestCase.__init__(self, *args, **kwargs)
-        import nova.auth.fakeldap as fakeldap
-        if FLAGS.flush_db:
-            LOG.info("Flushing datastore")
-            r = fakeldap.Store.instance()
-            r.flushdb()
-
 
 class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'

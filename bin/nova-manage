@@ -86,8 +86,6 @@ from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.db import migration
 
-
-logging.basicConfig()
 FLAGS = flags.FLAGS
 flags.DECLARE('fixed_range', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
@@ -95,6 +93,9 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
 def param2id(object_id):
@@ -552,7 +553,7 @@ class ServiceCommands(object):
         args: [host] [service]"""
         ctxt = context.get_admin_context()
         now = datetime.datetime.utcnow()
-        services = db.service_get_all(ctxt)
+        services = db.service_get_all(ctxt) + db.service_get_all(ctxt, True)
         if host:
             services = [s for s in services if s['host'] == host]
         if service:
@@ -710,6 +711,7 @@ def main():
     """Parse options and call the appropriate class/method."""
     utils.default_flagfile()
     argv = FLAGS(sys.argv)
+    logging.setup()
 
     script_name = argv.pop(0)
     if len(argv) < 1:

@@ -17,17 +17,18 @@
 
 import datetime
 import json
-import unittest
 
 import stubout
 import webob
 
 from nova import db
 from nova import flags
+from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
+from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.rpc
 from nova.tests.api.openstack import fakes
 
@@ -64,6 +65,9 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
+    metadata = []
+    metadata.append(InstanceMetadata(key='seq', value=id))
+
     if public_addresses == None:
         public_addresses = list()
 
@@ -84,7 +88,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "vcpus": 0,
         "local_gb": 0,
         "hostname": "",
-        "host": "",
+        "host": None,
         "instance_type": "",
         "user_data": "",
         "reservation_id": "",
@@ -95,7 +99,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "availability_zone": "",
         "display_name": "server%s" % id,
         "display_description": "",
-        "locked": False}
+        "locked": False,
+        "metadata": metadata}
 
     instance["fixed_ip"] = {
         "address": private_address,
@@ -108,9 +113,10 @@ def fake_compute_api(cls, req, id):
     return True
 
 
-class ServersTest(unittest.TestCase):
+class ServersTest(test.TestCase):
 
     def setUp(self):
+        super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -141,6 +147,7 @@ class ServersTest(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
+        super(ServersTest, self).tearDown()
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -214,7 +221,8 @@ class ServersTest(unittest.TestCase):
             "get_image_id_from_image_hash", image_id_from_hash)
 
         body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
+            name='server_test', imageId=2, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
@@ -292,6 +300,7 @@ class ServersTest(unittest.TestCase):
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
+            self.assertEqual(s['metadata']['seq'], i)
             i += 1
 
     def test_get_all_server_details_with_host(self):
@@ -387,6 +396,18 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
+    def test_server_inject_network_info(self):
+        FLAGS.allow_admin_api = True
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2, metadata={},
+            personality={}))
+        req = webob.Request.blank('/v1.0/servers/1/inject_network_info')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+
     def test_server_diagnostics(self):
         req = webob.Request.blank("/v1.0/servers/1/diagnostics")
         req.method = "GET"
@@ -444,7 +465,3 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
-
-
-if __name__ == "__main__":
-    unittest.main()
