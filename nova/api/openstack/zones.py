@@ -14,7 +14,6 @@
 #    under the License.
 
 import common
-import logging
 
 from nova import flags
 from nova import wsgi

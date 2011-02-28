@@ -422,19 +422,7 @@ class VMHelper(HelperBase):
     @classmethod
     def _lookup_image_glance(cls, session, vdi_ref):
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
-
-        def is_vdi_pv(dev):
-            LOG.debug(_("Running pygrub against %s"), dev)
-            output = os.popen('pygrub -qn /dev/%s' % dev)
-            for line in output.readlines():
-                #try to find kernel string
-                m = re.search('(?<=kernel:)/.*(?:>)', line)
-                if m and m.group(0).find('xen') != -1:
-                    LOG.debug(_("Found Xen kernel %s") % m.group(0))
-                    return True
-            LOG.debug(_("No Xen kernel found.  Booting HVM."))
-            return False
-        return with_vdi_attached_here(session, vdi_ref, True, is_vdi_pv)
+        return with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
 
     @classmethod
     def lookup(cls, session, i):
@@ -723,6 +711,19 @@ def get_this_vm_uuid():
 
 def get_this_vm_ref(session):
     return session.get_xenapi().VM.get_by_uuid(get_this_vm_uuid())
+
+
+def _is_vdi_pv(dev):
+    LOG.debug(_("Running pygrub against %s"), dev)
+    output = os.popen('pygrub -qn /dev/%s' % dev)
+    for line in output.readlines():
+        #try to find kernel string
+        m = re.search('(?<=kernel:)/.*(?:>)', line)
+        if m and m.group(0).find('xen') != -1:
+            LOG.debug(_("Found Xen kernel %s") % m.group(0))
+            return True
+    LOG.debug(_("No Xen kernel found.  Booting HVM."))
+    return False
 
 
 def _stream_disk(dev, type, virtual_size, image_file):

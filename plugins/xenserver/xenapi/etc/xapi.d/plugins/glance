@@ -73,6 +73,10 @@ def _copy_kernel_vdi(dest, copy_args):
     logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",
                   dest, vdi_uuid)
     filename = KERNEL_DIR + '/' + vdi_uuid
+    #make sure KERNEL_DIR exists, otherwise create it
+    if not os.path.isdir(KERNEL_DIR):
+        logging.debug("Creating directory %s", KERNEL_DIR)
+        os.makedirs(KERNEL_DIR)
     #read data from /dev/ and write into a file on /boot/guest
     of = open(filename, 'wb')
     f = open(dest, 'rb')

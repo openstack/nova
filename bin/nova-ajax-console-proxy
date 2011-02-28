@@ -25,7 +25,6 @@ from eventlet.green import urllib2
 
 import exceptions
 import gettext
-import logging
 import os
 import sys
 import time
@@ -48,9 +47,11 @@ from nova import utils
 from nova import wsgi
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_integer('ajax_console_idle_timeout', 300,
                      'Seconds before idle connection destroyed')
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
 
 LOG = logging.getLogger('nova.ajax_console_proxy')
 LOG.setLevel(logging.DEBUG)
@@ -62,10 +63,16 @@ class AjaxConsoleProxy(object):
 
     def __call__(self, env, start_response):
         try:
-            req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
-                                        env['HTTP_HOST'],
-                                        env['PATH_INFO'],
-                                        env['QUERY_STRING'])
+            if 'QUERY_STRING' in env:
+                req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
+                                            env['HTTP_HOST'],
+                                            env['PATH_INFO'],
+                                            env['QUERY_STRING'])
+            else:
+                req_url = '%s://%s%s' % (env['wsgi.url_scheme'],
+                                         env['HTTP_HOST'],
+                                         env['PATH_INFO'])
+
             if 'HTTP_REFERER' in env:
                 auth_url = env['HTTP_REFERER']
             else:
@@ -130,6 +137,7 @@ class AjaxConsoleProxy(object):
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
+    logging.setup()
     server = wsgi.Server()
     acp = AjaxConsoleProxy()
     acp.register_listeners()

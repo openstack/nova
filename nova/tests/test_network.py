@@ -42,15 +42,13 @@ class NetworkTestCase(test.TestCase):
         #             flags in the corresponding section in nova-dhcpbridge
         self.flags(connection_type='fake',
                    fake_call=True,
-                   fake_network=True,
-                   network_size=16,
-                   num_networks=5)
+                   fake_network=True)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
         self.context = context.RequestContext(project=None, user=self.user)
-        for i in range(5):
+        for i in range(FLAGS.num_networks):
             name = 'project%s' % i
             project = self.manager.create_project(name, 'netuser', name)
             self.projects.append(project)
@@ -117,6 +115,9 @@ class NetworkTestCase(test.TestCase):
                              utils.to_global_ipv6(
                                                  network_ref['cidr_v6'],
                                                  instance_ref['mac_address']))
+            self._deallocate_address(0, address)
+            db.instance_destroy(context.get_admin_context(),
+                                instance_ref['id'])
 
     def test_public_network_association(self):
         """Makes sure that we can allocaate a public ip"""
@@ -192,7 +193,7 @@ class NetworkTestCase(test.TestCase):
         first = self._create_address(0)
         lease_ip(first)
         instance_ids = []
-        for i in range(1, 5):
+        for i in range(1, FLAGS.num_networks):
             instance_ref = self._create_instance(i, mac=utils.generate_mac())
             instance_ids.append(instance_ref['id'])
             address = self._create_address(i, instance_ref['id'])
