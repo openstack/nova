@@ -554,7 +554,7 @@ class ServiceCommands(object):
         args: [host] [service]"""
         ctxt = context.get_admin_context()
         now = datetime.datetime.utcnow()
-        services = db.service_get_all(ctxt)
+        services = db.service_get_all(ctxt) + db.service_get_all(ctxt, True)
         if host:
             services = [s for s in services if s['host'] == host]
         if service:

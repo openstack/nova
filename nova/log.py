@@ -54,7 +54,7 @@ flags.DEFINE_string('logging_default_format_string',
                     'format string to use for log messages without context')
 
 flags.DEFINE_string('logging_debug_format_suffix',
-                    'from %(processName)s (pid=%(process)d) %(funcName)s'
+                    'from (pid=%(process)d) %(funcName)s'
                     ' %(pathname)s:%(lineno)d',
                     'data to append to log format when level is DEBUG')
 

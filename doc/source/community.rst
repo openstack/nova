@@ -18,7 +18,7 @@
 Getting Involved
 ================
 
-The Nova community is a very friendly group and there are places online to join in with the 
+The OpenStack community for Nova is a very friendly group and there are places online to join in with the 
 community. Feel free to ask questions. This document points you to some of the places where you can
 communicate with people.
 
@@ -83,3 +83,13 @@ Twitter
 
 Because all the cool kids do it: `@openstack <http://twitter.com/openstack>`_. Also follow the 
 `#openstack <http://search.twitter.com/search?q=%23openstack>`_ tag for relevant tweets.
+
+OpenStack Docs Site
+-------------------
+
+The `nova.openstack.org <http://nova.openstack.org>`_ site is geared towards developer documentation, 
+and the `docs.openstack.org <http://docs.openstack.org>`_  site is intended for cloud administrators 
+who are standing up and running OpenStack Compute in production. You can contribute to the Docs Site
+by using bzr and Launchpad and contributing to the openstack-manuals project at http://launchpad.net/openstack-manuals.
+
+

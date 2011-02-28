@@ -129,6 +129,7 @@ class API(base.Base):
             kernel_id = image.get('kernel_id', None)
         if ramdisk_id is None:
             ramdisk_id = image.get('ramdisk_id', None)
+        # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
             kernel_id = None
@@ -500,6 +501,13 @@ class API(base.Base):
 
         """
         self._cast_compute_message('reset_network', context, instance_id)
+
+    def inject_network_info(self, context, instance_id):
+        """
+        Inject network info for the instance.
+
+        """
+        self._cast_compute_message('inject_network_info', context, instance_id)
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):

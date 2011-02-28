@@ -80,70 +80,40 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        #if kernel is not present we must download a raw disk
-        if instance.kernel_id:
-            disk_image_type = ImageType.DISK
-        else:
-            disk_image_type = ImageType.DISK_RAW
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
+
         vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
             instance.image_id, user, project, disk_image_type)
+
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        #Have a look at the VDI and see if it has a PV kernel
+
         pv_kernel = False
-        if not instance.kernel_id:
+        if disk_image_type == ImageType.DISK_RAW:
+            #Have a look at the VDI and see if it has a PV kernel
             pv_kernel = VMHelper.lookup_image(self._session, instance.id,
                                               vdi_ref)
+        elif disk_image_type == ImageType.DISK_VHD:
+            # TODO(sirp): Assuming PV for now; this will need to be
+            # configurable as Windows will use HVM.
+            pv_kernel = True
+
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
                 instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
-        # write network info
-        admin_context = context.get_admin_context()
-
-        # TODO(tr3buchet) - remove comment in multi-nic
-        # I've decided to go ahead and consider multiple IPs and networks
-        # at this stage even though they aren't implemented because these will
-        # be needed for multi-nic and there was no sense writing it for single
-        # network/single IP and then having to turn around and re-write it
-        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
-        for network in db.network_get_all_by_instance(admin_context,
-                                                      instance['id']):
-            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
-
-            def ip_dict(ip):
-                return {'netmask': network['netmask'],
-                        'enabled': '1',
-                        'ip': ip.address}
-
-            mac_id = instance.mac_address.replace(':', '')
-            location = 'vm-data/networking/%s' % mac_id
-            mapping = {'label': network['label'],
-                       'gateway': network['gateway'],
-                       'mac': instance.mac_address,
-                       'dns': [network['dns']],
-                       'ips': [ip_dict(ip) for ip in network_IPs]}
-            self.write_to_param_xenstore(vm_ref, {location: mapping})
-
-            # TODO(tr3buchet) - remove comment in multi-nic
-            # this bit here about creating the vifs will be updated
-            # in multi-nic to handle multiple IPs on the same network
-            # and multiple networks
-            # for now it works as there is only one of each
-            bridge = network['bridge']
-            network_ref = \
-                NetworkHelper.find_network_with_bridge(self._session, bridge)
-
-            if network_ref:
-                VMHelper.create_vif(self._session, vm_ref,
-                                    network_ref, instance.mac_address)
+        # inject_network_info and create vifs
+        networks = self.inject_network_info(instance)
+        self.create_vifs(instance, networks)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
@@ -193,7 +163,7 @@ class VMOps(object):
 
         timer.f = _wait_for_boot
 
-        # call reset networking
+        # call to reset network to configure network from xenstore
         self.reset_network(instance)
 
         return timer.start(interval=0.5, now=True)
@@ -275,7 +245,8 @@ class VMOps(object):
             VMHelper.upload_image(
                 self._session, instance.id, template_vdi_uuids, image_id)
         finally:
-            self._destroy(instance, template_vm_ref, shutdown=False)
+            self._destroy(instance, template_vm_ref, shutdown=False,
+                          destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
@@ -357,6 +328,9 @@ class VMOps(object):
                      locals())
             return
 
+        instance_id = instance.id
+        LOG.debug(_("Shutting down VM for Instance %(instance_id)s")
+                  % locals())
         try:
             task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
             self._session.wait_for_task(instance.id, task)
@@ -365,6 +339,9 @@ class VMOps(object):
 
     def _destroy_vdis(self, instance, vm):
         """Destroys all VDIs associated with a VM """
+        instance_id = instance.id
+        LOG.debug(_("Destroying VDIs for Instance %(instance_id)s")
+                  % locals())
         vdis = VMHelper.lookup_vm_vdis(self._session, vm)
 
         if not vdis:
@@ -377,28 +354,55 @@ class VMOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
+    def _destroy_kernel_ramdisk(self, instance, vm):
+        """
+        Three situations can occur:
+
+            1. We have neither a ramdisk nor a kernel, in which case we are a
+               RAW image and can omit this step
+
+            2. We have one or the other, in which case, we should flag as an
+               error
+
+            3. We have both, in which case we safely remove both the kernel
+               and the ramdisk.
+        """
+        instance_id = instance.id
+        if not instance.kernel_id and not instance.ramdisk_id:
+            # 1. No kernel or ramdisk
+            LOG.debug(_("Instance %(instance_id)s using RAW or VHD, "
+                        "skipping kernel and ramdisk deletion") % locals())
+            return
+
+        if not (instance.kernel_id and instance.ramdisk_id):
+            # 2. We only have kernel xor ramdisk
+            raise exception.NotFound(
+                _("Instance %(instance_id)s has a kernel or ramdisk but not "
+                  "both" % locals()))
+
+        # 3. We have both kernel and ramdisk
+        (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+            self._session, vm)
+
+        LOG.debug(_("Removing kernel/ramdisk files"))
+
+        args = {'kernel-file': kernel, 'ramdisk-file': ramdisk}
+        task = self._session.async_call_plugin(
+            'glance', 'remove_kernel_ramdisk', args)
+        self._session.wait_for_task(instance.id, task)
+
+        LOG.debug(_("kernel/ramdisk files removed"))
+
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
+        instance_id = instance.id
         try:
-            kernel = None
-            ramdisk = None
-            if instance.kernel_id or instance.ramdisk_id:
-                (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
-                                    self._session, vm)
-            task1 = self._session.call_xenapi('Async.VM.destroy', vm)
-            LOG.debug(_("Removing kernel/ramdisk files"))
-            fn = "remove_kernel_ramdisk"
-            args = {}
-            if kernel:
-                args['kernel-file'] = kernel
-            if ramdisk:
-                args['ramdisk-file'] = ramdisk
-            task2 = self._session.async_call_plugin('glance', fn, args)
-            self._session.wait_for_task(instance.id, task1)
-            self._session.wait_for_task(instance.id, task2)
-            LOG.debug(_("kernel/ramdisk files removed"))
+            task = self._session.call_xenapi('Async.VM.destroy', vm)
+            self._session.wait_for_task(instance_id, task)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
+
+        LOG.debug(_("Instance %(instance_id)s VM destroyed") % locals())
 
     def destroy(self, instance):
         """
@@ -407,26 +411,31 @@ class VMOps(object):
         This is the method exposed by xenapi_conn.destroy(). The rest of the
         destroy_* methods are internal.
         """
+        instance_id = instance.id
+        LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
         vm = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm, shutdown=True)
 
-    def _destroy(self, instance, vm, shutdown=True):
+    def _destroy(self, instance, vm, shutdown=True,
+                 destroy_kernel_ramdisk=True):
         """
         Destroys VM instance by performing:
 
-        1. A shutdown if requested
-        2. Destroying associated VDIs
-        3. Destroying that actual VM record
+            1. A shutdown if requested
+            2. Destroying associated VDIs
+            3. Destroying kernel and ramdisk files (if necessary)
+            4. Destroying that actual VM record
         """
         if vm is None:
-            # Don't complain, just return.  This lets us clean up instances
-            # that have already disappeared from the underlying platform.
+            LOG.warning(_("VM is not present, skipping destroy..."))
             return
 
         if shutdown:
             self._shutdown(instance, vm)
 
         self._destroy_vdis(instance, vm)
+        if destroy_kernel_ramdisk:
+            self._destroy_kernel_ramdisk(instance, vm)
         self._destroy_vm(instance, vm)
 
     def _wait_with_callback(self, instance_id, task, callback):
@@ -482,6 +491,73 @@ class VMOps(object):
         """Return link to instance's ajax console"""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
+
+    def inject_network_info(self, instance):
+        """
+        Generate the network info and make calls to place it into the
+        xenstore and the xenstore param list
+
+        """
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # I've decided to go ahead and consider multiple IPs and networks
+        # at this stage even though they aren't implemented because these will
+        # be needed for multi-nic and there was no sense writing it for single
+        # network/single IP and then having to turn around and re-write it
+        vm_opaque_ref = self._get_vm_opaque_ref(instance.id)
+        logging.debug(_("injecting network info to xenstore for vm: |%s|"),
+                                                             vm_opaque_ref)
+        admin_context = context.get_admin_context()
+        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
+        networks = db.network_get_all_by_instance(admin_context,
+                                                  instance['id'])
+        for network in networks:
+            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+
+            def ip_dict(ip):
+                return {'netmask': network['netmask'],
+                        'enabled': '1',
+                        'ip': ip.address}
+
+            mac_id = instance.mac_address.replace(':', '')
+            location = 'vm-data/networking/%s' % mac_id
+            mapping = {'label': network['label'],
+                       'gateway': network['gateway'],
+                       'mac': instance.mac_address,
+                       'dns': [network['dns']],
+                       'ips': [ip_dict(ip) for ip in network_IPs]}
+            self.write_to_param_xenstore(vm_opaque_ref, {location: mapping})
+            try:
+                self.write_to_xenstore(vm_opaque_ref, location,
+                                                      mapping['location'])
+            except KeyError:
+                # catch KeyError for domid if instance isn't running
+                pass
+
+        return networks
+
+    def create_vifs(self, instance, networks=None):
+        """
+        Creates vifs for an instance
+
+        """
+        vm_opaque_ref = self._get_vm_opaque_ref(instance.id)
+        logging.debug(_("creating vif(s) for vm: |%s|"), vm_opaque_ref)
+        if networks is None:
+            networks = db.network_get_all_by_instance(admin_context,
+                                                      instance['id'])
+        # TODO(tr3buchet) - remove comment in multi-nic
+        # this bit here about creating the vifs will be updated
+        # in multi-nic to handle multiple IPs on the same network
+        # and multiple networks
+        # for now it works as there is only one of each
+        for network in networks:
+            bridge = network['bridge']
+            network_ref = \
+                NetworkHelper.find_network_with_bridge(self._session, bridge)
+
+            if network_ref:
+                VMHelper.create_vif(self._session, vm_opaque_ref,
+                                    network_ref, instance.mac_address)
 
     def reset_network(self, instance):
         """
