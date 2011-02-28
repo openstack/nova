@@ -44,11 +44,13 @@ from eventlet.green import subprocess
 
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import flags
 from nova import log as logging
 
 
 LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FLAGS = flags.FLAGS
 
 
 def import_class(import_str):
@@ -495,7 +497,8 @@ def loads(s):
 def synchronized(name):
     def wrap(f):
         def inner(*args, **kwargs):
-            lock = lockfile.FileLock('nova-%s.lock' % name)
+            lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
+                                                  'nova-%s.lock' % name))
             with lock:
                 return f(*args, **kwargs)
         return inner
