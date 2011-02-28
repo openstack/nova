@@ -106,7 +106,7 @@ flags.DEFINE_integer('xenapi_inject_image',
                      '  data into the disk image should be made.'
                      '  Used only if connection_type=xenapi.')
 flags.DEFINE_integer('xenapi_agent_path',
-                     True,
+                     '/usr/sbin/xe-update-networking'
                      'Specifies the path in which the xenapi guest agent'
                      '  should be located. If the agent is present,'
                      '  network configuration if not injected into the image'
