@@ -274,6 +274,7 @@ class IptablesManager(object):
 
         self.semaphore = semaphore.Semaphore()
 
+    @utils.synchronized('iptables')
     def apply(self):
         """Apply the current in-memory set of iptables rules
 
