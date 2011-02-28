@@ -125,7 +125,7 @@ def fetchfile(url, target):
 #    c.perform()
 #    c.close()
 #    fp.close()
-    execute("curl --fail %s -o %s" % (url, target))
+    execute("curl","--fail",url,"-o",target)
 
 
 def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
@@ -133,7 +133,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
-    obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+    obj = subprocess.Popen(cmd, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
     if process_input != None:
@@ -254,7 +254,7 @@ def last_octet(address):
 
 def  get_my_linklocal(interface):
     try:
-        if_str = execute("ip -f inet6 -o addr show %s" % interface)
+        if_str = execute("ip","-f","inet6","-o","addr","show", interface)
         condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
