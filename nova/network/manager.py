@@ -163,11 +163,22 @@ class NetworkManager(manager.Manager):
 
     def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
         """Gets a fixed ip from the pool."""
-        raise NotImplementedError()
+        # TODO(vish): when this is called by compute, we can associate compute
+        #             with a network, or a cluster of computes with a network
+        #             and use that network here with a method like
+        #             network_get_by_compute_host
+        network_ref = self.db.network_get_by_bridge(context,
+                                                    FLAGS.flat_network_bridge)
+        address = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                  network_ref['id'],
+                                                  instance_id)
+        self.db.fixed_ip_update(context, address, {'allocated': True})
+        return address
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool."""
-        raise NotImplementedError()
+        self.db.fixed_ip_update(context, address, {'allocated': False})
+        self.db.fixed_ip_disassociate(context.elevated(), address)
 
     def setup_fixed_ip(self, context, address):
         """Sets up rules for fixed ip."""
@@ -257,12 +268,58 @@ class NetworkManager(manager.Manager):
 
     def get_network_host(self, context):
         """Get the network host for the current context."""
-        raise NotImplementedError()
+        network_ref = self.db.network_get_by_bridge(context,
+                                                    FLAGS.flat_network_bridge)
+        # NOTE(vish): If the network has no host, use the network_host flag.
+        #             This could eventually be a a db lookup of some sort, but
+        #             a flag is easy to handle for now.
+        host = network_ref['host']
+        if not host:
+            topic = self.db.queue_get_for(context,
+                                          FLAGS.network_topic,
+                                          FLAGS.network_host)
+            if FLAGS.fake_call:
+                return self.set_network_host(context, network_ref['id'])
+            host = rpc.call(context,
+                            FLAGS.network_topic,
+                            {"method": "set_network_host",
+                             "args": {"network_id": network_ref['id']}})
+        return host
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, *args, **kwargs):
+                        cidr_v6, label, *args, **kwargs):
         """Create networks based on parameters."""
-        raise NotImplementedError()
+        fixed_net = IPy.IP(cidr)
+        fixed_net_v6 = IPy.IP(cidr_v6)
+        significant_bits_v6 = 64
+        count = 1
+        for index in range(num_networks):
+            start = index * network_size
+            significant_bits = 32 - int(math.log(network_size, 2))
+            cidr = "%s/%s" % (fixed_net[start], significant_bits)
+            project_net = IPy.IP(cidr)
+            net = {}
+            net['bridge'] = FLAGS.flat_network_bridge
+            net['dns'] = FLAGS.flat_network_dns
+            net['cidr'] = cidr
+            net['netmask'] = str(project_net.netmask())
+            net['gateway'] = str(project_net[1])
+            net['broadcast'] = str(project_net.broadcast())
+            net['dhcp_start'] = str(project_net[2])
+            if num_networks > 1:
+                net['label'] = "%s_%d" % (label, count)
+            else:
+                net['label'] = label
+            count += 1
+
+            if(FLAGS.use_ipv6):
+                cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
+                net['cidr_v6'] = cidr_v6
+
+            network_ref = self.db.network_create_safe(context, net)
+
+            if network_ref:
+                self._create_fixed_ips(context, network_ref['id'])
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable-msg=R0201
@@ -332,83 +389,9 @@ class FlatManager(NetworkManager):
         for network in self.db.host_get_networks(ctxt, self.host):
             self._on_set_network_host(ctxt, network['id'])
 
-    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
-        """Gets a fixed ip from the pool."""
-        # TODO(vish): when this is called by compute, we can associate compute
-        #             with a network, or a cluster of computes with a network
-        #             and use that network here with a method like
-        #             network_get_by_compute_host
-        network_ref = self.db.network_get_by_bridge(context,
-                                                    FLAGS.flat_network_bridge)
-        address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                  network_ref['id'],
-                                                  instance_id)
-        self.db.fixed_ip_update(context, address, {'allocated': True})
-        return address
-
-    def deallocate_fixed_ip(self, context, address, *args, **kwargs):
-        """Returns a fixed ip to the pool."""
-        self.db.fixed_ip_update(context, address, {'allocated': False})
-        self.db.fixed_ip_disassociate(context.elevated(), address)
-
     def setup_compute_network(self, context, instance_id):
         """Network is created manually."""
         pass
-
-    def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, label, *args, **kwargs):
-        """Create networks based on parameters."""
-        fixed_net = IPy.IP(cidr)
-        fixed_net_v6 = IPy.IP(cidr_v6)
-        significant_bits_v6 = 64
-        count = 1
-        for index in range(num_networks):
-            start = index * network_size
-            significant_bits = 32 - int(math.log(network_size, 2))
-            cidr = "%s/%s" % (fixed_net[start], significant_bits)
-            project_net = IPy.IP(cidr)
-            net = {}
-            net['bridge'] = FLAGS.flat_network_bridge
-            net['dns'] = FLAGS.flat_network_dns
-            net['cidr'] = cidr
-            net['netmask'] = str(project_net.netmask())
-            net['gateway'] = str(project_net[1])
-            net['broadcast'] = str(project_net.broadcast())
-            net['dhcp_start'] = str(project_net[2])
-            if num_networks > 1:
-                net['label'] = "%s_%d" % (label, count)
-            else:
-                net['label'] = label
-            count += 1
-
-            if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
-                net['cidr_v6'] = cidr_v6
-
-            network_ref = self.db.network_create_safe(context, net)
-
-            if network_ref:
-                self._create_fixed_ips(context, network_ref['id'])
-
-    def get_network_host(self, context):
-        """Get the network host for the current context."""
-        network_ref = self.db.network_get_by_bridge(context,
-                                                    FLAGS.flat_network_bridge)
-        # NOTE(vish): If the network has no host, use the network_host flag.
-        #             This could eventually be a a db lookup of some sort, but
-        #             a flag is easy to handle for now.
-        host = network_ref['host']
-        if not host:
-            topic = self.db.queue_get_for(context,
-                                          FLAGS.network_topic,
-                                          FLAGS.network_host)
-            if FLAGS.fake_call:
-                return self.set_network_host(context, network_ref['id'])
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return host
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
@@ -434,7 +417,7 @@ class FlatManager(NetworkManager):
         raise NotImplementedError()
 
 
-class FlatDHCPManager(FlatManager):
+class FlatDHCPManager(NetworkManager):
     """Flat networking with dhcp.
 
     FlatDHCPManager will start up one dhcp server to give out addresses.
