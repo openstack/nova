@@ -232,6 +232,46 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 200)
 
+    def _create_instance_with_personality(self, personality):
+
+        class FakeComputeAPI(object):
+
+            def __init__(self):
+                self.onset_files = None
+
+            def create(*args, **kwargs):
+                if 'onset_files' in kwargs:
+                    self.onset_files = kwargs['onset_files']
+                else:
+                    self.onset_files = None
+                return [{'id': '1234', 'display_name': 'fakeinstance'}]
+
+        def make_stub_method(canned_return):
+            def stub_method(*args, **kwargs):
+                return canned_return
+            return stub_method
+
+        compute_api = FakeComputeAPI()
+        self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
+        self.stubs.Set(nova.api.openstack.servers.Controller,
+            '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
+        self.stubs.Set(nova.api.openstack.common,
+            'get_image_id_from_image_hash', make_stub_method(2))
+        body = dict(server=dict(
+            name='server_test', imageId=2, flavorId=2,
+            metadata={},
+            personality=personality))
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        return req.get_response(fakes.wsgi_app()), compute_api.onset_files
+
+    def test_create_instance_with_no_personality(self):
+        res, onset_files = self._create_instance_with_personality(personality={})
+        self.assertEquals(res.status_int, 200)
+        self.assertEquals(onset_files, None)
+
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
