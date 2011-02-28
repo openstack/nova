@@ -100,13 +100,13 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
-flags.DEFINE_integer('xenapi_inject_image',
+flags.DEFINE_bool('xenapi_inject_image',
                      True,
                      'Specifies whether an attempt to inject network/key'
                      '  data into the disk image should be made.'
                      '  Used only if connection_type=xenapi.')
-flags.DEFINE_integer('xenapi_agent_path',
-                     '/usr/sbin/xe-update-networking'
+flags.DEFINE_string('xenapi_agent_path',
+                     '/usr/sbin/xe-update-networking',
                      'Specifies the path in which the xenapi guest agent'
                      '  should be located. If the agent is present,'
                      '  network configuration if not injected into the image'
