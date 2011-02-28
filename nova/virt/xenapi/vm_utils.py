@@ -301,6 +301,13 @@ class VMHelper(HelperBase):
         return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
 
     @classmethod
+    def get_sr_path(cls, session, sr_label='slices'):
+        """ Finds the SR and then coerces it into a path on the dom0 file
+        system """
+        # TODO(mdietz): replace this with the flag once unified-images merges
+        return '/var/run/sr-mount/%s' % cls.get_sr(session, sr_label)
+
+    @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
@@ -508,13 +515,17 @@ class VMHelper(HelperBase):
 
     @classmethod
     def scan_sr(cls, session, instance_id=None, sr_ref=None):
+        """Scans the SR specified by sr_ref"""
         if sr_ref:
             LOG.debug(_("Re-scanning SR %s"), sr_ref)
             task = session.call_xenapi('Async.SR.scan', sr_ref)
             session.wait_for_task(instance_id, task)
-        else:
-            sr_ref = cls.get_sr(session)
-            session.call_xenapi('SR.scan', sr_ref)
+
+    @classmethod
+    def scan_default_sr(cls, session):
+        """Looks for the system default SR and triggers a re-scan"""
+        sr_ref = cls.get_sr(session)
+        session.call_xenapi('SR.scan', sr_ref)
 
 
 def get_rrd(host, uuid):

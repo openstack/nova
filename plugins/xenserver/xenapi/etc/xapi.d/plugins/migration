@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright 2010 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -31,38 +30,6 @@ import XenAPIPlugin
 from pluginlib_nova import *
 configure_logging('migration')
 
-SSH_HOSTS = '/root/.ssh/known_hosts'
-DEVNULL = '/dev/null'
-KEYSCAN = '/usr/bin/ssh-keyscan'
-RSYNC = '/usr/bin/rsync'
-FILE_SR_PATH = '/var/run/sr-mount'
-IMAGE_PATH = '/images/'
-VHD_UTIL = '/usr/sbin/vhd-util'
-
-def get_sr_path(session):
-    sr_ref = find_sr(session)
-
-    if sr_ref is None:
-        raise Exception('Cannot find SR to read VDI from')
-
-    sr_rec = session.xenapi.SR.get_record(sr_ref)
-    sr_uuid = sr_rec["uuid"]
-    sr_path = os.path.join(FILE_SR_PATH, sr_uuid)
-    return sr_path
-
-def find_sr(session):
-    host = get_this_host(session)
-    srs = session.xenapi.SR.get_all()
-    for sr in srs:
-        sr_rec = session.xenapi.SR.get_record(sr)
-        if not ('i18n-key' in sr_rec['other_config'] and
-                sr_rec['other_config']['i18n-key'] == 'local-storage'):
-            continue
-        for pbd in sr_rec['PBDs']:
-            pbd_rec = session.xenapi.PBD.get_record(pbd)
-            if pbd_rec['host'] == host:
-                return sr
-    return None
 
 def move_vhds_into_sr(session, args):
     """Moves the VHDs from their copied location to the SR"""
@@ -75,13 +42,13 @@ def move_vhds_into_sr(session, args):
     new_base_copy_uuid = params['new_base_copy_uuid']
     new_cow_uuid = params['new_cow_uuid']
 
-    sr_path = get_sr_path(session)
+    sr_path = params['sr_path']
     sr_temp_path = "%s/images/" % sr_path
 
-    # Discover the copied VHDs locally, and then set up paths to copy 
+    # Discover the copied VHDs locally, and then set up paths to copy
     # them to under the SR
-    source_image_path = "%s/instance%d" % (IMAGE_PATH, instance_id)
-    source_base_copy_path = "%s/%s.vhd" % (source_image_path, 
+    source_image_path = "%s/instance%d" % ('/images/', instance_id)
+    source_base_copy_path = "%s/%s.vhd" % (source_image_path,
             old_base_copy_uuid)
     source_cow_path = "%s/%s.vhd" % (source_image_path, old_cow_uuid)
 
@@ -102,11 +69,10 @@ def move_vhds_into_sr(session, args):
     os.rmdir(source_image_path)
 
     # Link the COW to the base copy
-    logging.debug('Attaching COW to the base copy %s -> %s' % 
+    logging.debug('Attaching COW to the base copy %s -> %s' %
             (new_cow_path, new_base_copy_path))
-    subprocess.call([VHD_UTIL, 'modify', '-n', new_cow_path, '-p', 
-            new_base_copy_path])
-    
+    subprocess.call(shlex.split('/usr/sbin/vhd-util modify -n %s -p %s' %
+            (new_cow_path, new_base_copy_path)))
     logging.debug('Moving VHDs into SR %s' % sr_path)
     shutil.move("%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid), sr_path)
     shutil.move("%s/%s.vhd" % (temp_vhd_path, new_cow_uuid), sr_path)
@@ -122,19 +88,19 @@ def transfer_vhd(session, args):
     instance_id = params['instance_id']
     host = params['host']
     vdi_uuid = params['vdi_uuid']
-    sr_path = get_sr_path(session)
+    sr_path = params['sr_path']
     vhd_path = "%s.vhd" % vdi_uuid
 
     source_path = "%s/%s" % (sr_path, vhd_path)
-    dest_path = '%s:%sinstance%d/' % (host, IMAGE_PATH, instance_id)
+    dest_path = '%s:%sinstance%d/' % (host, '/images/', instance_id)
 
-    logging.debug("Preparing to transmit %s to %s" % (source_path, 
+    logging.debug("Preparing to transmit %s to %s" % (source_path,
             dest_path))
 
     ssh_cmd = 'ssh -o StrictHostKeyChecking=no'
 
-    rsync_args = ['nohup', RSYNC, '-av', '--progress', '-e', ssh_cmd, 
-                  source_path, dest_path]
+    rsync_args = shlex.split('nohup /usr/bin/rsync -av --progress -e %s %s %s'
+            % (ssh_cmd, source_path, dest_path))
 
     logging.debug('rsync %s' % (' '.join(rsync_args, )))
 
@@ -148,4 +114,4 @@ def transfer_vhd(session, args):
 
 if __name__ == '__main__':
     XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd,
-            'move_vhds_into_sr':move_vhds_into_sr, })
+            'move_vhds_into_sr': move_vhds_into_sr, })

@@ -298,8 +298,10 @@ class VMOps(object):
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             cow_uuid = vm_vdi_rec['uuid']
 
-            params = {'host': dest, 'vdi_uuid': base_copy_uuid,
-                      'instance_id': instance.id, }
+            params = {'host': dest,
+                      'vdi_uuid': base_copy_uuid,
+                      'instance_id': instance.id,
+                      'sr_path': VMHelper.get_sr_path(self._session), }
 
             task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
@@ -308,8 +310,11 @@ class VMOps(object):
             # Now power down the instance and transfer the COW VHD
             self._shutdown(instance, vm_ref, method='clean')
 
-            params = {'host': dest, 'vdi_uuid': cow_uuid,
-                      'instance_id': instance.id, }
+            params = {'host': dest,
+                      'vdi_uuid': cow_uuid,
+                      'instance_id': instance.id,
+                      'sr_path': VMHelper.get_sr_path(self._session), }
+
             task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
             self._session.wait_for_task(instance.id, task)
@@ -326,14 +331,15 @@ class VMOps(object):
                   'old_base_copy_uuid': disk_info['base_copy'],
                   'old_cow_uuid':       disk_info['cow'],
                   'new_base_copy_uuid': new_base_copy_uuid,
-                  'new_cow_uuid':       new_cow_uuid, }
+                  'new_cow_uuid':       new_cow_uuid,
+                  'sr_path': VMHelper.get_sr_path(self._session), }
 
         task = self._session.async_call_plugin('migration',
                 'move_vhds_into_sr', {'params': pickle.dumps(params)})
         self._session.wait_for_task(instance.id, task)
 
         # Now we rescan the SR so we find the VHDs
-        VMHelper.scan_sr(self._session)
+        VMHelper.scan_default_sr(self._session)
 
         return new_cow_uuid
 
@@ -411,7 +417,7 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def _shutdown(self, instance, vm, method='hard'):
+    def _shutdown(self, instance, vm, hard=True):
         """Shutdown an instance """
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
@@ -421,10 +427,11 @@ class VMOps(object):
 
         try:
             task = None
-            if method == 'clean':
-                task = self._session.call_xenapi('Async.VM.clean_shutdown', vm)
-            else:
+            if hard:
                 task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+            else:
+                task = self._session.call_xenapi('Async.VM.clean_shutdown', vm)
+
             self._session.wait_for_task(instance.id, task)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
