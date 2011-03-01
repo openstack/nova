@@ -45,6 +45,6 @@ def get_by_type(instance_type):
 
 def get_by_flavor_id(flavor_id):
     for instance_type, details in INSTANCE_TYPES.iteritems():
-        if details['flavorid'] == flavor_id:
+        if details['flavorid'] == int(flavor_id):
             return instance_type
     return FLAGS.default_instance_type

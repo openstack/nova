@@ -309,6 +309,7 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
+<<<<<<< TREE
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_manager = utils.import_object(FLAGS.network_manager)
@@ -561,3 +562,11 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id)
         db.volume_destroy(c, v_ref['id'])
         db.floating_ip_destroy(c, flo_addr)
+=======
+    def test_get_by_flavor_id(self):
+        type = instance_types.get_by_flavor_id(1)
+        self.assertEqual(type, 'm1.tiny')
+
+        type = instance_types.get_by_flavor_id("1")
+        self.assertEqual(type, 'm1.tiny')
+>>>>>>> MERGE-SOURCE
