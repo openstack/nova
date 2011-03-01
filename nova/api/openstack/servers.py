@@ -72,8 +72,6 @@ def _translate_detail_keys(inst):
     public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
     inst_dict['addresses']['public'] = public_ips
 
-    inst_dict['metadata'] = {}
-
     # Return the metadata as a dictionary
     metadata = {}
     for item in inst['metadata']:
