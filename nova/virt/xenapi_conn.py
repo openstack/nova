@@ -100,6 +100,8 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
+                    'Base path to the storage repository')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
