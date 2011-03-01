@@ -1,4 +1,4 @@
-
+..
       Copyright 2010-2011 United States Government as represented by the
       Administrator of the National Aeronautics and Space Administration.
       All Rights Reserved.
@@ -21,9 +21,13 @@ Managing Instance Types and Flavors
 What are Instance Types or Flavors ?
 ------------------------------------
 
-Instance types are the container descriptions (meta-data) about instances. In layman terms, this is the size of the instance (vCPUs, RAM, etc.) that you will be launching. In the EC2 API, these are called by names such as "m1.large" or "m1.tiny", while the OpenStack API terms these "flavors" with names like "" 
+Instance types describe the compute, memory and storage capacity of nova computing instances. In layman terms, this is the size (in terms of vCPUs, RAM, etc.) of the virtual server that you will be launching. In the EC2 API, these are called by names such as "m1.large" or "m1.tiny", while the OpenStack API terms these "flavors" with names like "512 MB Server". 
 
-Flavors are simply the name for instance types used in the OpenStack API. In nova, these are equivalent terms, so when you create an instance type you are also creating a flavor. For the rest of this document, I will refer to these as instance types.
+In Nova, "flavor" and "instance type" are equivalent terms. When you create an EC2 instance type, you are also creating a OpenStack API flavor. To reduce repetition, for the rest of this document I will refer to these as instance types.
+
+Instance types can be in either the active or inactive state:
+  * Active instance types are available to be used for launching instances
+  * Inactive instance types are not available for launching instances
 
 In the current (Cactus) version of nova, instance types can only be created by the nova administrator through the nova-manage command. Future versions of nova (in concert with the OpenStack API or EC2 API), may expose this functionality directly to users.
 
@@ -43,16 +47,15 @@ To see all currently active instance types, use the list subcommand::
     m1.xlarge: Memory: 16384MB, VCPUS: 8, Storage: 160GB, FlavorID: 5, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.small: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
 
-By default, the list subcommand only shows active instance types. To see all instance types 
-(even those deleted), use the listall subcommand::
+By default, the list subcommand only shows active instance types. To see all instance types (inactive and active), use the list subcommand with the "--all" flag::
 
-    # nova-manage instance_type listall
+    # nova-manage instance_type list --all
     m1.medium: Memory: 4096MB, VCPUS: 2, Storage: 40GB, FlavorID: 3, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.large: Memory: 8192MB, VCPUS: 4, Storage: 80GB, FlavorID: 4, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.tiny: Memory: 512MB, VCPUS: 1, Storage: 0GB, FlavorID: 1, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.xlarge: Memory: 16384MB, VCPUS: 8, Storage: 160GB, FlavorID: 5, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
     m1.small: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
-    m1.deleted: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
+    m1.deleted: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB, inactive
 
 To create an instance type, use the "create" subcommand with the following positional arguments:
  * memory (expressed in megabytes) 
@@ -80,14 +83,4 @@ terminate for months or years). If you are sure that you want to delete this ins
 type from the database, pass the "--purge" flag after the name::
 
     # nova-manage instance_type delete m1.xxlarge --purge
-    m1.xxlarge deleted
-
-To see all instance types (inactive + active), use the list subcommand with the "--all" flag::
-
-    # nova-manage instance_type list --all
-    m1.medium: Memory: 4096MB, VCPUS: 2, Storage: 40GB, FlavorID: 3, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
-    m1.large: Memory: 8192MB, VCPUS: 4, Storage: 80GB, FlavorID: 4, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
-    m1.tiny: Memory: 512MB, VCPUS: 1, Storage: 0GB, FlavorID: 1, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
-    m1.xlarge: Memory: 16384MB, VCPUS: 8, Storage: 160GB, FlavorID: 5, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
-    m1.small: Memory: 2048MB, VCPUS: 1, Storage: 20GB, FlavorID: 2, Swap: 0GB, RXTX Quota: 0GB, RXTX Cap: 0MB
-
+    m1.xxlarge purged

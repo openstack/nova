@@ -190,7 +190,7 @@ Nova Flavor
 
     Outputs a list of all flavors (active and inactive) to the screen.
 
-``nova-manage flavor create <name> <memory> <vCPU> <local_storage> <flavorID> <swap> <RXTX Quota> <RXTX Cap>``
+``nova-manage flavor create <name> <memory> <vCPU> <local_storage> <flavorID> <(optional) swap> <(optional) RXTX Quota> <(optional) RXTX Cap>``
 
     creates a flavor with the following positional arguments:
      * memory (expressed in megabytes) 
@@ -213,7 +213,8 @@ Nova Flavor
 Nova Instance_type
 ~~~~~~~~~~~~~~~~~~
 
-Nova instance_type is a alias for 
+The instance_type command is provided as an alias for the flavor command. All the same subcommands and arguments from nova-manage flavor can be used.
+
 
 FILES
 ========
