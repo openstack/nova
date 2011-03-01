@@ -24,6 +24,7 @@ import pickle
 import re
 import time
 import urllib
+import uuid
 from xml.dom import minidom
 
 from eventlet import event
@@ -63,11 +64,14 @@ class ImageType:
         0 - kernel/ramdisk image (goes on dom0's filesystem)
         1 - disk image (local SR, partitioned by objectstore plugin)
         2 - raw disk image (local SR, NOT partitioned by plugin)
+        3 - vhd disk image (local SR, NOT inspected by XS, PV assumed for
+            linux, HVM assumed for Windows)
     """
 
     KERNEL_RAMDISK = 0
     DISK = 1
     DISK_RAW = 2
+    DISK_VHD = 3
 
 
 class VMHelper(HelperBase):
@@ -274,29 +278,35 @@ class VMHelper(HelperBase):
             session, instance_id, sr_ref, vm_vdi_ref, original_parent_uuid)
 
         #TODO(sirp): we need to assert only one parent, not parents two deep
-        return template_vm_ref, [template_vdi_uuid, parent_uuid]
+        template_vdi_uuids = {'image': parent_uuid,
+                              'snap': template_vdi_uuid}
+        return template_vm_ref, template_vdi_uuids
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
+        # NOTE(sirp): Currently we only support uploading images as VHD, there
+        # is no RAW equivalent (yet)
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port}
+                  'glance_port': FLAGS.glance_port,
+                  'sr_path': get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
-        task = session.async_call_plugin('glance', 'put_vdis', kwargs)
+        task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
         session.wait_for_task(task, instance_id)
 
     @classmethod
-    def fetch_image(cls, session, instance_id, image, user, project, type):
+    def fetch_image(cls, session, instance_id, image, user, project,
+                    image_type):
         """
-        type is interpreted as an ImageType instance
+        image_type is interpreted as an ImageType instance
         Related flags:
             xenapi_image_service = ['glance', 'objectstore']
             glance_address = 'address for glance services'
@@ -306,35 +316,80 @@ class VMHelper(HelperBase):
 
         if FLAGS.xenapi_image_service == 'glance':
             return cls._fetch_image_glance(session, instance_id, image,
-                                           access, type)
+                                           access, image_type)
         else:
             return cls._fetch_image_objectstore(session, instance_id, image,
-                                                access, user.secret, type)
+                                                access, user.secret,
+                                                image_type)
 
     @classmethod
-    def _fetch_image_glance(cls, session, instance_id, image, access, type):
-        sr = find_sr(session)
-        if sr is None:
-            raise exception.NotFound('Cannot find SR to write VDI to')
+    def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
+                                image_type):
+        LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
+                    % locals())
 
-        c = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+        sr_ref = safe_find_sr(session)
 
-        meta, image_file = c.get_image(image)
+        # NOTE(sirp): The Glance plugin runs under Python 2.4 which does not
+        # have the `uuid` module. To work around this, we generate the uuids
+        # here (under Python 2.6+) and pass them as arguments
+        uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
+
+        params = {'image_id': image,
+                  'glance_host': FLAGS.glance_host,
+                  'glance_port': FLAGS.glance_port,
+                  'uuid_stack': uuid_stack,
+                  'sr_path': get_sr_path(session)}
+
+        kwargs = {'params': pickle.dumps(params)}
+        task = session.async_call_plugin('glance', 'download_vhd', kwargs)
+        vdi_uuid = session.wait_for_task(instance_id, task)
+
+        scan_sr(session, instance_id, sr_ref)
+
+        # Set the name-label to ease debugging
+        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
+        name_label = get_name_label_for_image(image)
+        session.get_xenapi().VDI.set_name_label(vdi_ref, name_label)
+
+        LOG.debug(_("xapi 'download_vhd' returned VDI UUID %(vdi_uuid)s")
+                  % locals())
+        return vdi_uuid
+
+    @classmethod
+    def _fetch_image_glance_disk(cls, session, instance_id, image, access,
+                                 image_type):
+        """Fetch the image from Glance
+
+        NOTE:
+        Unlike _fetch_image_glance_vhd, this method does not use the Glance
+        plugin; instead, it streams the disks through domU to the VDI
+        directly.
+
+        """
+        # FIXME(sirp): Since the Glance plugin seems to be required for the
+        # VHD disk, it may be worth using the plugin for both VHD and RAW and
+        # DISK restores
+        sr_ref = safe_find_sr(session)
+
+        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+        meta, image_file = client.get_image(image)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
         LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
-        if type == ImageType.DISK:
+
+        if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
 
-        vdi = cls.create_vdi(session, sr, _('Glance image %s') % image,
-                             vdi_size, False)
+        name_label = get_name_label_for_image(image)
+        vdi = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
 
         with_vdi_attached_here(session, vdi, False,
                                lambda dev:
-                               _stream_disk(dev, type,
+                               _stream_disk(dev, image_type,
                                             virtual_size, image_file))
-        if (type == ImageType.KERNEL_RAMDISK):
+        if image_type == ImageType.KERNEL_RAMDISK:
             #we need to invoke a plugin for copying VDI's
             #content into proper path
             LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi)
@@ -353,20 +408,87 @@ class VMHelper(HelperBase):
             return session.get_xenapi().VDI.get_uuid(vdi)
 
     @classmethod
+    def determine_disk_image_type(cls, instance):
+        """Disk Image Types are used to determine where the kernel will reside
+        within an image. To figure out which type we're dealing with, we use
+        the following rules:
+
+        1. If we're using Glance, we can use the image_type field to
+           determine the image_type
+
+        2. If we're not using Glance, then we need to deduce this based on
+           whether a kernel_id is specified.
+        """
+        def log_disk_format(image_type):
+            pretty_format = {ImageType.KERNEL_RAMDISK: 'KERNEL_RAMDISK',
+                             ImageType.DISK: 'DISK',
+                             ImageType.DISK_RAW: 'DISK_RAW',
+                             ImageType.DISK_VHD: 'DISK_VHD'}
+            disk_format = pretty_format[image_type]
+            image_id = instance.image_id
+            instance_id = instance.id
+            LOG.debug(_("Detected %(disk_format)s format for image "
+                        "%(image_id)s, instance %(instance_id)s") % locals())
+
+        def determine_from_glance():
+            glance_type2nova_type = {'machine': ImageType.DISK,
+                                     'raw': ImageType.DISK_RAW,
+                                     'vhd': ImageType.DISK_VHD,
+                                     'kernel': ImageType.KERNEL_RAMDISK,
+                                     'ramdisk': ImageType.KERNEL_RAMDISK}
+            client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+            meta = client.get_image_meta(instance.image_id)
+            type_ = meta['type']
+            try:
+                return glance_type2nova_type[type_]
+            except KeyError:
+                raise exception.NotFound(
+                    _("Unrecognized image type '%(type_)s'") % locals())
+
+        def determine_from_instance():
+            if instance.kernel_id:
+                return ImageType.DISK
+            else:
+                return ImageType.DISK_RAW
+
+        # FIXME(sirp): can we unify the ImageService and xenapi_image_service
+        # abstractions?
+        if FLAGS.xenapi_image_service == 'glance':
+            image_type = determine_from_glance()
+        else:
+            image_type = determine_from_instance()
+
+        log_disk_format(image_type)
+        return image_type
+
+    @classmethod
+    def _fetch_image_glance(cls, session, instance_id, image, access,
+                            image_type):
+        if image_type == ImageType.DISK_VHD:
+            return cls._fetch_image_glance_vhd(
+                session, instance_id, image, access, image_type)
+        else:
+            return cls._fetch_image_glance_disk(
+                session, instance_id, image, access, image_type)
+
+    @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
-                                 secret, type):
+                                 secret, image_type):
         url = images.image_url(image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
-        fn = (type != ImageType.KERNEL_RAMDISK) and 'get_vdi' or 'get_kernel'
+        if image_type == ImageType.KERNEL_RAMDISK:
+            fn = 'get_kernel'
+        else:
+            fn = 'get_vdi'
         args = {}
         args['src_url'] = url
         args['username'] = access
         args['password'] = secret
         args['add_partition'] = 'false'
         args['raw'] = 'false'
-        if type != ImageType.KERNEL_RAMDISK:
+        if image_type != ImageType.KERNEL_RAMDISK:
             args['add_partition'] = 'true'
-            if type == ImageType.DISK_RAW:
+            if image_type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
         uuid = session.wait_for_task(task, instance_id)
@@ -374,6 +496,9 @@ class VMHelper(HelperBase):
 
     @classmethod
     def lookup_image(cls, session, instance_id, vdi_ref):
+        """
+        Determine if VDI is using a PV kernel
+        """
         if FLAGS.xenapi_image_service == 'glance':
             return cls._lookup_image_glance(session, vdi_ref)
         else:
@@ -585,7 +710,18 @@ def get_vdi_for_vm_safely(session, vm_ref):
     return vdi_ref, vdi_rec
 
 
+def safe_find_sr(session):
+    """Same as find_sr except raises a NotFound exception if SR cannot be
+    determined
+    """
+    sr_ref = find_sr(session)
+    if sr_ref is None:
+        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+    return sr_ref
+
+
 def find_sr(session):
+    """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
     srs = session.get_xenapi().SR.get_all()
     for sr in srs:
@@ -598,6 +734,18 @@ def find_sr(session):
             if pbd_rec['host'] == host:
                 return sr
     return None
+
+
+def get_sr_path(session):
+    """Return the path to our storage repository
+
+    This is used when we're dealing with VHDs directly, either by taking
+    snapshots or by restoring an image in the DISK_VHD format.
+    """
+    sr_ref = safe_find_sr(session)
+    sr_rec = session.get_xenapi().SR.get_record(sr_ref)
+    sr_uuid = sr_rec["uuid"]
+    return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
 
 def remap_vbd_dev(dev):
@@ -713,9 +861,9 @@ def _is_vdi_pv(dev):
     return False
 
 
-def _stream_disk(dev, type, virtual_size, image_file):
+def _stream_disk(dev, image_type, virtual_size, image_file):
     offset = 0
-    if type == ImageType.DISK:
+    if image_type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
         _write_partition(virtual_size, dev)
 
@@ -744,3 +892,8 @@ def _write_partition(virtual_size, dev):
             (dest, primary_first, primary_last))
 
     LOG.debug(_('Writing partition table %s done.'), dest)
+
+
+def get_name_label_for_image(image):
+    # TODO(sirp): This should eventually be the URI for the Glance image
+    return _('Glance image %s') % image

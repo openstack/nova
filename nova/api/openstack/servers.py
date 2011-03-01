@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import hashlib
 import json
 import traceback
 
@@ -50,7 +51,8 @@ def _translate_detail_keys(inst):
         power_state.PAUSED: 'paused',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error'}
+        power_state.CRASHED: 'error',
+        power_state.FAILED: 'error'}
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
@@ -70,13 +72,15 @@ def _translate_detail_keys(inst):
     public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
     inst_dict['addresses']['public'] = public_ips
 
-    inst_dict['hostId'] = ''
-
     # Return the metadata as a dictionary
     metadata = {}
     for item in inst['metadata']:
         metadata[item['key']] = item['value']
     inst_dict['metadata'] = metadata
+
+    inst_dict['hostId'] = ''
+    if inst['host']:
+        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
 
     return dict(server=inst_dict)
 
@@ -134,25 +138,6 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
-
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """
-        Machine images are associated with Kernels and Ramdisk images via
-        metadata stored in Glance as 'image_properties'
-        """
-        def lookup(param):
-            _image_id = image_id
-            try:
-                return image['properties'][param]
-            except KeyError:
-                LOG.debug(
-                    _("%(param)s property not found for image %(_image_id)s") %
-                      locals())
-            return None
-
-        image_id = str(image_id)
-        image = self._image_service.show(req.environ['nova.context'], image_id)
-        return lookup('kernel_id'), lookup('ramdisk_id')
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -399,3 +384,37 @@ class Controller(wsgi.Controller):
                 action=item.action,
                 error=item.error))
         return dict(actions=actions)
+
+    def _get_kernel_ramdisk_from_image(self, req, image_id):
+        """Retrevies kernel and ramdisk IDs from Glance
+
+        Only 'machine' (ami) type use kernel and ramdisk outside of the
+        image.
+        """
+        # FIXME(sirp): Since we're retrieving the kernel_id from an
+        # image_property, this means only Glance is supported.
+        # The BaseImageService needs to expose a consistent way of accessing
+        # kernel_id and ramdisk_id
+        image = self._image_service.show(req.environ['nova.context'], image_id)
+
+        if image['status'] != 'active':
+            raise exception.Invalid(
+                _("Cannot build from image %(image_id)s, status not active") %
+                  locals())
+
+        if image['type'] != 'machine':
+            return None, None
+
+        try:
+            kernel_id = image['properties']['kernel_id']
+        except KeyError:
+            raise exception.NotFound(
+                _("Kernel not found for image %(image_id)s") % locals())
+
+        try:
+            ramdisk_id = image['properties']['ramdisk_id']
+        except KeyError:
+            raise exception.NotFound(
+                _("Ramdisk not found for image %(image_id)s") % locals())
+
+        return kernel_id, ramdisk_id

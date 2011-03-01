@@ -81,27 +81,33 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        #if kernel is not present we must download a raw disk
-        if instance.kernel_id:
-            disk_image_type = ImageType.DISK
-        else:
-            disk_image_type = ImageType.DISK_RAW
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
+
         vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
             instance.image_id, user, project, disk_image_type)
+
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-        #Have a look at the VDI and see if it has a PV kernel
+
         pv_kernel = False
-        if not instance.kernel_id:
+        if disk_image_type == ImageType.DISK_RAW:
+            #Have a look at the VDI and see if it has a PV kernel
             pv_kernel = VMHelper.lookup_image(self._session, instance.id,
                                               vdi_ref)
+        elif disk_image_type == ImageType.DISK_VHD:
+            # TODO(sirp): Assuming PV for now; this will need to be
+            # configurable as Windows will use HVM.
+            pv_kernel = True
+
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
                 instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+
         vm_ref = VMHelper.create_vm(self._session,
                                           instance, kernel, ramdisk, pv_kernel)
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
@@ -252,7 +258,8 @@ class VMOps(object):
             VMHelper.upload_image(
                 self._session, instance.id, template_vdi_uuids, image_id)
         finally:
-            self._destroy(instance, template_vm_ref, shutdown=False)
+            self._destroy(instance, template_vm_ref, shutdown=False,
+                          destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
@@ -339,6 +346,9 @@ class VMOps(object):
                      locals())
             return
 
+        instance_id = instance.id
+        LOG.debug(_("Shutting down VM for Instance %(instance_id)s")
+                  % locals())
         try:
             try:
                 task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
@@ -351,6 +361,9 @@ class VMOps(object):
 
     def _destroy_vdis(self, instance, vm):
         """Destroys all VDIs associated with a VM """
+        instance_id = instance.id
+        LOG.debug(_("Destroying VDIs for Instance %(instance_id)s")
+                  % locals())
         vdis = VMHelper.lookup_vm_vdis(self._session, vm)
 
         if not vdis:
@@ -363,28 +376,55 @@ class VMOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
+    def _destroy_kernel_ramdisk(self, instance, vm):
+        """
+        Three situations can occur:
+
+            1. We have neither a ramdisk nor a kernel, in which case we are a
+               RAW image and can omit this step
+
+            2. We have one or the other, in which case, we should flag as an
+               error
+
+            3. We have both, in which case we safely remove both the kernel
+               and the ramdisk.
+        """
+        instance_id = instance.id
+        if not instance.kernel_id and not instance.ramdisk_id:
+            # 1. No kernel or ramdisk
+            LOG.debug(_("Instance %(instance_id)s using RAW or VHD, "
+                        "skipping kernel and ramdisk deletion") % locals())
+            return
+
+        if not (instance.kernel_id and instance.ramdisk_id):
+            # 2. We only have kernel xor ramdisk
+            raise exception.NotFound(
+                _("Instance %(instance_id)s has a kernel or ramdisk but not "
+                  "both" % locals()))
+
+        # 3. We have both kernel and ramdisk
+        (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
+            self._session, vm)
+
+        LOG.debug(_("Removing kernel/ramdisk files"))
+
+        args = {'kernel-file': kernel, 'ramdisk-file': ramdisk}
+        task = self._session.async_call_plugin(
+            'glance', 'remove_kernel_ramdisk', args)
+        self._session.wait_for_task(instance.id, task)
+
+        LOG.debug(_("kernel/ramdisk files removed"))
+
     def _destroy_vm(self, instance, vm):
         """Destroys a VM record """
+        instance_id = instance.id
         try:
-            kernel = None
-            ramdisk = None
-            if instance.kernel_id or instance.ramdisk_id:
-                (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
-                                    self._session, vm)
-            task1 = self._session.call_xenapi('Async.VM.destroy', vm)
-            LOG.debug(_("Removing kernel/ramdisk files"))
-            fn = "remove_kernel_ramdisk"
-            args = {}
-            if kernel:
-                args['kernel-file'] = kernel
-            if ramdisk:
-                args['ramdisk-file'] = ramdisk
-            task2 = self._session.async_call_plugin('glance', fn, args)
-            self._session.wait_for_task(task1, instance.id)
-            self._session.wait_for_task(task2, instance.id)
-            LOG.debug(_("kernel/ramdisk files removed"))
+            task = self._session.call_xenapi('Async.VM.destroy', vm)
+            self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
+
+        LOG.debug(_("Instance %(instance_id)s VM destroyed") % locals())
 
     def destroy(self, instance):
         """
@@ -393,26 +433,31 @@ class VMOps(object):
         This is the method exposed by xenapi_conn.destroy(). The rest of the
         destroy_* methods are internal.
         """
+        instance_id = instance.id
+        LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
         vm = VMHelper.lookup(self._session, instance.name)
         return self._destroy(instance, vm, shutdown=True)
 
-    def _destroy(self, instance, vm, shutdown=True):
+    def _destroy(self, instance, vm, shutdown=True,
+                 destroy_kernel_ramdisk=True):
         """
         Destroys VM instance by performing:
 
-        1. A shutdown if requested
-        2. Destroying associated VDIs
-        3. Destroying that actual VM record
+            1. A shutdown if requested
+            2. Destroying associated VDIs
+            3. Destroying kernel and ramdisk files (if necessary)
+            4. Destroying that actual VM record
         """
         if vm is None:
-            # Don't complain, just return.  This lets us clean up instances
-            # that have already disappeared from the underlying platform.
+            LOG.warning(_("VM is not present, skipping destroy..."))
             return
 
         if shutdown:
             self._shutdown(instance, vm)
 
         self._destroy_vdis(instance, vm)
+        if destroy_kernel_ramdisk:
+            self._destroy_kernel_ramdisk(instance, vm)
         self._destroy_vm(instance, vm)
 
     def _wait_with_callback(self, instance_id, task, callback):

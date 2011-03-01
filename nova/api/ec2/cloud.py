@@ -890,7 +890,6 @@ class CloudController(object):
             raise exception.ApiError(_('attribute not supported: %s')
                                      % attribute)
         try:
-            image = self.image_service.show(context, image_id)
             image = self._format_image(context,
                                        self.image_service.show(context,
                                                                image_id))
