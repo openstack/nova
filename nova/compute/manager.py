@@ -818,7 +818,7 @@ class ComputeManager(manager.Manager):
 
         LOG.info(_('Migrating %(i_name)s to %(dest)s finishes successfully.')
                  % locals())
-        LOG.info(_("The below error is normally occurs."
+        LOG.info(_("The below error is normally occurs. "
                 "Just check if instance is successfully migrated.\n"
                 "libvir: QEMU error : Domain not found: no domain "
                 "with matching name.."))
