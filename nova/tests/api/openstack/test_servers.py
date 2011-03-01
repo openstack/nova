@@ -232,6 +232,9 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 200)
 
+    def _personality_dict(self, path, contents):
+        return {'path': path, 'contents': contents}
+
     def _create_instance_with_personality(self, personality):
 
         class FakeComputeAPI(object):
@@ -239,7 +242,7 @@ class ServersTest(test.TestCase):
             def __init__(self):
                 self.onset_files = None
 
-            def create(*args, **kwargs):
+            def create(self, *args, **kwargs):
                 if 'onset_files' in kwargs:
                     self.onset_files = kwargs['onset_files']
                 else:
@@ -265,12 +268,20 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
-        return req.get_response(fakes.wsgi_app()), compute_api.onset_files
+        return req, req.get_response(fakes.wsgi_app()), compute_api.onset_files
 
     def test_create_instance_with_no_personality(self):
-        res, onset_files = self._create_instance_with_personality(personality={})
-        self.assertEquals(res.status_int, 200)
-        self.assertEquals(onset_files, None)
+        request, response, onset_files = \
+            self._create_instance_with_personality(personality=[])
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(onset_files, [])
+
+    def test_create_instance_with_one_personality(self):
+        personality = [self._personality_dict('/my/path', 'myfilecontents')]
+        request, response, onset_files = \
+            self._create_instance_with_personality(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(onset_files, [('/my/path', 'myfilecontents')])
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')

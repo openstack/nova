@@ -80,7 +80,6 @@ def _translate_detail_keys(inst):
 
     return dict(server=inst_dict)
 
-
 def _translate_keys(inst):
     """ Coerces into dictionary format, excluding all model attributes
     save for id and name """
@@ -154,6 +153,22 @@ class Controller(wsgi.Controller):
         image = self._image_service.show(req.environ['nova.context'], image_id)
         return lookup('kernel_id'), lookup('ramdisk_id')
 
+    
+    def _get_onset_files_from_personality_attr(self, personality_attr):
+        """
+        Create a list of onset files from the personality request attribute
+
+        At this time, onset_files must be formatted as a list of 
+        (file_path, file_content) pairs for compatibility with the 
+        underlying compute service.
+        """
+        onset_files = []
+        for personality in personality_attr:
+            path = personality['path']
+            contents = personality['contents']
+            onset_files.append((path, contents))
+        return onset_files
+
     def create(self, req):
         """ Creates a new server for a given user """
         env = self._deserialize(req.body, req)
@@ -181,6 +196,9 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
+        personality = env['server'].get('personality', [])
+        onset_files = self._get_onset_files_from_personality_attr(personality)
+
         instances = self.compute_api.create(
             context,
             instance_types.get_by_flavor_id(env['server']['flavorId']),
@@ -192,7 +210,7 @@ class Controller(wsgi.Controller):
             key_name=key_pair['name'],
             key_data=key_pair['public_key'],
             metadata=metadata,
-            onset_files=env.get('onset_files', []))
+            onset_files=onset_files)
         return _translate_keys(instances[0])
 
     def update(self, req, id):
