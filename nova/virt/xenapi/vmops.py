@@ -87,15 +87,7 @@ class VMOps(object):
 
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
-        pv_kernel = False
-        if disk_image_type == ImageType.DISK_RAW:
-            #Have a look at the VDI and see if it has a PV kernel
-            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
-                                              vdi_ref)
-        elif disk_image_type == ImageType.DISK_VHD:
-            # TODO(sirp): Assuming PV for now; this will need to be
-            # configurable as Windows will use HVM.
-            pv_kernel = True
+        os_type = instance.get('os_type', 'linux')
 
         kernel = None
         if instance.kernel_id:
@@ -107,8 +99,11 @@ class VMOps(object):
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
 
-        vm_ref = VMHelper.create_vm(self._session,
-                                          instance, kernel, ramdisk, pv_kernel)
+        use_pv_kernel = VMHelper.determine_is_pv(
+          self._session, instance.id, vdi_ref, disk_image_type, os_type)
+        vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
+                                    use_pv_kernel)
+
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
         # inject_network_info and create vifs

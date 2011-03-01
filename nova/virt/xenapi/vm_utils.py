@@ -80,62 +80,80 @@ class VMHelper(HelperBase):
     """
 
     @classmethod
-    def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
+    def create_vm(cls, session, instance, kernel, ramdisk, use_pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference.
-        the pv_kernel flag indicates whether the guest is HVM or PV
+        the use_pv_kernel flag indicates whether the guest is HVM or PV
+
+        There are 3 scenarios:
+
+            1. Using paravirtualization,  kernel passed in
+
+            2. Using paravirtualization, kernel within the image
+
+            3. Using hardware virtualization
         """
 
         instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
-            'name_label': instance.name,
-            'name_description': '',
+            'actions_after_crash': 'destroy',
+            'actions_after_reboot': 'restart',
+            'actions_after_shutdown': 'destroy',
+            'affinity': '',
+            'blocked_operations': {},
+            'ha_always_run': False,
+            'ha_restart_priority': '',
+            'HVM_boot_params': {},
+            'HVM_boot_policy': '',
             'is_a_template': False,
-            'memory_static_min': '0',
-            'memory_static_max': mem,
             'memory_dynamic_min': mem,
             'memory_dynamic_max': mem,
+            'memory_static_min': '0',
+            'memory_static_max': mem,
+            'memory_target': mem,
+            'name_description': '',
+            'name_label': instance.name,
+#            'other_config': {'allowvssprovider': False},
+            'other_config': {},
+            'PCI_bus': '',
+            'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
+                         'viridian': 'true', 'timeoffset': '0'},
+            'PV_args': '',
+            'PV_bootloader': '',
+            'PV_bootloader_args': '',
+            'PV_kernel': '',
+            'PV_legacy_args': '',
+            'PV_ramdisk': '',
+            'recommendations': '',
+            'tags': [],
+            'user_version': '0',
             'VCPUs_at_startup': vcpus,
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
-            'actions_after_shutdown': 'destroy',
-            'actions_after_reboot': 'restart',
-            'actions_after_crash': 'destroy',
-            'PV_bootloader': '',
-            'PV_kernel': '',
-            'PV_ramdisk': '',
-            'PV_args': '',
-            'PV_bootloader_args': '',
-            'PV_legacy_args': '',
-            'HVM_boot_policy': '',
-            'HVM_boot_params': {},
-            'platform': {},
-            'PCI_bus': '',
-            'recommendations': '',
-            'affinity': '',
-            'user_version': '0',
-            'other_config': {},
+            'xenstore_data': {}
             }
-        #Complete VM configuration record according to the image type
-        #non-raw/raw with PV kernel/raw in HVM mode
-        if instance.kernel_id:
-            rec['PV_bootloader'] = ''
-            rec['PV_kernel'] = kernel
-            rec['PV_ramdisk'] = ramdisk
-            rec['PV_args'] = 'root=/dev/xvda1'
-            rec['PV_bootloader_args'] = ''
-            rec['PV_legacy_args'] = ''
-        else:
-            if pv_kernel:
-                rec['PV_args'] = 'noninteractive'
-                rec['PV_bootloader'] = 'pygrub'
+
+        # Complete VM configuration record according to the image type
+        # non-raw/raw with PV kernel/raw in HVM mode
+        if use_pv_kernel:
+            rec['platform']['nx'] = 'false'
+            if instance.kernel_id:
+                # 1. Kernel explicitly passed in, use that
+                rec['PV_args'] = 'root=/dev/xvda1'
+                rec['PV_kernel'] = kernel
+                rec['PV_ramdisk'] = ramdisk
             else:
-                rec['HVM_boot_policy'] = 'BIOS order'
-                rec['HVM_boot_params'] = {'order': 'dc'}
-                rec['platform'] = {'acpi': 'true', 'apic': 'true',
-                                   'pae': 'true', 'viridian': 'true'}
+                # 2. Use kernel within the image
+                rec['PV_args'] = 'clocksource=jiffies'
+                rec['PV_bootloader'] = 'pygrub'
+        else:
+            # 3. Using hardware virtualization
+            rec['platform']['nx'] = 'true'
+            rec['HVM_boot_params'] = {'order': 'dc'}
+            rec['HVM_boot_policy'] = 'BIOS order'
+
         LOG.debug(_('Created VM %s...'), instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
         instance_name = instance.name
@@ -497,17 +515,32 @@ class VMHelper(HelperBase):
         return uuid
 
     @classmethod
-    def lookup_image(cls, session, instance_id, vdi_ref):
+    def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,
+                        os_type):
         """
-        Determine if VDI is using a PV kernel
+        Determine whether the VM will use a paravirtualized kernel or if it
+        will use hardware virtualization.
+
+            1. Objectstore (any image type): 
+               We use plugin to figure out whether the VDI uses PV
+
+            2. Glance (VHD): then we use `os_type`, raise if not set
+
+            3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
+               available
+
+            4. Glance (DISK): pv is assumed
         """
         if FLAGS.xenapi_image_service == 'glance':
-            return cls._lookup_image_glance(session, vdi_ref)
+            # 2, 3, 4: Glance
+            return cls._determine_is_pv_glance(
+              session, vdi_ref, disk_image_type, os_type)
         else:
-            return cls._lookup_image_objectstore(session, instance_id, vdi_ref)
+            # 1. Objecstore
+            return cls._determine_is_pv_objectstore(session, instance_id, vdi_ref)
 
     @classmethod
-    def _lookup_image_objectstore(cls, session, instance_id, vdi_ref):
+    def _determine_is_pv_objectstore(cls, session, instance_id, vdi_ref):
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
         fn = "is_vdi_pv"
         args = {}
@@ -523,9 +556,38 @@ class VMHelper(HelperBase):
         return pv
 
     @classmethod
-    def _lookup_image_glance(cls, session, vdi_ref):
+    def _determine_is_pv_glance(cls, session, vdi_ref, disk_image_type,
+                                os_type):
+        """
+        For a Glance image, determine if we need paravirtualization.
+
+        The relevant scenarios are: 
+            2. Glance (VHD): then we use `os_type`, raise if not set
+
+            3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
+               available
+
+            4. Glance (DISK): pv is assumed
+        """
+
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
-        return with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
+        if disk_image_type == ImageType.DISK_VHD:
+            # 2. VHD
+            if os_type == 'windows':
+                is_pv = False
+            else:
+                is_pv = True
+        elif disk_image_type == ImageType.DISK_RAW:
+            # 3. RAW
+            is_pv =  with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
+        elif disk_image_type == ImageType.DISK:
+            # 4. Disk
+            is_pv = True
+        else:
+            raise exception.Error(_("Unknown image format %(disk_image_type)s")
+                                  % locals())
+
+        return is_pv
 
     @classmethod
     def lookup(cls, session, i):
