@@ -202,18 +202,19 @@ class VMOps(object):
                             _('Instance not present %s') % instance_name)
         return vm
 
-    def _bootlock(self, vm, unlock=False):
+    def _acquire_bootlock(self, vm):
         """Prevent an instance from booting"""
-        if unlock:
-            self._session.call_xenapi(
-                "VM.remove_from_blocked_operations",
-                vm,
-                "start")
-        else:
-            self._session.call_xenapi(
-                "VM.set_blocked_operations",
-                vm,
-                {"start": ""})
+        self._session.call_xenapi(
+            "VM.set_blocked_operations",
+            vm,
+            {"start": ""})
+
+    def _release_bootlock(self, vm):
+        """Allow an instance to boot"""
+        self._session.call_xenapi(
+            "VM.remove_from_blocked_operations",
+            vm,
+            "start")
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance
@@ -338,7 +339,7 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def _shutdown(self, instance, vm):
+    def _shutdown(self, instance, vm, hard=True):
         """Shutdown an instance"""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
@@ -350,12 +351,13 @@ class VMOps(object):
         LOG.debug(_("Shutting down VM for Instance %(instance_id)s")
                   % locals())
         try:
-            try:
-                task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
-                self._session.wait_for_task(task, instance.id)
-            except self.XenAPI.Failure:
+            task = None
+            if hard:
                 task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
-                self._session.wait_for_task(task, instance.id)
+            else:
+                task = self._session.call_xenapi("Async.VM.clean_shutdown", vm)
+
+            self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -501,7 +503,7 @@ class VMOps(object):
 
         vm = self._get_vm_opaque_ref(instance)
         self._shutdown(instance, vm)
-        self._bootlock(vm)
+        self._acquire_bootlock(vm)
 
         instance._rescue = True
         self.spawn(instance)
@@ -533,7 +535,7 @@ class VMOps(object):
 
         for vbd_ref in vbds:
             vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if vbd["userdevice"] == str(1):
+            if vbd["userdevice"] == "1":
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
@@ -551,7 +553,7 @@ class VMOps(object):
         task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm)
         self._session.wait_for_task(task2, instance.id)
 
-        self._bootlock(original_vm, unlock=True)
+        self._release_bootlock(original_vm)
         self._start(instance, original_vm)
 
     def get_info(self, instance):
