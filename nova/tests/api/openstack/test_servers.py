@@ -296,6 +296,20 @@ class ServersTest(test.TestCase):
         self.assertEquals(response.status_int, 400)
         self.assertEquals(onset_files, None)
 
+    def test_create_instance_with_two_personalities(self):
+        files = [
+            ('/etc/sudoers', 'ALL ALL=NOPASSWD: ALL\n'),
+            ('/etc/motd', 'Enjoy your root access!\n'),
+            ]
+        personality = []
+        for path, content in files:
+            personality.append(self._personality_dict(
+                    path, base64.b64encode(content)))
+        request, response, onset_files = \
+            self._create_instance_with_personality(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(onset_files, files)
+
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
