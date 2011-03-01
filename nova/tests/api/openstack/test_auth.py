@@ -16,7 +16,6 @@
 #    under the License.
 
 import datetime
-import unittest
 
 import stubout
 import webob
@@ -27,12 +26,15 @@ import nova.api.openstack.auth
 import nova.auth.manager
 from nova import auth
 from nova import context
+from nova import db
+from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class Test(unittest.TestCase):
+class Test(test.TestCase):
 
     def setUp(self):
+        super(Test, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
@@ -45,10 +47,11 @@ class Test(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         fakes.fake_data_store = {}
+        super(Test, self).tearDown()
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        f.add_user(nova.auth.manager.User(1, 'herp', 'herp', 'derp', None))
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -62,7 +65,7 @@ class Test(unittest.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user(nova.auth.manager.User(1, 'herp', 'herp', 'derp', None))
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
@@ -97,10 +100,10 @@ class Test(unittest.TestCase):
                     token_hash=token_hash,
                     created_at=datetime.datetime(1990, 1, 1))
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_destroy_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_destroy',
             destroy_token_mock)
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_get_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_get',
             bad_token)
 
         req = webob.Request.blank('/v1.0/')
@@ -128,8 +131,36 @@ class Test(unittest.TestCase):
         self.assertEqual(result.status, '401 Unauthorized')
 
 
-class TestLimiter(unittest.TestCase):
+class TestFunctional(test.TestCase):
+    def test_token_expiry(self):
+        ctx = context.get_admin_context()
+        tok = db.auth_token_create(ctx, dict(
+                token_hash='bacon',
+                cdn_management_url='',
+                server_management_url='',
+                storage_url='',
+                user_id='ham',
+                ))
+
+        db.auth_token_update(ctx, tok.token_hash, dict(
+                created_at=datetime.datetime(2000, 1, 1, 12, 0, 0),
+                ))
+
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-Token'] = 'bacon'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+    def test_token_doesnotexist(self):
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-Token'] = 'ham'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+
+class TestLimiter(test.TestCase):
     def setUp(self):
+        super(TestLimiter, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
@@ -141,10 +172,11 @@ class TestLimiter(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         fakes.fake_data_store = {}
+        super(TestLimiter, self).tearDown()
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user(nova.auth.manager.User(1, 'herp', 'herp', 'derp', None))
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -161,7 +193,3 @@ class TestLimiter(unittest.TestCase):
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '200 OK')
         self.assertEqual(result.headers['X-Test-Success'], 'True')
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -54,7 +54,7 @@ Environment Variables
 
 By tweaking the environment that nova.sh run in, you can build slightly
 different configurations (though for more complex setups you should see
-:doc:`/adminguide/getting.started` and :doc:`/adminguide/multi.node.install`).
+`Installing and Configuring OpenStack Compute <http://docs.openstack.org/openstack-compute/admin/content/ch03.html>`_).
 
 * HOST_IP
     * Default: address of first interface from the ifconfig command

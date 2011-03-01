@@ -533,6 +533,18 @@ class ComputeManager(manager.Manager):
                                                    context=context)
         self.driver.reset_network(instance_ref)
 
+    @checks_instance_lock
+    def inject_network_info(self, context, instance_id):
+        """
+        Inject network info for the instance.
+
+        """
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.debug(_('instance %s: inject network info'), instance_id,
+                                                         context=context)
+        self.driver.inject_network_info(instance_ref)
+
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
         """Send the console output for an instance."""
@@ -619,7 +631,7 @@ class ComputeManager(manager.Manager):
         same shared storage. mktmpfile()/confirm_tmpfile is a pair.
 
         :param context: security context
-        :returns: tmpfile name
+        :returns: tmpfile name(basename)
 
         """
 
@@ -628,21 +640,22 @@ class ComputeManager(manager.Manager):
         LOG.debug(_("Creating tmpfile %s to notify to other "
                     "compute node that they mounts same storage.") % name)
         os.fdopen(fd, 'w+').close()
-        return name
+        return os.path.basename(name)
 
     @exception.wrap_exception
-    def confirm_tmpfile(self, context, path):
+    def confirm_tmpfile(self, context, filename):
         """Confirms existence of the tmpfile given by path.
 
         :param context: security context
-        :param path: confirm existence of this path
+        :param filename: confirm existence of FLAGS.instances_path/thisfile
         :returns: depends on os.remove()
 
         """
 
-        if not os.path.exists(path):
-            raise exception.NotFound(_('%s not found') % path)
-        return os.remove(path)
+        p = os.path.join(FLAGS.instances_path, filename)
+        if not os.path.exists(p):
+            raise exception.NotFound(_('%s not found') % p)
+        return os.remove(p)
 
     @exception.wrap_exception
     def update_available_resource(self, context):

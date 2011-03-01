@@ -249,6 +249,7 @@ class SimpleDriverTestCase(test.TestCase):
     def tearDown(self):
         self.manager.delete_user(self.user)
         self.manager.delete_project(self.project)
+        super(SimpleDriverTestCase, self).tearDown()
 
     def _create_instance(self, **kwargs):
         """Create a test instance"""
@@ -486,18 +487,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_doesnt_report_disabled_hosts_as_up(self):
         """Ensures driver doesn't find hosts before they are enabled"""
-        # NOTE(vish): constructing service without create method
-        #             because we are going to use it without queue
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
-        compute2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute2.start()
+        compute1 = self.start_service('compute', host='host1')
+        compute2 = self.start_service('compute', host='host2')
         s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
         s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
         db.service_update(self.context, s1['id'], {'disabled': True})
@@ -509,18 +500,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_reports_enabled_hosts_as_up(self):
         """Ensures driver can find the hosts that are up"""
-        # NOTE(vish): constructing service without create method
-        #             because we are going to use it without queue
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
-        compute2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute2.start()
+        compute1 = self.start_service('compute', host='host1')
+        compute2 = self.start_service('compute', host='host2')
         hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
         self.assertEqual(2, len(hosts))
         compute1.kill()
@@ -528,16 +509,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_least_busy_host_gets_instance(self):
         """Ensures the host with less cores gets the next one"""
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
-        compute2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute2.start()
+        compute1 = self.start_service('compute', host='host1')
+        compute2 = self.start_service('compute', host='host2')
         instance_id1 = self._create_instance()
         compute1.run_instance(self.context, instance_id1)
         instance_id2 = self._create_instance()
@@ -551,16 +524,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_specific_host_gets_instance(self):
         """Ensures if you set availability_zone it launches on that zone"""
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
-        compute2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute2.start()
+        compute1 = self.start_service('compute', host='host1')
+        compute2 = self.start_service('compute', host='host2')
         instance_id1 = self._create_instance()
         compute1.run_instance(self.context, instance_id1)
         instance_id2 = self._create_instance(availability_zone='nova:host1')
@@ -573,11 +538,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute2.kill()
 
     def test_wont_sechedule_if_specified_host_is_down(self):
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
+        compute1 = self.start_service('compute', host='host1')
         s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
         now = datetime.datetime.utcnow()
         delta = datetime.timedelta(seconds=FLAGS.service_down_time * 2)
@@ -592,11 +553,7 @@ class SimpleDriverTestCase(test.TestCase):
         compute1.kill()
 
     def test_will_schedule_on_disabled_host_if_specified(self):
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
+        compute1 = self.start_service('compute', host='host1')
         s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
         db.service_update(self.context, s1['id'], {'disabled': True})
         instance_id2 = self._create_instance(availability_zone='nova:host1')
@@ -608,16 +565,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_too_many_cores(self):
         """Ensures we don't go over max cores"""
-        compute1 = service.Service('host1',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute1.start()
-        compute2 = service.Service('host2',
-                                   'nova-compute',
-                                   'compute',
-                                   FLAGS.compute_manager)
-        compute2.start()
+        compute1 = self.start_service('compute', host='host1')
+        compute2 = self.start_service('compute', host='host2')
         instance_ids1 = []
         instance_ids2 = []
         for index in xrange(FLAGS.max_cores):
@@ -632,6 +581,7 @@ class SimpleDriverTestCase(test.TestCase):
                           self.scheduler.driver.schedule_run_instance,
                           self.context,
                           instance_id)
+        db.instance_destroy(self.context, instance_id)
         for instance_id in instance_ids1:
             compute1.terminate_instance(self.context, instance_id)
         for instance_id in instance_ids2:
@@ -641,16 +591,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_least_busy_host_gets_volume(self):
         """Ensures the host with less gigabytes gets the next one"""
-        volume1 = service.Service('host1',
-                                   'nova-volume',
-                                   'volume',
-                                   FLAGS.volume_manager)
-        volume1.start()
-        volume2 = service.Service('host2',
-                                   'nova-volume',
-                                   'volume',
-                                   FLAGS.volume_manager)
-        volume2.start()
+        volume1 = self.start_service('volume', host='host1')
+        volume2 = self.start_service('volume', host='host2')
         volume_id1 = self._create_volume()
         volume1.create_volume(self.context, volume_id1)
         volume_id2 = self._create_volume()
@@ -664,16 +606,8 @@ class SimpleDriverTestCase(test.TestCase):
 
     def test_too_many_gigabytes(self):
         """Ensures we don't go over max gigabytes"""
-        volume1 = service.Service('host1',
-                                   'nova-volume',
-                                   'volume',
-                                   FLAGS.volume_manager)
-        volume1.start()
-        volume2 = service.Service('host2',
-                                   'nova-volume',
-                                   'volume',
-                                   FLAGS.volume_manager)
-        volume2.start()
+        volume1 = self.start_service('volume', host='host1')
+        volume2 = self.start_service('volume', host='host2')
         volume_ids1 = []
         volume_ids2 = []
         for index in xrange(FLAGS.max_gigabytes):
@@ -893,7 +827,7 @@ class SimpleDriverTestCase(test.TestCase):
             {"method": 'mktmpfile'}).AndReturn(fpath)
         driver.rpc.call(mox.IgnoreArg(),
             db.queue_get_for(mox.IgnoreArg(), topic, i_ref['host']),
-            {"method": 'confirm_tmpfile', "args": {'path': fpath}})
+            {"method": 'confirm_tmpfile', "args": {'filename': fpath}})
 
         self.mox.ReplayAll()
         try:

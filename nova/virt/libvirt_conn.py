@@ -958,7 +958,7 @@ class LibvirtConnection(object):
         if len(nodes) != 1:
             raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
                                       "but %d\n") % len(nodes)
-                                      + xml.serialize)
+                                      + xml.serialize())
 
         cpu_info = dict()
         cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()

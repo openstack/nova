@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import libvirt
 import mox
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
@@ -23,20 +24,15 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import logging
 from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.db.sqlalchemy import models
-from nova.compute import power_state
 from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
-
-libvirt = None
-libxml2 = None
 
 
 class LibvirtConnTestCase(test.TestCase):
@@ -65,6 +61,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
         FLAGS.instances_path = ''
+        self.call_libvirt_dependant_setup = False
 
     test_ip = '10.11.12.13'
     test_instance = {'memory_kb':     '1024000',
@@ -76,32 +73,22 @@ class LibvirtConnTestCase(test.TestCase):
                      'bridge':        'br101',
                      'instance_type': 'm1.small'}
 
-    def _driver_dependant_test_setup(self):
-        """Call this method at the top of each testcase method.
-
-        Checks if libvirt and cheetah, etc is installed.
-        Otherwise, skip testing."""
-
+    def libvirt_dependant_setup(self):
+        """A setup method of LibvirtConnection dependent test."""
+        # try to connect libvirt. if fail, skip test.
+        self.call_libvirt_dependant_setup = True
         try:
-            global libvirt
-            global libxml2
-            libvirt_conn.libvirt = __import__('libvirt')
-            libvirt_conn.libxml2 = __import__('libxml2')
-            libvirt_conn._late_load_cheetah()
-            libvirt = __import__('libvirt')
-        except ImportError, e:
-            logging.warn("""This test has not been done since """
-                 """using driver-dependent library Cheetah/libvirt/libxml2.""")
-            raise
+            libvirt.openReadOnly('qemu:///system')
+        except libvirt.libvirtError:
+            return
+        return libvirt_conn.get_connection(False)
 
-        # inebitable mocks for calling
-        obj = utils.import_object(FLAGS.firewall_driver)
-        fwmock = self.mox.CreateMock(obj)
-        self.mox.StubOutWithMock(libvirt_conn, 'utils',
-                                 use_mock_anything=True)
-        libvirt_conn.utils.import_object(FLAGS.firewall_driver).\
-                                         AndReturn(fwmock)
-        return fwmock
+    def libvirt_dependant_teardown(self):
+        """teardown method of LibvirtConnection dependent test."""
+        if self.call_libvirt_dependant_setup:
+            libvirt_conn.libvirt = None
+            libvirt_conn.libxml2 = None
+            self.call_libvirt_dependant_setup = False
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
@@ -255,102 +242,30 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_conn.LibvirtConnection(True)
             uri = conn.get_uri()
             self.assertEquals(uri, testuri)
-
-    def test_get_vcpu_total(self):
-        """Check if get_vcpu_total returns appropriate cpu value."""
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        self.assertTrue(0 < conn.get_vcpu_total())
-
-    def test_get_memory_mb_total(self):
-        """Check if get_memory_mb returns appropriate memory value."""
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        self.assertTrue(0 < conn.get_memory_mb_total())
+        db.instance_destroy(user_context, instance_ref['id'])
 
     def test_get_vcpu_used(self):
         """Check if get_local_gb_total returns appropriate disk value."""
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
-                                 '_conn', use_mock_anything=True)
+        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
         libvirt_conn.LibvirtConnection._conn.listDomainsID().AndReturn([1, 2])
         vdmock = self.mox.CreateMock(libvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "vcpus", use_mock_anything=True)
+        self.mox.StubOutWithMock(vdmock, "vcpus")
         vdmock.vcpus().AndReturn(['', [('dummycpu'), ('dummycpu')]])
         vdmock.vcpus().AndReturn(['', [('dummycpu'), ('dummycpu')]])
-        libvirt_conn.LibvirtConnection._conn.lookupByID(mox.IgnoreArg()).\
-            AndReturn(vdmock)
-        libvirt_conn.LibvirtConnection._conn.lookupByID(mox.IgnoreArg()).\
-            AndReturn(vdmock)
+        arg = mox.IgnoreArg()
+        libvirt_conn.LibvirtConnection._conn.lookupByID(arg).AndReturn(vdmock)
+        libvirt_conn.LibvirtConnection._conn.lookupByID(arg).AndReturn(vdmock)
 
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         self.assertTrue(conn.get_vcpu_used() == 4)
 
-    def test_get_memory_mb_used(self):
-        """Check if get_memory_mb returns appropriate memory value."""
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        self.assertTrue(0 < conn.get_memory_mb_used())
-
-    def test_get_cpu_info_works_correctly(self):
-        """Check if get_cpu_info works correctly as expected."""
-        xml = """<cpu>
-                     <arch>x86_64</arch>
-                     <model>Nehalem</model>
-                     <vendor>Intel</vendor>
-                     <topology sockets='2' cores='4' threads='2'/>
-                     <feature name='rdtscp'/>
-                     <feature name='dca'/>
-                     <feature name='xtpr'/>
-                     <feature name='tm2'/>
-                     <feature name='est'/>
-                     <feature name='vmx'/>
-                     <feature name='ds_cpl'/>
-                     <feature name='monitor'/>
-                     <feature name='pbe'/>
-                     <feature name='tm'/>
-                     <feature name='ht'/>
-                     <feature name='ss'/>
-                     <feature name='acpi'/>
-                     <feature name='ds'/>
-                     <feature name='vme'/>
-                </cpu>
-             """
-
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
-                                 '_conn', use_mock_anything=True)
-        libvirt_conn.LibvirtConnection._conn.getCapabilities().AndReturn(xml)
-
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        self.assertTrue(0 < len(conn.get_cpu_info()))
-
     def test_get_cpu_info_inappropreate_xml(self):
         """Raise exception if given xml is inappropriate."""
+        conn = self.libvirt_dependant_setup()
+        if not conn:
+            return
+
         xml = """<cccccpu>
                      <arch>x86_64</arch>
                      <model>Nehalem</model>
@@ -374,16 +289,10 @@ class LibvirtConnTestCase(test.TestCase):
                  </cccccpu>
               """
 
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
-                                 '_conn', use_mock_anything=True)
-        libvirt_conn.LibvirtConnection._conn.getCapabilities().AndReturn(xml)
+        self.mox.StubOutWithMock(conn._conn, 'getCapabilities')
+        conn._conn.getCapabilities().AndReturn(xml)
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
         try:
             conn.get_cpu_info()
         except exception.Invalid, e:
@@ -392,6 +301,9 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_get_cpu_info_inappropreate_xml2(self):
         """Raise exception if given xml is inappropriate(topology tag)."""
+        conn = self.libvirt_dependant_setup()
+        if not conn:
+            return
 
         xml = """<cpu>
                       <arch>x86_64</arch>
@@ -414,16 +326,10 @@ class LibvirtConnTestCase(test.TestCase):
                       <feature name='vme'/>
                   </cpu>
               """
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
-                                 '_conn', use_mock_anything=True)
-        libvirt_conn.LibvirtConnection._conn.getCapabilities().AndReturn(xml)
+        self.mox.StubOutWithMock(conn._conn, 'getCapabilities')
+        conn._conn.getCapabilities().AndReturn(xml)
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
         try:
             conn.get_cpu_info()
         except exception.Invalid, e:
@@ -432,109 +338,86 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_update_available_resource_works_correctly(self):
         """Confirm compute_service table is updated successfully."""
-        try:
-            self._driver_dependant_test_setup()
-        except:
+        conn = self.libvirt_dependant_setup()
+        if not conn:
             return
 
-        def dic_key_check(dic):
-            validkey = ['vcpus', 'memory_mb', 'local_gb',
-                        'vcpus_used', 'memory_mb_used', 'local_gb_used',
-                        'hypervisor_type', 'hypervisor_version', 'cpu_info']
-            return (list(set(validkey)) == list(set(dic.keys())))
+        host = 'dummy'
+        zone = 'dummyzone'
+        ctxt = context.get_admin_context()
+        org_path = FLAGS.instances_path = ''
+        FLAGS.instances_path = '.'
 
-        host = 'foo'
-        binary = 'nova-compute'
-        service_ref = {'id': 1,
-                       'host': host,
-                       'binary': binary,
-                       'topic': 'compute'}
+        service_ref = db.service_create(ctxt,
+                                        {'host': host,
+                                         'binary': 'nova-compute',
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': zone})
+        conn.update_available_resource(ctxt, host)
 
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        db.service_get_all_by_topic(mox.IgnoreMox(), 'compute').\
-            AndReturn([service_ref])
-        dbmock.service_update(mox.IgnoreArg(),
-                              service_ref['id'],
-                              mox.Func(dic_key_check))
+        service_ref = db.service_get(ctxt, service_ref['id'])
+        print service_ref['compute_service']
+        compute_service = service_ref['compute_service'][0]
+        c1 = (compute_service['vcpus'] > 0)
+        c2 = (compute_service['memory_mb'] > 0)
+        c3 = (compute_service['local_gb'] > 0)
+        # vcpu_used is checked at test_get_vcpu_used.
+        c4 = (compute_service['memory_mb_used'] > 0)
+        c5 = (compute_service['local_gb_used'] > 0)
+        c6 = (len(compute_service['hypervisor_type']) > 0)
+        c7 = (compute_service['hypervisor_version'] > 0)
 
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        conn.update_available_resource(host)
+        self.assertTrue(c1 and c2 and c3 and c4 and c5 and c6 and c7)
+
+        db.service_destroy(ctxt, service_ref['id'])
+        FLAGS.instances_path = org_path
 
     def test_update_resource_info_raise_exception(self):
         """Raise exception if no recorde found on services table."""
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        host = 'foo'
-        binary = 'nova-compute'
-        dbmock = self.mox.CreateMock(db)
-        self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        db.service_get_all_by_topic(mox.IgnoreMox(), 'compute').\
-            AndRaise(exceptin.NotFound())
-
-        self.mox.ReplayAll()
+        host = 'dummy'
+        org_path = FLAGS.instances_path = ''
+        FLAGS.instances_path = '.'
         try:
             conn = libvirt_conn.LibvirtConnection(False)
-            conn.update_available_resource(host)
+            conn.update_available_resource(context.get_admin_context(), host)
         except exception.Invalid, e:
-            msg = 'Cannot insert compute manager specific info'
+            msg = 'Cannot update compute manager specific info'
             c1 = (0 <= e.message.find(msg))
-            self.assertTrue(c1)
+        self.assertTrue(c1)
+        FLAGS.instances_path = org_path
 
     def test_compare_cpu_works_correctly(self):
         """Calling libvirt.compute_cpu() and works correctly."""
-        t = {}
-        t['arch'] = 'x86'
-        t['model'] = 'model'
-        t['vendor'] = 'Intel'
-        t['topology'] = {'cores': "2", "threads": "1", "sockets": "4"}
-        t['features'] = ["tm"]
-        cpu_info = utils.dumps(t)
-
-        try:
-            self._driver_dependant_test_setup()
-        except:
+        conn = self.libvirt_dependant_setup()
+        if not conn:
             return
+        host = 'dummy'
+        zone = 'dummyzone'
+        ctxt = context.get_admin_context()
+        org_path = FLAGS.instances_path = ''
+        FLAGS.instances_path = '.'
 
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
-                                 '_conn',
-                                 use_mock_anything=True)
-        libvirt_conn.LibvirtConnection._conn.compareCPU(mox.IgnoreArg(),
-                                                        0).AndReturn(1)
+        service_ref = db.service_create(ctxt,
+                                        {'host': host,
+                                         'binary': 'nova-compute',
+                                         'topic': 'compute',
+                                         'report_count': 0,
+                                         'availability_zone': zone})
+        conn.update_available_resource(ctxt, host)
+        service_ref = db.service_get(ctxt, service_ref['id'])
+        ret = conn.compare_cpu(service_ref['compute_service'][0]['cpu_info'])
+        self.assertTrue(ret == None)
 
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        self.assertTrue(None == conn.compare_cpu(cpu_info))
-
-    def test_compare_cpu_raises_exception(self):
-        """Libvirt-related exception occurs when calling compare_cpu()."""
-        t = {}
-        t['arch'] = 'x86'
-        t['model'] = 'model'
-        t['vendor'] = 'Intel'
-        t['topology'] = {'cores': "2", "threads": "1", "sockets": "4"}
-        t['features'] = ["tm"]
-        cpu_info = utils.dumps(t)
-
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn',
-                                 use_mock_anything=True)
-        libvirt_conn.LibvirtConnection._conn.compareCPU(mox.IgnoreArg(), 0).\
-            AndRaise(libvirt.libvirtError('ERR'))
-
-        self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        self.assertRaises(libvirt.libvirtError, conn.compare_cpu, cpu_info)
+        db.service_destroy(ctxt, service_ref['id'])
+        FLAGS.instances_path = org_path
 
     def test_compare_cpu_no_compatibility(self):
         """Libvirt.compare_cpu() return less than 0.(no compatibility)."""
+        conn = self.libvirt_dependant_setup()
+        if not conn:
+            return
+
         t = {}
         t['arch'] = 'x86'
         t['model'] = 'model'
@@ -542,71 +425,66 @@ class LibvirtConnTestCase(test.TestCase):
         t['topology'] = {'cores': "2", "threads": "1", "sockets": "4"}
         t['features'] = ["tm"]
         cpu_info = utils.dumps(t)
-
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn',
-                                 use_mock_anything=True)
-        libvirt_conn.LibvirtConnection._conn.compareCPU(mox.IgnoreArg(), 0).\
-            AndRaise(exception.Invalid('ERR'))
+        self.mox.StubOutWithMock(conn._conn, 'compareCPU')
+        conn._conn.compareCPU(mox.IgnoreArg(), 0).AndReturn(0)
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
         self.assertRaises(exception.Invalid, conn.compare_cpu, cpu_info)
 
     def test_ensure_filtering_rules_for_instance_works_correctly(self):
         """ensure_filtering_rules_for_instance() works successfully."""
-        instance_ref = models.Instance()
-        instance_ref.__setitem__('id', 1)
-
-        try:
-            nwmock, fwmock = self._driver_dependant_test_setup()
-        except:
+        conn = self.libvirt_dependant_setup()
+        if not conn:
             return
 
-        nwmock.setup_basic_filtering(mox.IgnoreArg())
-        fwmock.prepare_instance_filter(instance_ref)
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn',
-                                 use_mock_anything=True)
+        instance_ref = models.Instance()
+        instance_ref.__setitem__('id', 1)
+        fwdriver = conn.firewall_driver
+
+        self.mox.StubOutWithMock(fwdriver, 'setup_basic_filtering')
+        fwdriver.setup_basic_filtering(instance_ref)
+        self.mox.StubOutWithMock(fwdriver, 'prepare_instance_filter')
+        fwdriver.prepare_instance_filter(instance_ref)
+        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
         n = 'nova-instance-%s' % instance_ref.name
-        libvirt_conn.LibvirtConnection._conn.nwfilterLookupByName(n)
+        conn._conn.nwfilterLookupByName(n)
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
         conn.ensure_filtering_rules_for_instance(instance_ref)
 
     def test_ensure_filtering_rules_for_instance_timeout(self):
         """ensure_filtering_fules_for_instance() finishes with timeout."""
-        instance_ref = models.Instance()
-        instance_ref.__setitem__('id', 1)
-
-        try:
-            nwmock, fwmock = self._driver_dependant_test_setup()
-        except:
+        conn = self.libvirt_dependant_setup()
+        if not conn:
             return
 
-        nwmock.setup_basic_filtering(mox.IgnoreArg())
-        fwmock.prepare_instance_filter(instance_ref)
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn',
-                                 use_mock_anything=True)
+        instance_ref = models.Instance()
+        instance_ref.__setitem__('id', 1)
+        fwdriver = conn.firewall_driver
+
+        self.mox.StubOutWithMock(fwdriver, 'setup_basic_filtering')
+        fwdriver.setup_basic_filtering(instance_ref)
+        self.mox.StubOutWithMock(fwdriver, 'prepare_instance_filter')
+        fwdriver.prepare_instance_filter(instance_ref)
+        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
         n = 'nova-instance-%s' % instance_ref.name
-        for i in range(FLAGS.live_migration_timeout_sec * 2):
-            libvirt_conn.LibvirtConnection._conn.\
-                nwfilterLookupByName(n).AndRaise(libvirt.libvirtError('ERR'))
+        for i in range(FLAGS.live_migration_retry_count):
+            conn._conn.nwfilterLookupByName(n).\
+                AndRaise(libvirt.libvirtError('ERR'))
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
         try:
             conn.ensure_filtering_rules_for_instance(instance_ref)
         except exception.Error, e:
             c1 = (0 <= e.message.find('Timeout migrating for'))
-            self.assertTrue(c1)
+        self.assertTrue(c1)
 
     def test_live_migration_works_correctly(self):
         """_live_migration() works as expected correctly."""
+        conn = self.libvirt_dependant_setup()
+        if not conn:
+            return
+
         class dummyCall(object):
             f = None
 
@@ -615,76 +493,57 @@ class LibvirtConnTestCase(test.TestCase):
 
         i_ref = models.Instance()
         i_ref.__setitem__('id', 1)
-        i_ref.__setitem__('host', 'dummy')
         ctxt = context.get_admin_context()
 
-        try:
-            self._driver_dependant_test_setup()
-        except:
-            return
-
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn',
-                                 use_mock_anything=True)
         vdmock = self.mox.CreateMock(libvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI",
-                                 use_mock_anything=True)
-        vdmock.migrateToURI(FLAGS.live_migration_uri % i_ref['host'],
+        self.mox.StubOutWithMock(vdmock, "migrateToURI")
+        vdmock.migrateToURI(FLAGS.live_migration_uri % 'dest',
                             mox.IgnoreArg(),
                             None, FLAGS.live_migration_bandwidth).\
                             AndReturn(None)
-        libvirt_conn.LibvirtConnection._conn.lookupByName(i_ref.name).\
-            AndReturn(vdmock)
+        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
+        conn._conn.lookupByName(i_ref.name).AndReturn(vdmock)
+        self.mox.StubOutWithMock(libvirt_conn.utils, 'LoopingCall')
         libvirt_conn.utils.LoopingCall(f=None).AndReturn(dummyCall())
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
-        # Not setting post_method/recover_method in this testcase.
-        ret = conn._live_migration(ctxt, i_ref, i_ref['host'], '', '')
+        # Nothing to do with setting post_method/recover_method or not.
+        ret = conn._live_migration(ctxt, i_ref, 'dest', '', '')
         self.assertTrue(ret == None)
 
     def test_live_migration_raises_exception(self):
         """Confirms recover method is called when exceptions are raised."""
-        i_ref = models.Instance()
-        i_ref.__setitem__('id', 1)
-        i_ref.__setitem__('host', 'dummy')
-        ctxt = context.get_admin_context()
-
-        def dummy_recover_method(self, c, instance):
-            pass
-
-        try:
-            nwmock, fwmock = self._driver_dependant_test_setup()
-        except:
+        conn = self.libvirt_dependant_setup()
+        if not conn:
             return
 
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn',
-                                 use_mock_anything=True)
+        i_ref = models.Instance()
+        i_ref.__setitem__('id', 1)
+        ctxt = context.get_admin_context()
+
+        def dummy_recover_method(c, instance, host=None):
+            pass
+
         vdmock = self.mox.CreateMock(libvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI",
-                                 use_mock_anything=True)
-        vdmock.migrateToURI(FLAGS.live_migration_uri % dest, mox.IgnoreArg(),
+        self.mox.StubOutWithMock(vdmock, "migrateToURI")
+        vdmock.migrateToURI(FLAGS.live_migration_uri % 'dest',
+                            mox.IgnoreArg(),
                             None, FLAGS.live_migration_bandwidth).\
                             AndRaise(libvirt.libvirtError('ERR'))
-        libvirt_conn.LibvirtConnection._conn.lookupByName(instance_ref.name).\
-                                                          AndReturn(vdmock)
-        self.mox.StubOutWithMock(db, 'instance_set_state')
-        db.instance_set_state(ctxt, instance_ref['id'],
-                              power_state.RUNNING, 'running')
-        self.mox.StubOutWithMock(db, 'volume_update')
-        for v in instance_ref.volumes:
-            db.volume_update(ctxt, v['id'], {'status': 'in-use'})
+        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
+        conn._conn.lookupByName(i_ref.name).AndReturn(vdmock)
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
         self.assertRaises(libvirt.libvirtError,
-                          conn._mlive_migration,
-                          ctxt, instance_ref, dest,
+                          conn._live_migration,
+                          ctxt, i_ref, 'dest',
                           '', dummy_recover_method)
 
     def tearDown(self):
-        super(LibvirtConnTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        super(LibvirtConnTestCase, self).tearDown()
+        self.libvirt_dependant_teardown()
 
 
 class IptablesFirewallTestCase(test.TestCase):
@@ -841,6 +700,7 @@ class IptablesFirewallTestCase(test.TestCase):
                         '--dports 80:81 -j ACCEPT' % security_group_chain \
                             in self.out_rules,
                         "TCP port 80/81 acceptance rule wasn't added")
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
 
 
 class NWFilterTestCase(test.TestCase):
@@ -864,6 +724,7 @@ class NWFilterTestCase(test.TestCase):
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        super(NWFilterTestCase, self).tearDown()
 
     def test_cidr_rule_nwfilter_xml(self):
         cloud_controller = cloud.CloudController()
@@ -990,3 +851,4 @@ class NWFilterTestCase(test.TestCase):
         self.fw.apply_instance_filter(instance)
         _ensure_all_called()
         self.teardown_security_group()
+        db.instance_destroy(admin_ctxt, instance_ref['id'])

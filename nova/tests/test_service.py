@@ -69,13 +69,6 @@ class ExtendedService(service.Service):
 class ServiceManagerTestCase(test.TestCase):
     """Test cases for Services"""
 
-    def test_attribute_error_for_no_manager(self):
-        serv = service.Service('test',
-                               'test',
-                               'test',
-                               'nova.tests.test_service.FakeManager')
-        self.assertRaises(AttributeError, getattr, serv, 'test_method')
-
     def test_message_gets_to_manager(self):
         serv = service.Service('test',
                                'test',

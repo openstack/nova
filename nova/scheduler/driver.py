@@ -287,7 +287,8 @@ class Scheduler(object):
         # make sure existence at src host.
         try:
             rpc.call(context, src_t,
-                     {"method": 'confirm_tmpfile', "args": {'path': filename}})
+                     {"method": 'confirm_tmpfile',
+                      "args": {'filename': filename}})
 
         except (rpc.RemoteError, exception.NotFound), e:
             ipath = FLAGS.instances_path

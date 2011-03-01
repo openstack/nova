@@ -15,13 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
 
 import stubout
 import webob
 from paste import urlmap
 
 from nova import flags
+from nova import test
 from nova.api import openstack
 from nova.api.openstack import ratelimiting
 from nova.api.openstack import auth
@@ -30,9 +30,10 @@ from nova.tests.api.openstack import fakes
 FLAGS = flags.FLAGS
 
 
-class AdminAPITest(unittest.TestCase):
+class AdminAPITest(test.TestCase):
 
     def setUp(self):
+        super(AdminAPITest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -44,6 +45,7 @@ class AdminAPITest(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
+        super(AdminAPITest, self).tearDown()
 
     def test_admin_enabled(self):
         FLAGS.allow_admin_api = True
@@ -58,8 +60,5 @@ class AdminAPITest(unittest.TestCase):
         # We should still be able to access public operations.
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status_int, 200)
         # TODO: Confirm admin operations are unavailable.
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(res.status_int, 200)
