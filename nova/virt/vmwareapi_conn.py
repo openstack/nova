@@ -16,33 +16,30 @@
 #    under the License.
 
 """
-Connection class for VMware Infrastructure API in VMware ESX/ESXi platform
-
-Encapsulates the session management activties and acts as interface for VI API.
-The connection class sets up a session with the ESX/ESXi compute provider host
-and handles all the calls made to the host.
+A connection to the VMware ESX platform.
 
 **Related Flags**
 
-:vmwareapi_host_ip: IP of VMware ESX/ESXi compute provider host
-:vmwareapi_host_username: ESX/ESXi server user to be used for API session
-:vmwareapi_host_password: Password for the user "vmwareapi_host_username"
-:vmwareapi_task_poll_interval: The interval used for polling of remote tasks
-:vmwareapi_api_retry_count: Max number of retry attempts upon API failures
-
+:vmwareapi_host_ip:        IPAddress of VMware ESX server.
+:vmwareapi_host_username:  Username for connection to VMware ESX Server.
+:vmwareapi_host_password:  Password for connection to VMware ESX Server.
+:vmwareapi_task_poll_interval:  The interval (seconds) used for polling of
+                             remote tasks
+                             (default: 1.0).
+:vmwareapi_api_retry_count:  The API retry count in case of failure such as
+                             network failures (socket errors etc.)
+                             (default: 10).
 """
 
-import logging
 import time
-import urlparse
 
 from eventlet import event
 
 from nova import context
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import utils
-
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
@@ -71,45 +68,34 @@ flags.DEFINE_float('vmwareapi_api_retry_count',
                    'The number of times we retry on failures, '
                    'e.g., socket error, etc.'
                    'Used only if connection_type is vmwareapi')
+flags.DEFINE_string('vmwareapi_vlan_interface',
+                   'vmnic0',
+                   'Physical ethernet adapter name for vlan networking')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
-
-
-class TaskState:
-    """Enumeration class for different states of task
-    0 - Task completed successfully
-    1 - Task is in queued state
-    2 - Task is in running state
-    """
-
-    TASK_SUCCESS = 0
-    TASK_QUEUED = 1
-    TASK_RUNNING = 2
 
 
 class Failure(Exception):
     """Base Exception class for handling task failures"""
 
     def __init__(self, details):
-        """Initializer"""
         self.details = details
 
     def __str__(self):
-        """The informal string representation of the object"""
         return str(self.details)
 
 
 def get_connection(_):
-    """Sets up the ESX host connection"""
+    """Sets up the ESX host connection."""
     host_ip = FLAGS.vmwareapi_host_ip
     host_username = FLAGS.vmwareapi_host_username
     host_password = FLAGS.vmwareapi_host_password
     api_retry_count = FLAGS.vmwareapi_api_retry_count
-    if not host_ip  or host_username is None or host_password is None:
-        raise Exception('Must specify vmwareapi_host_ip,'
-                        'vmwareapi_host_username '
-                        'and vmwareapi_host_password to use'
-                        'connection_type=vmwareapi')
+    if not host_ip or host_username is None or host_password is None:
+        raise Exception(_("Must specify vmwareapi_host_ip,"
+                        "vmwareapi_host_username "
+                        "and vmwareapi_host_password to use"
+                        "connection_type=vmwareapi"))
     return VMWareESXConnection(host_ip, host_username, host_password,
                                api_retry_count)
 
@@ -119,7 +105,6 @@ class VMWareESXConnection(object):
 
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
-        """The Initializer"""
         session = VMWareAPISession(host_ip, host_username, host_password,
                  api_retry_count, scheme=scheme)
         self._vmops = VMWareVMOps(session)
@@ -191,22 +176,18 @@ class VMWareESXConnection(object):
 
     def get_console_pool_info(self, console_type):
         """Get info about the host on which the VM resides"""
-        esx_url = urlparse.urlparse(FLAGS.vmwareapi_host_ip)
-        return  {'address': esx_url.netloc,
-                 'username': FLAGS.vmwareapi_host_password,
-                 'password': FLAGS.vmwareapi_host_password}
-
-    def _create_dummy_vm_for_test(self, instance):
-        """Creates a dummy VM with default parameters for testing purpose"""
-        return self._vmops._create_dummy_vm_for_test(instance)
+        return {'address': FLAGS.vmwareapi_host_ip,
+                'username': FLAGS.vmwareapi_host_username,
+                'password': FLAGS.vmwareapi_host_password}
 
 
 class VMWareAPISession(object):
-    """Sets up a session with ESX host and handles all calls made to host"""
+    """Sets up a session with the ESX host and handles all
+    the calls made to the host
+    """
 
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
-        """Set the connection credentials"""
         self._host_ip = host_ip
         self._host_username = host_username
         self._host_password = host_password
@@ -216,15 +197,19 @@ class VMWareAPISession(object):
         self.vim = None
         self._create_session()
 
+    def _get_vim_object(self):
+        """Create the VIM Object instance"""
+        return vim.Vim(protocol=self._scheme, host=self._host_ip)
+
     def _create_session(self):
         """Creates a session with the ESX host"""
         while True:
             try:
                 # Login and setup the session with the ESX host for making
                 # API calls
-                self.vim = vim.Vim(protocol=self._scheme, host=self._host_ip)
+                self.vim = self._get_vim_object()
                 session = self.vim.Login(
-                               self.vim.get_service_content().SessionManager,
+                               self.vim.get_service_content().sessionManager,
                                userName=self._host_username,
                                password=self._host_password)
                 # Terminate the earlier session, if possible ( For the sake of
@@ -233,34 +218,40 @@ class VMWareAPISession(object):
                 if self._session_id:
                     try:
                         self.vim.TerminateSession(
-                                self.vim.get_service_content().SessionManager,
+                                self.vim.get_service_content().sessionManager,
                                 sessionId=[self._session_id])
                     except Exception, excep:
                         LOG.exception(excep)
-                self._session_id = session.Key
+                self._session_id = session.key
                 return
             except Exception, excep:
-                LOG.info(_("In vmwareapi:_create_session, "
+                LOG.critical(_("In vmwareapi:_create_session, "
                               "got this exception: %s") % excep)
                 raise Exception(excep)
 
     def __del__(self):
-        """The Destructor. Logs-out the session."""
+        """Logs-out the session."""
         # Logout to avoid un-necessary increase in session count at the
         # ESX host
         try:
-            self.vim.Logout(self.vim.get_service_content().SessionManager)
+            self.vim.Logout(self.vim.get_service_content().sessionManager)
         except Exception:
             pass
 
+    def _is_vim_object(self, module):
+        """Check if the module is a VIM Object instance"""
+        return isinstance(module, vim.Vim)
+
     def _call_method(self, module, method, *args, **kwargs):
-        """Calls a method within the module specified with args provided"""
+        """Calls a method within the module specified with
+        args provided
+        """
         args = list(args)
         retry_count = 0
         exc = None
         while True:
             try:
-                if not isinstance(module, vim.Vim):
+                if not self._is_vim_object(module):
                     #If it is not the first try, then get the latest vim object
                     if retry_count > 0:
                         args = args[1:]
@@ -295,8 +286,8 @@ class VMWareAPISession(object):
                 break
             time.sleep(TIME_BETWEEN_API_CALL_RETRIES)
 
-        LOG.info(_("In vmwareapi:_call_method, "
-                     "got this exception: ") % exc)
+        LOG.critical(_("In vmwareapi:_call_method, "
+                     "got this exception: %s") % exc)
         raise Exception(exc)
 
     def _get_vim(self):
@@ -306,8 +297,7 @@ class VMWareAPISession(object):
         return self.vim
 
     def _wait_for_task(self, instance_id, task_ref):
-        """
-        Return a Deferred that will give the result of the given task.
+        """Return a Deferred that will give the result of the given task.
         The task is polled until it completes.
         """
         done = event.Event()
@@ -319,36 +309,30 @@ class VMWareAPISession(object):
         return ret_val
 
     def _poll_task(self, instance_id, task_ref, done):
-        """
-        Poll the given task, and fires the given Deferred if we
+        """Poll the given task, and fires the given Deferred if we
         get a result.
         """
         try:
             task_info = self._call_method(vim_util, "get_dynamic_property",
                             task_ref, "Task", "info")
-            task_name = task_info.Name
+            task_name = task_info.name
             action = dict(
                 instance_id=int(instance_id),
                 action=task_name[0:255],
                 error=None)
-            if task_info.State in [TaskState.TASK_QUEUED,
-                                   TaskState.TASK_RUNNING]:
+            if task_info.state in ['queued', 'running']:
                 return
-            elif task_info.State == TaskState.TASK_SUCCESS:
-                LOG.info(_("Task [%(taskname)s] %(taskref)s status: success") %
-                         {'taskname': task_name,
-                          'taskref': str(task_ref)})
-                done.send(TaskState.TASK_SUCCESS)
+            elif task_info.state == 'success':
+                LOG.info(_("Task [%(task_name)s] %(task_ref)s "
+                            "status: success") % locals())
+                done.send("success")
             else:
-                error_info = str(task_info.Error.LocalizedMessage)
+                error_info = str(task_info.error.localizedMessage)
                 action["error"] = error_info
-                LOG.info(_("Task [%(task_name)s] %(task_ref)s status: "
-                         "error [%(error_info)s]") %
-                         {'task_name': task_name,
-                          'task_ref': str(task_ref),
-                          'error_info': error_info})
+                LOG.warn(_("Task [%(task_name)s] %(task_ref)s "
+                          "status: error %(error_info)s") % locals())
                 done.send_exception(Exception(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except Exception, excep:
-            LOG.info(_("In vmwareapi:_poll_task, Got this error %s") % excep)
+            LOG.warn(_("In vmwareapi:_poll_task, Got this error %s") % excep)
             done.send_exception(excep)

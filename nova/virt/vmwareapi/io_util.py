@@ -16,13 +16,8 @@
 #    under the License.
 
 """
-Helper classes for multi-threaded I/O (read/write) in the basis of chunks.
-
-The class ThreadSafePipe queues the chunk data.
-
-The class IOThread reads chunks from input file and pipes it to output file
-till it reaches the transferable size
-
+Reads a chunk from input file and writes the same to the output file till
+it reaches the transferable size
 """
 
 from Queue import Empty
@@ -32,27 +27,26 @@ from threading import Thread
 import time
 import traceback
 
-THREAD_SLEEP_TIME = .01
+THREAD_SLEEP_TIME = 0.01
 
 
 class ThreadSafePipe(Queue):
-    """ThreadSafePipe class queue's the chunk data."""
+    """ThreadSafePipe class queues the chunk data"""
 
     def __init__(self, max_size=None):
-        """Initializes the queue"""
         Queue.__init__(self, max_size)
         self.eof = False
 
     def write(self, data):
-        """Writes the chunk data to the queue."""
+        """Writes the chunk data to the queue"""
         self.put(data, block=False)
 
     def read(self):
-        """Retrieves the chunk data from the queue."""
+        """Retrieves the chunk data from the queue"""
         return self.get(block=False)
 
     def set_eof(self, eof):
-        """Sets EOF to mark reading of input file finishes."""
+        """Sets EOF to mark reading of input file finishes"""
         self.eof = eof
 
     def get_eof(self):
@@ -61,16 +55,11 @@ class ThreadSafePipe(Queue):
 
 
 class IOThread(Thread):
-    """
-    IOThread reads chunks from input file and pipes it to output file till it
-    reaches the transferable size
+    """IOThread reads chunks from input file and pipes it to output file till
+    it reaches the transferable size
     """
 
     def __init__(self, input_file, output_file, chunk_size, transfer_size):
-        """
-        Initialize the thread.
-        inputFile and outputFile should be file like objects.
-        """
         Thread.__init__(self)
         self.input_file = input_file
         self.output_file = output_file
@@ -83,9 +72,8 @@ class IOThread(Thread):
         self._exception = None
 
     def run(self):
-        """
-        Pipes the input chunk read to the output file till it reaches
-        transferable size
+        """Pipes the input chunk read to the output file till it reaches
+        a transferable size
         """
         try:
             if self.transfer_size and self.transfer_size <= self.chunk_size:
@@ -131,10 +119,10 @@ class IOThread(Thread):
 
             if not self.transfer_size is None:
                 if self.read_size < self.transfer_size:
-                    raise IOError(_("Not enough data (%(read_size)d of "
-                                  "%(transfer_size)d bytes)") %
-                                  {'read_size': self.read_size,
-                                   'transfer_size': self.transfer_size})
+                    raise IOError(_("Not enough data (%(read_size)d "
+                                    "of %(transfer_size)d bytes)") \
+                                    % ({'read_size': self.read_size,
+                                        'transfer_size': self.transfer_size}))
 
         except Exception:
             self._error = True
@@ -142,18 +130,20 @@ class IOThread(Thread):
         self._done = True
 
     def stop_io_transfer(self):
-        """Set stop flag to true, which causes the thread to stop safely."""
+        """Set the stop flag to true, which causes the thread to stop
+        safely
+        """
         self._stop_transfer = True
         self.join()
 
     def get_error(self):
-        """Returns the error string."""
+        """Returns the error string"""
         return self._error
 
     def get_exception(self):
-        """Returns the traceback exception string."""
+        """Returns the traceback exception string"""
         return self._exception
 
     def is_done(self):
-        """Checks whether transfer is complete."""
+        """Checks whether transfer is complete"""
         return self._done

@@ -16,32 +16,39 @@
 #    under the License.
 
 """
-Class facilitating SOAP calls to ESX/ESXi server
-
+Classes for making VMware VI SOAP calls
 """
 
 import httplib
 
-import ZSI
+from suds.client import Client
+from suds.plugin import MessagePlugin
+from suds.sudsobject import Property
 
-from nova.virt.vmwareapi import VimService_services
+from nova import flags
 
 RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml'
 CONN_ABORT_ERROR = 'Software caused connection abort'
 ADDRESS_IN_USE_ERROR = 'Address already in use'
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('vmwareapi_wsdl_loc',
+                   None,
+                   'VIM Service WSDL Location'
+                   'E.g http://<server>/vimService.wsdl'
+                   'Due to a bug in vSphere ESX 4.1 default wsdl'
+                   'Read the readme for vmware to setup')
 
 
 class VimException(Exception):
     """The VIM Exception class"""
 
     def __init__(self, exception_summary, excep):
-        """Initializer"""
         Exception.__init__(self)
         self.exception_summary = exception_summary
         self.exception_obj = excep
 
     def __str__(self):
-        """The informal string representation of the object"""
         return self.exception_summary + str(self.exception_obj)
 
 
@@ -56,8 +63,28 @@ class SessionFaultyException(VimException):
 
 
 class VimAttributeError(VimException):
-    """Attribute Error"""
+    """VI Attribute Error"""
     pass
+
+
+class VIMMessagePlugin(MessagePlugin):
+
+    def addAttributeForValue(self, node):
+        #suds does not handle AnyType properly
+        #VI SDK requires type attribute to be set when AnyType is used
+        if node.name == 'value':
+            node.set('xsi:type', 'xsd:string')
+
+    def marshalled(self, context):
+        """Suds will send the specified soap envelope.
+        Provides the plugin with the opportunity to prune empty
+        nodes and fixup nodes before sending it to the server
+        """
+        #suds builds the entire request object based on the wsdl schema
+        #VI SDK throws server errors if optional SOAP nodes are sent without
+        #values. E.g <test/> as opposed to <test>test</test>
+        context.envelope.prune()
+        context.envelope.walk(self.addAttributeForValue)
 
 
 class Vim:
@@ -65,29 +92,24 @@ class Vim:
 
     def __init__(self,
                  protocol="https",
-                 host="localhost",
-                 trace=None):
+                 host="localhost"):
         """
-        Initializer
-
         protocol: http or https
         host    : ESX IPAddress[:port] or ESX Hostname[:port]
-        trace   : File handle (eg. sys.stdout, sys.stderr ,
-                    open("file.txt",w), Use it only for debugging
-                    SOAP Communication
         Creates the necessary Communication interfaces, Gets the
         ServiceContent for initiating SOAP transactions
         """
         self._protocol = protocol
         self._host_name = host
-        service_locator = VimService_services.VimServiceLocator()
-        connect_string = "%s://%s/sdk" % (self._protocol, self._host_name)
-        if trace == None:
-            self.proxy = \
-                service_locator.getVimPortType(url=connect_string)
-        else:
-            self.proxy = service_locator.getVimPortType(url=connect_string,
-                                                        tracefile=trace)
+        wsdl_url = FLAGS.vmwareapi_wsdl_loc
+        if wsdl_url is None:
+            raise Exception(_("Must specify vmwareapi_wsdl_loc"))
+        #Use this when VMware fixes their faulty wsdl
+        #wsdl_url = '%s://%s/sdk/vimService.wsdl' % (self._protocol,
+        #        self._host_name)
+        url = '%s://%s/sdk' % (self._protocol, self._host_name)
+        self.client = Client(wsdl_url, location=url,
+                            plugins=[VIMMessagePlugin()])
         self._service_content = \
                 self.RetrieveServiceContent("ServiceInstance")
 
@@ -102,45 +124,29 @@ class Vim:
         except AttributeError:
 
             def vim_request_handler(managed_object, **kwargs):
-                """
-                   managed_object    : Managed Object Reference or Managed
+                """managed_object    : Managed Object Reference or Managed
                                        Object Name
                    **kw              : Keyword arguments of the call
                 """
                 #Dynamic handler for VI SDK Calls
-                response = None
                 try:
-                    request_msg = \
-                        self._request_message_builder(attr_name,
-                                            managed_object, **kwargs)
-                    request = getattr(self.proxy, attr_name)
-                    response = request(request_msg)
-                    if response == None:
-                        return None
-                    else:
-                        try:
-                            return getattr(response, "_returnval")
-                        except AttributeError, excep:
-                            return None
+                    request_mo = \
+                        self._request_managed_object_builder(managed_object)
+                    request = getattr(self.client.service, attr_name)
+                    return request(request_mo, **kwargs)
                 except AttributeError, excep:
                     raise VimAttributeError(_("No such SOAP method '%s'"
                          " provided by VI SDK") % (attr_name), excep)
-                except ZSI.FaultException, excep:
-                    raise SessionFaultyException(_("<ZSI.FaultException> in"
-                           " %s:") % (attr_name), excep)
-                except ZSI.EvaluateException, excep:
-                    raise SessionFaultyException(_("<ZSI.EvaluateException> in"
-                           " %s:") % (attr_name), excep)
                 except (httplib.CannotSendRequest,
                         httplib.ResponseNotReady,
                         httplib.CannotSendHeader), excep:
-                    raise SessionOverLoadException(_("httplib errror in"
+                    raise SessionOverLoadException(_("httplib error in"
                                     " %s: ") % (attr_name), excep)
                 except Exception, excep:
                     # Socket errors which need special handling for they
                     # might be caused by ESX API call overload
                     if (str(excep).find(ADDRESS_IN_USE_ERROR) != -1 or
-                        str(excep).find(CONN_ABORT_ERROR)):
+                        str(excep).find(CONN_ABORT_ERROR)) != -1:
                         raise SessionOverLoadException(_("Socket error in"
                                     " %s: ") % (attr_name), excep)
                     # Type error that needs special handling for it might be
@@ -153,25 +159,18 @@ class Vim:
                            _("Exception in %s ") % (attr_name), excep)
             return vim_request_handler
 
-    def _request_message_builder(self, method_name, managed_object, **kwargs):
-        """Builds the Request Message"""
-        #Request Message Builder
-        request_msg = getattr(VimService_services, \
-                              method_name + "RequestMsg")()
-        element = request_msg.new__this(managed_object)
+    def _request_managed_object_builder(self, managed_object):
+        """Builds the request managed object"""
+        #Request Managed Object Builder
         if type(managed_object) == type(""):
-            element.set_attribute_type(managed_object)
+            mo = Property(managed_object)
+            mo._type = managed_object
         else:
-            element.set_attribute_type(managed_object.get_attribute_type())
-        request_msg.set_element__this(element)
-        for key in kwargs:
-            getattr(request_msg, "set_element_" + key)(kwargs[key])
-        return request_msg
+            mo = managed_object
+        return mo
 
     def __repr__(self):
-        """The official string representation"""
         return "VIM Object"
 
     def __str__(self):
-        """The informal string representation"""
         return "VIM Object"

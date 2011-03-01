@@ -14,16 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 """
 :mod:`vmwareapi` -- Nova support for VMware ESX/ESXi Server through vSphere API
-===============================================================================
 """
 
-
-class HelperBase(object):
-    """The base for helper classes. This adds the VMwareAPI class attribute"""
-    VMwareAPI = None
-
-    def __init__(self):
-        return
