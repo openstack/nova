@@ -343,7 +343,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-        vdi_uuid = session.wait_for_task(instance_id, task)
+        vdi_uuid = session.wait_for_task(task, instance_id)
 
         scan_sr(session, instance_id, sr_ref)
 

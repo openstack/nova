@@ -411,7 +411,7 @@ class VMOps(object):
         args = {'kernel-file': kernel, 'ramdisk-file': ramdisk}
         task = self._session.async_call_plugin(
             'glance', 'remove_kernel_ramdisk', args)
-        self._session.wait_for_task(instance.id, task)
+        self._session.wait_for_task(task, instance.id)
 
         LOG.debug(_("kernel/ramdisk files removed"))
 
