@@ -93,12 +93,8 @@ Other flags
 -----------
 ::
 
-  --network_manager=nova.network.manager.FlatManager
-  --flat_network_bridge=<ESX Virtual Machine Port Group>
   --image_service=nova.image.glance.GlanceImageService
   --glance_host=<Glance Host>
-  --console_manager=nova.console.vmrc_manager.ConsoleVMRCManager
-  --console_driver=nova.console.vmrc.VMRCSessionConsole [Optional for OTP (One time Passwords) as against host credentials]
   --vmwareapi_wsdl_loc=<http://<WEB SERVER>/vimService.wsdl>
 
 Note:- Due to a faulty wsdl being shipped with ESX vSphere 4.1 we need a working wsdl which can to be mounted on any webserver. Follow the below steps to download the SDK,
