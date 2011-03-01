@@ -14,11 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from datetime import datetime
 import errno
 import os
 import select
-import time
 
 from nova import test
 from nova.utils import parse_mailmap, str_dict_replace, synchronized
@@ -62,6 +60,16 @@ class ProjectTestCase(test.TestCase):
 
 
 class LockTestCase(test.TestCase):
+    def test_synchronized_wrapped_function_metadata(self):
+        @synchronized('whatever')
+        def foo():
+            """Bar"""
+            pass
+        self.assertEquals(foo.__doc__, 'Bar', "Wrapped function's docstring "
+                                              "got lost")
+        self.assertEquals(foo.__name__, 'foo', "Wrapped function's name "
+                                               "got mangled")
+
     def test_synchronized(self):
         rpipe, wpipe = os.pipe()
         pid = os.fork()
