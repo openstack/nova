@@ -16,28 +16,31 @@
 #    under the License.
 
 """
-The guest tool is a small python script that should be run either as a service
-or added to system startup. This script configures networking on the guest.
-
-IP address information is injected through 'machine.id' vmx parameter which is
-equivalent to XenStore in XenServer. This information can be retrived inside
-the guest using VMware tools.
+Guest tools for ESX to set up network in the guest.
+On Windows we require pyWin32 installed on Python.
 """
 
-import os
-import sys
-import subprocess
-import time
 import array
-import struct
-import socket
-import platform
 import logging
+import os
+import platform
+import socket
+import struct
+import subprocess
+import sys
+import time
 
+PLATFORM_WIN = 'win32'
+PLATFORM_LINUX = 'linux2'
+ARCH_32_BIT = '32bit'
+ARCH_64_BIT = '64bit'
+NO_MACHINE_ID = 'No machine id'
+
+#Logging
 FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
-if sys.platform == 'win32':
+if sys.platform == PLATFORM_WIN:
     LOG_DIR = os.path.join(os.environ.get('ALLUSERSPROFILE'), 'openstack')
-elif sys.platform == 'linux2':
+elif sys.platform == PLATFORM_LINUX:
     LOG_DIR = '/var/log/openstack'
 else:
     LOG_DIR = 'logs'
@@ -49,34 +52,24 @@ logging.basicConfig(filename=LOG_FILENAME, format=FORMAT)
 if sys.hexversion < 0x3000000:
     _byte = ord    # 2.x chr to integer
 else:
-    _byte = int     # 3.x byte to integer
+    _byte = int    # 3.x byte to integer
 
 
 class ProcessExecutionError:
-    """
-    Process Execution Error Class
-    """
+    """Process Execution Error Class"""
 
     def __init__(self, exit_code, stdout, stderr, cmd):
-        """
-        The Intializer
-        """
         self.exit_code = exit_code
         self.stdout = stdout
         self.stderr = stderr
         self.cmd = cmd
 
     def __str__(self):
-        """
-        The informal string representation of the object
-        """
         return str(self.exit_code)
 
 
 def _bytes2int(bytes):
-    """
-    convert bytes to int.
-    """
+    """Convert bytes to int."""
     intgr = 0
     for byt in bytes:
         intgr = (intgr << 8) + _byte(byt)
@@ -84,13 +77,12 @@ def _bytes2int(bytes):
 
 
 def _parse_network_details(machine_id):
-    """
-    Parse the machine.id field to get MAC, IP, Netmask and Gateway feilds
-    machine.id is of the form MAC;IP;Netmask;Gateway;
-    ; is the separator
+    """Parse the machine.id field to get MAC, IP, Netmask and Gateway fields
+    machine.id is of the form MAC;IP;Netmask;Gateway; where ';' is
+    the separator.
     """
     network_details = []
-    if machine_id[1].strip() == 'No machine id':
+    if machine_id[1].strip() == NO_MACHINE_ID:
         pass
     else:
         network_info_list = machine_id[0].split(';')
@@ -104,9 +96,7 @@ def _parse_network_details(machine_id):
 
 
 def _get_windows_network_adapters():
-    """
-    Get the list of windows network adapters
-    """
+    """Get the list of windows network adapters"""
     import win32com.client
     wbem_locator = win32com.client.Dispatch('WbemScripting.SWbemLocator')
     wbem_service = wbem_locator.ConnectServer('.', 'root\cimv2')
@@ -135,20 +125,18 @@ def _get_windows_network_adapters():
 
 
 def _get_linux_network_adapters():
-    """
-    Get the list of Linux network adapters
-    """
+    """Get the list of Linux network adapters"""
     import fcntl
     max_bytes = 8096
     arch = platform.architecture()[0]
-    if arch == '32bit':
+    if arch == ARCH_32_BIT:
         offset1 = 32
         offset2 = 32
-    elif arch == '64bit':
+    elif arch == ARCH_64_BIT:
         offset1 = 16
         offset2 = 40
     else:
-        raise OSError("Unknown architecture: %s" % arch)
+        raise OSError(_("Unknown architecture: %s") % arch)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     names = array.array('B', '\0' * max_bytes)
     outbytes = struct.unpack('iL', fcntl.ioctl(
@@ -182,9 +170,7 @@ def _get_linux_network_adapters():
 
 
 def _get_adapter_name_and_ip_address(network_adapters, mac_address):
-    """
-    Get the adapter name based on the MAC address
-    """
+    """Get the adapter name based on the MAC address"""
     adapter_name = None
     ip_address = None
     for network_adapter in network_adapters:
@@ -196,27 +182,21 @@ def _get_adapter_name_and_ip_address(network_adapters, mac_address):
 
 
 def _get_win_adapter_name_and_ip_address(mac_address):
-    """
-    Get the Windows network adapter name
-    """
+    """Get Windows network adapter name"""
     network_adapters = _get_windows_network_adapters()
     return _get_adapter_name_and_ip_address(network_adapters, mac_address)
 
 
 def _get_linux_adapter_name_and_ip_address(mac_address):
-    """
-    Get the Linux adapter name
-    """
+    """Get Linux network adapter name"""
     network_adapters = _get_linux_network_adapters()
     return _get_adapter_name_and_ip_address(network_adapters, mac_address)
 
 
 def _execute(cmd_list, process_input=None, check_exit_code=True):
-    """
-    Executes the command with the list of arguments specified
-    """
+    """Executes the command with the list of arguments specified"""
     cmd = ' '.join(cmd_list)
-    logging.debug('Executing command "%s"' % cmd)
+    logging.debug(_("Executing command: '%s'") % cmd)
     env = os.environ.copy()
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
@@ -227,7 +207,7 @@ def _execute(cmd_list, process_input=None, check_exit_code=True):
         result = obj.communicate()
     obj.stdin.close()
     if obj.returncode:
-        logging.debug('Result was %s' % obj.returncode)
+        logging.debug(_("Result was %s") % obj.returncode)
         if check_exit_code and obj.returncode != 0:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
@@ -239,9 +219,7 @@ def _execute(cmd_list, process_input=None, check_exit_code=True):
 
 
 def _windows_set_ipaddress():
-    """
-    Set IP address for the windows VM
-    """
+    """Set IP address for the windows VM"""
     program_files = os.environ.get('PROGRAMFILES')
     program_files_x86 = os.environ.get('PROGRAMFILES(X86)')
     vmware_tools_bin = None
@@ -271,13 +249,11 @@ def _windows_set_ipaddress():
                        subnet_mask, gateway, '1']
                 _execute(cmd)
     else:
-        logging.warn('VMware Tools is not installed')
+        logging.warn(_("VMware Tools is not installed"))
 
 
 def _linux_set_ipaddress():
-    """
-    Set IP address for the Linux VM
-    """
+    """Set IP address for the Linux VM"""
     vmware_tools_bin = None
     if os.path.exists('/usr/sbin/vmtoolsd'):
         vmware_tools_bin = '/usr/sbin/vmtoolsd'
@@ -314,13 +290,13 @@ def _linux_set_ipaddress():
                 interface_file.close()
         _execute(['/sbin/service', 'network' 'restart'])
     else:
-        logging.warn('VMware Tools is not installed')
+        logging.warn(_("VMware Tools is not installed"))
 
 if __name__ == '__main__':
     pltfrm = sys.platform
-    if pltfrm == 'win32':
+    if pltfrm == PLATFORM_WIN:
         _windows_set_ipaddress()
-    elif pltfrm == 'linux2':
+    elif pltfrm == PLATFORM_LINUX:
         _linux_set_ipaddress()
     else:
-        raise NotImplementedError('Platform not implemented:"%s"' % pltfrm)
+        raise NotImplementedError(_("Platform not implemented: '%s'") % pltfrm)
