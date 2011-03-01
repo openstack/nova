@@ -43,11 +43,23 @@ VMware ESX Requirements
 -----------------------
 * ESX credentials with administration/root privileges
 * Single local hard disk at the ESX host
-* An ESX Virtual Machine Port Group (Bridge for Flat Networking)
-   
+* An ESX Virtual Machine Port Group (For Flat Networking)
+* An ESX physical network adapter (For VLAN networking)
+* Need to enable "vSphere Web Access" in Configuration->Security Profile->Firewall   
+
 Python dependencies 
 -------------------
-* ZSI-2.0
+* suds-0.4
+
+* Installation procedure on Ubuntu/Debian
+
+::
+
+ sudo apt-get install python-setuptools
+ wget https://fedorahosted.org/releases/s/u/suds/python-suds-0.4.tar.gz
+ tar -zxvf python-suds-0.4.tar.gz
+ cd python-suds-0.4
+ sudo python setup.py install
 
 Configuration flags required for nova-compute 
 ---------------------------------------------
@@ -57,6 +69,25 @@ Configuration flags required for nova-compute
   --vmwareapi_host_ip=<VMware ESX Host IP> 
   --vmwareapi_host_username=<VMware ESX Username>
   --vmwareapi_host_password=<VMware ESX Password>
+  --network_driver=nova.network.vmwareapi_net [Optional, only for VLAN Networking]
+  --vlan_interface=<Physical ethernet adapter name in VMware ESX host for vlan networking E.g vmnic0> [Optional, only for VLAN Networking]
+  
+
+Configuration flags required for nova-network 
+---------------------------------------------
+::
+ 
+  --network_manager=nova.network.manager.FlatManager [or nova.network.manager.VlanManager]
+  --flat_network_bridge=<ESX Virtual Machine Port Group> [Optional, only for Flat Networking]
+
+
+Configuration flags required for nova-console
+---------------------------------------------
+::
+ 
+  --console_manager=nova.console.vmrc_manager.ConsoleVMRCManager
+  --console_driver=nova.console.vmrc.VMRCSessionConsole [Optional, only for OTP (One time Passwords) as against host credentials]
+
    
 Other flags
 -----------
@@ -66,6 +97,19 @@ Other flags
   --flat_network_bridge=<ESX Virtual Machine Port Group>
   --image_service=nova.image.glance.GlanceImageService
   --glance_host=<Glance Host>
+  --console_manager=nova.console.vmrc_manager.ConsoleVMRCManager
+  --console_driver=nova.console.vmrc.VMRCSessionConsole [Optional for OTP (One time Passwords) as against host credentials]
+  --vmwareapi_wsdl_loc=<http://<WEB SERVER>/vimService.wsdl>
+
+Note:- Due to a faulty wsdl being shipped with ESX vSphere 4.1 we need a working wsdl which can to be mounted on any webserver. Follow the below steps to download the SDK,
+
+* Go to http://www.vmware.com/support/developer/vc-sdk/
+* Go to section VMware vSphere Web Services SDK 4.0
+* Click "Downloads"
+* Enter VMware credentials when prompted for download
+* Unzip the downloaded file vi-sdk-4.0.0-xxx.zip
+* Go to SDK->WSDL->vim25 & host the files "vimService.wsdl" and "vim.wsdl" in a WEB SERVER
+* Set the flag "--vmwareapi_wsdl_loc" with url, "http://<WEB SERVER>/vimService.wsdl"
 
 FAQ 
 ---
@@ -84,4 +128,8 @@ FAQ
 
 * The guest tool is a small python script that should be run either as a service or added to system startup. This script configures networking on the guest.
 
+
+4. What type of consoles are supported?
+
+* VMware VMRC based consoles are supported. There are 2 options for credentials one is OTP (Secure but creates multiple session entries in DB for each OpenStack console create request.) & other is host based credentials (It may not be secure as ESX credentials are transmitted as clear text).
 
