@@ -233,7 +233,7 @@ class XenAPIVMTestCase(test.TestCase):
         vm = vms[0]
 
         # Check that m1.large above turned into the right thing.
-        instance_type = test.INSTANCE_TYPES['m1.large']
+        instance_type = db.instance_type_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
