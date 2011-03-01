@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import hashlib
 import json
 import traceback
@@ -138,7 +139,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def _get_onset_files_from_personality_attr(self, personality_attr):
+    def _get_onset_files_from_personality(self, personality):
         """
         Create a list of onset files from the personality request attribute
 
@@ -147,9 +148,13 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         onset_files = []
-        for personality in personality_attr:
-            path = personality['path']
-            contents = personality['contents']
+        for item in personality:
+            path = item['path']
+            try:
+                contents = base64.b64decode(item['contents'])
+            except TypeError:
+                raise exc.HTTPBadRequest(explanation=
+                        'Personality content for %s cannot be decoded' % path)
             onset_files.append((path, contents))
         return onset_files
 
@@ -181,7 +186,7 @@ class Controller(wsgi.Controller):
                 metadata.append({'key': k, 'value': v})
 
         personality = env['server'].get('personality', [])
-        onset_files = self._get_onset_files_from_personality_attr(personality)
+        onset_files = self._get_onset_files_from_personality(personality)
 
         instances = self.compute_api.create(
             context,

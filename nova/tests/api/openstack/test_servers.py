@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import datetime
 import json
 
@@ -272,16 +273,28 @@ class ServersTest(test.TestCase):
 
     def test_create_instance_with_no_personality(self):
         request, response, onset_files = \
-            self._create_instance_with_personality(personality=[])
+                self._create_instance_with_personality(personality=[])
         self.assertEquals(response.status_int, 200)
         self.assertEquals(onset_files, [])
 
-    def test_create_instance_with_one_personality(self):
-        personality = [self._personality_dict('/my/path', 'myfilecontents')]
+    def test_create_instance_with_personality(self):
+        path = '/my/file/path'
+        contents = '#!/bin/bash\necho "Hello, World!"\n'
+        b64contents = base64.b64encode(contents)
+        personality = [self._personality_dict(path, b64contents)]
         request, response, onset_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, [('/my/path', 'myfilecontents')])
+        self.assertEquals(onset_files, [(path, contents)])
+    
+    def test_create_instance_with_personality_with_non_b64_content(self):
+        path = '/my/file/path'
+        contents = '#!/bin/bash\necho "Oh no!"\n'
+        personality = [self._personality_dict(path, contents)]
+        request, response, onset_files = \
+            self._create_instance_with_personality(personality)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(onset_files, None)
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
