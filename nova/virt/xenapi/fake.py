@@ -156,11 +156,11 @@ def VM_get_xenstore_data(vm_ref):
 def VM_remove_from_xenstore_data(vm_ref, key):
     db_ref = _db_content['VM'][vm_ref]
     if not 'xenstore_data' in db_ref:
-        return 
+        return
     db_ref['xenstore_data'][key] = None
 
+
 def VM_add_to_xenstore_data(vm_ref, key, value):
-    LOG.debug("ADDING TO XENSTORE DATA %s %s",key,value)
     db_ref = _db_content['VM'][vm_ref]
     if not 'xenstore_data' in db_ref:
         db_ref['xenstore_data'] = {}
@@ -510,9 +510,7 @@ class SessionBase(object):
 
     def _get_by_field(self, recs, k, v, return_singleton):
         result = []
-        LOG.debug("_get_by_field!!!! - %d", return_singleton)
         for ref, rec in recs.iteritems():
-            LOG.debug("k:%s,rec[k]:%s,v:%s",k,rec.get(k),v)
             if rec.get(k) == v:
                 result.append(ref)
 

@@ -112,12 +112,10 @@ class VMOps(object):
 
         # Alter the image before VM start for, e.g. network injection
         #TODO(salvatore-orlando): do this only if flag is true
-        LOG.debug("About to run preconfigure_instance")
         if FLAGS.xenapi_inject_image:
             VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
 
         # inject_network_info and create vifs
-        LOG.debug("About to run inject_network_info")
         networks = self.inject_network_info(instance)
         self.create_vifs(instance, networks)
 
@@ -192,19 +190,12 @@ class VMOps(object):
             # Not a string; must be an ID or a vm instance
             if isinstance(instance_or_vm, (int, long)):
                 ctx = context.get_admin_context()
-                try:
-                    instance_obj = db.instance_get(ctx, instance_or_vm)
-                    instance_name = instance_obj.name
-                except exception.NotFound:
-                    # The unit tests screw this up, as they use an integer for
-                    # the vm name. I'd fix that up, but that's a matter for
-                    # another bug report. So for now, just try with the passed
-                    # value
-                    instance_name = instance_or_vm
+                instance_obj = db.instance_get(ctx, instance_or_vm)
+                instance_name = instance_obj.name
             else:
                 instance_name = instance_or_vm.name
         #fake xenapi does not use OpaqueRef as a prefix
-        #when running tests we will always end up here 
+        #when running tests we will always end up here
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
             if FLAGS.xenapi_connection_url == 'test_url':

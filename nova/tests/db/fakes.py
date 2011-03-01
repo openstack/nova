@@ -36,8 +36,6 @@ class FakeModel(object):
         if key in self.values:
             return self.values[key]
         else:
-            print "Key:%s" %key
-            print "Values:%s" %self.values
             raise NotImplementedError()
 
 
@@ -74,7 +72,7 @@ def stub_out_db_instance_api(stubs):
 
 def stub_out_db_network_api(stubs, injected=True):
     """Stubs out the db API for retrieving networks"""
-    
+
     network_fields = {
         'id': 'test',
         'bridge': 'xenbr0',
@@ -83,12 +81,12 @@ def stub_out_db_network_api(stubs, injected=True):
         'gateway': '10.0.0.1',
         'broadcast': '10.0.0.255',
         'dns': '10.0.0.2',
-        'ra_server': None,        
+        'ra_server': None,
         'injected': injected}
-    
+
     fixed_ip_fields = {
-        'address':'10.0.0.3',
-        'network_id':'test'}
+        'address': '10.0.0.3',
+        'network_id': 'test'}
 
     def fake_network_get_by_instance(context, instance_id):
         return FakeModel(network_fields)
@@ -113,4 +111,3 @@ def stub_out_db_network_api(stubs, injected=True):
               fake_network_get_all_by_instance)
     stubs.Set(db, 'fixed_ip_get_all_by_instance',
         fake_fixed_ip_get_all_by_instance)
-    

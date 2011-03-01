@@ -409,10 +409,8 @@ class VMHelper(HelperBase):
     @classmethod
     def lookup(cls, session, i):
         """Look the instance i up, and returns it if available"""
-        LOG.debug("Entering lookup for instance:%s",str(i))
         vms = session.get_xenapi().VM.get_by_name_label(i)
         n = len(vms)
-        LOG.debug("n:%d",n)        
         if n == 0:
             return None
         elif n > 1:
@@ -451,20 +449,17 @@ class VMHelper(HelperBase):
         # As mounting the image VDI is expensive, we only want do do it once,
         # if at all, so determine whether it's required first, and then do
         # everything
-        LOG.debug("Running preconfigure_instance")
         mount_required = False
         key, net = disk.get_injectables(instance)
         if key is not None or net is not None:
             mount_required = True
 
-        LOG.debug("Mount_required:%s", str(mount_required))
         if mount_required:
 
             def _mounted_processing(device):
                 """Callback which runs with the image VDI attached"""
 
                 dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
-                LOG.debug("Device path:%s", dev_path)
                 tmpdir = tempfile.mkdtemp()
                 try:
                     # Mount only Linux filesystems, to avoid disturbing
@@ -473,7 +468,6 @@ class VMHelper(HelperBase):
                         out, err = utils.execute(
                             'sudo mount -t ext2,ext3 "%s" "%s"' %
                             (dev_path, tmpdir))
-                        LOG.debug("filesystem mounted")
                     except exception.ProcessExecutionError as e:
                         err = str(e)
                     if err:
@@ -506,7 +500,6 @@ class VMHelper(HelperBase):
                                         'installed in this image'))
                                 LOG.info(_('Manipulating interface files '
                                          'directly'))
-                                LOG.debug("Going to inject data in filesystem")
                                 disk.inject_data_into_fs(tmpdir, key, net,
                                     utils.execute)
                         finally:
@@ -748,7 +741,6 @@ def vbd_unplug_with_retry(session, vbd):
     # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
-            LOG.debug("About to unplug VBD")
             session.get_xenapi().VBD.unplug(vbd)
             LOG.debug(_('VBD.unplug successful first time.'))
             return

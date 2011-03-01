@@ -21,6 +21,7 @@ Test suite for XenAPI
 import os
 import re
 import stubout
+import ast
 
 from nova import db
 from nova import context
@@ -204,7 +205,7 @@ class XenAPIVMTestCase(test.TestCase):
                 if not vm_rec["is_control_domain"]:
                     vm_labels.append(vm_rec["name_label"])
 
-            self.assertEquals(vm_labels, [1])
+            self.assertEquals(vm_labels, ['1'])
 
         def ensure_vbd_was_torn_down():
             vbd_labels = []
@@ -212,7 +213,7 @@ class XenAPIVMTestCase(test.TestCase):
                 vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
                 vbd_labels.append(vbd_rec["vm_name_label"])
 
-            self.assertEquals(vbd_labels, [1])
+            self.assertEquals(vbd_labels, ['1'])
 
         def ensure_vdi_was_torn_down():
             for vdi_ref in xenapi_fake.get_all('VDI'):
@@ -229,10 +230,10 @@ class XenAPIVMTestCase(test.TestCase):
 
     def check_vm_record(self, conn, check_injection=False):
         instances = conn.list_instances()
-        self.assertEquals(instances, [1])
+        self.assertEquals(instances, ['1'])
 
         # Get Nova record for VM
-        vm_info = conn.get_info(1)
+        vm_info = conn.get_info('1')
 
         # Get XenAPI record for VM
         vms = [(ref, rec) for ref, rec
@@ -262,27 +263,24 @@ class XenAPIVMTestCase(test.TestCase):
         if check_injection:
             xenstore_data = xenapi_fake.VM_get_xenstore_data(vm_ref)
             key = 'vm-data/networking/aabbccddeeff'
-            LOG.debug("Xenstore data: %s",xenstore_data)
-            xenstore_value=xenstore_data[key]
-            #tcpip_data = dict([(k, v)
-            #    for k, v in xenstore_value.iteritems()
-            #    if k.startswith(key_prefix)])
-            #LOG.debug("tcpip data: %s",tcpip_data)
-            #self.assertEquals(tcpip_data['label'],'test_network')
-            #self.assertEquals(tcpip_data, {
-            #    'label': 'test_network',
-            #    'broadcast': '10.0.0.255',
-            #    'ips': [{'ip': '10.0.0.3', 'netmask':'255.255.255.0', 'enabled':'1'}],
-            #    'mac': 'aa:bb:cc:dd:ee:ff',
-            #    'dns': ['10.0.0.2'],
-            #    'gateway': '10.0.0.1'})
+            xenstore_value = xenstore_data[key]
+            tcpip_data = ast.literal_eval(xenstore_value)
+            self.assertEquals(tcpip_data, {
+                'label': 'test_network',
+                'broadcast': '10.0.0.255',
+                'ips': [{'ip': '10.0.0.3',
+                         'netmask':'255.255.255.0',
+                         'enabled':'1'}],
+                'mac': 'aa:bb:cc:dd:ee:ff',
+                'dns': ['10.0.0.2'],
+                'gateway': '10.0.0.1'})
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
         instance_type="m1.large", check_injection=False):
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': 1,
-                  'id': 1,
+        values = {'name': "1",
+                  'id': "1",
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': image_id,
@@ -331,9 +329,7 @@ class XenAPIVMTestCase(test.TestCase):
 
             # Find the start of eth0 configuration and check it
             index = config.index('auto eth0')
-            LOG.debug("CONFIG")
-            LOG.debug(config)
-            
+
             self.assertEquals(config[index + 1:index + 8], [
                 'iface eth0 inet static',
                 'address 10.0.0.3',
@@ -409,8 +405,8 @@ class XenAPIVMTestCase(test.TestCase):
     def _create_instance(self):
         """Creates and spawns a test instance"""
         values = {
-            'name': 1,
-            'id': 1,
+            'name': '1',
+            'id': '1',
             'project_id': self.project.id,
             'user_id': self.user.id,
             'image_id': 1,
