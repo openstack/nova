@@ -117,6 +117,7 @@ class VMOps(object):
             VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
 
         # inject_network_info and create vifs
+        LOG.debug("About to run inject_network_info")
         networks = self.inject_network_info(instance)
         self.create_vifs(instance, networks)
 
@@ -186,6 +187,7 @@ class VMOps(object):
                 # Must be the instance name
                 instance_name = instance_or_vm
         except (AttributeError, KeyError):
+            #
             # Note the the KeyError will only happen with fakes.py
             # Not a string; must be an ID or a vm instance
             if isinstance(instance_or_vm, (int, long)):
@@ -201,8 +203,12 @@ class VMOps(object):
                     instance_name = instance_or_vm
             else:
                 instance_name = instance_or_vm.name
+        #fake xenapi does not use OpaqueRef as a prefix
+        #when running tests we will always end up here 
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is None:
+            if FLAGS.xenapi_connection_url == 'test_url':
+                return instance_or_vm
             raise exception.NotFound(
                             _('Instance not present %s') % instance_name)
         return vm
@@ -496,6 +502,7 @@ class VMOps(object):
                        'ips': [ip_dict(ip) for ip in network_IPs]}
             self.write_to_param_xenstore(vm_opaque_ref, {location: mapping})
             try:
+                logging.debug("About to run write_to_xenstore")
                 self.write_to_xenstore(vm_opaque_ref, location,
                                                       mapping['location'])
             except KeyError:

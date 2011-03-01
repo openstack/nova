@@ -191,6 +191,9 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_add_to_xenstore_data(self, session_ref, vm_ref, key, value):
         fake.VM_add_to_xenstore_data(vm_ref, key, value)
+    
+    def VM_remove_from_xenstore_data(self, session_ref, vm_ref, key):
+        fake.VM_remove_from_xenstore_data(vm_ref, key)
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):

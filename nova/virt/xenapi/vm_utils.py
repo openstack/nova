@@ -409,8 +409,10 @@ class VMHelper(HelperBase):
     @classmethod
     def lookup(cls, session, i):
         """Look the instance i up, and returns it if available"""
+        LOG.debug("Entering lookup for instance:%s",str(i))
         vms = session.get_xenapi().VM.get_by_name_label(i)
         n = len(vms)
+        LOG.debug("n:%d",n)        
         if n == 0:
             return None
         elif n > 1:
@@ -480,7 +482,6 @@ class VMHelper(HelperBase):
                     else:
                         try:
                             # This try block ensures that the umount occurs
-
                             xe_guest_agent_filename = os.path.join(
                                 tmpdir, FLAGS.xenapi_agent_path)
                             if os.path.isfile(xe_guest_agent_filename):

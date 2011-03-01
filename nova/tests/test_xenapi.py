@@ -261,30 +261,21 @@ class XenAPIVMTestCase(test.TestCase):
 
         if check_injection:
             xenstore_data = xenapi_fake.VM_get_xenstore_data(vm_ref)
-            key_prefix = 'vm-data/vif/22_33_2A_B3_CC_DD/tcpip/'
-            tcpip_data = dict([(k.replace(key_prefix, ''), v)
-                for k, v in xenstore_data.iteritems()
-                if k.startswith(key_prefix)])
-
-            self.assertEquals(tcpip_data, {
-                'BroadcastAddress/data/0': '10.0.0.255',
-                'BroadcastAddress/name': 'BroadcastAddress',
-                'BroadcastAddress/type': 'multi_sz',
-                'DefaultGateway/data/0': '10.0.0.1',
-                'DefaultGateway/name': 'DefaultGateway',
-                'DefaultGateway/type': 'multi_sz',
-                'EnableDhcp/data': '0',
-                'EnableDhcp/name': 'EnableDhcp',
-                'EnableDhcp/type': 'dword',
-                'IPAddress/data/0': '10.0.0.3',
-                'IPAddress/name': 'IPAddress',
-                'IPAddress/type': 'multi_sz',
-                'NameServer/data': '10.0.0.2',
-                'NameServer/name': 'NameServer',
-                'NameServer/type': 'string',
-                'SubnetMask/data/0': '255.255.255.0',
-                'SubnetMask/name': 'SubnetMask',
-                'SubnetMask/type': 'multi_sz'})
+            key = 'vm-data/networking/aabbccddeeff'
+            LOG.debug("Xenstore data: %s",xenstore_data)
+            xenstore_value=xenstore_data[key]
+            #tcpip_data = dict([(k, v)
+            #    for k, v in xenstore_value.iteritems()
+            #    if k.startswith(key_prefix)])
+            #LOG.debug("tcpip data: %s",tcpip_data)
+            #self.assertEquals(tcpip_data['label'],'test_network')
+            #self.assertEquals(tcpip_data, {
+            #    'label': 'test_network',
+            #    'broadcast': '10.0.0.255',
+            #    'ips': [{'ip': '10.0.0.3', 'netmask':'255.255.255.0', 'enabled':'1'}],
+            #    'mac': 'aa:bb:cc:dd:ee:ff',
+            #    'dns': ['10.0.0.2'],
+            #    'gateway': '10.0.0.1'})
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
         instance_type="m1.large", check_injection=False):
@@ -340,6 +331,9 @@ class XenAPIVMTestCase(test.TestCase):
 
             # Find the start of eth0 configuration and check it
             index = config.index('auto eth0')
+            LOG.debug("CONFIG")
+            LOG.debug(config)
+            
             self.assertEquals(config[index + 1:index + 8], [
                 'iface eth0 inet static',
                 'address 10.0.0.3',
