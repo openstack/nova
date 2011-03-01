@@ -640,6 +640,11 @@ def auth_token_get(context, token_hash):
     return IMPL.auth_token_get(context, token_hash)
 
 
+def auth_token_update(context, token_hash, values):
+    """Updates a token given the hash representing it."""
+    return IMPL.auth_token_update(context, token_hash, values)
+
+
 def auth_token_create(context, token):
     """Creates a new token."""
     return IMPL.auth_token_create(context, token)
