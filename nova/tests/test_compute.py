@@ -32,6 +32,7 @@ from nova import rpc
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import instance_types
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.db.sqlalchemy import models
