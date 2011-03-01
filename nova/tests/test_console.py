@@ -21,7 +21,6 @@ Tests For Console proxy.
 """
 
 import datetime
-import logging
 
 from nova import context
 from nova import db
@@ -38,7 +37,6 @@ FLAGS = flags.FLAGS
 class ConsoleTestCase(test.TestCase):
     """Test case for console proxy"""
     def setUp(self):
-        logging.getLogger().setLevel(logging.DEBUG)
         super(ConsoleTestCase, self).setUp()
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy',
                    stub_compute=True)

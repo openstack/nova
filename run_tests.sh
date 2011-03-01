@@ -39,8 +39,18 @@ done
 
 function run_tests {
   # Just run the test suites in current environment
-  ${wrapper} rm -f nova.sqlite
-  ${wrapper} $NOSETESTS 2> run_tests.err.log
+  ${wrapper} $NOSETESTS 2> run_tests.log
+  # If we get some short import error right away, print the error log directly
+  RESULT=$?
+  if [ "$RESULT" -ne "0" ];
+  then
+    ERRSIZE=`wc -l run_tests.log | awk '{print \$1}'`
+    if [ "$ERRSIZE" -lt "40" ];
+    then
+      cat run_tests.log
+    fi
+  fi
+  return $RESULT
 }
 
 NOSETESTS="python run_tests.py $noseargs"
@@ -73,7 +83,9 @@ fi
 
 if [ -z "$noseargs" ];
 then
-  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py bin/* nova setup.py || exit 1
+  srcfiles=`find bin -type f ! -name "nova.conf*"`
+  srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
+  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles} || exit 1
 else
   run_tests
 fi

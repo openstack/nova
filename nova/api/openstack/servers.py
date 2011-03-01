@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import hashlib
 import json
 import traceback
 
@@ -33,7 +34,6 @@ import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
-LOG.setLevel(logging.DEBUG)
 
 
 FLAGS = flags.FLAGS
@@ -51,7 +51,8 @@ def _translate_detail_keys(inst):
         power_state.PAUSED: 'paused',
         power_state.SHUTDOWN: 'active',
         power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error'}
+        power_state.CRASHED: 'error',
+        power_state.FAILED: 'error'}
     inst_dict = {}
 
     mapped_keys = dict(status='state', imageId='image_id',
@@ -64,22 +65,22 @@ def _translate_detail_keys(inst):
     inst_dict['addresses'] = dict(public=[], private=[])
 
     # grab single private fixed ip
-    try:
-        private_ip = inst['fixed_ip']['address']
-        if private_ip:
-            inst_dict['addresses']['private'].append(private_ip)
-    except KeyError:
-        LOG.debug(_("Failed to read private ip"))
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    inst_dict['addresses']['private'] = private_ips
 
     # grab all public floating ips
-    try:
-        for floating in inst['fixed_ip']['floating_ips']:
-            inst_dict['addresses']['public'].append(floating['address'])
-    except KeyError:
-        LOG.debug(_("Failed to read public ip(s)"))
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    inst_dict['addresses']['public'] = public_ips
 
-    inst_dict['metadata'] = {}
+    # Return the metadata as a dictionary
+    metadata = {}
+    for item in inst['metadata']:
+        metadata[item['key']] = item['value']
+    inst_dict['metadata'] = metadata
+
     inst_dict['hostId'] = ''
+    if inst['host']:
+        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
 
     return dict(server=inst_dict)
 
@@ -138,42 +139,35 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """
-        Machine images are associated with Kernels and Ramdisk images via
-        metadata stored in Glance as 'image_properties'
-        """
-        def lookup(param):
-            _image_id = image_id
-            try:
-                return image['properties'][param]
-            except KeyError:
-                raise exception.NotFound(
-                    _("%(param)s property not found for image %(_image_id)s") %
-                      locals())
-
-        image_id = str(image_id)
-        image = self._image_service.show(req.environ['nova.context'], image_id)
-        return lookup('kernel_id'), lookup('ramdisk_id')
-
     def create(self, req):
         """ Creates a new server for a given user """
         env = self._deserialize(req.body, req)
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        key_pairs = auth_manager.AuthManager.get_key_pairs(
-            req.environ['nova.context'])
+        context = req.environ['nova.context']
+        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
         if not key_pairs:
             raise exception.NotFound(_("No keypairs defined"))
         key_pair = key_pairs[0]
 
         image_id = common.get_image_id_from_image_hash(self._image_service,
-            req.environ['nova.context'], env['server']['imageId'])
+            context, env['server']['imageId'])
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
+
+        # Metadata is a list, not a Dictionary, because we allow duplicate keys
+        # (even though JSON can't encode this)
+        # In future, we may not allow duplicate keys.
+        # However, the CloudServers API is not definitive on this front,
+        #  and we want to be compatible.
+        metadata = []
+        if env['server'].get('metadata'):
+            for k, v in env['server']['metadata'].items():
+                metadata.append({'key': k, 'value': v})
+
         instances = self.compute_api.create(
-            req.environ['nova.context'],
+            context,
             instance_types.get_by_flavor_id(env['server']['flavorId']),
             image_id,
             kernel_id=kernel_id,
@@ -182,6 +176,7 @@ class Controller(wsgi.Controller):
             display_description=env['server']['name'],
             key_name=key_pair['name'],
             key_data=key_pair['public_key'],
+            metadata=metadata,
             onset_files=env.get('onset_files', []))
         return _translate_keys(instances[0])
 
@@ -282,6 +277,20 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def inject_network_info(self, req, id):
+        """
+        Inject network info for an instance (admin only).
+
+        """
+        context = req.environ['nova.context']
+        try:
+            self.compute_api.inject_network_info(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("Compute.api::inject_network_info %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
@@ -353,3 +362,37 @@ class Controller(wsgi.Controller):
                 action=item.action,
                 error=item.error))
         return dict(actions=actions)
+
+    def _get_kernel_ramdisk_from_image(self, req, image_id):
+        """Retrevies kernel and ramdisk IDs from Glance
+
+        Only 'machine' (ami) type use kernel and ramdisk outside of the
+        image.
+        """
+        # FIXME(sirp): Since we're retrieving the kernel_id from an
+        # image_property, this means only Glance is supported.
+        # The BaseImageService needs to expose a consistent way of accessing
+        # kernel_id and ramdisk_id
+        image = self._image_service.show(req.environ['nova.context'], image_id)
+
+        if image['status'] != 'active':
+            raise exception.Invalid(
+                _("Cannot build from image %(image_id)s, status not active") %
+                  locals())
+
+        if image['type'] != 'machine':
+            return None, None
+
+        try:
+            kernel_id = image['properties']['kernel_id']
+        except KeyError:
+            raise exception.NotFound(
+                _("Kernel not found for image %(image_id)s") % locals())
+
+        try:
+            ramdisk_id = image['properties']['ramdisk_id']
+        except KeyError:
+            raise exception.NotFound(
+                _("Ramdisk not found for image %(image_id)s") % locals())
+
+        return kernel_id, ramdisk_id

@@ -85,7 +85,7 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None,
+               availability_zone=None, user_data=None, metadata=[],
                onset_files=None):
         """Create the number of instances requested if quota and
         other arguments check out ok.
@@ -100,11 +100,36 @@ class API(base.Base):
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            pid = context.project_id
+            msg = (_("Quota exceeeded for %(pid)s,"
+                     " tried to set %(num_metadata)s metadata properties")
+                   % locals())
+            LOG.warn(msg)
+            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        # Because metadata is stored in the DB, we hard-code the size limits
+        # In future, we may support more variable length strings, so we act
+        #  as if this is quota-controlled for forwards compatibility
+        for metadata_item in metadata:
+            k = metadata_item['key']
+            v = metadata_item['value']
+            if len(k) > 255 or len(v) > 255:
+                pid = context.project_id
+                msg = (_("Quota exceeeded for %(pid)s,"
+                         " metadata property key or value too long")
+                       % locals())
+                LOG.warn(msg)
+                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
         image = self.image_service.show(context, image_id)
         if kernel_id is None:
             kernel_id = image.get('kernel_id', None)
         if ramdisk_id is None:
             ramdisk_id = image.get('ramdisk_id', None)
+        # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
             kernel_id = None
@@ -154,6 +179,7 @@ class API(base.Base):
             'key_name': key_name,
             'key_data': key_data,
             'locked': False,
+            'metadata': metadata,
             'availability_zone': availability_zone}
         elevated = context.elevated()
         instances = []
@@ -447,7 +473,7 @@ class API(base.Base):
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
                   'port': output['port']}})
-        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+        return {'url': '%s/?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}
 
     def get_console_output(self, context, instance_id):
@@ -475,6 +501,13 @@ class API(base.Base):
 
         """
         self._cast_compute_message('reset_network', context, instance_id)
+
+    def inject_network_info(self, context, instance_id):
+        """
+        Inject network info for the instance.
+
+        """
+        self._cast_compute_message('inject_network_info', context, instance_id)
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
