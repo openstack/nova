@@ -514,18 +514,30 @@ class VMOps(object):
             network_IPs = [ip for ip in IPs if ip.network_id == network.id]
 
             def ip_dict(ip):
-                return {'netmask': network['netmask'],
-                        'enabled': '1',
-                        'ip': ip.address}
+                return {
+                    "ip": ip.address,
+                    "netmask": network["netmask"],
+                    "enabled": "1"}
+
+            def ip6_dict(ip6):
+                return {
+                    "ip": ip6.addressV6,
+                    "netmask": ip6.netmaskV6,
+                    "gateway": ip6.gatewayV6,
+                    "enabled": "1"}
 
             mac_id = instance.mac_address.replace(':', '')
             location = 'vm-data/networking/%s' % mac_id
-            mapping = {'label': network['label'],
-                       'gateway': network['gateway'],
-                       'mac': instance.mac_address,
-                       'dns': [network['dns']],
-                       'ips': [ip_dict(ip) for ip in network_IPs]}
+            mapping = {
+                'label': network['label'],
+                'gateway': network['gateway'],
+                'mac': instance.mac_address,
+                'dns': [network['dns']],
+                'ips': [ip_dict(ip) for ip in network_IPs],
+                'ip6s': [ip6_dict(ip) for ip in network_IPs]}
+
             self.write_to_param_xenstore(vm_opaque_ref, {location: mapping})
+
             try:
                 self.write_to_xenstore(vm_opaque_ref, location,
                                                       mapping['location'])
