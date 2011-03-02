@@ -511,6 +511,23 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    @exception.wrap_exception
+    def get_vnc_console(self, instance):
+        def get_vnc_port_for_instance(instance_name):
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            dom = minidom.parseString(xml)
+
+            for graphic in dom.getElementsByTagName('graphics'):
+                if graphic.getAttribute('type') == 'vnc':
+                    return graphic.getAttribute('port')
+
+        port = get_vnc_port_for_instance(instance['name'])
+        token = str(uuid.uuid4())
+        host = instance['host']
+
+        return {'token': token, 'host': host, 'port': port}
+
     def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 

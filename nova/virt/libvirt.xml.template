@@ -101,5 +101,6 @@
             <target port='0'/>
         </serial>
 
+        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/>
     </devices>
 </domain>
