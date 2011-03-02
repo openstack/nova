@@ -51,6 +51,7 @@ class VMOps(object):
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
+        self.known_vm_refs = []
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
@@ -176,29 +177,16 @@ class VMOps(object):
         a vm name or a vm instance, and want a vm instance in return.
         """
         vm = None
-        try:
-            if instance_or_vm.startswith("OpaqueRef:"):
-                # Got passed an opaque ref; return it
+        if instance_or_vm in self.known_vm_refs:
                 return instance_or_vm
-            else:
-                # Must be the instance name
-                instance_name = instance_or_vm
-        except (AttributeError, KeyError):
-            #
-            # Note the the KeyError will only happen with fakes.py
-            # Not a string; must be an ID or a vm instance
-            if isinstance(instance_or_vm, (int, long)):
-                ctx = context.get_admin_context()
-                instance_obj = db.instance_get(ctx, instance_or_vm)
-                instance_name = instance_obj.name
-            else:
-                instance_name = instance_or_vm.name
-        #fake xenapi does not use OpaqueRef as a prefix
-        #when running tests we will always end up here
+        instance_name = instance_or_vm
+        #if instance_or_vm is not a string;
+        #must be an ID or a vm instance
+        if not isinstance(instance_or_vm, str):
+            instance_name = instance_or_vm.name
         vm = VMHelper.lookup(self._session, instance_name)
+        self.known_vm_refs.append(vm)
         if vm is None:
-            if FLAGS.xenapi_connection_url == 'test_url':
-                return instance_or_vm
             raise exception.NotFound(
                             _('Instance not present %s') % instance_name)
         return vm
@@ -482,7 +470,7 @@ class VMOps(object):
 
             mac_id = instance.mac_address.replace(':', '')
             location = 'vm-data/networking/%s' % mac_id
-            #TODO(salvatore-orlando): key for broadcast address
+            #salvatore-orlando: key for broadcast address
             #provisionally set to 'broadcast'
             mapping = {'label': network['label'],
                        'gateway': network['gateway'],
