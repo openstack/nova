@@ -310,8 +310,7 @@ class VMHelper(HelperBase):
     def get_sr_path(cls, session, sr_label='slices'):
         """ Finds the SR and then coerces it into a path on the dom0 file
         system """
-        # TODO(mdietz): replace this with the flag once unified-images merges
-        return '/var/run/sr-mount/%s' % cls.get_sr(session, sr_label)
+        return FLAGS.xenapi_sr_base_path + cls.get_sr(session, sr_label)
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
@@ -649,6 +648,7 @@ class VMHelper(HelperBase):
     @classmethod
     def scan_default_sr(cls, session):
         """Looks for the system default SR and triggers a re-scan"""
+        #FIXME(sirp/mdietz): refactor scan_default_sr in there
         sr_ref = cls.get_sr(session)
         session.call_xenapi('SR.scan', sr_ref)
 

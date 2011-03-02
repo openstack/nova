@@ -430,7 +430,7 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.Error(_("No finished migrations found for \
+            raise exception.NotFound(_("No finished migrations found for \
                     instance"))
 
         params = {'migration_id': migration_ref['id']}
@@ -444,7 +444,7 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.Error(_("No finished migrations found for \
+            raise exception.NotFound(_("No finished migrations found for \
                     instance"))
         instance_ref = self.db.instance_get(context, instance_id)
         params = {'migration_id': migration_ref['id']}

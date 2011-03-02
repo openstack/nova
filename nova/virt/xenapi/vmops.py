@@ -105,7 +105,7 @@ class VMOps(object):
             vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', disk)
 
         if disk_image_type == ImageType.DISK_RAW:
-            #Have a look at the VDI and see if it has a PV kernel
+            # Have a look at the VDI and see if it has a PV kernel
             pv_kernel = VMHelper.lookup_image(self._session, instance.id,
                                               vdi_ref)
         elif disk_image_type == ImageType.DISK_VHD:
@@ -113,7 +113,6 @@ class VMOps(object):
             # configurable as Windows will use HVM.
             pv_kernel = True
 
-        #Have a look at the VDI and see if it has a PV kernel
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
                 instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
@@ -240,29 +239,20 @@ class VMOps(object):
             that will bundle the VHDs together and then push the bundle into
             Glance.
         """
-
-        with self._get_snapshot(instance) as snapshot:
+        template_vm_ref = None
+        try:
+            template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                self._session, instance.id, snapshot.vdi_uuids, image_id)
+                    self._session, instance.id, template_vdi_uuids, image_id)
+        finally:
+            if template_vm_ref:
+                self.virt._destroy(self.instance, template_vm_ref, shutdown=False,
+                        destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
     def _get_snapshot(self, instance):
-        class Snapshot(object):
-            def __init__(self, virt, instance, vm_ref, vdis):
-                self.instance = instance
-                self.vdi_uuids = vdis
-                self.virt = virt
-                self.vm_ref = vm_ref
-
-            def __enter__(self):
-                return self
-
-            def __exit__(self, type, value, traceback):
-                self.virt._destroy(self.instance, self.vm_ref, shutdown=False,
-                        destroy_kernel_ramdisk=False)
-
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
 
@@ -273,8 +263,7 @@ class VMOps(object):
         try:
             template_vm_ref, template_vdi_uuids = VMHelper.create_snapshot(
                 self._session, instance.id, vm_ref, label)
-            return Snapshot(self, instance, template_vm_ref,
-                    template_vdi_uuids)
+            return template_vm_ref, template_vdi_uuids
         except self.XenAPI.Failure, exc:
             logging.error(_("Unable to Snapshot %(vm_ref)s: %(exc)s")
                     % locals())
@@ -294,9 +283,11 @@ class VMOps(object):
         # from the snapshot creation
 
         base_copy_uuid = cow_uuid = None
-        with self._get_snapshot(instance) as snapshot:
+        template_vdi_uuids = template_vm_ref = None
+        try:
             # transfer the base copy
-            base_copy_uuid = snapshot.vdi_uuids[1]
+            template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
+            base_copy_uuid = template_vdi_uuids[1]
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             cow_uuid = vm_vdi_rec['uuid']
@@ -304,7 +295,7 @@ class VMOps(object):
             params = {'host': dest,
                       'vdi_uuid': base_copy_uuid,
                       'instance_id': instance.id,
-                      'sr_path': VMHelper.get_sr_path(self._session), }
+                      'sr_path': VMHelper.get_sr_path(self._session)}
 
             task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
@@ -322,6 +313,11 @@ class VMOps(object):
                     {'params': pickle.dumps(params)})
             self._session.wait_for_task(instance.id, task)
 
+        finally:
+            if template_vm_ref:
+                self.virt._destroy(self.instance, template_vm_ref, shutdown=False,
+                        destroy_kernel_ramdisk=False)
+
         # TODO(mdietz): we could also consider renaming these to something
         # sensible so we don't need to blindly pass around dictionaries
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
@@ -332,9 +328,9 @@ class VMOps(object):
         new_cow_uuid = str(uuid.uuid4())
         params = {'instance_id': instance.id,
                   'old_base_copy_uuid': disk_info['base_copy'],
-                  'old_cow_uuid':       disk_info['cow'],
+                  'old_cow_uuid': disk_info['cow'],
                   'new_base_copy_uuid': new_base_copy_uuid,
-                  'new_cow_uuid':       new_cow_uuid,
+                  'new_cow_uuid': new_cow_uuid,
                   'sr_path': VMHelper.get_sr_path(self._session), }
 
         task = self._session.async_call_plugin('migration',
