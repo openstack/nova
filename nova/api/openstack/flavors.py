@@ -56,26 +56,6 @@ class Controller(wsgi.Controller):
         return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
 
-    def create(self, req):
-        """Create a flavor."""
-        #TODO(jk0): Finish this later
-        #instance_types.create(
-        #    name,
-        #    memory,
-        #    vcpus,
-        #    local_gb,
-        #    flavor_id,
-        #    swap,
-        #    rxtx_quota,
-        #    rxtx_cap)
-        return "CREATE! %s" % req
-
-    def delete(self, req, id):
-        """Delete a flavor."""
-        #TODO(jk0): Finish this later
-        #instance_type.destroy(name)
-        return "DELETE! %s %s" % (req, id)
-
     def _all_ids(self):
         """Return the list of all flavorids."""
         # FIXME(kpepple) do we really need admin context here ?
