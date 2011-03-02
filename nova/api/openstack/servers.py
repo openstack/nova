@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import hashlib
 import json
 import traceback
 
@@ -71,13 +72,15 @@ def _translate_detail_keys(inst):
     public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
     inst_dict['addresses']['public'] = public_ips
 
-    inst_dict['hostId'] = ''
-
     # Return the metadata as a dictionary
     metadata = {}
     for item in inst['metadata']:
         metadata[item['key']] = item['value']
     inst_dict['metadata'] = metadata
+
+    inst_dict['hostId'] = ''
+    if inst['host']:
+        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
 
     return dict(server=inst_dict)
 
