@@ -111,7 +111,6 @@ class VMOps(object):
         VMHelper.create_vbd(self._session, vm_ref, vdi_ref, 0, True)
 
         # Alter the image before VM start for, e.g. network injection
-        #TODO(salvatore-orlando): do this only if flag is true
         if FLAGS.xenapi_inject_image:
             VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
 
@@ -493,7 +492,6 @@ class VMOps(object):
                        'ips': [ip_dict(ip) for ip in network_IPs]}
             self.write_to_param_xenstore(vm_opaque_ref, {location: mapping})
             try:
-                logging.debug("About to run write_to_xenstore")
                 self.write_to_xenstore(vm_opaque_ref, location,
                                                       mapping['location'])
             except KeyError:
