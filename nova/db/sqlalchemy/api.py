@@ -833,13 +833,10 @@ def instance_get_fixed_address_v6(context, instance_id):
     session = get_session()
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
-        if 'nova.network.manager.FlatManager' == FLAGS.network_manager:
-            return instance_ref.fixed_ip['addressv6']
-        else:
-            network_ref = network_get_by_instance(context, instance_id)
-            prefix = network_ref.cidr_v6
-            mac = instance_ref.mac_address
-            return utils.to_global_ipv6(prefix, mac)
+        network_ref = network_get_by_instance(context, instance_id)
+        prefix = network_ref.cidr_v6
+        mac = instance_ref.mac_address
+        return utils.to_global_ipv6(prefix, mac)
 
 
 @require_context

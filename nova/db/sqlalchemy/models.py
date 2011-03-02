@@ -385,8 +385,8 @@ class Network(BASE, NovaBase):
 
     ra_server = Column(String(255))
 
-    gatewayv6 = Column(String(255))
-    netmaskv6 = Column(String(255))
+    gateway_v6 = Column(String(255))
+    netmask_v6 = Column(String(255))
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -427,7 +427,6 @@ class FixedIp(BASE, NovaBase):
     __tablename__ = 'fixed_ips'
     id = Column(Integer, primary_key=True)
     address = Column(String(255))
-    addressv6 = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)

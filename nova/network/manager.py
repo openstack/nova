@@ -388,40 +388,13 @@ class FlatManager(NetworkManager):
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
                 project_net_v6 = IPy.IP(cidr_v6)
-                net['gatewayv6'] = str(project_net_v6[1])
-                net['netmaskv6'] = str(project_net_v6.prefixlen())
+                net['gateway_v6'] = str(project_net_v6[1])
+                net['netmask_v6'] = str(project_net_v6.prefixlen())
 
             network_ref = self.db.network_create_safe(context, net)
 
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
-
-    def _create_fixed_ips(self, context, network_id):
-        """Create all fixed ips for network."""
-        network_ref = self.db.network_get(context, network_id)
-        # NOTE(vish): Should these be properties of the network as opposed
-        #             to properties of the manager class?
-        bottom_reserved = self._bottom_reserved_ips
-        top_reserved = self._top_reserved_ips
-        project_net = IPy.IP(network_ref['cidr'])
-
-        if(FLAGS.use_ipv6):
-            project_net_v6 = IPy.IP(network_ref['cidr_v6'])
-
-        num_ips = len(project_net)
-        addressv6 = None
-        for index in range(num_ips):
-            address = str(project_net[index])
-            if(FLAGS.use_ipv6):
-                addressv6 = str(project_net_v6[index])
-            if index < bottom_reserved or num_ips - index < top_reserved:
-                reserved = True
-            else:
-                reserved = False
-            self.db.fixed_ip_create(context, {'network_id': network_id,
-                                              'address': address,
-                                              'addressv6': addressv6,
-                                              'reserved': reserved})
 
     def get_network_host(self, context):
         """Get the network host for the current context."""
@@ -448,6 +421,12 @@ class FlatManager(NetworkManager):
         net = {}
         net['injected'] = FLAGS.flat_injected
         net['dns'] = FLAGS.flat_network_dns
+
+        if not FLAGS.fake_network:
+            if(FLAGS.use_ipv6):
+                net['gateway_v6'] = \
+                             utils.get_my_linklocal(FLAGS.flat_network_bridge)
+
         self.db.network_update(context, network_id, net)
 
     def allocate_floating_ip(self, context, project_id):

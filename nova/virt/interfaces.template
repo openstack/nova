@@ -16,8 +16,8 @@ iface eth0 inet static
 
 #if $use_ipv6
 iface eth0 inet6 static
-    address ${addressv6}
-    netmask ${netmaskv6}
-    gateway ${gatewayv6}
+    address ${address_v6}
+    netmask ${netmask_v6}
+    gateway ${gateway_v6}
 #end if
 

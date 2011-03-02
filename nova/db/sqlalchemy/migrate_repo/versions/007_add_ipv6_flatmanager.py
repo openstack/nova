@@ -30,10 +30,6 @@ networks = Table('networks', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
         )
 
-fixed_ips = Table('fixed_ips', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
-        )
-
 #
 # New Tables
 #
@@ -42,24 +38,19 @@ fixed_ips = Table('fixed_ips', meta,
 #
 # Tables to alter
 #
-# None
+
 
 #
 # Columns to add to existing tables
 #
 
-networks_gatewayv6 = Column(
-        'gatewayv6',
+networks_gateway_v6 = Column(
+        'gateway_v6',
         String(length=255, convert_unicode=False, assert_unicode=None,
                unicode_error=None, _warn_on_bytestring=False))
 
-networks_netmaskv6 = Column(
-        'netmaskv6',
-        String(length=255, convert_unicode=False, assert_unicode=None,
-               unicode_error=None, _warn_on_bytestring=False))
-
-fixed_ips_addressv6 = Column(
-        'addressv6',
+networks_netmask_v6 = Column(
+        'netmask_v6',
         String(length=255, convert_unicode=False, assert_unicode=None,
                unicode_error=None, _warn_on_bytestring=False))
 
@@ -70,6 +61,5 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     # Add columns to existing tables
-    networks.create_column(networks_gatewayv6)
-    networks.create_column(networks_netmaskv6)
-    fixed_ips.create_column(fixed_ips_addressv6)
+    networks.create_column(networks_gateway_v6)
+    networks.create_column(networks_netmask_v6)
