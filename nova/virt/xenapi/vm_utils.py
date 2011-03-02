@@ -303,7 +303,7 @@ class VMHelper(HelperBase):
         return template_vm_ref, template_vdi_uuids
 
     @classmethod
-    def upload_image(cls, session, instance_id, vdi_uuids, image_id):
+    def upload_image(cls, session, instance, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -312,15 +312,18 @@ class VMHelper(HelperBase):
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
+        # TODO(dubs): os_type is currently defaulting to linux, we actually
+        # want to make this a NOT NULL column and require it to be specified.
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
-                  'sr_path': get_sr_path(session)}
+                  'sr_path': get_sr_path(session),
+                  'os_type': instance.get('os_type', 'linux')}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
-        session.wait_for_task(instance_id, task)
+        session.wait_for_task(instance.id, task)
 
     @classmethod
     def fetch_image(cls, session, instance_id, image, user, project,

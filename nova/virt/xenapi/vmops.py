@@ -238,11 +238,11 @@ class VMOps(object):
         try:
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                self._session, instance.id, template_vdi_uuids, image_id)
+                self._session, instance, template_vdi_uuids, image_id)
         finally:
             self._destroy(instance, template_vm_ref, shutdown=False,
                           destroy_kernel_ramdisk=False)
-
+  
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
     def reboot(self, instance):
