@@ -176,3 +176,13 @@ class QuotaTestCase(test.TestCase):
                                             instance_type='m1.small',
                                             image_id='fake',
                                             metadata=metadata)
+
+    def test_allowed_file_injection_files(self):
+        self.assertEqual(
+                quota.allowed_file_injection_files(self.context),
+                FLAGS.quota_file_injection_max_files)
+
+    def test_allowed_file_injection_file_bytes(self):
+        self.assertEqual(
+                quota.allowed_file_injection_file_bytes(self.context),
+                FLAGS.quota_file_injection_max_file_bytes)

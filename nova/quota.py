@@ -37,15 +37,22 @@ flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
 flags.DEFINE_integer('quota_metadata_items', 128,
                      'number of metadata items allowed per instance')
+flags.DEFINE_integer('quota_file_injection_max_files', 5,
+                     'number of files allowed during file injection')
+flags.DEFINE_integer('quota_file_injection_max_file_bytes', 10 * 1024,
+                     'number of bytes allowed per file during file injection')
 
 
 def get_quota(context, project_id):
-    rval = {'instances': FLAGS.quota_instances,
-            'cores': FLAGS.quota_cores,
-            'volumes': FLAGS.quota_volumes,
-            'gigabytes': FLAGS.quota_gigabytes,
-            'floating_ips': FLAGS.quota_floating_ips,
-            'metadata_items': FLAGS.quota_metadata_items}
+    rval = {
+        'instances': FLAGS.quota_instances,
+        'cores': FLAGS.quota_cores,
+        'volumes': FLAGS.quota_volumes,
+        'gigabytes': FLAGS.quota_gigabytes,
+        'floating_ips': FLAGS.quota_floating_ips,
+        'metadata_items': FLAGS.quota_metadata_items,
+        }
+
     try:
         quota = db.quota_get(context, project_id)
         for key in rval.keys():
@@ -104,6 +111,16 @@ def allowed_metadata_items(context, num_metadata_items):
     quota = get_quota(context, project_id)
     num_allowed_metadata_items = quota['metadata_items']
     return min(num_metadata_items, num_allowed_metadata_items)
+
+
+def allowed_file_injection_files(context):
+    """Return the number of files allowed per file injection"""
+    return FLAGS.quota_file_injection_max_files
+
+
+def allowed_file_injection_file_bytes(context):
+    """Return the number of bytes allowed per file during injection"""
+    return FLAGS.quota_file_injection_max_file_bytes
 
 
 class QuotaError(exception.ApiError):
