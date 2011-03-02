@@ -80,6 +80,8 @@ class APIRouter(wsgi.Router):
             server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
+            server_members['rescue'] = 'POST'
+            server_members['unrescue'] = 'POST'
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
 
