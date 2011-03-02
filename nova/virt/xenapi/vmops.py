@@ -495,7 +495,12 @@ class VMOps(object):
         self._wait_with_callback(instance.id, task, callback)
 
     def rescue(self, instance, callback):
-        """Rescue the specified instance"""
+        """Rescue the specified instance
+            - shutdown the instance VM
+            - set 'bootlock' to prevent the instance from starting in rescue
+            - spawn a rescue VM (the vm name-label will be instance-N-rescue)
+
+        """
         rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
         if rescue_vm:
             raise RuntimeError(_(
@@ -521,7 +526,12 @@ class VMOps(object):
         self._session.call_xenapi("Async.VBD.plug", vbd_ref)
 
     def unrescue(self, instance, callback):
-        """Unrescue the specified instance"""
+        """Unrescue the specified instance
+            - unplug the instance VM's disk from the rescue VM
+            - teardown the rescue VM
+            - release the bootlock to allow the instance VM to start
+
+        """
         rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
 
         if not rescue_vm:
