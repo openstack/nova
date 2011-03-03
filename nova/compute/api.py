@@ -108,9 +108,9 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata=[],
                personality_files=None):
         """Create the number of instances requested if quota and
-        other arguments check out ok.
-        """
-        type_data = instance_types.INSTANCE_TYPES[instance_type]
+        other arguments check out ok."""
+
+        type_data = instance_types.get_instance_type(instance_type)
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
             pid = context.project_id

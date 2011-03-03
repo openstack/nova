@@ -83,7 +83,7 @@ class VolumeOps(object):
                 try:
                     task = self._session.call_xenapi('Async.VBD.plug',
                                                            vbd_ref)
-                    self._session.wait_for_task(vol_rec['deviceNumber'], task)
+                    self._session.wait_for_task(task, vol_rec['deviceNumber'])
                 except self.XenAPI.Failure, exc:
                     LOG.exception(exc)
                     VolumeHelper.destroy_iscsi_storage(self._session,
