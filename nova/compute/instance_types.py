@@ -40,7 +40,7 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
     for option in [memory, vcpus, local_gb, flavorid]:
         try:
             int(option)
-        except:
+        except ValueError:
             raise exception.InvalidInputException(
                     _("create arguments must be positive integers"))
     if (int(memory) <= 0) or (int(vcpus) <= 0) or (int(local_gb) < 0):
