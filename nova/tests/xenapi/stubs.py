@@ -28,7 +28,7 @@ def stubout_instance_snapshot(stubs):
     def fake_fetch_image(cls, session, instance_id, image, user, project,
                          type):
         # Stubout wait_for_task
-        def fake_wait_for_task(self, id, task):
+        def fake_wait_for_task(self, task, id):
             class FakeEvent:
 
                 def send(self, value):

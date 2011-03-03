@@ -209,6 +209,14 @@ class XenAPIConnection(object):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
+    def rescue(self, instance, callback):
+        """Rescue the specified instance"""
+        self._vmops.rescue(instance, callback)
+
+    def unrescue(self, instance, callback):
+        """Unrescue the specified instance"""
+        self._vmops.unrescue(instance, callback)
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         self._vmops.reset_network(instance)
@@ -296,7 +304,7 @@ class XenAPISession(object):
                              self._session.xenapi.Async.host.call_plugin,
                              self.get_xenapi_host(), plugin, fn, args)
 
-    def wait_for_task(self, id, task):
+    def wait_for_task(self, task, id=None):
         """Return the result of the given task. The task is polled
         until it completes. Not re-entrant."""
         done = event.Event()
@@ -323,10 +331,11 @@ class XenAPISession(object):
         try:
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
-            action = dict(
-                instance_id=int(id),
-                action=name[0:255],  # Ensure action is never > 255
-                error=None)
+            if id:
+                action = dict(
+                    instance_id=int(id),
+                    action=name[0:255],  # Ensure action is never > 255
+                    error=None)
             if status == "pending":
                 return
             elif status == "success":
@@ -340,7 +349,9 @@ class XenAPISession(object):
                 LOG.warn(_("Task [%(name)s] %(task)s status:"
                         " %(status)s    %(error_info)s") % locals())
                 done.send_exception(self.XenAPI.Failure(error_info))
-            db.instance_action_create(context.get_admin_context(), action)
+
+            if id:
+                db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:
             LOG.warn(exc)
             done.send_exception(*sys.exc_info())

@@ -1034,6 +1034,41 @@ def console_get(context, console_id, instance_id=None):
     return IMPL.console_get(context, console_id, instance_id)
 
 
+    ##################
+
+
+def instance_type_create(context, values):
+    """Create a new instance type"""
+    return IMPL.instance_type_create(context, values)
+
+
+def instance_type_get_all(context, inactive=0):
+    """Get all instance types"""
+    return IMPL.instance_type_get_all(context, inactive)
+
+
+def instance_type_get_by_name(context, name):
+    """Get instance type by name"""
+    return IMPL.instance_type_get_by_name(context, name)
+
+
+def instance_type_get_by_flavor_id(context, id):
+    """Get instance type by name"""
+    return IMPL.instance_type_get_by_flavor_id(context, id)
+
+
+def instance_type_destroy(context, name):
+    """Delete a instance type"""
+    return IMPL.instance_type_destroy(context, name)
+
+
+def instance_type_purge(context, name):
+    """Purges (removes) an instance type from DB
+       Use instance_type_destroy for most cases
+    """
+    return IMPL.instance_type_purge(context, name)
+
+
 ####################
 
 

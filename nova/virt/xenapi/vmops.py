@@ -50,6 +50,7 @@ class VMOps(object):
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
+
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
@@ -61,31 +62,32 @@ class VMOps(object):
                 vms.append(rec["name_label"])
         return vms
 
-    def power_on(self, instance):
+    def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
-        vm = VMHelper.lookup(self._session, instance.name)
-        if vm is  None:
+        if not vm_ref:
+            vm_ref = VMHelper.lookup(self._session, instance.name)
+        if vm_ref is None:
             raise exception(_('Attempted to power on non-existent instance'
             ' bad instance id %s') % instance.id)
         LOG.debug(_("Starting instance %s"), instance.name)
-        self._session.call_xenapi('VM.start', vm, False, False)
+        self._session.call_xenapi('VM.start', vm_ref, False, False)
 
     def spawn(self, instance, disk):
         """Create VM instance"""
-        vm = VMHelper.lookup(self._session, instance.name)
+        instance_name = instance.name
+        vm = VMHelper.lookup(self._session, instance_name)
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
-            ' non-unique name %s') % instance.name)
+            ' non-unique name %s') % instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
-                name = instance['name']
-                LOG.exception(_('instance %(name)s: not enough free memory')
-                              % locals())
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                return
+            LOG.exception(_('instance %(instance_name)s: not enough free '
+                          'memory') % locals())
+            db.instance_set_state(context.get_admin_context(),
+                                  instance['id'],
+                                  power_state.SHUTDOWN)
+            return
 
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
@@ -131,10 +133,9 @@ class VMOps(object):
         self.create_vifs(instance, networks)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
-        self._session.call_xenapi('VM.start', vm_ref, False, False)
-        instance_name = instance.name
+        self._start(instance, vm_ref)
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
-                % locals())
+                 % locals())
 
         def _inject_onset_files():
             onset_files = instance.onset_files
@@ -158,18 +159,18 @@ class VMOps(object):
 
         def _wait_for_boot():
             try:
-                state = self.get_info(instance['name'])['state']
+                state = self.get_info(instance_name)['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
-                    LOG.debug(_('Instance %s: booted'), instance['name'])
+                    LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
                     _inject_onset_files()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
                 LOG.exception(_('instance %s: failed to boot'),
-                              instance['name'])
+                              instance_name)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
                                       power_state.SHUTDOWN)
@@ -217,6 +218,20 @@ class VMOps(object):
                             _('Instance not present %s') % instance_name)
         return vm
 
+    def _acquire_bootlock(self, vm):
+        """Prevent an instance from booting"""
+        self._session.call_xenapi(
+            "VM.set_blocked_operations",
+            vm,
+            {"start": ""})
+
+    def _release_bootlock(self, vm):
+        """Allow an instance to boot"""
+        self._session.call_xenapi(
+            "VM.remove_from_blocked_operations",
+            vm,
+            "start")
+
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance
 
@@ -247,8 +262,8 @@ class VMOps(object):
                     self._session, instance.id, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
-                self.virt._destroy(self.instance, template_vm_ref, shutdown=False,
-                        destroy_kernel_ramdisk=False)
+                self.virt._destroy(self.instance, template_vm_ref,
+                        shutdown=False, destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
@@ -315,8 +330,8 @@ class VMOps(object):
 
         finally:
             if template_vm_ref:
-                self.virt._destroy(self.instance, template_vm_ref, shutdown=False,
-                        destroy_kernel_ramdisk=False)
+                self.virt._destroy(self.instance, template_vm_ref,
+                        shutdown=False, destroy_kernel_ramdisk=False)
 
         # TODO(mdietz): we could also consider renaming these to something
         # sensible so we don't need to blindly pass around dictionaries
@@ -350,7 +365,7 @@ class VMOps(object):
         """Reboot VM instance"""
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm)
-        self._session.wait_for_task(instance.id, task)
+        self._session.wait_for_task(task, instance.id)
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance. This is done via
@@ -417,7 +432,7 @@ class VMOps(object):
         return resp_dict['message']
 
     def _shutdown(self, instance, vm, hard=True):
-        """Shutdown an instance """
+        """Shutdown an instance"""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
             LOG.warn(_("VM %(vm)s already halted, skipping shutdown...") %
@@ -430,11 +445,10 @@ class VMOps(object):
         try:
             task = None
             if hard:
-                task = self._session.call_xenapi('Async.VM.hard_shutdown', vm)
+                task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
             else:
                 task = self._session.call_xenapi('Async.VM.clean_shutdown', vm)
-
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -451,7 +465,7 @@ class VMOps(object):
         for vdi in vdis:
             try:
                 task = self._session.call_xenapi('Async.VDI.destroy', vdi)
-                self._session.wait_for_task(instance.id, task)
+                self._session.wait_for_task(task, instance.id)
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
@@ -490,7 +504,7 @@ class VMOps(object):
         args = {'kernel-file': kernel, 'ramdisk-file': ramdisk}
         task = self._session.async_call_plugin(
             'glance', 'remove_kernel_ramdisk', args)
-        self._session.wait_for_task(instance.id, task)
+        self._session.wait_for_task(task, instance.id)
 
         LOG.debug(_("kernel/ramdisk files removed"))
 
@@ -499,7 +513,7 @@ class VMOps(object):
         instance_id = instance.id
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm)
-            self._session.wait_for_task(instance_id, task)
+            self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
@@ -542,7 +556,7 @@ class VMOps(object):
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
         try:
-            ret = self._session.wait_for_task(instance_id, task)
+            ret = self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
         callback(ret)
@@ -570,6 +584,78 @@ class VMOps(object):
         vm = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.resume', vm, False, True)
         self._wait_with_callback(instance.id, task, callback)
+
+    def rescue(self, instance, callback):
+        """Rescue the specified instance
+            - shutdown the instance VM
+            - set 'bootlock' to prevent the instance from starting in rescue
+            - spawn a rescue VM (the vm name-label will be instance-N-rescue)
+
+        """
+        rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
+        if rescue_vm:
+            raise RuntimeError(_(
+                "Instance is already in Rescue Mode: %s" % instance.name))
+
+        vm = self._get_vm_opaque_ref(instance)
+        self._shutdown(instance, vm)
+        self._acquire_bootlock(vm)
+
+        instance._rescue = True
+        self.spawn(instance)
+        rescue_vm = self._get_vm_opaque_ref(instance)
+
+        vbd = self._session.get_xenapi().VM.get_VBDs(vm)[0]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        vbd_ref = VMHelper.create_vbd(
+            self._session,
+            rescue_vm,
+            vdi_ref,
+            1,
+            False)
+
+        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+
+    def unrescue(self, instance, callback):
+        """Unrescue the specified instance
+            - unplug the instance VM's disk from the rescue VM
+            - teardown the rescue VM
+            - release the bootlock to allow the instance VM to start
+
+        """
+        rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
+
+        if not rescue_vm:
+            raise exception.NotFound(_(
+                "Instance is not in Rescue Mode: %s" % instance.name))
+
+        original_vm = self._get_vm_opaque_ref(instance)
+        vbds = self._session.get_xenapi().VM.get_VBDs(rescue_vm)
+
+        instance._rescue = False
+
+        for vbd_ref in vbds:
+            vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
+            if vbd["userdevice"] == "1":
+                VMHelper.unplug_vbd(self._session, vbd_ref)
+                VMHelper.destroy_vbd(self._session, vbd_ref)
+
+        task1 = self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm)
+        self._session.wait_for_task(task1, instance.id)
+
+        vdis = VMHelper.lookup_vm_vdis(self._session, rescue_vm)
+        for vdi in vdis:
+            try:
+                task = self._session.call_xenapi('Async.VDI.destroy', vdi)
+                self._session.wait_for_task(task, instance.id)
+            except self.XenAPI.Failure:
+                continue
+
+        task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm)
+        self._session.wait_for_task(task2, instance.id)
+
+        self._release_bootlock(original_vm)
+        self._start(instance, original_vm)
 
     def get_info(self, instance):
         """Return data about VM instance"""
@@ -615,18 +701,30 @@ class VMOps(object):
             network_IPs = [ip for ip in IPs if ip.network_id == network.id]
 
             def ip_dict(ip):
-                return {'netmask': network['netmask'],
-                        'enabled': '1',
-                        'ip': ip.address}
+                return {
+                    "ip": ip.address,
+                    "netmask": network["netmask"],
+                    "enabled": "1"}
+
+            def ip6_dict(ip6):
+                return {
+                    "ip": ip6.addressV6,
+                    "netmask": ip6.netmaskV6,
+                    "gateway": ip6.gatewayV6,
+                    "enabled": "1"}
 
             mac_id = instance.mac_address.replace(':', '')
             location = 'vm-data/networking/%s' % mac_id
-            mapping = {'label': network['label'],
-                       'gateway': network['gateway'],
-                       'mac': instance.mac_address,
-                       'dns': [network['dns']],
-                       'ips': [ip_dict(ip) for ip in network_IPs]}
+            mapping = {
+                'label': network['label'],
+                'gateway': network['gateway'],
+                'mac': instance.mac_address,
+                'dns': [network['dns']],
+                'ips': [ip_dict(ip) for ip in network_IPs],
+                'ip6s': [ip6_dict(ip) for ip in network_IPs]}
+
             self.write_to_param_xenstore(vm_opaque_ref, {location: mapping})
+
             try:
                 self.write_to_xenstore(vm_opaque_ref, location,
                                                       mapping['location'])
@@ -657,8 +755,17 @@ class VMOps(object):
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
 
             if network_ref:
-                VMHelper.create_vif(self._session, vm_opaque_ref,
-                                    network_ref, instance.mac_address)
+                try:
+                    device = "1" if instance._rescue else "0"
+                except AttributeError:
+                    device = "0"
+
+                VMHelper.create_vif(
+                    self._session,
+                    vm_opaque_ref,
+                    network_ref,
+                    instance.mac_address,
+                    device)
 
     def reset_network(self, instance):
         """
@@ -728,7 +835,7 @@ class VMOps(object):
         args.update(addl_args)
         try:
             task = self._session.async_call_plugin(plugin, method, args)
-            ret = self._session.wait_for_task(instance_id, task)
+            ret = self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, e:
             ret = None
             err_trace = e.details[-1]

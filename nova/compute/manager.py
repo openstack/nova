@@ -370,12 +370,19 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'rescuing')
+        self.db.instance_set_state(
+            context,
+            instance_id,
+            power_state.NOSTATE,
+            'rescuing')
         self.network_manager.setup_compute_network(context, instance_id)
-        self.driver.rescue(instance_ref)
+        self.driver.rescue(
+            instance_ref,
+            lambda result: self._update_state_callback(
+                self,
+                context,
+                instance_id,
+                result))
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -385,11 +392,18 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: unrescuing'), instance_id, context=context)
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'unrescuing')
-        self.driver.unrescue(instance_ref)
+        self.db.instance_set_state(
+            context,
+            instance_id,
+            power_state.NOSTATE,
+            'unrescuing')
+        self.driver.unrescue(
+            instance_ref,
+            lambda result: self._update_state_callback(
+                self,
+                context,
+                instance_id,
+                result))
         self._update_state(context, instance_id)
 
     @staticmethod
@@ -417,7 +431,7 @@ class ComputeManager(manager.Manager):
 
         #TODO(mdietz): we may want to split these into separate methods.
         if migration_ref['source_compute'] == FLAGS.host:
-            self.driver.power_on(instance_ref)
+            self.driver._start(instance_ref)
             self.db.migration_update(context, migration_id,
                     {'status': 'reverted'})
         else:

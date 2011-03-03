@@ -267,7 +267,7 @@ class CloudTestCase(test.TestCase):
         self._create_key('test1')
         self._create_key('test2')
         result = self.cloud.describe_key_pairs(self.context)
-        keys = result["keypairsSet"]
+        keys = result["keySet"]
         self.assertTrue(filter(lambda k: k['keyName'] == 'test1', keys))
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
