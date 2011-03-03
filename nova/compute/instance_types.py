@@ -58,8 +58,7 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
                     rxtx_quota=rxtx_quota,
                     rxtx_cap=rxtx_cap))
     except exception.DBError:
-        raise exception.ApiError(_("Cannot create instance type: %s"),
-                                 name)
+        raise exception.ApiError(_("Cannot create instance type: %s" % name))
 
 
 def destroy(name):
@@ -71,8 +70,7 @@ def destroy(name):
         try:
             db.instance_type_destroy(context.get_admin_context(), name)
         except exception.NotFound:
-            raise exception.ApiError(_("Unknown instance type: %s"),
-                                     name)
+            raise exception.ApiError(_("Unknown instance type: %s" % name))
 
 
 def purge(name):
@@ -84,8 +82,7 @@ def purge(name):
         try:
             db.instance_type_purge(context.get_admin_context(), name)
         except exception.NotFound:
-            raise exception.ApiError(_("Unknown instance type: %s"),
-                                      name)
+            raise exception.ApiError(_("Unknown instance type: %s" % name))
 
 
 def get_all_types(inactive=0):
@@ -109,8 +106,7 @@ def get_instance_type(name):
         inst_type = db.instance_type_get_by_name(ctxt, name)
         return inst_type
     except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s"),
-                                 name)
+        raise exception.ApiError(_("Unknown instance type: %s" % name))
 
 
 def get_by_type(instance_type):
@@ -123,8 +119,8 @@ def get_by_type(instance_type):
         inst_type = db.instance_type_get_by_name(ctxt, instance_type)
         return inst_type['name']
     except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s"),
-                                 instance_type)
+        raise exception.ApiError(_("Unknown instance type: %s" %\
+                                    instance_type))
 
 
 def get_by_flavor_id(flavor_id):
@@ -136,5 +132,4 @@ def get_by_flavor_id(flavor_id):
         flavor = db.instance_type_get_by_flavor_id(ctxt, flavor_id)
         return flavor['name']
     except exception.DBError:
-        raise exception.ApiError(_("Unknown flavor: %s"),
-                                 flavor_id)
+        raise exception.ApiError(_("Unknown flavor: %s" % flavor_id))
