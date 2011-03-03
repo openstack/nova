@@ -241,13 +241,13 @@ class ServersTest(test.TestCase):
         class FakeComputeAPI(object):
 
             def __init__(self):
-                self.onset_files = None
+                self.personality_files = None
 
             def create(self, *args, **kwargs):
-                if 'onset_files' in kwargs:
-                    self.onset_files = kwargs['onset_files']
+                if 'personality_files' in kwargs:
+                    self.personality_files = kwargs['personality_files']
                 else:
-                    self.onset_files = None
+                    self.personality_files = None
                 return [{'id': '1234', 'display_name': 'fakeinstance'}]
 
         def make_stub_method(canned_return):
@@ -271,32 +271,33 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
-        return req, req.get_response(fakes.wsgi_app()), compute_api.onset_files
+        return (req, req.get_response(fakes.wsgi_app()),
+                compute_api.personality_files)
 
     def test_create_instance_with_no_personality(self):
-        request, response, onset_files = \
+        request, response, personality_files = \
                 self._create_instance_with_personality(personality=None)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, [])
+        self.assertEquals(personality_files, [])
 
     def test_create_instance_with_personality(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Hello, World!"\n'
         b64contents = base64.b64encode(contents)
         personality = [self._personality_dict(path, b64contents)]
-        request, response, onset_files = \
+        request, response, personality_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, [(path, contents)]) 
+        self.assertEquals(personality_files, [(path, contents)])
 
     def test_create_instance_with_personality_with_non_b64_content(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Oh no!"\n'
         personality = [self._personality_dict(path, contents)]
-        request, response, onset_files = \
+        request, response, personality_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(onset_files, None)
+        self.assertEquals(personality_files, None)
 
     def test_create_instance_with_three_personalities(self):
         files = [
@@ -308,28 +309,28 @@ class ServersTest(test.TestCase):
         for path, content in files:
             personality.append(self._personality_dict(
                     path, base64.b64encode(content)))
-        request, response, onset_files = \
+        request, response, personality_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, files)
+        self.assertEquals(personality_files, files)
 
     def test_create_instance_personality_empty_content(self):
         path = '/my/file/path'
         contents = ''
         personality = [self._personality_dict(path, contents)]
-        request, response, onset_files = \
+        request, response, personality_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, [(path, contents)])
+        self.assertEquals(personality_files, [(path, contents)])
 
     def test_create_instance_personality_not_a_list(self):
         path = '/my/file/path'
         contents = 'myfilecontents'
         personality = self._personality_dict(path, contents)
-        request, response, onset_files = \
+        request, response, personality_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(onset_files, None)
+        self.assertEquals(personality_files, None)
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')

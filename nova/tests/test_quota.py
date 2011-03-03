@@ -186,7 +186,7 @@ class QuotaTestCase(test.TestCase):
         api = compute.API()
         api.create(self.context, min_count=1, max_count=1,
                 instance_type='m1.small', image_id='fake',
-                onset_files=files)
+                personality_files=files)
 
     def test_no_personality_files(self):
         api = compute.API()

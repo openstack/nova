@@ -140,15 +140,15 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def _get_onset_files_from_personality(self, personality):
+    def _get_personality_files(self, personality):
         """
-        Create a list of onset files from the personality request attribute
+        Create a list of personality files from the personality attribute
 
-        At this time, onset_files must be formatted as a list of
+        At this time, personality_files must be formatted as a list of
         (file_path, file_content) pairs for compatibility with the
         underlying compute service.
         """
-        onset_files = []
+        personality_files = []
         for item in personality:
             try:
                 path = item['path']
@@ -160,8 +160,8 @@ class Controller(wsgi.Controller):
             except TypeError:
                 msg = 'Personality content for %s cannot be decoded' % path
                 raise exc.HTTPBadRequest(explanation=msg)
-            onset_files.append((path, contents))
-        return onset_files
+            personality_files.append((path, contents))
+        return personality_files
 
     def create(self, req):
         """ Creates a new server for a given user """
@@ -191,7 +191,7 @@ class Controller(wsgi.Controller):
                 metadata.append({'key': k, 'value': v})
 
         personality = env['server'].get('personality', [])
-        onset_files = self._get_onset_files_from_personality(personality)
+        personality_files = self._get_personality_files(personality)
 
         instances = self.compute_api.create(
             context,
@@ -204,7 +204,7 @@ class Controller(wsgi.Controller):
             key_name=key_pair['name'],
             key_data=key_pair['public_key'],
             metadata=metadata,
-            onset_files=onset_files)
+            personality_files=personality_files)
         return _translate_keys(instances[0])
 
     def update(self, req, id):

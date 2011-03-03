@@ -106,7 +106,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=[],
-               onset_files=None):
+               personality_files=None):
         """Create the number of instances requested if quota and
         other arguments check out ok.
         """
@@ -144,9 +144,9 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
-        if onset_files is not None:
-            onset_files = \
-                self._check_personality_file_quota(context, onset_files)
+        if personality_files is not None:
+            personality_files = \
+                self._check_personality_file_quota(context, personality_files)
 
         image = self.image_service.show(context, image_id)
         if kernel_id is None:
@@ -242,7 +242,7 @@ class API(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
                                "availability_zone": availability_zone,
-                               "onset_files": onset_files}})
+                               "personality_files": personality_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
