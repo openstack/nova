@@ -2077,7 +2077,7 @@ def console_get(context, console_id, instance_id=None):
 
 
 @require_admin_context
-def instance_type_create(context, values):
+def instance_type_create(_context, values):
     try:
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
