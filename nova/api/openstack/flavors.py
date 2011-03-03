@@ -41,25 +41,19 @@ class Controller(wsgi.Controller):
 
     def detail(self, req):
         """Return all flavors in detail."""
-        items = [self.show(req, id)['flavor'] for id in self._all_ids()]
+        items = [self.show(req, id)['flavor'] for id in self._all_ids(req)]
         return dict(flavors=items)
 
     def show(self, req, id):
         """Return data about the given flavor id."""
-        # FIXME(kpepple) do we really need admin context here ?
-        ctxt = context.get_admin_context()
+        ctxt = req.environ['nova.context']
         values = db.instance_type_get_by_flavor_id(ctxt, id)
-        # FIXME(kpepple) refactor db call to return dict
-        # v = val.values()[0]
-        # item = dict(ram=v['memory_mb'], disk=v['local_gb'],
-        #             id=v['flavorid'], name=val.keys()[0])
         return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
 
-    def _all_ids(self):
+    def _all_ids(self, req):
         """Return the list of all flavorids."""
-        # FIXME(kpepple) do we really need admin context here ?
-        ctxt = context.get_admin_context()
+        ctxt = req.environ['nova.context']
         inst_types = db.instance_type_get_all(ctxt)
         flavor_ids = [inst_types[i]['flavorid'] for i in inst_types.keys()]
-        return flavor_ids
+        return sorted(flavor_ids)
