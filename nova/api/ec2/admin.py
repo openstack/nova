@@ -114,9 +114,9 @@ class AdminController(object):
     def __str__(self):
         return 'AdminController'
 
-    def describe_instance_types(self, _context, **_kwargs):
+    def describe_instance_types(self, context, **_kwargs):
         """Returns all active instance types data (vcpus, memory, etc.)"""
-        return {'instanceTypeSet': [db.instance_type_get_all(_context)]}
+        return {'instanceTypeSet': [db.instance_type_get_all(context)]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
