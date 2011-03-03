@@ -86,7 +86,8 @@ class VMHelper(HelperBase):
         the pv_kernel flag indicates whether the guest is HVM or PV
         """
 
-        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        instance_type = instance_types.\
+                                get_instance_type(instance.instance_type)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -144,7 +145,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def ensure_free_mem(cls, session, instance):
-        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        instance_type = instance_types.get_instance_type(
+            instance.instance_type)
         mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
