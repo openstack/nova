@@ -30,15 +30,8 @@ from nova import exception
 FLAGS = flags.FLAGS
 
 
-def create(
-        name,
-        memory,
-        vcpus,
-        local_gb,
-        flavorid,
-        swap=0,
-        rxtx_quota=0,
-        rxtx_cap=0):
+def create(name, memory, vcpus, local_gb, flavorid, swap=0,
+           rxtx_quota=0,rxtx_cap=0):
     """Creates instance types / flavors
        arguments: name memory vcpus local_gb flavorid swap rxtx_quota rxtx_cap
     """
