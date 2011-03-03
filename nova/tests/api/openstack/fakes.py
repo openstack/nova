@@ -25,6 +25,7 @@ import webob.dec
 from paste import urlmap
 
 from glance import client as glance_client
+from glance.common import exception as glance_exc
 
 from nova import auth
 from nova import context
@@ -149,25 +150,26 @@ def stub_out_glance(stubs, initial_fixtures=None):
             for f in self.fixtures:
                 if f['id'] == image_id:
                     return f
-            return None
+            raise glance_exc.NotFound
 
-        def fake_add_image(self, image_meta):
+        def fake_add_image(self, image_meta, data=None):
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_meta['id'] = id
             self.fixtures.append(image_meta)
-            return id
+            return image_meta
 
-        def fake_update_image(self, image_id, image_meta):
+        def fake_update_image(self, image_id, image_meta, data=None):
             f = self.fake_get_image_meta(image_id)
             if not f:
-                raise exc.NotFound
+                raise glance_exc.NotFound
 
             f.update(image_meta)
+            return f
 
         def fake_delete_image(self, image_id):
             f = self.fake_get_image_meta(image_id)
             if not f:
-                raise exc.NotFound
+                raise glance_exc.NotFound
 
             self.fixtures.remove(f)
 
@@ -188,7 +190,11 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
 
 class FakeToken(object):
+    id = 0
+
     def __init__(self, **kwargs):
+        FakeToken.id += 1
+        self.id = FakeToken.id
         for k, v in kwargs.iteritems():
             setattr(self, k, v)
 
@@ -203,19 +209,22 @@ class FakeAuthDatabase(object):
     data = {}
 
     @staticmethod
-    def auth_get_token(context, token_hash):
+    def auth_token_get(context, token_hash):
         return FakeAuthDatabase.data.get(token_hash, None)
 
     @staticmethod
-    def auth_create_token(context, token):
+    def auth_token_create(context, token):
         fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
         FakeAuthDatabase.data[fake_token.token_hash] = fake_token
+        FakeAuthDatabase.data['id_%i' % fake_token.id] = fake_token
         return fake_token
 
     @staticmethod
-    def auth_destroy_token(context, token):
-        if token.token_hash in FakeAuthDatabase.data:
-            del FakeAuthDatabase.data['token_hash']
+    def auth_token_destroy(context, token_id):
+        token = FakeAuthDatabase.data.get('id_%i' % token_id)
+        if token and token.token_hash in FakeAuthDatabase.data:
+            del FakeAuthDatabase.data[token.token_hash]
+            del FakeAuthDatabase.data['id_%i' % token_id]
 
 
 class FakeAuthManager(object):

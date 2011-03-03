@@ -173,12 +173,72 @@ Nova Floating IPs
 ``nova-manage floating create <host> <ip_range>``
 
     Creates floating IP addresses for the named host by the given range.
-	floating delete <ip_range>	Deletes floating IP addresses in the range given.
+
+``nova-manage floating delete <ip_range>``
+
+    Deletes floating IP addresses in the range given.
 
 ``nova-manage floating list``
 
     Displays a list of all floating IP addresses.
 
+Nova Flavor
+~~~~~~~~~~~
+
+``nova-manage flavor list``
+
+    Outputs a list of all active flavors to the screen.
+
+``nova-manage flavor list --all``
+
+    Outputs a list of all flavors (active and inactive) to the screen.
+
+``nova-manage flavor create <name> <memory> <vCPU> <local_storage> <flavorID> <(optional) swap> <(optional) RXTX Quota> <(optional) RXTX Cap>``
+
+    creates a flavor with the following positional arguments:
+     * memory (expressed in megabytes)
+     * vcpu(s) (integer)
+     * local storage (expressed in gigabytes)
+     * flavorid (unique integer)
+     * swap space (expressed in megabytes, defaults to zero, optional)
+     * RXTX quotas (expressed in gigabytes, defaults to zero, optional)
+     * RXTX cap (expressed in gigabytes, defaults to zero, optional)
+
+``nova-manage flavor delete <name>``
+
+    Delete the flavor with the name <name>. This marks the flavor as inactive and cannot be launched. However, the record stays in the database for archival and billing purposes.
+
+``nova-manage flavor delete <name> --purge``
+
+    Purges the flavor with the name <name>. This removes this flavor from the database.
+
+Nova Instance_type
+~~~~~~~~~~~~~~~~~~
+
+The instance_type command is provided as an alias for the flavor command. All the same subcommands and arguments from nova-manage flavor can be used.
+
+Nova Images
+~~~~~~~~~~~
+
+``nova-manage image image_register <path> <owner>``
+
+    Registers an image with the image service.
+
+``nova-manage image kernel_register <path> <owner>``
+
+    Registers a kernel with the image service.
+
+``nova-manage image ramdisk_register <path> <owner>``
+
+    Registers a ramdisk with the image service.
+
+``nova-manage image all_register <image_path> <kernel_path> <ramdisk_path> <owner>``
+
+    Registers an image kernel and ramdisk with the image service.
+
+``nova-manage image convert <directory>``
+
+    Converts all images in directory from the old (Bexar) format to the new format.
 
 FILES
 ========

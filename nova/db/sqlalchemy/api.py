@@ -136,15 +136,12 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
-def service_get_all(context, session=None, disabled=False):
-    if not session:
-        session = get_session()
-
-    result = session.query(models.Service).\
+def service_get_all(context, disabled=False):
+    session = get_session()
+    return session.query(models.Service).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(disabled=disabled).\
                    all()
-    return result
 
 
 @require_admin_context
@@ -155,6 +152,17 @@ def service_get_all_by_topic(context, topic):
                    filter_by(disabled=False).\
                    filter_by(topic=topic).\
                    all()
+
+
+@require_admin_context
+def service_get_by_host_and_topic(context, host, topic):
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(disabled=False).\
+                   filter_by(host=host).\
+                   filter_by(topic=topic).\
+                   first()
 
 
 @require_admin_context
@@ -579,8 +587,19 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                              'AND instance_id IS NOT NULL '
                              'AND allocated = 0',
                     {'host': host,
-                     'time': time.isoformat()})
+                     'time': time})
     return result.rowcount
+
+
+@require_admin_context
+def fixed_ip_get_all(context, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.FixedIp).all()
+    if not result:
+        raise exception.NotFound(_('No fixed ips defined'))
+
+    return result
 
 
 @require_context
@@ -606,6 +625,17 @@ def fixed_ip_get_by_address(context, address, session=None):
 def fixed_ip_get_instance(context, address):
     fixed_ip_ref = fixed_ip_get_by_address(context, address)
     return fixed_ip_ref.instance
+
+
+@require_context
+def fixed_ip_get_all_by_instance(context, instance_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
+    if not rv:
+        raise exception.NotFound(_('No address for instance %s') % instance_id)
+    return rv
 
 
 @require_context
@@ -693,6 +723,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload_all('fixed_ip.network')).\
+                         options(joinedload('metadata')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -701,6 +732,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('fixed_ip.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
+                         options(joinedload('metadata')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -719,6 +751,7 @@ def instance_get_all(context):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -729,6 +762,7 @@ def instance_get_all_by_user(context, user_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
                    all()
@@ -740,6 +774,7 @@ def instance_get_all_by_host(context, host):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -753,6 +788,7 @@ def instance_get_all_by_project(context, project_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -766,6 +802,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
                        all()
@@ -773,6 +810,7 @@ def instance_get_all_by_reservation(context, reservation_id):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
+                       options(joinedload_all('fixed_ip.network')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=False).\
@@ -1017,8 +1055,18 @@ def network_create_safe(context, values):
 
 
 @require_admin_context
+def network_delete_safe(context, network_id):
+    session = get_session()
+    with session.begin():
+        network_ref = network_get(context, network_id=network_id, \
+                                  session=session)
+        session.delete(network_ref)
+
+
+@require_admin_context
 def network_disassociate(context, network_id):
-    network_update(context, network_id, {'project_id': None})
+    network_update(context, network_id, {'project_id': None,
+                                         'host': None})
 
 
 @require_admin_context
@@ -1047,6 +1095,15 @@ def network_get(context, network_id, session=None):
     if not result:
         raise exception.NotFound(_('No network for id %s') % network_id)
 
+    return result
+
+
+@require_admin_context
+def network_get_all(context):
+    session = get_session()
+    result = session.query(models.Network)
+    if not result:
+        raise exception.NotFound(_('No networks defined'))
     return result
 
 
@@ -1080,6 +1137,18 @@ def network_get_by_bridge(context, bridge):
 
 
 @require_admin_context
+def network_get_by_cidr(context, cidr):
+    session = get_session()
+    result = session.query(models.Network).\
+                filter_by(cidr=cidr).first()
+
+    if not result:
+        raise exception.NotFound(_('Network with cidr %s does not exist') %
+                                  cidr)
+    return result
+
+
+@require_admin_context
 def network_get_by_instance(_context, instance_id):
     session = get_session()
     rv = session.query(models.Network).\
@@ -1088,6 +1157,19 @@ def network_get_by_instance(_context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False).\
                  first()
+    if not rv:
+        raise exception.NotFound(_('No network for instance %s') % instance_id)
+    return rv
+
+
+@require_admin_context
+def network_get_all_by_instance(_context, instance_id):
+    session = get_session()
+    rv = session.query(models.Network).\
+                 filter_by(deleted=False).\
+                 join(models.Network.fixed_ips).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(deleted=False)
     if not rv:
         raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv
@@ -1212,16 +1294,20 @@ def iscsi_target_create_safe(context, values):
 
 
 @require_admin_context
-def auth_destroy_token(_context, token):
+def auth_token_destroy(context, token_id):
     session = get_session()
-    session.delete(token)
+    with session.begin():
+        token_ref = auth_token_get(context, token_id, session=session)
+        token_ref.delete(session=session)
 
 
 @require_admin_context
-def auth_get_token(_context, token_hash):
-    session = get_session()
+def auth_token_get(context, token_hash, session=None):
+    if session is None:
+        session = get_session()
     tk = session.query(models.AuthToken).\
                   filter_by(token_hash=token_hash).\
+                  filter_by(deleted=can_read_deleted(context)).\
                   first()
     if not tk:
         raise exception.NotFound(_('Token %s does not exist') % token_hash)
@@ -1229,7 +1315,16 @@ def auth_get_token(_context, token_hash):
 
 
 @require_admin_context
-def auth_create_token(_context, token):
+def auth_token_update(context, token_hash, values):
+    session = get_session()
+    with session.begin():
+        token_ref = auth_token_get(context, token_hash, session=session)
+        token_ref.update(values)
+        token_ref.save(session=session)
+
+
+@require_admin_context
+def auth_token_create(_context, token):
     tk = models.AuthToken()
     tk.update(token)
     tk.save()
@@ -1909,6 +2004,51 @@ def host_get_networks(context, host):
                        all()
 
 
+###################
+
+
+@require_admin_context
+def migration_create(context, values):
+    migration = models.Migration()
+    migration.update(values)
+    migration.save()
+    return migration
+
+
+@require_admin_context
+def migration_update(context, id, values):
+    session = get_session()
+    with session.begin():
+        migration = migration_get(context, id, session=session)
+        migration.update(values)
+        migration.save(session=session)
+        return migration
+
+
+@require_admin_context
+def migration_get(context, id, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.Migration).\
+                     filter_by(id=id).first()
+    if not result:
+        raise exception.NotFound(_("No migration found with id %s")
+                % migration_id)
+    return result
+
+
+@require_admin_context
+def migration_get_by_instance_and_status(context, instance_id, status):
+    session = get_session()
+    result = session.query(models.Migration).\
+                     filter_by(instance_id=instance_id).\
+                     filter_by(status=status).first()
+    if not result:
+        raise exception.NotFound(_("No migration found with instance id %s")
+                % migration_id)
+    return result
+
+
 ##################
 
 
@@ -2008,3 +2148,139 @@ def console_get(context, console_id, instance_id=None):
         raise exception.NotFound(_("No console with id %(console_id)s"
                                    " %(idesc)s") % locals())
     return result
+
+
+    ##################
+
+
+@require_admin_context
+def instance_type_create(_context, values):
+    try:
+        instance_type_ref = models.InstanceTypes()
+        instance_type_ref.update(values)
+        instance_type_ref.save()
+    except:
+        raise exception.DBError
+    return instance_type_ref
+
+
+@require_context
+def instance_type_get_all(context, inactive=0):
+    """
+    Returns a dict describing all instance_types with name as key.
+    """
+    session = get_session()
+    if inactive:
+        inst_types = session.query(models.InstanceTypes).\
+                        order_by("name").\
+                        all()
+    else:
+        inst_types = session.query(models.InstanceTypes).\
+                        filter_by(deleted=inactive).\
+                        order_by("name").\
+                        all()
+    if inst_types:
+        inst_dict = {}
+        for i in inst_types:
+            inst_dict[i['name']] = dict(i)
+        return inst_dict
+    else:
+        raise exception.NotFound
+
+
+@require_context
+def instance_type_get_by_name(context, name):
+    """Returns a dict describing specific instance_type"""
+    session = get_session()
+    inst_type = session.query(models.InstanceTypes).\
+                    filter_by(name=name).\
+                    first()
+    if not inst_type:
+        raise exception.NotFound(_("No instance type with name %s") % name)
+    else:
+        return dict(inst_type)
+
+
+@require_context
+def instance_type_get_by_flavor_id(context, id):
+    """Returns a dict describing specific flavor_id"""
+    session = get_session()
+    inst_type = session.query(models.InstanceTypes).\
+                                    filter_by(flavorid=int(id)).\
+                                    first()
+    if not inst_type:
+        raise exception.NotFound(_("No flavor with name %s") % id)
+    else:
+        return dict(inst_type)
+
+
+@require_admin_context
+def instance_type_destroy(context, name):
+    """ Marks specific instance_type as deleted"""
+    session = get_session()
+    instance_type_ref = session.query(models.InstanceTypes).\
+                                      filter_by(name=name)
+    records = instance_type_ref.update(dict(deleted=1))
+    if records == 0:
+        raise exception.NotFound
+    else:
+        return instance_type_ref
+
+
+@require_admin_context
+def instance_type_purge(context, name):
+    """ Removes specific instance_type from DB
+        Usually instance_type_destroy should be used
+    """
+    session = get_session()
+    instance_type_ref = session.query(models.InstanceTypes).\
+                                      filter_by(name=name)
+    records = instance_type_ref.delete()
+    if records == 0:
+        raise exception.NotFound
+    else:
+        return instance_type_ref
+
+
+####################
+
+
+@require_admin_context
+def zone_create(context, values):
+    zone = models.Zone()
+    zone.update(values)
+    zone.save()
+    return zone
+
+
+@require_admin_context
+def zone_update(context, zone_id, values):
+    zone = session.query(models.Zone).filter_by(id=zone_id).first()
+    if not zone:
+        raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
+    zone.update(values)
+    zone.save()
+    return zone
+
+
+@require_admin_context
+def zone_delete(context, zone_id):
+    session = get_session()
+    with session.begin():
+        session.execute('delete from zones '
+                        'where id=:id', {'id': zone_id})
+
+
+@require_admin_context
+def zone_get(context, zone_id):
+    session = get_session()
+    result = session.query(models.Zone).filter_by(id=zone_id).first()
+    if not result:
+        raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
+    return result
+
+
+@require_admin_context
+def zone_get_all(context):
+    session = get_session()
+    return session.query(models.Zone).all()

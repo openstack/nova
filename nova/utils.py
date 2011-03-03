@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,30 +21,37 @@
 System-level utilities and helper functions.
 """
 
+import base64
 import datetime
+import functools
 import inspect
 import json
+import lockfile
+import netaddr
 import os
 import random
-import subprocess
+import re
 import socket
+import string
 import struct
 import sys
 import time
+import types
 from xml.sax import saxutils
-import re
-import netaddr
 
 from eventlet import event
 from eventlet import greenthread
-
+from eventlet.green import subprocess
+None
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import flags
 from nova import log as logging
 
 
 LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FLAGS = flags.FLAGS
 
 
 def import_class(import_str):
@@ -53,7 +61,7 @@ def import_class(import_str):
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
-        logging.debug(_('Inner Exception: %s'), exc)
+        LOG.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
@@ -121,35 +129,90 @@ def fetchfile(url, target):
 #    c.perform()
 #    c.close()
 #    fp.close()
-    execute("curl --fail %s -o %s" % (url, target))
+    execute("curl", "--fail", url, "-o", target)
 
 
-def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
-    env = os.environ.copy()
+def execute(*cmd, **kwargs):
+    process_input = kwargs.get('process_input', None)
+    addl_env = kwargs.get('addl_env', None)
+    check_exit_code = kwargs.get('check_exit_code', 0)
+    stdin = kwargs.get('stdin', subprocess.PIPE)
+    stdout = kwargs.get('stdout', subprocess.PIPE)
+    stderr = kwargs.get('stderr', subprocess.PIPE)
+    attempts = kwargs.get('attempts', 1)
+    cmd = map(str, cmd)
+
+    while attempts > 0:
+        attempts -= 1
+        try:
+            LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
+            env = os.environ.copy()
+            if addl_env:
+                env.update(addl_env)
+            obj = subprocess.Popen(cmd, stdin=stdin,
+                    stdout=stdout, stderr=stderr, env=env)
+            result = None
+            if process_input != None:
+                result = obj.communicate(process_input)
+            else:
+                result = obj.communicate()
+            obj.stdin.close()
+            if obj.returncode:
+                LOG.debug(_("Result was %s") % obj.returncode)
+                if type(check_exit_code) == types.IntType \
+                        and obj.returncode != check_exit_code:
+                    (stdout, stderr) = result
+                    raise ProcessExecutionError(exit_code=obj.returncode,
+                                                stdout=stdout,
+                                                stderr=stderr,
+                                                cmd=' '.join(cmd))
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
+            greenthread.sleep(0)
+            return result
+        except ProcessExecutionError:
+            if not attempts:
+                raise
+            else:
+                LOG.debug(_("%r failed. Retrying."), cmd)
+                greenthread.sleep(random.randint(20, 200) / 100.0)
+
+
+def ssh_execute(ssh, cmd, process_input=None,
+                addl_env=None, check_exit_code=True):
+    LOG.debug(_("Running cmd (SSH): %s"), ' '.join(cmd))
     if addl_env:
-        env.update(addl_env)
-    obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-    result = None
-    if process_input != None:
-        result = obj.communicate(process_input)
-    else:
-        result = obj.communicate()
-    obj.stdin.close()
-    if obj.returncode:
-        LOG.debug(_("Result was %s") % obj.returncode)
-        if check_exit_code and obj.returncode != 0:
-            (stdout, stderr) = result
-            raise ProcessExecutionError(exit_code=obj.returncode,
-                                        stdout=stdout,
-                                        stderr=stderr,
-                                        cmd=cmd)
-    # NOTE(termie): this appears to be necessary to let the subprocess call
-    #               clean something up in between calls, without it two
-    #               execute calls in a row hangs the second one
-    greenthread.sleep(0)
-    return result
+        raise exception.Error("Environment not supported over SSH")
+
+    if process_input:
+        # This is (probably) fixable if we need it...
+        raise exception.Error("process_input not supported over SSH")
+
+    stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
+    channel = stdout_stream.channel
+
+    #stdin.write('process_input would go here')
+    #stdin.flush()
+
+    # NOTE(justinsb): This seems suspicious...
+    # ...other SSH clients have buffering issues with this approach
+    stdout = stdout_stream.read()
+    stderr = stderr_stream.read()
+    stdin_stream.close()
+
+    exit_status = channel.recv_exit_status()
+
+    # exit_status == -1 if no exit code was returned
+    if exit_status != -1:
+        LOG.debug(_("Result was %s") % exit_status)
+        if check_exit_code and exit_status != 0:
+            raise exception.ProcessExecutionError(exit_code=exit_status,
+                                                  stdout=stdout,
+                                                  stderr=stderr,
+                                                  cmd=' '.join(cmd))
+
+    return (stdout, stderr)
 
 
 def abspath(s):
@@ -180,9 +243,9 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, cmd, check_exit_code=True):
-    LOG.debug(_("Running %s"), (cmd))
-    rv, err = execute(cmd, check_exit_code=check_exit_code)
+def runthis(prompt, *cmd, **kwargs):
+    LOG.debug(_("Running %s"), (" ".join(cmd)))
+    rv, err = execute(*cmd, **kwargs)
 
 
 def generate_uid(topic, size=8):
@@ -199,13 +262,22 @@ def generate_mac():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
+def generate_password(length=20):
+    """Generate a random sequence of letters and digits
+    to be used as a password. Note that this is not intended
+    to represent the ultimate in security.
+    """
+    chrs = string.letters + string.digits
+    return "".join([random.choice(chrs) for i in xrange(length)])
+
+
 def last_octet(address):
     return int(address.split(".")[-1])
 
 
 def  get_my_linklocal(interface):
     try:
-        if_str = execute("ip -f inet6 -o addr show %s" % interface)
+        if_str = execute("ip", "-f", "inet6", "-o", "addr", "show", interface)
         condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
@@ -440,3 +512,76 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+def synchronized(name):
+    def wrap(f):
+        @functools.wraps(f)
+        def inner(*args, **kwargs):
+            lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
+                                                  'nova-%s.lock' % name))
+            with lock:
+                return f(*args, **kwargs)
+        return inner
+    return wrap
+
+
+def ensure_b64_encoding(val):
+    """Safety method to ensure that values expected to be base64-encoded
+    actually are. If they are, the value is returned unchanged. Otherwise,
+    the encoded value is returned.
+    """
+    try:
+        dummy = base64.decode(val)
+        return val
+    except TypeError:
+        return base64.b64encode(val)
+
+
+def get_from_path(items, path):
+    """ Returns a list of items matching the specified path.  Takes an
+    XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,
+    looks up items[prop1][prop2][prop3].  Like XPath, if any of the
+    intermediate results are lists it will treat each list item individually.
+    A 'None' in items or any child expressions will be ignored, this function
+    will not throw because of None (anywhere) in items.  The returned list
+    will contain no None values."""
+
+    if path is None:
+        raise exception.Error("Invalid mini_xpath")
+
+    (first_token, sep, remainder) = path.partition("/")
+
+    if first_token == "":
+        raise exception.Error("Invalid mini_xpath")
+
+    results = []
+
+    if items is None:
+        return results
+
+    if not isinstance(items, types.ListType):
+        # Wrap single objects in a list
+        items = [items]
+
+    for item in items:
+        if item is None:
+            continue
+        get_method = getattr(item, "get", None)
+        if get_method is None:
+            continue
+        child = get_method(first_token)
+        if child is None:
+            continue
+        if isinstance(child, types.ListType):
+            # Flatten intermediate lists
+            for x in child:
+                results.append(x)
+        else:
+            results.append(child)
+
+    if not sep:
+        # No more tokens
+        return results
+    else:
+        return get_from_path(results, remainder)

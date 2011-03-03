@@ -66,7 +66,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
     sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
     sudo apt-get install -y lvm2 iscsitarget open-iscsi
-    sudo apt-get install -y socat
+    sudo apt-get install -y socat unzip
     echo "ISCSITARGET_ENABLE=true" | sudo tee /etc/default/iscsitarget
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
@@ -111,8 +111,7 @@ if [ "$CMD" == "run" ]; then
 --nodaemon
 --dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
 --network_manager=nova.network.manager.$NET_MAN
---cc_host=$HOST_IP
---routing_source_ip=$HOST_IP
+--my_ip=$HOST_IP
 --sql_connection=$SQL_CONN
 --auth_driver=nova.auth.$AUTH
 --libvirt_type=$LIBVIRT_TYPE
@@ -151,7 +150,6 @@ NOVA_CONF_EOF
     mkdir -p $NOVA_DIR/instances
     rm -rf $NOVA_DIR/networks
     mkdir -p $NOVA_DIR/networks
-    $NOVA_DIR/tools/clean-vlans
     if [ ! -d "$NOVA_DIR/images" ]; then
         ln -s $DIR/images $NOVA_DIR/images
     fi
@@ -168,10 +166,11 @@ NOVA_CONF_EOF
     $NOVA_DIR/bin/nova-manage user admin admin admin admin
     # create a project called 'admin' with project manager of 'admin'
     $NOVA_DIR/bin/nova-manage project create admin admin
-    # export environment variables for project 'admin' and user 'admin'
-    $NOVA_DIR/bin/nova-manage project environment admin admin $NOVA_DIR/novarc
     # create a small network
     $NOVA_DIR/bin/nova-manage network create 10.0.0.0/8 1 32
+
+    # create some floating ips
+    $NOVA_DIR/bin/nova-manage floating create `hostname` 10.6.0.0/27
 
     # nova api crashes if we start it with a regular screen command,
     # so send the start command by forcing text into the window.
@@ -182,6 +181,11 @@ NOVA_CONF_EOF
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler"
     screen_it volume "$NOVA_DIR/bin/nova-volume"
     screen_it ajax_console_proxy "$NOVA_DIR/bin/nova-ajax-console-proxy"
+    sleep 2
+    # export environment variables for project 'admin' and user 'admin'
+    $NOVA_DIR/bin/nova-manage project zipfile admin admin $NOVA_DIR/nova.zip
+    unzip -o $NOVA_DIR/nova.zip -d $NOVA_DIR/
+
     screen_it test ". $NOVA_DIR/novarc"
     screen -S nova -x
 fi

@@ -15,25 +15,41 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob.exc
+
 from nova import exception
 
 
-def limited(items, req):
-    """Return a slice of items according to requested offset and limit.
-
-    items - a sliceable
-    req - wobob.Request possibly containing offset and limit GET variables.
-          offset is where to start in the list, and limit is the maximum number
-          of items to return.
-
-    If limit is not specified, 0, or > 1000, defaults to 1000.
+def limited(items, request, max_limit=1000):
     """
+    Return a slice of items according to requested offset and limit.
 
-    offset = int(req.GET.get('offset', 0))
-    limit = int(req.GET.get('limit', 0))
-    if not limit:
-        limit = 1000
-    limit = min(1000, limit)
+    @param items: A sliceable entity
+    @param request: `wsgi.Request` possibly containing 'offset' and 'limit'
+                    GET variables. 'offset' is where to start in the list,
+                    and 'limit' is the maximum number of items to return. If
+                    'limit' is not specified, 0, or > max_limit, we default
+                    to max_limit. Negative values for either offset or limit
+                    will cause exc.HTTPBadRequest() exceptions to be raised.
+    @kwarg max_limit: The maximum number of items to return from 'items'
+    """
+    try:
+        offset = int(request.GET.get('offset', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', max_limit))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if offset < 0:
+        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
+
+    limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
     return items[offset:range_end]
 

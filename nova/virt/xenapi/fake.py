@@ -286,6 +286,13 @@ class SessionBase(object):
         rec['currently_attached'] = False
         rec['device'] = ''
 
+    def host_compute_free_memory(self, _1, ref):
+        #Always return 12GB available
+        return 12 * 1024 * 1024 * 1024
+
+    def host_call_plugin(*args):
+        return 'herp'
+
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
             self._login(methodname, params)
@@ -397,7 +404,7 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 return _db_content[cls][ref][field]
 
-        LOG.debuug(_('Raising NotImplemented'))
+        LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
             _('xenapi.fake does not have an implementation for %s or it has '
             'been called with the wrong number of arguments') % name)

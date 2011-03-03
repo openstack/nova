@@ -311,4 +311,5 @@ class S3APITestCase(test.TestCase):
         self.auth_manager.delete_user('admin')
         self.auth_manager.delete_project('admin')
         stop_listening = defer.maybeDeferred(self.listening_port.stopListening)
+        super(S3APITestCase, self).tearDown()
         return defer.DeferredList([stop_listening])

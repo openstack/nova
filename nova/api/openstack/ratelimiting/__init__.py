@@ -57,7 +57,7 @@ class RateLimitingMiddleware(wsgi.Middleware):
             self.limiter = WSGIAppProxy(service_host)
         super(RateLimitingMiddleware, self).__init__(application)
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         """Rate limit the request.
 
@@ -183,7 +183,7 @@ class WSGIApp(object):
         """Create the WSGI application using the given Limiter instance."""
         self.limiter = limiter
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         parts = req.path_info.split('/')
         # format: /limiter/<username>/<urlencoded action>

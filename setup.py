@@ -18,9 +18,20 @@
 
 import os
 import subprocess
+import sys
 
-from setuptools import setup, find_packages
+from setuptools import find_packages
 from setuptools.command.sdist import sdist
+
+try:
+    import DistUtilsExtra.auto
+except ImportError:
+    print >> sys.stderr, 'To build nova you need '\
+                         'https://launchpad.net/python-distutils-extra'
+    sys.exit(1)
+assert DistUtilsExtra.auto.__version__ >= '2.18',\
+       'needs DistUtilsExtra.auto >= 2.18'
+
 
 from nova.utils import parse_mailmap, str_dict_replace
 from nova import version
@@ -75,7 +86,7 @@ try:
 except:
     pass
 
-setup(name='nova',
+DistUtilsExtra.auto.setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
       author='OpenStack',
@@ -85,9 +96,12 @@ setup(name='nova',
       packages=find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       test_suite='nose.collector',
-      scripts=['bin/nova-api',
+      scripts=['bin/nova-ajax-console-proxy',
+               'bin/nova-api',
                'bin/nova-compute',
+               'bin/nova-console',
                'bin/nova-dhcpbridge',
+               'bin/nova-direct-api',
                'bin/nova-import-canonical-imagestore',
                'bin/nova-instancemonitor',
                'bin/nova-logspool',
@@ -96,5 +110,6 @@ setup(name='nova',
                'bin/nova-objectstore',
                'bin/nova-scheduler',
                'bin/nova-spoolsentry',
+               'bin/stack',
                'bin/nova-volume',
                'tools/nova-debug'])

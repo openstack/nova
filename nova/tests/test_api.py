@@ -20,6 +20,7 @@
 
 import boto
 from boto.ec2 import regioninfo
+import datetime
 import httplib
 import random
 import StringIO
@@ -126,6 +127,28 @@ class ApiEc2TestCase(test.TestCase):
         # pylint: disable-msg=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
+
+    def test_return_valid_isoformat(self):
+        """
+            Ensure that the ec2 api returns datetime in xs:dateTime
+            (which apparently isn't datetime.isoformat())
+            NOTE(ken-pepple): https://bugs.launchpad.net/nova/+bug/721297
+        """
+        conv = apirequest._database_to_isoformat
+        # sqlite database representation with microseconds
+        time_to_convert = datetime.datetime.strptime(
+                            "2011-02-21 20:14:10.634276",
+                            "%Y-%m-%d %H:%M:%S.%f")
+        self.assertEqual(
+                        conv(time_to_convert),
+                        '2011-02-21T20:14:10Z')
+        # mysqlite database representation
+        time_to_convert = datetime.datetime.strptime(
+                            "2011-02-21 19:56:18",
+                            "%Y-%m-%d %H:%M:%S")
+        self.assertEqual(
+                        conv(time_to_convert),
+                        '2011-02-21T19:56:18Z')
 
     def test_xmlns_version_matches_request_version(self):
         self.expect_http(api_version='2010-10-30')
@@ -248,16 +271,14 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         rv = self.ec2.get_all_security_groups()
-        # I don't bother checkng that we actually find it here,
-        # because the create/delete unit test further up should
-        # be good enough for that.
-        for group in rv:
-            if group.name == security_group_name:
-                self.assertEquals(len(group.rules), 1)
-                self.assertEquals(int(group.rules[0].from_port), 80)
-                self.assertEquals(int(group.rules[0].to_port), 81)
-                self.assertEquals(len(group.rules[0].grants), 1)
-                self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
+
+        group = [grp for grp in rv if grp.name == security_group_name][0]
+
+        self.assertEquals(len(group.rules), 1)
+        self.assertEquals(int(group.rules[0].from_port), 80)
+        self.assertEquals(int(group.rules[0].to_port), 81)
+        self.assertEquals(len(group.rules[0].grants), 1)
+        self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -314,16 +335,13 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         rv = self.ec2.get_all_security_groups()
-        # I don't bother checkng that we actually find it here,
-        # because the create/delete unit test further up should
-        # be good enough for that.
-        for group in rv:
-            if group.name == security_group_name:
-                self.assertEquals(len(group.rules), 1)
-                self.assertEquals(int(group.rules[0].from_port), 80)
-                self.assertEquals(int(group.rules[0].to_port), 81)
-                self.assertEquals(len(group.rules[0].grants), 1)
-                self.assertEquals(str(group.rules[0].grants[0]), '::/0')
+
+        group = [grp for grp in rv if grp.name == security_group_name][0]
+        self.assertEquals(len(group.rules), 1)
+        self.assertEquals(int(group.rules[0].from_port), 80)
+        self.assertEquals(int(group.rules[0].to_port), 81)
+        self.assertEquals(len(group.rules[0].grants), 1)
+        self.assertEquals(str(group.rules[0].grants[0]), '::/0')
 
         self.expect_http()
         self.mox.ReplayAll()
