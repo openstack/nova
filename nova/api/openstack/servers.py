@@ -85,6 +85,7 @@ def _translate_detail_keys(inst):
 
     return dict(server=inst_dict)
 
+
 def _translate_keys(inst):
     """ Coerces into dictionary format, excluding all model attributes
     save for id and name """
@@ -143,8 +144,8 @@ class Controller(wsgi.Controller):
         """
         Create a list of onset files from the personality request attribute
 
-        At this time, onset_files must be formatted as a list of 
-        (file_path, file_content) pairs for compatibility with the 
+        At this time, onset_files must be formatted as a list of
+        (file_path, file_content) pairs for compatibility with the
         underlying compute service.
         """
         onset_files = []
@@ -157,8 +158,8 @@ class Controller(wsgi.Controller):
             try:
                 contents = base64.b64decode(contents)
             except TypeError:
-                raise exc.HTTPBadRequest(explanation=
-                        'Personality content for %s cannot be decoded' % path)
+                msg = 'Personality content for %s cannot be decoded' % path
+                raise exc.HTTPBadRequest(explanation=msg)
             onset_files.append((path, contents))
         return onset_files
 

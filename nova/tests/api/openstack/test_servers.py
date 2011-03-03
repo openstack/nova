@@ -287,8 +287,8 @@ class ServersTest(test.TestCase):
         request, response, onset_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, [(path, contents)])
-    
+        self.assertEquals(onset_files, [(path, contents)]) 
+
     def test_create_instance_with_personality_with_non_b64_content(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Oh no!"\n'
@@ -320,7 +320,7 @@ class ServersTest(test.TestCase):
         request, response, onset_files = \
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(onset_files, [(path, contents)]) 
+        self.assertEquals(onset_files, [(path, contents)])
 
     def test_create_instance_personality_not_a_list(self):
         path = '/my/file/path'
