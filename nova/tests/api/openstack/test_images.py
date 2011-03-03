@@ -202,7 +202,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.orig_image_service = FLAGS.image_service
         FLAGS.image_service = 'nova.image.glance.GlanceImageService'
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -216,7 +216,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def test_get_image_index(self):
-        req = webob.Request.blank('/v1.0/images')
+        req = webob.Request.blank('/v1.0/testacct/images')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -228,7 +228,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                               "image %s not in fixture index!" % str(image))
 
     def test_get_image_details(self):
-        req = webob.Request.blank('/v1.0/images/detail')
+        req = webob.Request.blank('/v1.0/testacct/images/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 

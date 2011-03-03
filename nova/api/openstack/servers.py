@@ -105,11 +105,11 @@ class Controller(wsgi.Controller):
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
-    def index(self, req):
+    def index(self, req, **kw):
         """ Returns a list of server names and ids for a given user """
         return self._items(req, entity_maker=_translate_keys)
 
-    def detail(self, req):
+    def detail(self, req, **kw):
         """ Returns a list of server details for a given user """
         return self._items(req, entity_maker=_translate_detail_keys)
 
@@ -123,7 +123,7 @@ class Controller(wsgi.Controller):
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return dict(servers=res)
 
-    def show(self, req, id):
+    def show(self, req, id, **kw):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
@@ -131,7 +131,7 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-    def delete(self, req, id):
+    def delete(self, req, id, **kw):
         """ Destroys a server """
         try:
             self.compute_api.delete(req.environ['nova.context'], id)
@@ -139,7 +139,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def create(self, req):
+    def create(self, req, **kw):
         """ Creates a new server for a given user """
         env = self._deserialize(req.body, req)
         if not env:
@@ -180,7 +180,7 @@ class Controller(wsgi.Controller):
             onset_files=env.get('onset_files', []))
         return _translate_keys(instances[0])
 
-    def update(self, req, id):
+    def update(self, req, id, **kw):
         """ Updates the server name or password """
         inst_dict = self._deserialize(req.body, req)
         if not inst_dict:
@@ -202,7 +202,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
 
-    def action(self, req, id):
+    def action(self, req, id, **kw):
         """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
         input_dict = self._deserialize(req.body, req)
@@ -219,7 +219,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def lock(self, req, id):
+    def lock(self, req, id, **kw):
         """
         lock the instance with id
         admin only operation
@@ -234,7 +234,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def unlock(self, req, id):
+    def unlock(self, req, id, **kw):
         """
         unlock the instance with id
         admin only operation
@@ -249,7 +249,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def get_lock(self, req, id):
+    def get_lock(self, req, id, **kw):
         """
         return the boolean state of (instance with id)'s lock
 
@@ -263,7 +263,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def reset_network(self, req, id):
+    def reset_network(self, req, id, **kw):
         """
         Reset networking on an instance (admin only).
 
@@ -277,7 +277,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def inject_network_info(self, req, id):
+    def inject_network_info(self, req, id, **kw):
         """
         Inject network info for an instance (admin only).
 
@@ -291,7 +291,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def pause(self, req, id):
+    def pause(self, req, id, **kw):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
         try:
@@ -302,7 +302,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def unpause(self, req, id):
+    def unpause(self, req, id, **kw):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
         try:
@@ -313,7 +313,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def suspend(self, req, id):
+    def suspend(self, req, id, **kw):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
         try:
@@ -324,7 +324,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def resume(self, req, id):
+    def resume(self, req, id, **kw):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
         try:
@@ -335,7 +335,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
-    def get_ajax_console(self, req, id):
+    def get_ajax_console(self, req, id, **kw):
         """ Returns a url to an instance's ajaxterm console. """
         try:
             self.compute_api.get_ajax_console(req.environ['nova.context'],
@@ -344,12 +344,12 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def diagnostics(self, req, id):
+    def diagnostics(self, req, id, **kw):
         """Permit Admins to retrieve server diagnostics."""
         ctxt = req.environ["nova.context"]
         return self.compute_api.get_diagnostics(ctxt, id)
 
-    def actions(self, req, id):
+    def actions(self, req, id, **kw):
         """Permit Admins to retrieve server actions."""
         ctxt = req.environ["nova.context"]
         items = self.compute_api.get_actions(ctxt, id)

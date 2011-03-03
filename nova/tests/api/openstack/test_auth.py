@@ -51,7 +51,9 @@ class Test(test.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        u = nova.auth.manager.User(1, 'herp', None, None, None)
+        f.add_user('derp', u)
+        f.create_project('test', u)
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -65,7 +67,9 @@ class Test(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        u = nova.auth.manager.User(1, 'herp', None, None, None)
+        f.add_user('derp', u)
+        f.create_project('test', u)
 
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
@@ -74,7 +78,7 @@ class Test(test.TestCase):
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
         self.assertEqual(result.headers['X-Server-Management-Url'],
-            "http://foo/v1.0/")
+            "http://foo/v1.0/test/")
         self.assertEqual(result.headers['X-CDN-Management-Url'],
             "")
         self.assertEqual(result.headers['X-Storage-Url'], "")
@@ -82,7 +86,7 @@ class Test(test.TestCase):
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouter',
             fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        req = webob.Request.blank('/v1.0/test/fake')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '200 OK')
@@ -176,6 +180,9 @@ class TestLimiter(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
+        u = nova.auth.manager.User(1, 'herp', None, None, None)
+        f.add_user('derp', u)
+        f.create_project('test', u)
         f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
@@ -187,7 +194,7 @@ class TestLimiter(test.TestCase):
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouter',
             fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/fake')
+        req = webob.Request.blank('/v1.0/test/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())

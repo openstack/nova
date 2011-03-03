@@ -32,18 +32,18 @@ class Controller(wsgi.Controller):
             "attributes": {
                 "flavor": ["id", "name", "ram", "disk"]}}}
 
-    def index(self, req):
+    def index(self, req, **kw):
         """Return all flavors in brief."""
         return dict(flavors=[dict(id=flavor['id'], name=flavor['name'])
                              for flavor in self.detail(req)['flavors']])
 
-    def detail(self, req):
+    def detail(self, req, **kw):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids()]
         items = common.limited(items, req)
         return dict(flavors=items)
 
-    def show(self, req, id):
+    def show(self, req, id, **kw):
         """Return data about the given flavor id."""
         for name, val in instance_types.INSTANCE_TYPES.iteritems():
             if val['flavorid'] == int(id):

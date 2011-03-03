@@ -115,14 +115,14 @@ class Controller(wsgi.Controller):
     def __init__(self):
         self._service = utils.import_object(FLAGS.image_service)
 
-    def index(self, req):
+    def index(self, req, **kw):
         """Return all public images in brief"""
         items = self._service.index(req.environ['nova.context'])
         items = common.limited(items, req)
         items = [_filter_keys(item, ('id', 'name')) for item in items]
         return dict(images=items)
 
-    def detail(self, req):
+    def detail(self, req, **kw):
         """Return all public images in detail"""
         try:
             items = self._service.detail(req.environ['nova.context'])
@@ -136,7 +136,7 @@ class Controller(wsgi.Controller):
         items = [_translate_status(item) for item in items]
         return dict(images=items)
 
-    def show(self, req, id):
+    def show(self, req, id, **kw):
         """Return data about the given image id"""
         image_id = common.get_image_id_from_image_hash(self._service,
                     req.environ['nova.context'], id)
@@ -145,11 +145,11 @@ class Controller(wsgi.Controller):
         _convert_image_id_to_hash(image)
         return dict(image=image)
 
-    def delete(self, req, id):
+    def delete(self, req, id, **kw):
         # Only public images are supported for now.
         raise faults.Fault(exc.HTTPNotFound())
 
-    def create(self, req):
+    def create(self, req, **kw):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req)
         instance_id = env["image"]["serverId"]
@@ -160,7 +160,7 @@ class Controller(wsgi.Controller):
 
         return dict(image=image_meta)
 
-    def update(self, req, id):
+    def update(self, req, id, **kw):
         # Users may not modify public images, and that's all that
         # we support for now.
         raise faults.Fault(exc.HTTPNotFound())

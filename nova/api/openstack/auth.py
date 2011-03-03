@@ -28,11 +28,13 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import manager
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
 
+LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
 
 
@@ -50,14 +52,27 @@ class AuthMiddleware(wsgi.Middleware):
     def __call__(self, req):
         if not self.has_authentication(req):
             return self.authenticate(req)
-
         user = self.get_user_by_authentication(req)
+        account_name = req.path_info_peek()
 
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        project = self.auth.get_project(FLAGS.default_project)
-        req.environ['nova.context'] = context.RequestContext(user, project)
+        if not account_name:
+            if self.auth.is_admin(user):
+                account_name = FLAGS.default_project
+            else:
+                return faults.Fault(webob.exc.HTTPUnauthorized())
+        try:
+            account = self.auth.get_project(account_name)
+        except exception.NotFound:
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
+        if not self.auth.is_admin(user) and \
+           not self.auth.is_project_member(user, account):
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
+        req.environ['nova.context'] = context.RequestContext(user, account)
         return self.application
 
     def has_authentication(self, req):
@@ -70,6 +85,7 @@ class AuthMiddleware(wsgi.Middleware):
         # Unless the request is explicitly made against /<version>/ don't
         # honor it
         path_info = req.path_info
+        account_name = None
         if len(path_info) > 1:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
@@ -79,7 +95,10 @@ class AuthMiddleware(wsgi.Middleware):
         except KeyError:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        token, user = self._authorize_user(username, key, req)
+        if ':' in username:
+            account_name, username = username.rsplit(':', 1)
+
+        token, user = self._authorize_user(username, account_name, key, req)
         if user and token:
             res = webob.Response()
             res.headers['X-Auth-Token'] = token.token_hash
@@ -116,23 +135,44 @@ class AuthMiddleware(wsgi.Middleware):
                 return self.auth.get_user(token.user_id)
         return None
 
-    def _authorize_user(self, username, key, req):
+    def _authorize_user(self, username, account_name, key, req):
         """Generates a new token and assigns it to a user.
 
         username - string
+        account_name - string
         key - string API key
         req - webob.Request object
         """
         ctxt = context.get_admin_context()
         user = self.auth.get_user_from_access_key(key)
+        if account_name:
+            try:
+                account = self.auth.get_project(account_name)
+            except exception.NotFound:
+                return None, None
+        else:
+            # (dragondm) punt and try to determine account.
+            # this is something of a hack, but a user on 1 account is a
+            # common case, and is the way the current RS code works.
+            accounts = self.auth.get_projects(user=user)
+            if len(accounts) == 1:
+                account = accounts[0]
+            else:
+                #we can't tell what account they are logging in for.
+                return None, None
+
         if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
                 time.time())).hexdigest()
             token_dict = {}
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
-            # Same as auth url, e.g. http://foo.org:8774/baz/v1.0
-            token_dict['server_management_url'] = req.url
+            # auth url + project (account) id, e.g.
+            # http://foo.org:8774/baz/v1.0/myacct/
+            os_url = '%s%s%s/' % (req.url,
+                                  '' if req.url.endswith('/') else '/',
+                                  account.id)
+            token_dict['server_management_url'] = os_url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)

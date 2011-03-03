@@ -433,6 +433,8 @@ class ProjectCommands(object):
                     "been created.\nPlease create a database by running a "
                     "nova-api server on this host.")
 
+AccountCommands = ProjectCommands
+
 
 class FixedIpCommands(object):
     """Class for managing fixed ip."""
@@ -663,6 +665,7 @@ class VolumeCommands(object):
 
 CATEGORIES = [
     ('user', UserCommands),
+    ('account', AccountCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
     ('shell', ShellCommands),

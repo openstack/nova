@@ -207,7 +207,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
         'transfer-encoding': 'chunked',
         'x-image-meta-is_public': 'True',
         'x-image-meta-status': 'queued',
-        'x-image-meta-type': 'vhd'
+        'x-image-meta-type': 'vhd',
      }
     for header, value in headers.iteritems():
         conn.putheader(header, value)

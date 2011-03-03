@@ -40,15 +40,15 @@ class Controller(wsgi.Controller):
     def __init__(self):
         pass
 
-    def index(self, req, server_id):
+    def index(self, req, server_id, **kw):
         """ Returns the list of backup schedules for a given instance """
         return _translate_keys({})
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, **kw):
         """ No actual update method required, since the existing API allows
         both create and update through a POST """
         return faults.Fault(exc.HTTPNotImplemented())
 
-    def delete(self, req, server_id, id):
+    def delete(self, req, server_id, id, **kw):
         """ Deletes an existing backup schedule """
         return faults.Fault(exc.HTTPNotImplemented())

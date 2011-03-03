@@ -28,7 +28,7 @@ class FlavorsTest(test.TestCase):
     def setUp(self):
         super(FlavorsTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -39,7 +39,7 @@ class FlavorsTest(test.TestCase):
         super(FlavorsTest, self).tearDown()
 
     def test_get_flavor_list(self):
-        req = webob.Request.blank('/v1.0/flavors')
+        req = webob.Request.blank('/v1.0/testacct/flavors')
         res = req.get_response(fakes.wsgi_app())
 
     def test_get_flavor_by_id(self):

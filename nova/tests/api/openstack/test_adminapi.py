@@ -35,7 +35,7 @@ class AdminAPITest(test.TestCase):
     def setUp(self):
         super(AdminAPITest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -50,7 +50,7 @@ class AdminAPITest(test.TestCase):
     def test_admin_enabled(self):
         FLAGS.allow_admin_api = True
         # We should still be able to access public operations.
-        req = webob.Request.blank('/v1.0/flavors')
+        req = webob.Request.blank('/v1.0/testacct/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         # TODO: Confirm admin operations are available.
@@ -58,7 +58,7 @@ class AdminAPITest(test.TestCase):
     def test_admin_disabled(self):
         FLAGS.allow_admin_api = False
         # We should still be able to access public operations.
-        req = webob.Request.blank('/v1.0/flavors')
+        req = webob.Request.blank('/v1.0/testacct/flavors')
         res = req.get_response(fakes.wsgi_app())
         # TODO: Confirm admin operations are unavailable.
         self.assertEqual(res.status_int, 200)
