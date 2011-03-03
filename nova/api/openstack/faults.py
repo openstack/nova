@@ -57,6 +57,7 @@ class Fault(webob.exc.HTTPException):
             fault_data[fault_name]['retryAfter'] = retry
         # 'code' is an attribute on the fault tag itself
         metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
-        serializer = wsgi.Serializer(req.environ, metadata)
-        self.wrapped_exc.body = serializer.to_content_type(fault_data)
+        serializer = wsgi.Serializer(metadata)
+        content_type = req.best_match()
+        self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
         return self.wrapped_exc

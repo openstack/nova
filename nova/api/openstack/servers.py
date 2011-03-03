@@ -141,7 +141,7 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -182,7 +182,10 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        inst_dict = self._deserialize(req.body, req)
+        if len(req.body) == 0:
+            raise exc.HTTPUnprocessableEntity()
+
+        inst_dict = self._deserialize(req.body, req.get_content_type())
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -205,7 +208,7 @@ class Controller(wsgi.Controller):
     def action(self, req, id):
         """ Multi-purpose method used to reboot, rebuild, and
         resize a server """
-        input_dict = self._deserialize(req.body, req)
+        input_dict = self._deserialize(req.body, req.get_content_type())
         #TODO(sandy): rebuild/resize not supported.
         try:
             reboot_type = input_dict['reboot']['type']

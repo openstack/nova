@@ -124,4 +124,6 @@ class Versions(wsgi.Application):
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
-        return wsgi.Serializer(req.environ, metadata).to_content_type(response)
+
+        content_type = req.best_match()
+        return wsgi.Serializer(metadata).serialize(response, content_type)

@@ -36,6 +36,7 @@ import webob.exc
 
 from paste import deploy
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
@@ -101,6 +102,14 @@ class Request(webob.Request):
         bm = self.accept.best_match(ctypes)
 
         return bm or "application/json"
+
+    def get_content_type(self):
+        try:
+            ct = self.headers["Content-Type"]
+            assert ct in ("application/xml", "application/json")
+            return ct
+        except Exception:
+            raise webob.exc.HTTPBadRequest("Invalid content type")
 
 
 class Application(object):
@@ -343,30 +352,41 @@ class Controller(object):
             del arg_dict['format']
         arg_dict['req'] = req
         result = method(**arg_dict)
+
         if type(result) is dict:
-            return self._serialize(result, req)
+            content_type = req.best_match()
+            body = self._serialize(result, content_type)
+
+            response = webob.Response()
+            response.headers["Content-Type"] = content_type
+            response.body = body
+            return response
+
         else:
             return result
 
-    def _serialize(self, data, request):
+    def _serialize(self, data, content_type):
         """
-        Serialize the given dict to the response type requested in request.
+        Serialize the given dict to the provided content_type.
         Uses self._serialization_metadata if it exists, which is a dict mapping
         MIME types to information needed to serialize to that type.
         """
         _metadata = getattr(type(self), "_serialization_metadata", {})
-        serializer = Serializer(request.environ, _metadata)
-        return serializer.to_content_type(data)
+        serializer = Serializer(_metadata)
+        try:
+            return serializer.serialize(data, content_type)
+        except exception.InvalidContentType:
+            raise webob.exc.HTTPNotAcceptable()
 
-    def _deserialize(self, data, request):
+    def _deserialize(self, data, content_type):
         """
-        Deserialize the request body to the response type requested in request.
+        Deserialize the request body to the specefied content type.
         Uses self._serialization_metadata if it exists, which is a dict mapping
         MIME types to information needed to serialize to that type.
         """
         _metadata = getattr(type(self), "_serialization_metadata", {})
-        serializer = Serializer(request.environ, _metadata)
-        return serializer.deserialize(data)
+        serializer = Serializer(_metadata)
+        return serializer.deserialize(data, content_type)
 
 
 class Serializer(object):
@@ -374,50 +394,52 @@ class Serializer(object):
     Serializes and deserializes dictionaries to certain MIME types.
     """
 
-    def __init__(self, environ, metadata=None):
+    def __init__(self, metadata=None):
         """
         Create a serializer based on the given WSGI environment.
         'metadata' is an optional dict mapping MIME types to information
         needed to serialize a dictionary to that type.
         """
         self.metadata = metadata or {}
-        req = Request.blank('', environ)
-        suffix = req.path_info.split('.')[-1].lower()
-        if suffix == 'json':
-            self.handler = self._to_json
-        elif suffix == 'xml':
-            self.handler = self._to_xml
-        elif 'application/json' in req.accept:
-            self.handler = self._to_json
-        elif 'application/xml' in req.accept:
-            self.handler = self._to_xml
-        else:
-            # This is the default
-            self.handler = self._to_json
 
-    def to_content_type(self, data):
+    def _get_serialize_handler(self, content_type):
+        handlers = {
+            "application/json": self._to_json,
+            "application/xml": self._to_xml,
+        }
+
+        try:
+            return handlers[content_type]
+        except Exception:
+            raise exception.InvalidContentType()
+
+    def serialize(self, data, content_type):
         """
-        Serialize a dictionary into a string.
-
-        The format of the string will be decided based on the Content Type
-        requested in self.environ: by Accept: header, or by URL suffix.
+        Serialize a dictionary into a string of the specified content type.
         """
-        return self.handler(data)
+        return self._get_serialize_handler(content_type)(data)
 
-    def deserialize(self, datastring):
+    def deserialize(self, datastring, content_type):
         """
         Deserialize a string to a dictionary.
 
         The string must be in the format of a supported MIME type.
         """
-        datastring = datastring.strip()
+        return self.get_deserialize_handler(content_type)(datastring)
+
+    def get_deserialize_handler(self, content_type):
+        handlers = {
+            "application/json": self._from_json,
+            "application/xml": self._from_xml,
+        }
+
         try:
-            is_xml = (datastring[0] == '<')
-            if not is_xml:
-                return utils.loads(datastring)
-            return self._from_xml(datastring)
-        except:
-            return None
+            return handlers[content_type]
+        except Exception:
+            raise exception.InvalidContentType()
+
+    def _from_json(self, datastring):
+        return utils.loads(datastring)
 
     def _from_xml(self, datastring):
         xmldata = self.metadata.get('application/xml', {})
