@@ -120,6 +120,12 @@ class ServiceTestCase(test.TestCase):
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.AdapterConsumer)
 
+        rpc.AdapterConsumer(connection=mox.IgnoreArg(),
+                            topic='%s_fanout' % topic,
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.AdapterConsumer)
+
+        rpc.AdapterConsumer.attach_to_eventlet()
         rpc.AdapterConsumer.attach_to_eventlet()
         rpc.AdapterConsumer.attach_to_eventlet()
 
