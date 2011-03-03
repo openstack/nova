@@ -98,24 +98,24 @@ class SchedulerManager(manager.Manager):
         # Getting usage resource information
         usage = {}
         instance_refs = db.instance_get_all_by_host(context,
-                                                     compute_ref['host'])
-        if 0 == len(instance_refs):
+                                                    compute_ref['host'])
+        if not instance_refs:
             return {'resource': resource, 'usage': usage}
 
         project_ids = [i['project_id'] for i in instance_refs]
         project_ids = list(set(project_ids))
-        for i in project_ids:
+        for project_id in project_ids:
             vcpus = db.instance_get_vcpu_sum_by_host_and_project(context,
                                                                  host,
-                                                                 i)
+                                                                 project_id)
             mem = db.instance_get_memory_sum_by_host_and_project(context,
                                                                  host,
-                                                                 i)
+                                                                 project_id)
             hdd = db.instance_get_disk_sum_by_host_and_project(context,
                                                                host,
-                                                               i)
-            usage[i] = {'vcpus': int(vcpus),
-                        'memory_mb': int(mem),
-                        'local_gb': int(hdd)}
+                                                               project_id)
+            usage[project_id] = {'vcpus': int(vcpus),
+                                 'memory_mb': int(mem),
+                                 'local_gb': int(hdd)}
 
         return {'resource': resource, 'usage': usage}

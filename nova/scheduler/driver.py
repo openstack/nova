@@ -100,9 +100,9 @@ class Scheduler(object):
                               'migrating')
 
         # Changing volume state
-        for v in instance_ref['volumes']:
+        for volume_ref in instance_ref['volumes']:
             db.volume_update(context,
-                             v['id'],
+                             volume_ref['id'],
                              {'status': 'migrating'})
 
         # Return value is necessary to send request to src
@@ -121,17 +121,16 @@ class Scheduler(object):
         # Checking instance is running.
         if (power_state.RUNNING != instance_ref['state'] or \
            'running' != instance_ref['state_description']):
-            msg = _('Instance(%s) is not running')
             ec2_id = instance_ref['hostname']
-            raise exception.Invalid(msg % ec2_id)
+            raise exception.Invalid(_('Instance(%s) is not running') % ec2_id)
 
         # Checing volume node is running when any volumes are mounted
         # to the instance.
         if len(instance_ref['volumes']) != 0:
             services = db.service_get_all_by_topic(context, 'volume')
             if len(services) < 1 or  not self.service_is_up(services[0]):
-                msg = _('volume node is not alive(time synchronize problem?)')
-                raise exception.Invalid(msg)
+                raise exception.Invalid(_("volume node is not alive"
+                                          "(time synchronize problem?)"))
 
         # Checking src host exists and compute node
         src = instance_ref['host']
@@ -139,8 +138,8 @@ class Scheduler(object):
 
         # Checking src host is alive.
         if not self.service_is_up(services[0]):
-            msg = _('%s is not alive(time synchronize problem?)')
-            raise exception.Invalid(msg % src)
+            raise exception.Invalid(_("%s is not alive(time "
+                                      "synchronize problem?)") % src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest):
         """Live migration check routine (for destination host).
@@ -157,8 +156,8 @@ class Scheduler(object):
 
         # Checking dest host is alive.
         if not self.service_is_up(dservice_ref):
-            msg = _('%s is not alive(time synchronize problem?)')
-            raise exception.Invalid(msg % dest)
+            raise exception.Invalid(_("%s is not alive(time "
+                                      "synchronize problem?)") % dest)
 
         # Checking whether The host where instance is running
         # and dest is not same.
@@ -170,7 +169,9 @@ class Scheduler(object):
                                        % locals())
 
         # Checking dst host still has enough capacities.
-        self.has_enough_resources(context, instance_ref, dest)
+        self.assert_compute_node_has_enough_resources(context,
+                                                      instance_ref,
+                                                      dest)
 
     def _live_migration_common_check(self, context, instance_ref, dest):
         """Live migration common check routine.
@@ -202,18 +203,20 @@ class Scheduler(object):
         oservice_ref = oservice_refs[0]['compute_service'][0]
 
         # Checking hypervisor is same.
-        o = oservice_ref['hypervisor_type']
-        d = dservice_ref['hypervisor_type']
-        if o != d:
+        orig_hypervisor = oservice_ref['hypervisor_type']
+        dest_hypervisor = dservice_ref['hypervisor_type']
+        if orig_hypervisor != dest_hypervisor:
             raise exception.Invalid(_("Different hypervisor type"
-                                      "(%(o)s->%(d)s)')" % locals()))
+                                      "(%(orig_hypervisor)s->"
+                                      "%(dest_hypervisor)s)')" % locals()))
 
         # Checkng hypervisor version.
-        o = oservice_ref['hypervisor_version']
-        d = dservice_ref['hypervisor_version']
-        if o > d:
-            raise exception.Invalid(_('Older hypervisor version(%(o)s->%(d)s)')
-                                    % locals())
+        orig_hypervisor = oservice_ref['hypervisor_version']
+        dest_hypervisor = dservice_ref['hypervisor_version']
+        if orig_hypervisor > dest_hypervisor:
+            raise exception.Invalid(_("Older hypervisor version"
+                                      "(%(orig_hypervisor)s->"
+                                      "%(dest_hypervisor)s)") % locals())
 
         # Checking cpuinfo.
         try:
@@ -222,14 +225,15 @@ class Scheduler(object):
                      {"method": 'compare_cpu',
                       "args": {'cpu_info': oservice_ref['cpu_info']}})
 
-        except rpc.RemoteError, e:
+        except rpc.RemoteError:
             ec2_id = instance_ref['hostname']
             src = instance_ref['host']
             logging.exception(_("host %(dest)s is not compatible with "
                                 "original host %(src)s.") % locals())
             raise
 
-    def has_enough_resources(self, context, instance_ref, dest):
+    def assert_compute_node_has_enough_resources(self, context,
+                                                 instance_ref, dest):
         """Checks if destination host has enough resource for live migration.
 
         Currently, only memory checking has been done.
@@ -276,22 +280,24 @@ class Scheduler(object):
         dst_t = db.queue_get_for(context, FLAGS.compute_topic, dest)
         src_t = db.queue_get_for(context, FLAGS.compute_topic, src)
 
-        # create tmpfile at dest host
         try:
-            filename = rpc.call(context, dst_t, {"method": 'mktmpfile'})
-        except rpc.RemoteError, e:
-            msg = _("Cannot create tmpfile at %s to confirm shared storage.")
-            LOG.error(msg % FLAGS.instances_path)
-            raise
+            # create tmpfile at dest host
+            filename = rpc.call(context, dst_t,
+                                {"method": 'create_shared_storage_test_file'})
 
-        # make sure existence at src host.
-        try:
+            # make sure existence at src host.
             rpc.call(context, src_t,
-                     {"method": 'confirm_tmpfile',
+                     {"method": 'check_shared_storage_test_file',
                       "args": {'filename': filename}})
 
-        except (rpc.RemoteError, exception.NotFound), e:
+        except rpc.RemoteError:
             ipath = FLAGS.instances_path
-            logging.error(_("Cannot comfirm %(ipath)s at %(dest)s is "
-                            "located at same shared storage.") % locals())
+            logging.error(_("Cannot comfirm tmpfile at %(ipath)s is on "
+                            "same shared storage between %(src)s "
+                            "and %(dest)s.") % locals())
             raise
+
+        finally:
+            rpc.call(context, dst_t,
+                     {"method": 'cleanup_shared_storage_test_file',
+                      "args": {'filename': filename}})

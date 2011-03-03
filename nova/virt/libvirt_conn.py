@@ -891,8 +891,8 @@ class LibvirtConnection(object):
         """
 
         total = 0
-        for i in self._conn.listDomainsID():
-            dom = self._conn.lookupByID(i)
+        for dom_id in self._conn.listDomainsID():
+            dom = self._conn.lookupByID(dom_id)
             total += len(dom.vcpus()[1])
         return total
 
@@ -1048,7 +1048,7 @@ class LibvirtConnection(object):
                'cpu_info': self.get_cpu_info()}
 
         compute_service_ref = service_ref['compute_service']
-        if len(compute_service_ref) == 0:
+        if not compute_service_ref:
             LOG.info(_('Compute_service record is created for %s ') % host)
             dic['service_id'] = service_ref['id']
             db.compute_service_create(ctxt, dic)
@@ -1124,7 +1124,7 @@ class LibvirtConnection(object):
 
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
-        while len(timeout_count) != 0:
+        while not timeout_count:
             try:
                 filter_name = 'nova-instance-%s' % instance_ref.name
                 self._conn.nwfilterLookupByName(filter_name)
@@ -1198,7 +1198,7 @@ class LibvirtConnection(object):
                                  None,
                                  FLAGS.live_migration_bandwidth)
 
-        except Exception, e:
+        except Exception:
             recover_method(ctxt, instance_ref)
             raise
 

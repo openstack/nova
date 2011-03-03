@@ -175,5 +175,5 @@ class VolumeManager(manager.Manager):
     def check_for_export(self, context, instance_id):
         """Make sure whether volume is exported."""
         instance_ref = self.db.instance_get(context, instance_id)
-        for v in instance_ref['volumes']:
-            self.driver.check_for_export(context, v['id'])
+        for volume in instance_ref['volumes']:
+            self.driver.check_for_export(context, volume['id'])

@@ -661,7 +661,6 @@ class SimpleDriverTestCase(test.TestCase):
         self.scheduler.live_migration(self.context, FLAGS.compute_topic,
                                       instance_id=instance_id,
                                       dest=i_ref['host'])
-        self.mox.UnsetStubs()
 
         i_ref = db.instance_get(self.context, instance_id)
         self.assertTrue(i_ref['state_description'] == 'migrating')
@@ -824,10 +823,15 @@ class SimpleDriverTestCase(test.TestCase):
         topic = FLAGS.compute_topic
         driver.rpc.call(mox.IgnoreArg(),
             db.queue_get_for(self.context, topic, dest),
-            {"method": 'mktmpfile'}).AndReturn(fpath)
+            {"method": 'create_shared_storage_test_file'}).AndReturn(fpath)
         driver.rpc.call(mox.IgnoreArg(),
             db.queue_get_for(mox.IgnoreArg(), topic, i_ref['host']),
-            {"method": 'confirm_tmpfile', "args": {'filename': fpath}})
+            {"method": 'check_shared_storage_test_file',
+             "args": {'filename': fpath}})
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(mox.IgnoreArg(), topic, dest),
+            {"method": 'cleanup_shared_storage_test_file',
+             "args": {'filename': fpath}})
 
         self.mox.ReplayAll()
         try:
@@ -838,7 +842,6 @@ class SimpleDriverTestCase(test.TestCase):
             c = (e.message.find('does not exist') >= 0)
 
         self.assertTrue(c)
-        self.mox.UnsetStubs()
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
@@ -867,7 +870,6 @@ class SimpleDriverTestCase(test.TestCase):
             c = (e.message.find(_('Different hypervisor type')) >= 0)
 
         self.assertTrue(c)
-        self.mox.UnsetStubs()
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
@@ -898,7 +900,6 @@ class SimpleDriverTestCase(test.TestCase):
             c = (e.message.find(_('Older hypervisor version')) >= 0)
 
         self.assertTrue(c)
-        self.mox.UnsetStubs()
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
@@ -934,7 +935,6 @@ class SimpleDriverTestCase(test.TestCase):
             c = (e.message.find(_("doesn't have compatibility to")) >= 0)
 
         self.assertTrue(c)
-        self.mox.UnsetStubs()
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])

@@ -624,11 +624,12 @@ class ComputeManager(manager.Manager):
         return self.driver.compare_cpu(cpu_info)
 
     @exception.wrap_exception
-    def mktmpfile(self, context):
+    def create_shared_storage_test_file(self, context):
         """Makes tmpfile under FLAGS.instance_path.
 
         This method enables compute nodes to recognize that they mounts
-        same shared storage. mktmpfile()/confirm_tmpfile is a pair.
+        same shared storage. (create|check|creanup)_shared_storage_test_file()
+        is a pair.
 
         :param context: security context
         :returns: tmpfile name(basename)
@@ -636,26 +637,36 @@ class ComputeManager(manager.Manager):
         """
 
         dirpath = FLAGS.instances_path
-        fd, name = tempfile.mkstemp(dir=dirpath)
+        fd, tmp_file = tempfile.mkstemp(dir=dirpath)
         LOG.debug(_("Creating tmpfile %s to notify to other "
-                    "compute node that they mounts same storage.") % name)
+                    "compute node that they mounts same storage.") % tmp_file)
         os.fdopen(fd, 'w+').close()
-        return os.path.basename(name)
+        return os.path.basename(tmp_file)
 
     @exception.wrap_exception
-    def confirm_tmpfile(self, context, filename):
-        """Confirms existence of the tmpfile given by path.
+    def check_shared_storage_test_file(self, context, filename):
+        """Confirms existence of the tmpfile under FLAGS.instances_path.
 
         :param context: security context
         :param filename: confirm existence of FLAGS.instances_path/thisfile
-        :returns: depends on os.remove()
 
         """
 
-        p = os.path.join(FLAGS.instances_path, filename)
-        if not os.path.exists(p):
-            raise exception.NotFound(_('%s not found') % p)
-        return os.remove(p)
+        tmp_file = os.path.join(FLAGS.instances_path, filename)
+        if not os.path.exists(tmp_file):
+            raise exception.NotFound(_('%s not found') % tmp_file)
+
+    @exception.wrap_exception
+    def cleanup_shared_storage_test_file(self, context, filename):
+        """Removes existence of the tmpfile under FLAGS.instances_path.
+
+        :param context: security context
+        :param filename: remove existence of FLAGS.instances_path/thisfile
+
+        """
+
+        tmp_file = os.path.join(FLAGS.instances_path, filename)
+        os.remove(tmp_file)
 
     @exception.wrap_exception
     def update_available_resource(self, context):
@@ -687,7 +698,7 @@ class ComputeManager(manager.Manager):
             raise exception.NotFound(msg % locals())
 
         # If any volume is mounted, prepare here.
-        if len(instance_ref['volumes']) == 0:
+        if not instance_ref['volumes']:
             LOG.info(_("%s has no volume."), ec2_id)
         else:
             for v in instance_ref['volumes']:
@@ -701,16 +712,16 @@ class ComputeManager(manager.Manager):
         # Retry operation is necessary because continuously request comes,
         # concorrent request occurs to iptables, then it complains.
         max_retry = FLAGS.live_migration_retry_count
-        for i in range(max_retry):
+        for cnt in range(max_retry):
             try:
                 self.network_manager.setup_compute_network(context,
                                                            instance_id)
                 break
-            except exception.ProcessExecutionError, e:
-                if i == max_retry - 1:
+            except exception.ProcessExecutionError:
+                if cnt == max_retry - 1:
                     raise
                 else:
-                    LOG.warn(_("setup_compute_network() failed %(i)d."
+                    LOG.warn(_("setup_compute_network() failed %(cnt)d."
                                "Retry up to %(max_retry)d for %(ec2_id)s.")
                                % locals())
                     time.sleep(1)
@@ -739,7 +750,7 @@ class ComputeManager(manager.Manager):
         try:
             # Checking volume node is working correctly when any volumes
             # are attached to instances.
-            if len(instance_ref['volumes']) != 0:
+            if instance_ref['volumes']:
                 rpc.call(context,
                           FLAGS.volume_topic,
                           {"method": "check_for_export",
@@ -751,7 +762,7 @@ class ComputeManager(manager.Manager):
                      {"method": "pre_live_migration",
                       "args": {'instance_id': instance_id}})
 
-        except Exception, e:
+        except Exception:
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
             self.recover_live_migration(context, instance_ref)
@@ -843,5 +854,5 @@ class ComputeManager(manager.Manager):
                                  'state': power_state.RUNNING,
                                  'host': host})
 
-        for v in instance_ref['volumes']:
-            self.db.volume_update(ctxt, v['id'], {'status': 'in-use'})
+        for volume in instance_ref['volumes']:
+            self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
