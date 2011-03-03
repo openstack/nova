@@ -105,6 +105,7 @@ class ZoneManager(object):
     def __init__(self):
         self.last_zone_db_check = datetime.min
         self.zone_states = {}
+        self.compute_states = {}
         self.green_pool = greenpool.GreenPool()
 
     def get_zone_list(self):
@@ -141,3 +142,6 @@ class ZoneManager(object):
             self.last_zone_db_check = datetime.now()
             self._refresh_from_db(context)
         self._poll_zones(context)
+
+    def update_compute_capabilities(self):
+        logging.debug(_("****** UPDATE COMPUTE CAPABILITIES *******"))

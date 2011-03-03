@@ -84,6 +84,7 @@ class Service(object):
 
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
+        conn3 = rpc.Connection.instance(new=True)
         if self.report_interval:
             consumer_all = rpc.AdapterConsumer(
                     connection=conn1,
@@ -93,9 +94,14 @@ class Service(object):
                     connection=conn2,
                     topic='%s.%s' % (self.topic, self.host),
                     proxy=self)
+            fanout = rpc.AdapterConsumer(
+                    connection=conn2,
+                    topic='%s_fanout' % self.topic,
+                    proxy=self)
 
             self.timers.append(consumer_all.attach_to_eventlet())
             self.timers.append(consumer_node.attach_to_eventlet())
+            self.timers.append(fanout.attach_to_eventlet())
 
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)

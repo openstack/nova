@@ -218,6 +218,16 @@ class TopicPublisher(Publisher):
         super(TopicPublisher, self).__init__(connection=connection)
 
 
+class FanoutPublisher(Publisher):
+    """Publishes messages to a fanout exchange."""
+    exchange_type = "fanout"
+
+    def __init__(self, topic, connection=None):
+        self.exchange = "%s_fanout" % topic
+        self.durable = False
+        super(FanoutPublisher, self).__init__(connection=connection)
+
+
 class DirectConsumer(Consumer):
     """Consumes messages directly on a channel specified by msg_id"""
     exchange_type = "direct"
@@ -356,6 +366,16 @@ def cast(context, topic, msg):
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
+    publisher.send(msg)
+    publisher.close()
+
+
+def fanout_cast(context, topic, msg):
+    """Sends a message on a fanout exchange without waiting for a response"""
+    LOG.debug(_("Making asynchronous fanout cast..."))
+    _pack_context(msg, context)
+    conn = Connection.instance()
+    publisher = FanoutPublisher(topic, connection=conn)
     publisher.send(msg)
     publisher.close()
 
