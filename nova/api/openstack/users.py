@@ -48,7 +48,7 @@ class Controller(wsgi.Controller):
         """ We cannot depend on the db layer to check for admin access
             for the auth manager, so we do it here """
         if not context.is_admin:
-            raise exception.NotAuthorized("Not admin user")
+            raise exception.NotAuthorized(_("Not admin user"))
 
     def index(self, req, **kw):
         """Return all users in brief"""
