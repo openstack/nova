@@ -669,40 +669,19 @@ class InstanceTypeCommands(object):
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
             "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
-            n,
-            val["memory_mb"],
-            val["vcpus"],
-            val["local_gb"],
-            val["flavorid"],
-            val["swap"],
-            val["rxtx_quota"],
-            val["rxtx_cap"],
-            deleted)
+            n, val["memory_mb"], val["vcpus"], val["local_gb"],
+            val["flavorid"], val["swap"], val["rxtx_quota"],
+            val["rxtx_cap"], deleted)
 
-    def create(
-        self,
-        name,
-        memory,
-        vcpus,
-        local_gb,
-        flavorid,
-        swap=0,
-        rxtx_quota=0,
-        rxtx_cap=0):
+    def create(self, name, memory, vcpus, local_gb, flavorid, 
+               swap=0, rxtx_quota=0, rxtx_cap=0):
         """Creates instance types / flavors
            arguments: name memory vcpus local_gb flavorid [swap] [rxtx_quota]
                       [rxtx_cap]
         """
         try:
-            instance_types.create(
-                name,
-                memory,
-                vcpus,
-                local_gb,
-                flavorid,
-                swap,
-                rxtx_quota,
-                rxtx_cap)
+            instance_types.create(name, memory, vcpus, local_gb,
+                                  flavorid, swap, rxtx_quota, rxtx_cap)
         except exception.InvalidInputException:
             print "Must supply valid parameters to create instance type"
             print e
