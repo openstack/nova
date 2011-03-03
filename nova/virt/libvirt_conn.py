@@ -363,7 +363,7 @@ class LibvirtConnection(object):
         raise exception.APIError("resume not supported for libvirt")
 
     @exception.wrap_exception
-    def rescue(self, instance):
+    def rescue(self, instance, callback=None):
         self.destroy(instance, False)
 
         xml = self.to_xml(instance, rescue=True)
@@ -393,7 +393,7 @@ class LibvirtConnection(object):
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception
-    def unrescue(self, instance):
+    def unrescue(self, instance, callback=None):
         # NOTE(vish): Because reboot destroys and recreates an instance using
         #             the normal xml file, we can just call reboot here
         self.reboot(instance)
