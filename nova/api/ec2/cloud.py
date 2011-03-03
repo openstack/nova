@@ -298,7 +298,7 @@ class CloudController(object):
                     'keyFingerprint': key_pair['fingerprint'],
                 })
 
-        return {'keypairsSet': result}
+        return {'keySet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
