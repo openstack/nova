@@ -24,10 +24,12 @@ The built-in instance properties.
 
 from nova import context
 from nova import db
-from nova import flags
 from nova import exception
+from nova import flags
+from nova import log as logging
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.instance_types')
 
 
 def create(name, memory, vcpus, local_gb, flavorid, swap=0,
@@ -56,7 +58,8 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
                     swap=swap,
                     rxtx_quota=rxtx_quota,
                     rxtx_cap=rxtx_cap))
-    except exception.DBError:
+    except exception.DBError, e:
+        LOG.exception(_('DB error: %s' % e))
         raise exception.ApiError(_("Cannot create instance type: %s" % name))
 
 
@@ -69,6 +72,7 @@ def destroy(name):
         try:
             db.instance_type_destroy(context.get_admin_context(), name)
         except exception.NotFound:
+            LOG.exception(_('Instance type %s not found for deletion' % name))
             raise exception.ApiError(_("Unknown instance type: %s" % name))
 
 
@@ -81,6 +85,7 @@ def purge(name):
         try:
             db.instance_type_purge(context.get_admin_context(), name)
         except exception.NotFound:
+            LOG.exception(_('Instance type %s not found for purge' % name))
             raise exception.ApiError(_("Unknown instance type: %s" % name))
 
 
@@ -117,7 +122,8 @@ def get_by_type(instance_type):
         ctxt = context.get_admin_context()
         inst_type = db.instance_type_get_by_name(ctxt, instance_type)
         return inst_type['name']
-    except exception.DBError:
+    except exception.DBError, e:
+        LOG.exception(_('DB error: %s' % e))
         raise exception.ApiError(_("Unknown instance type: %s" %\
                                     instance_type))
 
@@ -130,5 +136,6 @@ def get_by_flavor_id(flavor_id):
         ctxt = context.get_admin_context()
         flavor = db.instance_type_get_by_flavor_id(ctxt, flavor_id)
         return flavor['name']
-    except exception.DBError:
+    except exception.DBError, e:
+        LOG.exception(_('DB error: %s' % e))
         raise exception.ApiError(_("Unknown flavor: %s" % flavor_id))
