@@ -82,6 +82,27 @@ class Server(object):
                              log=WritableLogger(logger))
 
 
+class Request(webob.Request):
+
+    def best_match(self):
+        """
+        Determine the most acceptable content-type based on the
+        query extension then the Accept header
+        """
+
+        parts = self.path.rsplit(".", 1)
+
+        if len(parts) > 1:
+            format = parts[1]
+            if format in ["json", "xml"]:
+                return "application/{0}".format(parts[1])
+
+        ctypes = ["application/json", "application/xml"]
+        bm = self.accept.best_match(ctypes)
+
+        return bm or "application/json"
+
+
 class Application(object):
     """Base WSGI application wrapper. Subclasses need to implement __call__."""
 
@@ -113,7 +134,7 @@ class Application(object):
     def __call__(self, environ, start_response):
         r"""Subclasses will probably want to implement __call__ like this:
 
-        @webob.dec.wsgify
+        @webob.dec.wsgify(RequestClass=Request)
         def __call__(self, req):
           # Any of the following objects work as responses:
 
@@ -199,7 +220,7 @@ class Middleware(Application):
         """Do whatever you'd like to the response."""
         return response
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, req):
         response = self.process_request(req)
         if response:
@@ -212,7 +233,7 @@ class Debug(Middleware):
     """Helper class that can be inserted into any WSGI application chain
     to get information about the request and response."""
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, req):
         print ("*" * 40) + " REQUEST ENVIRON"
         for key, value in req.environ.items():
@@ -276,7 +297,7 @@ class Router(object):
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           self.map)
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, req):
         """
         Route the incoming request to a controller based on self.map.
@@ -285,7 +306,7 @@ class Router(object):
         return self._router
 
     @staticmethod
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=Request)
     def _dispatch(req):
         """
         Called by self._router after matching the incoming request to a route
@@ -304,11 +325,11 @@ class Controller(object):
     WSGI app that reads routing information supplied by RoutesMiddleware
     and calls the requested action method upon itself.  All action methods
     must, in addition to their normal parameters, accept a 'req' argument
-    which is the incoming webob.Request.  They raise a webob.exc exception,
+    which is the incoming wsgi.Request.  They raise a webob.exc exception,
     or return a dict which will be serialized by requested content type.
     """
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, req):
         """
         Call the method specified in req.environ by RoutesMiddleware.
@@ -358,7 +379,7 @@ class Serializer(object):
         needed to serialize a dictionary to that type.
         """
         self.metadata = metadata or {}
-        req = webob.Request.blank('', environ)
+        req = wsgi.Request.blank('', environ)
         suffix = req.path_info.split('.')[-1].lower()
         if suffix == 'json':
             self.handler = self._to_json

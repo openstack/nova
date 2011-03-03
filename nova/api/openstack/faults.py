@@ -42,7 +42,7 @@ class Fault(webob.exc.HTTPException):
         """Create a Fault for the given webob.exc.exception."""
         self.wrapped_exc = exception
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         """Generate a WSGI response based on the exception passed to ctor."""
         # Replace the body with fault details.
