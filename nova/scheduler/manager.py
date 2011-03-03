@@ -87,13 +87,13 @@ class SchedulerManager(manager.Manager):
         compute_ref = compute_ref[0]
 
         # Getting physical resource information
-        compute_service_ref = compute_ref['compute_service'][0]
-        resource = {'vcpus': compute_service_ref['vcpus'],
-                    'memory_mb': compute_service_ref['memory_mb'],
-                    'local_gb': compute_service_ref['local_gb'],
-                    'vcpus_used': compute_service_ref['vcpus_used'],
-                    'memory_mb_used': compute_service_ref['memory_mb_used'],
-                    'local_gb_used': compute_service_ref['local_gb_used']}
+        compute_node_ref = compute_ref['compute_node'][0]
+        resource = {'vcpus': compute_node_ref['vcpus'],
+                    'memory_mb': compute_node_ref['memory_mb'],
+                    'local_gb': compute_node_ref['local_gb'],
+                    'vcpus_used': compute_node_ref['vcpus_used'],
+                    'memory_mb_used': compute_node_ref['memory_mb_used'],
+                    'local_gb_used': compute_node_ref['local_gb_used']}
 
         # Getting usage resource information
         usage = {}

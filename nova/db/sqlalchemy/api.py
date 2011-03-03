@@ -119,8 +119,8 @@ def service_destroy(context, service_id):
         service_ref.delete(session=session)
 
         if service_ref.topic == 'compute' and \
-            len(service_ref.compute_service) != 0:
-            for c in service_ref.compute_service:
+            len(service_ref.compute_node) != 0:
+            for c in service_ref.compute_node:
                 c.delete(session=session)
 
 
@@ -130,7 +130,7 @@ def service_get(context, service_id, session=None):
         session = get_session()
 
     result = session.query(models.Service).\
-                     options(joinedload('compute_service')).\
+                     options(joinedload('compute_node')).\
                      filter_by(id=service_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
@@ -174,7 +174,7 @@ def service_get_all_compute_by_host(context, host):
     topic = 'compute'
     session = get_session()
     result = session.query(models.Service).\
-                  options(joinedload('compute_service')).\
+                  options(joinedload('compute_node')).\
                   filter_by(deleted=False).\
                   filter_by(host=host).\
                   filter_by(topic=topic).\
@@ -298,11 +298,11 @@ def service_update(context, service_id, values):
 
 
 @require_admin_context
-def compute_service_get(context, compute_id, session=None):
+def compute_node_get(context, compute_id, session=None):
     if not session:
         session = get_session()
 
-    result = session.query(models.ComputeService).\
+    result = session.query(models.ComputeNode).\
                      filter_by(id=compute_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
@@ -314,18 +314,18 @@ def compute_service_get(context, compute_id, session=None):
 
 
 @require_admin_context
-def compute_service_create(context, values):
-    compute_service_ref = models.ComputeService()
-    compute_service_ref.update(values)
-    compute_service_ref.save()
-    return compute_service_ref
+def compute_node_create(context, values):
+    compute_node_ref = models.ComputeNode()
+    compute_node_ref.update(values)
+    compute_node_ref.save()
+    return compute_node_ref
 
 
 @require_admin_context
-def compute_service_update(context, compute_id, values):
+def compute_node_update(context, compute_id, values):
     session = get_session()
     with session.begin():
-        compute_ref = compute_service_get(context, compute_id, session=session)
+        compute_ref = compute_node_get(context, compute_id, session=session)
         compute_ref.update(values)
         compute_ref.save(session=session)
 

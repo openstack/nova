@@ -190,7 +190,7 @@ class Scheduler(object):
 
         # Checking dest exists.
         dservice_refs = db.service_get_all_compute_by_host(context, dest)
-        dservice_ref = dservice_refs[0]['compute_service'][0]
+        dservice_ref = dservice_refs[0]['compute_node'][0]
 
         # Checking original host( where instance was launched at) exists.
         try:
@@ -200,7 +200,7 @@ class Scheduler(object):
             raise exception.Invalid(_("host %s where instance was launched "
                                       "does not exist.")
                                        % instance_ref['launched_on'])
-        oservice_ref = oservice_refs[0]['compute_service'][0]
+        oservice_ref = oservice_refs[0]['compute_node'][0]
 
         # Checking hypervisor is same.
         orig_hypervisor = oservice_ref['hypervisor_type']
@@ -252,10 +252,10 @@ class Scheduler(object):
 
         # Getting host information
         service_refs = db.service_get_all_compute_by_host(context, dest)
-        compute_service_ref = service_refs[0]['compute_service'][0]
+        compute_node_ref = service_refs[0]['compute_node'][0]
 
-        mem_total = int(compute_service_ref['memory_mb'])
-        mem_used = int(compute_service_ref['memory_mb_used'])
+        mem_total = int(compute_node_ref['memory_mb'])
+        mem_used = int(compute_node_ref['memory_mb_used'])
         mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:

@@ -31,7 +31,7 @@ instances = Table('instances', meta,
 # New Tables
 #
 
-compute_services = Table('compute_services', meta,
+compute_nodes = Table('compute_nodes', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
@@ -73,11 +73,11 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     try:
-        compute_services.create()
+        compute_nodes.create()
     except Exception:
-        logging.info(repr(compute_services))
+        logging.info(repr(compute_nodes))
         logging.exception('Exception while creating table')
-        meta.drop_all(tables=[compute_services])
+        meta.drop_all(tables=[compute_nodes])
         raise
 
     instances.create_column(instances_launched_on)

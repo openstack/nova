@@ -113,18 +113,18 @@ class Service(BASE, NovaBase):
     availability_zone = Column(String(255), default='nova')
 
 
-class ComputeService(BASE, NovaBase):
+class ComputeNode(BASE, NovaBase):
     """Represents a running compute service on a host."""
 
-    __tablename__ = 'compute_services'
+    __tablename__ = 'compute_nodes'
     id = Column(Integer, primary_key=True)
     service_id = Column(Integer, ForeignKey('services.id'), nullable=True)
     service = relationship(Service,
-                           backref=backref('compute_service'),
+                           backref=backref('compute_node'),
                            foreign_keys=service_id,
                            primaryjoin='and_('
-                                'ComputeService.service_id == Service.id,'
-                                'ComputeService.deleted == False)')
+                                'ComputeNode.service_id == Service.id,'
+                                'ComputeNode.deleted == False)')
 
     vcpus = Column(Integer, nullable=True)
     memory_mb = Column(Integer, nullable=True)

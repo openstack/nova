@@ -153,24 +153,24 @@ def service_update(context, service_id, values):
 ###################
 
 
-def compute_service_get(context, compute_id, session=None):
+def compute_node_get(context, compute_id, session=None):
     """Get an computeService or raise if it does not exist."""
-    return IMPL.compute_service_get(context, compute_id)
+    return IMPL.compute_node_get(context, compute_id)
 
 
-def compute_service_create(context, values):
+def compute_node_create(context, values):
     """Create a computeService from the values dictionary."""
-    return IMPL.compute_service_create(context, values)
+    return IMPL.compute_node_create(context, values)
 
 
-def compute_service_update(context, compute_id, values):
+def compute_node_update(context, compute_id, values):
     """Set the given properties on an computeService and update it.
 
     Raises NotFound if computeService does not exist.
 
     """
 
-    return IMPL.compute_service_update(context, compute_id, values)
+    return IMPL.compute_node_update(context, compute_id, values)
 
 
 ###################

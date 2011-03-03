@@ -275,7 +275,7 @@ class LibvirtConnTestCase(test.TestCase):
         db.instance_destroy(user_context, instance_ref['id'])
 
     def test_update_available_resource_works_correctly(self):
-        """Confirm compute_service table is updated successfully."""
+        """Confirm compute_node table is updated successfully."""
         org_path = FLAGS.instances_path = ''
         FLAGS.instances_path = '.'
 
@@ -289,16 +289,16 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_conn.LibvirtConnection(False)
         conn.update_available_resource(self.context, 'dummy')
         service_ref = db.service_get(self.context, service_ref['id'])
-        compute_service = service_ref['compute_service'][0]
+        compute_node = service_ref['compute_node'][0]
 
-        c1 = (compute_service['vcpus'] > 0)
-        c2 = (compute_service['memory_mb'] > 0)
-        c3 = (compute_service['local_gb'] > 0)
-        c4 = (compute_service['vcpus_used'] == 0)
-        c5 = (compute_service['memory_mb_used'] > 0)
-        c6 = (compute_service['local_gb_used'] > 0)
-        c7 = (len(compute_service['hypervisor_type']) > 0)
-        c8 = (compute_service['hypervisor_version'] > 0)
+        c1 = (compute_node['vcpus'] > 0)
+        c2 = (compute_node['memory_mb'] > 0)
+        c3 = (compute_node['local_gb'] > 0)
+        c4 = (compute_node['vcpus_used'] == 0)
+        c5 = (compute_node['memory_mb_used'] > 0)
+        c6 = (compute_node['local_gb_used'] > 0)
+        c7 = (len(compute_node['hypervisor_type']) > 0)
+        c8 = (compute_node['hypervisor_version'] > 0)
 
         self.assertTrue(c1 and c2 and c3 and c4 and c5 and c6 and c7 and c8)
 

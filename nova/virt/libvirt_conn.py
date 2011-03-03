@@ -1021,7 +1021,7 @@ class LibvirtConnection(object):
         self.firewall_driver.refresh_security_group_members(security_group_id)
 
     def update_available_resource(self, ctxt, host):
-        """Updates compute manager resource info on ComputeService table.
+        """Updates compute manager resource info on ComputeNode table.
 
         This method is called when nova-coompute launches, and
         whenever admin executes "nova-manage service update_resource".
@@ -1049,14 +1049,14 @@ class LibvirtConnection(object):
                'hypervisor_version': self.get_hypervisor_version(),
                'cpu_info': self.get_cpu_info()}
 
-        compute_service_ref = service_ref['compute_service']
-        if not compute_service_ref:
+        compute_node_ref = service_ref['compute_node']
+        if not compute_node_ref:
             LOG.info(_('Compute_service record is created for %s ') % host)
             dic['service_id'] = service_ref['id']
-            db.compute_service_create(ctxt, dic)
+            db.compute_node_create(ctxt, dic)
         else:
             LOG.info(_('Compute_service record is updated for %s ') % host)
-            db.compute_service_update(ctxt, compute_service_ref[0]['id'], dic)
+            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
     def compare_cpu(self, cpu_info):
         """Checks the host cpu is compatible to a cpu given by xml.

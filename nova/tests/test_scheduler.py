@@ -60,7 +60,7 @@ class SchedulerTestCase(test.TestCase):
         self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
 
     def _create_compute_service(self):
-        """Create compute-manager(ComputeService and Service record)."""
+        """Create compute-manager(ComputeNode and Service record)."""
         ctxt = context.get_admin_context()
         dic = {'host': 'dummy', 'binary': 'nova-compute', 'topic': 'compute',
                'report_count': 0, 'availability_zone': 'dummyzone'}
@@ -71,7 +71,7 @@ class SchedulerTestCase(test.TestCase):
                'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
                'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
                'cpu_info': ''}
-        db.compute_service_create(ctxt, dic)
+        db.compute_node_create(ctxt, dic)
 
         return db.service_get(ctxt, s_ref['id'])
 
@@ -144,8 +144,8 @@ class SchedulerTestCase(test.TestCase):
 
         # result checking
         c1 = ('resource' in result and 'usage' in result)
-        compute_service = s_ref['compute_service'][0]
-        c2 = self._dic_is_equal(result['resource'], compute_service)
+        compute_node = s_ref['compute_node'][0]
+        c2 = self._dic_is_equal(result['resource'], compute_node)
         c3 = result['usage'] == {}
         self.assertTrue(c1 and c2 and c3)
         db.service_destroy(ctxt, s_ref['id'])
@@ -163,8 +163,8 @@ class SchedulerTestCase(test.TestCase):
         result = scheduler.show_host_resources(ctxt, s_ref['host'])
 
         c1 = ('resource' in result and 'usage' in result)
-        compute_service = s_ref['compute_service'][0]
-        c2 = self._dic_is_equal(result['resource'], compute_service)
+        compute_node = s_ref['compute_node'][0]
+        c2 = self._dic_is_equal(result['resource'], compute_node)
         c3 = result['usage'].keys() == ['p-01', 'p-02']
         keys = ['vcpus', 'memory_mb', 'local_gb']
         c4 = self._dic_is_equal(result['usage']['p-01'], i_ref1, keys)
@@ -301,7 +301,7 @@ class SimpleDriverTestCase(test.TestCase):
         dic['memory_mb_used'] = kwargs.get('memory_mb_used', 32)
         dic['hypervisor_type'] = kwargs.get('hypervisor_type', 'qemu')
         dic['hypervisor_version'] = kwargs.get('hypervisor_version', 12003)
-        db.compute_service_create(self.context, dic)
+        db.compute_node_create(self.context, dic)
         return db.service_get(self.context, s_ref['id'])
 
     def test_doesnt_report_disabled_hosts_as_up(self):
@@ -923,7 +923,7 @@ class SimpleDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc, 'call', use_mock_anything=True)
         rpc.call(mox.IgnoreArg(), mox.IgnoreArg(),
             {"method": 'compare_cpu',
-            "args": {'cpu_info': s_ref2['compute_service'][0]['cpu_info']}}).\
+            "args": {'cpu_info': s_ref2['compute_node'][0]['cpu_info']}}).\
              AndRaise(rpc.RemoteError("doesn't have compatibility to", "", ""))
 
         self.mox.ReplayAll()

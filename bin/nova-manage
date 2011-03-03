@@ -546,7 +546,7 @@ class NetworkCommands(object):
                                 network.dns)
 
 
-class InstanceCommands(object):
+class VmCommands(object):
     """Class for mangaging VM instances."""
 
     def live_migration(self, ec2_id, dest):
@@ -831,7 +831,7 @@ CATEGORIES = [
     ('fixed', FixedIpCommands),
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
-    ('instance', InstanceCommands),
+    ('vm', VmCommands),
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),
