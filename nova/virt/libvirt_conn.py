@@ -604,7 +604,7 @@ class LibvirtConnection(object):
                           user=user,
                           project=project,
                           size=size)
-        type_data = instance_types.get_instance_type([inst['instance_type']])
+        type_data = instance_types.get_instance_type(inst['instance_type'])
 
         if type_data['local_gb']:
             self._cache_image(fn=self._create_local,
