@@ -630,19 +630,24 @@ def iscsi_target_create_safe(context, values):
 ###############
 
 
-def auth_destroy_token(context, token):
+def auth_token_destroy(context, token_id):
     """Destroy an auth token."""
-    return IMPL.auth_destroy_token(context, token)
+    return IMPL.auth_token_destroy(context, token_id)
 
 
-def auth_get_token(context, token_hash):
+def auth_token_get(context, token_hash):
     """Retrieves a token given the hash representing it."""
-    return IMPL.auth_get_token(context, token_hash)
+    return IMPL.auth_token_get(context, token_hash)
 
 
-def auth_create_token(context, token):
+def auth_token_update(context, token_hash, values):
+    """Updates a token given the hash representing it."""
+    return IMPL.auth_token_update(context, token_hash, values)
+
+
+def auth_token_create(context, token):
     """Creates a new token."""
-    return IMPL.auth_create_token(context, token)
+    return IMPL.auth_token_create(context, token)
 
 
 ###################
@@ -1000,6 +1005,41 @@ def console_get_all_by_instance(context, instance_id):
 def console_get(context, console_id, instance_id=None):
     """Get a specific console (possibly on a given instance)."""
     return IMPL.console_get(context, console_id, instance_id)
+
+
+    ##################
+
+
+def instance_type_create(context, values):
+    """Create a new instance type"""
+    return IMPL.instance_type_create(context, values)
+
+
+def instance_type_get_all(context, inactive=0):
+    """Get all instance types"""
+    return IMPL.instance_type_get_all(context, inactive)
+
+
+def instance_type_get_by_name(context, name):
+    """Get instance type by name"""
+    return IMPL.instance_type_get_by_name(context, name)
+
+
+def instance_type_get_by_flavor_id(context, id):
+    """Get instance type by name"""
+    return IMPL.instance_type_get_by_flavor_id(context, id)
+
+
+def instance_type_destroy(context, name):
+    """Delete a instance type"""
+    return IMPL.instance_type_destroy(context, name)
+
+
+def instance_type_purge(context, name):
+    """Purges (removes) an instance type from DB
+       Use instance_type_destroy for most cases
+    """
+    return IMPL.instance_type_purge(context, name)
 
 
 ####################

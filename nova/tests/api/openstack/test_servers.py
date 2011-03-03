@@ -17,13 +17,13 @@
 
 import datetime
 import json
-import unittest
 
 import stubout
 import webob
 
 from nova import db
 from nova import flags
+from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.db.api
@@ -113,9 +113,10 @@ def fake_compute_api(cls, req, id):
     return True
 
 
-class ServersTest(unittest.TestCase):
+class ServersTest(test.TestCase):
 
     def setUp(self):
+        super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
@@ -146,6 +147,7 @@ class ServersTest(unittest.TestCase):
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
+        super(ServersTest, self).tearDown()
 
     def test_get_server_by_id(self):
         req = webob.Request.blank('/v1.0/servers/1')
@@ -295,10 +297,44 @@ class ServersTest(unittest.TestCase):
         i = 0
         for s in res_dict['servers']:
             self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['metadata']['seq'], i)
             i += 1
+
+    def test_get_all_server_details_with_host(self):
+        '''
+        We want to make sure that if two instances are on the same host, then
+        they return the same hostId. If two instances are on different hosts,
+        they should return different hostId's. In this test, there are 5
+        instances - 2 on one host and 3 on another.
+        '''
+
+        def stub_instance(id, user_id=1):
+            return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                display_name='server%s' % id, host='host%s' % (id % 2))
+
+        def return_servers_with_host(context, user_id=1):
+            return [stub_instance(i) for i in xrange(5)]
+
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
+            return_servers_with_host)
+
+        req = webob.Request.blank('/v1.0/servers/detail')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        server_list = res_dict['servers']
+        host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
+        self.assertTrue(host_ids[0] and host_ids[1])
+        self.assertNotEqual(host_ids[0], host_ids[1])
+
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], host_ids[i % 2])
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['imageId'], 10)
 
     def test_server_pause(self):
         FLAGS.allow_admin_api = True
@@ -429,7 +465,3 @@ class ServersTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
-
-
-if __name__ == "__main__":
-    unittest.main()

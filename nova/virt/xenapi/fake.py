@@ -401,7 +401,7 @@ class SessionBase(object):
                 field in _db_content[cls][ref]):
                 return _db_content[cls][ref][field]
 
-        LOG.debuug(_('Raising NotImplemented'))
+        LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
             _('xenapi.fake does not have an implementation for %s or it has '
             'been called with the wrong number of arguments') % name)
