@@ -18,7 +18,7 @@ Tests For ZoneManager
 
 import datetime
 import mox
-import novatools
+import novaclient
 
 from nova import context
 from nova import db
@@ -40,8 +40,8 @@ class FakeZone:
             setattr(self, k, v)
 
 
-def exploding_novatools(zone):
-    """Used when we want to simulate a novatools call failing."""
+def exploding_novaclient(zone):
+    """Used when we want to simulate a novaclient call failing."""
     raise Exception("kaboom")
 
 
@@ -139,8 +139,8 @@ class ZoneManagerTestCase(test.TestCase):
         self.assertEquals(zm.zone_states[2].username, 'user2')
 
     def test_poll_zone(self):
-        self.mox.StubOutWithMock(zone_manager, '_call_novatools')
-        zone_manager._call_novatools(mox.IgnoreArg()).AndReturn(
+        self.mox.StubOutWithMock(zone_manager, '_call_novaclient')
+        zone_manager._call_novaclient(mox.IgnoreArg()).AndReturn(
                         dict(name='zohan', capabilities='hairdresser'))
 
         zone_state = zone_manager.ZoneState()
@@ -156,7 +156,7 @@ class ZoneManagerTestCase(test.TestCase):
         self.assertEquals(zone_state.name, 'zohan')
 
     def test_poll_zone_fails(self):
-        self.stubs.Set(zone_manager, "_call_novatools", exploding_novatools)
+        self.stubs.Set(zone_manager, "_call_novaclient", exploding_novaclient)
 
         zone_state = zone_manager.ZoneState()
         zone_state.update_credentials(FakeZone(id=2,
