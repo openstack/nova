@@ -339,6 +339,8 @@ class Controller(object):
         method = getattr(self, action)
         del arg_dict['controller']
         del arg_dict['action']
+        if 'format' in arg_dict:
+            del arg_dict['format']
         arg_dict['req'] = req
         result = method(**arg_dict)
         if type(result) is dict:
@@ -379,7 +381,7 @@ class Serializer(object):
         needed to serialize a dictionary to that type.
         """
         self.metadata = metadata or {}
-        req = wsgi.Request.blank('', environ)
+        req = Request.blank('', environ)
         suffix = req.path_info.split('.')[-1].lower()
         if suffix == 'json':
             self.handler = self._to_json

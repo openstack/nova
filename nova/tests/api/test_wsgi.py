@@ -21,11 +21,13 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
+import json
 from nova import test
 
 import routes
 import webob
 
+from nova import exception
 from nova import wsgi
 
 
@@ -66,30 +68,112 @@ class Test(test.TestCase):
         result = webob.Request.blank('/bad').get_response(Router())
         self.assertNotEqual(result.body, "Router result")
 
-    def test_controller(self):
 
-        class Controller(wsgi.Controller):
-            """Test controller to call from router."""
-            test = self
+class ControllerTest(test.TestCase):
+
+    class TestRouter(wsgi.Router):
+
+        class TestController(wsgi.Controller):
+
+            _serialization_metadata = {
+                'application/xml': {
+                    "attributes": {
+                        "test": ["id"]}}}
 
             def show(self, req, id):  # pylint: disable-msg=W0622,C0103
-                """Default action called for requests with an ID."""
-                self.test.assertEqual(req.path_info, '/tests/123')
-                self.test.assertEqual(id, '123')
-                return id
+                return {"test": {"id": id}}
 
-        class Router(wsgi.Router):
-            """Test router."""
+        def __init__(self):
+            mapper = routes.Mapper()
+            mapper.resource("test", "tests", controller=self.TestController())
+            wsgi.Router.__init__(self, mapper)
 
-            def __init__(self):
-                mapper = routes.Mapper()
-                mapper.resource("test", "tests", controller=Controller())
-                super(Router, self).__init__(mapper)
+    def test_show(self):
+        request = wsgi.Request.blank('/tests/123')
+        result = request.get_response(self.TestRouter())
+        self.assertEqual(json.loads(result.body), {"test": {"id": "123"}})
 
-        result = webob.Request.blank('/tests/123').get_response(Router())
-        self.assertEqual(result.body, "123")
-        result = webob.Request.blank('/test/123').get_response(Router())
-        self.assertNotEqual(result.body, "123")
+    def test_content_type_from_accept_xml(self):
+        request = webob.Request.blank('/tests/123')
+        request.headers["Accept"] = "application/xml"
+        result = request.get_response(self.TestRouter())
+        self.assertEqual(result.headers["Content-Type"], "application/xml")
+
+    def test_content_type_from_accept_json(self):
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Accept"] = "application/json"
+        result = request.get_response(self.TestRouter())
+        self.assertEqual(result.headers["Content-Type"], "application/json")
+
+    def test_content_type_from_query_extension_xml(self):
+        request = wsgi.Request.blank('/tests/123.xml')
+        result = request.get_response(self.TestRouter())
+        self.assertEqual(result.headers["Content-Type"], "application/xml")
+
+    def test_content_type_from_query_extension_json(self):
+        request = wsgi.Request.blank('/tests/123.json')
+        result = request.get_response(self.TestRouter())
+        self.assertEqual(result.headers["Content-Type"], "application/json")
+
+    def test_content_type_default_when_unsupported(self):
+        request = wsgi.Request.blank('/tests/123.unsupported')
+        request.headers["Accept"] = "application/unsupported1"
+        result = request.get_response(self.TestRouter())
+        self.assertEqual(result.status_int, 200)
+        self.assertEqual(result.headers["Content-Type"], "application/json")
+
+
+class RequestTest(test.TestCase):
+
+    def test_content_type_from_accept_xml(self):
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Accept"] = "application/xml"
+        result = request.best_match()
+        self.assertEqual(result, "application/xml")
+
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Accept"] = "application/json"
+        result = request.best_match()
+        self.assertEqual(result, "application/json")
+
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Accept"] = "application/xml, application/json"
+        result = request.best_match()
+        self.assertEqual(result, "application/json")
+
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Accept"] = \
+            "application/json; q=0.3, application/xml; q=0.9"
+        result = request.best_match()
+        self.assertEqual(result, "application/xml")
+
+    def test_content_type_from_query_extension(self):
+        request = wsgi.Request.blank('/tests/123.xml')
+        result = request.best_match()
+        self.assertEqual(result, "application/xml")
+
+        request = wsgi.Request.blank('/tests/123.json')
+        result = request.best_match()
+        self.assertEqual(result, "application/json")
+
+        request = wsgi.Request.blank('/tests/123.invalid')
+        result = request.best_match()
+        self.assertEqual(result, "application/json")
+
+    def test_content_type_accept_and_query_extension(self):
+        request = wsgi.Request.blank('/tests/123.xml')
+        request.headers["Accept"] = "application/json"
+        result = request.best_match()
+        self.assertEqual(result, "application/xml")
+
+    def test_content_type_accept_default(self):
+        request = wsgi.Request.blank('/tests/123.unsupported')
+        request.headers["Accept"] = "application/unsupported1"
+        result = request.best_match()
+        self.assertEqual(result, "application/json")
+
+
+
 
 
 class SerializerTest(test.TestCase):
