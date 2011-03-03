@@ -265,6 +265,8 @@ class ServersTest(test.TestCase):
             name='server_test', imageId=2, flavorId=2,
             metadata={},
             personality=personality))
+        if personality is None:
+            del body['server']['personality']
 
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
@@ -273,7 +275,7 @@ class ServersTest(test.TestCase):
 
     def test_create_instance_with_no_personality(self):
         request, response, onset_files = \
-                self._create_instance_with_personality(personality=[])
+                self._create_instance_with_personality(personality=None)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(onset_files, [])
 
@@ -296,10 +298,11 @@ class ServersTest(test.TestCase):
         self.assertEquals(response.status_int, 400)
         self.assertEquals(onset_files, None)
 
-    def test_create_instance_with_two_personalities(self):
+    def test_create_instance_with_three_personalities(self):
         files = [
             ('/etc/sudoers', 'ALL ALL=NOPASSWD: ALL\n'),
             ('/etc/motd', 'Enjoy your root access!\n'),
+            ('/etc/dovecot.conf', 'dovecot\nconfig\nstuff\n'),
             ]
         personality = []
         for path, content in files:
@@ -309,6 +312,24 @@ class ServersTest(test.TestCase):
             self._create_instance_with_personality(personality)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(onset_files, files)
+
+    def test_create_instance_personality_empty_content(self):
+        path = '/my/file/path'
+        contents = ''
+        personality = [self._personality_dict(path, contents)]
+        request, response, onset_files = \
+            self._create_instance_with_personality(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(onset_files, [(path, contents)]) 
+
+    def test_create_instance_personality_not_a_list(self):
+        path = '/my/file/path'
+        contents = 'myfilecontents'
+        personality = self._personality_dict(path, contents)
+        request, response, onset_files = \
+            self._create_instance_with_personality(personality)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(onset_files, None)
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')

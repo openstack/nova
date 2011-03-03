@@ -149,9 +149,13 @@ class Controller(wsgi.Controller):
         """
         onset_files = []
         for item in personality:
-            path = item['path']
             try:
-                contents = base64.b64decode(item['contents'])
+                path = item['path']
+                contents = item['contents']
+            except TypeError:
+                raise exc.HTTPBadRequest(explanation='Bad personality format')
+            try:
+                contents = base64.b64decode(contents)
             except TypeError:
                 raise exc.HTTPBadRequest(explanation=
                         'Personality content for %s cannot be decoded' % path)
