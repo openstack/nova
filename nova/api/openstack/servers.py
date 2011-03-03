@@ -335,6 +335,28 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    def rescue(self, req, id):
+        """Permit users to rescue the server."""
+        context = req.environ["nova.context"]
+        try:
+            self.compute_api.rescue(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("compute.api::rescue %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
+    def unrescue(self, req, id):
+        """Permit users to unrescue the server."""
+        context = req.environ["nova.context"]
+        try:
+            self.compute_api.unrescue(context, id)
+        except:
+            readable = traceback.format_exc()
+            LOG.exception(_("compute.api::unrescue %s"), readable)
+            return faults.Fault(exc.HTTPUnprocessableEntity())
+        return exc.HTTPAccepted()
+
     def get_ajax_console(self, req, id):
         """ Returns a url to an instance's ajaxterm console. """
         try:
