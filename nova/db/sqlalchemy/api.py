@@ -308,7 +308,7 @@ def compute_node_get(context, compute_id, session=None):
                      first()
 
     if not result:
-        raise exception.NotFound(_('No computeService for id %s') % compute_id)
+        raise exception.NotFound(_('No computeNode for id %s') % compute_id)
 
     return result
 
