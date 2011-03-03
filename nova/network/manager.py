@@ -167,7 +167,7 @@ class NetworkManager(manager.Manager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        network_ref = self.db.network_get_by_bridge(context,
+        network_ref = self.db.network_get_by_bridge(context.elevated(),
                                                     FLAGS.flat_network_bridge)
         address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                   network_ref['id'],
