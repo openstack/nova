@@ -28,7 +28,10 @@ meta = MetaData()
 #
 networks = Table('networks', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
-        )
+        Column('ra_server', String(length=255, convert_unicode=False,
+               assert_unicode=None, unicode_error=None,
+               _warn_on_bytestring=False))
+              )
 
 #
 # New Tables
@@ -43,12 +46,6 @@ networks = Table('networks', meta,
 #
 # Columns to add to existing tables
 #
-
-networks_gateway_v6 = Column(
-        'gateway_v6',
-        String(length=255, convert_unicode=False, assert_unicode=None,
-               unicode_error=None, _warn_on_bytestring=False))
-
 networks_netmask_v6 = Column(
         'netmask_v6',
         String(length=255, convert_unicode=False, assert_unicode=None,
@@ -60,6 +57,7 @@ def upgrade(migrate_engine):
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
+    # Alter column name
+    networks.c.ra_server.alter(name='gateway_v6')
     # Add columns to existing tables
-    networks.create_column(networks_gateway_v6)
     networks.create_column(networks_netmask_v6)
