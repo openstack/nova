@@ -27,7 +27,7 @@ def stubout_instance_snapshot(stubs):
     def fake_fetch_image(cls, session, instance_id, image, user, project,
                          type):
         # Stubout wait_for_task
-        def fake_wait_for_task(self, id, task):
+        def fake_wait_for_task(self, task, id):
             class FakeEvent:
 
                 def send(self, value):
@@ -176,6 +176,12 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_destroy(self, session_ref, vm_ref):
         fake.destroy_vm(vm_ref)
+
+    def SR_scan(self, session_ref, sr_ref):
+        pass
+
+    def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
+        pass
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):

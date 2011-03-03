@@ -31,6 +31,7 @@ from nova.compute import power_state
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi.vmops import SimpleDH
 from nova.virt.xenapi.vmops import VMOps
 from nova.tests.db import fakes as db_fakes
@@ -232,7 +233,7 @@ class XenAPIVMTestCase(test.TestCase):
         vm = vms[0]
 
         # Check that m1.large above turned into the right thing.
-        instance_type = instance_types.INSTANCE_TYPES['m1.large']
+        instance_type = db.instance_type_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
@@ -284,11 +285,17 @@ class XenAPIVMTestCase(test.TestCase):
 
     def test_spawn_raw_glance(self):
         FLAGS.xenapi_image_service = 'glance'
-        self._test_spawn(1, None, None)
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_RAW, None, None)
+
+    def test_spawn_vhd_glance(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None)
 
     def test_spawn_glance(self):
         FLAGS.xenapi_image_service = 'glance'
-        self._test_spawn(1, 2, 3)
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
+                         glance_stubs.FakeGlance.IMAGE_KERNEL,
+                         glance_stubs.FakeGlance.IMAGE_RAMDISK)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
@@ -337,3 +344,63 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()
+
+
+class XenAPIDetermineDiskImageTestCase(test.TestCase):
+    """
+    Unit tests for code that detects the ImageType
+    """
+    def setUp(self):
+        super(XenAPIDetermineDiskImageTestCase, self).setUp()
+        glance_stubs.stubout_glance_client(self.stubs,
+                                           glance_stubs.FakeGlance)
+
+        class FakeInstance(object):
+            pass
+
+        self.fake_instance = FakeInstance()
+        self.fake_instance.id = 42
+
+    def assert_disk_type(self, disk_type):
+        dt = vm_utils.VMHelper.determine_disk_image_type(
+            self.fake_instance)
+        self.assertEqual(disk_type, dt)
+
+    def test_instance_disk(self):
+        """
+        If a kernel is specified then the image type is DISK (aka machine)
+        """
+        FLAGS.xenapi_image_service = 'objectstore'
+        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_MACHINE
+        self.fake_instance.kernel_id = glance_stubs.FakeGlance.IMAGE_KERNEL
+        self.assert_disk_type(vm_utils.ImageType.DISK)
+
+    def test_instance_disk_raw(self):
+        """
+        If the kernel isn't specified, and we're not using Glance, then
+        DISK_RAW is assumed.
+        """
+        FLAGS.xenapi_image_service = 'objectstore'
+        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_RAW
+        self.fake_instance.kernel_id = None
+        self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
+
+    def test_glance_disk_raw(self):
+        """
+        If we're using Glance, then defer to the image_type field, which in
+        this case will be 'raw'.
+        """
+        FLAGS.xenapi_image_service = 'glance'
+        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_RAW
+        self.fake_instance.kernel_id = None
+        self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
+
+    def test_glance_disk_vhd(self):
+        """
+        If we're using Glance, then defer to the image_type field, which in
+        this case will be 'vhd'.
+        """
+        FLAGS.xenapi_image_service = 'glance'
+        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_VHD
+        self.fake_instance.kernel_id = None
+        self.assert_disk_type(vm_utils.ImageType.DISK_VHD)

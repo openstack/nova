@@ -64,6 +64,11 @@ Concept: Instances
 
 An 'instance' is a word for a virtual machine that runs inside the cloud.
 
+Concept: Instance Type
+----------------------
+
+An 'instance type' describes the compute, memory and storage capacity of nova computing instances. In layman terms, this is the size (in terms of vCPUs, RAM, etc.) of the virtual server that you will be launching.
+
 Concept: System Architecture
 ----------------------------
 

@@ -84,6 +84,7 @@ from nova import utils
 from nova.api.ec2.cloud import ec2_id_to_id
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+from nova.compute import instance_types
 from nova.db import migration
 
 FLAGS = flags.FLAGS
@@ -661,6 +662,79 @@ class VolumeCommands(object):
                            "mountpoint": volume['mountpoint']}})
 
 
+class InstanceTypeCommands(object):
+    """Class for managing instance types / flavors."""
+
+    def _print_instance_types(self, n, val):
+        deleted = ('', ', inactive')[val["deleted"] == 1]
+        print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
+            "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
+            n, val["memory_mb"], val["vcpus"], val["local_gb"],
+            val["flavorid"], val["swap"], val["rxtx_quota"],
+            val["rxtx_cap"], deleted)
+
+    def create(self, name, memory, vcpus, local_gb, flavorid,
+               swap=0, rxtx_quota=0, rxtx_cap=0):
+        """Creates instance types / flavors
+           arguments: name memory vcpus local_gb flavorid [swap] [rxtx_quota]
+                      [rxtx_cap]
+        """
+        try:
+            instance_types.create(name, memory, vcpus, local_gb,
+                                  flavorid, swap, rxtx_quota, rxtx_cap)
+        except exception.InvalidInputException:
+            print "Must supply valid parameters to create instance type"
+            print e
+            sys.exit(1)
+        except exception.DBError, e:
+            print "DB Error: %s" % e
+            sys.exit(2)
+        except:
+            print "Unknown error"
+            sys.exit(3)
+        else:
+            print "%s created" % name
+
+    def delete(self, name, purge=None):
+        """Marks instance types / flavors as deleted
+        arguments: name"""
+        try:
+            if purge == "--purge":
+                instance_types.purge(name)
+                verb = "purged"
+            else:
+                instance_types.destroy(name)
+                verb = "deleted"
+        except exception.ApiError:
+            print "Valid instance type name is required"
+            sys.exit(1)
+        except exception.DBError, e:
+            print "DB Error: %s" % e
+            sys.exit(2)
+        except:
+            sys.exit(3)
+        else:
+            print "%s %s" % (name, verb)
+
+    def list(self, name=None):
+        """Lists all active or specific instance types / flavors
+        arguments: [name]"""
+        try:
+            if name == None:
+                inst_types = instance_types.get_all_types()
+            elif name == "--all":
+                inst_types = instance_types.get_all_types(1)
+            else:
+                inst_types = instance_types.get_instance_type(name)
+        except exception.DBError, e:
+            _db_error(e)
+        if isinstance(inst_types.values()[0], dict):
+            for k, v in inst_types.iteritems():
+                self._print_instance_types(k, v)
+        else:
+            self._print_instance_types(name, inst_types)
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -673,7 +747,9 @@ CATEGORIES = [
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands)]
+    ('volume', VolumeCommands),
+    ('instance_type', InstanceTypeCommands),
+    ('flavor', InstanceTypeCommands)]
 
 
 def lazy_match(name, key_value_tuples):
