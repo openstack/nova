@@ -86,7 +86,8 @@ class VMHelper(HelperBase):
         the pv_kernel flag indicates whether the guest is HVM or PV
         """
 
-        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        instance_type = instance_types.\
+                                get_instance_type(instance.instance_type)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -144,7 +145,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def ensure_free_mem(cls, session, instance):
-        instance_type = instance_types.INSTANCE_TYPES[instance.instance_type]
+        instance_type = instance_types.get_instance_type(
+            instance.instance_type)
         mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
@@ -205,19 +207,17 @@ class VMHelper(HelperBase):
         """Destroy VBD from host database"""
         try:
             task = session.call_xenapi('Async.VBD.destroy', vbd_ref)
-            #FIXME(armando): find a solution to missing instance_id
-            #with Josh Kearney
-            session.wait_for_task(0, task)
+            session.wait_for_task(task)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
-    def create_vif(cls, session, vm_ref, network_ref, mac_address):
+    def create_vif(cls, session, vm_ref, network_ref, mac_address, dev="0"):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
         vif_rec = {}
-        vif_rec['device'] = '0'
+        vif_rec['device'] = dev
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = mac_address
@@ -269,7 +269,7 @@ class VMHelper(HelperBase):
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
-        template_vm_ref = session.wait_for_task(instance_id, task)
+        template_vm_ref = session.wait_for_task(task, instance_id)
         template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
@@ -302,7 +302,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
-        session.wait_for_task(instance_id, task)
+        session.wait_for_task(task, instance_id)
 
     @classmethod
     def fetch_image(cls, session, instance_id, image, user, project,
@@ -345,7 +345,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-        vdi_uuid = session.wait_for_task(instance_id, task)
+        vdi_uuid = session.wait_for_task(task, instance_id)
 
         scan_sr(session, instance_id, sr_ref)
 
@@ -401,7 +401,7 @@ class VMHelper(HelperBase):
             #let the plugin copy the correct number of bytes
             args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
-            filename = session.wait_for_task(instance_id, task)
+            filename = session.wait_for_task(task, instance_id)
             #remove the VDI as it is not needed anymore
             session.get_xenapi().VDI.destroy(vdi)
             LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi)
@@ -493,7 +493,7 @@ class VMHelper(HelperBase):
             if image_type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid = session.wait_for_task(instance_id, task)
+        uuid = session.wait_for_task(task, instance_id)
         return uuid
 
     @classmethod
@@ -513,7 +513,7 @@ class VMHelper(HelperBase):
         args = {}
         args['vdi-ref'] = vdi_ref
         task = session.async_call_plugin('objectstore', fn, args)
-        pv_str = session.wait_for_task(instance_id, task)
+        pv_str = session.wait_for_task(task, instance_id)
         pv = None
         if pv_str.lower() == 'true':
             pv = True
@@ -654,7 +654,7 @@ def get_vhd_parent_uuid(session, vdi_ref):
 def scan_sr(session, instance_id, sr_ref):
     LOG.debug(_("Re-scanning SR %s"), sr_ref)
     task = session.call_xenapi('Async.SR.scan', sr_ref)
-    session.wait_for_task(instance_id, task)
+    session.wait_for_task(task, instance_id)
 
 
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
