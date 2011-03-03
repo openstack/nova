@@ -48,8 +48,7 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
     try:
         db.instance_type_create(
                 context.get_admin_context(),
-                dict(
-                    name=name,
+                dict(name=name,
                     memory_mb=memory,
                     vcpus=vcpus,
                     local_gb=local_gb,
