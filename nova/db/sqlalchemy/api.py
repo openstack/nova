@@ -2076,6 +2076,98 @@ def console_get(context, console_id, instance_id=None):
     return result
 
 
+    ##################
+
+
+@require_admin_context
+def instance_type_create(_context, values):
+    try:
+        instance_type_ref = models.InstanceTypes()
+        instance_type_ref.update(values)
+        instance_type_ref.save()
+    except:
+        raise exception.DBError
+    return instance_type_ref
+
+
+@require_context
+def instance_type_get_all(context, inactive=0):
+    """
+    Returns a dict describing all instance_types with name as key.
+    """
+    session = get_session()
+    if inactive:
+        inst_types = session.query(models.InstanceTypes).\
+                        order_by("name").\
+                        all()
+    else:
+        inst_types = session.query(models.InstanceTypes).\
+                        filter_by(deleted=inactive).\
+                        order_by("name").\
+                        all()
+    if inst_types:
+        inst_dict = {}
+        for i in inst_types:
+            inst_dict[i['name']] = dict(i)
+        return inst_dict
+    else:
+        raise exception.NotFound
+
+
+@require_context
+def instance_type_get_by_name(context, name):
+    """Returns a dict describing specific instance_type"""
+    session = get_session()
+    inst_type = session.query(models.InstanceTypes).\
+                    filter_by(name=name).\
+                    first()
+    if not inst_type:
+        raise exception.NotFound(_("No instance type with name %s") % name)
+    else:
+        return dict(inst_type)
+
+
+@require_context
+def instance_type_get_by_flavor_id(context, id):
+    """Returns a dict describing specific flavor_id"""
+    session = get_session()
+    inst_type = session.query(models.InstanceTypes).\
+                                    filter_by(flavorid=int(id)).\
+                                    first()
+    if not inst_type:
+        raise exception.NotFound(_("No flavor with name %s") % id)
+    else:
+        return dict(inst_type)
+
+
+@require_admin_context
+def instance_type_destroy(context, name):
+    """ Marks specific instance_type as deleted"""
+    session = get_session()
+    instance_type_ref = session.query(models.InstanceTypes).\
+                                      filter_by(name=name)
+    records = instance_type_ref.update(dict(deleted=1))
+    if records == 0:
+        raise exception.NotFound
+    else:
+        return instance_type_ref
+
+
+@require_admin_context
+def instance_type_purge(context, name):
+    """ Removes specific instance_type from DB
+        Usually instance_type_destroy should be used
+    """
+    session = get_session()
+    instance_type_ref = session.query(models.InstanceTypes).\
+                                      filter_by(name=name)
+    records = instance_type_ref.delete()
+    if records == 0:
+        raise exception.NotFound
+    else:
+        return instance_type_ref
+
+
 ####################
 
 

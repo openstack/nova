@@ -20,6 +20,8 @@ import webob
 
 from nova import test
 import nova.api
+from nova import context
+from nova import db
 from nova.api.openstack import flavors
 from nova.tests.api.openstack import fakes
 
@@ -33,6 +35,7 @@ class FlavorsTest(test.TestCase):
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
+        self.context = context.get_admin_context()
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -41,6 +44,9 @@ class FlavorsTest(test.TestCase):
     def test_get_flavor_list(self):
         req = webob.Request.blank('/v1.0/testacct/flavors')
         res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
 
     def test_get_flavor_by_id(self):
-        pass
+        req = webob.Request.blank('/v1.0/testacct/flavors/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)

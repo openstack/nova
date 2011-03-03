@@ -17,6 +17,8 @@
 
 from webob import exc
 
+from nova import db
+from nova import context
 from nova.api.openstack import faults
 from nova.api.openstack import common
 from nova.compute import instance_types
@@ -39,19 +41,19 @@ class Controller(wsgi.Controller):
 
     def detail(self, req, **kw):
         """Return all flavors in detail."""
-        items = [self.show(req, id)['flavor'] for id in self._all_ids()]
-        items = common.limited(items, req)
+        items = [self.show(req, id)['flavor'] for id in self._all_ids(req)]
         return dict(flavors=items)
 
     def show(self, req, id, **kw):
         """Return data about the given flavor id."""
-        for name, val in instance_types.INSTANCE_TYPES.iteritems():
-            if val['flavorid'] == int(id):
-                item = dict(ram=val['memory_mb'], disk=val['local_gb'],
-                            id=val['flavorid'], name=name)
-                return dict(flavor=item)
+        ctxt = req.environ['nova.context']
+        values = db.instance_type_get_by_flavor_id(ctxt, id)
+        return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
 
-    def _all_ids(self):
+    def _all_ids(self, req):
         """Return the list of all flavorids."""
-        return [i['flavorid'] for i in instance_types.INSTANCE_TYPES.values()]
+        ctxt = req.environ['nova.context']
+        inst_types = db.instance_type_get_all(ctxt)
+        flavor_ids = [inst_types[i]['flavorid'] for i in inst_types.keys()]
+        return sorted(flavor_ids)
