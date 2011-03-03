@@ -37,10 +37,12 @@ flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
 flags.DEFINE_integer('quota_metadata_items', 128,
                      'number of metadata items allowed per instance')
-flags.DEFINE_integer('quota_file_injection_max_files', 5,
-                     'number of files allowed during file injection')
-flags.DEFINE_integer('quota_file_injection_max_file_bytes', 10 * 1024,
-                     'number of bytes allowed per file during file injection')
+flags.DEFINE_integer('quota_personality_max_files', 5,
+                     'number of personality files allowed')
+flags.DEFINE_integer('quota_personality_max_content_bytes', 10 * 1024,
+                     'number of bytes allowed per personality file')
+flags.DEFINE_integer('quota_personality_max_path_bytes', 255,
+                     'number of bytes allowed per personality file path')
 
 
 def get_quota(context, project_id):
@@ -113,14 +115,19 @@ def allowed_metadata_items(context, num_metadata_items):
     return min(num_metadata_items, num_allowed_metadata_items)
 
 
-def allowed_file_injection_files(context):
-    """Return the number of files allowed per file injection"""
-    return FLAGS.quota_file_injection_max_files
+def allowed_personality_files(context):
+    """Return the number of personality files allowed"""
+    return FLAGS.quota_personality_max_files
 
 
-def allowed_file_injection_file_bytes(context):
-    """Return the number of bytes allowed per file during injection"""
-    return FLAGS.quota_file_injection_max_file_bytes
+def allowed_personality_content_bytes(context):
+    """Return the number of bytes allowed per personality content"""
+    return FLAGS.quota_personality_max_content_bytes
+
+
+def allowed_personality_path_bytes(context):
+    """Return the number of bytes allowed in a personality file path"""
+    return FLAGS.quota_personality_max_path_bytes
 
 
 class QuotaError(exception.ApiError):

@@ -177,12 +177,66 @@ class QuotaTestCase(test.TestCase):
                                             image_id='fake',
                                             metadata=metadata)
 
-    def test_allowed_file_injection_files(self):
+    def test_allowed_personality_files(self):
         self.assertEqual(
-                quota.allowed_file_injection_files(self.context),
-                FLAGS.quota_file_injection_max_files)
+                quota.allowed_personality_files(self.context),
+                FLAGS.quota_personality_max_files)
 
-    def test_allowed_file_injection_file_bytes(self):
+    def _create_with_personality(self, files):
+        api = compute.API()
+        api.create(self.context, min_count=1, max_count=1,
+                instance_type='m1.small', image_id='fake',
+                onset_files=files)
+
+    def test_no_personality_files(self):
+        api = compute.API()
+        api.create(self.context, instance_type='m1.small', image_id='fake')
+
+    def test_max_personality_files(self):
+        files = []
+        for i in xrange(FLAGS.quota_personality_max_files):
+            files.append(('/my/path%d' % i, 'config = test\n'))
+        self._create_with_personality(files)  # no QuotaError
+
+    def test_too_many_personality_files(self):
+        files = []
+        for i in xrange(FLAGS.quota_personality_max_files + 1):
+            files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_personality, files)
+
+    def test_allowed_personality_content_bytes(self):
         self.assertEqual(
-                quota.allowed_file_injection_file_bytes(self.context),
-                FLAGS.quota_file_injection_max_file_bytes)
+                quota.allowed_personality_content_bytes(self.context),
+                FLAGS.quota_personality_max_content_bytes)
+
+    def test_max_personality_content_bytes(self):
+        max = FLAGS.quota_personality_max_content_bytes
+        content = ''.join(['a' for i in xrange(max)])
+        files = [('/test/path', content)]
+        self._create_with_personality(files)  # no QuotaError
+
+    def test_too_many_personality_content_bytes(self):
+        max = FLAGS.quota_personality_max_content_bytes
+        content = ''.join(['a' for i in xrange(max + 1)])
+        files = [('/test/path', content)]
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_personality, files)
+
+    def test_allowed_personality_path_bytes(self):
+        self.assertEqual(
+                quota.allowed_personality_path_bytes(self.context),
+                FLAGS.quota_personality_max_path_bytes)
+
+    def test_max_personality_path_bytes(self):
+        max = FLAGS.quota_personality_max_path_bytes
+        path = ''.join(['a' for i in xrange(max)])
+        files = [(path, 'config = quotatest')]
+        self._create_with_personality(files)  # no QuotaError
+
+    def test_too_many_personality_path_bytes(self):
+        max = FLAGS.quota_personality_max_path_bytes
+        path = ''.join(['a' for i in xrange(max + 1)])
+        files = [(path, 'config = quotatest')]
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_personality, files)

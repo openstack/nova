@@ -80,6 +80,26 @@ class API(base.Base):
                         topic,
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
+    def _check_personality_file_quota(self, context, personality_files):
+        limit = quota.allowed_personality_files(context)
+        if len(personality_files) > limit:
+            raise quota.QuotaError(_("Personality limit exceeded. You can "
+                                     "only have %d personalities when "
+                                     "creating an instance.") % limit,
+                                   "PersonalityLimitExceeded")
+        path_limit = quota.allowed_personality_path_bytes(context)
+        content_limit = quota.allowed_personality_content_bytes(context)
+        for path, content in personality_files:
+            if len(path) > path_limit:
+                raise quota.QuotaError(
+                        _("Personality file path limit exceeded."),
+                        "PersonalityLimitExceeded")
+            if len(content) > content_limit:
+                raise quota.QuotaError(
+                        _("Personality file content limit exceeded."),
+                        "PersonalityLimitExceeded")
+        return personality_files
+
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
@@ -123,6 +143,10 @@ class API(base.Base):
                        % locals())
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        if onset_files is not None:
+            onset_files = \
+                self._check_personality_file_quota(context, onset_files)
 
         image = self.image_service.show(context, image_id)
         if kernel_id is None:
