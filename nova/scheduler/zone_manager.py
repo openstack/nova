@@ -17,7 +17,7 @@
 ZoneManager oversees all communications with child Zones.
 """
 
-import novatools
+import novaclient
 import thread
 import traceback
 
@@ -85,9 +85,9 @@ class ZoneState(object):
                             "attempts. Marking inactive.") % locals())
 
 
-def _call_novatools(zone):
-    """Call novatools. Broken out for testing purposes."""
-    client = novatools.OpenStack(zone.username, zone.password, zone.api_url)
+def _call_novaclient(zone):
+    """Call novaclient. Broken out for testing purposes."""
+    client = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
     return client.zones.info()._info
 
 
@@ -95,7 +95,7 @@ def _poll_zone(zone):
     """Eventlet worker to poll a zone."""
     logging.debug(_("Polling zone: %s") % zone.api_url)
     try:
-        zone.update_metadata(_call_novatools(zone))
+        zone.update_metadata(_call_novaclient(zone))
     except Exception, e:
         zone.log_error(traceback.format_exc())
 
