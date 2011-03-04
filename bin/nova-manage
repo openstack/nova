@@ -546,6 +546,16 @@ class NetworkCommands(object):
                                 network.dns)
 
 
+    def delete(self, fixed_range):
+        """Deletes a network"""
+        try:
+            network = [n for n in db.network_get_all(context.get_admin_context()) 
+                       if n.cidr == fixed_range][0]
+            
+            print network.id, network.cidr, network.project_id
+        except IndexError:
+            raise ValueError(_("Network does not exist"))
+
 class ServiceCommands(object):
     """Enable and disable running services"""
 
