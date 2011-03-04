@@ -15,6 +15,7 @@
 #    under the License.
 
 import mox
+import sys
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
 from xml.dom.minidom import parseString as xml_to_dom
@@ -27,11 +28,15 @@ from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
+from nova.compute import manager as compute_manager
+from nova.compute import power_state
 from nova.db.sqlalchemy import models
 from nova.virt import libvirt_conn
 
+libvirt = None
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
+flags.DECLARE('compute_driver', 'nova.compute.manager')
 
 
 class LibvirtConnTestCase(test.TestCase):
@@ -73,30 +78,35 @@ class LibvirtConnTestCase(test.TestCase):
                      'bridge':        'br101',
                      'instance_type': 'm1.small'}
 
+    def lazy_load_library_exists(self):
+        """check if libvirt is available."""
+        # try to connect libvirt. if fail, skip test.
+        try:
+            import libvirt
+            import libxml2
+        except ImportError:
+            return False
+        global libvirt
+        libvirt = __import__('libvirt')
+        libvirt_conn.libvirt = __import__('libvirt')
+        libvirt_conn.libxml2 = __import__('libxml2')
+        return True
+
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtConnection(libvirt is not used)."""
 
-        # A fake libvirt.virtConnect
+        # A fake libvirt.virConnect
         class FakeLibvirtConnection(object):
-            def getVersion(self):
-                return 12003
-
-            def getType(self):
-                return 'qemu'
-
-            def getCapabilities(self):
-                return 'qemu'
-
-            def listDomainsID(self):
-                return []
-
-            def getCapabilitied(self):
-                return
+            pass
 
         # A fake libvirt_conn.IptablesFirewallDriver
         class FakeIptablesFirewallDriver(object):
+
             def __init__(self, **kwargs):
                 pass
+
+            def setattr(self, key, val):
+                self.__setattr__(key, val)
 
         # Creating mocks
         fake = FakeLibvirtConnection()
@@ -274,33 +284,54 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEquals(uri, testuri)
         db.instance_destroy(user_context, instance_ref['id'])
 
-    def test_update_available_resource_works_correctly(self):
+    def tes1t_update_available_resource_works_correctly(self):
         """Confirm compute_node table is updated successfully."""
         org_path = FLAGS.instances_path = ''
         FLAGS.instances_path = '.'
 
+        # Prepare mocks
+        def getVersion():
+            return 12003
+
+        def getType():
+            return 'qemu'
+
+        def listDomainsID():
+            return []
+
         service_ref = self.create_service(host='dummy')
-        self.create_fake_libvirt_mock()
+        self.create_fake_libvirt_mock(getVersion=getVersion,
+                                      getType=getType,
+                                      listDomainsID=listDomainsID)
         self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
                                  'get_cpu_info')
         libvirt_conn.LibvirtConnection.get_cpu_info().AndReturn('cpuinfo')
 
+        # Start test
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
         conn.update_available_resource(self.context, 'dummy')
         service_ref = db.service_get(self.context, service_ref['id'])
         compute_node = service_ref['compute_node'][0]
 
-        c1 = (compute_node['vcpus'] > 0)
-        c2 = (compute_node['memory_mb'] > 0)
-        c3 = (compute_node['local_gb'] > 0)
-        c4 = (compute_node['vcpus_used'] == 0)
-        c5 = (compute_node['memory_mb_used'] > 0)
-        c6 = (compute_node['local_gb_used'] > 0)
-        c7 = (len(compute_node['hypervisor_type']) > 0)
-        c8 = (compute_node['hypervisor_version'] > 0)
-
-        self.assertTrue(c1 and c2 and c3 and c4 and c5 and c6 and c7 and c8)
+        if sys.platform.upper() == 'LINUX2':
+            self.assertTrue(compute_node['vcpus'] > 0)
+            self.assertTrue(compute_node['memory_mb'] > 0)
+            self.assertTrue(compute_node['local_gb'] > 0)
+            self.assertTrue(compute_node['vcpus_used'] == 0)
+            self.assertTrue(compute_node['memory_mb_used'] > 0)
+            self.assertTrue(compute_node['local_gb_used'] > 0)
+            self.assertTrue(len(compute_node['hypervisor_type']) > 0)
+            self.assertTrue(compute_node['hypervisor_version'] > 0)
+        else:
+            self.assertTrue(compute_node['vcpus'] > 0)
+            self.assertTrue(compute_node['memory_mb'] == 0)
+            self.assertTrue(compute_node['local_gb'] > 0)
+            self.assertTrue(compute_node['vcpus_used'] == 0)
+            self.assertTrue(compute_node['memory_mb_used'] == 0)
+            self.assertTrue(compute_node['local_gb_used'] > 0)
+            self.assertTrue(len(compute_node['hypervisor_type']) > 0)
+            self.assertTrue(compute_node['hypervisor_version'] > 0)
 
         db.service_destroy(self.context, service_ref['id'])
         FLAGS.instances_path = org_path
@@ -318,6 +349,84 @@ class LibvirtConnTestCase(test.TestCase):
                           self.context, 'dummy')
 
         FLAGS.instances_path = org_path
+
+    def test_ensure_filtering_rules_for_instance_timeout(self):
+        """ensure_filtering_fules_for_instance() finishes with timeout."""
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        # Preparing mocks
+        def fake_none(self):
+            return
+
+        def fake_raise(self):
+            raise libvirt.libvirtError('ERR')
+
+        self.create_fake_libvirt_mock(nwfilterLookupByName=fake_raise)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        # Start test
+        self.mox.ReplayAll()
+        try:
+            conn = libvirt_conn.LibvirtConnection(False)
+            conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
+            conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
+            conn.ensure_filtering_rules_for_instance(instance_ref)
+        except exception.Error, e:
+            c1 = (0 <= e.message.find('Timeout migrating for'))
+        self.assertTrue(c1)
+
+        db.instance_destroy(self.context, instance_ref['id'])
+
+    def test_live_migration_raises_exception(self):
+        """Confirms recover method is called when exceptions are raised."""
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        # Preparing data
+        self.compute = utils.import_object(FLAGS.compute_manager)
+        instance_dict = {'host': 'fake', 'state': power_state.RUNNING,
+                         'state_description': 'running'}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref = db.instance_update(self.context, instance_ref['id'],
+                                          instance_dict)
+        vol_dict = {'status': 'migrating', 'size': 1}
+        volume_ref = db.volume_create(self.context, vol_dict)
+        db.volume_attached(self.context, volume_ref['id'], instance_ref['id'],
+                           '/dev/fake')
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "migrateToURI")
+        vdmock.migrateToURI(FLAGS.live_migration_uri % 'dest',
+                            mox.IgnoreArg(),
+                            None, FLAGS.live_migration_bandwidth).\
+                            AndRaise(libvirt.libvirtError('ERR'))
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref.name:
+                return vdmock
+
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        # Start test
+        self.mox.ReplayAll()
+        conn = libvirt_conn.LibvirtConnection(False)
+        self.assertRaises(libvirt.libvirtError,
+                      conn._live_migration,
+                      self.context, instance_ref, 'dest', '',
+                      self.compute.recover_live_migration)
+
+        instance_ref = db.instance_get(self.context, instance_ref['id'])
+        self.assertTrue(instance_ref['state_description'] == 'running')
+        self.assertTrue(instance_ref['state'] == power_state.RUNNING)
+        volume_ref = db.volume_get(self.context, volume_ref['id'])
+        self.assertTrue(volume_ref['status'] == 'in-use')
+
+        db.volume_destroy(self.context, volume_ref['id'])
+        db.instance_destroy(self.context, instance_ref['id'])
 
     def tearDown(self):
         self.manager.delete_project(self.project)

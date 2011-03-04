@@ -36,8 +36,10 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
+import multiprocessing
 import os
 import shutil
+import sys
 import random
 import subprocess
 import time
@@ -858,7 +860,7 @@ class LibvirtConnection(object):
 
         """
 
-        return open('/proc/cpuinfo').read().count('processor')
+        return multiprocessing.cpu_count()
 
     def get_memory_mb_total(self):
         """Get the total memory size(MB) of physical computer.
@@ -866,6 +868,9 @@ class LibvirtConnection(object):
         :returns: the total amount of memory(MB).
 
         """
+
+        if sys.platform.upper() != 'LINUX2':
+            return 0
 
         meminfo = open('/proc/meminfo').read().split()
         idx = meminfo.index('MemTotal:')
@@ -904,6 +909,9 @@ class LibvirtConnection(object):
         :returns: the total usage of memory(MB).
 
         """
+
+        if sys.platform.upper() != 'LINUX2':
+            return 0
 
         m = open('/proc/meminfo').read().split()
         idx1 = m.index('MemFree:')
@@ -1126,7 +1134,7 @@ class LibvirtConnection(object):
 
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
-        while not timeout_count:
+        while timeout_count:
             try:
                 filter_name = 'nova-instance-%s' % instance_ref.name
                 self._conn.nwfilterLookupByName(filter_name)
