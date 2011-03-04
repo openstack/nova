@@ -156,7 +156,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_meta['id'] = id
             self.fixtures.append(image_meta)
-            return id
+            return image_meta
 
         def fake_update_image(self, image_id, image_meta, data=None):
             f = self.fake_get_image_meta(image_id)
@@ -164,6 +164,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
                 raise glance_exc.NotFound
 
             f.update(image_meta)
+            return f
 
         def fake_delete_image(self, image_id):
             f = self.fake_get_image_meta(image_id)

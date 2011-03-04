@@ -29,6 +29,7 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', '$state_path/images',
                     'path to decrypted images')
 
+
 class LocalImageService(service.BaseImageService):
     """Image service storing images to local disk.
 
@@ -97,18 +98,11 @@ class LocalImageService(service.BaseImageService):
 
         """
         try:
-            os.unlink(self._path_to(image_id))
+            shutil.rmtree(self._path_to(image_id, None))
         except IOError:
             raise exception.NotFound
 
     def delete_all(self):
         """Clears out all images in local directory."""
         for image_id in self._ids():
-            os.unlink(self._path_to(image_id))
-
-    def delete_imagedir(self):
-        """Deletes the local directory.
-        Raises OSError if directory is not empty.
-
-        """
-        os.rmdir(self._path)
+            shutil.rmtree(self._path_to(image_id, None))
