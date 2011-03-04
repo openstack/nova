@@ -280,37 +280,6 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body_dict)
         return req
 
-    def _format_xml_request_body(self, body_dict):
-        server = body_dict['server']
-        body_parts = []
-        body_parts.extend([
-            '<?xml version="1.0" encoding="UTF-8"?>',
-            '<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"',
-            ' name="%s" imageId="%s" flavorId="%s">' % (
-                    server['name'], server['imageId'], server['flavorId'])])
-        if 'metadata' in server:
-            metadata = server['metadata']
-            body_parts.append('<metadata>')
-            for item in metadata.iteritems():
-                body_parts.append('<meta key="%s">%s</meta>' % item)
-            body_parts.append('</metadata>')
-        if 'personality' in server:
-            personalities = server['personality']
-            body_parts.append('<personality>')
-            for item in personalities.iteritems():
-                body_parts.append('<file path="%s">%s</file>' % item)
-            body_parts.append('</personality>')
-        body_parts.append('</server>')
-        return ''.join(body_parts)
-
-    def _create_personality_request_xml(self, personality_files):
-        body_dict = self._create_personality_request_dict(personality_files)
-        req = webob.Request.blank('/v1.0/servers')
-        req.content_type = 'application/xml'
-        req.method = 'POST'
-        req.body = self._format_xml_request_body(body_dict)
-        return req
-
     def _create_instance_with_personality_json(self, personality):
         compute_api = self._setup_mock_compute_api_for_personality()
         request = self._create_personality_request_json(personality)
