@@ -36,23 +36,11 @@ from nova import flags
 from nova import utils
 from nova.auth import manager
 from nova.image import service
-from nova.api.ec2 import ec2utils
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('image_decryption_dir', '/tmp',
                     'parent dir for tempdir used for image decryption')
-
-
-_type_prefix_map = {'machine': 'ami',
-                    'kernel': 'aki',
-                    'ramdisk': 'ari'}
-
-
-def image_ec2_id(image_id, image_type):
-    prefix = _type_prefix_map[image_type]
-    template = prefix + '-%08x'
-    return ec2utils.id_to_ec2_id(int(image_id), template=template)
 
 
 class S3ImageService(service.BaseImageService):
@@ -62,23 +50,20 @@ class S3ImageService(service.BaseImageService):
         self.service = service
         self.service.__init__(*args, **kwargs)
 
-    def create(self, context, properties, data=None):
-        """image should contain image_location"""
-        image_id, metadata = self._s3_create(context, properties)
-        return image_ec2_id(image_id, metadata['type'])
+    def create(self, context, metadata, data=None):
+        """metadata should contain image_location"""
+        image = self._s3_create(context, metadata)
+        return image
 
     def delete(self, context, image_id):
         # FIXME(vish): call to show is to check filter
         self.show(context, image_id)
-        image_id = ec2utils.ec2_id_to_id(image_id)
         self.service.delete(context, image_id)
 
     def update(self, context, image_id, metadata, data=None):
         # FIXME(vish): call to show is to check filter
         self.show(context, image_id)
-        image_id = ec2utils.ec2_id_to_id(image_id)
         image = self.service.update(context, image_id, metadata, data)
-        image['id'] = image_ec2_id(image['id'], image['type'])
         return image
 
     def index(self, context):
@@ -103,16 +88,13 @@ class S3ImageService(service.BaseImageService):
         for image in images:
             if not S3ImageService._is_visible(context, image):
                 continue
-            image['id'] = image_ec2_id(image['id'], image['type'])
             filtered.append(image)
         return filtered
 
     def show(self, context, image_id):
-        image_id = ec2utils.ec2_id_to_id(image_id)
         image = self.service.show(context, image_id)
         if not self._is_visible(context, image):
             raise exception.NotFound
-        image['id'] = image_ec2_id(image['id'], image['type'])
         return image
 
     @staticmethod
@@ -233,7 +215,7 @@ class S3ImageService(service.BaseImageService):
 
         eventlet.spawn_n(delayed_create)
 
-        return image_id, metadata
+        return image
 
     @staticmethod
     def _decrypt_image(encrypted_filename, encrypted_key, encrypted_iv,

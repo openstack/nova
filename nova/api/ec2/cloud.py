@@ -843,10 +843,19 @@ class CloudController(object):
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
+    _type_prefix_map = {'machine': 'ami',
+                        'kernel': 'aki',
+                        'ramdisk': 'ari'}
+
+    def _image_ec2_id(self, image_id, image_type):
+        prefix = self._type_prefix_map[image_type]
+        template = prefix + '-%08x'
+        return ec2utils.id_to_ec2_id(int(image_id), template=template)
+
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
         i = {}
-        i['imageId'] = image.get('id')
+        i['imageId'] = self._image_ec2_id(image.get('id'), image.get('type'))
         i['kernelId'] = image['properties'].get('kernel_id')
         i['ramdiskId'] = image['properties'].get('ramdisk_id')
         i['imageOwnerId'] = image['properties'].get('owner_id')
@@ -863,7 +872,8 @@ class CloudController(object):
             images = []
             for ec2_id in image_id:
                 try:
-                    image = self.image_service.show(context, ec2_id)
+                    internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                    image = self.image_service.show(context, internal_id)
                 except exception.NotFound:
                     raise exception.NotFound(_('Image %s not found') %
                                              ec2_id)
@@ -875,14 +885,16 @@ class CloudController(object):
 
     def deregister_image(self, context, image_id, **kwargs):
         LOG.audit(_("De-registering image %s"), image_id, context=context)
-        self.image_service.delete(context, image_id)
+        internal_id = ec2utils.ec2_id_to_id(image_id)
+        self.image_service.delete(context, internal_id)
         return {'imageId': image_id}
 
     def register_image(self, context, image_location=None, **kwargs):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
-        image = {"image_location": image_location}
-        image_id = self.image_service.create(context, image)
+        metadata = {"image_location": image_location}
+        image = self.image_service.create(context, metadata)
+        image_id =  self._image_ec2_id(image['id'], image['type'])
         msg = _("Registered image %(image_location)s with"
                 " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
@@ -893,8 +905,9 @@ class CloudController(object):
             raise exception.ApiError(_('attribute not supported: %s')
                                      % attribute)
         try:
+            internal_id = ec2utils.ec2_id_to_id(image_id)
             image = self._format_image(self.image_service.show(context,
-                                                               image_id))
+                                                               internal_id))
         except (IndexError, exception.NotFound):
             raise exception.NotFound(_('Image %s not found') % image_id)
         result = {'image_id': image_id, 'launchPermission': []}
@@ -917,13 +930,15 @@ class CloudController(object):
         LOG.audit(_("Updating image %s publicity"), image_id, context=context)
 
         try:
-            metadata = self.image_service.show(context, image_id)
+            internal_id = ec2utils.ec2_id_to_id(image_id)
+            metadata = self.image_service.show(context, internal_id)
         except exception.NotFound:
             raise exception.NotFound(_('Image %s not found') % image_id)
         del(metadata['id'])
         metadata['properties']['is_public'] = (operation_type == 'add')
-        return self.image_service.update(context, image_id, metadata)
+        return self.image_service.update(context, internal_id, metadata)
 
     def update_image(self, context, image_id, **kwargs):
-        result = self.image_service.update(context, image_id, dict(kwargs))
+        internal_id = ec2utils.ec2_id_to_id(image_id)
+        result = self.image_service.update(context, internal_id, dict(kwargs))
         return result
