@@ -22,6 +22,7 @@ objectstore service.
 """
 
 import binascii
+import eventlet
 import os
 import shutil
 import tarfile
@@ -188,46 +189,50 @@ class S3ImageService(service.BaseImageService):
         image = self.service.create(context, metadata)
         image_id = image['id']
 
-        parts = []
-        for fn_element in manifest.find("image").getiterator("filename"):
-            part = self._download_file(bucket, fn_element.text, image_path)
-            parts.append(part)
+        def delayed_create():
+            parts = []
+            for fn_element in manifest.find("image").getiterator("filename"):
+                part = self._download_file(bucket, fn_element.text, image_path)
+                parts.append(part)
 
-        # NOTE(vish): this may be suboptimal, should we use cat?
-        encrypted_filename = os.path.join(image_path, 'image.encrypted')
-        with open(encrypted_filename, 'w') as combined:
-            for filename in parts:
-                with open(filename) as part:
-                    shutil.copyfileobj(part, combined)
+            # NOTE(vish): this may be suboptimal, should we use cat?
+            encrypted_filename = os.path.join(image_path, 'image.encrypted')
+            with open(encrypted_filename, 'w') as combined:
+                for filename in parts:
+                    with open(filename) as part:
+                        shutil.copyfileobj(part, combined)
 
-        metadata['properties']['image_state'] = 'decrypting'
-        self.service.update(context, image_id, metadata)
+            metadata['properties']['image_state'] = 'decrypting'
+            self.service.update(context, image_id, metadata)
 
-        hex_key = manifest.find("image/ec2_encrypted_key").text
-        encrypted_key = binascii.a2b_hex(hex_key)
-        hex_iv = manifest.find("image/ec2_encrypted_iv").text
-        encrypted_iv = binascii.a2b_hex(hex_iv)
+            hex_key = manifest.find("image/ec2_encrypted_key").text
+            encrypted_key = binascii.a2b_hex(hex_key)
+            hex_iv = manifest.find("image/ec2_encrypted_iv").text
+            encrypted_iv = binascii.a2b_hex(hex_iv)
 
-        # FIXME(vish): grab key from common service so this can run on
-        #              any host.
-        cloud_private_key = os.path.join(FLAGS.ca_path, "private/cakey.pem")
+            # FIXME(vish): grab key from common service so this can run on
+            #              any host.
+            cloud_pk = os.path.join(FLAGS.ca_path, "private/cakey.pem")
 
-        decrypted_filename = os.path.join(image_path, 'image.tar.gz')
-        self._decrypt_image(encrypted_filename, encrypted_key, encrypted_iv,
-                            cloud_private_key, decrypted_filename)
+            decrypted_filename = os.path.join(image_path, 'image.tar.gz')
+            self._decrypt_image(encrypted_filename, encrypted_key,
+                                encrypted_iv, cloud_pk, decrypted_filename)
 
-        metadata['properties']['image_state'] = 'untarring'
-        self.service.update(context, image_id, metadata)
+            metadata['properties']['image_state'] = 'untarring'
+            self.service.update(context, image_id, metadata)
 
-        unz_filename = self._untarzip_image(image_path, decrypted_filename)
+            unz_filename = self._untarzip_image(image_path, decrypted_filename)
 
-        metadata['properties']['image_state'] = 'uploading'
-        with open(unz_filename) as image_file:
-            self.service.update(context, image_id, metadata, image_file)
-        metadata['properties']['image_state'] = 'available'
-        self.service.update(context, image_id, metadata)
+            metadata['properties']['image_state'] = 'uploading'
+            with open(unz_filename) as image_file:
+                self.service.update(context, image_id, metadata, image_file)
+            metadata['properties']['image_state'] = 'available'
+            self.service.update(context, image_id, metadata)
 
-        shutil.rmtree(image_path)
+            shutil.rmtree(image_path)
+
+        eventlet.spawn_n(delayed_create)
+
         return image_id, metadata
 
     @staticmethod
