@@ -853,7 +853,7 @@ class CloudController(object):
         i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
         i['type'] = image.get('type')
-        i['isPublic'] = image['properties'].get('is_public') == 'True'
+        i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
         i['architecture'] = image['properties'].get('architecture')
         return i
 
