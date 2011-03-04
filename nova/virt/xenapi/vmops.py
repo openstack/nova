@@ -19,6 +19,7 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
+import base64
 import json
 import M2Crypto
 import os
@@ -313,17 +314,16 @@ class VMOps(object):
         task = self._session.call_xenapi("Async.VM.start", vm, False, False)
         self._session.wait_for_task(task, instance.id)
 
-    def inject_file(self, instance, b64_path, b64_contents):
+    def inject_file(self, instance, path, contents):
         """Write a file to the VM instance. The path to which it is to be
         written and the contents of the file need to be supplied; both should
         be base64-encoded to prevent errors with non-ASCII characters being
         transmitted. If the agent does not support file injection, or the user
         has disabled it, a NotImplementedError will be raised.
         """
-        # Files/paths *should* be base64-encoded at this point, but
-        # double-check to make sure.
-        b64_path = utils.ensure_b64_encoding(b64_path)
-        b64_contents = utils.ensure_b64_encoding(b64_contents)
+        # Files/paths must be base64-encoded for transmission to agent
+        b64_path = base64.b64encode(path)
+        b64_contents = base64.b64encode(contents)
 
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())

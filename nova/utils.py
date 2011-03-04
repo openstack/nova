@@ -491,18 +491,6 @@ def loads(s):
     return json.loads(s)
 
 
-def ensure_b64_encoding(val):
-    """Safety method to ensure that values expected to be base64-encoded
-    actually are. If they are, the value is returned unchanged. Otherwise,
-    the encoded value is returned.
-    """
-    try:
-        dummy = base64.decode(val)
-        return val
-    except TypeError:
-        return base64.b64encode(val)
-
-
 def get_from_path(items, path):
     """ Returns a list of items matching the specified path.  Takes an
     XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,

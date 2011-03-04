@@ -34,7 +34,6 @@ terminating it.
                   :func:`nova.utils.import_object`
 """
 
-import base64
 import datetime
 import random
 import string
@@ -353,15 +352,10 @@ class ComputeManager(manager.Manager):
             LOG.warn(_('trying to inject a file into a non-running '
                     'instance: %(instance_id)s (state: %(instance_state)s '
                     'expected: %(expected_state)s)') % locals())
-        # Files/paths *should* be base64-encoded at this point, but
-        # double-check to make sure.
-        b64_path = utils.ensure_b64_encoding(path)
-        b64_contents = utils.ensure_b64_encoding(file_contents)
-        plain_path = base64.b64decode(b64_path)
         nm = instance_ref['name']
-        msg = _('instance %(nm)s: injecting file to %(plain_path)s') % locals()
+        msg = _('instance %(nm)s: injecting file to %(path)s') % locals()
         LOG.audit(msg)
-        self.driver.inject_file(instance_ref, b64_path, b64_contents)
+        self.driver.inject_file(instance_ref, path, file_contents)
 
     @exception.wrap_exception
     @checks_instance_lock
