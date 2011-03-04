@@ -215,6 +215,20 @@ class InstanceActions(BASE, NovaBase):
     error = Column(Text)
 
 
+class InstanceTypes(BASE, NovaBase):
+    """Represent possible instance_types or flavor of VM offered"""
+    __tablename__ = "instance_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True)
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+    flavorid = Column(Integer, unique=True)
+    swap = Column(Integer, nullable=False, default=0)
+    rxtx_quota = Column(Integer, nullable=False, default=0)
+    rxtx_cap = Column(Integer, nullable=False, default=0)
+
+
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
@@ -579,7 +593,7 @@ def register_models():
     connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceActions,
+    models = (Service, Instance, InstanceActions, InstanceTypes,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
