@@ -36,7 +36,6 @@ from nova.virt import libvirt_conn
 libvirt = None
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
-flags.DECLARE('compute_driver', 'nova.compute.manager')
 
 
 class LibvirtConnTestCase(test.TestCase):
