@@ -233,12 +233,9 @@ class ServersTest(test.TestCase):
 
         self.assertEqual(res.status_int, 200)
 
-    def _personality_dict(self, path, contents):
-        return {'path': path, 'contents': contents}
+    def _setup_mock_compute_api_for_personality(self):
 
-    def _create_instance_with_personality(self, personality):
-
-        class FakeComputeAPI(object):
+        class MockComputeAPI(object):
 
             def __init__(self):
                 self.personality_files = None
@@ -255,28 +252,74 @@ class ServersTest(test.TestCase):
                 return canned_return
             return stub_method
 
-        compute_api = FakeComputeAPI()
+        compute_api = MockComputeAPI()
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
         self.stubs.Set(nova.api.openstack.servers.Controller,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
         self.stubs.Set(nova.api.openstack.common,
             'get_image_id_from_image_hash', make_stub_method(2))
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2,
-            metadata={},
-            personality=personality))
-        if personality is None:
-            del body['server']['personality']
+        return compute_api
 
+    def _create_personality_request_dict(self, personality_files):
+        server = {}
+        server['name'] = 'new-server-test'
+        server['imageId'] = 1
+        server['flavorId'] = 1
+        if personality_files is not None:
+            personalities = []
+            for path, contents in personality_files:
+                personalities.append({'path': path, 'contents': contents})
+            server['personality'] = personalities
+        return {'server': server}
+
+    def _create_personality_request_json(self, personality_files):
+        body_dict = self._create_personality_request_dict(personality_files)
         req = webob.Request.blank('/v1.0/servers')
+        req.content_type = 'application/json'
         req.method = 'POST'
-        req.body = json.dumps(body)
-        return (req, req.get_response(fakes.wsgi_app()),
-                compute_api.personality_files)
+        req.body = json.dumps(body_dict)
+        return req
+
+    def _format_xml_request_body(self, body_dict):
+        server = body_dict['server']
+        body_parts = []
+        body_parts.extend([
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"',
+            ' name="%s" imageId="%s" flavorId="%s">' % (
+                    server['name'], server['imageId'], server['flavorId'])])
+        if 'metadata' in server:
+            metadata = server['metadata']
+            body_parts.append('<metadata>')
+            for item in metadata.iteritems():
+                body_parts.append('<meta key="%s">%s</meta>' % item)
+            body_parts.append('</metadata>')
+        if 'personality' in server:
+            personalities = server['personality']
+            body_parts.append('<personality>')
+            for item in personalities.iteritems():
+                body_parts.append('<file path="%s">%s</file>' % item)
+            body_parts.append('</personality>')
+        body_parts.append('</server>')
+        return ''.join(body_parts)
+
+    def _create_personality_request_xml(self, personality_files):
+        body_dict = self._create_personality_request_dict(personality_files)
+        req = webob.Request.blank('/v1.0/servers')
+        req.content_type = 'application/xml'
+        req.method = 'POST'
+        req.body = self._format_xml_request_body(body_dict)
+        return req
+
+    def _create_instance_with_personality_json(self, personality):
+        compute_api = self._setup_mock_compute_api_for_personality()
+        request = self._create_personality_request_json(personality)
+        response = request.get_response(fakes.wsgi_app())
+        return (request, response, compute_api.personality_files)
 
     def test_create_instance_with_no_personality(self):
         request, response, personality_files = \
-                self._create_instance_with_personality(personality=None)
+                self._create_instance_with_personality_json(personality=None)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [])
 
@@ -284,18 +327,18 @@ class ServersTest(test.TestCase):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Hello, World!"\n'
         b64contents = base64.b64encode(contents)
-        personality = [self._personality_dict(path, b64contents)]
+        personality = [(path, b64contents)]
         request, response, personality_files = \
-            self._create_instance_with_personality(personality)
+            self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [(path, contents)])
 
     def test_create_instance_with_personality_with_non_b64_content(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Oh no!"\n'
-        personality = [self._personality_dict(path, contents)]
+        personality = [(path, contents)]
         request, response, personality_files = \
-            self._create_instance_with_personality(personality)
+            self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(personality_files, None)
 
@@ -307,30 +350,20 @@ class ServersTest(test.TestCase):
             ]
         personality = []
         for path, content in files:
-            personality.append(self._personality_dict(
-                    path, base64.b64encode(content)))
+            personality.append((path, base64.b64encode(content)))
         request, response, personality_files = \
-            self._create_instance_with_personality(personality)
+            self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, files)
 
     def test_create_instance_personality_empty_content(self):
         path = '/my/file/path'
         contents = ''
-        personality = [self._personality_dict(path, contents)]
+        personality = [(path, contents)]
         request, response, personality_files = \
-            self._create_instance_with_personality(personality)
+            self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [(path, contents)])
-
-    def test_create_instance_personality_not_a_list(self):
-        path = '/my/file/path'
-        contents = 'myfilecontents'
-        personality = self._personality_dict(path, contents)
-        request, response, personality_files = \
-            self._create_instance_with_personality(personality)
-        self.assertEquals(response.status_int, 400)
-        self.assertEquals(personality_files, None)
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
