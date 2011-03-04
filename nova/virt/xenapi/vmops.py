@@ -87,8 +87,6 @@ class VMOps(object):
 
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
-        os_type = instance.get('os_type', 'linux')
-
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
@@ -99,8 +97,8 @@ class VMOps(object):
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
 
-        use_pv_kernel = VMHelper.determine_is_pv(
-          self._session, instance.id, vdi_ref, disk_image_type, os_type)
+        use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
+            vdi_ref, disk_image_type, instance.os_type)
         vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
                                     use_pv_kernel)
 
@@ -242,7 +240,7 @@ class VMOps(object):
         finally:
             self._destroy(instance, template_vm_ref, shutdown=False,
                           destroy_kernel_ramdisk=False)
-  
+
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
 
     def reboot(self, instance):

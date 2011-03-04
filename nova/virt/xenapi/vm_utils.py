@@ -80,7 +80,8 @@ class VMHelper(HelperBase):
     """
 
     @classmethod
-    def create_vm(cls, session, instance, kernel, ramdisk, use_pv_kernel=False):
+    def create_vm(cls, session, instance, kernel, ramdisk,
+                  use_pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference.
         the use_pv_kernel flag indicates whether the guest is HVM or PV
@@ -319,7 +320,7 @@ class VMHelper(HelperBase):
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
                   'sr_path': get_sr_path(session),
-                  'os_type': instance.get('os_type', 'linux')}
+                  'os_type': instance.os_type}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
@@ -524,7 +525,7 @@ class VMHelper(HelperBase):
         Determine whether the VM will use a paravirtualized kernel or if it
         will use hardware virtualization.
 
-            1. Objectstore (any image type): 
+            1. Objectstore (any image type):
                We use plugin to figure out whether the VDI uses PV
 
             2. Glance (VHD): then we use `os_type`, raise if not set
@@ -540,7 +541,8 @@ class VMHelper(HelperBase):
               session, vdi_ref, disk_image_type, os_type)
         else:
             # 1. Objecstore
-            return cls._determine_is_pv_objectstore(session, instance_id, vdi_ref)
+            return cls._determine_is_pv_objectstore(session, instance_id,
+                                                    vdi_ref)
 
     @classmethod
     def _determine_is_pv_objectstore(cls, session, instance_id, vdi_ref):
@@ -564,7 +566,7 @@ class VMHelper(HelperBase):
         """
         For a Glance image, determine if we need paravirtualization.
 
-        The relevant scenarios are: 
+        The relevant scenarios are:
             2. Glance (VHD): then we use `os_type`, raise if not set
 
             3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
@@ -582,7 +584,7 @@ class VMHelper(HelperBase):
                 is_pv = True
         elif disk_image_type == ImageType.DISK_RAW:
             # 3. RAW
-            is_pv =  with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
+            is_pv = with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
         elif disk_image_type == ImageType.DISK:
             # 4. Disk
             is_pv = True

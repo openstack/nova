@@ -125,7 +125,10 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
         image = self.image_service.show(context, image_id)
-        os_type = image['properties'].get('os_type', 'linux')
+
+        os_type = None
+        if 'properties' in image and 'os_type' in image['properties']:
+            os_type = image['properties']['os_type']
 
         if kernel_id is None:
             kernel_id = image.get('kernel_id', None)

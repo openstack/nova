@@ -34,7 +34,7 @@ instances_os_type = Column('os_type',
                            String(length=255, convert_unicode=False,
                                   assert_unicode=None, unicode_error=None,
                                   _warn_on_bytestring=False),
-                           nullable=False)
+                           nullable=True)
 
 
 def upgrade(migrate_engine):
@@ -43,5 +43,3 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     instances.create_column(instances_os_type)
-
-    
