@@ -414,7 +414,7 @@ class ComputeManager(manager.Manager):
     @exception.wrap_exception
     @checks_instance_lock
     def confirm_resize(self, context, instance_id, migration_id):
-        """ Destroys the source instance """
+        """Destroys the source instance"""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)

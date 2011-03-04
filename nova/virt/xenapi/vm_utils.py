@@ -270,8 +270,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
-        """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-        Snapshot VHD """
+        """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+        Snapshot VHD"""
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
@@ -284,7 +284,7 @@ class VMHelper(HelperBase):
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
-        template_vm_ref = session.wait_for_task(instance_id, task)
+        template_vm_ref = session.wait_for_task(task, instance_id)
         template_vdi_rec = cls.get_vdi_for_vm_safely(session,
                 template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
@@ -302,14 +302,14 @@ class VMHelper(HelperBase):
 
     @classmethod
     def get_sr(cls, session, sr_label='slices'):
-        """ Finds the SR named by the given name label and returns
-        the UUID """
+        """Finds the SR named by the given name label and returns
+        the UUID"""
         return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
 
     @classmethod
     def get_sr_path(cls, session, sr_label='slices'):
-        """ Finds the SR and then coerces it into a path on the dom0 file
-        system """
+        """Finds the SR and then coerces it into a path on the dom0 file
+        system"""
         return FLAGS.xenapi_sr_base_path + cls.get_sr(session, sr_label)
 
     @classmethod
@@ -643,7 +643,7 @@ class VMHelper(HelperBase):
         if sr_ref:
             LOG.debug(_("Re-scanning SR %s"), sr_ref)
             task = session.call_xenapi('Async.SR.scan', sr_ref)
-            session.wait_for_task(instance_id, task)
+            session.wait_for_task(task, instance_id)
 
     @classmethod
     def scan_default_sr(cls, session):

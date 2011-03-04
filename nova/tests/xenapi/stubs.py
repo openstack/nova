@@ -221,7 +221,7 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 
 
 class FakeSessionForMigrationTests(fake.SessionBase):
-    """ Stubs out a XenAPISession for Migration tests """
+    """Stubs out a XenAPISession for Migration tests"""
     def __init__(self, uri):
         super(FakeSessionForMigrationTests, self).__init__(uri)
 

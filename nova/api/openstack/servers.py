@@ -203,8 +203,8 @@ class Controller(wsgi.Controller):
         return exc.HTTPNoContent()
 
     def action(self, req, id):
-        """ Multi-purpose method used to reboot, rebuild, or
-        resize a server """
+        """Multi-purpose method used to reboot, rebuild, or
+        resize a server"""
 
         actions = {
             'reboot':        self._action_reboot,

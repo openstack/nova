@@ -233,7 +233,7 @@ class VMOps(object):
             "start")
 
     def snapshot(self, instance, image_id):
-        """ Create snapshot from a running VM instance
+        """Create snapshot from a running VM instance
 
         :param instance: instance to be snapshotted
         :param image_id: id of image to upload to
@@ -285,7 +285,7 @@ class VMOps(object):
             return
 
     def migrate_disk_and_power_off(self, instance, dest):
-        """ Copies a VHD from one host machine to another
+        """Copies a VHD from one host machine to another
 
         :param instance: the instance that owns the VHD in question
         :param dest: the destination host machine
@@ -314,7 +314,7 @@ class VMOps(object):
 
             task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(task, instance.id)
 
             # Now power down the instance and transfer the COW VHD
             self._shutdown(instance, vm_ref, method='clean')
@@ -326,7 +326,7 @@ class VMOps(object):
 
             task = self._session.async_call_plugin('migration', 'transfer_vhd',
                     {'params': pickle.dumps(params)})
-            self._session.wait_for_task(instance.id, task)
+            self._session.wait_for_task(task, instance.id)
 
         finally:
             if template_vm_ref:
@@ -338,6 +338,7 @@ class VMOps(object):
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
 
     def attach_disk(self, instance, disk_info):
+        """Links the base copy VHD to the COW via the XAPI plugin"""
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
         new_cow_uuid = str(uuid.uuid4())
@@ -350,7 +351,7 @@ class VMOps(object):
 
         task = self._session.async_call_plugin('migration',
                 'move_vhds_into_sr', {'params': pickle.dumps(params)})
-        self._session.wait_for_task(instance.id, task)
+        self._session.wait_for_task(task, instance.id)
 
         # Now we rescan the SR so we find the VHDs
         VMHelper.scan_default_sr(self._session)
