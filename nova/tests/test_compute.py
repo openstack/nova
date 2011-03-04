@@ -31,7 +31,7 @@ from nova import test
 from nova import utils
 from nova.auth import manager
 from nova.compute import instance_types
-
+from nova.image import local
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
@@ -47,6 +47,11 @@ class ComputeTestCase(test.TestCase):
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute.API()
+
+        def fake_image_show(meh, context, id):
+            return dict(kernelId=1, ramdiskId=1)
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_image_show)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')

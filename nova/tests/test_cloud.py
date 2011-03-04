@@ -38,6 +38,8 @@ from nova import test
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
+from nova.image import local
 from nova.objectstore import image
 
 
@@ -75,6 +77,11 @@ class CloudTestCase(test.TestCase):
         self.context = context.RequestContext(user=self.user,
                                               project=self.project)
         host = self.network.get_network_host(self.context.elevated())
+
+        def fake_image_show(meh, context, id):
+            return dict(kernelId=1, ramdiskId=1)
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_image_show)
 
     def tearDown(self):
         network_ref = db.project_get_network(self.context,
@@ -122,7 +129,7 @@ class CloudTestCase(test.TestCase):
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {'host': self.compute.host})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
-        ec2_id = cloud.id_to_ec2_id(inst['id'])
+        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
@@ -158,12 +165,12 @@ class CloudTestCase(test.TestCase):
         vol2 = db.volume_create(self.context, {})
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
-        volume_id = cloud.id_to_ec2_id(vol2['id'], 'vol-%08x')
+        volume_id = ec2utils.id_to_ec2_id(vol2['id'], 'vol-%08x')
         result = self.cloud.describe_volumes(self.context,
                                              volume_id=[volume_id])
         self.assertEqual(len(result['volumeSet']), 1)
         self.assertEqual(
-                cloud.ec2_id_to_id(result['volumeSet'][0]['volumeId']),
+                ec2utils.ec2_id_to_id(result['volumeSet'][0]['volumeId']),
                 vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
@@ -200,7 +207,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         self.assertEqual(len(result['instancesSet']), 2)
-        instance_id = cloud.id_to_ec2_id(inst2['id'])
+        instance_id = ec2utils.id_to_ec2_id(inst2['id'])
         result = self.cloud.describe_instances(self.context,
                                              instance_id=[instance_id])
         result = result['reservationSet'][0]
@@ -216,6 +223,7 @@ class CloudTestCase(test.TestCase):
 
     def test_console_output(self):
         image_id = FLAGS.default_image
+        print image_id
         instance_type = FLAGS.default_instance_type
         max_count = 1
         kwargs = {'image_id': image_id,
@@ -347,7 +355,7 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
-        ec2_id = cloud.id_to_ec2_id(inst['id'])
+        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3')
         inst = db.instance_get(self.context, inst['id'])
@@ -365,7 +373,7 @@ class CloudTestCase(test.TestCase):
     def test_update_of_volume_display_fields(self):
         vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context,
-                                 cloud.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x'),
                                  display_name='c00l v0lum3')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual('c00l v0lum3', vol['display_name'])
@@ -374,7 +382,7 @@ class CloudTestCase(test.TestCase):
     def test_update_of_volume_wont_update_private_fields(self):
         vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context,
-                                 cloud.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x'),
                                  mountpoint='/not/here')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])

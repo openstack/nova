@@ -21,6 +21,8 @@ import httplib
 import json
 import urlparse
 
+from glance.common import exception as glance_exception
+
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -57,27 +59,32 @@ class GlanceImageService(service.BaseImageService):
         """
         Returns a dict containing image data for the given opaque image id.
         """
-        image = self.client.get_image_meta(id)
-        if image:
-            return image
-        raise exception.NotFound
+        try:
+            image = self.client.get_image_meta(id)
+        except glance_exception.NotFound:
+            raise exception.NotFound
+        return image
 
-    def create(self, context, data):
+    def create(self, context, metadata, data=None):
         """
         Store the image data and return the new image id.
 
         :raises AlreadyExists if the image already exist.
 
         """
-        return self.client.add_image(image_meta=data)
+        return self.client.add_image(metadata, data)
 
-    def update(self, context, image_id, data):
+    def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data.
 
         :raises NotFound if the image does not exist.
 
         """
-        return self.client.update_image(image_id, data)
+        try:
+            result = self.client.update_image(image_id, metadata, data)
+        except glance_exception.NotFound:
+            raise exception.NotFound
+        return result
 
     def delete(self, context, image_id):
         """
@@ -86,7 +93,11 @@ class GlanceImageService(service.BaseImageService):
         :raises NotFound if the image does not exist.
 
         """
-        return self.client.delete_image(image_id)
+        try:
+            result = self.client.delete_image(image_id)
+        except glance_exception.NotFound:
+            raise exception.NotFound
+        return result
 
     def delete_all(self):
         """

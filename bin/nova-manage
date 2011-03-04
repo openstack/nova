@@ -81,7 +81,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.api.ec2.cloud import ec2_id_to_id
+from nova.api.ec2.ec2utils import ec2_id_to_id
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types

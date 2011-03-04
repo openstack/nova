@@ -57,7 +57,7 @@ class QuotaTestCase(test.TestCase):
     def _create_instance(self, cores=2):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 'ami-1'
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
@@ -123,7 +123,7 @@ class QuotaTestCase(test.TestCase):
                                             min_count=1,
                                             max_count=1,
                                             instance_type='m1.small',
-                                            image_id='fake')
+                                            image_id='ami-1')
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -136,7 +136,7 @@ class QuotaTestCase(test.TestCase):
                                             min_count=1,
                                             max_count=1,
                                             instance_type='m1.small',
-                                            image_id='fake')
+                                            image_id='ami-1')
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 

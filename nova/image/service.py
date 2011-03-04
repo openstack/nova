@@ -76,7 +76,7 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def create(self, context, data):
+    def create(self, context, metadata, data=None):
         """
         Store the image data and return the new image id.
 
@@ -85,7 +85,7 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def update(self, context, image_id, data):
+    def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data.
 
         :raises NotFound if the image does not exist.

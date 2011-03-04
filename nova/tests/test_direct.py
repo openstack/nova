@@ -90,8 +90,7 @@ class DirectTestCase(test.TestCase):
 class DirectCloudTestCase(test_cloud.CloudTestCase):
     def setUp(self):
         super(DirectCloudTestCase, self).setUp()
-        compute_handle = compute.API(image_service=self.cloud.image_service,
-                                     network_api=self.cloud.network_api,
+        compute_handle = compute.API(network_api=self.cloud.network_api,
                                      volume_api=self.cloud.volume_api)
         direct.register_service('compute', compute_handle)
         self.router = direct.JsonParamsMiddleware(direct.Router())
