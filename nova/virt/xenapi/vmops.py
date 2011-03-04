@@ -519,7 +519,7 @@ class VMOps(object):
                     NetworkHelper.find_network_with_name_label(self._session,
                                                                bridge)
             if network_ref:
-                VMHelper.create_vif(self._session, vm_ref,
+                VMHelper.create_vif(self._session, vm_opaque_ref,
                                     network_ref, instance.mac_address)
             
 
