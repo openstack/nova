@@ -13,7 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import nova
+
+from nova import flags
 from nova import notifier
+from nova.notifier import no_op_notifier
 from nova import test
 
 import stubout
@@ -30,12 +34,27 @@ class NotifierTestCase(test.TestCase):
 
     def test_send_notification(self):
         self.notify_called = False
-        def mock_notify(self, model):
+        def mock_notify(cls, *args):
             self.notify_called = True
 
-        self.stubs.set(nova.notifier.no_op_notifier.NoopNotifier, 'notify',
+        self.stubs.Set(nova.notifier.no_op_notifier.NoopNotifier, 'notify',
                 mock_notify)
 
-        model = dict(x=1, y=2)
-        notifier.notify(model)
-        self.assertEqual(True, self.notify_called)
+        class Mock(object):
+            pass
+        notifier.notify('derp', Mock())
+        self.assertEqual(self.notify_called, True)
+
+    def test_send_rabbit_notification(self):
+        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
+                'nova.notifier.rabbit_notifier.RabbitNotifier')
+        self.mock_cast = False
+        def mock_cast(cls, *args):
+            self.mock_cast = True
+    
+        class Mock(object):
+            pass
+        self.stubs.Set(nova.rpc, 'cast', mock_cast) 
+        notifier.notify('derp', Mock())
+
+        self.assertEqual(self.mock_cast, True)

@@ -14,6 +14,6 @@
 #    under the License.
 
 class NoopNotifier(object):
-    def notify(self, model):
+    def notify(self, event_name, model):
         """Notifies the recipient of the desired event given the model"""
         pass

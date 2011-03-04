@@ -13,7 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-def notify(model):
+from nova import flags
+from nova import utils
+
+FLAGS = flags.FLAGS
+
+def notify(event_name, model):
     """Sends a notification using the specified driver"""
-    driver = FLAGS.notification_driver
-    driver.notify(model)
+    driver = utils.import_class(FLAGS.notification_driver)()
+    driver.notify(event_name, model)

@@ -355,5 +355,6 @@ DEFINE_string('host', socket.gethostname(),
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
-DEFINE_string('notification_driver', 'nova.notifier.no_op_driver.NoopDriver',
+DEFINE_string('notification_driver',
+              'nova.notifier.no_op_notifier.NoopNotifier',
               'Default driver for sending notifications')
