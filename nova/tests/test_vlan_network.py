@@ -34,10 +34,10 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.network')
 
 
-class NetworkTestCase(test.TestCase):
+class VlanNetworkTestCase(test.TestCase):
     """Test cases for network code"""
     def setUp(self):
-        super(NetworkTestCase, self).setUp()
+        super(VlanNetworkTestCase, self).setUp()
         # NOTE(vish): if you change these flags, make sure to change the
         #             flags in the corresponding section in nova-dhcpbridge
         self.flags(connection_type='fake',
@@ -69,7 +69,11 @@ class NetworkTestCase(test.TestCase):
         for project in self.projects:
             self.manager.delete_project(project)
         self.manager.delete_user(self.user)
-        super(NetworkTestCase, self).tearDown()
+        super(VlanNetworkTestCase, self).tearDown()
+
+    def run(self, result=None):
+        if(FLAGS.network_manager == 'nova.network.manager.VlanManager'):
+            super(VlanNetworkTestCase, self).run(result)
 
     def _create_instance(self, project_num, mac=None):
         if not mac:
