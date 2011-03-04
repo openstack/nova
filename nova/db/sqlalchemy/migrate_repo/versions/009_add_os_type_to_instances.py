@@ -17,6 +17,7 @@
 #    under the License.
 
 from sqlalchemy import *
+from sqlalchemy.sql import text
 from migrate import *
 
 from nova import log as logging
@@ -43,3 +44,13 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
     instances.create_column(instances_os_type)
+    migrate_engine.execute(instances.update()\
+                           .where(instances.c.os_type==None)\
+                           .values(os_type='linux'))
+
+
+def downgrade(migrate_engine):
+    meta.bind = migrate_engine
+
+    instances.drop_column('os_type')
+

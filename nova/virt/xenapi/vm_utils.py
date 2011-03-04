@@ -117,7 +117,7 @@ class VMHelper(HelperBase):
             'memory_target': mem,
             'name_description': '',
             'name_label': instance.name,
-#            'other_config': {'allowvssprovider': False},
+            'other_config': {'allowvssprovider': False},
             'other_config': {},
             'PCI_bus': '',
             'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
@@ -313,14 +313,14 @@ class VMHelper(HelperBase):
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
-        # TODO(dubs): os_type is currently defaulting to linux, we actually
-        # want to make this a NOT NULL column and require it to be specified.
+        os_type = instance.os_type and instance.os_type or 'linux'
+
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
                   'sr_path': get_sr_path(session),
-                  'os_type': instance.os_type}
+                  'os_type': os_type}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
