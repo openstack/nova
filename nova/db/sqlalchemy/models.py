@@ -402,8 +402,6 @@ class Network(BASE, NovaBase):
     cidr = Column(String(255), unique=True)
     cidr_v6 = Column(String(255), unique=True)
 
-    ra_server = Column(String(255))
-
     gateway_v6 = Column(String(255))
     netmask_v6 = Column(String(255))
     netmask = Column(String(255))
