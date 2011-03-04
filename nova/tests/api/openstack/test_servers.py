@@ -272,19 +272,24 @@ class ServersTest(test.TestCase):
             server['personality'] = personalities
         return {'server': server}
 
-    def _create_personality_request_json(self, personality_files):
-        body_dict = self._create_personality_request_dict(personality_files)
+    def _get_create_request_json(self, body_dict):
         req = webob.Request.blank('/v1.0/servers')
         req.content_type = 'application/json'
         req.method = 'POST'
         req.body = json.dumps(body_dict)
         return req
 
-    def _create_instance_with_personality_json(self, personality):
+    def _run_create_instance_with_mock_compute_api(self, request):
         compute_api = self._setup_mock_compute_api_for_personality()
-        request = self._create_personality_request_json(personality)
         response = request.get_response(fakes.wsgi_app())
-        return (request, response, compute_api.personality_files)
+        return compute_api, response
+
+    def _create_instance_with_personality_json(self, personality):
+        body_dict = self._create_personality_request_dict(personality)
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.personality_files
 
     def test_create_instance_with_no_personality(self):
         request, response, personality_files = \
@@ -301,6 +306,39 @@ class ServersTest(test.TestCase):
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [(path, contents)])
+
+    def test_create_instance_with_personality_no_path(self):
+        personality = [('/remove/this/path',
+            base64.b64encode('my\n\file\ncontents'))]
+        body_dict = self._create_personality_request_dict(personality)
+        del body_dict['server']['personality'][0]['path']
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.personality_files, None)
+
+    def test_create_instance_with_personality_no_contents(self):
+        personality = [('/test/path',
+            base64.b64encode('remove\nthese\ncontents'))]
+        body_dict = self._create_personality_request_dict(personality)
+        del body_dict['server']['personality'][0]['contents']
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.personality_files, None)
+
+    def test_create_instance_with_personality_not_a_list(self):
+        personality = [('/test/path', base64.b64encode('test\ncontents\n'))]
+        body_dict = self._create_personality_request_dict(personality)
+        body_dict['server']['personality'] = \
+            body_dict['server']['personality'][0]
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.personality_files, None)
 
     def test_create_instance_with_personality_with_non_b64_content(self):
         path = '/my/file/path'
