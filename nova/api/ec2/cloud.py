@@ -298,7 +298,7 @@ class CloudController(object):
                     'keyFingerprint': key_pair['fingerprint'],
                 })
 
-        return {'keypairsSet': result}
+        return {'keySet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
@@ -890,7 +890,6 @@ class CloudController(object):
             raise exception.ApiError(_('attribute not supported: %s')
                                      % attribute)
         try:
-            image = self.image_service.show(context, image_id)
             image = self._format_image(context,
                                        self.image_service.show(context,
                                                                image_id))
