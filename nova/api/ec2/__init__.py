@@ -62,7 +62,7 @@ class RequestLogging(wsgi.Middleware):
 
     def log_request_completion(self, response, request, start):
         apireq = request.environ.get('ec2.request', None)
-        if apirequest:
+        if apireq:
             controller = apireq.controller
             action = apireq.action
         else:
