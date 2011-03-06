@@ -115,17 +115,17 @@ def allowed_metadata_items(context, num_metadata_items):
 
 def allowed_personality_files(context):
     """Return the number of personality files allowed"""
-    return FLAGS.quota_personality_max_files
+    return int(FLAGS.quota_personality_max_files)
 
 
 def allowed_personality_content_bytes(context):
     """Return the number of bytes allowed per personality content"""
-    return FLAGS.quota_personality_max_content_bytes
+    return int(FLAGS.quota_personality_max_content_bytes)
 
 
 def allowed_personality_path_bytes(context):
     """Return the number of bytes allowed in a personality file path"""
-    return FLAGS.quota_personality_max_path_bytes
+    return int(FLAGS.quota_personality_max_path_bytes)
 
 
 class QuotaError(exception.ApiError):
