@@ -153,7 +153,7 @@ class Controller(wsgi.Controller):
             try:
                 path = item['path']
                 contents = item['contents']
-            except KeyError, key:
+            except KeyError as key:
                 expl = 'Bad personality format: missing %s' % key
                 raise exc.HTTPBadRequest(explanation=expl)
             except TypeError:

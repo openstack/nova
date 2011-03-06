@@ -316,7 +316,7 @@ class VMOps(object):
 
     def inject_file(self, instance, path, contents):
         """Write a file to the VM instance. The path to which it is to be
-        written and the contents of the file need to be supplied; both should
+        written and the contents of the file need to be supplied; both will
         be base64-encoded to prevent errors with non-ASCII characters being
         transmitted. If the agent does not support file injection, or the user
         has disabled it, a NotImplementedError will be raised.

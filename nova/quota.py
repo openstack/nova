@@ -46,14 +46,12 @@ flags.DEFINE_integer('quota_personality_max_path_bytes', 255,
 
 
 def get_quota(context, project_id):
-    rval = {
-        'instances': FLAGS.quota_instances,
-        'cores': FLAGS.quota_cores,
-        'volumes': FLAGS.quota_volumes,
-        'gigabytes': FLAGS.quota_gigabytes,
-        'floating_ips': FLAGS.quota_floating_ips,
-        'metadata_items': FLAGS.quota_metadata_items,
-        }
+    rval = {'instances': FLAGS.quota_instances,
+            'cores': FLAGS.quota_cores,
+            'volumes': FLAGS.quota_volumes,
+            'gigabytes': FLAGS.quota_gigabytes,
+            'floating_ips': FLAGS.quota_floating_ips,
+            'metadata_items': FLAGS.quota_metadata_items}
 
     try:
         quota = db.quota_get(context, project_id)
