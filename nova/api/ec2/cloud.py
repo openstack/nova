@@ -838,14 +838,14 @@ class CloudController(object):
         self.compute_api.unrescue(context, instance_id=instance_id)
         return True
 
-    def update_instance(self, context, ec2_id, **kwargs):
+    def update_instance(self, context, instance_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
         changes = {}
         for field in updatable_fields:
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            instance_id = ec2_id_to_id(ec2_id)
+            instance_id = ec2_id_to_id(instance_id)
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
