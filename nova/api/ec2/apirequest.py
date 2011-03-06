@@ -52,7 +52,23 @@ def _database_to_isoformat(datetimeobj):
 
 
 def _try_convert(value):
-    """Return a non-string if possible"""
+    """Return a non-string from a string or unicode, if possible.
+
+    ============= =====================================================
+    When value is returns
+    ============= =====================================================
+    zero-length   ''
+    'None'        None
+    'True'        True
+    'False'       False
+    '0', '-0'     0
+    0xN, -0xN     int from hex (postitive) (N is any number)
+    0bN, -0bN     int from binary (positive) (N is any number)
+    *             try conversion to int, float, complex, fallback value
+
+    """
+    if len(value) == 0:
+        return ''
     if value == 'None':
         return None
     if value == 'True':
