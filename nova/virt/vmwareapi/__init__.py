@@ -17,4 +17,3 @@
 """
 :mod:`vmwareapi` -- Nova support for VMware ESX/ESXi Server through vSphere API
 """
-

@@ -30,7 +30,7 @@ def build_selcetion_spec(client_factory, name):
 def build_traversal_spec(client_factory, name, type, path, skip, select_set):
     """ Builds the traversal spec object """
     traversal_spec = client_factory.create('ns0:TraversalSpec')
-    traversal_spec.name= name
+    traversal_spec.name = name
     traversal_spec.type = type
     traversal_spec.path = path
     traversal_spec.skip = skip
