@@ -42,6 +42,7 @@ from nova import utils
 from nova import version
 from nova import wsgi
 
+
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('report_interval', 10,
                      'seconds between nodes reporting state to datastore',
@@ -271,6 +272,11 @@ def serve(*services):
         x.start()
 
 
+def wait():
+    while True:
+        greenthread.sleep(5)
+
+
 def serve_wsgi(cls, conf):
     try:
         service = cls.create(conf)
@@ -288,11 +294,6 @@ def serve_wsgi(cls, conf):
     service.start()
 
     return service
-
-
-def wait():
-    while True:
-        greenthread.sleep(5)
 
 
 def _run_wsgi(paste_config_file, apis):
