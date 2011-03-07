@@ -290,6 +290,9 @@ class SessionBase(object):
         #Always return 12GB available
         return 12 * 1024 * 1024 * 1024
 
+    def host_call_plugin(*args):
+        return 'herp'
+
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
             self._login(methodname, params)
