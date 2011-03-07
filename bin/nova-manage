@@ -846,6 +846,16 @@ class ImageCommands(object):
         arguments: directory"""
         machine_images = {}
         other_images = {}
+        directory = os.path.abspath(directory)
+        # NOTE(vish): If we're importing from the images path dir, attempt
+        #             to move the files out of the way before importing
+        #             so we aren't writing to the same directory. This
+        #             may fail if the dir was a mointpoint.
+        if directory == os.path.abspath(FLAGS.images_path):
+            new_dir = "%s_bak" % directory
+            os.move(directory, new_dir)
+            os.mkdir(directory)
+            directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
             try:
                 image_path = os.path.join(fn.rpartition('/')[0], 'image')
