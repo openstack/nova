@@ -18,6 +18,7 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 """
 
 import os
+import time
 
 from nova import db
 from nova import exception
@@ -56,6 +57,8 @@ flags.DEFINE_bool('use_nova_chains', False,
                   'use the nova_ routing chains instead of default')
 flags.DEFINE_string('input_chain', 'INPUT',
                     'chain to add nova_input to')
+flags.DEFINE_integer('dhcp_lease_time', 120,
+                     'Lifetime of a DHCP lease')
 
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
@@ -273,8 +276,17 @@ def ensure_bridge(bridge, interface, net_attrs=None):
     _confirm_rule("FORWARD", "-j nova-local")
 
 
+def get_dhcp_leases(context, network_id):
+    """Return a network's hosts config in dnsmasq leasefile format"""
+    hosts = []
+    for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
+                                                            network_id):
+        hosts.append(_host_lease(fixed_ip_ref))
+    return '\n'.join(hosts)
+
+
 def get_dhcp_hosts(context, network_id):
-    """Get a string containing a network's hosts config in dnsmasq format"""
+    """Get a string containing a network's hosts config in dhcp-host format"""
     hosts = []
     for fixed_ip_ref in db.network_get_associated_fixed_ips(context,
                                                             network_id):
@@ -365,8 +377,19 @@ interface %s
                        utils.get_my_linklocal(network_ref['bridge'])})
 
 
+def _host_lease(fixed_ip_ref):
+    """Return a host string for an address in leasefile format"""
+    instance_ref = fixed_ip_ref['instance']
+    timestamp = time.mktime(instance_ref['updated_at'].timetuple())
+
+    return "%d %s %s %s" % (timestamp + FLAGS.dhcp_lease_time,
+                            instance_ref['mac_address'],
+                            instance_ref['hostname'],
+                            fixed_ip_ref['address'])
+
+
 def _host_dhcp(fixed_ip_ref):
-    """Return a host string for an address"""
+    """Return a host string for an address in dhcp-host format"""
     instance_ref = fixed_ip_ref['instance']
     return "%s,%s.%s,%s" % (instance_ref['mac_address'],
                                    instance_ref['hostname'],
@@ -420,7 +443,8 @@ def _dnsmasq_cmd(net):
            ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            ' --listen-address=%s' % net['gateway'],
            ' --except-interface=lo',
-           ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
+           ' --dhcp-range=%s,static,%ds' % (net['dhcp_start'],
+                                            FLAGS.dhcp_lease_time),
            ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            ' --dhcp-script=%s' % FLAGS.dhcpbridge,
            ' --leasefile-ro']
