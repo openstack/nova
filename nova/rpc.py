@@ -91,18 +91,19 @@ class Consumer(messaging.Consumer):
                 super(Consumer, self).__init__(*args, **kwargs)
                 self.failed_connection = False
                 break
-            except:  # Catching all because carrot sucks
+            except Exception as e:  # Catching all because carrot sucks
                 fl_host = FLAGS.rabbit_host
                 fl_port = FLAGS.rabbit_port
                 fl_intv = FLAGS.rabbit_retry_interval
-                LOG.exception(_("AMQP server on %(fl_host)s:%(fl_port)d is"
-                        " unreachable. Trying again in %(fl_intv)d seconds.")
+                LOG.error(_("AMQP server on %(fl_host)s:%(fl_port)d is"
+                        " unreachable: %(e)s. Trying again in %(fl_intv)d"
+                        " seconds.")
                         % locals())
                 self.failed_connection = True
         if self.failed_connection:
-            LOG.exception(_("Unable to connect to AMQP server "
-                          "after %d tries. Shutting down."),
-                          FLAGS.rabbit_max_retries)
+            LOG.error(_("Unable to connect to AMQP server "
+                        "after %d tries. Shutting down."),
+                      FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
@@ -122,7 +123,7 @@ class Consumer(messaging.Consumer):
                 LOG.error(_("Reconnected to queue"))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
-        #             exceptions to be logged 10 times a second if some
+        #             want exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
         except Exception:  # pylint: disable-msg=W0703
             if not self.failed_connection:

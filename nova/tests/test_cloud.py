@@ -66,6 +66,7 @@ class CloudTestCase(test.TestCase):
 
         # set up services
         self.compute = self.start_service('compute')
+        self.scheduter = self.start_service('scheduler')
         self.network = self.start_service('network')
 
         self.manager = manager.AuthManager()
@@ -73,8 +74,12 @@ class CloudTestCase(test.TestCase):
         self.project = self.manager.create_project('proj', 'admin', 'proj')
         self.context = context.RequestContext(user=self.user,
                                               project=self.project)
+        host = self.network.get_network_host(self.context.elevated())
 
     def tearDown(self):
+        network_ref = db.project_get_network(self.context,
+                                             self.project.id)
+        db.network_disassociate(self.context, network_ref['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         self.compute.kill()
@@ -130,6 +135,22 @@ class CloudTestCase(test.TestCase):
         self.network.deallocate_fixed_ip(self.context, fixed)
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
+
+    def test_describe_security_groups(self):
+        """Makes sure describe_security_groups works and filters results."""
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        result = self.cloud.describe_security_groups(self.context)
+        # NOTE(vish): should have the default group as well
+        self.assertEqual(len(result['securityGroupInfo']), 2)
+        result = self.cloud.describe_security_groups(self.context,
+                      group_name=[sec['name']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                sec['name'])
+        db.security_group_destroy(self.context, sec['id'])
 
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
@@ -201,27 +222,32 @@ class CloudTestCase(test.TestCase):
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
+        greenthread.sleep(0.3)
         instance_id = rv['instancesSet'][0]['instanceId']
         output = self.cloud.get_console_output(context=self.context,
-                                                     instance_id=[instance_id])
+                                               instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
         rv = self.cloud.terminate_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
 
     def test_ajax_console(self):
+        image_id = FLAGS.default_image
         kwargs = {'image_id': image_id}
-        rv = yield self.cloud.run_instances(self.context, **kwargs)
+        rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        output = yield self.cloud.get_console_output(context=self.context,
-                                                     instance_id=[instance_id])
-        self.assertEquals(b64decode(output['output']),
-                          'http://fakeajaxconsole.com/?token=FAKETOKEN')
+        greenthread.sleep(0.3)
+        output = self.cloud.get_ajax_console(context=self.context,
+                                             instance_id=[instance_id])
+        self.assertEquals(output['url'],
+                          '%s/?token=FAKETOKEN' % FLAGS.ajax_console_proxy_url)
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
-        rv = yield self.cloud.terminate_instances(self.context, [instance_id])
+        rv = self.cloud.terminate_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
 
     def test_key_generation(self):
         result = self._create_key('test')
@@ -241,7 +267,7 @@ class CloudTestCase(test.TestCase):
         self._create_key('test1')
         self._create_key('test2')
         result = self.cloud.describe_key_pairs(self.context)
-        keys = result["keypairsSet"]
+        keys = result["keySet"]
         self.assertTrue(filter(lambda k: k['keyName'] == 'test1', keys))
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
@@ -283,70 +309,6 @@ class CloudTestCase(test.TestCase):
                 instance_id = instance['instance_id']
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
-
-    def test_describe_instances(self):
-        """Makes sure describe_instances works."""
-        instance1 = db.instance_create(self.context, {'host': 'host2'})
-        comp1 = db.service_create(self.context, {'host': 'host2',
-                                                 'availability_zone': 'zone1',
-                                                 'topic': "compute"})
-        result = self.cloud.describe_instances(self.context)
-        self.assertEqual(result['reservationSet'][0]
-                         ['instancesSet'][0]
-                         ['placement']['availabilityZone'], 'zone1')
-        db.instance_destroy(self.context, instance1['id'])
-        db.service_destroy(self.context, comp1['id'])
-
-    def test_instance_update_state(self):
-        # TODO(termie): what is this code even testing?
-        def instance(num):
-            return {
-                'reservation_id': 'r-1',
-                'instance_id': 'i-%s' % num,
-                'image_id': 'ami-%s' % num,
-                'private_dns_name': '10.0.0.%s' % num,
-                'dns_name': '10.0.0%s' % num,
-                'ami_launch_index': str(num),
-                'instance_type': 'fake',
-                'availability_zone': 'fake',
-                'key_name': None,
-                'kernel_id': 'fake',
-                'ramdisk_id': 'fake',
-                'groups': ['default'],
-                'product_codes': None,
-                'state': 0x01,
-                'user_data': ''}
-        rv = self.cloud._format_describe_instances(self.context)
-        logging.error(str(rv))
-        self.assertEqual(len(rv['reservationSet']), 0)
-
-        # simulate launch of 5 instances
-        # self.cloud.instances['pending'] = {}
-        #for i in xrange(5):
-        #    inst = instance(i)
-        #    self.cloud.instances['pending'][inst['instance_id']] = inst
-
-        #rv = self.cloud._format_instances(self.admin)
-        #self.assert_(len(rv['reservationSet']) == 1)
-        #self.assert_(len(rv['reservationSet'][0]['instances_set']) == 5)
-        # report 4 nodes each having 1 of the instances
-        #for i in xrange(4):
-        #    self.cloud.update_state('instances',
-        #                            {('node-%s' % i): {('i-%s' % i):
-        #                                               instance(i)}})
-
-        # one instance should be pending still
-        #self.assert_(len(self.cloud.instances['pending'].keys()) == 1)
-
-        # check that the reservations collapse
-        #rv = self.cloud._format_instances(self.admin)
-        #self.assert_(len(rv['reservationSet']) == 1)
-        #self.assert_(len(rv['reservationSet'][0]['instances_set']) == 5)
-
-        # check that we can get metadata for each instance
-        #for i in xrange(4):
-        #    data = self.cloud.get_metadata(instance(i)['private_dns_name'])
-        #    self.assert_(data['meta-data']['ami-id'] == 'ami-%s' % i)
 
     @staticmethod
     def _fake_set_image_description(ctxt, image_id, description):

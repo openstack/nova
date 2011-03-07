@@ -74,13 +74,17 @@ class APIRouter(wsgi.Router):
         server_members = {'action': 'POST'}
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
+
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
             server_members["diagnostics"] = "GET"
             server_members["actions"] = "GET"
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
+            server_members['rescue'] = 'POST'
+            server_members['unrescue'] = 'POST'
             server_members['reset_network'] = 'POST'
+            server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
                         collection={'detail': 'GET'})

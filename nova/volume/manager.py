@@ -107,10 +107,14 @@ class VolumeManager(manager.Manager):
             vol_size = volume_ref['size']
             LOG.debug(_("volume %(vol_name)s: creating lv of"
                     " size %(vol_size)sG") % locals())
-            self.driver.create_volume(volume_ref)
+            model_update = self.driver.create_volume(volume_ref)
+            if model_update:
+                self.db.volume_update(context, volume_ref['id'], model_update)
 
             LOG.debug(_("volume %s: creating export"), volume_ref['name'])
-            self.driver.create_export(context, volume_ref)
+            model_update = self.driver.create_export(context, volume_ref)
+            if model_update:
+                self.db.volume_update(context, volume_ref['id'], model_update)
         except Exception:
             self.db.volume_update(context,
                                   volume_ref['id'], {'status': 'error'})

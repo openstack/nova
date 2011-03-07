@@ -35,5 +35,5 @@ DEFINE_bool = DEFINE_bool
 # http://code.google.com/p/python-gflags/source/browse/trunk/gflags.py#39
 
 DEFINE_string('region', 'nova', 'Region to use')
-DEFINE_string('test_image', 'ami-tiny', 'Image to use for launch tests')
-DEFINE_string('use_ipv6', True, 'use the ipv6 or not')
+DEFINE_string('test_image', 'ami-tty', 'Image to use for launch tests')
+DEFINE_bool('use_ipv6', False, 'use the ipv6 or not')

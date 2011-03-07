@@ -100,6 +100,8 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
+                    'Base path to the storage repository')
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -152,13 +154,17 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
-    def spawn(self, instance):
+    def spawn(self, instance, disk=None):
         """Create VM instance"""
-        self._vmops.spawn(instance)
+        self._vmops.spawn(instance, disk)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
+
+    def resize(self, instance, flavor):
+        """Resize a VM instance"""
+        raise NotImplementedError()
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -186,6 +192,15 @@ class XenAPIConnection(object):
         """Unpause paused VM instance"""
         self._vmops.unpause(instance, callback)
 
+    def migrate_disk_and_power_off(self, instance, dest):
+        """Transfers the VHD of a running instance to another host, then shuts
+        off the instance copies over the COW disk"""
+        return self._vmops.migrate_disk_and_power_off(instance, dest)
+
+    def attach_disk(self, instance, disk_info):
+        """Moves the copied VDIs into the SR"""
+        return self._vmops.attach_disk(instance, disk_info)
+
     def suspend(self, instance, callback):
         """suspend the specified instance"""
         self._vmops.suspend(instance, callback)
@@ -194,9 +209,21 @@ class XenAPIConnection(object):
         """resume the specified instance"""
         self._vmops.resume(instance, callback)
 
+    def rescue(self, instance, callback):
+        """Rescue the specified instance"""
+        self._vmops.rescue(instance, callback)
+
+    def unrescue(self, instance, callback):
+        """Unrescue the specified instance"""
+        self._vmops.unrescue(instance, callback)
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         self._vmops.reset_network(instance)
+
+    def inject_network_info(self, instance):
+        """inject network info for specified instance"""
+        self._vmops.inject_network_info(instance)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""
@@ -213,6 +240,10 @@ class XenAPIConnection(object):
     def get_ajax_console(self, instance):
         """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
+
+    def get_host_ip_addr(self):
+        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
+        return xs_url.netloc
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach volume storage to VM instance"""
@@ -273,7 +304,7 @@ class XenAPISession(object):
                              self._session.xenapi.Async.host.call_plugin,
                              self.get_xenapi_host(), plugin, fn, args)
 
-    def wait_for_task(self, id, task):
+    def wait_for_task(self, task, id=None):
         """Return the result of the given task. The task is polled
         until it completes. Not re-entrant."""
         done = event.Event()
@@ -300,10 +331,11 @@ class XenAPISession(object):
         try:
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
-            action = dict(
-                instance_id=int(id),
-                action=name[0:255],  # Ensure action is never > 255
-                error=None)
+            if id:
+                action = dict(
+                    instance_id=int(id),
+                    action=name[0:255],  # Ensure action is never > 255
+                    error=None)
             if status == "pending":
                 return
             elif status == "success":
@@ -317,7 +349,9 @@ class XenAPISession(object):
                 LOG.warn(_("Task [%(name)s] %(task)s status:"
                         " %(status)s    %(error_info)s") % locals())
                 done.send_exception(self.XenAPI.Failure(error_info))
-            db.instance_action_create(context.get_admin_context(), action)
+
+            if id:
+                db.instance_action_create(context.get_admin_context(), action)
         except self.XenAPI.Failure, exc:
             LOG.warn(exc)
             done.send_exception(*sys.exc_info())

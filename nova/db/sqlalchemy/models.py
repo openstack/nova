@@ -126,11 +126,16 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
+    onset_files = []
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def name(self):
-        return FLAGS.instance_name_template % self.id
+        base_name = FLAGS.instance_name_template % self.id
+        if getattr(self, '_rescue', False):
+            base_name += "-rescue"
+        return base_name
 
     admin_pass = Column(String(255))
     user_id = Column(String(255))
@@ -210,6 +215,20 @@ class InstanceActions(BASE, NovaBase):
     error = Column(Text)
 
 
+class InstanceTypes(BASE, NovaBase):
+    """Represent possible instance_types or flavor of VM offered"""
+    __tablename__ = "instance_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True)
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+    flavorid = Column(Integer, unique=True)
+    swap = Column(Integer, nullable=False, default=0)
+    rxtx_quota = Column(Integer, nullable=False, default=0)
+    rxtx_cap = Column(Integer, nullable=False, default=0)
+
+
 class Volume(BASE, NovaBase):
     """Represents a block storage device that can be attached to a vm."""
     __tablename__ = 'volumes'
@@ -243,6 +262,9 @@ class Volume(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    provider_location = Column(String(255))
+    provider_auth = Column(String(255))
+
 
 class Quota(BASE, NovaBase):
     """Represents quota overrides for a project."""
@@ -256,6 +278,7 @@ class Quota(BASE, NovaBase):
     volumes = Column(Integer)
     gigabytes = Column(Integer)
     floating_ips = Column(Integer)
+    metadata_items = Column(Integer)
 
 
 class ExportDevice(BASE, NovaBase):
@@ -366,6 +389,18 @@ class KeyPair(BASE, NovaBase):
     public_key = Column(Text)
 
 
+class Migration(BASE, NovaBase):
+    """Represents a running host-to-host migration."""
+    __tablename__ = 'migrations'
+    id = Column(Integer, primary_key=True, nullable=False)
+    source_compute = Column(String(255))
+    dest_compute = Column(String(255))
+    dest_host = Column(String(255))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    #TODO(_cerberus_): enum
+    status = Column(String(255))
+
+
 class Network(BASE, NovaBase):
     """Represents a network."""
     __tablename__ = 'networks'
@@ -433,6 +468,9 @@ class FixedIp(BASE, NovaBase):
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
+    addressV6 = Column(String(255))
+    netmaskV6 = Column(String(3))
+    gatewayV6 = Column(String(255))
 
 
 class User(BASE, NovaBase):
@@ -536,6 +574,20 @@ class Console(BASE, NovaBase):
     pool = relationship(ConsolePool, backref=backref('consoles'))
 
 
+class InstanceMetadata(BASE, NovaBase):
+    """Represents a metadata key/value pair for an instance"""
+    __tablename__ = 'instance_metadata'
+    id = Column(Integer, primary_key=True)
+    key = Column(String(255))
+    value = Column(String(255))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance, backref="metadata",
+                            foreign_keys=instance_id,
+                            primaryjoin='and_('
+                                'InstanceMetadata.instance_id == Instance.id,'
+                                'InstanceMetadata.deleted == False)')
+
+
 class Zone(BASE, NovaBase):
     """Represents a child zone of this zone."""
     __tablename__ = 'zones'
@@ -553,11 +605,12 @@ def register_models():
     connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceActions,
+    models = (Service, Instance, InstanceActions, InstanceTypes,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
-              Project, Certificate, ConsolePool, Console, Zone)
+              Project, Certificate, ConsolePool, Console, Zone,
+              InstanceMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

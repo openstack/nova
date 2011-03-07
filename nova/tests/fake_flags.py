@@ -29,8 +29,8 @@ FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('fake_network', 'nova.network.manager')
-FLAGS.network_size = 16
-FLAGS.num_networks = 5
+FLAGS.network_size = 8
+FLAGS.num_networks = 2
 FLAGS.fake_network = True
 flags.DECLARE('num_shelves', 'nova.volume.driver')
 flags.DECLARE('blades_per_shelf', 'nova.volume.driver')
@@ -39,6 +39,5 @@ FLAGS.num_shelves = 2
 FLAGS.blades_per_shelf = 4
 FLAGS.iscsi_num_targets = 8
 FLAGS.verbose = True
-FLAGS.sql_connection = 'sqlite:///nova.sqlite'
+FLAGS.sqlite_db = "tests.sqlite"
 FLAGS.use_ipv6 = True
-FLAGS.logfile = 'tests.log'

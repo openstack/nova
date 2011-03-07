@@ -17,19 +17,21 @@
 #    under the License.
 
 import boto
-import boto_v6
 import commands
 import httplib
 import os
 import paramiko
-import random
 import sys
+import time
 import unittest
 from boto.ec2.regioninfo import RegionInfo
 
 from smoketests import flags
 
+SUITE_NAMES = '[image, instance, volume]'
 FLAGS = flags.FLAGS
+flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
+boto_v6 = None
 
 
 class SmokeTestCase(unittest.TestCase):
@@ -39,12 +41,10 @@ class SmokeTestCase(unittest.TestCase):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.WarningPolicy())
         client.connect(ip, username='root', pkey=key)
-        stdin, stdout, stderr = client.exec_command('uptime')
-        print 'uptime: ', stdout.read()
         return client
 
-    def can_ping(self, ip):
-        """ Attempt to ping the specified IP, and give up after 1 second. """
+    def can_ping(self, ip, command="ping"):
+        """Attempt to ping the specified IP, and give up after 1 second."""
 
         # NOTE(devcamcar): ping timeout flag is different in OSX.
         if sys.platform == 'darwin':
@@ -52,9 +52,40 @@ class SmokeTestCase(unittest.TestCase):
         else:
             timeout_flag = 'w'
 
-        status, output = commands.getstatusoutput('ping -c1 -%s1 %s' %
-                                                  (timeout_flag, ip))
+        status, output = commands.getstatusoutput('%s -c1 -%s1 %s' %
+                                                  (command, timeout_flag, ip))
         return status == 0
+
+    def wait_for_running(self, instance, tries=60, wait=1):
+        """Wait for instance to be running"""
+        for x in xrange(tries):
+            instance.update()
+            if instance.state.startswith('running'):
+                return True
+            time.sleep(wait)
+        else:
+            return False
+
+    def wait_for_ping(self, ip, command="ping", tries=120):
+        """Wait for ip to be pingable"""
+        for x in xrange(tries):
+            if self.can_ping(ip, command):
+                return True
+        else:
+            return False
+
+    def wait_for_ssh(self, ip, key_name, tries=30, wait=5):
+        """Wait for ip to be sshable"""
+        for x in xrange(tries):
+            try:
+                conn = self.connect_ssh(ip, key_name)
+                conn.close()
+            except Exception, e:
+                time.sleep(wait)
+            else:
+                return True
+        else:
+            return False
 
     def connection_for_env(self, **kwargs):
         """
@@ -144,8 +175,21 @@ class SmokeTestCase(unittest.TestCase):
         return True
 
 
+TEST_DATA = {}
+
+
+class UserSmokeTestCase(SmokeTestCase):
+    def setUp(self):
+        global TEST_DATA
+        self.conn = self.connection_for_env()
+        self.data = TEST_DATA
+
+
 def run_tests(suites):
     argv = FLAGS(sys.argv)
+    if FLAGS.use_ipv6:
+        global boto_v6
+        boto_v6 = __import__('boto_v6')
 
     if not os.getenv('EC2_ACCESS_KEY'):
         print >> sys.stderr, 'Missing EC2 environment variables. Please ' \
