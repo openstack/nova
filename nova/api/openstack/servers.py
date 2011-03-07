@@ -84,12 +84,10 @@ def _translate_detail_keys(inst):
 
     return dict(server=inst_dict)
 
-
 def _translate_keys(inst):
     """ Coerces into dictionary format, excluding all model attributes
     save for id and name """
     return dict(server=dict(id=inst['id'], name=inst['display_name']))
-
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
@@ -178,7 +176,13 @@ class Controller(wsgi.Controller):
             key_data=key_pair['public_key'],
             metadata=metadata,
             onset_files=env.get('onset_files', []))
-        return _translate_keys(instances[0])
+
+        server = _translate_keys(instances[0])
+        password = "%s%s" % (server['server']['name'][:4],
+                             utils.generate_password(12))
+        server['server']['adminPass'] = password
+        self.compute_api.set_admin_password(context, server['server']['id'])
+        return server
 
     def update(self, req, id):
         """ Updates the server name or password """
