@@ -47,15 +47,15 @@ class ComputeTestCase(test.TestCase):
                    network_manager='nova.network.manager.FlatManager')
         self.compute = utils.import_object(FLAGS.compute_manager)
         self.compute_api = compute.API()
-
-        def fake_image_show(meh, context, id):
-            return dict(kernelId=1, ramdiskId=1)
-
-        self.stubs.Set(local.LocalImageService, 'show', fake_image_show)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake')
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.context = context.RequestContext('fake', 'fake', False)
+
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
 
     def tearDown(self):
         self.manager.delete_user(self.user)
@@ -65,7 +65,7 @@ class ComputeTestCase(test.TestCase):
     def _create_instance(self):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id

@@ -56,9 +56,9 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def show(self, context, id):
+    def show(self, context, image_id):
         """
-        Returns a dict containing image data for the given opaque image id.
+        Returns a dict containing image metadata for the given opaque image id.
 
         :retval a mapping with the following signature:
 
@@ -76,9 +76,19 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
+    def get(self, context, data):
+        """
+        Returns a dict containing image metadata and writes image data to data.
+
+        :param data: a file-like object to hold binary image data
+
+        :raises NotFound if the image does not exist
+        """
+        raise NotImplementedError
+
     def create(self, context, metadata, data=None):
         """
-        Store the image data and return the new image id.
+        Store the image metadata and data and return the new image id.
 
         :raises AlreadyExists if the image already exist.
 
@@ -86,7 +96,7 @@ class BaseImageService(object):
         raise NotImplementedError
 
     def update(self, context, image_id, metadata, data=None):
-        """Replace the contents of the given image with the new data.
+        """Update the given image with the new metadata and data.
 
         :raises NotFound if the image does not exist.
 

@@ -55,6 +55,8 @@
 
 import datetime
 import gettext
+import glob
+import json
 import os
 import re
 import sys
@@ -81,7 +83,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.api.ec2.ec2utils import ec2_id_to_id
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
 from nova.compute import instance_types
@@ -104,7 +106,7 @@ def param2id(object_id):
     args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
     """
     if '-' in object_id:
-        return ec2_id_to_id(object_id)
+        return ec2utils.ec2_id_to_id(object_id)
     else:
         return int(object_id)
 
@@ -735,6 +737,130 @@ class InstanceTypeCommands(object):
             self._print_instance_types(name, inst_types)
 
 
+class ImageCommands(object):
+    """Methods for dealing with a cloud in an odd state"""
+
+    def __init__(self, *args, **kwargs):
+        self.image_service = utils.import_object(FLAGS.image_service)
+
+    def _register(self, image_type, path, owner, name=None,
+                 is_public='T', architecture='x86_64',
+                 kernel_id=None, ramdisk_id=None):
+        meta = {'type': image_type,
+                'is_public': True,
+                'name': name,
+                'properties': {'image_state': 'available',
+                               'owner': owner,
+                               'architecture': architecture,
+                               'image_location': 'local',
+                               'is_public': (is_public == 'T')}}
+        if kernel_id:
+            meta['properties']['kernel_id'] = int(kernel_id)
+        if ramdisk_id:
+            meta['properties']['ramdisk_id'] = int(ramdisk_id)
+        elevated = context.get_admin_context()
+        try:
+            with open(path) as ifile:
+                image = self.image_service.create(elevated, meta, ifile)
+            new = image['id']
+            print _("Image registered to %(new)s (%(new)08x).") % locals()
+            return new
+        except Exception as exc:
+            print _("Failed to register %(path)s: %(exc)s") % locals()
+
+    def register_all(self, image, kernel, ramdisk, owner, name=None,
+                 is_public='T', architecture='x86_64'):
+        """Uploads an image, kernel, and ramdisk into the image_service
+        arguments: image kernel ramdisk owner [name] [is_public='T']
+                   [architecture='x86_64']"""
+        kernel_id = self._register('kernel', kernel, owner, None,
+                                   is_public, architecture)
+        ramdisk_id = self._register('ramdisk', ramdisk, owner, None,
+                                    is_public, architecture)
+        self._register('machine', image, owner, name, is_public,
+                       architecture, kernel_id, ramdisk_id)
+
+    def image_register(self, path, owner, name=None, is_public='T',
+              architecture='x86_64', kernel_id=None, ramdisk_id=None):
+        """Uploads an image into the image_service
+        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+                   [kernel_id] [ramdisk_id]"""
+        self._register('machine', path, owner, name, is_public,
+                       architecture, kernel_id, ramdisk_id)
+
+    def kernel_register(self, path, owner, name=None, is_public='T',
+               architecture='x86_64'):
+        """Uploads a kernel into the image_service
+        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+        """
+        self._register('kernel', path, owner, name, is_public, architecture)
+
+    def ramdisk_register(self, path, owner, name=None, is_public='T',
+                architecture='x86_64'):
+        """Uploads a ramdisk into the image_service
+        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+        """
+        self._register('ramdisk', path, owner, name, is_public, architecture)
+
+    def _lookup(self, old_image_id):
+        try:
+            internal_id = ec2utils.ec2_id_to_id(old_image_id)
+            image = self.image_service.show(context, internal_id)
+        except exception.NotFound:
+            image = self.image_service.show_by_name(context, old_image_id)
+        return image['id']
+
+    def _old_to_new(self, old):
+        new = {'type': old['type'],
+               'is_public': True,
+               'name': old['imageId'],
+               'properties': {'image_state': old['imageState'],
+                              'owner': old['imageOwnerId'],
+                              'architecture': old['architecture'],
+                              'image_location': old['imageLocation'],
+                              'is_public': old['isPublic']}}
+        if old.get('kernelId'):
+            new['properties']['kernel_id'] = self._lookup(old['kernelId'])
+        if old.get('ramdiskId'):
+            new['properties']['ramdisk_id'] = self._lookup(old['ramdiskId'])
+        return new
+
+    def _convert_images(self, images):
+        elevated = context.get_admin_context()
+        for image_path, image_metadata in images.iteritems():
+            meta = self._old_to_new(image_metadata)
+            old = meta['name']
+            try:
+                with open(image_path) as ifile:
+                    image = self.image_service.create(elevated, meta, ifile)
+                new = image['id']
+                print _("Image %(old)s converted to " \
+                        "%(new)s (%(new)08x).") % locals()
+            except Exception as exc:
+                print _("Failed to convert %(old)s: %(exc)s") % locals()
+
+
+    def convert(self, directory):
+        """Uploads old objectstore images in directory to new service
+        arguments: directory"""
+        machine_images = {}
+        other_images = {}
+        for fn in glob.glob("%s/*/info.json" % directory):
+            try:
+                image_path = os.path.join(fn.rpartition('/')[0], 'image')
+                with open(fn) as metadata_file:
+                    image_metadata = json.load(metadata_file)
+                if image_metadata['type'] == 'machine':
+                    machine_images[image_path] = image_metadata
+                else:
+                    other_images[image_path] = image_metadata
+            except Exception as exc:
+                print _("Failed to load %(fn)s.") % locals()
+        # NOTE(vish): do kernels and ramdisks first so images
+        self._convert_images(other_images)
+        self._convert_images(machine_images)
+
+
 CATEGORIES = [
     ('user', UserCommands),
     ('project', ProjectCommands),
@@ -749,6 +875,7 @@ CATEGORIES = [
     ('db', DbCommands),
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
+    ('image', ImageCommands),
     ('flavor', InstanceTypeCommands)]
 
 

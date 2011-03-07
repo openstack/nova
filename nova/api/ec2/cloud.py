@@ -146,10 +146,13 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
+        image_ec2_id = self._image_ec2_id(instance_ref['image_id'], 'machine')
+        k_ec2_id = self._image_ec2_id(instance_ref['kernel_id'], 'kernel')
+        r_ec2_id = self._image_ec2_id(instance_ref['ramdisk_id'], 'ramdisk')
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
-                'ami-id': instance_ref['image_id'],
+                'ami-id': image_ec2_id,
                 'ami-launch-index': instance_ref['launch_index'],
                 'ami-manifest-path': 'FIXME',
                 'block-device-mapping': {
@@ -164,12 +167,12 @@ class CloudController(object):
                 'instance-type': instance_ref['instance_type'],
                 'local-hostname': hostname,
                 'local-ipv4': address,
-                'kernel-id': instance_ref['kernel_id'],
+                'kernel-id': k_ec2_id,
+                'ramdisk-id': r_ec2_id,
                 'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
                 'public-keys': keys,
-                'ramdisk-id': instance_ref['ramdisk_id'],
                 'reservation-id': instance_ref['reservation_id'],
                 'security-groups': '',
                 'mpi': mpi}}
@@ -679,7 +682,7 @@ class CloudController(object):
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = instance['image_id']
+            i['imageId'] = self._image_ec2_id(instance['image_id'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -782,13 +785,15 @@ class CloudController(object):
     def run_instances(self, context, **kwargs):
         max_count = int(kwargs.get('max_count', 1))
         if kwargs.get('kernel_id'):
-            kwargs['kernel_id'] = ec2utils.ec2_id_to_id(kwargs['kernel_id'])
+            kernel = self._get_image(context, kwargs['kernel_id'])
+            kwargs['kernel_id'] = kernel['id']
         if kwargs.get('ramdisk_id'):
-            kwargs['ramdisk_id'] = ec2utils.ec2_id_to_id(kwargs['ramdisk_id'])
+            ramdisk = self._get_image(context, kwargs['ramdisk_id'])
+            kwargs['ramdisk_id'] = ramdisk['id']
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_by_type(
                 kwargs.get('instance_type', None)),
-            image_id=ec2utils.ec2_id_to_id(kwargs['image_id']),
+            image_id=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
@@ -847,17 +852,34 @@ class CloudController(object):
                         'kernel': 'aki',
                         'ramdisk': 'ari'}
 
-    def _image_ec2_id(self, image_id, image_type):
+    def _image_ec2_id(self, image_id, image_type='machine'):
         prefix = self._type_prefix_map[image_type]
         template = prefix + '-%08x'
         return ec2utils.id_to_ec2_id(int(image_id), template=template)
 
+    def _get_image(self, context, ec2_id):
+        try:
+            internal_id = ec2utils.ec2_id_to_id(ec2_id)
+            return self.image_service.show(context, internal_id)
+        except exception.NotFound:
+            return self.image_service.show_by_name(context, ec2_id)
+
+
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
         i = {}
-        i['imageId'] = self._image_ec2_id(image.get('id'), image.get('type'))
-        i['kernelId'] = image['properties'].get('kernel_id')
-        i['ramdiskId'] = image['properties'].get('ramdisk_id')
+        ec2_id = self._image_ec2_id(image.get('id'), image.get('type'))
+        name = image.get('name')
+        if name:
+            i['imageId'] = "%s (%s)" % (ec2_id, name)
+        else:
+            i['imageId'] = ec2_id
+        kernel_id = image['properties'].get('kernel_id')
+        if kernel_id:
+            i['kernelId'] = self._image_ec2_id(kernel_id, 'kernel')
+        ramdisk_id = image['properties'].get('ramdisk_id')
+        if ramdisk_id:
+            i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ramdisk')
         i['imageOwnerId'] = image['properties'].get('owner_id')
         i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
@@ -872,8 +894,7 @@ class CloudController(object):
             images = []
             for ec2_id in image_id:
                 try:
-                    internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                    image = self.image_service.show(context, internal_id)
+                    image = self._get_image(context, ec2_id)
                 except exception.NotFound:
                     raise exception.NotFound(_('Image %s not found') %
                                              ec2_id)
@@ -885,16 +906,17 @@ class CloudController(object):
 
     def deregister_image(self, context, image_id, **kwargs):
         LOG.audit(_("De-registering image %s"), image_id, context=context)
-        internal_id = ec2utils.ec2_id_to_id(image_id)
+        image = self._get_image(context, image_id)
+        internal_id = image['id']
         self.image_service.delete(context, internal_id)
         return {'imageId': image_id}
 
     def register_image(self, context, image_location=None, **kwargs):
         if image_location is None and 'name' in kwargs:
             image_location = kwargs['name']
-        metadata = {"image_location": image_location}
+        metadata = {'properties': {'image_location': image_location}}
         image = self.image_service.create(context, metadata)
-        image_id =  self._image_ec2_id(image['id'], image['type'])
+        image_id = self._image_ec2_id(image['id'], image['type'])
         msg = _("Registered image %(image_location)s with"
                 " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
@@ -905,13 +927,11 @@ class CloudController(object):
             raise exception.ApiError(_('attribute not supported: %s')
                                      % attribute)
         try:
-            internal_id = ec2utils.ec2_id_to_id(image_id)
-            image = self._format_image(self.image_service.show(context,
-                                                               internal_id))
-        except (IndexError, exception.NotFound):
+            image = self._get_image(context, image_id)
+        except exception.NotFound:
             raise exception.NotFound(_('Image %s not found') % image_id)
-        result = {'image_id': image_id, 'launchPermission': []}
-        if image['isPublic']:
+        result = {'imageId': image_id, 'launchPermission': []}
+        if image['properties']['is_public']:
             result['launchPermission'].append({'group': 'all'})
         return result
 
@@ -930,13 +950,13 @@ class CloudController(object):
         LOG.audit(_("Updating image %s publicity"), image_id, context=context)
 
         try:
-            internal_id = ec2utils.ec2_id_to_id(image_id)
-            metadata = self.image_service.show(context, internal_id)
+            image = self._get_image(context, image_id)
         except exception.NotFound:
             raise exception.NotFound(_('Image %s not found') % image_id)
-        del(metadata['id'])
-        metadata['properties']['is_public'] = (operation_type == 'add')
-        return self.image_service.update(context, internal_id, metadata)
+        internal_id = image['id']
+        del(image['id'])
+        image['properties']['is_public'] = (operation_type == 'add')
+        return self.image_service.update(context, internal_id, image)
 
     def update_image(self, context, image_id, **kwargs):
         internal_id = ec2utils.ec2_id_to_id(image_id)

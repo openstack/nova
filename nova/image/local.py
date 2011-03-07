@@ -42,13 +42,12 @@ class LocalImageService(service.BaseImageService):
 
     def _path_to(self, image_id, fname='info.json'):
         if fname:
-            return os.path.join(self._path, str(image_id), fname)
-        return os.path.join(self._path, str(image_id))
+            return os.path.join(self._path, '%08x' % int(image_id), fname)
+        return os.path.join(self._path, '%08x' % int(image_id))
 
     def _ids(self):
         """The list of all image ids."""
-        return [int(i) for i in os.listdir(self._path)
-                if unicode(i).isnumeric()]
+        return [int(i, 16) for i in os.listdir(self._path)]
 
     def index(self, context):
         return [dict(image_id=i['id'], name=i.get('name'))
@@ -68,27 +67,56 @@ class LocalImageService(service.BaseImageService):
         try:
             with open(self._path_to(image_id)) as metadata_file:
                 return json.load(metadata_file)
-        except IOError:
+        except (IOError, ValueError):
             raise exception.NotFound
 
+    def show_by_name(self, context, name):
+        """Returns a dict containing image data for the given name."""
+        # NOTE(vish): Not very efficient, but the local image service
+        #             is for testing so it should be fine.
+        images = self.detail(context)
+        image = None
+        for cantidate in images:
+            if name == cantidate.get('name'):
+                image = cantidate
+                break
+        if image == None:
+            raise exception.NotFound
+        return image
+
+    def get(self, context, image_id, data):
+        """Get image and metadata."""
+        try:
+            with open(self._path_to(image_id)) as metadata_file:
+                metadata = json.load(metadata_file)
+            with open(self._path_to(image_id, 'image')) as image_file:
+                shutil.copyfileobj(image_file, data)
+        except (IOError, ValueError):
+            raise exception.NotFound
+        return metadata
+
     def create(self, context, metadata, data=None):
-        """Store the image data and return the new image id."""
+        """Store the image data and return the new image."""
         image_id = random.randint(0, 2 ** 31 - 1)
         image_path = self._path_to(image_id, None)
         if not os.path.exists(image_path):
             os.mkdir(image_path)
-        return  self.update(context, image_id, metadata, data)
+        return self.update(context, image_id, metadata, data)
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data."""
         metadata['id'] = image_id
         try:
+            if data:
+                location = self._path_to(image_id, 'image')
+                with open(location, 'w') as image_file:
+                    shutil.copyfileobj(data, image_file)
+                # NOTE(vish): update metadata similarly to glance
+                metadata['status'] = 'active'
+                metadata['location'] = location
             with open(self._path_to(image_id), 'w') as metadata_file:
                 json.dump(metadata, metadata_file)
-            if data:
-                with open(self._path_to(image_id, 'image'), 'w') as image_file:
-                    shutil.copyfileobj(data, image_file)
-        except IOError:
+        except (IOError, ValueError):
             raise exception.NotFound
         return metadata
 
@@ -99,7 +127,7 @@ class LocalImageService(service.BaseImageService):
         """
         try:
             shutil.rmtree(self._path_to(image_id, None))
-        except IOError:
+        except (IOError, ValueError):
             raise exception.NotFound
 
     def delete_all(self):

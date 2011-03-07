@@ -36,6 +36,7 @@ from nova import flags
 from nova import utils
 from nova.auth import manager
 from nova.image import service
+from nova.api.ec2 import ec2utils
 
 
 FLAGS = flags.FLAGS
@@ -51,7 +52,7 @@ class S3ImageService(service.BaseImageService):
         self.service.__init__(*args, **kwargs)
 
     def create(self, context, metadata, data=None):
-        """metadata should contain image_location"""
+        """metadata['properties'] should contain image_location"""
         image = self._s3_create(context, metadata)
         return image
 
@@ -97,6 +98,12 @@ class S3ImageService(service.BaseImageService):
             raise exception.NotFound
         return image
 
+    def show_by_name(self, context, name):
+        image = self.service.show_by_name(context, name)
+        if not self._is_visible(context, image):
+            raise exception.NotFound
+        return image
+
     @staticmethod
     def _conn(context):
         # TODO(vish): is there a better way to get creds to sign
@@ -119,10 +126,12 @@ class S3ImageService(service.BaseImageService):
         key.get_contents_to_filename(local_filename)
         return local_filename
 
-    def _s3_create(self, context, properties):
+    def _s3_create(self, context, metadata):
+        """Gets a manifext from s3 and makes an image"""
+
         image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
 
-        image_location = properties['image_location']
+        image_location = metadata['properties']['image_location']
         bucket_name = image_location.split("/")[0]
         manifest_path = image_location[len(bucket_name) + 1:]
         bucket = self._conn(context).get_bucket(bucket_name)
@@ -153,25 +162,27 @@ class S3ImageService(service.BaseImageService):
         except:
             arch = 'x86_64'
 
-        properties.update({'owner_id': context.project_id,
-                           'architecture': arch})
+        properties = metadata['properties']
+        properties['owner_id'] = context.project_id
+        properties['architecture'] = arch
 
         if kernel_id:
-            properties['kernel_id'] = kernel_id
+            properties['kernel_id'] = ec2utils.ec2_id_to_id(kernel_id)
 
         if ramdisk_id:
-            properties['ramdisk_id'] = ramdisk_id
+            properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
         properties['is_public'] = False
-        metadata = {'type': image_type,
-                    'status': 'queued',
-                    'is_public': True,
-                    'properties': properties}
+        metadata.update({'type': image_type,
+                         'status': 'queued',
+                         'is_public': True,
+                         'properties': properties})
         metadata['properties']['image_state'] = 'pending'
         image = self.service.create(context, metadata)
         image_id = image['id']
 
         def delayed_create():
+            """This handles the fetching and decrypting of the part files."""
             parts = []
             for fn_element in manifest.find("image").getiterator("filename"):
                 part = self._download_file(bucket, fn_element.text, image_path)

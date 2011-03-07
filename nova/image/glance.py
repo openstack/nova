@@ -17,9 +17,6 @@
 """Implementation of an image service that uses Glance as the backend"""
 
 from __future__ import absolute_import
-import httplib
-import json
-import urlparse
 
 from glance.common import exception as glance_exception
 
@@ -55,15 +52,43 @@ class GlanceImageService(service.BaseImageService):
         """
         return self.client.get_images_detailed()
 
-    def show(self, context, id):
+    def show(self, context, image_id):
         """
         Returns a dict containing image data for the given opaque image id.
         """
         try:
-            image = self.client.get_image_meta(id)
+            image = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
             raise exception.NotFound
         return image
+
+    def show_by_name(self, context, name):
+        """
+        Returns a dict containing image data for the given name.
+        """
+        # TODO(vish): replace this with more efficient call when glance
+        #             supports it.
+        images = self.detail(context)
+        image = None
+        for cantidate in images:
+            if name == cantidate.get('name'):
+                image = cantidate
+                break
+        if image == None:
+            raise exception.NotFound
+        return image
+
+    def get(self, context, image_id, data):
+        """
+        Calls out to Glance for metadata and data and writes data.
+        """
+        try:
+            metadata, image_chunks = self.client.get_image(image_id)
+        except glance_exception.NotFound:
+            raise exception.NotFound
+        for chunk in image_chunks:
+            data.write(chunk)
+        return metadata
 
     def create(self, context, metadata, data=None):
         """

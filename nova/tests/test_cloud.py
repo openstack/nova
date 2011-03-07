@@ -78,10 +78,11 @@ class CloudTestCase(test.TestCase):
                                               project=self.project)
         host = self.network.get_network_host(self.context.elevated())
 
-        def fake_image_show(meh, context, id):
-            return dict(kernelId=1, ramdiskId=1)
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_image_show)
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
         network_ref = db.project_get_network(self.context,
@@ -195,8 +196,10 @@ class CloudTestCase(test.TestCase):
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_id': 1,
                                                   'host': 'host1'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_id': 1,
                                                   'host': 'host2'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'availability_zone': 'zone1',
@@ -222,11 +225,9 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp2['id'])
 
     def test_console_output(self):
-        image_id = FLAGS.default_image
-        print image_id
         instance_type = FLAGS.default_instance_type
         max_count = 1
-        kwargs = {'image_id': image_id,
+        kwargs = {'image_id': 'ami-1',
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
@@ -242,8 +243,7 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
 
     def test_ajax_console(self):
-        image_id = FLAGS.default_image
-        kwargs = {'image_id': image_id}
+        kwargs = {'image_id': 'ami-1'}
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
         greenthread.sleep(0.3)
