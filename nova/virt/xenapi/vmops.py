@@ -189,7 +189,7 @@ class VMOps(object):
         a vm name or a vm instance, and want a vm instance in return.
         """
         # if instance_or_vm is a string it must be opaque ref or instance name
-        if isinstance(instance_or_vm, str):
+        if isinstance(instance_or_vm, basestring):
             ref = None
             try:
                 ref = self._session.get_xenapi().VM.get_record(instance_or_vm)
