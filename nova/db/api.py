@@ -459,11 +459,6 @@ def network_associate(context, project_id):
     """Associate a free network to a project."""
     return IMPL.network_associate(context, project_id)
 
-def network_is_associated(context, project_id):
-    """Returns true the the network is associated to a project"""
-    return IMPL.network_is_associated(context, project_id)
-
-
 def network_count(context):
     """Return the number of networks."""
     return IMPL.network_count(context)

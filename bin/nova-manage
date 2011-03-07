@@ -547,8 +547,8 @@ class NetworkCommands(object):
 
     def delete(self, fixed_range):
         """Deletes a network"""
-        print db.network_get_by_cidr(context.get_admin_context(), fixed_range)
-
+        network = db.network_get_by_cidr(context.get_admin_context(), fixed_range)
+         
 class ServiceCommands(object):
     """Enable and disable running services"""
 
