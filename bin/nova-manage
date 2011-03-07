@@ -768,16 +768,16 @@ class ImageCommands(object):
         except Exception as exc:
             print _("Failed to register %(path)s: %(exc)s") % locals()
 
-    def register_all(self, image, kernel, ramdisk, owner, name=None,
+    def all_register(self, image, kernel, ramdisk, owner, name=None,
                  is_public='T', architecture='x86_64'):
         """Uploads an image, kernel, and ramdisk into the image_service
         arguments: image kernel ramdisk owner [name] [is_public='T']
                    [architecture='x86_64']"""
-        kernel_id = self._register('kernel', kernel, owner, None,
+        kernel_id = self.kernel_register(kernel, owner, None,
                                    is_public, architecture)
-        ramdisk_id = self._register('ramdisk', ramdisk, owner, None,
+        ramdisk_id = self.ramdisk_register(ramdisk, owner, None,
                                     is_public, architecture)
-        self._register('machine', image, owner, name, is_public,
+        self.image_register(image, owner, name, is_public,
                        architecture, kernel_id, ramdisk_id)
 
     def image_register(self, path, owner, name=None, is_public='T',
@@ -785,7 +785,7 @@ class ImageCommands(object):
         """Uploads an image into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
                    [kernel_id] [ramdisk_id]"""
-        self._register('machine', path, owner, name, is_public,
+        return self._register('machine', path, owner, name, is_public,
                        architecture, kernel_id, ramdisk_id)
 
     def kernel_register(self, path, owner, name=None, is_public='T',
@@ -793,14 +793,16 @@ class ImageCommands(object):
         """Uploads a kernel into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
         """
-        self._register('kernel', path, owner, name, is_public, architecture)
+        return self._register('kernel', path, owner, name, is_public,
+                              architecture)
 
     def ramdisk_register(self, path, owner, name=None, is_public='T',
                 architecture='x86_64'):
         """Uploads a ramdisk into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
         """
-        self._register('ramdisk', path, owner, name, is_public, architecture)
+        return self._register('ramdisk', path, owner, name, is_public,
+                              architecture)
 
     def _lookup(self, old_image_id):
         try:
