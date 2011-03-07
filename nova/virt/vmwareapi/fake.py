@@ -28,7 +28,8 @@ from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi.vim import SessionFaultyException
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
-            'Network', 'HostSystem', 'Task', 'session', 'files']
+            'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
+            'files']
 
 _FAKE_FILE_SIZE = 1024
 
@@ -54,6 +55,7 @@ def reset():
         else:
             _db_content[c] = {}
     create_network()
+    create_host_network_system()
     create_host()
     create_datacenter()
     create_datastore()
@@ -242,13 +244,33 @@ class Datastore(ManagedObject):
         self.set("summary.name", "fake-ds")
 
 
+class HostNetworkSystem(ManagedObject):
+    """ HostNetworkSystem class """
+
+    def __init__(self):
+        ManagedObject.__init__(self, "HostNetworkSystem")
+        self.set("name", "networkSystem")
+
+        pnic_do = DataObject()
+        pnic_do.device = "vmnic0"
+
+        net_info_pnic = DataObject()
+        net_info_pnic.PhysicalNic = [pnic_do]
+
+        self.set("networkInfo.pnic", net_info_pnic)
+
+
 class HostSystem(ManagedObject):
     """ Host System class """
 
     def __init__(self):
         ManagedObject.__init__(self, "HostSystem")
-        self.set("name", "HostSystem")
-        self.set("configManager.networkSystem", "NetworkSystem")
+        self.set("name", "ha-host")
+        if _db_content.get("HostNetworkSystem", None) is None:
+            create_host_network_system()
+        host_net_key = _db_content["HostNetworkSystem"].keys()[0]
+        host_net_sys = _db_content["HostNetworkSystem"][host_net_key].obj
+        self.set("configManager.networkSystem", host_net_sys)
 
         vswitch_do = DataObject()
         vswitch_do.pnic = ["vmnic0"]
@@ -322,6 +344,11 @@ class Task(ManagedObject):
         info.name = task_name
         info.state = state
         self.set("info", info)
+
+
+def create_host_network_system():
+    host_net_system = HostNetworkSystem()
+    _create_object("HostNetworkSystem", host_net_system)
 
 
 def create_host():

@@ -55,11 +55,8 @@ Python dependencies
 
 ::
 
- sudo apt-get install python-setuptools
- wget https://fedorahosted.org/releases/s/u/suds/python-suds-0.4.tar.gz
- tar -zxvf python-suds-0.4.tar.gz
- cd python-suds-0.4
- sudo python setup.py install
+ easy_install suds==0.4
+
 
 Configuration flags required for nova-compute 
 ---------------------------------------------

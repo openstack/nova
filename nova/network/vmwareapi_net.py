@@ -27,40 +27,12 @@ from nova import utils
 from nova.virt.vmwareapi_conn import VMWareAPISession
 from nova.virt.vmwareapi.network_utils import NetworkHelper
 
-LOG = logging.getLogger("nova.vmwareapi_net")
+LOG = logging.getLogger("nova.network.vmwareapi_net")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('vlan_interface', 'vmnic0',
                     'Physical network adapter name in VMware ESX host for '
                     'vlan networking')
-
-
-def metadata_forward():
-    pass
-
-
-def init_host():
-    pass
-
-
-def bind_floating_ip(floating_ip, check_exit_code=True):
-    pass
-
-
-def unbind_floating_ip(floating_ip):
-    pass
-
-
-def ensure_vlan_forward(public_ip, port, private_ip):
-    pass
-
-
-def ensure_floating_forward(floating_ip, fixed_ip):
-    pass
-
-
-def remove_floating_forward(floating_ip, fixed_ip):
-    pass
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
@@ -77,48 +49,49 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     session = VMWareAPISession(host_ip, host_username, host_password,
                                FLAGS.vmwareapi_api_retry_count)
     vlan_interface = FLAGS.vlan_interface
-    #check whether bridge already exists
-    #retrieve network whose name_label is "bridge"
+    #Check if the vlan_interface physical network adapter exists on the host
+    if not NetworkHelper.check_if_vlan_interface_exists(session,
+                                                        vlan_interface):
+        raise Exception(_("There is no physical network adapter with the name"
+                          " %s on the ESX host") % vlan_interface)
+    #check whether bridge already exists and retrieve the the ref of the
+    #network whose name_label is "bridge"
     network_ref = NetworkHelper.get_network_with_the_name(session, bridge)
+
+    #Get the vSwitch associated with the Physical Adapter
+    vswitch_associated = NetworkHelper.get_vswitch_for_vlan_interface(
+                                        session, vlan_interface)
+    if vswitch_associated is None:
+        raise Exception(_("There is no virtual switch associated with "
+            "the physical network adapter with name %s") %
+            vlan_interface)
     if network_ref == None:
         #Create a port group on the vSwitch associated with the vlan_interface
         #corresponding physical network adapter on the ESX host
-        vswitches = NetworkHelper.get_vswitches_for_vlan_interface(session,
-                                           vlan_interface)
-        if len(vswitches) == 0:
-            raise Exception(_("There is no virtual switch connected "
-                "to the physical network adapter with name %s") %
-                vlan_interface)
-        #Assuming physical network interface is associated with only one
-        #virtual switch
-        NetworkHelper.create_port_group(session, bridge, vswitches[0],
-                                        vlan_num)
+        NetworkHelper.create_port_group(session, bridge, vswitch_associated,
+                                vlan_num)
     else:
-        #check VLAN tag is appropriate
-        is_vlan_proper, ret_vlan_id = NetworkHelper.check_if_vlan_id_is_proper(
-                                           session, bridge, vlan_num)
-        if not is_vlan_proper:
-            raise Exception(_("VLAN tag not appropriate for the port group "
-                              "%(bridge)s. Expected VLAN tag is %(vlan_num)s, "
-                              "but the one associated with the port group is"
-                              " %(ret_vlan_id)s") % locals())
+        #Get the vlan id and vswitch corresponding to the port group
+        pg_vlanid, pg_vswitch = \
+            NetworkHelper.get_vlanid_and_vswicth_for_portgroup(session, bridge)
 
+        #Check if the vsiwtch associated is proper
+        if pg_vswitch != vswitch_associated:
+            raise Exception(_("vSwitch which contains the port group "
+                            "%(bridge)s is not associated with the desired "
+                            "physical adapter. Expected vSwitch is "
+                            "%(vswitch_associated)s, but the one associated"
+                            " is %(pg_vswitch)s") %\
+                            {"bridge": bridge,
+                             "vswitch_associated": vswitch_associated,
+                             "pg_vswitch": pg_vswitch})
 
-def ensure_vlan(vlan_num):
-    pass
-
-
-def ensure_bridge(bridge, interface, net_attrs=None):
-    pass
-
-
-def get_dhcp_hosts(context, network_id):
-    pass
-
-
-def update_dhcp(context, network_id):
-    pass
-
-
-def update_ra(context, network_id):
-    pass
+        #Check if the vlan id is proper for the port group
+        if pg_vlanid != vlan_num:
+            raise Exception(_("VLAN tag is not appropriate for the port "
+                            "group %(bridge)s. Expected VLAN tag is "
+                            "%(vlan_num)s, but the one associated with the "
+                            "port group is %(pg_vlanid)s") %\
+                            {"bridge": bridge,
+                             "vlan_num": vlan_num,
+                             "pg_vlanid": pg_vlanid})

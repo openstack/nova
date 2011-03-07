@@ -104,75 +104,99 @@ class VMWareVMOps(object):
                 "but that already exists on the host") % instance.name)
 
         client_factory = self._session._get_vim().client.factory
+        service_content = self._session._get_vim().get_service_content()
 
         network = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])
+
         net_name = network['bridge']
-        network_ref = \
-            NetworkHelper.get_network_with_the_name(self._session, net_name)
-        if network_ref is None:
-            raise Exception(_("Network with the name '%s' doesn't exist on"
-                    " the ESX host") % net_name)
-        #Get the Size of the flat vmdk file that is there on the storage
-        #repository.
-        image_size, image_properties = \
-                vmware_images.get_vmdk_size_and_properties(instance.image_id,
-                                                           instance)
-        vmdk_file_size_in_kb = int(image_size) / 1024
-        os_type = image_properties.get("vmware_ostype", "otherGuest")
-        adapter_type = image_properties.get("vmware_adaptertype", "lsiLogic")
 
-        # Get the datastore list and choose the first local storage
-        data_stores = self._session._call_method(vim_util, "get_objects",
-                    "Datastore", ["summary.type", "summary.name"])
-        data_store_name = None
-        for elem in data_stores:
-            ds_name = None
-            ds_type = None
-            for prop in elem.propSet:
-                if prop.name == "summary.type":
-                    ds_type = prop.val
-                elif prop.name == "summary.name":
-                    ds_name = prop.val
-            #Local storage identifier
-            if ds_type == "VMFS":
-                data_store_name = ds_name
-                break
+        def _check_if_network_bridge_exists():
+            network_ref = \
+                NetworkHelper.get_network_with_the_name(self._session,
+                                                        net_name)
+            if network_ref is None:
+                raise Exception(_("Network with the name '%s' doesn't exist on"
+                        " the ESX host") % net_name)
 
-        if data_store_name is None:
-            msg = _("Couldn't get a local Datastore reference")
-            LOG.exception(msg)
-            raise Exception(msg)
+        _check_if_network_bridge_exists()
+
+        def _get_datastore_ref():
+            # Get the datastore list and choose the first local storage
+            data_stores = self._session._call_method(vim_util, "get_objects",
+                        "Datastore", ["summary.type", "summary.name"])
+            for elem in data_stores:
+                ds_name = None
+                ds_type = None
+                for prop in elem.propSet:
+                    if prop.name == "summary.type":
+                        ds_type = prop.val
+                    elif prop.name == "summary.name":
+                        ds_name = prop.val
+                #Local storage identifier
+                if ds_type == "VMFS":
+                    data_store_name = ds_name
+                    return data_store_name
+
+            if data_store_name is None:
+                msg = _("Couldn't get a local Datastore reference")
+                LOG.exception(msg)
+                raise Exception(msg)
+
+        data_store_name = _get_datastore_ref()
+
+        def _get_image_properties():
+            #Get the Size of the flat vmdk file that is there on the storage
+            #repository.
+            image_size, image_properties = \
+                    vmware_images.get_vmdk_size_and_properties(
+                                       instance.image_id, instance)
+            vmdk_file_size_in_kb = int(image_size) / 1024
+            os_type = image_properties.get("vmware_ostype", "otherGuest")
+            adapter_type = image_properties.get("vmware_adaptertype",
+                                                "lsiLogic")
+            return vmdk_file_size_in_kb, os_type, adapter_type
+
+        vmdk_file_size_in_kb, os_type, adapter_type = _get_image_properties()
+
+        def _get_vmfolder_and_res_pool_mors():
+            #Get the Vm folder ref from the datacenter
+            dc_objs = self._session._call_method(vim_util, "get_objects",
+                                    "Datacenter", ["vmFolder"])
+            #There is only one default datacenter in a standalone ESX host
+            vm_folder_mor = dc_objs[0].propSet[0].val
+
+            #Get the resource pool. Taking the first resource pool coming our
+            #way. Assuming that is the default resource pool.
+            res_pool_mor = self._session._call_method(vim_util, "get_objects",
+                                    "ResourcePool")[0].obj
+            return vm_folder_mor, res_pool_mor
+
+        vm_folder_mor, res_pool_mor = _get_vmfolder_and_res_pool_mors()
+
+        #Get the create vm config spec
         config_spec = vm_util.get_vm_create_spec(client_factory, instance,
                                 data_store_name, net_name, os_type)
 
-        #Get the Vm folder ref from the datacenter
-        dc_objs = self._session._call_method(vim_util, "get_objects",
-                                "Datacenter", ["vmFolder"])
-        #There is only one default datacenter in a standalone ESX host
-        vm_folder_ref = dc_objs[0].propSet[0].val
+        def _execute_create_vm():
+            LOG.debug(_("Creating VM with the name %s on the ESX  host") %
+                      instance.name)
+            #Create the VM on the ESX host
+            vm_create_task = self._session._call_method(
+                                    self._session._get_vim(),
+                                    "CreateVM_Task", vm_folder_mor,
+                                    config=config_spec, pool=res_pool_mor)
+            self._session._wait_for_task(instance.id, vm_create_task)
 
-        #Get the resource pool. Taking the first resource pool coming our way.
-        #Assuming that is the default resource pool.
-        res_pool_mor = self._session._call_method(vim_util, "get_objects",
-                                "ResourcePool")[0].obj
+            LOG.debug(_("Created VM with the name %s on the ESX  host") %
+                      instance.name)
 
-        LOG.debug(_("Creating VM with the name %s on the ESX  host") %
-                  instance.name)
-        #Create the VM on the ESX host
-        vm_create_task = self._session._call_method(self._session._get_vim(),
-                                "CreateVM_Task", vm_folder_ref,
-                                config=config_spec, pool=res_pool_mor)
-        self._session._wait_for_task(instance.id, vm_create_task)
-
-        LOG.debug(_("Created VM with the name %s on the ESX  host") %
-                  instance.name)
+        _execute_create_vm()
 
         # Set the machine id for the VM for setting the IP
         self._set_machine_id(client_factory, instance)
 
         #Naming the VM files in correspondence with the VM instance name
-
         # The flat vmdk file name
         flat_uploaded_vmdk_name = "%s/%s-flat.vmdk" % (instance.name,
                                                        instance.name)
@@ -183,79 +207,111 @@ class VMWareVMOps(object):
         uploaded_vmdk_path = vm_util.build_datastore_path(data_store_name,
                                             uploaded_vmdk_name)
 
-        #Create a Virtual Disk of the size of the flat vmdk file. This is done
-        #just created to generate the meta-data file whose specifics
-        #depend on the size of the disk, thin/thick provisioning and the
-        #storage adapter type.
-        #Here we assume thick provisioning and lsiLogic for the adapter type
-        LOG.debug(_("Creating Virtual Disk of size %(vmdk_file_size_in_kb)s "
-                  "KB and adapter type %(adapter_type)s on "
-                  "the ESX host local store %(data_store_name)s") % locals())
-        vmdk_create_spec = vm_util.get_vmdk_create_spec(client_factory,
-                                vmdk_file_size_in_kb, adapter_type)
-        vmdk_create_task = self._session._call_method(self._session._get_vim(),
-            "CreateVirtualDisk_Task",
-            self._session._get_vim().get_service_content().virtualDiskManager,
-            name=uploaded_vmdk_path,
-            datacenter=self._get_datacenter_name_and_ref()[0],
-            spec=vmdk_create_spec)
-        self._session._wait_for_task(instance.id, vmdk_create_task)
-        LOG.debug(_("Created Virtual Disk of size %(vmdk_file_size_in_kb)s "
-                    "KB on the ESX host local store "
-                    "%(data_store_name)s") % locals())
+        def _create_virtual_disk():
+            #Create a Virtual Disk of the size of the flat vmdk file. This is
+            #done just to generate the meta-data file whose specifics
+            #depend on the size of the disk, thin/thick provisioning and the
+            #storage adapter type.
+            #Here we assume thick provisioning and lsiLogic for the adapter
+            #type
+            LOG.debug(_("Creating Virtual Disk of size  "
+                      "%(vmdk_file_size_in_kb)s KB and adapter type  "
+                      "%(adapter_type)s on the ESX host local store"
+                      " %(data_store_name)s") %
+                       {"vmdk_file_size_in_kb": vmdk_file_size_in_kb,
+                        "adapter_type": adapter_type,
+                        "data_store_name": data_store_name})
+            vmdk_create_spec = vm_util.get_vmdk_create_spec(client_factory,
+                                    vmdk_file_size_in_kb, adapter_type)
+            vmdk_create_task = self._session._call_method(
+                self._session._get_vim(),
+                "CreateVirtualDisk_Task",
+                service_content.virtualDiskManager,
+                name=uploaded_vmdk_path,
+                datacenter=self._get_datacenter_name_and_ref()[0],
+                spec=vmdk_create_spec)
+            self._session._wait_for_task(instance.id, vmdk_create_task)
+            LOG.debug(_("Created Virtual Disk of size %(vmdk_file_size_in_kb)s"
+                        " KB on the ESX host local store "
+                        "%(data_store_name)s") %
+                        {"vmdk_file_size_in_kb": vmdk_file_size_in_kb,
+                         "data_store_name": data_store_name})
 
-        LOG.debug(_("Deleting the file %(flat_uploaded_vmdk_path)s "
-                    "on the ESX host local"
-                    "store %(data_store_name)s") % locals())
-        #Delete the -flat.vmdk file created. .vmdk file is retained.
-        vmdk_delete_task = self._session._call_method(self._session._get_vim(),
-                    "DeleteDatastoreFile_Task",
-                    self._session._get_vim().get_service_content().fileManager,
-                    name=flat_uploaded_vmdk_path)
-        self._session._wait_for_task(instance.id, vmdk_delete_task)
-        LOG.debug(_("Deleted the file %(flat_uploaded_vmdk_path)s on the "
-                    "ESX host local store %(data_store_name)s") % locals())
+        _create_virtual_disk()
 
-        LOG.debug(_("Downloading image file data %(image_id)s to the ESX "
-                    "data store %(data_store_name)s") %
-                    ({'image_id': instance.image_id,
-                      'data_store_name': data_store_name}))
+        def _delete_disk_file():
+            LOG.debug(_("Deleting the file %(flat_uploaded_vmdk_path)s "
+                        "on the ESX host local"
+                        "store %(data_store_name)s") %
+                        {"flat_uploaded_vmdk_path": flat_uploaded_vmdk_path,
+                         "data_store_name": data_store_name})
+            #Delete the -flat.vmdk file created. .vmdk file is retained.
+            vmdk_delete_task = self._session._call_method(
+                        self._session._get_vim(),
+                        "DeleteDatastoreFile_Task",
+                        service_content.fileManager,
+                        name=flat_uploaded_vmdk_path)
+            self._session._wait_for_task(instance.id, vmdk_delete_task)
+            LOG.debug(_("Deleted the file %(flat_uploaded_vmdk_path)s on the "
+                        "ESX host local store %(data_store_name)s") %
+                        {"flat_uploaded_vmdk_path": flat_uploaded_vmdk_path,
+                         "data_store_name": data_store_name})
+
+        _delete_disk_file()
+
         cookies = self._session._get_vim().client.options.transport.cookiejar
-        # Upload the -flat.vmdk file whose meta-data file we just created above
-        vmware_images.fetch_image(
-            instance.image_id,
-            instance,
-            host=self._session._host_ip,
-            data_center_name=self._get_datacenter_name_and_ref()[1],
-            datastore_name=data_store_name,
-            cookies=cookies,
-            file_path=flat_uploaded_vmdk_name)
-        LOG.debug(_("Downloaded image file data %(image_id)s to the ESX "
-                    "data store %(data_store_name)s") %
-                    ({'image_id': instance.image_id,
-                     'data_store_name': data_store_name}))
 
-        #Attach the vmdk uploaded to the VM. VM reconfigure is done to do so.
-        vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
-                            client_factory,
-                            vmdk_file_size_in_kb, uploaded_vmdk_path,
-                            adapter_type)
+        def _fetch_image_on_esx_datastore():
+            LOG.debug(_("Downloading image file data %(image_id)s to the ESX "
+                        "data store %(data_store_name)s") %
+                        ({'image_id': instance.image_id,
+                          'data_store_name': data_store_name}))
+            #Upload the -flat.vmdk file whose meta-data file we just created
+            #above
+            vmware_images.fetch_image(
+                instance.image_id,
+                instance,
+                host=self._session._host_ip,
+                data_center_name=self._get_datacenter_name_and_ref()[1],
+                datastore_name=data_store_name,
+                cookies=cookies,
+                file_path=flat_uploaded_vmdk_name)
+            LOG.debug(_("Downloaded image file data %(image_id)s to the ESX "
+                        "data store %(data_store_name)s") %
+                        ({'image_id': instance.image_id,
+                         'data_store_name': data_store_name}))
+        _fetch_image_on_esx_datastore()
+
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
-        LOG.debug(_("Reconfiguring VM instance %s to attach the image "
-                  "disk") % instance.name)
-        reconfig_task = self._session._call_method(self._session._get_vim(),
-                           "ReconfigVM_Task", vm_ref,
-                           spec=vmdk_attach_config_spec)
-        self._session._wait_for_task(instance.id, reconfig_task)
-        LOG.debug(_("Reconfigured VM instance %s to attach the image "
-                  "disk") % instance.name)
 
-        LOG.debug(_("Powering on the VM instance %s") % instance.name)
-        #Power On the VM
-        power_on_task = self._session._call_method(self._session._get_vim(),
-                           "PowerOnVM_Task", vm_ref)
-        self._session._wait_for_task(instance.id, power_on_task)
-        LOG.debug(_("Powered on the VM instance %s") % instance.name)
+        def _attach_vmdk_to_the_vm():
+            #Attach the vmdk uploaded to the VM. VM reconfigure is done
+            #to do so.
+            vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
+                                client_factory,
+                                vmdk_file_size_in_kb, uploaded_vmdk_path,
+                                adapter_type)
+            LOG.debug(_("Reconfiguring VM instance %s to attach the image "
+                      "disk") % instance.name)
+            reconfig_task = self._session._call_method(
+                               self._session._get_vim(),
+                               "ReconfigVM_Task", vm_ref,
+                               spec=vmdk_attach_config_spec)
+            self._session._wait_for_task(instance.id, reconfig_task)
+            LOG.debug(_("Reconfigured VM instance %s to attach the image "
+                      "disk") % instance.name)
+
+        _attach_vmdk_to_the_vm()
+
+        def _power_on_vm():
+            LOG.debug(_("Powering on the VM instance %s") % instance.name)
+            #Power On the VM
+            power_on_task = self._session._call_method(
+                               self._session._get_vim(),
+                               "PowerOnVM_Task", vm_ref)
+            self._session._wait_for_task(instance.id, power_on_task)
+            LOG.debug(_("Powered on the VM instance %s") % instance.name)
+        _power_on_vm()
 
     def snapshot(self, instance, snapshot_name):
         """
@@ -275,51 +331,65 @@ class VMWareVMOps(object):
         if vm_ref is None:
             raise Exception(_("instance - %s not present") % instance.name)
 
-        #Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vim_util,
-                    "get_dynamic_property", vm_ref,
-                    "VirtualMachine", "config.hardware.device")
         client_factory = self._session._get_vim().client.factory
-        vmdk_file_path_before_snapshot, adapter_type = \
-            vm_util.get_vmdk_file_path_and_adapter_type(client_factory,
-                                                        hardware_devices)
+        service_content = self._session._get_vim().get_service_content()
 
-        os_type = self._session._call_method(vim_util,
-                    "get_dynamic_property", vm_ref,
-                    "VirtualMachine", "summary.config.guestId")
-        #Create a snapshot of the VM
-        LOG.debug(_("Creating Snapshot of the VM instance %s ") %
-                    instance.name)
-        snapshot_task = self._session._call_method(self._session._get_vim(),
-                    "CreateSnapshot_Task", vm_ref,
-                    name="%s-snapshot" % instance.name,
-                    description="Taking Snapshot of the VM",
-                    memory=True,
-                    quiesce=True)
-        self._session._wait_for_task(instance.id, snapshot_task)
-        LOG.debug(_("Created Snapshot of the VM instance %s ") % instance.name)
+        def _get_vm_and_vmdk_attribs():
+            #Get the vmdk file name that the VM is pointing to
+            hardware_devices = self._session._call_method(vim_util,
+                        "get_dynamic_property", vm_ref,
+                        "VirtualMachine", "config.hardware.device")
+            vmdk_file_path_before_snapshot, adapter_type = \
+                vm_util.get_vmdk_file_path_and_adapter_type(client_factory,
+                                                            hardware_devices)
+            datastore_name = vm_util.split_datastore_path(
+                                      vmdk_file_path_before_snapshot)[0]
+            os_type = self._session._call_method(vim_util,
+                        "get_dynamic_property", vm_ref,
+                        "VirtualMachine", "summary.config.guestId")
+            return (vmdk_file_path_before_snapshot, adapter_type,
+                    datastore_name, os_type)
 
-        datastore_name = vm_util.split_datastore_path(
-                                  vmdk_file_path_before_snapshot)[0]
-        #Copy the contents of the VM that were there just before the snapshot
-        #was taken
-        ds_ref = vim_util.get_dynamic_property(self._session._get_vim(),
+        vmdk_file_path_before_snapshot, adapter_type, datastore_name,\
+            os_type = _get_vm_and_vmdk_attribs()
+
+        def _create_vm_snapshot():
+            #Create a snapshot of the VM
+            LOG.debug(_("Creating Snapshot of the VM instance %s ") %
+                        instance.name)
+            snapshot_task = self._session._call_method(
+                        self._session._get_vim(),
+                        "CreateSnapshot_Task", vm_ref,
+                        name="%s-snapshot" % instance.name,
+                        description="Taking Snapshot of the VM",
+                        memory=True,
+                        quiesce=True)
+            self._session._wait_for_task(instance.id, snapshot_task)
+            LOG.debug(_("Created Snapshot of the VM instance %s ") %
+                      instance.name)
+
+        _create_vm_snapshot()
+
+        def _check_if_tmp_folder_exists():
+            #Copy the contents of the VM that were there just before the
+            #snapshot was taken
+            ds_ref = vim_util.get_dynamic_property(self._session._get_vim(),
                                       vm_ref,
                                       "VirtualMachine",
                                       "datastore").ManagedObjectReference[0]
-        ds_browser = vim_util.get_dynamic_property(self._session._get_vim(),
+            ds_browser = vim_util.get_dynamic_property(
+                                       self._session._get_vim(),
                                        ds_ref,
                                        "Datastore",
                                        "browser")
-        #Check if the vmware-tmp folder exists or not. If not, create one
-        tmp_folder_path = vm_util.build_datastore_path(datastore_name,
-                                                       "vmware-tmp")
-        if not self._path_exists(ds_browser, tmp_folder_path):
-            self._mkdir(vm_util.build_datastore_path(datastore_name,
-                                                     "vmware-tmp"))
+            #Check if the vmware-tmp folder exists or not. If not, create one
+            tmp_folder_path = vm_util.build_datastore_path(datastore_name,
+                                                           "vmware-tmp")
+            if not self._path_exists(ds_browser, tmp_folder_path):
+                self._mkdir(vm_util.build_datastore_path(datastore_name,
+                                                         "vmware-tmp"))
 
-        copy_spec = vm_util.get_copy_virtual_disk_spec(client_factory,
-                                                        adapter_type)
+        _check_if_tmp_folder_exists()
 
         #Generate a random vmdk file name to which the coalesced vmdk content
         #will be copied to. A random name is chosen so that we don't have
@@ -329,50 +399,64 @@ class VMWareVMOps(object):
                    "vmware-tmp/%s.vmdk" % random_name)
         dc_ref = self._get_datacenter_name_and_ref()[0]
 
-        #Copy the contents of the disk ( or disks, if there were snapshots
-        #done earlier) to a temporary vmdk file.
-        LOG.debug(_("Copying disk data before snapshot of the VM instance %s")
-                   % instance.name)
-        copy_disk_task = self._session._call_method(self._session._get_vim(),
-            "CopyVirtualDisk_Task",
-            self._session._get_vim().get_service_content().virtualDiskManager,
-            sourceName=vmdk_file_path_before_snapshot,
-            sourceDatacenter=dc_ref,
-            destName=dest_vmdk_file_location,
-            destDatacenter=dc_ref,
-            destSpec=copy_spec,
-            force=False)
-        self._session._wait_for_task(instance.id, copy_disk_task)
-        LOG.debug(_("Copied disk data before snapshot of the VM instance %s")
-                    % instance.name)
+        def _copy_vmdk_content():
+            #Copy the contents of the disk ( or disks, if there were snapshots
+            #done earlier) to a temporary vmdk file.
+            copy_spec = vm_util.get_copy_virtual_disk_spec(client_factory,
+                                                            adapter_type)
+            LOG.debug(_("Copying disk data before snapshot of the VM "
+                        " instance %s") % instance.name)
+            copy_disk_task = self._session._call_method(
+                self._session._get_vim(),
+                "CopyVirtualDisk_Task",
+                service_content.virtualDiskManager,
+                sourceName=vmdk_file_path_before_snapshot,
+                sourceDatacenter=dc_ref,
+                destName=dest_vmdk_file_location,
+                destDatacenter=dc_ref,
+                destSpec=copy_spec,
+                force=False)
+            self._session._wait_for_task(instance.id, copy_disk_task)
+            LOG.debug(_("Copied disk data before snapshot of the VM "
+                        "instance %s") % instance.name)
+
+        _copy_vmdk_content()
 
         cookies = self._session._get_vim().client.options.transport.cookiejar
-        #Upload the contents of -flat.vmdk file which has the disk data.
-        LOG.debug(_("Uploading image %s") % snapshot_name)
-        vmware_images.upload_image(
-            snapshot_name,
-            instance,
-            os_type=os_type,
-            adapter_type=adapter_type,
-            image_version=1,
-            host=self._session._host_ip,
-            data_center_name=self._get_datacenter_name_and_ref()[1],
-            datastore_name=datastore_name,
-            cookies=cookies,
-            file_path="vmware-tmp/%s-flat.vmdk" % random_name)
-        LOG.debug(_("Uploaded image %s") % snapshot_name)
 
-        #Delete the temporary vmdk created above.
-        LOG.debug(_("Deleting temporary vmdk file %s")
-                    % dest_vmdk_file_location)
-        remove_disk_task = self._session._call_method(self._session._get_vim(),
-            "DeleteVirtualDisk_Task",
-            self._session._get_vim().get_service_content().virtualDiskManager,
-             name=dest_vmdk_file_location,
-            datacenter=dc_ref)
-        self._session._wait_for_task(instance.id, remove_disk_task)
-        LOG.debug(_("Deleted temporary vmdk file %s")
-                    % dest_vmdk_file_location)
+        def _upload_vmdk_to_image_repository():
+            #Upload the contents of -flat.vmdk file which has the disk data.
+            LOG.debug(_("Uploading image %s") % snapshot_name)
+            vmware_images.upload_image(
+                snapshot_name,
+                instance,
+                os_type=os_type,
+                adapter_type=adapter_type,
+                image_version=1,
+                host=self._session._host_ip,
+                data_center_name=self._get_datacenter_name_and_ref()[1],
+                datastore_name=datastore_name,
+                cookies=cookies,
+                file_path="vmware-tmp/%s-flat.vmdk" % random_name)
+            LOG.debug(_("Uploaded image %s") % snapshot_name)
+
+        _upload_vmdk_to_image_repository()
+
+        def _clean_temp_data():
+            #Delete the temporary vmdk created above.
+            LOG.debug(_("Deleting temporary vmdk file %s")
+                        % dest_vmdk_file_location)
+            remove_disk_task = self._session._call_method(
+                self._session._get_vim(),
+                "DeleteVirtualDisk_Task",
+                service_content.virtualDiskManager,
+                name=dest_vmdk_file_location,
+                datacenter=dc_ref)
+            self._session._wait_for_task(instance.id, remove_disk_task)
+            LOG.debug(_("Deleted temporary vmdk file %s")
+                        % dest_vmdk_file_location)
+
+        _clean_temp_data()
 
     def reboot(self, instance):
         """ Reboot a VM instance """

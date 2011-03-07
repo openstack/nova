@@ -48,8 +48,8 @@ class NetworkHelper:
         return None
 
     @classmethod
-    def get_vswitches_for_vlan_interface(cls, session, vlan_interface):
-        """ Gets the list of vswitches associated with the physical
+    def get_vswitch_for_vlan_interface(cls, session, vlan_interface):
+        """ Gets the vswitch associated with the physical
         network adapter with the name supplied"""
         #Get the list of vSwicthes on the Host System
         host_mor = session._call_method(vim_util, "get_objects",
@@ -57,21 +57,31 @@ class NetworkHelper:
         vswitches = session._call_method(vim_util,
                     "get_dynamic_property", host_mor,
                     "HostSystem", "config.network.vswitch").HostVirtualSwitch
-        vswicthes_conn_to_physical_nic = []
-        #For each vSwitch check  if it is associated with the network adapter
+        #Get the vSwitch associated with the network adapter
         for elem in vswitches:
             try:
                 for nic_elem in elem.pnic:
                     if str(nic_elem).split('-')[-1].find(vlan_interface) != -1:
-                        vswicthes_conn_to_physical_nic.append(elem.name)
+                        return elem.name
             except Exception:
                 pass
-        return vswicthes_conn_to_physical_nic
 
     @classmethod
-    def check_if_vlan_id_is_proper(cls, session, pg_name, vlan_id):
-        """ Check if the vlan id associated with the port group matches the
-        vlan tag supplied """
+    def check_if_vlan_interface_exists(cls, session, vlan_interface):
+        """ Checks if the vlan_inteface exists on the esx host """
+        host_net_system_mor = session._call_method(vim_util, "get_objects",
+             "HostSystem", ["configManager.networkSystem"])[0].propSet[0].val
+        physical_nics = session._call_method(vim_util,
+                    "get_dynamic_property", host_net_system_mor,
+                    "HostNetworkSystem", "networkInfo.pnic").PhysicalNic
+        for pnic in physical_nics:
+            if vlan_interface == pnic.device:
+                return True
+        return False
+
+    @classmethod
+    def get_vlanid_and_vswicth_for_portgroup(cls, session, pg_name):
+        """ Get the vlan id and vswicth associated with the port group """
         host_mor = session._call_method(vim_util, "get_objects",
              "HostSystem")[0].obj
         port_grps_on_host = session._call_method(vim_util,
@@ -79,10 +89,8 @@ class NetworkHelper:
                     "HostSystem", "config.network.portgroup").HostPortGroup
         for p_gp in port_grps_on_host:
             if p_gp.spec.name == pg_name:
-                if p_gp.spec.vlanId == vlan_id:
-                    return True, vlan_id
-                else:
-                    return False, p_gp.spec.vlanId
+                p_grp_vswitch_name = p_gp.vswitch.split("-")[-1]
+                return p_gp.spec.vlanId, p_grp_vswitch_name
 
     @classmethod
     def create_port_group(cls, session, pg_name, vswitch_name, vlan_id=0):

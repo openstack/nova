@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob.exc
+
 from nova import exception
 
 
@@ -27,7 +29,8 @@ def limited(items, request, max_limit=1000):
                     GET variables. 'offset' is where to start in the list,
                     and 'limit' is the maximum number of items to return. If
                     'limit' is not specified, 0, or > max_limit, we default
-                    to max_limit.
+                    to max_limit. Negative values for either offset or limit
+                    will cause exc.HTTPBadRequest() exceptions to be raised.
     @kwarg max_limit: The maximum number of items to return from 'items'
     """
     try:
@@ -39,6 +42,9 @@ def limited(items, request, max_limit=1000):
         limit = int(request.GET.get('limit', max_limit))
     except ValueError:
         limit = max_limit
+
+    if offset < 0 or limit < 0:
+        raise webob.exc.HTTPBadRequest()
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit

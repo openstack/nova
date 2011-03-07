@@ -78,20 +78,27 @@ def _bytes2int(bytes):
 
 def _parse_network_details(machine_id):
     """Parse the machine.id field to get MAC, IP, Netmask and Gateway fields
-    machine.id is of the form MAC;IP;Netmask;Gateway; where ';' is
-    the separator.
+    machine.id is of the form MAC;IP;Netmask;Gateway;Broadcast;DNS1,DNS2
+    where ';' is the separator.
     """
     network_details = []
-    if machine_id[1].strip() == NO_MACHINE_ID:
+    if machine_id[1].strip() == "1":
         pass
     else:
         network_info_list = machine_id[0].split(';')
-        assert len(network_info_list) % 4 == 0
-        for i in xrange(0, len(network_info_list) / 4):
-            network_details.append((network_info_list[i].strip().lower(),
-                                    network_info_list[i + 1].strip(),
-                                    network_info_list[i + 2].strip(),
-                                    network_info_list[i + 3].strip()))
+        assert len(network_info_list) % 6 == 0
+        no_grps = len(network_info_list) / 6
+        i = 0
+        while i < no_grps:
+            k = i * 6
+            network_details.append((
+                            network_info_list[k].strip().lower(),
+                            network_info_list[k + 1].strip(),
+                            network_info_list[k + 2].strip(),
+                            network_info_list[k + 3].strip(),
+                            network_info_list[k + 4].strip(),
+                            network_info_list[k + 5].strip().split(',')))
+            i += 1
     return network_details
 
 
@@ -218,7 +225,7 @@ def _execute(cmd_list, process_input=None, check_exit_code=True):
     return result
 
 
-def _windows_set_ipaddress():
+def _windows_set_networking():
     """Set IP address for the windows VM"""
     program_files = os.environ.get('PROGRAMFILES')
     program_files_x86 = os.environ.get('PROGRAMFILES(X86)')
@@ -240,7 +247,8 @@ def _windows_set_ipaddress():
         cmd = ['"' + vmware_tools_bin + '"', '--cmd', 'machine.id.get']
         for network_detail in _parse_network_details(_execute(cmd,
                                               check_exit_code=False)):
-            mac_address, ip_address, subnet_mask, gateway = network_detail
+            mac_address, ip_address, subnet_mask, gateway, broadcast,\
+                dns_servers = network_detail
             adapter_name, current_ip_address = \
                     _get_win_adapter_name_and_ip_address(mac_address)
             if adapter_name and not ip_address == current_ip_address:
@@ -248,11 +256,65 @@ def _windows_set_ipaddress():
                        'name="%s"' % adapter_name, 'source=static', ip_address,
                        subnet_mask, gateway, '1']
                 _execute(cmd)
+                #Windows doesn't let you manually set the broadcast address
+                for dns_server in dns_servers:
+                    if dns_server:
+                        cmd = ['netsh', 'interface', 'ip', 'add', 'dns',
+                               'name="%s"' % adapter_name, dns_server]
+                        _execute(cmd)
     else:
         logging.warn(_("VMware Tools is not installed"))
 
 
-def _linux_set_ipaddress():
+def _filter_duplicates(all_entries):
+    final_list = []
+    for entry in all_entries:
+        if entry and entry not in final_list:
+            final_list.append(entry)
+    return final_list
+
+
+def _set_rhel_networking(network_details=[]):
+    all_dns_servers = []
+    for network_detail in network_details:
+        mac_address, ip_address, subnet_mask, gateway, broadcast,\
+            dns_servers = network_detail
+        all_dns_servers.extend(dns_servers)
+        adapter_name, current_ip_address = \
+                _get_linux_adapter_name_and_ip_address(mac_address)
+        if adapter_name and not ip_address == current_ip_address:
+            interface_file_name = \
+                '/etc/sysconfig/network-scripts/ifcfg-%s' % adapter_name
+            #Remove file
+            os.remove(interface_file_name)
+            #Touch file
+            _execute(['touch', interface_file_name])
+            interface_file = open(interface_file_name, 'w')
+            interface_file.write('\nDEVICE=%s' % adapter_name)
+            interface_file.write('\nUSERCTL=yes')
+            interface_file.write('\nONBOOT=yes')
+            interface_file.write('\nBOOTPROTO=static')
+            interface_file.write('\nBROADCAST=%s' % broadcast)
+            interface_file.write('\nNETWORK=')
+            interface_file.write('\nGATEWAY=%s' % gateway)
+            interface_file.write('\nNETMASK=%s' % subnet_mask)
+            interface_file.write('\nIPADDR=%s' % ip_address)
+            interface_file.write('\nMACADDR=%s' % mac_address)
+            interface_file.close()
+    if all_dns_servers:
+        dns_file_name = "/etc/resolv.conf"
+        os.remove(dns_file_name)
+        _execute(['touch', dns_file_name])
+        dns_file = open(dns_file_name, 'w')
+        dns_file.write("; generated by OpenStack guest tools")
+        unique_entries = _filter_duplicates(all_dns_servers)
+        for dns_server in unique_entries:
+            dns_file.write("\nnameserver %s" % dns_server)
+        dns_file.close()
+    _execute(['/sbin/service', 'network', 'restart'])
+
+
+def _linux_set_networking():
     """Set IP address for the Linux VM"""
     vmware_tools_bin = None
     if os.path.exists('/usr/sbin/vmtoolsd'):
@@ -265,38 +327,18 @@ def _linux_set_ipaddress():
         vmware_tools_bin = '/usr/bin/vmware-guestd'
     if vmware_tools_bin:
         cmd = [vmware_tools_bin, '--cmd', 'machine.id.get']
-        for network_detail in _parse_network_details(_execute(cmd,
-                                              check_exit_code=False)):
-            mac_address, ip_address, subnet_mask, gateway = network_detail
-            adapter_name, current_ip_address = \
-                    _get_linux_adapter_name_and_ip_address(mac_address)
-            if adapter_name and not ip_address == current_ip_address:
-                interface_file_name = \
-                    '/etc/sysconfig/network-scripts/ifcfg-%s' % adapter_name
-                #Remove file
-                os.remove(interface_file_name)
-                #Touch file
-                _execute(['touch', interface_file_name])
-                interface_file = open(interface_file_name, 'w')
-                interface_file.write('\nDEVICE=%s' % adapter_name)
-                interface_file.write('\nUSERCTL=yes')
-                interface_file.write('\nONBOOT=yes')
-                interface_file.write('\nBOOTPROTO=static')
-                interface_file.write('\nBROADCAST=')
-                interface_file.write('\nNETWORK=')
-                interface_file.write('\nNETMASK=%s' % subnet_mask)
-                interface_file.write('\nIPADDR=%s' % ip_address)
-                interface_file.write('\nMACADDR=%s' % mac_address)
-                interface_file.close()
-        _execute(['/sbin/service', 'network' 'restart'])
+        network_details = _parse_network_details(_execute(cmd,
+                                                check_exit_code=False))
+        #TODO: For other distros like ubuntu, suse, debian, BSD, etc.
+        _set_rhel_networking(network_details)
     else:
         logging.warn(_("VMware Tools is not installed"))
 
 if __name__ == '__main__':
     pltfrm = sys.platform
     if pltfrm == PLATFORM_WIN:
-        _windows_set_ipaddress()
+        _windows_set_networking()
     elif pltfrm == PLATFORM_LINUX:
-        _linux_set_ipaddress()
+        _linux_set_networking()
     else:
         raise NotImplementedError(_("Platform not implemented: '%s'") % pltfrm)

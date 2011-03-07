@@ -26,7 +26,6 @@ from nova import flags
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.compute import instance_types
 from nova.compute import power_state
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests.vmwareapi import db_fakes
@@ -74,7 +73,7 @@ class VMWareAPIVMTestCase(test.TestCase):
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
         self.instance = db.instance_create(values)
-        self.type_data = instance_types.INSTANCE_TYPES[values['instance_type']]
+        self.type_data = db.instance_type_get_by_name(None, 'm1.large')
         self.conn.spawn(self.instance)
         self._check_vm_record()
 
