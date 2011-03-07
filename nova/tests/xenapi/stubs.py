@@ -27,7 +27,7 @@ def stubout_instance_snapshot(stubs):
     def fake_fetch_image(cls, session, instance_id, image, user, project,
                          type):
         # Stubout wait_for_task
-        def fake_wait_for_task(self, id, task):
+        def fake_wait_for_task(self, task, id):
             class FakeEvent:
 
                 def send(self, value):
@@ -177,23 +177,17 @@ class FakeSessionForVMTests(fake.SessionBase):
     def VM_destroy(self, session_ref, vm_ref):
         fake.destroy_vm(vm_ref)
 
-    def VM_get_VIFs(self, session_ref, vm_ref):
-        return (['0', '1', '2'])
-
-    def VIF_get_device(self, session_ref, vif_ref):
-        return ('1', '0', '2')[int(vif_ref)]
-
-    def VIF_get_MAC(self, session_ref, vif_ref):
-        return (
-            '11:22:2a:b3:CC:dd',
-            '22:33:2a:b3:CC:dd',
-            '44:44:2a:b3:CC:dd')[int(vif_ref)]
-
     def VM_add_to_xenstore_data(self, session_ref, vm_ref, key, value):
         fake.VM_add_to_xenstore_data(vm_ref, key, value)
 
     def VM_remove_from_xenstore_data(self, session_ref, vm_ref, key):
         fake.VM_remove_from_xenstore_data(vm_ref, key)
+
+    def SR_scan(self, session_ref, sr_ref):
+        pass
+
+    def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
+        pass
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):

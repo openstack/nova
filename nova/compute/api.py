@@ -88,9 +88,9 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata=[],
                onset_files=None):
         """Create the number of instances requested if quota and
-        other arguments check out ok.
-        """
-        type_data = instance_types.INSTANCE_TYPES[instance_type]
+        other arguments check out ok."""
+
+        type_data = instance_types.get_instance_type(instance_type)
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
             pid = context.project_id
@@ -129,6 +129,7 @@ class API(base.Base):
             kernel_id = image.get('kernel_id', None)
         if ramdisk_id is None:
             ramdisk_id = image.get('ramdisk_id', None)
+        # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
             kernel_id = None
@@ -318,12 +319,12 @@ class API(base.Base):
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound:
-            LOG.warning(_("Instance %d was not found during terminate"),
+            LOG.warning(_("Instance %s was not found during terminate"),
                         instance_id)
             raise
 
         if (instance['state_description'] == 'terminating'):
-            LOG.warning(_("Instance %d is already being terminated"),
+            LOG.warning(_("Instance %s is already being terminated"),
                         instance_id)
             return
 
