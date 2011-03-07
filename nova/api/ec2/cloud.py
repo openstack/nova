@@ -864,7 +864,6 @@ class CloudController(object):
         except exception.NotFound:
             return self.image_service.show_by_name(context, ec2_id)
 
-
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
         i = {}

@@ -841,7 +841,6 @@ class ImageCommands(object):
             except Exception as exc:
                 print _("Failed to convert %(old)s: %(exc)s") % locals()
 
-
     def convert(self, directory):
         """Uploads old objectstore images in directory to new service
         arguments: directory"""

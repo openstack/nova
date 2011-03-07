@@ -18,6 +18,7 @@
 
 from nova import exception
 
+
 def ec2_id_to_id(ec2_id):
     """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
     try:
