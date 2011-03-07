@@ -383,6 +383,11 @@ class XenAPIMigrateInstance(test.TestCase):
         conn = xenapi_conn.get_connection(False)
         conn.attach_disk(instance, {'base_copy': 'hurr', 'cow': 'durr'})
 
+    def test_finish_resize(self):
+        instance = db.instance_create(self.values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        conn = xenapi_conn.get_connection(False)
+        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
     """

@@ -251,6 +251,9 @@ def stub_out_migration_methods(stubs):
     def fake_destroy(*args, **kwargs):
         pass
 
+    def fake_spawn_with_disk(*args, **kwargs):
+        pass
+
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
@@ -259,3 +262,4 @@ def stub_out_migration_methods(stubs):
     stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)
+    stubs.Set(vmops.VMOps, 'spawn_with_disk', fake_spawn_with_disk)
