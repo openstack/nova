@@ -72,7 +72,13 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def spawn(self, instance, disk):
+    def spawn(self, instance):
+        self._spawn(instance, disk=None)
+
+    def spawn_with_disk(self, instance, disk):
+        self._spawn(instance, disk=disk)
+
+    def _spawn(self, instance, disk):
         """Create VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)

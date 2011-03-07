@@ -154,9 +154,14 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
-    def spawn(self, instance, disk=None):
+    def spawn(self, instance):
         """Create VM instance"""
-        self._vmops.spawn(instance, disk)
+        self._vmops.spawn(instance)
+
+    def finish_resize(self, instance, disk_info)
+        """Completes a resize, turning on the migrated instance"""
+        new_disk_info = self.attach_disk(instance, disk_info)
+        self._vmops.spawn_with_disk(instance, new_disk_info)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
