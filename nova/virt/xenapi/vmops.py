@@ -262,7 +262,7 @@ class VMOps(object):
                     self._session, instance.id, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
-                self.virt._destroy(self.instance, template_vm_ref,
+                self._destroy(instance, template_vm_ref,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
         logging.debug(_("Finished snapshot and upload for VM %s"), instance)
@@ -330,7 +330,7 @@ class VMOps(object):
 
         finally:
             if template_vm_ref:
-                self.virt._destroy(self.instance, template_vm_ref,
+                self._destroy(instance, template_vm_ref,
                         shutdown=False, destroy_kernel_ramdisk=False)
 
         # TODO(mdietz): we could also consider renaming these to something

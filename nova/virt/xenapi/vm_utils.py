@@ -307,10 +307,16 @@ class VMHelper(HelperBase):
         return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
 
     @classmethod
-    def get_sr_path(cls, session, sr_label='slices'):
-        """Finds the SR and then coerces it into a path on the dom0 file
-        system"""
-        return FLAGS.xenapi_sr_base_path + cls.get_sr(session, sr_label)
+    def get_sr_path(cls, session):
+        """Return the path to our storage repository
+
+        This is used when we're dealing with VHDs directly, either by taking
+        snapshots or by restoring an image in the DISK_VHD format.
+        """
+        sr_ref = safe_find_sr(session)
+        sr_rec = session.get_xenapi().SR.get_record(sr_ref)
+        sr_uuid = sr_rec["uuid"]
+        return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
@@ -326,7 +332,7 @@ class VMHelper(HelperBase):
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
-                  'sr_path': get_sr_path(session)}
+                  'sr_path': cls.get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
@@ -369,7 +375,7 @@ class VMHelper(HelperBase):
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
                   'uuid_stack': uuid_stack,
-                  'sr_path': get_sr_path(session)}
+                  'sr_path': cls.get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
@@ -773,18 +779,6 @@ def find_sr(session):
             if pbd_rec['host'] == host:
                 return sr
     return None
-
-
-def get_sr_path(session):
-    """Return the path to our storage repository
-
-    This is used when we're dealing with VHDs directly, either by taking
-    snapshots or by restoring an image in the DISK_VHD format.
-    """
-    sr_ref = safe_find_sr(session)
-    sr_rec = session.get_xenapi().SR.get_record(sr_ref)
-    sr_uuid = sr_rec["uuid"]
-    return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
 
 def remap_vbd_dev(dev):

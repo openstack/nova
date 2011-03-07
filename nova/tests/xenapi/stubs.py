@@ -227,18 +227,8 @@ class FakeSessionForMigrationTests(fake.SessionBase):
 
 
 def stub_out_migration_methods(stubs):
-    class FakeSnapshot(object):
-        def __getattr__(self, key):
-            return str(key)
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, type, value, traceback):
-            pass
-
     def fake_get_snapshot(self, instance):
-        return FakeSnapshot()
+        return 'foo', 'bar'
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
@@ -251,11 +241,21 @@ def stub_out_migration_methods(stubs):
         pass
 
     @classmethod
-    def fake_scan_sr(cls, session):
+    def fake_sr(cls, session, *args):
         pass
 
-    stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_scan_sr)
+    @classmethod
+    def fake_get_sr_path(cls, *args):
+        return "fake"
+
+    def fake_destroy(*args, **kwargs):
+        pass
+
+    stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
+    stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
+    stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
     stubs.Set(vmops.VMOps, '_get_snapshot', fake_get_snapshot)
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
+    stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
     stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)
