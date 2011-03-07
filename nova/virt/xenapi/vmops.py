@@ -72,13 +72,19 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
+    def create_disk(self, instance):
+        user = AuthManager().get_user(instance.user_id)
+        project = AuthManager().get_project(instance.project_id)
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
+                instance.image_id, user, project, disk_image_type)
+        return vdi_uuid
+
     def spawn(self, instance):
-        self._spawn(instance, disk=None)
-
-    def spawn_with_disk(self, instance, vdi_uuid):
-        self._spawn(instance, disk=vdi_uuid)
-
-    def _spawn(self, instance, disk):
+        vdi_uuid = self.create_disk(instance)
+        self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
+        
+    def _spawn_with_disk(self, instance, vdi_uuid):
         """Create VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
@@ -101,17 +107,9 @@ class VMOps(object):
         vdi_ref = kernel = ramdisk = pv_kernel = None
 
         # Are we building from a pre-existing disk?
-        if not disk:
-            #if kernel is not present we must download a raw disk
+        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
-            disk_image_type = VMHelper.determine_disk_image_type(instance)
-            vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
-                    instance.image_id, user, project, disk_image_type)
-            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-
-        else:
-            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', disk)
-
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
         if disk_image_type == ImageType.DISK_RAW:
             # Have a look at the VDI and see if it has a PV kernel
             pv_kernel = VMHelper.lookup_image(self._session, instance.id,
