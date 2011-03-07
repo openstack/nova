@@ -190,13 +190,16 @@ class VMOps(object):
         """
         # if instance_or_vm is a string it must be opaque ref or instance name
         if isinstance(instance_or_vm, str):
-            vm_rec = self._session.get_xenapi().VM.get_record(instance_or_vm)
-            if vm_rec != None:
-                # an opaque ref was passed in, return it
-                return instance_or_vm
-            else:
-                # it must be an instance name
-                instance_name = instance_or_vm
+            ref = None
+            try:
+                ref = self._session.get_xenapi().VM.get_record(instance_or_vm)
+                if ref != None:
+                    # an opaque ref was passed in, return it
+                    return instance_or_vm
+            except:
+                pass
+            # wasn't an opaque ref, must be an instance name
+            instance_name = instance_or_vm
 
         # if instance_or_vm is an int/long it must be instance id
         elif isinstance(instance_or_vm, (int, long)):
