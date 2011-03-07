@@ -160,8 +160,9 @@ class XenAPIConnection(object):
 
     def finish_resize(self, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
-        new_disk_info = self.attach_disk(instance, disk_info)
-        self._vmops.spawn_with_disk(instance, new_disk_info)
+        cow_uuid = self._vmops.attach_disk(instance, disk_info['base_copy'],
+                disk_info['cow'])
+        self._vmops.spawn_with_disk(instance, cow_uuid)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
@@ -201,10 +202,6 @@ class XenAPIConnection(object):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk"""
         return self._vmops.migrate_disk_and_power_off(instance, dest)
-
-    def attach_disk(self, instance, disk_info):
-        """Moves the copied VDIs into the SR"""
-        return self._vmops.attach_disk(instance, disk_info)
 
     def suspend(self, instance, callback):
         """suspend the specified instance"""

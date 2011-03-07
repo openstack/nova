@@ -75,8 +75,8 @@ class VMOps(object):
     def spawn(self, instance):
         self._spawn(instance, disk=None)
 
-    def spawn_with_disk(self, instance, disk):
-        self._spawn(instance, disk=disk)
+    def spawn_with_disk(self, instance, vdi_uuid):
+        self._spawn(instance, disk=vdi_uuid)
 
     def _spawn(self, instance, disk):
         """Create VM instance"""
@@ -343,14 +343,14 @@ class VMOps(object):
         # sensible so we don't need to blindly pass around dictionaries
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
 
-    def attach_disk(self, instance, disk_info):
+    def attach_disk(self, instance, base_copy_uuid, cow_uuid):
         """Links the base copy VHD to the COW via the XAPI plugin"""
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
         new_cow_uuid = str(uuid.uuid4())
         params = {'instance_id': instance.id,
-                  'old_base_copy_uuid': disk_info['base_copy'],
-                  'old_cow_uuid': disk_info['cow'],
+                  'old_base_copy_uuid': base_copy_uuid,
+                  'old_cow_uuid': cow_uuid,
                   'new_base_copy_uuid': new_base_copy_uuid,
                   'new_cow_uuid': new_cow_uuid,
                   'sr_path': VMHelper.get_sr_path(self._session), }
