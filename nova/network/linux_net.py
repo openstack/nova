@@ -85,10 +85,7 @@ class IptablesRule(object):
                 (self.wrap == other.wrap))
 
     def __ne__(self, other):
-        return ((self.chain != other.chain) or
-                (self.rule != other.rule) or
-                (self.top != other.top) or
-                (self.wrap != other.wrap))
+        return not self == other
 
     def __str__(self):
         if self.wrap:
