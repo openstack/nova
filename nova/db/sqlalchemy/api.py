@@ -994,6 +994,13 @@ def network_associate(context, project_id):
 
 
 @require_admin_context
+def network_is_associated(context, project_id):
+    session = get_session()
+    network = session.query(models.Network.project_id).filter(project_id=1).first()
+    print network 
+
+
+@require_admin_context
 def network_count(context):
     session = get_session()
     return session.query(models.Network).\
@@ -1115,6 +1122,17 @@ def network_get_by_bridge(context, bridge):
         raise exception.NotFound(_('No network for bridge %s') % bridge)
     return result
 
+
+@require_admin_context
+def network_get_by_cidr(context, cidr):
+    session = get_session()
+    result = session.query(models.Network).\
+                filter_by(cidr=cidr).first()
+
+    if not result:
+        raise exception.NotFound(_('Network with cidr %s does not exist') %
+                                  cidr)
+    return result.id
 
 @require_admin_context
 def network_get_by_instance(_context, instance_id):
