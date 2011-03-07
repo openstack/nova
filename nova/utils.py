@@ -166,6 +166,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True,
             if not attempts:
                 raise
             else:
+                LOG.debug(_("%r failed. Retrying."), cmd)
                 greenthread.sleep(random.randint(20, 200) / 100.0)
 
 
