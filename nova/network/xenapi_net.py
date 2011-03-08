@@ -34,34 +34,6 @@ flags.DEFINE_string('vlan_interface', 'eth0',
                     'network device for vlans')
 
 
-def metadata_forward():
-    pass
-
-
-def init_host():
-    pass
-
-
-def bind_floating_ip(floating_ip, check_exit_code=True):
-    pass
-
-
-def unbind_floating_ip(floating_ip):
-    pass
-
-
-def ensure_vlan_forward(public_ip, port, private_ip):
-    pass
-
-
-def ensure_floating_forward(floating_ip, fixed_ip):
-    pass
-
-
-def remove_floating_forward(floating_ip, fixed_ip):
-    pass
-
-
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
     #open xenapi session
@@ -108,23 +80,3 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
                 raise Exception(_("PIF %(pif_rec['uuid'])s for network "
                                   "%(bridge)s has VLAN id %(pif_vlan)d."
                                   "Expected %(vlan_num)d") % locals())
-
-
-def ensure_vlan(vlan_num):
-    pass
-
-
-def ensure_bridge(bridge, interface, net_attrs=None):
-    pass
-
-
-def get_dhcp_hosts(context, network_id):
-    pass
-
-
-def update_dhcp(context, network_id):
-    pass
-
-
-def update_ra(context, network_id):
-    pass
