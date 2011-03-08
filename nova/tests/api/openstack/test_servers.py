@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
+# Copyright 2010-2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -26,10 +26,12 @@ from nova import flags
 from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
+import nova.compute.api
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.rpc
+from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
 
 
@@ -143,6 +145,8 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
         self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
+
+        self.webreq = common.webob_factory('/v1.0/servers')
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -297,10 +301,44 @@ class ServersTest(test.TestCase):
         i = 0
         for s in res_dict['servers']:
             self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['metadata']['seq'], i)
             i += 1
+
+    def test_get_all_server_details_with_host(self):
+        '''
+        We want to make sure that if two instances are on the same host, then
+        they return the same hostId. If two instances are on different hosts,
+        they should return different hostId's. In this test, there are 5
+        instances - 2 on one host and 3 on another.
+        '''
+
+        def stub_instance(id, user_id=1):
+            return Instance(id=id, state=0, image_id=10, user_id=user_id,
+                display_name='server%s' % id, host='host%s' % (id % 2))
+
+        def return_servers_with_host(context, user_id=1):
+            return [stub_instance(i) for i in xrange(5)]
+
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
+            return_servers_with_host)
+
+        req = webob.Request.blank('/v1.0/servers/detail')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        server_list = res_dict['servers']
+        host_ids = [server_list[0]['hostId'], server_list[1]['hostId']]
+        self.assertTrue(host_ids[0] and host_ids[1])
+        self.assertNotEqual(host_ids[0], host_ids[1])
+
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], host_ids[i % 2])
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['imageId'], 10)
 
     def test_server_pause(self):
         FLAGS.allow_admin_api = True
@@ -431,3 +469,96 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
+
+    def test_resize_server(self):
+        req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
+
+        self.resize_called = False
+
+        def resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
+    def test_resize_bad_flavor_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(resize=dict(derp=3)))
+
+        self.resize_called = False
+
+        def resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 422)
+        self.assertEqual(self.resize_called, False)
+
+    def test_resize_raises_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(resize=dict(flavorId=3)))
+
+        def resize_mock(*args):
+            raise Exception('hurr durr')
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_confirm_resize_server(self):
+        req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
+
+        self.resize_called = False
+
+        def confirm_resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize',
+                confirm_resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+        self.assertEqual(self.resize_called, True)
+
+    def test_confirm_resize_server_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
+
+        def confirm_resize_mock(*args):
+            raise Exception('hurr durr')
+
+        self.stubs.Set(nova.compute.api.API, 'confirm_resize',
+                confirm_resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_revert_resize_server(self):
+        req = self.webreq('/1/action', 'POST', dict(revertResize=None))
+
+        self.resize_called = False
+
+        def revert_resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'revert_resize',
+                revert_resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
+    def test_revert_resize_server_fails(self):
+        req = self.webreq('/1/action', 'POST', dict(revertResize=None))
+
+        def revert_resize_mock(*args):
+            raise Exception('hurr durr')
+
+        self.stubs.Set(nova.compute.api.API, 'revert_resize',
+                revert_resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)

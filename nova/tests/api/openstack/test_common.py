@@ -19,6 +19,7 @@
 Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
+import webob.exc
 
 from webob import Request
 
@@ -160,3 +161,23 @@ class LimiterTest(test.TestCase):
         self.assertEqual(limited(items, req, max_limit=2000), items[3:])
         req = Request.blank('/?offset=3000&limit=10')
         self.assertEqual(limited(items, req, max_limit=2000), [])
+
+    def test_limiter_negative_limit(self):
+        """
+        Test a negative limit.
+        """
+        def _limit_large():
+            limited(self.large, req, max_limit=2000)
+
+        req = Request.blank('/?limit=-3000')
+        self.assertRaises(webob.exc.HTTPBadRequest, _limit_large)
+
+    def test_limiter_negative_offset(self):
+        """
+        Test a negative offset.
+        """
+        def _limit_large():
+            limited(self.large, req, max_limit=2000)
+
+        req = Request.blank('/?offset=-30')
+        self.assertRaises(webob.exc.HTTPBadRequest, _limit_large)
