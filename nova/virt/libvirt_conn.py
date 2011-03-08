@@ -486,8 +486,9 @@ class LibvirtConnection(object):
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
 
-                # TODO:ewindisch: subprocess lets us do this...
-                # but utils.execute abstracts it away from us
+                # TODO(ewindisch): broken /w execvp patch.
+                # subprocess lets us do this, but utils.execute
+                # abstracts it away from us
                 cmd = 'netcat', '0.0.0.0', port, '-w', '1', '</dev/null || echo free' % (port)
                 stdout, stderr = utils.execute(cmd)
                 if stdout.strip() == 'free':
