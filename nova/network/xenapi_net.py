@@ -31,7 +31,7 @@ LOG = logging.getLogger("nova.xenapi_net")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('vlan_interface', 'eth0',
-                    'network device for vlans')
+                    'Physical network interface for vlans')
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):

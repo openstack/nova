@@ -518,7 +518,6 @@ class VlanManager(NetworkManager):
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
         network_ref = db.network_get_by_instance(context, instance_id)
-        #xenapi driver will create a xen network if necessary here
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
 
