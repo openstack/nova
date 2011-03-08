@@ -198,7 +198,7 @@ class VMOps(object):
             obj = None
             try:
                 # check for opaque ref
-                obj = self._session.get_xenapi().VM.get_record(instance_or_vm)
+                obj = self._session.get_xenapi().VM.get_uuid(instance_or_vm)
                 return instance_or_vm
             except self.XenAPI.Failure:
                 # wasn't an opaque ref, can be an instance name

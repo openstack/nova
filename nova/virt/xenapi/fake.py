@@ -400,7 +400,6 @@ class SessionBase(object):
     def _getter(self, name, params):
         self._check_session(params)
         (cls, func) = name.split('.')
-
         if func == 'get_all':
             self._check_arg_count(params, 1)
             return get_all(cls)
@@ -423,10 +422,12 @@ class SessionBase(object):
         if len(params) == 2:
             field = func[len('get_'):]
             ref = params[1]
-
-            if (ref in _db_content[cls] and
-                field in _db_content[cls][ref]):
-                return _db_content[cls][ref][field]
+            if (ref in _db_content[cls]):
+                if (field in _db_content[cls][ref]):
+                    return _db_content[cls][ref][field]
+            else:
+                LOG.debug(_('Raising Failure'))
+                raise Failure(['HANDLE_INVALID', cls, ref])
 
         LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
