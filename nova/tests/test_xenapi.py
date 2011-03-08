@@ -376,6 +376,11 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stub_out_migration_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
+    def tearDown(self):
+        super(XenAPIMigrateInstance, self).tearDown()
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
+        self.stubs.UnsetAll()
 
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.values)
