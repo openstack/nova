@@ -86,7 +86,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         # Get Nova record for VM
         vm_info = self.conn.get_info(1)
 
-        # Get XenAPI record for VM
+        # Get record for VMs
         vms = vmwareapi_fake._get_objects("VirtualMachine")
         vm = vms[0]
 
@@ -102,7 +102,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         # Check that the VM is running according to Nova
         self.assertEquals(vm_info['state'], power_state.RUNNING)
 
-        # Check that the VM is running according to XenAPI.
+        # Check that the VM is running according to vSphere API.
         self.assertEquals(vm.get("runtime.powerState"), 'poweredOn')
 
     def _check_vm_info(self, info, pwr_state=power_state.RUNNING):
