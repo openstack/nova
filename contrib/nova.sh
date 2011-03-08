@@ -181,7 +181,7 @@ NOVA_CONF_EOF
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler"
     screen_it volume "$NOVA_DIR/bin/nova-volume"
     screen_it ajax_console_proxy "$NOVA_DIR/bin/nova-ajax-console-proxy"
-
+    sleep 2
     # export environment variables for project 'admin' and user 'admin'
     $NOVA_DIR/bin/nova-manage project zipfile admin admin $NOVA_DIR/nova.zip
     unzip -o $NOVA_DIR/nova.zip -d $NOVA_DIR/
