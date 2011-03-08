@@ -42,11 +42,11 @@ class FlavorsTest(test.TestCase):
         super(FlavorsTest, self).tearDown()
 
     def test_get_flavor_list(self):
-        req = webob.Request.blank('/v1.0/testacct/flavors')
+        req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
 
     def test_get_flavor_by_id(self):
-        req = webob.Request.blank('/v1.0/testacct/flavors/1')
+        req = webob.Request.blank('/v1.0/flavors/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)

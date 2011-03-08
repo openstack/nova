@@ -85,7 +85,7 @@ class ZonesTest(test.TestCase):
         super(ZonesTest, self).tearDown()
 
     def test_get_zone_list(self):
-        req = webob.Request.blank('/v1.0/testacct/zones')
+        req = webob.Request.blank('/v1.0/zones')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -93,7 +93,7 @@ class ZonesTest(test.TestCase):
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_by_id(self):
-        req = webob.Request.blank('/v1.0/testacct/zones/1')
+        req = webob.Request.blank('/v1.0/zones/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -103,7 +103,7 @@ class ZonesTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
 
     def test_zone_delete(self):
-        req = webob.Request.blank('/v1.0/testacct/zones/1')
+        req = webob.Request.blank('/v1.0/zones/1')
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(res.status_int, 200)
@@ -111,7 +111,7 @@ class ZonesTest(test.TestCase):
     def test_zone_create(self):
         body = dict(zone=dict(api_url='http://blah.zoo', username='fred',
                         password='fubar'))
-        req = webob.Request.blank('/v1.0/testacct/zones')
+        req = webob.Request.blank('/v1.0/zones')
         req.method = 'POST'
         req.body = json.dumps(body)
 
@@ -125,7 +125,7 @@ class ZonesTest(test.TestCase):
 
     def test_zone_update(self):
         body = dict(zone=dict(username='zeb', password='sneaky'))
-        req = webob.Request.blank('/v1.0/testacct/zones/1')
+        req = webob.Request.blank('/v1.0/zones/1')
         req.method = 'PUT'
         req.body = json.dumps(body)
 

@@ -70,7 +70,7 @@ class AccountsTest(test.TestCase):
         super(AccountsTest, self).tearDown()
 
     def test_get_account(self):
-        req = webob.Request.blank('/v1.0/test1')
+        req = webob.Request.blank('/v1.0/accounts/test1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -80,7 +80,7 @@ class AccountsTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
 
     def test_account_delete(self):
-        req = webob.Request.blank('/v1.0/test1')
+        req = webob.Request.blank('/v1.0/accounts/test1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertTrue('test1' not in fakes.FakeAuthManager.projects)
@@ -89,7 +89,7 @@ class AccountsTest(test.TestCase):
     def test_account_create(self):
         body = dict(account=dict(description='test account',
                               manager='guy1'))
-        req = webob.Request.blank('/v1.0/newacct')
+        req = webob.Request.blank('/v1.0/accounts/newacct')
         req.method = 'PUT'
         req.body = json.dumps(body)
 
@@ -108,7 +108,7 @@ class AccountsTest(test.TestCase):
     def test_account_update(self):
         body = dict(account=dict(description='test account',
                               manager='guy2'))
-        req = webob.Request.blank('/v1.0/test1')
+        req = webob.Request.blank('/v1.0/accounts/test1')
         req.method = 'PUT'
         req.body = json.dumps(body)
 

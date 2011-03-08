@@ -216,7 +216,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def test_get_image_index(self):
-        req = webob.Request.blank('/v1.0/testacct/images')
+        req = webob.Request.blank('/v1.0/images')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -228,7 +228,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                               "image %s not in fixture index!" % str(image))
 
     def test_get_image_details(self):
-        req = webob.Request.blank('/v1.0/testacct/images/detail')
+        req = webob.Request.blank('/v1.0/images/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 

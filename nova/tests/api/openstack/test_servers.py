@@ -150,7 +150,7 @@ class ServersTest(test.TestCase):
         super(ServersTest, self).tearDown()
 
     def test_get_server_by_id(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/1')
+        req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], '1')
@@ -161,7 +161,7 @@ class ServersTest(test.TestCase):
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
-        req = webob.Request.blank('/v1.0/testacct/servers/1')
+        req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], '1')
@@ -173,7 +173,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses["private"][0], private)
 
     def test_get_server_list(self):
-        req = webob.Request.blank('/v1.0/testacct/servers')
+        req = webob.Request.blank('/v1.0/servers')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -224,7 +224,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageId=2, flavorId=2,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers')
+        req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
 
@@ -233,7 +233,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
 
     def test_update_no_body(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/1')
+        req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 422)
@@ -251,7 +251,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
 
-        req = webob.Request.blank('/v1.0/testacct/servers/1')
+        req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         req.body = self.body
         req.get_response(fakes.wsgi_app())
@@ -267,30 +267,30 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
 
-        req = webob.Request.blank('/v1.0/testacct/servers/1')
+        req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
         req.body = self.body
         req.get_response(fakes.wsgi_app())
 
     def test_create_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
         req.method = 'POST'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '404 Not Found')
 
     def test_delete_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '404 Not Found')
 
     def test_get_server_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '404 Not Found')
 
     def test_get_all_server_details(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/detail')
+        req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -321,7 +321,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
             return_servers_with_host)
 
-        req = webob.Request.blank('/v1.0/testacct/servers/detail')
+        req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -341,7 +341,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/pause')
+        req = webob.Request.blank('/v1.0/servers/1/pause')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -353,7 +353,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/unpause')
+        req = webob.Request.blank('/v1.0/servers/1/unpause')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -365,7 +365,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/suspend')
+        req = webob.Request.blank('/v1.0/servers/1/suspend')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -377,7 +377,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/resume')
+        req = webob.Request.blank('/v1.0/servers/1/resume')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -389,7 +389,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/reset_network')
+        req = webob.Request.blank('/v1.0/servers/1/reset_network')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -402,7 +402,7 @@ class ServersTest(test.TestCase):
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
         req = webob.Request.blank(
-              '/v1.0/testacct/servers/1/inject_network_info')
+              '/v1.0/servers/1/inject_network_info')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -410,13 +410,13 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
 
     def test_server_diagnostics(self):
-        req = webob.Request.blank("/v1.0/testacct/servers/1/diagnostics")
+        req = webob.Request.blank("/v1.0/servers/1/diagnostics")
         req.method = "GET"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
     def test_server_actions(self):
-        req = webob.Request.blank("/v1.0/testacct/servers/1/actions")
+        req = webob.Request.blank("/v1.0/servers/1/actions")
         req.method = "GET"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
@@ -425,7 +425,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/action')
+        req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -435,7 +435,7 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/action')
+        req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
@@ -445,14 +445,14 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/testacct/servers/1/action')
+        req = webob.Request.blank('/v1.0/servers/1/action')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
 
     def test_delete_server_instance(self):
-        req = webob.Request.blank('/v1.0/testacct/servers/1')
+        req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'DELETE'
 
         self.server_delete_called = False

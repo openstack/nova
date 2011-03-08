@@ -73,18 +73,6 @@ class APIRouter(wsgi.Router):
     def __init__(self):
         mapper = routes.Mapper()
 
-        accounts_controller = accounts.Controller()
-        mapper.connect("account", "/{id}",
-            controller=accounts_controller, action="show",
-                conditions=dict(method=["GET"]))
-        if FLAGS.allow_admin_api:
-            mapper.connect("/{id}",
-                controller=accounts_controller, action="update",
-                    conditions=dict(method=["PUT"]))
-            mapper.connect("/{id}",
-                controller=accounts_controller, action="delete",
-                    conditions=dict(method=["DELETE"]))
-
         server_members = {'action': 'POST'}
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
@@ -101,38 +89,34 @@ class APIRouter(wsgi.Router):
             server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
-                        path_prefix="{account_id}/",
                         collection={'detail': 'GET'})
 
             mapper.resource("user", "users", controller=users.Controller(),
-                        path_prefix="{account_id}/",
                         collection={'detail': 'GET'})
+
+            mapper.resource("account", "accounts",
+                            controller=accounts.Controller(),
+                            collection={'detail': 'GET'})
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
-                        path_prefix="{account_id}/",
                         member=server_members)
 
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
-                        path_prefix="{account_id}/servers/{server_id}/",
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
         mapper.resource("console", "consoles",
                         controller=consoles.Controller(),
-                        path_prefix="{account_id}/servers/{server_id}/",
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
         mapper.resource("image", "images", controller=images.Controller(),
-                        path_prefix="{account_id}/",
                         collection={'detail': 'GET'})
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
-                        path_prefix="{account_id}/",
                         collection={'detail': 'GET'})
         mapper.resource("shared_ip_group", "shared_ip_groups",
-                        path_prefix="{account_id}/",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
 

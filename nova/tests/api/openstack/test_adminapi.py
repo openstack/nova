@@ -50,7 +50,7 @@ class AdminAPITest(test.TestCase):
     def test_admin_enabled(self):
         FLAGS.allow_admin_api = True
         # We should still be able to access public operations.
-        req = webob.Request.blank('/v1.0/testacct/flavors')
+        req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         # TODO: Confirm admin operations are available.
@@ -58,7 +58,7 @@ class AdminAPITest(test.TestCase):
     def test_admin_disabled(self):
         FLAGS.allow_admin_api = False
         # We should still be able to access public operations.
-        req = webob.Request.blank('/v1.0/testacct/flavors')
+        req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
         # TODO: Confirm admin operations are unavailable.
         self.assertEqual(res.status_int, 200)

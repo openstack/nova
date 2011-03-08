@@ -72,7 +72,7 @@ class UsersTest(test.TestCase):
         super(UsersTest, self).tearDown()
 
     def test_get_user_list(self):
-        req = webob.Request.blank('/v1.0/testacct/users')
+        req = webob.Request.blank('/v1.0/users')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -80,7 +80,7 @@ class UsersTest(test.TestCase):
         self.assertEqual(len(res_dict['users']), 2)
 
     def test_get_user_by_id(self):
-        req = webob.Request.blank('/v1.0/testacct/users/guy2')
+        req = webob.Request.blank('/v1.0/users/guy2')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
@@ -91,7 +91,7 @@ class UsersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
 
     def test_user_delete(self):
-        req = webob.Request.blank('/v1.0/testacct/users/guy1')
+        req = webob.Request.blank('/v1.0/users/guy1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertTrue('guy1' not in [u.id for u in
@@ -103,7 +103,7 @@ class UsersTest(test.TestCase):
                               access='acc3',
                               secret='invasionIsInNormandy',
                               admin=True))
-        req = webob.Request.blank('/v1.0/testacct/users')
+        req = webob.Request.blank('/v1.0/users')
         req.method = 'POST'
         req.body = json.dumps(body)
 
@@ -124,7 +124,7 @@ class UsersTest(test.TestCase):
         body = dict(user=dict(name='guy2',
                               access='acc2',
                               secret='invasionIsInNormandy'))
-        req = webob.Request.blank('/v1.0/testacct/users/guy2')
+        req = webob.Request.blank('/v1.0/users/guy2')
         req.method = 'PUT'
         req.body = json.dumps(body)
 
