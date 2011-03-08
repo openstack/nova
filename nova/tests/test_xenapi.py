@@ -233,7 +233,7 @@ class XenAPIVMTestCase(test.TestCase):
         vm = vms[0]
 
         # Check that m1.large above turned into the right thing.
-        instance_type = instance_types.INSTANCE_TYPES['m1.large']
+        instance_type = db.instance_type_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
@@ -344,6 +344,44 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()
+
+
+class XenAPIMigrateInstance(test.TestCase):
+    """
+    Unit test for verifying migration-related actions
+    """
+
+    def setUp(self):
+        super(XenAPIMigrateInstance, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        FLAGS.target_host = '127.0.0.1'
+        FLAGS.xenapi_connection_url = 'test_url'
+        FLAGS.xenapi_connection_password = 'test_pass'
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        stubs.stub_out_get_target(self.stubs)
+        xenapi_fake.reset()
+        self.values = {'name': 1, 'id': 1,
+                  'project_id': 'fake',
+                  'user_id': 'fake',
+                  'image_id': 1,
+                  'kernel_id': 2,
+                  'ramdisk_id': 3,
+                  'instance_type': 'm1.large',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  }
+        stubs.stub_out_migration_methods(self.stubs)
+
+    def test_migrate_disk_and_power_off(self):
+        instance = db.instance_create(self.values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        conn = xenapi_conn.get_connection(False)
+        conn.migrate_disk_and_power_off(instance, '127.0.0.1')
+
+    def test_attach_disk(self):
+        instance = db.instance_create(self.values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        conn = xenapi_conn.get_connection(False)
+        conn.attach_disk(instance, {'base_copy': 'hurr', 'cow': 'durr'})
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):

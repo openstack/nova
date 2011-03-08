@@ -29,7 +29,6 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.auth import manager
-from nova.compute import instance_types
 
 
 FLAGS = flags.FLAGS
@@ -80,8 +79,8 @@ def host_dict(host, compute_service, instances, volume_service, volumes, now):
     return rv
 
 
-def instance_dict(name, inst):
-    return {'name': name,
+def instance_dict(inst):
+    return {'name': inst['name'],
             'memory_mb': inst['memory_mb'],
             'vcpus': inst['vcpus'],
             'disk_gb': inst['local_gb'],
@@ -115,9 +114,9 @@ class AdminController(object):
     def __str__(self):
         return 'AdminController'
 
-    def describe_instance_types(self, _context, **_kwargs):
-        return {'instanceTypeSet': [instance_dict(n, v) for n, v in
-                                    instance_types.INSTANCE_TYPES.iteritems()]}
+    def describe_instance_types(self, context, **_kwargs):
+        """Returns all active instance types data (vcpus, memory, etc.)"""
+        return {'instanceTypeSet': [db.instance_type_get_all(context)]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
