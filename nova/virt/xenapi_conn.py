@@ -168,13 +168,17 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
-    def spawn(self, instance):
+    def spawn(self, instance, disk=None):
         """Create VM instance"""
-        self._vmops.spawn(instance)
+        self._vmops.spawn(instance, disk)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
+
+    def resize(self, instance, flavor):
+        """Resize a VM instance"""
+        raise NotImplementedError()
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -201,6 +205,15 @@ class XenAPIConnection(object):
     def unpause(self, instance, callback):
         """Unpause paused VM instance"""
         self._vmops.unpause(instance, callback)
+
+    def migrate_disk_and_power_off(self, instance, dest):
+        """Transfers the VHD of a running instance to another host, then shuts
+        off the instance copies over the COW disk"""
+        return self._vmops.migrate_disk_and_power_off(instance, dest)
+
+    def attach_disk(self, instance, disk_info):
+        """Moves the copied VDIs into the SR"""
+        return self._vmops.attach_disk(instance, disk_info)
 
     def suspend(self, instance, callback):
         """suspend the specified instance"""
@@ -241,6 +254,10 @@ class XenAPIConnection(object):
     def get_ajax_console(self, instance):
         """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
+
+    def get_host_ip_addr(self):
+        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
+        return xs_url.netloc
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach volume storage to VM instance"""
