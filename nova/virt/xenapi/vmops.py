@@ -190,10 +190,10 @@ class VMOps(object):
         """
         # if instance_or_vm is a string it must be opaque ref or instance name
         if isinstance(instance_or_vm, basestring):
-            ref = None
+            obj = None
             try:
                 # check for opaque ref
-                ref = self._session.get_xenapi().VM.get_record(instance_or_vm)
+                obj = self._session.get_xenapi().VM.get_record(instance_or_vm)
                 return instance_or_vm
             except self.XenAPI.Failure:
                 # wasn't an opaque ref, must be an instance name
@@ -215,11 +215,11 @@ class VMOps(object):
         # otherwise instance_or_vm is an instance object
         else:
             instance_name = instance_or_vm.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
+        vm_ref = VMHelper.lookup(self._session, instance_name)
+        if vm_ref is None:
             raise exception.NotFound(
                             _('Instance not present %s') % instance_name)
-        return vm
+        return vm_ref
 
     def _acquire_bootlock(self, vm):
         """Prevent an instance from booting"""
