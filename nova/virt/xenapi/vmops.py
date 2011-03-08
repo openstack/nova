@@ -90,7 +90,7 @@ class VMOps(object):
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
-            ' non-unique name %s') % instance_name)
+                    ' non-unique name %s') % instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
@@ -104,7 +104,7 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        vdi_ref = kernel = ramdisk = pv_kernel = None
+        kernel = ramdisk = pv_kernel = None
 
         # Are we building from a pre-existing disk?
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
