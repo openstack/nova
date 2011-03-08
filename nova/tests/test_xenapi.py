@@ -251,7 +251,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.vm_info = vm_info
         self.vm = vm
 
-    def check_vm_record(self):
+    def check_vm_record(self, conn):
         # Check that m1.large above turned into the right thing.
         instance_type = db.instance_type_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
@@ -321,7 +321,7 @@ class XenAPIVMTestCase(test.TestCase):
         instance = db.instance_create(values)
         conn.spawn(instance)
         self.create_vm_record(conn, os_type)
-        self.check_vm_record()
+        self.check_vm_record(conn)
 
     def test_spawn_not_enough_memory(self):
         FLAGS.xenapi_image_service = 'glance'

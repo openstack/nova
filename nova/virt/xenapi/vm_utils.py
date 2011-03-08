@@ -324,7 +324,7 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
-        session.wait_for_task(task, instance_id)
+        session.wait_for_task(task, instance.id)
 
     @classmethod
     def fetch_image(cls, session, instance_id, image, user, project,

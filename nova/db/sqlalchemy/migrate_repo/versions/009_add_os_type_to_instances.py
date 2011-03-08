@@ -29,8 +29,6 @@ instances = Table('instances', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
         )
 
-# FIXME(dubs) should this be not null?  Maybe create as nullable, then
-#   populate all existing rows with 'linux', then adding not null constraint.
 instances_os_type = Column('os_type',
                            String(length=255, convert_unicode=False,
                                   assert_unicode=None, unicode_error=None,
@@ -45,7 +43,7 @@ def upgrade(migrate_engine):
 
     instances.create_column(instances_os_type)
     migrate_engine.execute(instances.update()\
-                           .where(instances.c.os_type==None)\
+                           .where(instances.c.os_type == None)\
                            .values(os_type='linux'))
 
 
@@ -53,4 +51,3 @@ def downgrade(migrate_engine):
     meta.bind = migrate_engine
 
     instances.drop_column('os_type')
-
