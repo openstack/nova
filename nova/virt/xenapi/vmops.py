@@ -72,13 +72,25 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def spawn(self, instance, disk):
+    def create_disk(self, instance):
+        user = AuthManager().get_user(instance.user_id)
+        project = AuthManager().get_project(instance.project_id)
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
+        vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
+                instance.image_id, user, project, disk_image_type)
+        return vdi_uuid
+
+    def spawn(self, instance):
+        vdi_uuid = self.create_disk(instance)
+        self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
+
+    def _spawn_with_disk(self, instance, vdi_uuid):
         """Create VM instance"""
         instance_name = instance.name
         vm = VMHelper.lookup(self._session, instance_name)
         if vm is not None:
             raise exception.Duplicate(_('Attempted to create'
-            ' non-unique name %s') % instance_name)
+                    ' non-unique name %s') % instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
@@ -92,20 +104,12 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        vdi_ref = kernel = ramdisk = pv_kernel = None
+        kernel = ramdisk = pv_kernel = None
 
         # Are we building from a pre-existing disk?
-        if not disk:
-            #if kernel is not present we must download a raw disk
+        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
-            disk_image_type = VMHelper.determine_disk_image_type(instance)
-            vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
-                    instance.image_id, user, project, disk_image_type)
-            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-
-        else:
-            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', disk)
-
+        disk_image_type = VMHelper.determine_disk_image_type(instance)
         if disk_image_type == ImageType.DISK_RAW:
             # Have a look at the VDI and see if it has a PV kernel
             pv_kernel = VMHelper.lookup_image(self._session, instance.id,
@@ -340,14 +344,14 @@ class VMOps(object):
         # sensible so we don't need to blindly pass around dictionaries
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
 
-    def attach_disk(self, instance, disk_info):
+    def attach_disk(self, instance, base_copy_uuid, cow_uuid):
         """Links the base copy VHD to the COW via the XAPI plugin"""
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
         new_cow_uuid = str(uuid.uuid4())
         params = {'instance_id': instance.id,
-                  'old_base_copy_uuid': disk_info['base_copy'],
-                  'old_cow_uuid': disk_info['cow'],
+                  'old_base_copy_uuid': base_copy_uuid,
+                  'old_cow_uuid': cow_uuid,
                   'new_base_copy_uuid': new_base_copy_uuid,
                   'new_cow_uuid': new_cow_uuid,
                   'sr_path': VMHelper.get_sr_path(self._session), }
