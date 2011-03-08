@@ -30,6 +30,7 @@ from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.compute import instance_types
 
 
 LOG = logging.getLogger('nova.tests.compute')
@@ -56,7 +57,7 @@ class ComputeTestCase(test.TestCase):
         self.manager.delete_project(self.project)
         super(ComputeTestCase, self).tearDown()
 
-    def _create_instance(self):
+    def _create_instance(self, params={}):
         """Create a test instance"""
         inst = {}
         inst['image_id'] = 'ami-test'
@@ -67,6 +68,7 @@ class ComputeTestCase(test.TestCase):
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
+        inst.update(params)
         return db.instance_create(self.context, inst)['id']
 
     def _create_group(self):
@@ -266,3 +268,31 @@ class ComputeTestCase(test.TestCase):
         self.assertEqual(ret_val, None)
 
         self.compute.terminate_instance(self.context, instance_id)
+
+    def test_resize_instance(self):
+        """Ensure instance can be migrated/resized"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id, {'host': 'foo'})
+        self.compute.prep_resize(context, instance_id)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+        self.compute.resize_instance(context, instance_id,
+                migration_ref['id'])
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_get_by_flavor_id(self):
+        type = instance_types.get_by_flavor_id(1)
+        self.assertEqual(type, 'm1.tiny')
+
+    def test_resize_same_source_fails(self):
+        """Ensure instance fails to migrate when source and destination are
+        the same host"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.assertRaises(exception.Error, self.compute.prep_resize,
+                self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+        type = instance_types.get_by_flavor_id("1")
+        self.assertEqual(type, 'm1.tiny')
