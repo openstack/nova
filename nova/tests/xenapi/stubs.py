@@ -237,6 +237,7 @@ class FakeSessionForMigrationTests(fake.SessionBase):
         vm['is_a_template'] = False
         vm['is_control_domain'] = False
 
+
 def stub_out_migration_methods(stubs):
     def fake_get_snapshot(self, instance):
         return 'foo', 'bar'

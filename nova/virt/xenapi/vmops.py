@@ -83,7 +83,7 @@ class VMOps(object):
     def spawn(self, instance):
         vdi_uuid = self.create_disk(instance)
         self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
-        
+
     def _spawn_with_disk(self, instance, vdi_uuid):
         """Create VM instance"""
         instance_name = instance.name

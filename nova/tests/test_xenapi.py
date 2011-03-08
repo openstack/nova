@@ -376,6 +376,7 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stub_out_migration_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
+
     def tearDown(self):
         super(XenAPIMigrateInstance, self).tearDown()
         self.manager.delete_project(self.project)
@@ -393,6 +394,7 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
+
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
     """
