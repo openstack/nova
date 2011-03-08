@@ -188,35 +188,38 @@ class VMOps(object):
         """Refactored out the common code of many methods that receive either
         a vm name or a vm instance, and want a vm instance in return.
         """
-        vm = None
-        try:
-            if instance_or_vm.startswith("OpaqueRef:"):
-                # Got passed an opaque ref; return it
+        # if instance_or_vm is a string it must be opaque ref or instance name
+        if isinstance(instance_or_vm, basestring):
+            obj = None
+            try:
+                # check for opaque ref
+                obj = self._session.get_xenapi().VM.get_record(instance_or_vm)
                 return instance_or_vm
-            else:
-                # Must be the instance name
+            except self.XenAPI.Failure:
+                # wasn't an opaque ref, must be an instance name
                 instance_name = instance_or_vm
-        except (AttributeError, KeyError):
-            # Note the the KeyError will only happen with fakes.py
-            # Not a string; must be an ID or a vm instance
-            if isinstance(instance_or_vm, (int, long)):
-                ctx = context.get_admin_context()
-                try:
-                    instance_obj = db.instance_get(ctx, instance_or_vm)
-                    instance_name = instance_obj.name
-                except exception.NotFound:
-                    # The unit tests screw this up, as they use an integer for
-                    # the vm name. I'd fix that up, but that's a matter for
-                    # another bug report. So for now, just try with the passed
-                    # value
-                    instance_name = instance_or_vm
-            else:
-                instance_name = instance_or_vm.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is None:
+
+        # if instance_or_vm is an int/long it must be instance id
+        elif isinstance(instance_or_vm, (int, long)):
+            ctx = context.get_admin_context()
+            try:
+                instance_obj = db.instance_get(ctx, instance_or_vm)
+                instance_name = instance_obj.name
+            except exception.NotFound:
+                # The unit tests screw this up, as they use an integer for
+                # the vm name. I'd fix that up, but that's a matter for
+                # another bug report. So for now, just try with the passed
+                # value
+                instance_name = instance_or_vm
+
+        # otherwise instance_or_vm is an instance object
+        else:
+            instance_name = instance_or_vm.name
+        vm_ref = VMHelper.lookup(self._session, instance_name)
+        if vm_ref is None:
             raise exception.NotFound(
                             _('Instance not present %s') % instance_name)
-        return vm
+        return vm_ref
 
     def _acquire_bootlock(self, vm):
         """Prevent an instance from booting"""
