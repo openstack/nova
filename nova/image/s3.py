@@ -139,11 +139,13 @@ class S3ImageService(service.BaseImageService):
         manifest = key.get_contents_as_string()
 
         manifest = ElementTree.fromstring(manifest)
+        image_format = 'ami'
         image_type = 'machine'
 
         try:
             kernel_id = manifest.find("machine_configuration/kernel_id").text
             if kernel_id == 'true':
+                image_format = 'aki'
                 image_type = 'kernel'
                 kernel_id = None
         except:
@@ -152,6 +154,7 @@ class S3ImageService(service.BaseImageService):
         try:
             ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
             if ramdisk_id == 'true':
+                image_format = 'ari'
                 image_type = 'ramdisk'
                 ramdisk_id = None
         except:
@@ -173,7 +176,9 @@ class S3ImageService(service.BaseImageService):
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
         properties['is_public'] = False
-        metadata.update({'type': image_type,
+        properties['type'] = image_type
+        metadata.update({'disk_format': image_format,
+                         'container_format': image_format,
                          'status': 'queued',
                          'is_public': True,
                          'properties': properties})

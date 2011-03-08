@@ -867,7 +867,8 @@ class CloudController(object):
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
         i = {}
-        ec2_id = self._image_ec2_id(image.get('id'), image.get('type'))
+        image_type = image['properties'].get('type')
+        ec2_id = self._image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
         if name:
             i['imageId'] = "%s (%s)" % (ec2_id, name)
@@ -882,7 +883,7 @@ class CloudController(object):
         i['imageOwnerId'] = image['properties'].get('owner_id')
         i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
-        i['type'] = image.get('type')
+        i['type'] = image_type
         i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
         i['architecture'] = image['properties'].get('architecture')
         return i
@@ -915,7 +916,8 @@ class CloudController(object):
             image_location = kwargs['name']
         metadata = {'properties': {'image_location': image_location}}
         image = self.image_service.create(context, metadata)
-        image_id = self._image_ec2_id(image['id'], image['type'])
+        image_id = self._image_ec2_id(image['id'],
+                                      image['properties']['type'])
         msg = _("Registered image %(image_location)s with"
                 " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
@@ -954,6 +956,7 @@ class CloudController(object):
             raise exception.NotFound(_('Image %s not found') % image_id)
         internal_id = image['id']
         del(image['id'])
+        raise Exception(image)
         image['properties']['is_public'] = (operation_type == 'add')
         return self.image_service.update(context, internal_id, image)
 
