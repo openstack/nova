@@ -1042,6 +1042,13 @@ def network_create_safe(context, values):
     except IntegrityError:
         return None
 
+@require_admin_context
+def network_delete_safe(context, network_id):
+    session = get_session()
+    with session.begin():
+        network_ref = network_get(context, network_id=network_id, session=session)
+        session.delete(network_ref)        
+
 
 @require_admin_context
 def network_disassociate(context, network_id):
