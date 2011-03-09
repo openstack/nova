@@ -498,9 +498,10 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def set_admin_password(self, context, instance_id):
+    def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message('set_admin_password', context, instance_id)
+        self._cast_compute_message('set_admin_password', context, instance_id,
+                                    password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""

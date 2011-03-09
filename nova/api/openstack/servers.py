@@ -183,7 +183,8 @@ class Controller(wsgi.Controller):
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
-        self.compute_api.set_admin_password(context, server['server']['id'])
+        self.compute_api.set_admin_password(context, server['server']['id'],
+                                            password)
         return server
 
     def update(self, req, id):
