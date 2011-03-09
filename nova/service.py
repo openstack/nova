@@ -56,7 +56,7 @@ flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
 flags.DEFINE_string('osapi_listen', "0.0.0.0",
                     'IP address for OpenStack API to listen')
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
-flags.DEFINE_string('paste_config', "api-paste.ini",
+flags.DEFINE_string('api_paste_config', "api-paste.ini",
                     'File name for the paste.deploy config for nova-api')
 
 
@@ -240,10 +240,10 @@ class ApiService(WsgiService):
     @classmethod
     def create(cls, conf=None):
         if not conf:
-            conf = wsgi.paste_config_file(FLAGS.paste_config)
+            conf = wsgi.paste_config_file(FLAGS.api_paste_config)
             if not conf:
                 message = (_("No paste configuration found for: %s"),
-                       FLAGS.paste_config)
+                           FLAGS.api_paste_config)
                 raise exception.Error(message)
         api_endpoints = ['ec2', 'osapi']
         service = cls(conf, api_endpoints)
@@ -315,7 +315,7 @@ def _run_wsgi(paste_config_file, apis):
                      getattr(FLAGS, "%s_listen" % api)))
     if len(apps) == 0:
         logging.error(_("No known API applications configured in %s."),
-                  paste_config_file)
+                      paste_config_file)
         return
 
     server = wsgi.Server()
