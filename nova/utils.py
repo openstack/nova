@@ -135,6 +135,7 @@ def execute(*cmd, **kwargs):
     stdin=kwargs.get('stdin', subprocess.PIPE)
     stdout=kwargs.get('stdout', subprocess.PIPE)
     stderr=kwargs.get('stderr', subprocess.PIPE)
+    cmd=map(str,cmd)
 
     LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
     env = os.environ.copy()
