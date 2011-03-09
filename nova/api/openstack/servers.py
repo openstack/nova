@@ -217,7 +217,7 @@ class Controller(wsgi.Controller):
             'rebuild':       self._action_rebuild,
             }
 
-        input_dict = self._deserialize(req.body, req)
+        input_dict = self._deserialize(req.body, req.get_content_type())
         for key in actions.keys():
             if key in input_dict:
                 return actions[key](input_dict, req, id)

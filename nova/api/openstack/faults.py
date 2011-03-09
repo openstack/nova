@@ -58,6 +58,6 @@ class Fault(webob.exc.HTTPException):
         # 'code' is an attribute on the fault tag itself
         metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
         serializer = wsgi.Serializer(metadata)
-        content_type = req.best_match()
+        content_type = req.best_match_content_type()
         self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
         return self.wrapped_exc

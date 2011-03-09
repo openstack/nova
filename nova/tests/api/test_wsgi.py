@@ -139,48 +139,48 @@ class RequestTest(test.TestCase):
     def test_content_type_from_accept_xml(self):
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/xml"
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/xml")
 
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/json"
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/xml, application/json"
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = \
             "application/json; q=0.3, application/xml; q=0.9"
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/xml")
 
     def test_content_type_from_query_extension(self):
         request = wsgi.Request.blank('/tests/123.xml')
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/xml")
 
         request = wsgi.Request.blank('/tests/123.json')
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
         request = wsgi.Request.blank('/tests/123.invalid')
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
     def test_content_type_accept_and_query_extension(self):
         request = wsgi.Request.blank('/tests/123.xml')
         request.headers["Accept"] = "application/json"
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/xml")
 
     def test_content_type_accept_default(self):
         request = wsgi.Request.blank('/tests/123.unsupported')
         request.headers["Accept"] = "application/unsupported1"
-        result = request.best_match()
+        result = request.best_match_content_type()
         self.assertEqual(result, "application/json")
 
 

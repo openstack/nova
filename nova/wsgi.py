@@ -85,7 +85,7 @@ class Server(object):
 
 class Request(webob.Request):
 
-    def best_match(self):
+    def best_match_content_type(self):
         """
         Determine the most acceptable content-type based on the
         query extension then the Accept header
@@ -354,7 +354,7 @@ class Controller(object):
         result = method(**arg_dict)
 
         if type(result) is dict:
-            content_type = req.best_match()
+            content_type = req.best_match_content_type()
             body = self._serialize(result, content_type)
 
             response = webob.Response()
