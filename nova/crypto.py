@@ -120,7 +120,8 @@ def generate_key_pair(bits=1024):
     # bio = M2Crypto.BIO.MemoryBuffer()
     # key.save_pub_key_bio(bio)
     # public_key = bio.read()
-    # public_key, err = execute('ssh-keygen', '-y', '-f', '/dev/stdin', private_key)
+    # public_key, err = execute('ssh-keygen', '-y', '-f',
+    #                           '/dev/stdin', private_key)
 
     return (private_key, public_key, fingerprint)
 

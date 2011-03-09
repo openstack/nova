@@ -112,7 +112,7 @@ class VolumeDriver(object):
             # If the volume isn't present, then don't attempt to delete
             return True
 
-        self._try_execute('sudo', 'lvremove', '-f',"%s/%s" %
+        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
 
@@ -256,7 +256,7 @@ class ISCSIDriver(VolumeDriver):
         self._sync_exec('sudo', 'ietadm', '--op', 'new',
                         "--tid=%s" % iscsi_target,
                         '--params',
-                        "Name=%s" % iscsi-name,
+                        "Name=%s" % iscsi_name,
                         check_exit_code=False)
         self._sync_exec('sudo', 'ietadm', '--op', 'new',
                         "--tid=%s" % iscsi_target,

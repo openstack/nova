@@ -40,7 +40,7 @@ import netaddr
 from eventlet import event
 from eventlet import greenthread
 from eventlet.green import subprocess
-
+None
 from nova import exception
 from nova.exception import ProcessExecutionError
 from nova import log as logging
@@ -129,13 +129,13 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
-    process_input=kwargs.get('process_input', None)
-    addl_env=kwargs.get('addl_env', None)
-    check_exit_code=kwargs.get('check_exit_code', 0)
-    stdin=kwargs.get('stdin', subprocess.PIPE)
-    stdout=kwargs.get('stdout', subprocess.PIPE)
-    stderr=kwargs.get('stderr', subprocess.PIPE)
-    cmd=map(str,cmd)
+    process_input = kwargs.get('process_input', None)
+    addl_env = kwargs.get('addl_env', None)
+    check_exit_code = kwargs.get('check_exit_code', 0)
+    stdin = kwargs.get('stdin', subprocess.PIPE)
+    stdout = kwargs.get('stdout', subprocess.PIPE)
+    stderr = kwargs.get('stderr', subprocess.PIPE)
+    cmd = map(str, cmd)
 
     LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
     env = os.environ.copy()
@@ -151,7 +151,8 @@ def execute(*cmd, **kwargs):
     obj.stdin.close()
     if obj.returncode:
         LOG.debug(_("Result was %s") % obj.returncode)
-        if check_exit_code is not None and obj.returncode != check_exit_code:
+        if type(check_exit_code) == types.IntType \
+                and obj.returncode != check_exit_code:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
                                         stdout=stdout,

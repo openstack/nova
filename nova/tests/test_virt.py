@@ -316,7 +316,7 @@ class IptablesFirewallTestCase(test.TestCase):
 
 #        self.fw.add_instance(instance_ref)
         def fake_iptables_execute(*cmd, **kwargs):
-            process_input=kwargs.get('process_input', None)
+            process_input = kwargs.get('process_input', None)
             if cmd == ('sudo', 'ip6tables-save', '-t', 'filter'):
                 return '\n'.join(self.in6_rules), None
             if cmd == ('sudo', 'iptables-save', '-t', 'filter'):

@@ -68,7 +68,8 @@ def metadata_forward():
     _confirm_rule("PREROUTING", '-t', 'nat', '-s', '0.0.0.0/0',
              '-d', '169.254.169.254/32', '-p', 'tcp', '-m', 'tcp',
              '--dport', '80', '-j', 'DNAT',
-             '--to-destination', '%s:%s' % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
+             '--to-destination',
+             '%s:%s' % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
 
 
 def init_host():
@@ -86,7 +87,8 @@ def init_host():
         _execute('sudo', 'iptables', '-D', 'FORWARD', '-j', 'nova_forward',
                  check_exit_code=False)
         _execute('sudo', 'iptables', '-A', 'FORWARD', '-j', 'nova_forward')
-        _execute('sudo', 'iptables', '-N', 'nova_output', check_exit_code=False)
+        _execute('sudo', 'iptables', '-N', 'nova_output',
+                 check_exit_code=False)
         _execute('sudo', 'iptables', '-D', 'OUTPUT', '-j', 'nova_output',
                  check_exit_code=False)
         _execute('sudo', 'iptables', '-A', 'OUTPUT', '-j', 'nova_output')
@@ -220,7 +222,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
         out, err = _execute('sudo', 'ip', 'addr', 'add',
-                            "%s/%s" % 
+                            "%s/%s" %
                             (net_attrs['gateway'], suffix),
                             'brd',
                             net_attrs['broadcast'],
@@ -237,7 +239,8 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         #             bridge, then the bridge has to be in promiscuous
         #             to forward packets properly.
         if(FLAGS.public_interface == bridge):
-            _execute('sudo', 'ip', 'link', 'set', 'dev', bridge, 'promisc', 'on')
+            _execute('sudo', 'ip', 'link', 'set',
+                     'dev', bridge, 'promisc', 'on')
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
@@ -253,8 +256,10 @@ def ensure_bridge(bridge, interface, net_attrs=None):
             fields = line.split()
             if fields and fields[0] == "inet":
                 params = ' '.join(fields[1:-1])
-                _execute('sudo', 'ip', 'addr', 'del', params, 'dev', fields[-1])
-                _execute('sudo', 'ip', 'addr', 'add', params, 'dev', bridge)
+                _execute('sudo', 'ip', 'addr',
+                         'del', params, 'dev', fields[-1])
+                _execute('sudo', 'ip', 'addr',
+                         'add', params, 'dev', bridge)
         if gateway:
             _execute('sudo', 'route', 'add', '0.0.0.0', 'gw', gateway)
         out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
@@ -397,7 +402,7 @@ def _device_exists(device):
 
 
 def _confirm_rule(chain, *cmd, **kwargs):
-    append=kwargs.get('append',False)
+    append = kwargs.get('append', False)
     """Delete and re-add iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "nova_%s" % chain.lower()

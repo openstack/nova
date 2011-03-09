@@ -134,9 +134,9 @@ class XVPConsoleProxy(object):
         logging.debug(_("Starting xvp"))
         try:
             utils.execute('xvp',
-                          '-p',FLAGS.console_xvp_pid,
-			  '-c',FLAGS.console_xvp_conf,
-			  '-l',FLAGS.console_xvp_log)
+                          '-p', FLAGS.console_xvp_pid,
+                          '-c', FLAGS.console_xvp_conf,
+                          '-l', FLAGS.console_xvp_log)
         except exception.ProcessExecutionError, err:
             logging.error(_("Error starting xvp: %s") % err)
 
