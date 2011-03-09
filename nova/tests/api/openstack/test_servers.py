@@ -188,9 +188,37 @@ class ServersTest(test.TestCase):
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
+    def test_get_servers_with_limit(self):
+        req = webob.Request.blank('/v1.0/servers?limit=3')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+
+        req = webob.Request.blank('/v1.0/servers?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_servers_with_offset(self):
+        req = webob.Request.blank('/v1.0/servers?offset=2')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [2, 3, 4])
+
+        req = webob.Request.blank('/v1.0/servers?offset=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('offset' in res.body)
+
+    def test_get_servers_with_limit_and_offset(self):
+        req = webob.Request.blank('/v1.0/servers?limit=2&offset=1')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [1, 2])
+
     def test_create_instance(self):
         def instance_create(context, inst):
-            return {'id': '1', 'display_name': ''}
+            return {'id': '1', 'display_name': 'server_test'}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -233,6 +261,12 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual('serv', server['adminPass'][:4])
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual('1', server['id'])
 
         self.assertEqual(res.status_int, 200)
 

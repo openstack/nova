@@ -23,10 +23,14 @@ System-level utilities and helper functions.
 
 import base64
 import datetime
+import functools
 import inspect
 import json
+import lockfile
+import netaddr
 import os
 import random
+import re
 import socket
 import string
 import struct
@@ -34,8 +38,6 @@ import sys
 import time
 import types
 from xml.sax import saxutils
-import re
-import netaddr
 
 from eventlet import event
 from eventlet import greenthread
@@ -43,11 +45,13 @@ from eventlet.green import subprocess
 None
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import flags
 from nova import log as logging
 
 
 LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FLAGS = flags.FLAGS
 
 
 def import_class(import_str):
@@ -498,6 +502,18 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+def synchronized(name):
+    def wrap(f):
+        @functools.wraps(f)
+        def inner(*args, **kwargs):
+            lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
+                                                  'nova-%s.lock' % name))
+            with lock:
+                return f(*args, **kwargs)
+        return inner
+    return wrap
 
 
 def ensure_b64_encoding(val):
