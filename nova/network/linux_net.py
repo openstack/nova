@@ -65,113 +65,119 @@ flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
 
 def metadata_forward():
     """Create forwarding rule for metadata"""
-    _confirm_rule("PREROUTING", "-t nat -s 0.0.0.0/0 "
-             "-d 169.254.169.254/32 -p tcp -m tcp --dport 80 -j DNAT "
-             "--to-destination %s:%s" % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
+    _confirm_rule("PREROUTING", '-t', 'nat', '-s', '0.0.0.0/0',
+             '-d', '169.254.169.254/32', '-p', 'tcp', '-m', 'tcp',
+             '--dport', '80', '-j', 'DNAT',
+             '--to-destination',
+             '%s:%s' % (FLAGS.ec2_dmz_host, FLAGS.ec2_port))
 
 
 def init_host():
     """Basic networking setup goes here"""
 
     if FLAGS.use_nova_chains:
-        _execute("sudo iptables -N nova_input", check_exit_code=False)
-        _execute("sudo iptables -D %s -j nova_input" % FLAGS.input_chain,
+        _execute('sudo', 'iptables', '-N', 'nova_input', check_exit_code=False)
+        _execute('sudo', 'iptables', '-D', FLAGS.input_chain,
+                 '-j', 'nova_input',
                  check_exit_code=False)
-        _execute("sudo iptables -A %s -j nova_input" % FLAGS.input_chain)
-
-        _execute("sudo iptables -N nova_forward", check_exit_code=False)
-        _execute("sudo iptables -D FORWARD -j nova_forward",
+        _execute('sudo', 'iptables', '-A', FLAGS.input_chain,
+                 '-j', 'nova_input')
+        _execute('sudo', 'iptables', '-N', 'nova_forward',
                  check_exit_code=False)
-        _execute("sudo iptables -A FORWARD -j nova_forward")
-
-        _execute("sudo iptables -N nova_output", check_exit_code=False)
-        _execute("sudo iptables -D OUTPUT -j nova_output",
+        _execute('sudo', 'iptables', '-D', 'FORWARD', '-j', 'nova_forward',
                  check_exit_code=False)
-        _execute("sudo iptables -A OUTPUT -j nova_output")
-
-        _execute("sudo iptables -t nat -N nova_prerouting",
+        _execute('sudo', 'iptables', '-A', 'FORWARD', '-j', 'nova_forward')
+        _execute('sudo', 'iptables', '-N', 'nova_output',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -D PREROUTING -j nova_prerouting",
+        _execute('sudo', 'iptables', '-D', 'OUTPUT', '-j', 'nova_output',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -A PREROUTING -j nova_prerouting")
-
-        _execute("sudo iptables -t nat -N nova_postrouting",
+        _execute('sudo', 'iptables', '-A', 'OUTPUT', '-j', 'nova_output')
+        _execute('sudo', 'iptables', '-t', 'nat', '-N', 'nova_prerouting',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -D POSTROUTING -j nova_postrouting",
+        _execute('sudo', 'iptables', '-t', 'nat', '-D', 'PREROUTING',
+                 '-j', 'nova_prerouting', check_exit_code=False)
+        _execute('sudo', 'iptables', '-t', 'nat', '-A', 'PREROUTING',
+                 '-j', 'nova_prerouting')
+        _execute('sudo', 'iptables', '-t', 'nat', '-N', 'nova_postrouting',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -A POSTROUTING -j nova_postrouting")
-
-        _execute("sudo iptables -t nat -N nova_snatting",
+        _execute('sudo', 'iptables', '-t', 'nat', '-D', 'POSTROUTING',
+                 '-j', 'nova_postrouting', check_exit_code=False)
+        _execute('sudo', 'iptables', '-t', 'nat', '-A', 'POSTROUTING',
+                 '-j', 'nova_postrouting')
+        _execute('sudo', 'iptables', '-t', 'nat', '-N', 'nova_snatting',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -D POSTROUTING -j nova_snatting",
+        _execute('sudo', 'iptables', '-t', 'nat', '-D', 'POSTROUTING',
+                 '-j nova_snatting', check_exit_code=False)
+        _execute('sudo', 'iptables', '-t', 'nat', '-A', 'POSTROUTING',
+                 '-j', 'nova_snatting')
+        _execute('sudo', 'iptables', '-t', 'nat', '-N', 'nova_output',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -A POSTROUTING -j nova_snatting")
-
-        _execute("sudo iptables -t nat -N nova_output", check_exit_code=False)
-        _execute("sudo iptables -t nat -D OUTPUT -j nova_output",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A OUTPUT -j nova_output")
+        _execute('sudo', 'iptables', '-t', 'nat', '-D', 'OUTPUT',
+                 '-j nova_output', check_exit_code=False)
+        _execute('sudo', 'iptables', '-t', 'nat', '-A', 'OUTPUT',
+                 '-j', 'nova_output')
     else:
         # NOTE(vish): This makes it easy to ensure snatting rules always
         #             come after the accept rules in the postrouting chain
-        _execute("sudo iptables -t nat -N SNATTING",
+        _execute('sudo', 'iptables', '-t', 'nat', '-N', 'SNATTING',
                  check_exit_code=False)
-        _execute("sudo iptables -t nat -D POSTROUTING -j SNATTING",
-                 check_exit_code=False)
-        _execute("sudo iptables -t nat -A POSTROUTING -j SNATTING")
+        _execute('sudo', 'iptables', '-t', 'nat', '-D', 'POSTROUTING',
+                 '-j', 'SNATTING', check_exit_code=False)
+        _execute('sudo', 'iptables', '-t', 'nat', '-A', 'POSTROUTING',
+                 '-j', 'SNATTING')
 
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
-    _confirm_rule("SNATTING", "-t nat -s %s "
-             "-j SNAT --to-source %s"
-             % (FLAGS.fixed_range, FLAGS.routing_source_ip), append=True)
+    _confirm_rule("SNATTING", '-t', 'nat', '-s', FLAGS.fixed_range,
+             '-j', 'SNAT', '--to-source', FLAGS.routing_source_ip,
+             append=True)
 
-    _confirm_rule("POSTROUTING", "-t nat -s %s -d %s -j ACCEPT" %
-                  (FLAGS.fixed_range, FLAGS.dmz_cidr))
-    _confirm_rule("POSTROUTING", "-t nat -s %(range)s -d %(range)s -j ACCEPT" %
-                  {'range': FLAGS.fixed_range})
+    _confirm_rule("POSTROUTING", '-t', 'nat', '-s', FLAGS.fixed_range,
+                  '-d', FLAGS.dmz_cidr, '-j', 'ACCEPT')
+    _confirm_rule("POSTROUTING", '-t', 'nat', '-s', FLAGS.fixed_range,
+                  '-d', FLAGS.fixed_range, '-j', 'ACCEPT')
 
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface"""
-    _execute("sudo ip addr add %s dev %s" % (floating_ip,
-                                             FLAGS.public_interface),
+    _execute('sudo', 'ip', 'addr', 'add', floating_ip,
+             'dev', FLAGS.public_interface,
              check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface"""
-    _execute("sudo ip addr del %s dev %s" % (floating_ip,
-                                             FLAGS.public_interface))
+    _execute('sudo', 'ip', 'addr', 'del', floating_ip,
+             'dev', FLAGS.public_interface)
 
 
 def ensure_vlan_forward(public_ip, port, private_ip):
     """Sets up forwarding rules for vlan"""
-    _confirm_rule("FORWARD", "-d %s -p udp --dport 1194 -j ACCEPT" %
-                  private_ip)
-    _confirm_rule("PREROUTING",
-                  "-t nat -d %s -p udp --dport %s -j DNAT --to %s:1194"
-            % (public_ip, port, private_ip))
+    _confirm_rule("FORWARD", '-d', private_ip, '-p', 'udp',
+                  '--dport', '1194', '-j', 'ACCEPT')
+    _confirm_rule("PREROUTING", '-t', 'nat', '-d', public_ip, '-p', 'udp',
+                  '--dport', port, '-j', 'DNAT', '--to', '%s:1194'
+                  % private_ip)
 
 
 def ensure_floating_forward(floating_ip, fixed_ip):
     """Ensure floating ip forwarding rule"""
-    _confirm_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
-                           % (floating_ip, fixed_ip))
-    _confirm_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
-                           % (floating_ip, fixed_ip))
-    _confirm_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
-                           % (fixed_ip, floating_ip))
+    _confirm_rule("PREROUTING", '-t', 'nat', '-d', floating_ip, '-j', 'DNAT',
+                  '--to', fixed_ip)
+    _confirm_rule("OUTPUT", '-t', 'nat', '-d', floating_ip, '-j', 'DNAT',
+                  '--to', fixed_ip)
+    _confirm_rule("SNATTING", '-t', 'nat', '-s', fixed_ip, '-j', 'SNAT',
+                  '--to', floating_ip)
 
 
 def remove_floating_forward(floating_ip, fixed_ip):
     """Remove forwarding for floating ip"""
-    _remove_rule("PREROUTING", "-t nat -d %s -j DNAT --to %s"
-                          % (floating_ip, fixed_ip))
-    _remove_rule("OUTPUT", "-t nat -d %s -j DNAT --to %s"
-                          % (floating_ip, fixed_ip))
-    _remove_rule("SNATTING", "-t nat -s %s -j SNAT --to %s"
-                          % (fixed_ip, floating_ip))
+    _remove_rule("PREROUTING", '-t', 'nat', '-d', floating_ip, '-j', 'DNAT',
+                 '--to', fixed_ip)
+    _remove_rule("OUTPUT", '-t', 'nat', '-d', floating_ip, '-j', 'DNAT',
+                 '--to', fixed_ip)
+    _remove_rule("SNATTING", '-t', 'nat', '-s', fixed_ip, '-j', 'SNAT',
+                 '--to', floating_ip)
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
@@ -185,9 +191,9 @@ def ensure_vlan(vlan_num):
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
         LOG.debug(_("Starting VLAN inteface %s"), interface)
-        _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
-        _execute("sudo ip link set %s up" % interface)
+        _execute('sudo', 'vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD')
+        _execute('sudo', 'vconfig', 'add', FLAGS.vlan_interface, vlan_num)
+        _execute('sudo', 'ip', 'link', 'set', interface, 'up')
     return interface
 
 
@@ -206,52 +212,57 @@ def ensure_bridge(bridge, interface, net_attrs=None):
     """
     if not _device_exists(bridge):
         LOG.debug(_("Starting Bridge interface for %s"), interface)
-        _execute("sudo brctl addbr %s" % bridge)
-        _execute("sudo brctl setfd %s 0" % bridge)
+        _execute('sudo', 'brctl', 'addbr', bridge)
+        _execute('sudo', 'brctl', 'setfd', bridge, 0)
         # _execute("sudo brctl setageing %s 10" % bridge)
-        _execute("sudo brctl stp %s off" % bridge)
-        _execute("sudo ip link set %s up" % bridge)
+        _execute('sudo', 'brctl', 'stp', bridge, 'off')
+        _execute('sudo', 'ip', 'link', 'set', bridge, up)
     if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
-        out, err = _execute("sudo ip addr add %s/%s brd %s dev %s" %
-                            (net_attrs['gateway'],
-                             suffix,
-                             net_attrs['broadcast'],
-                             bridge),
+        out, err = _execute('sudo', 'ip', 'addr', 'add',
+                            "%s/%s" %
+                            (net_attrs['gateway'], suffix),
+                            'brd',
+                            net_attrs['broadcast'],
+                            'dev',
+                            bridge,
                             check_exit_code=False)
         if err and err != "RTNETLINK answers: File exists\n":
             raise exception.Error("Failed to add ip: %s" % err)
         if(FLAGS.use_ipv6):
-            _execute("sudo ip -f inet6 addr change %s dev %s" %
-                     (net_attrs['cidr_v6'], bridge))
+            _execute('sudo', 'ip', '-f', 'inet6', 'addr',
+                     'change', net_attrs['cidr_v6'],
+                     'dev', bridge)
         # NOTE(vish): If the public interface is the same as the
         #             bridge, then the bridge has to be in promiscuous
         #             to forward packets properly.
         if(FLAGS.public_interface == bridge):
-            _execute("sudo ip link set dev %s promisc on" % bridge)
+            _execute('sudo', 'ip', 'link', 'set',
+                     'dev', bridge, 'promisc', 'on')
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
         gateway = None
-        out, err = _execute("sudo route -n")
+        out, err = _execute('sudo', 'route', '-n')
         for line in out.split("\n"):
             fields = line.split()
             if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
                 gateway = fields[1]
-        out, err = _execute("sudo ip addr show dev %s scope global" %
-                            interface)
+        out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
+                            'scope', 'global')
         for line in out.split("\n"):
             fields = line.split()
             if fields and fields[0] == "inet":
                 params = ' '.join(fields[1:-1])
-                _execute("sudo ip addr del %s dev %s" % (params, fields[-1]))
-                _execute("sudo ip addr add %s dev %s" % (params, bridge))
+                _execute('sudo', 'ip', 'addr',
+                         'del', params, 'dev', fields[-1])
+                _execute('sudo', 'ip', 'addr',
+                         'add', params, 'dev', bridge)
         if gateway:
-            _execute("sudo route add 0.0.0.0 gw %s" % gateway)
-        out, err = _execute("sudo brctl addif %s %s" %
-                            (bridge, interface),
+            _execute('sudo', 'route', 'add', '0.0.0.0', 'gw', gateway)
+        out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
                             check_exit_code=False)
 
         if (err and err != "device %s is already a member of a bridge; can't "
@@ -259,18 +270,18 @@ def ensure_bridge(bridge, interface, net_attrs=None):
             raise exception.Error("Failed to add interface: %s" % err)
 
     if FLAGS.use_nova_chains:
-        (out, err) = _execute("sudo iptables -N nova_forward",
+        (out, err) = _execute('sudo', 'iptables', '-N', 'nova_forward',
                               check_exit_code=False)
         if err != 'iptables: Chain already exists.\n':
             # NOTE(vish): chain didn't exist link chain
-            _execute("sudo iptables -D FORWARD -j nova_forward",
+            _execute('sudo', 'iptables', '-D', 'FORWARD', '-j', 'nova_forward',
                      check_exit_code=False)
-            _execute("sudo iptables -A FORWARD -j nova_forward")
+            _execute('sudo', 'iptables', '-A', 'FORWARD', '-j', 'nova_forward')
 
-    _confirm_rule("FORWARD", "--in-interface %s -j ACCEPT" % bridge)
-    _confirm_rule("FORWARD", "--out-interface %s -j ACCEPT" % bridge)
-    _execute("sudo iptables -N nova-local", check_exit_code=False)
-    _confirm_rule("FORWARD", "-j nova-local")
+    _confirm_rule("FORWARD", '--in-interface', bridge, '-j', 'ACCEPT')
+    _confirm_rule("FORWARD", '--out-interface', bridge, '-j', 'ACCEPT')
+    _execute('sudo', 'iptables', '-N', 'nova-local', check_exit_code=False)
+    _confirm_rule("FORWARD", '-j', 'nova-local')
 
 
 def get_dhcp_hosts(context, network_id):
@@ -304,11 +315,11 @@ def update_dhcp(context, network_id):
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
-        out, _err = _execute('cat /proc/%d/cmdline' % pid,
+        out, _err = _execute('cat', "/proc/%d/cmdline" % pid,
                              check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo kill -HUP %d' % pid)
+                _execute('sudo', 'kill', '-HUP', pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
                 LOG.debug(_("Hupping dnsmasq threw %s"), exc)
@@ -349,11 +360,11 @@ interface %s
 
     # if radvd is already running, then tell it to reload
     if pid:
-        out, _err = _execute('cat /proc/%d/cmdline'
+        out, _err = _execute('cat', '/proc/%d/cmdline'
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo kill %d' % pid)
+                _execute('sudo', 'kill', pid)
             except Exception as exc:  # pylint: disable-msg=W0703
                 LOG.debug(_("killing radvd threw %s"), exc)
         else:
@@ -374,23 +385,24 @@ def _host_dhcp(fixed_ip_ref):
                                    fixed_ip_ref['address'])
 
 
-def _execute(cmd, *args, **kwargs):
+def _execute(*cmd, **kwargs):
     """Wrapper around utils._execute for fake_network"""
     if FLAGS.fake_network:
-        LOG.debug("FAKE NET: %s", cmd)
+        LOG.debug("FAKE NET: %s", " ".join(map(str, cmd)))
         return "fake", 0
     else:
-        return utils.execute(cmd, *args, **kwargs)
+        return utils.execute(*cmd, **kwargs)
 
 
 def _device_exists(device):
     """Check if ethernet device exists"""
-    (_out, err) = _execute("ip link show dev %s" % device,
+    (_out, err) = _execute('ip', 'link', 'show', 'dev', device,
                            check_exit_code=False)
     return not err
 
 
-def _confirm_rule(chain, cmd, append=False):
+def _confirm_rule(chain, *cmd, **kwargs):
+    append = kwargs.get('append', False)
     """Delete and re-add iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "nova_%s" % chain.lower()
@@ -398,16 +410,16 @@ def _confirm_rule(chain, cmd, append=False):
         loc = "-A"
     else:
         loc = "-I"
-    _execute("sudo iptables --delete %s %s" % (chain, cmd),
+    _execute('sudo', 'iptables', '--delete', chain, *cmd,
              check_exit_code=False)
-    _execute("sudo iptables %s %s %s" % (loc, chain, cmd))
+    _execute('sudo', 'iptables', loc, chain, *cmd)
 
 
-def _remove_rule(chain, cmd):
+def _remove_rule(chain, *cmd):
     """Remove iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "%s" % chain.lower()
-    _execute("sudo iptables --delete %s %s" % (chain, cmd))
+    _execute('sudo', 'iptables', '--delete', chain, *cmd)
 
 
 def _dnsmasq_cmd(net):
@@ -444,7 +456,7 @@ def _stop_dnsmasq(network):
 
     if pid:
         try:
-            _execute('sudo kill -TERM %d' % pid)
+            _execute('sudo', 'kill', '-TERM', pid)
         except Exception as exc:  # pylint: disable-msg=W0703
             LOG.debug(_("Killing dnsmasq threw %s"), exc)
 
