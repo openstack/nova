@@ -198,6 +198,12 @@ class Requestify(wsgi.Middleware):
         try:
             # Raise KeyError if omitted
             action = req.params['Action']
+            # Fix bug lp:720157 for older (version 1) clients
+            version = req.params['SignatureVersion']
+            if int(version) == 1:
+                non_args.remove('SignatureMethod')
+                if 'SignatureMethod' in args:
+                    args.pop('SignatureMethod')
             for non_arg in non_args:
                 # Remove, but raise KeyError if omitted
                 args.pop(non_arg)

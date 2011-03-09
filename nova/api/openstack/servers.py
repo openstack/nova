@@ -206,10 +206,58 @@ class Controller(wsgi.Controller):
         return exc.HTTPNoContent()
 
     def action(self, req, id):
-        """ Multi-purpose method used to reboot, rebuild, and
-        resize a server """
-        input_dict = self._deserialize(req.body, req.get_content_type())
-        #TODO(sandy): rebuild/resize not supported.
+        """Multi-purpose method used to reboot, rebuild, or
+        resize a server"""
+
+        actions = {
+            'reboot':        self._action_reboot,
+            'resize':        self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize':  self._action_revert_resize,
+            'rebuild':       self._action_rebuild,
+            }
+
+        input_dict = self._deserialize(req.body, req)
+        for key in actions.keys():
+            if key in input_dict:
+                return actions[key](input_dict, req, id)
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_confirm_resize(self, input_dict, req, id):
+        try:
+            self.compute_api.confirm_resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in confirm-resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPNoContent()
+
+    def _action_revert_resize(self, input_dict, req, id):
+        try:
+            self.compute_api.revert_resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in revert-resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
+
+    def _action_rebuild(self, input_dict, req, id):
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
+                flavor_id = input_dict['resize']['flavorId']
+                self.compute_api.resize(req.environ['nova.context'], id,
+                        flavor_id)
+            else:
+                LOG.exception(_("Missing arguments for resize"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return faults.Fault(exc.HTTPAccepted())
+
+    def _action_reboot(self, input_dict, req, id):
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
@@ -405,7 +453,7 @@ class Controller(wsgi.Controller):
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image['type'] != 'machine':
+        if image['disk_format'] != 'ami':
             return None, None
 
         try:

@@ -35,23 +35,28 @@ class FakeGlance(object):
     IMAGE_FIXTURES = {
         IMAGE_MACHINE: {
             'image_meta': {'name': 'fakemachine', 'size': 0,
-                           'type': 'machine'},
+                           'disk_format': 'ami',
+                           'container_format': 'ami'},
             'image_data': StringIO.StringIO('')},
         IMAGE_KERNEL: {
             'image_meta': {'name': 'fakekernel', 'size': 0,
-                           'type': 'kernel'},
+                           'disk_format': 'aki',
+                           'container_format': 'aki'},
             'image_data': StringIO.StringIO('')},
         IMAGE_RAMDISK: {
             'image_meta': {'name': 'fakeramdisk', 'size': 0,
-                           'type': 'ramdisk'},
+                           'disk_format': 'ari',
+                           'container_format': 'ari'},
             'image_data': StringIO.StringIO('')},
         IMAGE_RAW: {
             'image_meta': {'name': 'fakeraw', 'size': 0,
-                           'type': 'raw'},
+                           'disk_format': 'raw',
+                           'container_format': 'bare'},
             'image_data': StringIO.StringIO('')},
         IMAGE_VHD: {
             'image_meta': {'name': 'fakevhd', 'size': 0,
-                           'type': 'vhd'},
+                           'disk_format': 'vhd',
+                           'container_format': 'ovf'},
             'image_data': StringIO.StringIO('')}}
 
     def __init__(self, host, port=None, use_ssl=False):
