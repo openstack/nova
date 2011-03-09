@@ -155,6 +155,17 @@ def service_get_all_by_topic(context, topic):
 
 
 @require_admin_context
+def service_get_by_host_and_topic(context, host, topic):
+    session = get_session()
+    return session.query(models.Service).\
+                   filter_by(deleted=False).\
+                   filter_by(disabled=False).\
+                   filter_by(host=host).\
+                   filter_by(topic=topic).\
+                   first()
+
+
+@require_admin_context
 def service_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Service).\
@@ -1970,6 +1981,51 @@ def host_get_networks(context, host):
                        filter_by(deleted=False).\
                        filter_by(host=host).\
                        all()
+
+
+###################
+
+
+@require_admin_context
+def migration_create(context, values):
+    migration = models.Migration()
+    migration.update(values)
+    migration.save()
+    return migration
+
+
+@require_admin_context
+def migration_update(context, id, values):
+    session = get_session()
+    with session.begin():
+        migration = migration_get(context, id, session=session)
+        migration.update(values)
+        migration.save(session=session)
+        return migration
+
+
+@require_admin_context
+def migration_get(context, id, session=None):
+    if not session:
+        session = get_session()
+    result = session.query(models.Migration).\
+                     filter_by(id=id).first()
+    if not result:
+        raise exception.NotFound(_("No migration found with id %s")
+                % migration_id)
+    return result
+
+
+@require_admin_context
+def migration_get_by_instance_and_status(context, instance_id, status):
+    session = get_session()
+    result = session.query(models.Migration).\
+                     filter_by(instance_id=instance_id).\
+                     filter_by(status=status).first()
+    if not result:
+        raise exception.NotFound(_("No migration found with instance id %s")
+                % migration_id)
+    return result
 
 
 ##################
