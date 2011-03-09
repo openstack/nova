@@ -165,6 +165,7 @@ class API(base.Base):
             'image_id': image_id,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'state': "0",
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
