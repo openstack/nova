@@ -105,7 +105,7 @@ def generate_key_pair(bits=1024):
 
     tmpdir = tempfile.mkdtemp()
     keyfile = os.path.join(tmpdir, 'temp')
-    utils.execute('ssh-keygen', '-q', '-b', '%d' % bits, '-N', '',
+    utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
                   '-f', keyfile)
     (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
                                '%s.pub' % (keyfile))
@@ -147,9 +147,9 @@ def revoke_cert(project_id, file_name):
     os.chdir(ca_folder(project_id))
     # NOTE(vish): potential race condition here
     utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
-                  '%s' % file_name)
+                  file_name)
     utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
-                  '-out', '%s' % FLAGS.crl_file)
+                  '-out', FLAGS.crl_file)
     os.chdir(start)
 
 

@@ -52,7 +52,7 @@ def main(dom_id, command, only_this_vif=None):
                 apply_iptables_rules(command, params)
 
 
-def execute(command, return_stdout=False):
+def execute(*command, return_stdout=False):
     devnull = open(os.devnull, 'w')
     proc = subprocess.Popen(command, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
@@ -110,26 +110,26 @@ def apply_arptables_rules(command, params):
 def apply_ebtables_rules(command, params):
     ebtables = lambda *rule: execute("/sbin/ebtables", *rule)
 
-    ebtables('-D', 'FORWARD', '-p', '0806', '-o', '%(VIF)s' % params,
-             '--arp-ip-dst', '%(IP)s' % params,
+    ebtables('-D', 'FORWARD', '-p', '0806', '-o', params['VIF'],
+             '--arp-ip-dst', params['IP'],
              '-j', 'ACCEPT')
     ebtables('-D', 'FORWARD', '-p', '0800', '-o',
-             '%(VIF)s' % params, '--ip-dst', '%(IP)s' % params,
+             params['VIF'], '--ip-dst', params['IP'],
              '-j', 'ACCEPT')
     if command == 'online':
         ebtables('-A', 'FORWARD', '-p', '0806',
-                 '-o', '%(VIF)s' % params
-                 '--arp-ip-dst', '%(IP)s' % params,
+                 '-o', params['VIF'],
+                 '--arp-ip-dst', params['IP'],
                  '-j', 'ACCEPT')
         ebtables('-A', 'FORWARD', '-p', '0800',
-                 '-o', '%(VIF)s' % params,
-                 '--ip-dst', '%(IP)s' % params,
+                 '-o', params['VIF'],
+                 '--ip-dst', params['IP'],
                  '-j', 'ACCEPT')
 
-    ebtables('-D', 'FORWARD', '-s', '!', '%(MAC)s' % params,
-             '-i', '%(VIF)s' % params, '-j', 'DROP')
+    ebtables('-D', 'FORWARD', '-s', '!', params['MAC'],
+             '-i', params['VIF'], '-j', 'DROP')
     if command == 'online':
-        ebtables('-I', 'FORWARD', '1', '-s', '!', '%(MAC)s' % params,
+        ebtables('-I', 'FORWARD', '1', '-s', '!', params['MAC'],
                  '-i', '%(VIF)s', '-j', 'DROP')
 
 
