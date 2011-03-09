@@ -456,12 +456,23 @@ class API(base.Base):
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
-    def resize(self, context, instance_id, flavor):
+    def resize(self, context, instance_id, flavor_id):
         """Resize a running instance."""
+        instance = self.db.instance_get(context, instance_id)
+        current_instance_type = self.db.instance_type_get_by_flavor_id(
+            context, instance['flavor_id'])
+        new_instance_type = self.db.instance_type_get_by_flavor_id(
+            context, flavor_id)
+
+        if current_instance_type.memory_mb > new_instance_typ.memory_mb:
+            raise exception.ApiError(_("Invalid flavor: cannot downsize"
+                    "instances"))
+
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_id, }},)
+                              "instance_id": instance_id,
+                              "instance_type": new_instance_type}})
 
     def pause(self, context, instance_id):
         """Pause the given instance."""

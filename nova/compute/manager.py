@@ -447,7 +447,7 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def prep_resize(self, context, instance_id):
+    def prep_resize(self, context, instance_id, flavor_id):
         """Initiates the process of moving a running instance to another
         host, possibly changing the RAM and disk size in the process"""
         context = context.elevated()
@@ -456,12 +456,17 @@ class ComputeManager(manager.Manager):
             raise exception.Error(_(
                     'Migration error: destination same as source!'))
 
+        instance_type = self.db.instance_type_get_by_flavor_id(context,
+                flavor_id)
         migration_ref = self.db.migration_create(context,
                 {'instance_id': instance_id,
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
+                 'old_flavor': instance_type['flavor_id'],
+                 'new_flavor': flavor_id,
                  'status':      'pre-migrating'})
+
         LOG.audit(_('instance %s: migrating to '), instance_id,
                 context=context)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
@@ -487,8 +492,14 @@ class ComputeManager(manager.Manager):
         self.db.migration_update(context, migration_id,
                 {'status': 'post-migrating', })
 
-        #TODO(mdietz): This is where we would update the VM record
-        #after resizing
+        #TODO(mdietz): apply the rest of the instance_type attributes going
+        #after they're supported
+        self.db.instance_update(context, instance_ref,
+               dict(memory_mb=instance_type['memory_mb'],
+                    vcpus=instance_type['vcpus'],
+                    local_gb=instance_type['local_gb']))
+        self.driver.resize_instance(context, instance_ref)
+
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
