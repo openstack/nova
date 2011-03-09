@@ -783,31 +783,9 @@ class TestServerInstanceCreation(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_networking(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fakes.stub_out_image_service(self.stubs)
-        self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get', return_server)
-        self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
-                       return_servers)
-        self.stubs.Set(nova.db.api, 'instance_add_security_group',
-                       return_security_group)
-        self.stubs.Set(nova.db.api, 'instance_update', instance_update)
-        self.stubs.Set(nova.db.api, 'instance_get_fixed_address',
-                       instance_address)
-        self.stubs.Set(nova.db.api, 'instance_get_floating_address',
-                       instance_address)
-        self.stubs.Set(nova.compute.API, 'pause', fake_compute_api)
-        self.stubs.Set(nova.compute.API, 'unpause', fake_compute_api)
-        self.stubs.Set(nova.compute.API, 'suspend', fake_compute_api)
-        self.stubs.Set(nova.compute.API, 'resume', fake_compute_api)
-        self.stubs.Set(nova.compute.API, "get_diagnostics", fake_compute_api)
-        self.stubs.Set(nova.compute.API, "get_actions", fake_compute_api)
         self.allow_admin = FLAGS.allow_admin_api
-
-        self.webreq = common.webob_factory('/v1.0/servers')
 
     def tearDown(self):
         self.stubs.UnsetAll()
