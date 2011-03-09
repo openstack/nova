@@ -485,13 +485,13 @@ def lease_ip(private_ip):
                                           private_ip)
     instance_ref = db.fixed_ip_get_instance(context.get_admin_context(),
                                             private_ip)
-    cmd = "%s add %s %s fake" % (binpath('nova-dhcpbridge'),
-                                 instance_ref['mac_address'],
-                                 private_ip)
+    cmd = (binpath('nova-dhcpbridge'), 'add',
+           instance_ref['mac_address'],
+           private_ip, 'fake')
     env = {'DNSMASQ_INTERFACE': network_ref['bridge'],
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
-    (out, err) = utils.execute(cmd, addl_env=env)
+    (out, err) = utils.execute(*cmd, addl_env=env)
     LOG.debug("ISSUE_IP: %s, %s ", out, err)
 
 
@@ -501,11 +501,11 @@ def release_ip(private_ip):
                                           private_ip)
     instance_ref = db.fixed_ip_get_instance(context.get_admin_context(),
                                             private_ip)
-    cmd = "%s del %s %s fake" % (binpath('nova-dhcpbridge'),
-                                 instance_ref['mac_address'],
-                                 private_ip)
+    cmd = (binpath('nova-dhcpbridge'), 'del',
+           instance_ref['mac_address'],
+           private_ip, 'fake')
     env = {'DNSMASQ_INTERFACE': network_ref['bridge'],
            'TESTING': '1',
            'FLAGFILE': FLAGS.dhcpbridge_flagfile}
-    (out, err) = utils.execute(cmd, addl_env=env)
+    (out, err) = utils.execute(*cmd, addl_env=env)
     LOG.debug("RELEASE_IP: %s, %s ", out, err)

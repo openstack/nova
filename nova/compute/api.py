@@ -319,12 +319,12 @@ class API(base.Base):
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound:
-            LOG.warning(_("Instance %d was not found during terminate"),
+            LOG.warning(_("Instance %s was not found during terminate"),
                         instance_id)
             raise
 
         if (instance['state_description'] == 'terminating'):
-            LOG.warning(_("Instance %d is already being terminated"),
+            LOG.warning(_("Instance %s is already being terminated"),
                         instance_id)
             return
 
@@ -404,6 +404,10 @@ class API(base.Base):
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
+    def _cast_scheduler_message(self, context, args):
+        """Generic handler for RPC calls to the scheduler"""
+        rpc.cast(context, FLAGS.scheduler_topic, args)
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -419,6 +423,45 @@ class API(base.Base):
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
+
+    def revert_resize(self, context, instance_id):
+        """Reverts a resize, deleting the 'new' instance in the process"""
+        context = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.NotFound(_("No finished migrations found for "
+                    "instance"))
+
+        params = {'migration_id': migration_ref['id']}
+        self._cast_compute_message('revert_resize', context, instance_id,
+                migration_ref['dest_compute'], params=params)
+
+    def confirm_resize(self, context, instance_id):
+        """Confirms a migration/resize, deleting the 'old' instance in the
+        process."""
+        context = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.NotFound(_("No finished migrations found for "
+                    "instance"))
+        instance_ref = self.db.instance_get(context, instance_id)
+        params = {'migration_id': migration_ref['id']}
+        self._cast_compute_message('confirm_resize', context, instance_id,
+                migration_ref['source_compute'], params=params)
+
+        self.db.migration_update(context, migration_id,
+                {'status': 'confirmed'})
+        self.db.instance_update(context, instance_id,
+                {'host': migration_ref['dest_compute'], })
+
+    def resize(self, context, instance_id, flavor):
+        """Resize a running instance."""
+        self._cast_scheduler_message(context,
+                    {"method": "prep_resize",
+                     "args": {"topic": FLAGS.compute_topic,
+                              "instance_id": instance_id, }},)
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
@@ -455,9 +498,10 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def set_admin_password(self, context, instance_id):
+    def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message('set_admin_password', context, instance_id)
+        self._cast_compute_message('set_admin_password', context, instance_id,
+                                    password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""

@@ -71,30 +71,33 @@ class LockTestCase(test.TestCase):
                                                "got mangled")
 
     def test_synchronized(self):
-        rpipe, wpipe = os.pipe()
-        pid = os.fork()
-        if pid > 0:
-            os.close(wpipe)
+        rpipe1, wpipe1 = os.pipe()
+        rpipe2, wpipe2 = os.pipe()
 
-            @synchronized('testlock')
-            def f():
-                rfds, _, __ = select.select([rpipe], [], [], 1)
-                self.assertEquals(len(rfds), 0, "The other process, which was"
-                                                " supposed to be locked, "
-                                                "wrote on its end of the "
-                                                "pipe")
-                os.close(rpipe)
+        @synchronized('testlock')
+        def f(rpipe, wpipe):
+            try:
+                os.write(wpipe, "foo")
+            except OSError, e:
+                self.assertEquals(e.errno, errno.EPIPE)
+                return
 
-            f()
-        else:
+            rfds, _, __ = select.select([rpipe], [], [], 1)
+            self.assertEquals(len(rfds), 0, "The other process, which was"
+                                            " supposed to be locked, "
+                                            "wrote on its end of the "
+                                            "pipe")
             os.close(rpipe)
 
-            @synchronized('testlock')
-            def g():
-                try:
-                    os.write(wpipe, "foo")
-                except OSError, e:
-                    self.assertEquals(e.errno, errno.EPIPE)
-                    return
-            g()
+        pid = os.fork()
+        if pid > 0:
+            os.close(wpipe1)
+            os.close(rpipe2)
+
+            f(rpipe1, wpipe2)
+        else:
+            os.close(rpipe1)
+            os.close(wpipe2)
+
+            f(rpipe2, wpipe1)
             os._exit(0)

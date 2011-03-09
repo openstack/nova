@@ -290,12 +290,14 @@ class IptablesManager(object):
 
             for cmd, tables in s:
                 for table in tables:
-                    current_table, _ = self.execute('sudo %s-save -t %s' %
-                                                    (cmd, table), attempts=5)
+                    current_table, _ = self.execute('sudo',
+                                                    '%s-save' % (cmd,),
+                                                    '-t', '%s' % (table,),
+                                                    attempts=5)
                     current_lines = current_table.split('\n')
                     new_filter = self._modify_rules(current_lines,
                                                     tables[table])
-                    self.execute('sudo %s-restore' % (cmd,),
+                    self.execute('sudo', '%s-restore' % (cmd,),
                                  process_input='\n'.join(new_filter),
                                  attempts=5)
 
@@ -371,7 +373,6 @@ def metadata_forward():
 
 def init_host():
     """Basic networking setup goes here"""
-
     # NOTE(devcamcar): Cloud public SNAT entries and the default
     # SNAT rule for outbound traffic.
     iptables_manager.ipv4['nat'].add_rule("snat",
@@ -392,15 +393,15 @@ def init_host():
 
 def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface"""
-    _execute("sudo ip addr add %s dev %s" % (floating_ip,
-                                             FLAGS.public_interface),
+    _execute('sudo', 'ip', 'addr', 'add', floating_ip,
+             'dev', FLAGS.public_interface,
              check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface"""
-    _execute("sudo ip addr del %s dev %s" % (floating_ip,
-                                             FLAGS.public_interface))
+    _execute('sudo', 'ip', 'addr', 'del', floating_ip,
+             'dev', FLAGS.public_interface)
 
 
 def ensure_vlan_forward(public_ip, port, private_ip):
@@ -448,9 +449,9 @@ def ensure_vlan(vlan_num):
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
         LOG.debug(_("Starting VLAN inteface %s"), interface)
-        _execute("sudo vconfig set_name_type VLAN_PLUS_VID_NO_PAD")
-        _execute("sudo vconfig add %s %s" % (FLAGS.vlan_interface, vlan_num))
-        _execute("sudo ip link set %s up" % interface)
+        _execute('sudo', 'vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD')
+        _execute('sudo', 'vconfig', 'add', FLAGS.vlan_interface, vlan_num)
+        _execute('sudo', 'ip', 'link', 'set', interface, 'up')
     return interface
 
 
@@ -469,52 +470,57 @@ def ensure_bridge(bridge, interface, net_attrs=None):
     """
     if not _device_exists(bridge):
         LOG.debug(_("Starting Bridge interface for %s"), interface)
-        _execute("sudo brctl addbr %s" % bridge)
-        _execute("sudo brctl setfd %s 0" % bridge)
+        _execute('sudo', 'brctl', 'addbr', bridge)
+        _execute('sudo', 'brctl', 'setfd', bridge, 0)
         # _execute("sudo brctl setageing %s 10" % bridge)
-        _execute("sudo brctl stp %s off" % bridge)
-        _execute("sudo ip link set %s up" % bridge)
+        _execute('sudo', 'brctl', 'stp', bridge, 'off')
+        _execute('sudo', 'ip', 'link', 'set', bridge, up)
     if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
         suffix = net_attrs['cidr'].rpartition('/')[2]
-        out, err = _execute("sudo ip addr add %s/%s brd %s dev %s" %
-                            (net_attrs['gateway'],
-                             suffix,
-                             net_attrs['broadcast'],
-                             bridge),
+        out, err = _execute('sudo', 'ip', 'addr', 'add',
+                            "%s/%s" %
+                            (net_attrs['gateway'], suffix),
+                            'brd',
+                            net_attrs['broadcast'],
+                            'dev',
+                            bridge,
                             check_exit_code=False)
         if err and err != "RTNETLINK answers: File exists\n":
             raise exception.Error("Failed to add ip: %s" % err)
         if(FLAGS.use_ipv6):
-            _execute("sudo ip -f inet6 addr change %s dev %s" %
-                     (net_attrs['cidr_v6'], bridge))
+            _execute('sudo', 'ip', '-f', 'inet6', 'addr',
+                     'change', net_attrs['cidr_v6'],
+                     'dev', bridge)
         # NOTE(vish): If the public interface is the same as the
         #             bridge, then the bridge has to be in promiscuous
         #             to forward packets properly.
         if(FLAGS.public_interface == bridge):
-            _execute("sudo ip link set dev %s promisc on" % bridge)
+            _execute('sudo', 'ip', 'link', 'set',
+                     'dev', bridge, 'promisc', 'on')
     if interface:
         # NOTE(vish): This will break if there is already an ip on the
         #             interface, so we move any ips to the bridge
         gateway = None
-        out, err = _execute("sudo route -n")
+        out, err = _execute('sudo', 'route', '-n')
         for line in out.split("\n"):
             fields = line.split()
             if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
                 gateway = fields[1]
-        out, err = _execute("sudo ip addr show dev %s scope global" %
-                            interface)
+        out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
+                            'scope', 'global')
         for line in out.split("\n"):
             fields = line.split()
             if fields and fields[0] == "inet":
                 params = ' '.join(fields[1:-1])
-                _execute("sudo ip addr del %s dev %s" % (params, fields[-1]))
-                _execute("sudo ip addr add %s dev %s" % (params, bridge))
+                _execute('sudo', 'ip', 'addr',
+                         'del', params, 'dev', fields[-1])
+                _execute('sudo', 'ip', 'addr',
+                         'add', params, 'dev', bridge)
         if gateway:
-            _execute("sudo route add 0.0.0.0 gw %s" % gateway)
-        out, err = _execute("sudo brctl addif %s %s" %
-                            (bridge, interface),
+            _execute('sudo', 'route', 'add', '0.0.0.0', 'gw', gateway)
+        out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
                             check_exit_code=False)
 
         if (err and err != "device %s is already a member of a bridge; can't "
@@ -560,11 +566,11 @@ def update_dhcp(context, network_id):
 
     # if dnsmasq is already running, then tell it to reload
     if pid:
-        out, _err = _execute('cat /proc/%d/cmdline' % pid,
+        out, _err = _execute('cat', "/proc/%d/cmdline" % pid,
                              check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo kill -HUP %d' % pid)
+                _execute('sudo', 'kill', '-HUP', pid)
                 return
             except Exception as exc:  # pylint: disable-msg=W0703
                 LOG.debug(_("Hupping dnsmasq threw %s"), exc)
@@ -605,11 +611,11 @@ interface %s
 
     # if radvd is already running, then tell it to reload
     if pid:
-        out, _err = _execute('cat /proc/%d/cmdline'
+        out, _err = _execute('cat', '/proc/%d/cmdline'
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
-                _execute('sudo kill %d' % pid)
+                _execute('sudo', 'kill', pid)
             except Exception as exc:  # pylint: disable-msg=W0703
                 LOG.debug(_("killing radvd threw %s"), exc)
         else:
@@ -630,18 +636,18 @@ def _host_dhcp(fixed_ip_ref):
                                    fixed_ip_ref['address'])
 
 
-def _execute(cmd, *args, **kwargs):
+def _execute(*cmd, **kwargs):
     """Wrapper around utils._execute for fake_network"""
     if FLAGS.fake_network:
-        LOG.debug("FAKE NET: %s", cmd)
+        LOG.debug("FAKE NET: %s", " ".join(map(str, cmd)))
         return "fake", 0
     else:
-        return utils.execute(cmd, *args, **kwargs)
+        return utils.execute(*cmd, **kwargs)
 
 
 def _device_exists(device):
     """Check if ethernet device exists"""
-    (_out, err) = _execute("ip link show dev %s" % device,
+    (_out, err) = _execute('ip', 'link', 'show', 'dev', device,
                            check_exit_code=False)
     return not err
 
@@ -680,7 +686,7 @@ def _stop_dnsmasq(network):
 
     if pid:
         try:
-            _execute('sudo kill -TERM %d' % pid)
+            _execute('sudo', 'kill', '-TERM', pid)
         except Exception as exc:  # pylint: disable-msg=W0703
             LOG.debug(_("Killing dnsmasq threw %s"), exc)
 

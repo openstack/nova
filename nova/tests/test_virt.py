@@ -322,23 +322,25 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
 
 #        self.fw.add_instance(instance_ref)
-        def fake_iptables_execute(cmd, process_input=None, attempts=5):
-            if cmd == 'sudo ip6tables-save -t filter':
+        def fake_iptables_execute(*cmd, **kwargs):
+            process_input = kwargs.get('process_input', None)
+            if cmd == ('sudo', 'ip6tables-save', '-t', 'filter'):
                 return '\n'.join(self.in6_filter_rules), None
-            if cmd == 'sudo iptables-save -t filter':
+            if cmd == ('sudo', 'iptables-save', '-t', 'filter'):
                 return '\n'.join(self.in_filter_rules), None
-            if cmd == 'sudo iptables-save -t nat':
+            if cmd == ('sudo', 'iptables-save', '-t', 'nat'):
                 return '\n'.join(self.in_nat_rules), None
-            if cmd == 'sudo iptables-restore':
+            if cmd == ('sudo', 'iptables-restore'):
                 lines = process_input.split('\n')
                 if '*filter' in lines:
                     self.out_rules = lines
                 return '', ''
-            if cmd == 'sudo ip6tables-restore':
+            if cmd == ('sudo', 'ip6tables-restore'):
                 lines = process_input.split('\n')
                 if '*filter' in lines:
                     self.out6_rules = lines
                 return '', ''
+            print cmd, kwargs
 
         from nova.network import linux_net
         linux_net.iptables_manager.execute = fake_iptables_execute

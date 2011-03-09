@@ -42,7 +42,7 @@ from xml.sax import saxutils
 from eventlet import event
 from eventlet import greenthread
 from eventlet.green import subprocess
-
+None
 from nova import exception
 from nova.exception import ProcessExecutionError
 from nova import flags
@@ -129,20 +129,28 @@ def fetchfile(url, target):
 #    c.perform()
 #    c.close()
 #    fp.close()
-    execute("curl --fail %s -o %s" % (url, target))
+    execute("curl", "--fail", url, "-o", target)
 
 
-def execute(cmd, process_input=None, addl_env=None, check_exit_code=True,
-            attempts=1):
+def execute(*cmd, **kwargs):
+    process_input = kwargs.get('process_input', None)
+    addl_env = kwargs.get('addl_env', None)
+    check_exit_code = kwargs.get('check_exit_code', 0)
+    stdin = kwargs.get('stdin', subprocess.PIPE)
+    stdout = kwargs.get('stdout', subprocess.PIPE)
+    stderr = kwargs.get('stderr', subprocess.PIPE)
+    attempts = kwargs.get('attempts', 1)
+    cmd = map(str, cmd)
+
     while attempts > 0:
         attempts -= 1
         try:
-            LOG.debug(_("Running cmd (subprocess): %s"), cmd)
+            LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
             env = os.environ.copy()
             if addl_env:
                 env.update(addl_env)
-            obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            obj = subprocess.Popen(cmd, stdin=stdin,
+                    stdout=stdout, stderr=stderr, env=env)
             result = None
             if process_input != None:
                 result = obj.communicate(process_input)
@@ -151,15 +159,16 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True,
             obj.stdin.close()
             if obj.returncode:
                 LOG.debug(_("Result was %s") % obj.returncode)
-                if check_exit_code and obj.returncode != 0:
+                if type(check_exit_code) == types.IntType \
+                        and obj.returncode != check_exit_code:
                     (stdout, stderr) = result
                     raise ProcessExecutionError(exit_code=obj.returncode,
                                                 stdout=stdout,
                                                 stderr=stderr,
-                                                cmd=cmd)
-            # NOTE(termie): this appears to be necessary to let the subprocess
-            #               call clean something up in between calls, without
-            #               it two execute calls in a row hangs the second one
+                                                cmd=' '.join(cmd))
+            # NOTE(termie): this appears to be necessary to let the subprocess call
+            #               clean something up in between calls, without it two
+            #               execute calls in a row hangs the second one
             greenthread.sleep(0)
             return result
         except ProcessExecutionError:
@@ -172,7 +181,7 @@ def execute(cmd, process_input=None, addl_env=None, check_exit_code=True,
 
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (SSH): %s"), cmd)
+    LOG.debug(_("Running cmd (SSH): %s"), ' '.join(cmd))
     if addl_env:
         raise exception.Error("Environment not supported over SSH")
 
@@ -201,7 +210,7 @@ def ssh_execute(ssh, cmd, process_input=None,
             raise exception.ProcessExecutionError(exit_code=exit_status,
                                                   stdout=stdout,
                                                   stderr=stderr,
-                                                  cmd=cmd)
+                                                  cmd=' '.join(cmd))
 
     return (stdout, stderr)
 
@@ -234,9 +243,9 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, cmd, check_exit_code=True):
-    LOG.debug(_("Running %s"), (cmd))
-    rv, err = execute(cmd, check_exit_code=check_exit_code)
+def runthis(prompt, *cmd, **kwargs):
+    LOG.debug(_("Running %s"), (" ".join(cmd)))
+    rv, err = execute(*cmd, **kwargs)
 
 
 def generate_uid(topic, size=8):
@@ -268,7 +277,7 @@ def last_octet(address):
 
 def  get_my_linklocal(interface):
     try:
-        if_str = execute("ip -f inet6 -o addr show %s" % interface)
+        if_str = execute("ip", "-f", "inet6", "-o", "addr", "show", interface)
         condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]

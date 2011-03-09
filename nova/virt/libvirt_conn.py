@@ -436,8 +436,10 @@ class LibvirtConnection(object):
 
         if virsh_output.startswith('/dev/'):
             LOG.info(_("cool, it's a device"))
-            out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
-                                     virsh_output, check_exit_code=False)
+            out, err = utils.execute('sudo', 'dd',
+                                     "if=%s" % virsh_output,
+                                     'iflag=nonblock',
+                                     check_exit_code=False)
             return out
         else:
             return ''
@@ -459,11 +461,11 @@ class LibvirtConnection(object):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('sudo chown %d %s' % (os.getuid(), console_log))
+        utils.execute('sudo', 'chown', s.getuid(), console_log)
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
-            virsh_output = utils.execute("virsh ttyconsole %s" %
+            virsh_output = utils.execute('virsh', 'ttyconsole',
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
@@ -480,9 +482,10 @@ class LibvirtConnection(object):
                 port = random.randint(int(start_port), int(end_port))
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
-                cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
-                stdout, stderr = utils.execute(cmd)
-                if stdout.strip() == 'free':
+                cmd = 'netcat', '0.0.0.0', port, '-w', '1'
+                try:
+                    stdout, stderr = utils.execute(*cmd, process_input='')
+                except ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
@@ -531,11 +534,11 @@ class LibvirtConnection(object):
             if not os.path.exists(base):
                 fn(target=base, *args, **kwargs)
             if cow:
-                utils.execute('qemu-img create -f qcow2 -o '
-                              'cluster_size=2M,backing_file=%s %s'
-                              % (base, target))
+                utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
+                              'cluster_size=2M,backing_file=%s' % base,
+                              target)
             else:
-                utils.execute('cp %s %s' % (base, target))
+                utils.execute('cp', base, target)
 
     def _fetch_image(self, target, image_id, user, project, size=None):
         """Grab image and optionally attempt to resize it"""
@@ -545,7 +548,7 @@ class LibvirtConnection(object):
 
     def _create_local(self, target, local_gb):
         """Create a blank image of specified size"""
-        utils.execute('truncate %s -s %dG' % (target, local_gb))
+        utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
@@ -556,7 +559,7 @@ class LibvirtConnection(object):
                                 fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir -p %s' % basepath(suffix=''))
+        utils.execute('mkdir', '-p', basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
@@ -656,7 +659,7 @@ class LibvirtConnection(object):
                         ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
-            utils.execute('sudo chown root %s' % basepath('disk'))
+            utils.execute('sudo', 'chown', 'root', basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
