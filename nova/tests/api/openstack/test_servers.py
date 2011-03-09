@@ -881,4 +881,3 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         }}
         request = self.deserializer.deserialize(serial_request)
         self.assertEqual(request, expected)
-
