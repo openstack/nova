@@ -49,6 +49,12 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
                              address for the nova-volume host
 :target_port:                iSCSI Target Port, 3260 Default
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
+
+**Variable Naming Scheme**
+
+- suffix "_ref" for opaque references
+- suffix "_uuid" for UUIDs
+- suffix "_rec" for record objects
 """
 
 import sys
