@@ -28,6 +28,7 @@ def webob_factory(url):
     def web_request(url, method=None, body=None):
         req = webob.Request.blank("%s%s" % (base_url, url))
         if method:
+            req.content_type = "application/json"
             req.method = method
         if body:
             req.body = json.dumps(body)
