@@ -220,7 +220,7 @@ class ServersTest(test.TestCase):
 
     def test_create_instance(self):
         def instance_create(context, inst):
-            return {'id': '1', 'display_name': ''}
+            return {'id': '1', 'display_name': 'server_test'}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -263,6 +263,12 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual('serv', server['adminPass'][:4])
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual('1', server['id'])
 
         self.assertEqual(res.status_int, 200)
 
@@ -833,6 +839,9 @@ class TestServerInstanceCreation(test.TestCase):
                 else:
                     self.personality_files = None
                 return [{'id': '1234', 'display_name': 'fakeinstance'}]
+
+            def set_admin_password(self, *args, **kwargs):
+                pass 
 
         def make_stub_method(canned_return):
             def stub_method(*args, **kwargs):

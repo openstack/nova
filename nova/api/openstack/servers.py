@@ -100,7 +100,7 @@ class Controller(wsgi.Controller):
         'application/xml': {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress"]}}}
+                           "status", "progress", "adminPass"]}}}
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -183,7 +183,14 @@ class Controller(wsgi.Controller):
             key_data=key_pair['public_key'],
             metadata=metadata,
             personality_files=personality_files)
-        return _translate_keys(instances[0])
+
+        server = _translate_keys(instances[0])
+        password = "%s%s" % (server['server']['name'][:4],
+                             utils.generate_password(12))
+        server['server']['adminPass'] = password
+        self.compute_api.set_admin_password(context, server['server']['id'],
+                                            password)
+        return server
 
     def _deserialize_create(self, request):
         """
