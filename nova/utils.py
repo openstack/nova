@@ -131,7 +131,7 @@ def fetchfile(url, target):
 def execute(*cmd, **kwargs):
     process_input=kwargs.get('process_input', None)
     addl_env=kwargs.get('addl_env', None)
-    check_exit_code=kwargs.get('check_exit_code', True)
+    check_exit_code=kwargs.get('check_exit_code', 0)
     stdin=kwargs.get('stdin', subprocess.PIPE)
     stdout=kwargs.get('stdout', subprocess.PIPE)
     stderr=kwargs.get('stderr', subprocess.PIPE)
@@ -151,7 +151,7 @@ def execute(*cmd, **kwargs):
     obj.stdin.close()
     if obj.returncode:
         LOG.debug(_("Result was %s") % obj.returncode)
-        if check_exit_code and obj.returncode != 0:
+        if check_exit_code is not None and obj.returncode != check_exit_code:
             (stdout, stderr) = result
             raise ProcessExecutionError(exit_code=obj.returncode,
                                         stdout=stdout,

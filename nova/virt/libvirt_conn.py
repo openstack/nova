@@ -485,13 +485,10 @@ class LibvirtConnection(object):
                 port = random.randint(int(start_port), int(end_port))
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
-
-                # TODO(ewindisch): broken /w execvp patch.
-                # subprocess lets us do this, but utils.execute
-                # abstracts it away from us
-                cmd = 'netcat', '0.0.0.0', port, '-w', '1', '</dev/null || echo free' % (port)
-                stdout, stderr = utils.execute(cmd)
-                if stdout.strip() == 'free':
+                cmd = 'netcat', '0.0.0.0', port, '-w', '1'
+                try:
+                    stdout, stderr = utils.execute(*cmd, process_input='')
+                except ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 

@@ -175,8 +175,8 @@ def _inject_key_into_fs(key, fs):
     utils.execute('sudo', 'chown', 'root', sshdir)
     utils.execute('sudo', 'chmod', '700', sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    # TODO:EWINDISCH: not sure about the following /w execv patch
-    utils.execute('sudo', 'tee', '-a', keyfile, '\n' + key.strip() + '\n')
+    utils.execute('sudo', 'tee', '-a', keyfile,
+            process_input='\n' + key.strip() + '\n')
 
 
 def _inject_net_into_fs(net, fs):
