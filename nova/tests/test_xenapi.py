@@ -251,6 +251,16 @@ class XenAPIVMTestCase(test.TestCase):
         # Check that the VM is running according to XenAPI.
         self.assertEquals(vm['power_state'], 'Running')
 
+    def _check_no_unbound_vdi(self):
+        url = FLAGS.xenapi_connection_url
+        username = FLAGS.xenapi_connection_username
+        password = FLAGS.xenapi_connection_password
+        session = xenapi_conn.XenAPISession(url, username, password)
+        vdi_refs = session.call_xenapi('VDI.get_all')
+        for vdi_ref in vdi_refs:
+            vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+            self.assertEquals(vdi_rec['VBDs'], {})
+
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
                     instance_type="m1.large"):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -274,6 +284,26 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertRaises(Exception,
                           self._test_spawn,
                           1, 2, 3, "m1.xlarge")
+
+    def test_spawn_fail_cleanup_1(self):
+        """Simulates an error while downloading image
+        Verifies VDI create are properly cleaned up"""
+        FLAGS.xenapi_image_service = 'glance'
+        stubs.stubout_fetch_image_glance_disk(self.stubs)
+        self.assertRaises(Exception,
+                          self._test_spawn, 1, 2, 3)
+        #ensure there is no VDI without a VBD
+        self._check_no_unbound_vdi()
+
+    def test_spawn_fail_cleanup_2(self):
+        """Simulates an error while creating VM record.
+        Verifies VDI create are properly cleaned up"""
+        FLAGS.xenapi_image_service = 'glance'
+        stubs.stubout_create_vm(self.stubs)
+        self.assertRaises(Exception,
+                          self._test_spawn, 1, 2, 3)
+        #ensure there is no VDI without a VBD
+        self._check_no_unbound_vdi()
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'
