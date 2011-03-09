@@ -539,6 +539,8 @@ class LibvirtConnection(object):
             with LibvirtConnection._image_sems[fname]:
                 if not os.path.exists(base):
                     fn(target=base, *args, **kwargs)
+            if not LibvirtConnection._image_sems[fname].locked():
+                del LibvirtConnection._image_sems[fname]
 
             if cow:
                 utils.execute('qemu-img create -f qcow2 -o '
