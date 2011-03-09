@@ -568,11 +568,11 @@ class VlanManager(NetworkManager):
                 network_ref = db.network_get_by_cidr(context, cidr)
             except exception.NotFound:
                 pass
-            
+
             if network_ref is not None:
                 raise ValueError(_('Network with cidr %s already exists' %
                                    cidr))
-            
+
             network_ref = self.db.network_create_safe(context, net)
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])

@@ -459,6 +459,7 @@ def network_associate(context, project_id):
     """Associate a free network to a project."""
     return IMPL.network_associate(context, project_id)
 
+
 def network_count(context):
     """Return the number of networks."""
     return IMPL.network_count(context)
@@ -488,9 +489,9 @@ def network_create_safe(context, values):
     """
     return IMPL.network_create_safe(context, values)
 
+
 def network_delete_safe(context, network_id):
-    """Delete network with key network_id
-     
+    """Delete network with key network_id.
     This method assumes that the network is not associated with any project
     """
     return IMPL.network_delete_safe(context, network_id)
@@ -531,9 +532,11 @@ def network_get_by_bridge(context, bridge):
     """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
 
+
 def network_get_by_cidr(context, cidr):
     """Get a network by cidr or raise if it does not exist"""
     return IMPL.network_get_by_cidr(context, cidr)
+
 
 def network_get_by_instance(context, instance_id):
     """Get a network by instance id or raise if it does not exist."""

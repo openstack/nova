@@ -1042,12 +1042,14 @@ def network_create_safe(context, values):
     except IntegrityError:
         return None
 
+
 @require_admin_context
 def network_delete_safe(context, network_id):
     session = get_session()
     with session.begin():
-        network_ref = network_get(context, network_id=network_id, session=session)
-        session.delete(network_ref)        
+        network_ref = network_get(context, network_id=network_id, \
+                                  session=session)
+        session.delete(network_ref)
 
 
 @require_admin_context
@@ -1133,6 +1135,7 @@ def network_get_by_cidr(context, cidr):
         raise exception.NotFound(_('Network with cidr %s does not exist') %
                                   cidr)
     return result
+
 
 @require_admin_context
 def network_get_by_instance(_context, instance_id):

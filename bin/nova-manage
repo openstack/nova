@@ -552,8 +552,9 @@ class NetworkCommands(object):
         if network.project_id is not None:
             raise ValueError(_('Network must be disassociated from project %s'
                                ' before delete' % network.project_id))
-        db.network_delete_safe(context.get_admin_context(), network.id)  
-  
+        db.network_delete_safe(context.get_admin_context(), network.id)
+
+
 class ServiceCommands(object):
     """Enable and disable running services"""
 
