@@ -141,39 +141,6 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
-    def _get_personality_files(self, personality):
-        """
-        Create a list of personality files from the personality attribute
-
-        At this time, personality_files must be formatted as a list of
-        (file_path, file_content) pairs for compatibility with the
-        underlying compute service.
-        """
-        personality_files = []
-        for item in personality:
-            try:
-                path = item['path']
-                contents = item['contents']
-            except KeyError as key:
-                expl = 'Bad personality format: missing %s' % key
-                raise exc.HTTPBadRequest(explanation=expl)
-            except TypeError:
-                raise exc.HTTPBadRequest(explanation='Bad personality format')
-            try:
-                contents = base64.b64decode(contents)
-            except TypeError:
-                msg = 'Personality content for %s cannot be decoded' % path
-                raise exc.HTTPBadRequest(explanation=msg)
-            personality_files.append((path, contents))
-        return personality_files
-
-    def _deserialize_create(self, request):
-        if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
-            return deserializer.deserialize(request.body)
-        else:
-            return self._deserialize(request.body, request)
-
     def create(self, req):
         """ Creates a new server for a given user """
         env = self._deserialize_create(req)
@@ -217,6 +184,44 @@ class Controller(wsgi.Controller):
             metadata=metadata,
             personality_files=personality_files)
         return _translate_keys(instances[0])
+
+    def _deserialize_create(self, request):
+        """
+        Deserialize a create request
+
+        Overrides normal behavior in the case of xml content
+        """
+        if request.content_type == "application/xml":
+            deserializer = ServerCreateRequestXMLDeserializer()
+            return deserializer.deserialize(request.body)
+        else:
+            return self._deserialize(request.body, request)
+
+    def _get_personality_files(self, personality):
+        """
+        Create a list of personality files from the personality attribute
+
+        At this time, personality_files must be formatted as a list of
+        (file_path, file_content) pairs for compatibility with the
+        underlying compute service.
+        """
+        personality_files = []
+        for item in personality:
+            try:
+                path = item['path']
+                contents = item['contents']
+            except KeyError as key:
+                expl = 'Bad personality format: missing %s' % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                raise exc.HTTPBadRequest(explanation='Bad personality format')
+            try:
+                contents = base64.b64decode(contents)
+            except TypeError:
+                msg = 'Personality content for %s cannot be decoded' % path
+                raise exc.HTTPBadRequest(explanation=msg)
+            personality_files.append((path, contents))
+        return personality_files
 
     def update(self, req, id):
         """ Updates the server name or password """
@@ -507,13 +512,21 @@ class Controller(wsgi.Controller):
 
 
 class ServerCreateRequestXMLDeserializer(object):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
 
     def deserialize(self, string):
+        """Deserialize an xml-formatted server create request"""
         dom = minidom.parseString(string)
         server = self._extract_server(dom)
         return {'server': server}
 
     def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self._find_first_child_named(node, 'server')
         for attr in ["name", "imageId", "flavorId"]:
@@ -527,6 +540,7 @@ class ServerCreateRequestXMLDeserializer(object):
         return server
 
     def _extract_metadata(self, server_node):
+        """Marshal the metadata attribute of a parsed request"""
         metadata_node = self._find_first_child_named(server_node, "metadata")
         if metadata_node is None:
             return None
@@ -537,6 +551,7 @@ class ServerCreateRequestXMLDeserializer(object):
         return metadata
 
     def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
         personality_node = \
                 self._find_first_child_named(server_node, "personality")
         if personality_node is None:
@@ -551,12 +566,14 @@ class ServerCreateRequestXMLDeserializer(object):
         return personality
 
     def _find_first_child_named(self, parent, name):
+        """Search a nodes children for the first child with a given name"""
         for node in parent.childNodes:
             if node.nodeName == name:
                 return node
         return None
 
     def _extract_text(self, node):
+        """Get the text field contained by the given node"""
         if len(node.childNodes) == 1:
             child = node.childNodes[0]
             if child.nodeType == child.TEXT_NODE:
