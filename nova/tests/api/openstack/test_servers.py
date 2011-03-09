@@ -261,6 +261,7 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
+        req.headers["Content-Type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
 
@@ -841,7 +842,7 @@ class TestServerInstanceCreation(test.TestCase):
                 return [{'id': '1234', 'display_name': 'fakeinstance'}]
 
             def set_admin_password(self, *args, **kwargs):
-                pass 
+                pass
 
         def make_stub_method(canned_return):
             def stub_method(*args, **kwargs):

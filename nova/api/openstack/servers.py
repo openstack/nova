@@ -202,7 +202,7 @@ class Controller(wsgi.Controller):
             deserializer = ServerCreateRequestXMLDeserializer()
             return deserializer.deserialize(request.body)
         else:
-            return self._deserialize(request.body, request)
+            return self._deserialize(request.body, request.get_content_type())
 
     def _get_personality_files(self, personality):
         """
@@ -232,7 +232,10 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         """ Updates the server name or password """
-        inst_dict = self._deserialize(req.body, req)
+        if len(req.body) == 0:
+            raise exc.HTTPUnprocessableEntity()
+
+        inst_dict = self._deserialize(req.body, req.get_content_type())
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -264,7 +267,7 @@ class Controller(wsgi.Controller):
             'rebuild':       self._action_rebuild,
             }
 
-        input_dict = self._deserialize(req.body, req)
+        input_dict = self._deserialize(req.body, req.get_content_type())
         for key in actions.keys():
             if key in input_dict:
                 return actions[key](input_dict, req, id)
