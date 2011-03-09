@@ -36,15 +36,18 @@ def limited(items, request, max_limit=1000):
     try:
         offset = int(request.GET.get('offset', 0))
     except ValueError:
-        offset = 0
+        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
 
     try:
         limit = int(request.GET.get('limit', max_limit))
     except ValueError:
-        limit = max_limit
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
 
-    if offset < 0 or limit < 0:
-        raise webob.exc.HTTPBadRequest()
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if offset < 0:
+        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
