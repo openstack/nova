@@ -57,7 +57,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def test_same_fname_concurrency(self):
         """Ensures that the same fname cache runs at a sequentially"""
-        conn = libvirt_conn.get_connection(False)
+        conn = libvirt_conn.LibvirtConnection
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
@@ -78,7 +78,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def test_different_fname_concurrency(self):
         """Ensures that two different fname caches are concurrent"""
-        conn = libvirt_conn.get_connection(False)
+        conn = libvirt_conn.LibvirtConnection
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,

@@ -511,9 +511,10 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
-    _image_semaphores = {}
+    _image_sems = {}
 
-    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+    @staticmethod
+    def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
@@ -533,9 +534,9 @@ class LibvirtConnection(object):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
 
-            if fname not in self._image_semaphores:
-                self._image_semaphores[fname] = semaphore.Semaphore()
-            with self._image_semaphores[fname]:
+            if fname not in LibvirtConnection._image_sems:
+                LibvirtConnection._image_sems[fname] = semaphore.Semaphore()
+            with LibvirtConnection._image_sems[fname]:
                 if not os.path.exists(base):
                     fn(target=base, *args, **kwargs)
 
