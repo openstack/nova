@@ -221,7 +221,12 @@ class Service(object):
 
 
 class WsgiService(object):
-    """Base class for WSGI based services."""
+    """Base class for WSGI based services.
+
+    For each api you define, you must also define these flags:
+    :<api>_listen:            The address on which to listen
+    :<api>_listen_port:       The port on which to listen
+    """
 
     def __init__(self, conf, apis):
         self.conf = conf
