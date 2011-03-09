@@ -427,6 +427,18 @@ class KeyPair(BASE, NovaBase):
     public_key = Column(Text)
 
 
+class Migration(BASE, NovaBase):
+    """Represents a running host-to-host migration."""
+    __tablename__ = 'migrations'
+    id = Column(Integer, primary_key=True, nullable=False)
+    source_compute = Column(String(255))
+    dest_compute = Column(String(255))
+    dest_host = Column(String(255))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    #TODO(_cerberus_): enum
+    status = Column(String(255))
+
+
 class Network(BASE, NovaBase):
     """Represents a network."""
     __tablename__ = 'networks'
@@ -636,7 +648,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata)
+              InstanceMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
