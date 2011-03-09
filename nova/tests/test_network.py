@@ -343,7 +343,7 @@ def lease_ip(private_ip):
                                           private_ip)
     instance_ref = db.fixed_ip_get_instance(context.get_admin_context(),
                                             private_ip)
-    cmd = (binpath('nova-dhcpbridge'), 'add'
+    cmd = (binpath('nova-dhcpbridge'), 'add',
            instance_ref['mac_address'],
            private_ip, 'fake')
     env = {'DNSMASQ_INTERFACE': network_ref['bridge'],

@@ -128,13 +128,20 @@ def fetchfile(url, target):
     execute("curl", "--fail", url, "-o", target)
 
 
-def execute(*cmd, process_input=None, addl_env=None, check_exit_code=True):
+def execute(*cmd, **kwargs):
+    process_input=kwargs.get('process_input', None)
+    addl_env=kwargs.get('addl_env', None)
+    check_exit_code=kwargs.get('check_exit_code', True)
+    stdin=kwargs.get('stdin', subprocess.PIPE)
+    stdout=kwargs.get('stdout', subprocess.PIPE)
+    stderr=kwargs.get('stderr', subprocess.PIPE)
+
     LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
     env = os.environ.copy()
     if addl_env:
         env.update(addl_env)
-    obj = subprocess.Popen(*cmd, stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    obj = subprocess.Popen(cmd, stdin=stdin,
+            stdout=stdout, stderr=stderr, env=env)
     result = None
     if process_input != None:
         result = obj.communicate(process_input)
@@ -220,9 +227,9 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, cmd, check_exit_code=True):
-    LOG.debug(_("Running %s"), (cmd))
-    rv, err = execute(cmd, check_exit_code=check_exit_code)
+def runthis(prompt, *cmd, **kwargs):
+    LOG.debug(_("Running %s"), (" ".join(cmd)))
+    rv, err = execute(*cmd, **kwargs)
 
 
 def generate_uid(topic, size=8):

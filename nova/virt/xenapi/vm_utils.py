@@ -915,10 +915,8 @@ def _write_partition(virtual_size, dev):
     LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
             ' to %(dest)s...') % locals())
 
-    def execute(*cmd, process_input=None, check_exit_code=True):
-        return utils.execute(*cmd,
-                             process_input=process_input,
-                             check_exit_code=check_exit_code)
+    def execute(*cmd, **kwargs):
+        return utils.execute(*cmd, **kwargs)
 
     execute('parted', '--script', dest, 'mklabel', 'msdos')
     execute('parted', '--script', dest, 'mkpart', 'primary',

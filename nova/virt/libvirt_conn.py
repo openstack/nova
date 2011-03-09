@@ -540,8 +540,8 @@ class LibvirtConnection(object):
             if not os.path.exists(base):
                 fn(target=base, *args, **kwargs)
             if cow:
-                utils.execute('qemu-img', 'create', '-f', 'qcow2', "'-o'',
-                              "cluster_size=2M,backing_file=%s" % base,
+                utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
+                              'cluster_size=2M,backing_file=%s' % base,
                               target)
             else:
                 utils.execute('cp', base, target)
@@ -554,7 +554,7 @@ class LibvirtConnection(object):
 
     def _create_local(self, target, local_gb):
         """Create a blank image of specified size"""
-        utils.execute('truncate', target, '-s', "%dG" local_gb)
+        utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
@@ -565,7 +565,7 @@ class LibvirtConnection(object):
                                 fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir', '-p', basepath(suffix='')
+        utils.execute('mkdir', '-p', basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
@@ -1245,7 +1245,8 @@ class IptablesFirewallDriver(FirewallDriver):
         self.apply_ruleset()
 
     def apply_ruleset(self):
-        current_filter, _ = self.execute('sudo iptables-save -t filter')
+        current_filter, _ = self.execute('sudo', 'iptables-save',
+                                         '-t', 'filter')
         current_lines = current_filter.split('\n')
         new_filter = self.modify_rules(current_lines, 4)
         self.execute('sudo', 'iptables-restore',

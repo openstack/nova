@@ -139,14 +139,14 @@ def init_host():
 def bind_floating_ip(floating_ip, check_exit_code=True):
     """Bind ip to public interface"""
     _execute('sudo', 'ip', 'addr', 'add', floating_ip,
-             'dev', FLAGS.public_interface),
+             'dev', FLAGS.public_interface,
              check_exit_code=check_exit_code)
 
 
 def unbind_floating_ip(floating_ip):
     """Unbind a public ip from public interface"""
     _execute('sudo', 'ip', 'addr', 'del', floating_ip,
-             'dev', FLAGS.public_interface))
+             'dev', FLAGS.public_interface)
 
 
 def ensure_vlan_forward(public_ip, port, private_ip):
@@ -213,7 +213,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         _execute('sudo', 'brctl', 'addbr', bridge)
         _execute('sudo', 'brctl', 'setfd', bridge, 0)
         # _execute("sudo brctl setageing %s 10" % bridge)
-        _execute('sudo', 'brctl', 'stp', bridge', 'off')
+        _execute('sudo', 'brctl', 'stp', bridge, 'off')
         _execute('sudo', 'ip', 'link', 'set', bridge, up)
     if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
@@ -223,7 +223,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                             "%s/%s" % 
                             (net_attrs['gateway'], suffix),
                             'brd',
-                            net-attrs['broadcast'],
+                            net_attrs['broadcast'],
                             'dev',
                             bridge,
                             check_exit_code=False)
@@ -257,7 +257,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                 _execute('sudo', 'ip', 'addr', 'add', params, 'dev', bridge)
         if gateway:
             _execute('sudo', 'route', 'add', '0.0.0.0', 'gw', gateway)
-        out, err = _execute('sudo', 'brctl', 'addif, bridge, interface,
+        out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
                             check_exit_code=False)
 
         if (err and err != "device %s is already a member of a bridge; can't "
@@ -265,11 +265,11 @@ def ensure_bridge(bridge, interface, net_attrs=None):
             raise exception.Error("Failed to add interface: %s" % err)
 
     if FLAGS.use_nova_chains:
-        (out, err) = _execute('sudo', 'iptables', '-N', 'nova_forward,
+        (out, err) = _execute('sudo', 'iptables', '-N', 'nova_forward',
                               check_exit_code=False)
         if err != 'iptables: Chain already exists.\n':
             # NOTE(vish): chain didn't exist link chain
-            _execute('sudo', 'iptables, '-D', 'FORWARD', '-j', 'nova_forward',
+            _execute('sudo', 'iptables', '-D', 'FORWARD', '-j', 'nova_forward',
                      check_exit_code=False)
             _execute('sudo', 'iptables', '-A', 'FORWARD', '-j', 'nova_forward')
 
@@ -355,7 +355,7 @@ interface %s
 
     # if radvd is already running, then tell it to reload
     if pid:
-        out, _err = _execute('cat', "/proc/%d/cmdline'
+        out, _err = _execute('cat', '/proc/%d/cmdline'
                              % pid, check_exit_code=False)
         if conffile in out:
             try:
@@ -383,7 +383,7 @@ def _host_dhcp(fixed_ip_ref):
 def _execute(*cmd, **kwargs):
     """Wrapper around utils._execute for fake_network"""
     if FLAGS.fake_network:
-        LOG.debug("FAKE NET: %s", ' '.join(cmd))
+        LOG.debug("FAKE NET: %s", " ".join(map(str, cmd)))
         return "fake", 0
     else:
         return utils.execute(*cmd, **kwargs)
@@ -396,7 +396,8 @@ def _device_exists(device):
     return not err
 
 
-def _confirm_rule(chain, *cmd, append=False):
+def _confirm_rule(chain, *cmd, **kwargs):
+    append=kwargs.get('append',False)
     """Delete and re-add iptables rule"""
     if FLAGS.use_nova_chains:
         chain = "nova_%s" % chain.lower()

@@ -104,7 +104,8 @@ class VolumeDriver(object):
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         try:
-            self._try_execute('sudo', 'lvdisplay', '%s/%s" %
+            self._try_execute('sudo', 'lvdisplay',
+                              '%s/%s' %
                               (FLAGS.volume_group,
                                volume['name']))
         except Exception as e:
@@ -550,7 +551,7 @@ class SheepdogDriver(VolumeDriver):
         else:
             sizestr = '%sG' % volume['size']
         self._try_execute('qemu-img', 'create',
-                          "sheepdog:%s" %s" % volume['name'],
+                          "sheepdog:%s" % volume['name'],
                           sizestr)
 
     def delete_volume(self, volume):
