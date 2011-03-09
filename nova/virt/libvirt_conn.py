@@ -44,9 +44,8 @@ import uuid
 from xml.dom import minidom
 
 
-from eventlet import greenthread
-from eventlet import event
 from eventlet import tpool
+from eventlet import semaphore
 
 import IPy
 
@@ -512,6 +511,8 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    _image_semaphores = {}
+
     def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
@@ -531,8 +532,13 @@ class LibvirtConnection(object):
             if not os.path.exists(base_dir):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
-            if not os.path.exists(base):
-                fn(target=base, *args, **kwargs)
+
+            if fname not in self._image_semaphores:
+                self._image_semaphores[fname] = semaphore.Semaphore()
+            with self._image_semaphores[fname]:
+                if not os.path.exists(base):
+                    fn(target=base, *args, **kwargs)
+
             if cow:
                 utils.execute('qemu-img create -f qcow2 -o '
                               'cluster_size=2M,backing_file=%s %s'

@@ -14,12 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
+import eventlet
 from xml.etree.ElementTree import fromstring as xml_to_tree
 from xml.dom.minidom import parseString as xml_to_dom
 
 from nova import context
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
@@ -28,6 +32,68 @@ from nova.virt import libvirt_conn
 
 FLAGS = flags.FLAGS
 flags.DECLARE('instances_path', 'nova.compute.manager')
+
+
+def _concurrency(wait, done, target):
+    wait.wait()
+    done.send()
+
+
+class CacheConcurrencyTestCase(test.TestCase):
+    def setUp(self):
+        super(CacheConcurrencyTestCase, self).setUp()
+
+        def fake_exists(fname):
+            basedir = os.path.join(FLAGS.instances_path, '_base')
+            if fname == basedir:
+                return True
+            return False
+
+        def fake_execute(*args, **kwargs):
+            pass
+
+        self.stubs.Set(os.path, 'exists', fake_exists)
+        self.stubs.Set(utils, 'execute', fake_execute)
+
+    def test_same_fname_concurrency(self):
+        """Ensures that the same fname cache runs at a sequentially"""
+        conn = libvirt_conn.get_connection(False)
+        wait1 = eventlet.event.Event()
+        done1 = eventlet.event.Event()
+        eventlet.spawn(conn._cache_image, _concurrency,
+                       'target', 'fname', False, wait1, done1)
+        wait2 = eventlet.event.Event()
+        done2 = eventlet.event.Event()
+        eventlet.spawn(conn._cache_image, _concurrency,
+                       'target', 'fname', False, wait2, done2)
+        wait2.send()
+        eventlet.sleep(0)
+        try:
+            self.assertFalse(done2.ready())
+        finally:
+            wait1.send()
+        done1.wait()
+        eventlet.sleep(0)
+        self.assertTrue(done2.ready())
+
+    def test_different_fname_concurrency(self):
+        """Ensures that two different fname caches are concurrent"""
+        conn = libvirt_conn.get_connection(False)
+        wait1 = eventlet.event.Event()
+        done1 = eventlet.event.Event()
+        eventlet.spawn(conn._cache_image, _concurrency,
+                       'target', 'fname2', False, wait1, done1)
+        wait2 = eventlet.event.Event()
+        done2 = eventlet.event.Event()
+        eventlet.spawn(conn._cache_image, _concurrency,
+                       'target', 'fname1', False, wait2, done2)
+        wait2.send()
+        eventlet.sleep(0)
+        try:
+            self.assertTrue(done2.ready())
+        finally:
+            wait1.send()
+            eventlet.sleep(0)
 
 
 class LibvirtConnTestCase(test.TestCase):
