@@ -40,26 +40,26 @@ class Controller(wsgi.Controller):
             'attributes': {
                 'sharedIpGroup': []}}}
 
-    def index(self, req, **kw):
+    def index(self, req):
         """ Returns a list of Shared IP Groups for the user """
         return dict(sharedIpGroups=[])
 
-    def show(self, req, id, **kw):
+    def show(self, req, id):
         """ Shows in-depth information on a specific Shared IP Group """
         return _translate_keys({})
 
-    def update(self, req, id, **kw):
+    def update(self, req, id):
         """ You can't update a Shared IP Group """
         raise faults.Fault(exc.HTTPNotImplemented())
 
-    def delete(self, req, id, **kw):
+    def delete(self, req, id):
         """ Deletes a Shared IP Group """
         raise faults.Fault(exc.HTTPNotImplemented())
 
-    def detail(self, req, **kw):
+    def detail(self, req):
         """ Returns a complete list of Shared IP Groups """
         return _translate_detail_keys({})
 
-    def create(self, req, **kw):
+    def create(self, req):
         """ Creates a new Shared IP group """
         raise faults.Fault(exc.HTTPNotImplemented())

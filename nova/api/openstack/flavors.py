@@ -34,17 +34,17 @@ class Controller(wsgi.Controller):
             "attributes": {
                 "flavor": ["id", "name", "ram", "disk"]}}}
 
-    def index(self, req, **kw):
+    def index(self, req):
         """Return all flavors in brief."""
         return dict(flavors=[dict(id=flavor['id'], name=flavor['name'])
                              for flavor in self.detail(req)['flavors']])
 
-    def detail(self, req, **kw):
+    def detail(self, req):
         """Return all flavors in detail."""
         items = [self.show(req, id)['flavor'] for id in self._all_ids(req)]
         return dict(flavors=items)
 
-    def show(self, req, id, **kw):
+    def show(self, req, id):
         """Return data about the given flavor id."""
         ctxt = req.environ['nova.context']
         values = db.instance_type_get_by_flavor_id(ctxt, id)

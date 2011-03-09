@@ -55,7 +55,7 @@ class Controller(wsgi.Controller):
         self.console_api = console.API()
         super(Controller, self).__init__()
 
-    def index(self, req, server_id, **kw):
+    def index(self, req, server_id):
         """Returns a list of consoles for this instance"""
         consoles = self.console_api.get_consoles(
                                     req.environ['nova.context'],
@@ -63,14 +63,14 @@ class Controller(wsgi.Controller):
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
-    def create(self, req, server_id, **kw):
+    def create(self, req, server_id):
         """Creates a new console"""
         #info = self._deserialize(req.body, req)
         self.console_api.create_console(
                                 req.environ['nova.context'],
                                 int(server_id))
 
-    def show(self, req, server_id, id, **kw):
+    def show(self, req, server_id, id):
         """Shows in-depth information on a specific console"""
         try:
             console = self.console_api.get_console(
@@ -81,11 +81,11 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return _translate_detail_keys(console)
 
-    def update(self, req, server_id, id, **kw):
+    def update(self, req, server_id, id):
         """You can't update a console"""
         raise faults.Fault(exc.HTTPNotImplemented())
 
-    def delete(self, req, server_id, id, **kw):
+    def delete(self, req, server_id, id):
         """Deletes a console"""
         try:
             self.console_api.delete_console(req.environ['nova.context'],

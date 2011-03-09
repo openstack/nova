@@ -50,28 +50,28 @@ class Controller(wsgi.Controller):
         if not context.is_admin:
             raise exception.NotAuthorized(_("Not admin user"))
 
-    def index(self, req, **kw):
+    def index(self, req):
         """Return all users in brief"""
         users = self.manager.get_users()
         users = common.limited(users, req)
         users = [_translate_keys(user) for user in users]
         return dict(users=users)
 
-    def detail(self, req, **kw):
+    def detail(self, req):
         """Return all users in detail"""
         return self.index(req)
 
-    def show(self, req, id, **kw):
+    def show(self, req, id):
         """Return data about the given user id"""
         user = self.manager.get_user(id)
         return dict(user=_translate_keys(user))
 
-    def delete(self, req, id, **kw):
+    def delete(self, req, id):
         self._check_admin(req.environ['nova.context'])
         self.manager.delete_user(id)
         return {}
 
-    def create(self, req, **kw):
+    def create(self, req):
         self._check_admin(req.environ['nova.context'])
         env = self._deserialize(req.body, req)
         is_admin = env['user'].get('admin') in ('T', 'True', True)
@@ -81,7 +81,7 @@ class Controller(wsgi.Controller):
         user = self.manager.create_user(name, access, secret, is_admin)
         return dict(user=_translate_keys(user))
 
-    def update(self, req, id, **kw):
+    def update(self, req, id):
         self._check_admin(req.environ['nova.context'])
         env = self._deserialize(req.body, req)
         is_admin = env['user'].get('admin')

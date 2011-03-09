@@ -43,35 +43,35 @@ class Controller(wsgi.Controller):
             "attributes": {
                 "zone": ["id", "api_url"]}}}
 
-    def index(self, req, **kw):
+    def index(self, req):
         """Return all zones in brief"""
         items = db.zone_get_all(req.environ['nova.context'])
         items = common.limited(items, req)
         items = [_scrub_zone(item) for item in items]
         return dict(zones=items)
 
-    def detail(self, req, **kw):
+    def detail(self, req):
         """Return all zones in detail"""
         return self.index(req)
 
-    def show(self, req, id, **kw):
+    def show(self, req, id):
         """Return data about the given zone id"""
         zone_id = int(id)
         zone = db.zone_get(req.environ['nova.context'], zone_id)
         return dict(zone=_scrub_zone(zone))
 
-    def delete(self, req, id, **kw):
+    def delete(self, req, id):
         zone_id = int(id)
         db.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
-    def create(self, req, **kw):
+    def create(self, req):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req)
         zone = db.zone_create(context, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def update(self, req, id, **kw):
+    def update(self, req, id):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req)
         zone_id = int(id)
