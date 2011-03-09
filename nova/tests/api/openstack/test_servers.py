@@ -259,6 +259,7 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
+        req.headers["Content-Type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
 
