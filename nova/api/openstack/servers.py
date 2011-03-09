@@ -17,6 +17,7 @@ import base64
 import hashlib
 import json
 import traceback
+from xml.dom import minidom
 
 from webob import exc
 
@@ -166,9 +167,16 @@ class Controller(wsgi.Controller):
             personality_files.append((path, contents))
         return personality_files
 
+    def _deserialize_create(self, request):
+        if request.content_type == "application/xml":
+            deserializer = ServerCreateRequestXMLDeserializer()
+            return deserializer.deserialize(request.body)
+        else:
+            return self._deserialize(request.body, request)
+
     def create(self, req):
         """ Creates a new server for a given user """
-        env = self._deserialize(req.body, req)
+        env = self._deserialize_create(req)
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -448,3 +456,61 @@ class Controller(wsgi.Controller):
                 _("Ramdisk not found for image %(image_id)s") % locals())
 
         return kernel_id, ramdisk_id
+
+
+class ServerCreateRequestXMLDeserializer(object):
+
+    def deserialize(self, string):
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'server': server}
+
+    def _extract_server(self, node):
+        server = {}
+        server_node = self._find_first_child_named(node, 'server')
+        for attr in ["name", "imageId", "flavorId"]:
+            server[attr] = server_node.getAttribute(attr)
+        metadata = self._extract_metadata(server_node)
+        if metadata is not None:
+            server["metadata"] = metadata
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
+        return server
+
+    def _extract_metadata(self, server_node):
+        metadata_node = self._find_first_child_named(server_node, "metadata")
+        if metadata_node is None:
+            return None
+        metadata = {}
+        for meta_node in metadata_node.childNodes:
+            key = meta_node.getAttribute("key")
+            metadata[key] = self._extract_text(meta_node)
+        return metadata
+
+    def _extract_personality(self, server_node):
+        personality_node = \
+                self._find_first_child_named(server_node, "personality")
+        if personality_node is None:
+            return None
+        personality = []
+        for file_node in personality_node.childNodes:
+            item = {}
+            if file_node.hasAttribute("path"):
+                item["path"] = file_node.getAttribute("path")
+            item["contents"] = self._extract_text(file_node)
+            personality.append(item)
+        return personality
+
+    def _find_first_child_named(self, parent, name):
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                return node
+        return None
+
+    def _extract_text(self, node):
+        if len(node.childNodes) == 1:
+            child = node.childNodes[0]
+            if child.nodeType == child.TEXT_NODE:
+                return child.nodeValue
+        return ""

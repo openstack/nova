@@ -18,6 +18,7 @@
 import base64
 import datetime
 import json
+import unittest
 
 import stubout
 import webob
@@ -284,6 +285,37 @@ class ServersTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         return compute_api, response
 
+    def _format_xml_request_body(self, body_dict):
+        server = body_dict['server']
+        body_parts = []
+        body_parts.extend([
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"',
+            ' name="%s" imageId="%s" flavorId="%s">' % (
+                    server['name'], server['imageId'], server['flavorId'])])
+        if 'metadata' in server:
+            metadata = server['metadata']
+            body_parts.append('<metadata>')
+            for item in metadata.iteritems():
+                body_parts.append('<meta key="%s">%s</meta>' % item)
+            body_parts.append('</metadata>')
+        if 'personality' in server:
+            personalities = server['personality']
+            body_parts.append('<personality>')
+            for file in personalities:
+                item = (file['path'], file['contents'])
+                body_parts.append('<file path="%s">%s</file>' % item)
+            body_parts.append('</personality>')
+        body_parts.append('</server>')
+        return ''.join(body_parts)
+
+    def _get_create_request_xml(self, body_dict):
+        req = webob.Request.blank('/v1.0/servers')
+        req.content_type = 'application/xml'
+        req.method = 'POST'
+        req.body = self._format_xml_request_body(body_dict)
+        return req
+
     def _create_instance_with_personality_json(self, personality):
         body_dict = self._create_personality_request_dict(personality)
         request = self._get_create_request_json(body_dict)
@@ -291,9 +323,22 @@ class ServersTest(test.TestCase):
             self._run_create_instance_with_mock_compute_api(request)
         return request, response, compute_api.personality_files
 
+    def _create_instance_with_personality_xml(self, personality):
+        body_dict = self._create_personality_request_dict(personality)
+        request = self._get_create_request_xml(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.personality_files
+
     def test_create_instance_with_no_personality(self):
         request, response, personality_files = \
                 self._create_instance_with_personality_json(personality=None)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(personality_files, [])
+
+    def test_create_instance_with_no_personality_xml(self):
+        request, response, personality_files = \
+                self._create_instance_with_personality_xml(personality=None)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [])
 
@@ -307,12 +352,33 @@ class ServersTest(test.TestCase):
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [(path, contents)])
 
+    def test_create_instance_with_personality_xml(self):
+        path = '/my/file/path'
+        contents = '#!/bin/bash\necho "Hello, World!"\n'
+        b64contents = base64.b64encode(contents)
+        personality = [(path, b64contents)]
+        request, response, personality_files = \
+            self._create_instance_with_personality_xml(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(personality_files, [(path, contents)])
+
     def test_create_instance_with_personality_no_path(self):
         personality = [('/remove/this/path',
             base64.b64encode('my\n\file\ncontents'))]
         body_dict = self._create_personality_request_dict(personality)
         del body_dict['server']['personality'][0]['path']
         request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.personality_files, None)
+
+    def _test_create_instance_with_personality_no_path_xml(self):
+        personality = [('/remove/this/path',
+            base64.b64encode('my\n\file\ncontents'))]
+        body_dict = self._create_personality_request_dict(personality)
+        request = self._get_create_request_xml(body_dict)
+        request.body = request.body.replace(' path="/remove/this/path"', '')
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 400)
@@ -605,3 +671,214 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '202 Accepted')
         self.assertEqual(self.server_delete_called, True)
+
+
+class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
+
+    def setUp(self):
+        self.deserializer = servers.ServerCreateRequestXMLDeserializer()
+
+    def test_minimal_request(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_metadata(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1"><metadata/></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_personality(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1"><personality/></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "personality": [],
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_metadata_and_personality(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata/><personality/></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_metadata_and_personality_reversed(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<personality/><metadata/></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_one_personality(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<personality><file path="/etc/conf">aabbccdd</file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_two_personalities(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<personality><file path="/etc/conf">aabbccdd</file>\
+<file path="/etc/sudoers">abcd</file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": "aabbccdd"},
+                    {"path": "/etc/sudoers", "contents": "abcd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_personality_missing_path(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<personality><file>aabbccdd</file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"contents": "aabbccdd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_personality_empty_contents(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<personality><file path="/etc/conf"></file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": ""}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_personality_empty_contents_variation(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<personality><file path="/etc/conf"/></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": ""}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_metadata(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata><meta key="alpha">beta</meta></metadata></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": "beta"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_two_metadata(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata><meta key="alpha">beta</meta><meta key="foo">bar</meta>\
+</metadata></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": "beta", "foo": "bar"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_metadata_missing_value(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata><meta key="alpha"></meta></metadata></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": ""}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_metadata_missing_key(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata><meta>beta</meta></metadata></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"": "beta"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_metadata_duplicate_key(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata><meta key="foo">bar</meta><meta key="foo">baz</meta>\
+</metadata></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"foo": "baz"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_canonical_request_from_docs(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+ name="new-server-test" imageId="1" flavorId="1">\
+<metadata><meta key="My Server Name">Apache1</meta></metadata>\
+<personality><file path="/etc/banner.txt">\
+ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp\
+dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k\
+IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs\
+c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g\
+QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo\
+ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv\
+dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy\
+c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6\
+b25zLiINCg0KLVJpY2hhcmQgQmFjaA==\
+</file></personality></server>"""
+        expected = {"server": {
+            "name": "new-server-test",
+            "imageId": "1",
+            "flavorId": "1",
+            "metadata": {
+                "My Server Name": "Apache1",
+            },
+            "personality": [
+                {
+                    "path": "/etc/banner.txt",
+                    "contents": """\
+ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp\
+dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k\
+IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs\
+c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g\
+QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo\
+ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv\
+dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy\
+c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6\
+b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
+                }
+            ],
+        }}
+        request = self.deserializer.deserialize(serial_request)
+        self.assertEqual(request, expected)
+
