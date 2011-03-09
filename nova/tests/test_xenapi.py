@@ -259,7 +259,10 @@ class XenAPIVMTestCase(test.TestCase):
         vdi_refs = session.call_xenapi('VDI.get_all')
         for vdi_ref in vdi_refs:
             vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
-            self.assertEquals(vdi_rec['VBDs'], {})
+            if 'VBDs' in vdi_rec:
+                self.assertEquals(vdi_rec['VBDs'], {})
+            else:
+                self.fail('Found unexpected unbound VDI:%s' % vdi_rec['uuid'])
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
                     instance_type="m1.large"):
@@ -374,6 +377,56 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()
+
+
+class XenAPIMigrateInstance(test.TestCase):
+    """
+    Unit test for verifying migration-related actions
+    """
+
+    def setUp(self):
+        super(XenAPIMigrateInstance, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        FLAGS.target_host = '127.0.0.1'
+        FLAGS.xenapi_connection_url = 'test_url'
+        FLAGS.xenapi_connection_password = 'test_pass'
+        db_fakes.stub_out_db_instance_api(self.stubs)
+        stubs.stub_out_get_target(self.stubs)
+        xenapi_fake.reset()
+        self.manager = manager.AuthManager()
+        self.user = self.manager.create_user('fake', 'fake', 'fake',
+                                             admin=True)
+        self.project = self.manager.create_project('fake', 'fake', 'fake')
+        self.values = {'name': 1, 'id': 1,
+                  'project_id': self.project.id,
+                  'user_id': self.user.id,
+                  'image_id': 1,
+                  'kernel_id': None,
+                  'ramdisk_id': None,
+                  'instance_type': 'm1.large',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  }
+        stubs.stub_out_migration_methods(self.stubs)
+        glance_stubs.stubout_glance_client(self.stubs,
+                                           glance_stubs.FakeGlance)
+
+    def tearDown(self):
+        super(XenAPIMigrateInstance, self).tearDown()
+        self.manager.delete_project(self.project)
+        self.manager.delete_user(self.user)
+        self.stubs.UnsetAll()
+
+    def test_migrate_disk_and_power_off(self):
+        instance = db.instance_create(self.values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        conn = xenapi_conn.get_connection(False)
+        conn.migrate_disk_and_power_off(instance, '127.0.0.1')
+
+    def test_finish_resize(self):
+        instance = db.instance_create(self.values)
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        conn = xenapi_conn.get_connection(False)
+        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):

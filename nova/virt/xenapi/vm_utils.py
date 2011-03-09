@@ -264,16 +264,31 @@ class VMHelper(HelperBase):
         return vdi_ref
 
     @classmethod
+    def get_vdi_for_vm_safely(cls, session, vm_ref):
+        vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
+        if vdi_refs is None:
+            raise Exception(_("No VDIs found for VM %s") % vm_ref)
+        else:
+            num_vdis = len(vdi_refs)
+            if num_vdis != 1:
+                raise Exception(
+                        _("Unexpected number of VDIs (%(num_vdis)s) found"
+                        " for VM %(vm_ref)s") % locals())
+
+        vdi_ref = vdi_refs[0]
+        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        return vdi_ref, vdi_rec
+
+    @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
-        """ Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
-        Snapshot VHD
-        """
+        """Creates Snapshot (Template) VM, Snapshot VBD, Snapshot VDI,
+        Snapshot VHD"""
         #TODO(sirp): Add quiesce and VSS locking support when Windows support
         # is added
         LOG.debug(_("Snapshotting VM %(vm_ref)s with label '%(label)s'...")
                 % locals())
 
-        vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+        vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
         vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
@@ -281,7 +296,8 @@ class VMHelper(HelperBase):
 
         task = session.call_xenapi('Async.VM.snapshot', vm_ref, label)
         template_vm_ref = session.wait_for_task(task, instance_id)
-        template_vdi_rec = get_vdi_for_vm_safely(session, template_vm_ref)[1]
+        template_vdi_rec = cls.get_vdi_for_vm_safely(session,
+                template_vm_ref)[1]
         template_vdi_uuid = template_vdi_rec["uuid"]
 
         LOG.debug(_('Created snapshot %(template_vm_ref)s from'
@@ -294,6 +310,24 @@ class VMHelper(HelperBase):
         template_vdi_uuids = {'image': parent_uuid,
                               'snap': template_vdi_uuid}
         return template_vm_ref, template_vdi_uuids
+
+    @classmethod
+    def get_sr(cls, session, sr_label='slices'):
+        """Finds the SR named by the given name label and returns
+        the UUID"""
+        return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
+
+    @classmethod
+    def get_sr_path(cls, session):
+        """Return the path to our storage repository
+
+        This is used when we're dealing with VHDs directly, either by taking
+        snapshots or by restoring an image in the DISK_VHD format.
+        """
+        sr_ref = safe_find_sr(session)
+        sr_rec = session.get_xenapi().SR.get_record(sr_ref)
+        sr_uuid = sr_rec["uuid"]
+        return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
     def upload_image(cls, session, instance_id, vdi_uuids, image_id):
@@ -309,7 +343,7 @@ class VMHelper(HelperBase):
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
-                  'sr_path': get_sr_path(session)}
+                  'sr_path': cls.get_sr_path(session)}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
@@ -343,23 +377,23 @@ class VMHelper(HelperBase):
         try:
             sr_ref = safe_find_sr(session)
 
-            # NOTE(sirp): The Glance plugin runs under Python 2.4 which
-            # does not have the `uuid` module. To work around this, we
-            # generate the uuids here (under Python 2.6+) and pass them
-            # as arguments
+            # NOTE(sirp): The Glance plugin runs under Python 2.4
+            # which does not have the `uuid` module. To work around this,
+            # we generate the uuids here (under Python 2.6+) and
+            # pass them as arguments
             uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
 
             params = {'image_id': image,
                       'glance_host': FLAGS.glance_host,
                       'glance_port': FLAGS.glance_port,
                       'uuid_stack': uuid_stack,
-                      'sr_path': get_sr_path(session)}
+                      'sr_path': cls.get_sr_path(session)}
 
             kwargs = {'params': pickle.dumps(params)}
             task = session.async_call_plugin('glance', 'download_vhd', kwargs)
             vdi_uuid = session.wait_for_task(task, instance_id)
 
-            scan_sr(session, instance_id, sr_ref)
+            cls.scan_sr(session, instance_id, sr_ref)
 
             # Set the name-label to ease debugging
             vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
@@ -408,7 +442,6 @@ class VMHelper(HelperBase):
 
             name_label = get_name_label_for_image(image)
             vdi = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
-
             with_vdi_attached_here(session, vdi, False,
                                    lambda dev:
                                    _stream_disk(dev, image_type,
@@ -464,19 +497,21 @@ class VMHelper(HelperBase):
                         "%(image_id)s, instance %(instance_id)s") % locals())
 
         def determine_from_glance():
-            glance_type2nova_type = {'machine': ImageType.DISK,
-                                     'raw': ImageType.DISK_RAW,
-                                     'vhd': ImageType.DISK_VHD,
-                                     'kernel': ImageType.KERNEL,
-                                     'ramdisk': ImageType.RAMDISK}
+            glance_disk_format2nova_type = {'ami': ImageType.DISK,
+                                            'raw': ImageType.DISK_RAW,
+                                            'vhd': ImageType.DISK_VHD,
+                                            'aki': ImageType.KERNEL,
+                                            'ari': ImageType.RAMDISK}
+
             client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
             meta = client.get_image_meta(instance.image_id)
-            type_ = meta['type']
+            disk_format = meta['disk_format']
             try:
-                return glance_type2nova_type[type_]
+                return glance_disk_format2nova_type[disk_format]
             except KeyError:
                 raise exception.NotFound(
-                    _("Unrecognized image type '%(type_)s'") % locals())
+                    _("Unrecognized disk_format '%(disk_format)s'")
+                    % locals())
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -640,6 +675,21 @@ class VMHelper(HelperBase):
         except cls.XenAPI.Failure as e:
             return {"Unable to retrieve diagnostics": e}
 
+    @classmethod
+    def scan_sr(cls, session, instance_id=None, sr_ref=None):
+        """Scans the SR specified by sr_ref"""
+        if sr_ref:
+            LOG.debug(_("Re-scanning SR %s"), sr_ref)
+            task = session.call_xenapi('Async.SR.scan', sr_ref)
+            session.wait_for_task(task, instance_id)
+
+    @classmethod
+    def scan_default_sr(cls, session):
+        """Looks for the system default SR and triggers a re-scan"""
+        #FIXME(sirp/mdietz): refactor scan_default_sr in there
+        sr_ref = cls.get_sr(session)
+        session.call_xenapi('SR.scan', sr_ref)
+
 
 def get_rrd(host, uuid):
     """Return the VM RRD XML as a string"""
@@ -682,12 +732,6 @@ def get_vhd_parent_uuid(session, vdi_ref):
         return None
 
 
-def scan_sr(session, instance_id, sr_ref):
-    LOG.debug(_("Re-scanning SR %s"), sr_ref)
-    task = session.call_xenapi('Async.SR.scan', sr_ref)
-    session.wait_for_task(task, instance_id)
-
-
 def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                           original_parent_uuid):
     """ Spin until the parent VHD is coalesced into its parent VHD
@@ -712,7 +756,7 @@ def wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                     " %(max_attempts)d), giving up...") % locals())
             raise exception.Error(msg)
 
-        scan_sr(session, instance_id, sr_ref)
+        VMHelper.scan_sr(session, instance_id, sr_ref)
         parent_uuid = get_vhd_parent_uuid(session, vdi_ref)
         if original_parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
@@ -767,18 +811,6 @@ def find_sr(session):
             if pbd_rec['host'] == host:
                 return sr
     return None
-
-
-def get_sr_path(session):
-    """Return the path to our storage repository
-
-    This is used when we're dealing with VHDs directly, either by taking
-    snapshots or by restoring an image in the DISK_VHD format.
-    """
-    sr_ref = safe_find_sr(session)
-    sr_rec = session.get_xenapi().SR.get_record(sr_ref)
-    sr_uuid = sr_rec["uuid"]
-    return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
 
 def remap_vbd_dev(dev):
