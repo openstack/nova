@@ -261,7 +261,7 @@ class VMOps(object):
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                    self._session, instance.id, template_vdi_uuids, image_id)
+                    self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,

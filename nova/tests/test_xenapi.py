@@ -440,6 +440,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'ramdisk_id': None,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  'os_type': 'linux'
                   }
         stubs.stub_out_migration_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
