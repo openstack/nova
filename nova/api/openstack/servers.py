@@ -84,10 +84,12 @@ def _translate_detail_keys(inst):
 
     return dict(server=inst_dict)
 
+
 def _translate_keys(inst):
     """ Coerces into dictionary format, excluding all model attributes
     save for id and name """
     return dict(server=dict(id=inst['id'], name=inst['display_name']))
+
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
