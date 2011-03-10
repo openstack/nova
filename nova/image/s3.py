@@ -236,25 +236,32 @@ class S3ImageService(service.BaseImageService):
     @staticmethod
     def _decrypt_image(encrypted_filename, encrypted_key, encrypted_iv,
                        cloud_private_key, decrypted_filename):
-        key, err = utils.execute(
-                'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
-                process_input=encrypted_key,
-                check_exit_code=False)
+        key, err = utils.execute('openssl',
+                                 'rsautl',
+                                 '-decrypt',
+                                 '-inkey', '%s' % cloud_private_key,
+                                 process_input=encrypted_key,
+                                 check_exit_code=False)
         if err:
             raise exception.Error(_("Failed to decrypt private key: %s")
                                   % err)
-        iv, err = utils.execute(
-                'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
-                process_input=encrypted_iv,
-                check_exit_code=False)
+        iv, err = utils.execute('openssl',
+                                'rsautl',
+                                '-decrypt',
+                                '-inkey', '%s' % cloud_private_key,
+                                process_input=encrypted_iv,
+                                check_exit_code=False)
         if err:
             raise exception.Error(_("Failed to decrypt initialization "
                                     "vector: %s") % err)
 
-        _out, err = utils.execute(
-                'openssl enc -d -aes-128-cbc -in %s -K %s -iv %s -out %s'
-                 % (encrypted_filename, key, iv, decrypted_filename),
-                 check_exit_code=False)
+        _out, err = utils.execute('openssl', 'enc',
+                                  '-d', '-aes-128-cbc',
+                                  '-in', '%s' % (encrypted_filename,),
+                                  '-K', '%s' % (key,),
+                                  '-iv', '%s' % (iv,),
+                                  '-out', '%s' % (decrypted_filename,),
+                                  check_exit_code=False)
         if err:
             raise exception.Error(_("Failed to decrypt image file "
                                     "%(image_file)s: %(err)s") %
