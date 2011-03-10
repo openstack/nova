@@ -22,6 +22,7 @@ from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
 
+
 LOG = logging.getLogger('nova.tests.integrated')
 
 FLAGS = flags.FLAGS
@@ -62,7 +63,6 @@ class LoginTest(unittest.TestCase):
 
         self.assertRaises(client.OpenstackApiAuthenticationException,
                           bad_credentials_api.get_flavors)
-
 
     def test_bad_login_both_bad(self):
         """Test that I get a 401 with both bad username and bad password"""
