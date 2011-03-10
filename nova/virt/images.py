@@ -97,8 +97,7 @@ def _fetch_s3_image(image, path, user, project):
             cmd += ['-H', '\'%s: %s\'' % (k, v)]
 
         cmd += ['-o', path]
-        cmd_out = ' '.join(cmd)
-        return utils.execute(cmd_out)
+        return utils.execute(*cmd)
 
 
 def _fetch_local_image(image, path, user, project):
@@ -106,7 +105,7 @@ def _fetch_local_image(image, path, user, project):
     if sys.platform.startswith('win'):
         return shutil.copy(source, path)
     else:
-        return utils.execute('cp %s %s' % (source, path))
+        return utils.execute('cp', source, path)
 
 
 def _image_path(path):

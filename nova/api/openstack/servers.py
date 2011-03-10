@@ -98,7 +98,7 @@ class Controller(wsgi.Controller):
         'application/xml': {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress"]}}}
+                           "status", "progress", "adminPass"]}}}
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -141,7 +141,7 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -178,11 +178,21 @@ class Controller(wsgi.Controller):
             key_data=key_pair['public_key'],
             metadata=metadata,
             onset_files=env.get('onset_files', []))
-        return _translate_keys(instances[0])
+
+        server = _translate_keys(instances[0])
+        password = "%s%s" % (server['server']['name'][:4],
+                             utils.generate_password(12))
+        server['server']['adminPass'] = password
+        self.compute_api.set_admin_password(context, server['server']['id'],
+                                            password)
+        return server
 
     def update(self, req, id):
         """ Updates the server name or password """
-        inst_dict = self._deserialize(req.body, req)
+        if len(req.body) == 0:
+            raise exc.HTTPUnprocessableEntity()
+
+        inst_dict = self._deserialize(req.body, req.get_content_type())
         if not inst_dict:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -203,10 +213,58 @@ class Controller(wsgi.Controller):
         return exc.HTTPNoContent()
 
     def action(self, req, id):
-        """ Multi-purpose method used to reboot, rebuild, and
-        resize a server """
-        input_dict = self._deserialize(req.body, req)
-        #TODO(sandy): rebuild/resize not supported.
+        """Multi-purpose method used to reboot, rebuild, or
+        resize a server"""
+
+        actions = {
+            'reboot':        self._action_reboot,
+            'resize':        self._action_resize,
+            'confirmResize': self._action_confirm_resize,
+            'revertResize':  self._action_revert_resize,
+            'rebuild':       self._action_rebuild,
+            }
+
+        input_dict = self._deserialize(req.body, req.get_content_type())
+        for key in actions.keys():
+            if key in input_dict:
+                return actions[key](input_dict, req, id)
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_confirm_resize(self, input_dict, req, id):
+        try:
+            self.compute_api.confirm_resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in confirm-resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPNoContent()
+
+    def _action_revert_resize(self, input_dict, req, id):
+        try:
+            self.compute_api.revert_resize(req.environ['nova.context'], id)
+        except Exception, e:
+            LOG.exception(_("Error in revert-resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
+
+    def _action_rebuild(self, input_dict, req, id):
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
+                flavor_id = input_dict['resize']['flavorId']
+                self.compute_api.resize(req.environ['nova.context'], id,
+                        flavor_id)
+            else:
+                LOG.exception(_("Missing arguments for resize"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return faults.Fault(exc.HTTPAccepted())
+
+    def _action_reboot(self, input_dict, req, id):
         try:
             reboot_type = input_dict['reboot']['type']
         except Exception:
@@ -402,7 +460,7 @@ class Controller(wsgi.Controller):
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image['type'] != 'machine':
+        if image['disk_format'] != 'ami':
             return None, None
 
         try:

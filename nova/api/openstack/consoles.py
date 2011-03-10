@@ -65,7 +65,7 @@ class Controller(wsgi.Controller):
 
     def create(self, req, server_id):
         """Creates a new console"""
-        #info = self._deserialize(req.body, req)
+        #info = self._deserialize(req.body, req.get_content_type())
         self.console_api.create_console(
                                 req.environ['nova.context'],
                                 int(server_id))

@@ -106,7 +106,7 @@ class CloudController(object):
             start = os.getcwd()
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh genrootca.sh")
+            utils.runthis(_("Generating root CA: %s"), "sh", "genrootca.sh")
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
@@ -292,7 +292,7 @@ class CloudController(object):
                     'keyFingerprint': key_pair['fingerprint'],
                 })
 
-        return {'keypairsSet': result}
+        return {'keySet': result}
 
     def create_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Create key pair %s"), key_name, context=context)
@@ -837,14 +837,14 @@ class CloudController(object):
         self.compute_api.unrescue(context, instance_id=instance_id)
         return True
 
-    def update_instance(self, context, ec2_id, **kwargs):
+    def update_instance(self, context, instance_id, **kwargs):
         updatable_fields = ['display_name', 'display_description']
         changes = {}
         for field in updatable_fields:
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            instance_id = ec2utils.ec2_id_to_id(ec2_id)
+            instance_id = ec2utils.ec2_id_to_id(instance_id)
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
