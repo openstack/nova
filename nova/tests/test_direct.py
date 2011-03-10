@@ -59,6 +59,7 @@ class DirectTestCase(test.TestCase):
         req.headers['X-OpenStack-User'] = 'user1'
         req.headers['X-OpenStack-Project'] = 'proj1'
         resp = req.get_response(self.auth_router)
+        self.assertEqual(resp.status_int, 200)
         data = json.loads(resp.body)
         self.assertEqual(data['user'], 'user1')
         self.assertEqual(data['project'], 'proj1')
@@ -69,6 +70,7 @@ class DirectTestCase(test.TestCase):
         req.method = 'POST'
         req.body = 'json=%s' % json.dumps({'data': 'foo'})
         resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 
@@ -78,6 +80,7 @@ class DirectTestCase(test.TestCase):
         req.method = 'POST'
         req.body = 'data=foo'
         resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 

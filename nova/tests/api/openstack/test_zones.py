@@ -86,24 +86,27 @@ class ZonesTest(test.TestCase):
 
     def test_get_zone_list(self):
         req = webob.Request.blank('/v1.0/zones')
+        req.headers["Content-Type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_by_id(self):
         req = webob.Request.blank('/v1.0/zones/1')
+        req.headers["Content-Type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
 
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://foo.com')
         self.assertFalse('password' in res_dict['zone'])
-        self.assertEqual(res.status_int, 200)
 
     def test_zone_delete(self):
         req = webob.Request.blank('/v1.0/zones/1')
+        req.headers["Content-Type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
 
         self.assertEqual(res.status_int, 200)
@@ -112,13 +115,14 @@ class ZonesTest(test.TestCase):
         body = dict(zone=dict(api_url='http://blah.zoo', username='fred',
                         password='fubar'))
         req = webob.Request.blank('/v1.0/zones')
+        req.headers["Content-Type"] = "application/json"
         req.method = 'POST'
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://blah.zoo')
         self.assertFalse('username' in res_dict['zone'])
@@ -126,13 +130,14 @@ class ZonesTest(test.TestCase):
     def test_zone_update(self):
         body = dict(zone=dict(username='zeb', password='sneaky'))
         req = webob.Request.blank('/v1.0/zones/1')
+        req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
 
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://foo.com')
         self.assertFalse('username' in res_dict['zone'])
