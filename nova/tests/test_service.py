@@ -284,9 +284,9 @@ class ServiceTestCase(test.TestCase):
         serv.manager.driver.update_available_resource(mox.IgnoreArg(), host)
 
         # Just doing start()-stop(), not confirm new db record is created,
-        # because update_available_resource() works only in libvirt environment.
-        # This testcase confirms update_available_resource() is called.
-        # Otherwise, mox complains.
+        # because update_available_resource() works only in
+        # libvirt environment. This testcase confirms
+        # update_available_resource() is called. Otherwise, mox complains.
         self.mox.ReplayAll()
         serv.start()
         serv.stop()
