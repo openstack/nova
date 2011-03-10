@@ -591,21 +591,23 @@ class LibvirtConnection(object):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
+            fname = '%08x' % int(disk_images['kernel_id'])
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
-                              fname=disk_images['kernel_id'],
+                              fname=fname,
                               image_id=disk_images['kernel_id'],
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
+                fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
-                                  fname=disk_images['ramdisk_id'],
+                                  fname=fname,
                                   image_id=disk_images['ramdisk_id'],
                                   user=user,
                                   project=project)
 
-        root_fname = disk_images['image_id']
+        root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
         if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
             size = None

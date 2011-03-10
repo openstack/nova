@@ -126,9 +126,9 @@ class API(base.Base):
 
         image = self.image_service.show(context, image_id)
         if kernel_id is None:
-            kernel_id = image.get('kernel_id', None)
+            kernel_id = image['properties'].get('kernel_id', None)
         if ramdisk_id is None:
-            ramdisk_id = image.get('ramdisk_id', None)
+            ramdisk_id = image['properties'].get('ramdisk_id', None)
         # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
