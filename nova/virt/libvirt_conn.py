@@ -860,7 +860,14 @@ class LibvirtConnection(object):
 
         """
 
-        return multiprocessing.cpu_count()
+        # On certain platforms, this will raise a NotImplementedError.
+        try:
+            return multiprocessing.cpu_count()
+        except NotImplementedError:
+            LOG.warn(_("Cannot get the number of cpu, because this "
+                       "function is not implemented for this platform. "
+                       "This error can be safely ignored for now."))
+            return 0
 
     def get_memory_mb_total(self):
         """Get the total memory size(MB) of physical computer.
@@ -1042,9 +1049,9 @@ class LibvirtConnection(object):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            msg = _(("""Cannot update compute manager specific info,"""
-                      """ Because no service record found."""))
-            raise exception.Invalid(msg)
+            raise exception.Invalid(_("Cannot update compute manager "
+                                      "specific info, because no service "
+                                      "record was found."))
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -1059,11 +1066,11 @@ class LibvirtConnection(object):
 
         compute_node_ref = service_ref['compute_node']
         if not compute_node_ref:
-            LOG.info(_('Compute_service record is created for %s ') % host)
+            LOG.info(_('Compute_service record created for %s ') % host)
             dic['service_id'] = service_ref['id']
             db.compute_node_create(ctxt, dic)
         else:
-            LOG.info(_('Compute_service record is updated for %s ') % host)
+            LOG.info(_('Compute_service record updated for %s ') % host)
             db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
 
     def compare_cpu(self, cpu_info):
@@ -1081,8 +1088,7 @@ class LibvirtConnection(object):
 
         """
 
-        LOG.info(_('Checking cpu_info: instance was launched this cpu.\n%s')
-                 % cpu_info)
+        LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
         dic = utils.loads(cpu_info)
         xml = str(Template(self.cpuinfo_xml, searchList=dic))
         LOG.info(_('to xml...\n:%s ' % xml))

@@ -119,7 +119,8 @@ class SchedulerTestCase(test.TestCase):
         try:
             scheduler.show_host_resources(ctxt, dest)
         except exception.NotFound, e:
-            c1 = (0 <= e.message.find('does not exist or not compute node'))
+            c1 = (e.message.find(_("does not exist or is not a "
+                                   "compute node.")) >= 0)
         self.assertTrue(c1)
 
     def _dic_is_equal(self, dic1, dic2, keys=None):
@@ -786,7 +787,7 @@ class SimpleDriverTestCase(test.TestCase):
                                                              i_ref,
                                                              'somewhere')
         except exception.NotEmpty, e:
-            c = (e.message.find('is not capable to migrate') >= 0)
+            c = (e.message.find('Unable to migrate') >= 0)
 
         self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)

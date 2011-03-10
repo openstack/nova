@@ -226,7 +226,6 @@ class Scheduler(object):
                       "args": {'cpu_info': oservice_ref['cpu_info']}})
 
         except rpc.RemoteError:
-            ec2_id = instance_ref['hostname']
             src = instance_ref['host']
             logging.exception(_("host %(dest)s is not compatible with "
                                 "original host %(src)s.") % locals())
@@ -259,9 +258,10 @@ class Scheduler(object):
         mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:
-            raise exception.NotEmpty(_("%(ec2_id)s is not capable to "
-                                       "migrate %(dest)s (host:%(mem_avail)s "
-                                       " <= instance:%(mem_inst)s)")
+            raise exception.NotEmpty(_("Unable to migrate %(ec2_id)s "
+                                       "to destination: %(dest)s "
+                                       "(host:%(mem_avail)s "
+                                       "<= instance:%(mem_inst)s)")
                                        % locals())
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
@@ -292,7 +292,7 @@ class Scheduler(object):
 
         except rpc.RemoteError:
             ipath = FLAGS.instances_path
-            logging.error(_("Cannot comfirm tmpfile at %(ipath)s is on "
+            logging.error(_("Cannot confirm tmpfile at %(ipath)s is on "
                             "same shared storage between %(src)s "
                             "and %(dest)s.") % locals())
             raise

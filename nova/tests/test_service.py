@@ -42,24 +42,6 @@ class FakeManager(manager.Manager):
     def test_method(self):
         return 'manager'
 
-# temporary variable to store host/binary/self.mox
-# from each method to fake class.
-global_host = None
-global_binary = None
-global_mox = None
-
-
-class FakeComputeManager(compute_manager.ComputeManager):
-    """Fake computemanager manager for tests"""
-
-    def __init__(self, compute_driver=None, *args, **kwargs):
-        global ghost, gbinary, gmox
-        self.update_available_resource(mox.IgnoreArg())
-        gmox.ReplayAll()
-        super(FakeComputeManager, self).__init__(compute_driver,
-                                                 *args,
-                                                 **kwargs)
-
 
 class ExtendedService(service.Service):
     def test_method(self):
@@ -275,37 +257,38 @@ class ServiceTestCase(test.TestCase):
         """Confirm compute updates their record of compute-service table."""
         host = 'foo'
         binary = 'nova-compute'
-        topic = 'compute1'
-        service_create = {'host': host,
-                          'binary': binary,
-                          'topic': topic,
-                          'report_count': 0,
-                          'availability_zone': 'nova'}
-        service_ref = {'host': host,
-                          'binary': binary,
-                          'topic': topic,
-                          'report_count': 0,
-                          'availability_zone': 'nova',
-                          'id': 1}
+        topic = 'compute'
 
-        service.db.service_get_by_args(mox.IgnoreArg(),
-                                      host,
-                                      binary).AndRaise(exception.NotFound())
-        service.db.service_create(mox.IgnoreArg(),
-                                  service_create).AndReturn(service_ref)
-        self.mox.StubOutWithMock(compute_manager.ComputeManager,
-                                 'update_available_resource')
-
-        global ghost, gbinary, gmox
-        ghost = host
-        gbinary = binary
-        gmox = self.mox
-
+        # Any mocks are not working without UnsetStubs() here.
+        self.mox.UnsetStubs()
+        ctxt = context.get_admin_context()
+        service_ref = db.service_create(ctxt, {'host': host,
+                                               'binary': binary,
+                                               'topic': topic})
         serv = service.Service(host,
                                binary,
                                topic,
-                               'nova.tests.test_service.FakeComputeManager')
-        # ReplayAll has been executed FakeComputeManager.__init__()
-        #self.mox.ReplayAll()
+                               'nova.compute.manager.ComputeManager')
+
+        # This testcase want to test calling update_available_resource.
+        # No need to call periodic call, then below variable must be set 0.
+        serv.report_interval = 0
+        serv.periodic_interval = 0
+
+        # Creating mocks
+        self.mox.StubOutWithMock(service.rpc.Connection, 'instance')
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
+        self.mox.StubOutWithMock(serv.manager.driver,
+                                 'update_available_resource')
+        serv.manager.driver.update_available_resource(mox.IgnoreArg(), host)
+
+        # Just doing start()-stop(), not confirm new db record is created,
+        # because update_available_resource() works only in libvirt environment.
+        # This testcase confirms update_available_resource() is called.
+        # Otherwise, mox complains.
+        self.mox.ReplayAll()
         serv.start()
         serv.stop()
+
+        db.service_destroy(ctxt, service_ref['id'])

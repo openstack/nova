@@ -284,9 +284,10 @@ class AOETestCase(DriverTestCase):
             self.volume.check_for_export(self.context, self.instance_id)
         except exception.ProcessExecutionError, e:
             volume_id = volume_id_list[0]
-            msg = _("""Cannot confirm exported volume id:%(volume_id)s."""
-                    """vblade process for e%(shelf_id)s.%(blade_id)s """
-                    """isn't running.""") % locals()
+            msg = _("Cannot confirm exported volume id:%(volume_id)s. "
+                    "vblade process for e%(shelf_id)s.%(blade_id)s "
+                    "isn't running.") % locals()
+
             msg_is_match = (0 <= e.message.find(msg))
 
         self.assertTrue(msg_is_match)

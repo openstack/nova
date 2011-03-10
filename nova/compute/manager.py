@@ -64,7 +64,7 @@ flags.DEFINE_integer('password_length', 12,
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
-flags.DEFINE_string('live_migration_retry_count', 30,
+flags.DEFINE_integer('live_migration_retry_count', 30,
                     ("Retry count needed in live_migration."
                      " sleep 1 sec for each count"))
 
@@ -757,8 +757,9 @@ class ComputeManager(manager.Manager):
         dirpath = FLAGS.instances_path
         fd, tmp_file = tempfile.mkstemp(dir=dirpath)
         LOG.debug(_("Creating tmpfile %s to notify to other "
-                    "compute node that they mounts same storage.") % tmp_file)
-        os.fdopen(fd, 'w+').close()
+                    "compute nodes that they should mount "
+                    "the same storage.") % tmp_file)
+        os.close(fd)
         return os.path.basename(tmp_file)
 
     @exception.wrap_exception
@@ -812,7 +813,7 @@ class ComputeManager(manager.Manager):
         # Getting fixed ips
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
-            msg = _("%(instance_id)s(%(ec2_id)s) does'nt have fixed_ip")
+            msg = _("%(instance_id)s(%(ec2_id)s) does not have fixed_ip.")
             raise exception.NotFound(msg % locals())
 
         # If any volume is mounted, prepare here.
@@ -929,7 +930,7 @@ class ComputeManager(manager.Manager):
             floating_ip = self.db.instance_get_floating_address(ctxt,
                                                          instance_id)
             if not floating_ip:
-                LOG.info(_('floating_ip is not found for %s'), i_name)
+                LOG.info(_('No floating_ip is found for %s.'), i_name)
             else:
                 floating_ip_ref = self.db.floating_ip_get_by_address(ctxt,
                                                               floating_ip)
@@ -937,7 +938,7 @@ class ComputeManager(manager.Manager):
                                            floating_ip_ref['address'],
                                            {'host': dest})
         except exception.NotFound:
-            LOG.info(_('Floating_ip is not found for %s'), i_name)
+            LOG.info(_('No floating_ip is found for %s.'), i_name)
         except:
             LOG.error(_("Live migration: Unexpected error:"
                         "%s cannot inherit floating ip..") % i_name)
@@ -945,12 +946,11 @@ class ComputeManager(manager.Manager):
         # Restore instance/volume state
         self.recover_live_migration(ctxt, instance_ref, dest)
 
-        LOG.info(_('Migrating %(i_name)s to %(dest)s finishes successfully.')
+        LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
                  % locals())
-        LOG.info(_("The below error is normally occurs. "
-                "Just check if instance is successfully migrated.\n"
-                "libvir: QEMU error : Domain not found: no domain "
-                "with matching name.."))
+        LOG.info(_("You may see the error \"libvirt: QEMU error: "
+                   "Domain not found: no domain with matching name.\" "
+                   "This error can be safely ignored."))
 
     def recover_live_migration(self, ctxt, instance_ref, host=None):
         """Recovers Instance/volume state from migrating -> running.

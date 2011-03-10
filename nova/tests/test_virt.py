@@ -283,7 +283,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertEquals(uri, testuri)
         db.instance_destroy(user_context, instance_ref['id'])
 
-    def tes1t_update_available_resource_works_correctly(self):
+    def test_update_available_resource_works_correctly(self):
         """Confirm compute_node table is updated successfully."""
         org_path = FLAGS.instances_path = ''
         FLAGS.instances_path = '.'
@@ -314,7 +314,7 @@ class LibvirtConnTestCase(test.TestCase):
         compute_node = service_ref['compute_node'][0]
 
         if sys.platform.upper() == 'LINUX2':
-            self.assertTrue(compute_node['vcpus'] > 0)
+            self.assertTrue(compute_node['vcpus'] >= 0)
             self.assertTrue(compute_node['memory_mb'] > 0)
             self.assertTrue(compute_node['local_gb'] > 0)
             self.assertTrue(compute_node['vcpus_used'] == 0)
@@ -323,7 +323,7 @@ class LibvirtConnTestCase(test.TestCase):
             self.assertTrue(len(compute_node['hypervisor_type']) > 0)
             self.assertTrue(compute_node['hypervisor_version'] > 0)
         else:
-            self.assertTrue(compute_node['vcpus'] > 0)
+            self.assertTrue(compute_node['vcpus'] >= 0)
             self.assertTrue(compute_node['memory_mb'] == 0)
             self.assertTrue(compute_node['local_gb'] > 0)
             self.assertTrue(compute_node['vcpus_used'] == 0)

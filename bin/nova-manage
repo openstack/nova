@@ -567,7 +567,7 @@ class VmCommands(object):
         if (FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
             FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver'):
             msg = _("Support only AOEDriver and ISCSIDriver. Sorry!")
-            raise  exception.Error(msg)
+            raise exception.Error(msg)
 
         rpc.call(ctxt,
                  FLAGS.scheduler_topic,
@@ -637,8 +637,8 @@ class ServiceCommands(object):
                       "args": {"host": host}})
 
         if type(result) != dict:
-            print 'Unexpected error occurs'
-            print '[Result]', result
+            print _('An unexpected error has occurred.')
+            print _('[Result]'), result
         else:
             cpu = result['resource']['vcpus']
             mem = result['resource']['memory_mb']
@@ -667,7 +667,7 @@ class ServiceCommands(object):
         ctxt = context.get_admin_context()
         service_refs = db.service_get_all_by_host(ctxt, host)
         if len(service_refs) <= 0:
-            raise exception.Invalid(_('%s does not exists.') % host)
+            raise exception.Invalid(_('%s does not exist.') % host)
 
         service_refs = [s for s in service_refs if s['topic'] == 'compute']
         if len(service_refs) <= 0:

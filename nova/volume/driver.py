@@ -234,7 +234,7 @@ class AOEDriver(VolumeDriver):
                 break
         if not exported:
             # Instance will be terminated in this case.
-            desc = _("Cannot confirm exported volume id:%(volume_id)s."
+            desc = _("Cannot confirm exported volume id:%(volume_id)s. "
                      "vblade process for e%(shelf_id)s.%(blade_id)s "
                      "isn't running.") % locals()
             raise exception.ProcessExecutionError(out, _err, cmd=cmd,
