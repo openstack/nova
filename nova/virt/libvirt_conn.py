@@ -45,6 +45,7 @@ from xml.dom import minidom
 
 
 from eventlet import tpool
+from eventlet import semaphore
 
 import IPy
 
@@ -512,7 +513,10 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
-    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+    _image_sems = {}
+
+    @staticmethod
+    def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
@@ -531,8 +535,15 @@ class LibvirtConnection(object):
             if not os.path.exists(base_dir):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
-            if not os.path.exists(base):
-                fn(target=base, *args, **kwargs)
+
+            if fname not in LibvirtConnection._image_sems:
+                LibvirtConnection._image_sems[fname] = semaphore.Semaphore()
+            with LibvirtConnection._image_sems[fname]:
+                if not os.path.exists(base):
+                    fn(target=base, *args, **kwargs)
+            if not LibvirtConnection._image_sems[fname].locked():
+                del LibvirtConnection._image_sems[fname]
+
             if cow:
                 utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
                               'cluster_size=2M,backing_file=%s' % base,
@@ -579,21 +590,23 @@ class LibvirtConnection(object):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
+            fname = '%08x' % int(disk_images['kernel_id'])
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
-                              fname=disk_images['kernel_id'],
+                              fname=fname,
                               image_id=disk_images['kernel_id'],
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
+                fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
-                                  fname=disk_images['ramdisk_id'],
+                                  fname=fname,
                                   image_id=disk_images['ramdisk_id'],
                                   user=user,
                                   project=project)
 
-        root_fname = disk_images['image_id']
+        root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
         if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
             size = None
