@@ -330,7 +330,7 @@ def update_dhcp(context, network_id):
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
            'DNSMASQ_INTERFACE': network_ref['bridge']}
     command = _dnsmasq_cmd(network_ref)
-    _execute(command, addl_env=env)
+    _execute(*command, addl_env=env)
 
 
 def update_ra(context, network_id):
@@ -370,7 +370,7 @@ interface %s
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
-    _execute(command)
+    _execute(*command)
     db.network_update(context, network_id,
                       {"ra_server":
                        utils.get_my_linklocal(network_ref['bridge'])})
