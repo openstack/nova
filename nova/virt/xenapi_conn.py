@@ -158,6 +158,11 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
+    def resize_instance(self, instance, disk_info):
+        """Resizes instance attributes such as RAM and disk space to the
+        attributes specified by the record"""
+        self._vmops.resize_instance(instance, disk_info['cow'])
+
     def finish_resize(self, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
         vdi_uuid = self._vmops.attach_disk(instance, disk_info['base_copy'],
@@ -167,10 +172,6 @@ class XenAPIConnection(object):
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
-
-    def resize(self, instance, flavor):
-        """Resize a VM instance"""
-        raise NotImplementedError()
 
     def reboot(self, instance):
         """Reboot VM instance"""

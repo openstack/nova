@@ -429,21 +429,37 @@ class ComputeManager(manager.Manager):
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
 
-        #TODO(mdietz): we may want to split these into separate methods.
-        if migration_ref['source_compute'] == FLAGS.host:
-            self.driver._start(instance_ref)
-            self.db.migration_update(context, migration_id,
-                    {'status': 'reverted'})
-        else:
-            self.driver.destroy(instance_ref)
-            topic = self.db.queue_get_for(context, FLAGS.compute_topic,
-                    instance_ref['host'])
-            rpc.cast(context, topic,
-                    {'method': 'revert_resize',
-                     'args': {
-                           'migration_id': migration_ref['id'],
-                           'instance_id': instance_id, },
-                    })
+        self.driver.destroy(instance_ref)
+        topic = self.db.queue_get_for(context, FLAGS.compute_topic,
+                instance_ref['host'])
+        rpc.cast(context, topic,
+                {'method': 'finish_revert_resize',
+                 'args': {
+                       'migration_id': migration_ref['id'],
+                       'instance_id': instance_id, },
+                })
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def finish_revert_resize(self, context, instance_id, migration_id):
+        """Finishes the second half of reverting a resize, powering back on
+        the source instance and reverting the resized attributes in the
+        database"""
+        instance_ref = self.db.instance_get(context, instance_id)
+        migration_ref = self.db.migration_get(context, migration_id)
+        instance_type = self.db.instance_type_get_by_flavor_id(context,
+                migration_ref['old_flavor_id'])
+
+        #Just roll back the record. There's no need to resize down since
+        #the 'old' VM already has the preferred attributes
+        self.db.instance_update(context,
+           dict(memory_mb=instance_type['memory_mb'],
+                vcpus=instance_type['vcpus'],
+                local_gb=instance_type['local_gb']))
+
+        self.driver._start(instance_ref)
+        self.db.migration_update(context, migration_id,
+                {'status': 'reverted'})
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -463,8 +479,8 @@ class ComputeManager(manager.Manager):
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
-                 'old_flavor': instance_type['flavor_id'],
-                 'new_flavor': flavor_id,
+                 'old_flavor_id': instance_type['flavor_id'],
+                 'new_flavor_id': flavor_id,
                  'status':      'pre-migrating'})
 
         LOG.audit(_('instance %s: migrating to '), instance_id,
@@ -492,13 +508,7 @@ class ComputeManager(manager.Manager):
         self.db.migration_update(context, migration_id,
                 {'status': 'post-migrating', })
 
-        #TODO(mdietz): apply the rest of the instance_type attributes going
-        #after they're supported
-        self.db.instance_update(context, instance_ref,
-               dict(memory_mb=instance_type['memory_mb'],
-                    vcpus=instance_type['vcpus'],
-                    local_gb=instance_type['local_gb']))
-        self.driver.resize_instance(context, instance_ref)
+        
 
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_compute'], FLAGS.compute_topic)
@@ -520,7 +530,17 @@ class ComputeManager(manager.Manager):
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get(context,
                 migration_ref['instance_id'])
+        
+        #TODO(mdietz): apply the rest of the instance_type attributes going
+        #after they're supported
+        instance_type = self.db.instance_type_get_by_flavor_id(context,
+                migration_ref['new_flavor_id'])
+        self.db.instance_update(context, instance_ref,
+               dict(memory_mb=instance_type['memory_mb'],
+                    vcpus=instance_type['vcpus'],
+                    local_gb=instance_type['local_gb']))
 
+        self.driver.resize_instance(instance_ref, disk_info)
         self.driver.finish_resize(instance_ref, disk_info)
 
         self.db.migration_update(context, migration_id,
