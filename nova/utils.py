@@ -166,9 +166,9 @@ def execute(*cmd, **kwargs):
                                                 stdout=stdout,
                                                 stderr=stderr,
                                                 cmd=' '.join(cmd))
-            # NOTE(termie): this appears to be necessary to let the subprocess call
-            #               clean something up in between calls, without it two
-            #               execute calls in a row hangs the second one
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
             greenthread.sleep(0)
             return result
         except ProcessExecutionError:
