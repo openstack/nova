@@ -56,7 +56,6 @@ from nova import flags
 from nova import log as logging
 #from nova import test
 from nova import utils
-#from nova.api import context
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -1222,9 +1221,13 @@ class NWFilterFirewall(FirewallDriver):
 
 class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, execute=None, **kwargs):
-        self.execute = execute or utils.execute
+        from nova.network import linux_net
+        self.iptables = linux_net.iptables_manager
         self.instances = {}
         self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
+
+        self.iptables.ipv4['filter'].add_chain('sg-fallback')
+        self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""
@@ -1234,128 +1237,97 @@ class IptablesFirewallDriver(FirewallDriver):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
-    def remove_instance(self, instance):
+    def unfilter_instance(self, instance):
         if instance['id'] in self.instances:
             del self.instances[instance['id']]
+            self.remove_filters_for_instance(instance)
+            self.iptables.apply()
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
                        'filtered'), instance['id'])
 
-    def add_instance(self, instance):
-        self.instances[instance['id']] = instance
-
-    def unfilter_instance(self, instance):
-        self.remove_instance(instance)
-        self.apply_ruleset()
-
     def prepare_instance_filter(self, instance):
-        self.add_instance(instance)
-        self.apply_ruleset()
+        self.instances[instance['id']] = instance
+        self.add_filters_for_instance(instance)
+        self.iptables.apply()
 
-    def apply_ruleset(self):
-        current_filter, _ = self.execute('sudo', 'iptables-save',
-                                         '-t', 'filter')
-        current_lines = current_filter.split('\n')
-        new_filter = self.modify_rules(current_lines, 4)
-        self.execute('sudo', 'iptables-restore',
-                     process_input='\n'.join(new_filter))
-        if(FLAGS.use_ipv6):
-            current_filter, _ = self.execute('sudo', 'ip6tables-save',
-                                             '-t', 'filter')
-            current_lines = current_filter.split('\n')
-            new_filter = self.modify_rules(current_lines, 6)
-            self.execute('sudo', 'ip6tables-restore',
-                         process_input='\n'.join(new_filter))
+    def add_filters_for_instance(self, instance):
+        chain_name = self._instance_chain_name(instance)
 
-    def modify_rules(self, current_lines, ip_version=4):
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_address = self._ip_for_instance(instance)
+        self.iptables.ipv4['filter'].add_rule('local',
+                                              '-d %s -j $%s' %
+                                              (ipv4_address, chain_name))
+
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+            ipv6_address = self._ip_for_instance_v6(instance)
+            self.iptables.ipv6['filter'].add_rule('local',
+                                                  '-d %s -j $%s' %
+                                                  (ipv6_address,
+                                                   chain_name))
+
+        ipv4_rules, ipv6_rules = self.instance_rules(instance)
+
+        for rule in ipv4_rules:
+            self.iptables.ipv4['filter'].add_rule(chain_name, rule)
+
+        if FLAGS.use_ipv6:
+            for rule in ipv6_rules:
+                self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def remove_filters_for_instance(self, instance):
+        chain_name = self._instance_chain_name(instance)
+
+        self.iptables.ipv4['filter'].remove_chain(chain_name)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].remove_chain(chain_name)
+
+    def instance_rules(self, instance):
         ctxt = context.get_admin_context()
-        # Remove any trace of nova rules.
-        new_filter = filter(lambda l: 'nova-' not in l, current_lines)
 
-        seen_chains = False
-        for rules_index in range(len(new_filter)):
-            if not seen_chains:
-                if new_filter[rules_index].startswith(':'):
-                    seen_chains = True
-            elif seen_chains == 1:
-                if not new_filter[rules_index].startswith(':'):
-                    break
+        ipv4_rules = []
+        ipv6_rules = []
 
-        our_chains = [':nova-fallback - [0:0]']
-        our_rules = ['-A nova-fallback -j DROP']
+        # Always drop invalid packets
+        ipv4_rules += ['-m state --state ' 'INVALID -j DROP']
+        ipv6_rules += ['-m state --state ' 'INVALID -j DROP']
 
-        our_chains += [':nova-local - [0:0]']
-        our_rules += ['-A FORWARD -j nova-local']
-        our_rules += ['-A OUTPUT -j nova-local']
+        # Allow established connections
+        ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
+        ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
 
-        security_groups = {}
-        # Add our chains
-        # First, we add instance chains and rules
-        for instance_id in self.instances:
-            instance = self.instances[instance_id]
-            chain_name = self._instance_chain_name(instance)
-            if(ip_version == 4):
-                ip_address = self._ip_for_instance(instance)
-            elif(ip_version == 6):
-                ip_address = self._ip_for_instance_v6(instance)
+        dhcp_server = self._dhcp_server_for_instance(instance)
+        ipv4_rules += ['-s %s -p udp --sport 67 --dport 68 '
+                       '-j ACCEPT' % (dhcp_server,)]
 
-            our_chains += [':%s - [0:0]' % chain_name]
+        #Allow project network traffic
+        if FLAGS.allow_project_net_traffic:
+            cidr = self._project_cidr_for_instance(instance)
+            ipv4_rules += ['-s %s -j ACCEPT' % (cidr,)]
 
-            # Jump to the per-instance chain
-            our_rules += ['-A nova-local -d %s -j %s' % (ip_address,
-                                                         chain_name)]
+        # We wrap these in FLAGS.use_ipv6 because they might cause
+        # a DB lookup. The other ones are just list operations, so
+        # they're not worth the clutter.
+        if FLAGS.use_ipv6:
+            # Allow RA responses
+            ra_server = self._ra_server_for_instance(instance)
+            if ra_server:
+                ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (ra_server,)]
 
-            # Always drop invalid packets
-            our_rules += ['-A %s -m state --state '
-                          'INVALID -j DROP' % (chain_name,)]
+            #Allow project network traffic
+            if FLAGS.allow_project_net_traffic:
+                cidrv6 = self._project_cidrv6_for_instance(instance)
+                ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
 
-            # Allow established connections
-            our_rules += ['-A %s -m state --state '
-                          'ESTABLISHED,RELATED -j ACCEPT' % (chain_name,)]
-
-            # Jump to each security group chain in turn
-            for security_group in \
-                            db.security_group_get_by_instance(ctxt,
-                                                              instance['id']):
-                security_groups[security_group['id']] = security_group
-
-                sg_chain_name = self._security_group_chain_name(
-                                                          security_group['id'])
-
-                our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
-
-            if(ip_version == 4):
-                # Allow DHCP responses
-                dhcp_server = self._dhcp_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
-                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
-                #Allow project network traffic
-                if (FLAGS.allow_project_net_traffic):
-                    cidr = self._project_cidr_for_instance(instance)
-                    our_rules += ['-A %s -s %s -j ACCEPT' % (chain_name, cidr)]
-            elif(ip_version == 6):
-                # Allow RA responses
-                ra_server = self._ra_server_for_instance(instance)
-                if ra_server:
-                    our_rules += ['-A %s -s %s -p icmpv6 -j ACCEPT' %
-                                  (chain_name, ra_server + "/128")]
-                #Allow project network traffic
-                if (FLAGS.allow_project_net_traffic):
-                    cidrv6 = self._project_cidrv6_for_instance(instance)
-                    our_rules += ['-A %s -s %s -j ACCEPT' %
-                                        (chain_name, cidrv6)]
-
-            # If nothing matches, jump to the fallback chain
-            our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
+        security_groups = db.security_group_get_by_instance(ctxt,
+                                                            instance['id'])
 
         # then, security group chains and rules
-        for security_group_id in security_groups:
-            chain_name = self._security_group_chain_name(security_group_id)
-            our_chains += [':%s - [0:0]' % chain_name]
-
-            rules = \
-              db.security_group_rule_get_by_security_group(ctxt,
-                                                          security_group_id)
+        for security_group in security_groups:
+            rules = db.security_group_rule_get_by_security_group(ctxt,
+                                                          security_group['id'])
 
             for rule in rules:
                 logging.info('%r', rule)
@@ -1366,14 +1338,16 @@ class IptablesFirewallDriver(FirewallDriver):
                     continue
 
                 version = _get_ip_version(rule.cidr)
-                if version != ip_version:
-                    continue
+                if version == 4:
+                    rules = ipv4_rules
+                else:
+                    rules = ipv6_rules
 
                 protocol = rule.protocol
                 if version == 6 and rule.protocol == 'icmp':
                     protocol = 'icmpv6'
 
-                args = ['-A', chain_name, '-p', protocol, '-s', rule.cidr]
+                args = ['-p', protocol, '-s', rule.cidr]
 
                 if rule.protocol in ['udp', 'tcp']:
                     if rule.from_port == rule.to_port:
@@ -1394,32 +1368,39 @@ class IptablesFirewallDriver(FirewallDriver):
                             icmp_type_arg += '/%s' % icmp_code
 
                     if icmp_type_arg:
-                        if(ip_version == 4):
+                        if version == 4:
                             args += ['-m', 'icmp', '--icmp-type',
                                      icmp_type_arg]
-                        elif(ip_version == 6):
+                        elif version == 6:
                             args += ['-m', 'icmp6', '--icmpv6-type',
                                      icmp_type_arg]
 
                 args += ['-j ACCEPT']
-                our_rules += [' '.join(args)]
+                rules += [' '.join(args)]
 
-        new_filter[rules_index:rules_index] = our_rules
-        new_filter[rules_index:rules_index] = our_chains
-        logging.info('new_filter: %s', '\n'.join(new_filter))
-        return new_filter
+        ipv4_rules += ['-j $sg-fallback']
+        ipv6_rules += ['-j $sg-fallback']
+
+        return ipv4_rules, ipv6_rules
 
     def refresh_security_group_members(self, security_group):
         pass
 
     def refresh_security_group_rules(self, security_group):
-        self.apply_ruleset()
+        for instance in self.instances.values():
+            # We use the semaphore to make sure noone applies the rule set
+            # after we've yanked the existing rules but before we've put in
+            # the new ones.
+            with self.iptables.semaphore:
+                self.remove_filters_for_instance(instance)
+                self.add_filters_for_instance(instance)
+        self.iptables.apply()
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)
 
     def _instance_chain_name(self, instance):
-        return 'nova-inst-%s' % (instance['id'],)
+        return 'inst-%s' % (instance['id'],)
 
     def _ip_for_instance(self, instance):
         return db.instance_get_fixed_address(context.get_admin_context(),
