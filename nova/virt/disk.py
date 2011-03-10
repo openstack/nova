@@ -140,6 +140,14 @@ def setup_container(image, container_dir=None, partition=None, nbd=False):
             utils.execute('sudo kpartx -s %s' % device)
         _unlink_device(device, nbd)
 
+def destroy_container(target, instance, nbd=False):
+    """Destroy the container once it terminates"""
+    try:
+        utils.execute('sudo umount %s/rootfs' % target)
+        image = os.path.join(FLAGS.instances_path, instance['name'], '' + 'disk')
+    except Exception as e:
+        LOG.warn(_('Unable to umount contianer'))
+
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:

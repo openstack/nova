@@ -260,7 +260,7 @@ class LibvirtConnection(object):
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals())
         if FLAGS.libvirt_type == 'lxc':
-            utils.execute('sudo umount %s/rootfs' % target)
+            disk.destroy_container(target, instance, nbd=FLAGS.use_cow_images)
         if os.path.exists(target):
             shutil.rmtree(target)
 
