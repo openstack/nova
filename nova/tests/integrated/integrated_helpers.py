@@ -104,6 +104,7 @@ class IntegratedUnitTestContext(object):
 
     def _start_services(self):
         # WSGI shutdown broken :-(
+        # bug731668
         if not self.api_service:
             self._start_api_service()
 
@@ -112,6 +113,7 @@ class IntegratedUnitTestContext(object):
             service.kill()
         self.services = []
         # TODO(justinsb): Shutdown WSGI & anything else we startup
+        # bug731668
         # WSGI shutdown broken :-(
         # self.wsgi_server.terminate()
         # self.wsgi_server = None
@@ -124,6 +126,7 @@ class IntegratedUnitTestContext(object):
         auth_key = generate_random_alphanumeric(16)
 
         # Right now there's a bug where auth_name and auth_key are reversed
+        # bug732907
         auth_key = auth_name
 
         self.auth_manager.create_user(auth_name, auth_name, auth_key, False)
@@ -156,6 +159,7 @@ class IntegratedUnitTestContext(object):
         return api_service
 
     # WSGI shutdown broken :-(
+    # bug731668
     #@staticmethod
     #def get():
     #    if not IntegratedUnitTestContext.__INSTANCE:
@@ -166,6 +170,7 @@ class IntegratedUnitTestContext(object):
     @staticmethod
     def startup():
         # Because WSGI shutdown is broken at the moment, we have to recycle
+        # bug731668
         if IntegratedUnitTestContext.__INSTANCE:
             #raise Error("Multiple calls to IntegratedUnitTestContext.startup")
             IntegratedUnitTestContext.__INSTANCE.setup()
@@ -179,4 +184,5 @@ class IntegratedUnitTestContext(object):
             raise Error("Must call IntegratedUnitTestContext::startup")
         IntegratedUnitTestContext.__INSTANCE.cleanup()
         # WSGI shutdown broken :-(
+        # bug731668
         #IntegratedUnitTestContext.__INSTANCE = None

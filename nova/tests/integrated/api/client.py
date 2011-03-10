@@ -109,6 +109,7 @@ class TestOpenStackClient(object):
         LOG.debug(_("%(auth_uri)s => code %(http_status)s") % locals())
 
         # Until bug732866 is fixed, we can't check this properly...
+        # bug732866
         #if http_status == 401:
         if http_status != 204:
             raise OpenstackApiAuthenticationException(response=response)
