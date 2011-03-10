@@ -216,7 +216,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         _execute('sudo', 'brctl', 'setfd', bridge, 0)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute('sudo', 'brctl', 'stp', bridge, 'off')
-        _execute('sudo', 'ip', 'link', 'set', bridge, up)
+        _execute('sudo', 'ip', 'link', 'set', bridge, 'up')
     if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
@@ -330,7 +330,7 @@ def update_dhcp(context, network_id):
     env = {'FLAGFILE': FLAGS.dhcpbridge_flagfile,
            'DNSMASQ_INTERFACE': network_ref['bridge']}
     command = _dnsmasq_cmd(network_ref)
-    _execute(command, addl_env=env)
+    _execute(*command, addl_env=env)
 
 
 def update_ra(context, network_id):
@@ -370,7 +370,7 @@ interface %s
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
-    _execute(command)
+    _execute(*command)
     db.network_update(context, network_id,
                       {"ra_server":
                        utils.get_my_linklocal(network_ref['bridge'])})
@@ -424,30 +424,30 @@ def _remove_rule(chain, *cmd):
 
 def _dnsmasq_cmd(net):
     """Builds dnsmasq command"""
-    cmd = ['sudo -E dnsmasq',
-           ' --strict-order',
-           ' --bind-interfaces',
-           ' --conf-file=',
-           ' --domain=%s' % FLAGS.dhcp_domain,
-           ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
-           ' --listen-address=%s' % net['gateway'],
-           ' --except-interface=lo',
-           ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
-           ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
-           ' --dhcp-script=%s' % FLAGS.dhcpbridge,
-           ' --leasefile-ro']
+    cmd = ['sudo', '-E', 'dnsmasq',
+           '--strict-order',
+           '--bind-interfaces',
+           '--conf-file=',
+           '--domain=%s' % FLAGS.dhcp_domain,
+           '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
+           '--listen-address=%s' % net['gateway'],
+           '--except-interface=lo',
+           '--dhcp-range=%s,static,120s' % net['dhcp_start'],
+           '--dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
+           '--dhcp-script=%s' % FLAGS.dhcpbridge,
+           '--leasefile-ro']
     if FLAGS.dns_server:
-        cmd.append(' -h -R --server=%s' % FLAGS.dns_server)
-    return ''.join(cmd)
+        cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
+    return cmd
 
 
 def _ra_cmd(net):
     """Builds radvd command"""
-    cmd = ['sudo -E radvd',
-#           ' -u nobody',
-           ' -C %s' % _ra_file(net['bridge'], 'conf'),
-           ' -p %s' % _ra_file(net['bridge'], 'pid')]
-    return ''.join(cmd)
+    cmd = ['sudo', '-E', 'radvd',
+#           '-u', 'nobody',
+           '-C', '%s' % _ra_file(net['bridge'], 'conf'),
+           '-p', '%s' % _ra_file(net['bridge'], 'pid')]
+    return cmd
 
 
 def _stop_dnsmasq(network):
