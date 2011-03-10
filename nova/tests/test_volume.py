@@ -101,7 +101,7 @@ class VolumeTestCase(test.TestCase):
     def test_run_attach_detach_volume(self):
         """Make sure volume can be attached and detached from instance."""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = 'fake'

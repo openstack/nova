@@ -105,8 +105,10 @@ def generate_key_pair(bits=1024):
 
     tmpdir = tempfile.mkdtemp()
     keyfile = os.path.join(tmpdir, 'temp')
-    utils.execute('ssh-keygen -q -b %d -N "" -f %s' % (bits, keyfile))
-    (out, err) = utils.execute('ssh-keygen -q -l -f %s.pub' % (keyfile))
+    utils.execute('ssh-keygen', '-q', '-b', bits, '-N', '',
+                  '-f', keyfile)
+    (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
+                               '%s.pub' % (keyfile))
     fingerprint = out.split(' ')[1]
     private_key = open(keyfile).read()
     public_key = open(keyfile + '.pub').read()
@@ -118,7 +120,8 @@ def generate_key_pair(bits=1024):
     # bio = M2Crypto.BIO.MemoryBuffer()
     # key.save_pub_key_bio(bio)
     # public_key = bio.read()
-    # public_key, err = execute('ssh-keygen -y -f /dev/stdin', private_key)
+    # public_key, err = execute('ssh-keygen', '-y', '-f',
+    #                           '/dev/stdin', private_key)
 
     return (private_key, public_key, fingerprint)
 
@@ -143,9 +146,10 @@ def revoke_cert(project_id, file_name):
     start = os.getcwd()
     os.chdir(ca_folder(project_id))
     # NOTE(vish): potential race condition here
-    utils.execute("openssl ca -config ./openssl.cnf -revoke '%s'" % file_name)
-    utils.execute("openssl ca -gencrl -config ./openssl.cnf -out '%s'" %
-                  FLAGS.crl_file)
+    utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
+                  file_name)
+    utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
+                  '-out', FLAGS.crl_file)
     os.chdir(start)
 
 
@@ -193,9 +197,9 @@ def generate_x509_cert(user_id, project_id, bits=1024):
     tmpdir = tempfile.mkdtemp()
     keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
     csrfile = os.path.join(tmpdir, 'temp.csr')
-    utils.execute("openssl genrsa -out %s %s" % (keyfile, bits))
-    utils.execute("openssl req -new -key %s -out %s -batch -subj %s" %
-                  (keyfile, csrfile, subject))
+    utils.execute('openssl', 'genrsa', '-out', keyfile, str(bits))
+    utils.execute('openssl', 'req', '-new', '-key', keyfile, '-out', csrfile,
+                  '-batch', '-subj', subject)
     private_key = open(keyfile).read()
     csr = open(csrfile).read()
     shutil.rmtree(tmpdir)
@@ -212,8 +216,8 @@ def _ensure_project_folder(project_id):
     if not os.path.exists(ca_path(project_id)):
         start = os.getcwd()
         os.chdir(ca_folder())
-        utils.execute("sh geninter.sh %s %s" %
-                      (project_id, _project_cert_subject(project_id)))
+        utils.execute('sh', 'geninter.sh', project_id,
+                      _project_cert_subject(project_id))
         os.chdir(start)
 
 
@@ -228,8 +232,8 @@ def generate_vpn_files(project_id):
     start = os.getcwd()
     os.chdir(ca_folder())
     # TODO(vish): the shell scripts could all be done in python
-    utils.execute("sh genvpn.sh %s %s" %
-                  (project_id, _vpn_cert_subject(project_id)))
+    utils.execute('sh', 'genvpn.sh',
+                  project_id, _vpn_cert_subject(project_id))
     with open(csr_fn, "r") as csrfile:
         csr_text = csrfile.read()
     (serial, signed_csr) = sign_csr(csr_text, project_id)
@@ -259,9 +263,10 @@ def _sign_csr(csr_text, ca_folder):
     start = os.getcwd()
     # Change working dir to CA
     os.chdir(ca_folder)
-    utils.execute("openssl ca -batch -out %s -config "
-                  "./openssl.cnf -infiles %s" % (outbound, inbound))
-    out, _err = utils.execute("openssl x509 -in %s -serial -noout" % outbound)
+    utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
+                  './openssl.cnf', '-infiles', inbound)
+    out, _err = utils.execute('openssl', 'x509', '-in', outbound,
+                              '-serial', '-noout')
     serial = out.rpartition("=")[2]
     os.chdir(start)
     with open(outbound, "r") as crtfile:

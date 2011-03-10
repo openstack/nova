@@ -255,7 +255,7 @@ class SimpleDriverTestCase(test.TestCase):
     def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
@@ -275,8 +275,6 @@ class SimpleDriverTestCase(test.TestCase):
     def _create_volume(self):
         """Create a test volume"""
         vol = {}
-        vol['image_id'] = 'ami-test'
-        vol['reservation_id'] = 'r-fakeres'
         vol['size'] = 1
         vol['availability_zone'] = 'test'
         return db.volume_create(self.context, vol)['id']

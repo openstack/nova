@@ -571,6 +571,13 @@ def network_create_safe(context, values):
     return IMPL.network_create_safe(context, values)
 
 
+def network_delete_safe(context, network_id):
+    """Delete network with key network_id.
+    This method assumes that the network is not associated with any project
+    """
+    return IMPL.network_delete_safe(context, network_id)
+
+
 def network_create_fixed_ips(context, network_id, num_vpn_clients):
     """Create the ips for the network, reserving sepecified ips."""
     return IMPL.network_create_fixed_ips(context, network_id, num_vpn_clients)
@@ -605,6 +612,11 @@ def network_get_associated_fixed_ips(context, network_id):
 def network_get_by_bridge(context, bridge):
     """Get a network by bridge or raise if it does not exist."""
     return IMPL.network_get_by_bridge(context, bridge)
+
+
+def network_get_by_cidr(context, cidr):
+    """Get a network by cidr or raise if it does not exist"""
+    return IMPL.network_get_by_cidr(context, cidr)
 
 
 def network_get_by_instance(context, instance_id):

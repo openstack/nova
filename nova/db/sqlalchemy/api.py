@@ -1164,6 +1164,15 @@ def network_create_safe(context, values):
 
 
 @require_admin_context
+def network_delete_safe(context, network_id):
+    session = get_session()
+    with session.begin():
+        network_ref = network_get(context, network_id=network_id, \
+                                  session=session)
+        session.delete(network_ref)
+
+
+@require_admin_context
 def network_disassociate(context, network_id):
     network_update(context, network_id, {'project_id': None,
                                          'host': None})
@@ -1233,6 +1242,18 @@ def network_get_by_bridge(context, bridge):
 
     if not result:
         raise exception.NotFound(_('No network for bridge %s') % bridge)
+    return result
+
+
+@require_admin_context
+def network_get_by_cidr(context, cidr):
+    session = get_session()
+    result = session.query(models.Network).\
+                filter_by(cidr=cidr).first()
+
+    if not result:
+        raise exception.NotFound(_('Network with cidr %s does not exist') %
+                                  cidr)
     return result
 
 
