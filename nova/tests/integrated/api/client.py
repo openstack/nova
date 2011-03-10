@@ -104,7 +104,7 @@ class TestOpenStackClient(object):
                    'X-Auth-Key': self.auth_key}
         response = self.request(auth_uri,
                                 headers=headers)
-        
+
         http_status = response.status
         LOG.debug(_("%(auth_uri)s => code %(http_status)s") % locals())
 
@@ -131,7 +131,7 @@ class TestOpenStackClient(object):
         headers['X-Auth-Token'] = auth_result['x-auth-token']
 
         response = self.request(full_uri, **kwargs)
-        
+
         http_status = response.status
         LOG.debug(_("%(relative_uri)s => code %(http_status)s") % locals())
 
