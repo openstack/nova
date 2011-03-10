@@ -19,6 +19,7 @@ import base64
 import datetime
 import json
 import unittest
+from xml.dom import minidom
 
 import stubout
 import webob
@@ -908,6 +909,7 @@ class TestServerInstanceCreation(test.TestCase):
     def _get_create_request_xml(self, body_dict):
         req = webob.Request.blank('/v1.0/servers')
         req.content_type = 'application/xml'
+        req.accept = 'application/xml'
         req.method = 'POST'
         req.body = self._format_xml_request_body(body_dict)
         return req
@@ -1033,6 +1035,23 @@ class TestServerInstanceCreation(test.TestCase):
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
         self.assertEquals(personality_files, [(path, contents)])
+
+    def test_create_instance_admin_pass_json(self):
+        request, response, dummy = \
+            self._create_instance_with_personality_json(None)
+        self.assertEquals(response.status_int, 200)
+        response = json.loads(response.body)
+        self.assertTrue('adminPass' in response['server'])
+        self.assertTrue(response['server']['adminPass'].startswith('fake'))
+
+    def test_create_instance_admin_pass_xml(self):
+        request, response, dummy = \
+            self._create_instance_with_personality_xml(None)
+        self.assertEquals(response.status_int, 200)
+        dom = minidom.parseString(response.body)
+        server = dom.childNodes[0]
+        self.assertEquals(server.nodeName, 'server')
+        self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
 
 
 if __name__ == "__main__":
