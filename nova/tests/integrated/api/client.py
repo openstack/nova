@@ -172,27 +172,6 @@ class TestOpenStackClient(object):
         kwargs.setdefault('check_response_status', [200, 202])
         return self.api_request(relative_uri, **kwargs)
 
-    def get_keys_detail(self):
-        return self.api_get('/keys/detail')['keys']
-
-    def post_key(self, key):
-        return self.api_post('/keys', key)['key']
-
-    def delete_key(self, key_id):
-        return self.api_delete('/keys/%s' % key_id)
-
-    def get_volume(self, volume_id):
-        return self.api_get('/volumes/%s' % volume_id)['volume']
-
-    def get_volumes_detail(self):
-        return self.api_get('/volumes/detail')['volumes']
-
-    def post_volume(self, volume):
-        return self.api_post('/volumes', volume)['volume']
-
-    def delete_volume(self, volume_id):
-        return self.api_delete('/volumes/%s' % volume_id)
-
     def get_server(self, server_id):
         return self.api_get('/servers/%s' % server_id)['server']
 
