@@ -701,14 +701,18 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        session.execute('update instances set deleted=1,'
-                        'deleted_at=:at where id=:id',
-                        {'id': instance_id,
-                         'at': datetime.datetime.utcnow()})
-        session.execute('update security_group_instance_association '
-                        'set deleted=1,deleted_at=:at where instance_id=:id',
-                        {'id': instance_id,
-                         'at': datetime.datetime.utcnow()})
+        session.query(models.Instance).\
+                     filter_by(id=instance_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at': models.Instance.updated_at + 0})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                     filter_by(instance_id=instance_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at':
+                                 (models.SecurityGroupInstanceAssociation.
+                                  updated_at + 0)})
 
 
 @require_context
@@ -950,9 +954,11 @@ def key_pair_destroy_all_by_user(context, user_id):
     authorize_user_context(context, user_id)
     session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update key_pairs set deleted=1 where user_id=:id',
-                        {'id': user_id})
+        session.query(models.KeyPair).\
+                     filter_by(user_id=user_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at': models.KeyPair.updated_at + 0})
 
 
 @require_context
@@ -1063,7 +1069,9 @@ def network_disassociate(context, network_id):
 @require_admin_context
 def network_disassociate_all(context):
     session = get_session()
-    session.execute('update networks set project_id=NULL')
+    session.query(models.Network).\
+                 update({'project_id': None,
+                         'updated_at': models.Network.updated_at + 0})
 
 
 @require_context
@@ -1433,15 +1441,17 @@ def volume_data_get_for_project(context, project_id):
 def volume_destroy(context, volume_id):
     session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update volumes set deleted=1 where id=:id',
-                        {'id': volume_id})
-        session.execute('update export_devices set volume_id=NULL '
-                        'where volume_id=:id',
-                        {'id': volume_id})
-        session.execute('update iscsi_targets set volume_id=NULL '
-                        'where volume_id=:id',
-                        {'id': volume_id})
+        session.query(models.Volume).\
+                     filter_by(id=volume_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at': models.Volume.updated_at + 0})
+        session.query(models.ExportDevice).\
+                     filter_by(volume_id=volume_id).\
+                     update({'volume_id': None})
+        session.query(models.IscsiTarget).\
+                     filter_by(volume_id=volume_id).\
+                     update({'volume_id': None})
 
 
 @require_admin_context
@@ -1661,17 +1671,26 @@ def security_group_create(context, values):
 def security_group_destroy(context, security_group_id):
     session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update security_groups set deleted=1 where id=:id',
-                        {'id': security_group_id})
-        session.execute('update security_group_instance_association '
-                        'set deleted=1,deleted_at=:at '
-                        'where security_group_id=:id',
-                        {'id': security_group_id,
-                         'at': datetime.datetime.utcnow()})
-        session.execute('update security_group_rules set deleted=1 '
-                        'where group_id=:id',
-                        {'id': security_group_id})
+        session.query(models.SecurityGroup).\
+                     filter_by(id=security_group_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at':
+                                 models.SecurityGroup.updated_at + 0})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                     filter_by(security_group_id=security_group_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at':
+                                 (models.SecurityGroupInstanceAssocation.
+                                  updated_at + 0)})
+        session.query(models.SecurityGroupIngressRule).\
+                     filter_by(group_id=security_group_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at':
+                                 (models.SecurityGroupIngressRule.
+                                  updated_at + 0)})
 
 
 @require_context
@@ -1679,9 +1698,17 @@ def security_group_destroy_all(context, session=None):
     if not session:
         session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update security_groups set deleted=1')
-        session.execute('update security_group_rules set deleted=1')
+        session.query(models.SecurityGroup).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at':
+                                 models.SecurityGroup.updated_at + 0})
+        session.query(models.SecurityGroupIngressRule).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at':
+                                 (models.SecurityGroupIngressRule.
+                                  updated_at + 0)})
 
 
 ###################
