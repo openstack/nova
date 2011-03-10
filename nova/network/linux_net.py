@@ -424,30 +424,30 @@ def _remove_rule(chain, *cmd):
 
 def _dnsmasq_cmd(net):
     """Builds dnsmasq command"""
-    cmd = ['sudo -E dnsmasq',
-           ' --strict-order',
-           ' --bind-interfaces',
-           ' --conf-file=',
-           ' --domain=%s' % FLAGS.dhcp_domain,
-           ' --pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
-           ' --listen-address=%s' % net['gateway'],
-           ' --except-interface=lo',
-           ' --dhcp-range=%s,static,120s' % net['dhcp_start'],
-           ' --dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
-           ' --dhcp-script=%s' % FLAGS.dhcpbridge,
-           ' --leasefile-ro']
+    cmd = ['sudo', '-E', 'dnsmasq',
+           '--strict-order',
+           '--bind-interfaces',
+           '--conf-file=',
+           '--domain=%s' % FLAGS.dhcp_domain,
+           '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
+           '--listen-address=%s' % net['gateway'],
+           '--except-interface=lo',
+           '--dhcp-range=%s,static,120s' % net['dhcp_start'],
+           '--dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
+           '--dhcp-script=%s' % FLAGS.dhcpbridge,
+           '--leasefile-ro']
     if FLAGS.dns_server:
-        cmd.append(' -h -R --server=%s' % FLAGS.dns_server)
-    return ''.join(cmd)
+        cmd += ['-h', '-R', '--server=%s' % FLAGS.dns_server]
+    return cmd
 
 
 def _ra_cmd(net):
     """Builds radvd command"""
-    cmd = ['sudo -E radvd',
-#           ' -u nobody',
-           ' -C %s' % _ra_file(net['bridge'], 'conf'),
-           ' -p %s' % _ra_file(net['bridge'], 'pid')]
-    return ''.join(cmd)
+    cmd = ['sudo', '-E', 'radvd',
+#           '-u', 'nobody',
+           '-C', '%s' % _ra_file(net['bridge'], 'conf'),
+           '-p', '%s' % _ra_file(net['bridge'], 'pid')]
+    return cmd
 
 
 def _stop_dnsmasq(network):
