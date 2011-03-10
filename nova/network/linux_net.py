@@ -216,7 +216,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         _execute('sudo', 'brctl', 'setfd', bridge, 0)
         # _execute("sudo brctl setageing %s 10" % bridge)
         _execute('sudo', 'brctl', 'stp', bridge, 'off')
-        _execute('sudo', 'ip', 'link', 'set', bridge, up)
+        _execute('sudo', 'ip', 'link', 'set', bridge, 'up')
     if net_attrs:
         # NOTE(vish): The ip for dnsmasq has to be the first address on the
         #             bridge for it to respond to reqests properly
