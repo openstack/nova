@@ -200,66 +200,66 @@ class QuotaTestCase(test.TestCase):
                                             image_id='fake',
                                             metadata=metadata)
 
-    def test_allowed_personality_files(self):
+    def test_allowed_onset_files(self):
         self.assertEqual(
-                quota.allowed_personality_files(self.context),
-                FLAGS.quota_personality_max_files)
+                quota.allowed_onset_files(self.context),
+                FLAGS.quota_max_onset_files)
 
-    def _create_with_personality(self, files):
+    def _create_with_onset_files(self, files):
         api = compute.API(image_service=self.StubImageService())
         api.create(self.context, min_count=1, max_count=1,
                 instance_type='m1.small', image_id='fake',
-                personality_files=files)
+                onset_files=files)
 
-    def test_no_personality_files(self):
+    def test_no_onset_files(self):
         api = compute.API(image_service=self.StubImageService())
         api.create(self.context, instance_type='m1.small', image_id='fake')
 
-    def test_max_personality_files(self):
+    def test_max_onset_files(self):
         files = []
-        for i in xrange(FLAGS.quota_personality_max_files):
+        for i in xrange(FLAGS.quota_max_onset_files):
             files.append(('/my/path%d' % i, 'config = test\n'))
-        self._create_with_personality(files)  # no QuotaError
+        self._create_with_onset_files(files)  # no QuotaError
 
-    def test_too_many_personality_files(self):
+    def test_too_many_onset_files(self):
         files = []
-        for i in xrange(FLAGS.quota_personality_max_files + 1):
+        for i in xrange(FLAGS.quota_max_onset_files + 1):
             files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
         self.assertRaises(quota.QuotaError,
-                          self._create_with_personality, files)
+                          self._create_with_onset_files, files)
 
-    def test_allowed_personality_content_bytes(self):
+    def test_allowed_onset_file_content_bytes(self):
         self.assertEqual(
-                quota.allowed_personality_content_bytes(self.context),
-                FLAGS.quota_personality_max_content_bytes)
+                quota.allowed_onset_file_content_bytes(self.context),
+                FLAGS.quota_max_onset_file_content_bytes)
 
-    def test_max_personality_content_bytes(self):
-        max = FLAGS.quota_personality_max_content_bytes
+    def test_max_onset_file_content_bytes(self):
+        max = FLAGS.quota_max_onset_file_content_bytes
         content = ''.join(['a' for i in xrange(max)])
         files = [('/test/path', content)]
-        self._create_with_personality(files)  # no QuotaError
+        self._create_with_onset_files(files)  # no QuotaError
 
-    def test_too_many_personality_content_bytes(self):
-        max = FLAGS.quota_personality_max_content_bytes
+    def test_too_many_onset_file_content_bytes(self):
+        max = FLAGS.quota_max_onset_file_content_bytes
         content = ''.join(['a' for i in xrange(max + 1)])
         files = [('/test/path', content)]
         self.assertRaises(quota.QuotaError,
-                          self._create_with_personality, files)
+                          self._create_with_onset_files, files)
 
-    def test_allowed_personality_path_bytes(self):
+    def test_allowed_onset_file_path_bytes(self):
         self.assertEqual(
-                quota.allowed_personality_path_bytes(self.context),
-                FLAGS.quota_personality_max_path_bytes)
+                quota.allowed_onset_file_path_bytes(self.context),
+                FLAGS.quota_max_onset_file_path_bytes)
 
-    def test_max_personality_path_bytes(self):
-        max = FLAGS.quota_personality_max_path_bytes
+    def test_max_onset_file_path_bytes(self):
+        max = FLAGS.quota_max_onset_file_path_bytes
         path = ''.join(['a' for i in xrange(max)])
         files = [(path, 'config = quotatest')]
-        self._create_with_personality(files)  # no QuotaError
+        self._create_with_onset_files(files)  # no QuotaError
 
-    def test_too_many_personality_path_bytes(self):
-        max = FLAGS.quota_personality_max_path_bytes
+    def test_too_many_onset_file_path_bytes(self):
+        max = FLAGS.quota_max_onset_file_path_bytes
         path = ''.join(['a' for i in xrange(max + 1)])
         files = [(path, 'config = quotatest')]
         self.assertRaises(quota.QuotaError,
-                          self._create_with_personality, files)
+                          self._create_with_onset_files, files)

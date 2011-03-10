@@ -169,20 +169,23 @@ class Controller(wsgi.Controller):
                 metadata.append({'key': k, 'value': v})
 
         personality = env['server'].get('personality', [])
-        personality_files = self._get_personality_files(personality)
+        onset_files = self._get_onset_files(personality)
 
-        instances = self.compute_api.create(
-            context,
-            instance_types.get_by_flavor_id(env['server']['flavorId']),
-            image_id,
-            kernel_id=kernel_id,
-            ramdisk_id=ramdisk_id,
-            display_name=env['server']['name'],
-            display_description=env['server']['name'],
-            key_name=key_pair['name'],
-            key_data=key_pair['public_key'],
-            metadata=metadata,
-            personality_files=personality_files)
+        try:
+            instances = self.compute_api.create(
+                context,
+                instance_types.get_by_flavor_id(env['server']['flavorId']),
+                image_id,
+                kernel_id=kernel_id,
+                ramdisk_id=ramdisk_id,
+                display_name=env['server']['name'],
+                display_description=env['server']['name'],
+                key_name=key_pair['name'],
+                key_data=key_pair['public_key'],
+                metadata=metadata,
+                onset_files=onset_files)
+        except QuotaError as error:
+            self._handle_quota_error(error)
 
         server = _translate_keys(instances[0])
         password = "%s%s" % (server['server']['name'][:4],
@@ -204,15 +207,15 @@ class Controller(wsgi.Controller):
         else:
             return self._deserialize(request.body, request.get_content_type())
 
-    def _get_personality_files(self, personality):
+    def _get_onset_files(self, personality):
         """
-        Create a list of personality files from the personality attribute
+        Create a list of onset files from the personality attribute
 
-        At this time, personality_files must be formatted as a list of
+        At this time, onset_files must be formatted as a list of
         (file_path, file_content) pairs for compatibility with the
         underlying compute service.
         """
-        personality_files = []
+        onset_files = []
         for item in personality:
             try:
                 path = item['path']
@@ -227,8 +230,24 @@ class Controller(wsgi.Controller):
             except TypeError:
                 msg = 'Personality content for %s cannot be decoded' % path
                 raise exc.HTTPBadRequest(explanation=msg)
-            personality_files.append((path, contents))
-        return personality_files
+            onset_files.append((path, contents))
+        return onset_files
+
+    def _handle_quota_errors(self, error):
+        """
+        Reraise quota errors as api-specific http exceptions
+        """
+        if error.code == "OnsetFileLimitExceeded":
+            expl = "Personality file limit exceeded"
+            raise exc.HTTPBadRequest(explanation=expl)
+        if error.code == "OnsetFilePathLimitExceeded":
+            expl = "Personality file path too long"
+            raise exc.HTTPBadRequest(explanation=expl)
+        if error.code == "OnsetFileContentLimitExceeded":
+            expl = "Personality file content too long"
+            raise exc.HTTPBadRequest(explanation=expl)
+        # if the original error is okay, just reraise it
+        raise error
 
     def update(self, req, id):
         """ Updates the server name or password """

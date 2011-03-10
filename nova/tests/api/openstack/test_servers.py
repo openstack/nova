@@ -833,13 +833,13 @@ class TestServerInstanceCreation(test.TestCase):
         class MockComputeAPI(object):
 
             def __init__(self):
-                self.personality_files = None
+                self.onset_files = None
 
             def create(self, *args, **kwargs):
-                if 'personality_files' in kwargs:
-                    self.personality_files = kwargs['personality_files']
+                if 'onset_files' in kwargs:
+                    self.onset_files = kwargs['onset_files']
                 else:
-                    self.personality_files = None
+                    self.onset_files = None
                 return [{'id': '1234', 'display_name': 'fakeinstance'}]
 
             def set_admin_password(self, *args, **kwargs):
@@ -919,46 +919,46 @@ class TestServerInstanceCreation(test.TestCase):
         request = self._get_create_request_json(body_dict)
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
-        return request, response, compute_api.personality_files
+        return request, response, compute_api.onset_files
 
     def _create_instance_with_personality_xml(self, personality):
         body_dict = self._create_personality_request_dict(personality)
         request = self._get_create_request_xml(body_dict)
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
-        return request, response, compute_api.personality_files
+        return request, response, compute_api.onset_files
 
     def test_create_instance_with_no_personality(self):
-        request, response, personality_files = \
+        request, response, onset_files = \
                 self._create_instance_with_personality_json(personality=None)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(personality_files, [])
+        self.assertEquals(onset_files, [])
 
     def test_create_instance_with_no_personality_xml(self):
-        request, response, personality_files = \
+        request, response, onset_files = \
                 self._create_instance_with_personality_xml(personality=None)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(personality_files, [])
+        self.assertEquals(onset_files, [])
 
     def test_create_instance_with_personality(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Hello, World!"\n'
         b64contents = base64.b64encode(contents)
         personality = [(path, b64contents)]
-        request, response, personality_files = \
+        request, response, onset_files = \
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(personality_files, [(path, contents)])
+        self.assertEquals(onset_files, [(path, contents)])
 
     def test_create_instance_with_personality_xml(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Hello, World!"\n'
         b64contents = base64.b64encode(contents)
         personality = [(path, b64contents)]
-        request, response, personality_files = \
+        request, response, onset_files = \
             self._create_instance_with_personality_xml(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(personality_files, [(path, contents)])
+        self.assertEquals(onset_files, [(path, contents)])
 
     def test_create_instance_with_personality_no_path(self):
         personality = [('/remove/this/path',
@@ -969,7 +969,7 @@ class TestServerInstanceCreation(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.personality_files, None)
+        self.assertEquals(compute_api.onset_files, None)
 
     def _test_create_instance_with_personality_no_path_xml(self):
         personality = [('/remove/this/path',
@@ -980,7 +980,7 @@ class TestServerInstanceCreation(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.personality_files, None)
+        self.assertEquals(compute_api.onset_files, None)
 
     def test_create_instance_with_personality_no_contents(self):
         personality = [('/test/path',
@@ -991,7 +991,7 @@ class TestServerInstanceCreation(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.personality_files, None)
+        self.assertEquals(compute_api.onset_files, None)
 
     def test_create_instance_with_personality_not_a_list(self):
         personality = [('/test/path', base64.b64encode('test\ncontents\n'))]
@@ -1002,16 +1002,16 @@ class TestServerInstanceCreation(test.TestCase):
         compute_api, response = \
             self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(compute_api.personality_files, None)
+        self.assertEquals(compute_api.onset_files, None)
 
     def test_create_instance_with_personality_with_non_b64_content(self):
         path = '/my/file/path'
         contents = '#!/bin/bash\necho "Oh no!"\n'
         personality = [(path, contents)]
-        request, response, personality_files = \
+        request, response, onset_files = \
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 400)
-        self.assertEquals(personality_files, None)
+        self.assertEquals(onset_files, None)
 
     def test_create_instance_with_three_personalities(self):
         files = [
@@ -1022,19 +1022,19 @@ class TestServerInstanceCreation(test.TestCase):
         personality = []
         for path, content in files:
             personality.append((path, base64.b64encode(content)))
-        request, response, personality_files = \
+        request, response, onset_files = \
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(personality_files, files)
+        self.assertEquals(onset_files, files)
 
     def test_create_instance_personality_empty_content(self):
         path = '/my/file/path'
         contents = ''
         personality = [(path, contents)]
-        request, response, personality_files = \
+        request, response, onset_files = \
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(personality_files, [(path, contents)])
+        self.assertEquals(onset_files, [(path, contents)])
 
     def test_create_instance_admin_pass_json(self):
         request, response, dummy = \
