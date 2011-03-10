@@ -579,16 +579,17 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     session = get_session()
     # NOTE(vish): The nested select is because sqlite doesn't support
     #             JOINs in UPDATEs.
-    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
-                                                  'leased = 0 '
-                             'WHERE network_id IN (SELECT id FROM networks '
-                                                  'WHERE host = :host) '
-                             'AND updated_at < :time '
-                             'AND instance_id IS NOT NULL '
-                             'AND allocated = 0',
-                    {'host': host,
-                     'time': time})
-    return result.rowcount
+    inner_q = session.query(models.Network.id).\
+                 filter_by(host=host).\
+                 subquery()
+    result = session.query(models.FixedIp).\
+                 filter(models.FixedIp.network_id.in_(inner_q)).\
+                 filter(models.FixedIp.updated_at < time).\
+                 filter(models.FixedIp.instance_id != None).\
+                 filter_by(allocated=0).\
+                 update({'instance_id': None,
+                         'leased': 0})
+    return result
 
 
 @require_admin_context
