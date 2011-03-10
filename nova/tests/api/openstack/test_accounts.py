@@ -14,9 +14,10 @@
 #    under the License.
 
 
+import json
+
 import stubout
 import webob
-import json
 
 import nova.api
 import nova.api.openstack.auth
@@ -47,8 +48,7 @@ class AccountsTest(test.TestCase):
                        fake_init)
         self.stubs.Set(nova.api.openstack.accounts.Controller, '_check_admin',
                        fake_admin_check)
-        fakes.FakeAuthManager.auth_data = {}
-        fakes.FakeAuthManager.projects = {}
+        fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 
 import stubout
 import webob
-import json
 
 import nova.api
 import nova.api.openstack.auth

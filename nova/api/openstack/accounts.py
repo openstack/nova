@@ -21,6 +21,7 @@ from nova import log as logging
 from nova import wsgi
 
 from nova.auth import manager
+from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.openstack')
@@ -44,10 +45,16 @@ class Controller(wsgi.Controller):
         self.manager = manager.AuthManager()
 
     def _check_admin(self, context):
-        """ We cannot depend on the db layer to check for admin access
-            for the auth manager, so we do it here """
+        """We cannot depend on the db layer to check for admin access
+           for the auth manager, so we do it here"""
         if not context.is_admin:
             raise exception.NotAuthorized(_("Not admin user."))
+
+    def index(self, req):
+        raise faults.Fault(exc.HTTPNotImplemented())
+
+    def detail(self, req):
+        raise faults.Fault(exc.HTTPNotImplemented())
 
     def show(self, req, id):
         """Return data about the given account id"""
@@ -59,8 +66,13 @@ class Controller(wsgi.Controller):
         self.manager.delete_project(id)
         return {}
 
+    def create(self, req):
+        """We use update with create-or-update semantics
+           because the id comes from an external source"""
+        raise faults.Fault(exc.HTTPNotImplemented())
+
     def update(self, req, id):
-        """ This is really create or update. """
+        """This is really create or update."""
         self._check_admin(req.environ['nova.context'])
         env = self._deserialize(req.body, req)
         description = env['account'].get('description')

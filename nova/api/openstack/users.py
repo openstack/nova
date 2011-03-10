@@ -45,8 +45,8 @@ class Controller(wsgi.Controller):
         self.manager = manager.AuthManager()
 
     def _check_admin(self, context):
-        """ We cannot depend on the db layer to check for admin access
-            for the auth manager, so we do it here """
+        """We cannot depend on the db layer to check for admin access
+           for the auth manager, so we do it here"""
         if not context.is_admin:
             raise exception.NotAuthorized(_("Not admin user"))
 

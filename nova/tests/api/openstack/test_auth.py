@@ -51,9 +51,7 @@ class Test(test.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'herp', None, None, None)
-        f.add_user('derp', u)
-        f.create_project('test', u)
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-User'] = 'herp'
@@ -67,9 +65,7 @@ class Test(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'herp', None, None, None)
-        f.add_user('derp', u)
-        f.create_project('test', u)
+        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
         req.headers['X-Auth-User'] = 'herp'
@@ -86,7 +82,7 @@ class Test(test.TestCase):
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouter',
             fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/test/fake')
+        req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '200 OK')
@@ -180,9 +176,6 @@ class TestLimiter(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'herp', None, None, None)
-        f.add_user('derp', u)
-        f.create_project('test', u)
         f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
@@ -194,7 +187,7 @@ class TestLimiter(test.TestCase):
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouter',
             fakes.FakeRouter)
-        req = webob.Request.blank('/v1.0/test/fake')
+        req = webob.Request.blank'/v1.0/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())
