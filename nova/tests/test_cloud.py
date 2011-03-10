@@ -353,6 +353,18 @@ class CloudTestCase(test.TestCase):
         self.assertEqual('', img.metadata['description'])
         shutil.rmtree(pathdir)
 
+    def test_metadata_works_without_kernel_and_ramdisk(self):
+        inst = db.instance_create(self.context, {'host': self.compute.host,
+                                                 'vcpus': 2,
+                                                 'image_id': '123456',
+                                                 'user_data': '' })
+        fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
+        try:
+            self.cloud.get_metadata(fixed)
+        finally:
+            self.network.deallocate_fixed_ip(self.context, fixed)
+            db.instance_destroy(self.context, inst['id'])
+
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
