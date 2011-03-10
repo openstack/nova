@@ -1682,7 +1682,7 @@ def security_group_destroy(context, security_group_id):
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
                              'updated_at':
-                                 (models.SecurityGroupInstanceAssocation.
+                                 (models.SecurityGroupInstanceAssociation.
                                   updated_at + 0)})
         session.query(models.SecurityGroupIngressRule).\
                      filter_by(group_id=security_group_id).\
