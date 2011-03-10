@@ -25,6 +25,7 @@ import webob.dec
 from paste import urlmap
 
 from glance import client as glance_client
+from glance.common import exception as glance_exc
 
 from nova import auth
 from nova import context
@@ -149,25 +150,26 @@ def stub_out_glance(stubs, initial_fixtures=None):
             for f in self.fixtures:
                 if f['id'] == image_id:
                     return f
-            return None
+            raise glance_exc.NotFound
 
-        def fake_add_image(self, image_meta):
+        def fake_add_image(self, image_meta, data=None):
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_meta['id'] = id
             self.fixtures.append(image_meta)
-            return id
+            return image_meta
 
-        def fake_update_image(self, image_id, image_meta):
+        def fake_update_image(self, image_id, image_meta, data=None):
             f = self.fake_get_image_meta(image_id)
             if not f:
-                raise exc.NotFound
+                raise glance_exc.NotFound
 
             f.update(image_meta)
+            return f
 
         def fake_delete_image(self, image_id):
             f = self.fake_get_image_meta(image_id)
             if not f:
-                raise exc.NotFound
+                raise glance_exc.NotFound
 
             self.fixtures.remove(f)
 
