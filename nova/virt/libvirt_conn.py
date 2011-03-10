@@ -463,7 +463,7 @@ class LibvirtConnection(object):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('sudo', 'chown', s.getuid(), console_log)
+        utils.execute('sudo', 'chown', os.getuid(), console_log)
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
