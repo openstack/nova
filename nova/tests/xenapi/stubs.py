@@ -231,6 +231,18 @@ class FakeSessionForMigrationTests(fake.SessionBase):
     def __init__(self, uri):
         super(FakeSessionForMigrationTests, self).__init__(uri)
 
+    def VDI_get_by_uuid(*args):
+        return 'hurr'
+
+    def VM_start(self, _1, ref, _2, _3):
+        vm = fake.get_record('VM', ref)
+        if vm['power_state'] != 'Halted':
+            raise fake.Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
+                                  vm['power_state']])
+        vm['power_state'] = 'Running'
+        vm['is_a_template'] = False
+        vm['is_control_domain'] = False
+
 
 def stub_out_migration_methods(stubs):
     def fake_get_snapshot(self, instance):
@@ -257,6 +269,9 @@ def stub_out_migration_methods(stubs):
     def fake_destroy(*args, **kwargs):
         pass
 
+    def fake_reset_network(*args, **kwargs):
+        pass
+
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
@@ -264,4 +279,5 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
     stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
+    stubs.Set(vmops.VMOps, 'reset_network', fake_reset_network)
     stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)

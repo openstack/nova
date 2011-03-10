@@ -44,9 +44,8 @@ import uuid
 from xml.dom import minidom
 
 
-from eventlet import greenthread
-from eventlet import event
 from eventlet import tpool
+from eventlet import semaphore
 
 import IPy
 
@@ -437,8 +436,10 @@ class LibvirtConnection(object):
 
         if virsh_output.startswith('/dev/'):
             LOG.info(_("cool, it's a device"))
-            out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
-                                     virsh_output, check_exit_code=False)
+            out, err = utils.execute('sudo', 'dd',
+                                     "if=%s" % virsh_output,
+                                     'iflag=nonblock',
+                                     check_exit_code=False)
             return out
         else:
             return ''
@@ -460,11 +461,11 @@ class LibvirtConnection(object):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('sudo chown %d %s' % (os.getuid(), console_log))
+        utils.execute('sudo', 'chown', s.getuid(), console_log)
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
-            virsh_output = utils.execute("virsh ttyconsole %s" %
+            virsh_output = utils.execute('virsh', 'ttyconsole',
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
@@ -481,9 +482,10 @@ class LibvirtConnection(object):
                 port = random.randint(int(start_port), int(end_port))
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
-                cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
-                stdout, stderr = utils.execute(cmd)
-                if stdout.strip() == 'free':
+                cmd = 'netcat', '0.0.0.0', port, '-w', '1'
+                try:
+                    stdout, stderr = utils.execute(*cmd, process_input='')
+                except ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
@@ -510,7 +512,10 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
-    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+    _image_sems = {}
+
+    @staticmethod
+    def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
@@ -529,14 +534,21 @@ class LibvirtConnection(object):
             if not os.path.exists(base_dir):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
-            if not os.path.exists(base):
-                fn(target=base, *args, **kwargs)
+
+            if fname not in LibvirtConnection._image_sems:
+                LibvirtConnection._image_sems[fname] = semaphore.Semaphore()
+            with LibvirtConnection._image_sems[fname]:
+                if not os.path.exists(base):
+                    fn(target=base, *args, **kwargs)
+            if not LibvirtConnection._image_sems[fname].locked():
+                del LibvirtConnection._image_sems[fname]
+
             if cow:
-                utils.execute('qemu-img create -f qcow2 -o '
-                              'cluster_size=2M,backing_file=%s %s'
-                              % (base, target))
+                utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
+                              'cluster_size=2M,backing_file=%s' % base,
+                              target)
             else:
-                utils.execute('cp %s %s' % (base, target))
+                utils.execute('cp', base, target)
 
     def _fetch_image(self, target, image_id, user, project, size=None):
         """Grab image and optionally attempt to resize it"""
@@ -546,7 +558,7 @@ class LibvirtConnection(object):
 
     def _create_local(self, target, local_gb):
         """Create a blank image of specified size"""
-        utils.execute('truncate %s -s %dG' % (target, local_gb))
+        utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
@@ -557,7 +569,7 @@ class LibvirtConnection(object):
                                 fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir -p %s' % basepath(suffix=''))
+        utils.execute('mkdir', '-p', basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
@@ -577,21 +589,23 @@ class LibvirtConnection(object):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
+            fname = '%08x' % int(disk_images['kernel_id'])
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
-                              fname=disk_images['kernel_id'],
+                              fname=fname,
                               image_id=disk_images['kernel_id'],
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
+                fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
-                                  fname=disk_images['ramdisk_id'],
+                                  fname=fname,
                                   image_id=disk_images['ramdisk_id'],
                                   user=user,
                                   project=project)
 
-        root_fname = disk_images['image_id']
+        root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
         if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
             size = None
@@ -642,7 +656,7 @@ class LibvirtConnection(object):
                         ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
-            utils.execute('sudo chown root %s' % basepath('disk'))
+            utils.execute('sudo', 'chown', 'root', basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
@@ -1222,16 +1236,18 @@ class IptablesFirewallDriver(FirewallDriver):
         self.apply_ruleset()
 
     def apply_ruleset(self):
-        current_filter, _ = self.execute('sudo iptables-save -t filter')
+        current_filter, _ = self.execute('sudo', 'iptables-save',
+                                         '-t', 'filter')
         current_lines = current_filter.split('\n')
         new_filter = self.modify_rules(current_lines, 4)
-        self.execute('sudo iptables-restore',
+        self.execute('sudo', 'iptables-restore',
                      process_input='\n'.join(new_filter))
         if(FLAGS.use_ipv6):
-            current_filter, _ = self.execute('sudo ip6tables-save -t filter')
+            current_filter, _ = self.execute('sudo', 'ip6tables-save',
+                                             '-t', 'filter')
             current_lines = current_filter.split('\n')
             new_filter = self.modify_rules(current_lines, 6)
-            self.execute('sudo ip6tables-restore',
+            self.execute('sudo', 'ip6tables-restore',
                          process_input='\n'.join(new_filter))
 
     def modify_rules(self, current_lines, ip_version=4):

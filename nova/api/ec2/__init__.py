@@ -53,7 +53,7 @@ flags.DEFINE_list('lockout_memcached_servers', None,
 class RequestLogging(wsgi.Middleware):
     """Access-Log akin logging for all EC2 API requests."""
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         start = utils.utcnow()
         rv = req.get_response(self.application)
@@ -112,7 +112,7 @@ class Lockout(wsgi.Middleware):
                                   debug=0)
         super(Lockout, self).__init__(application)
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         access_key = str(req.params['AWSAccessKeyId'])
         failures_key = "authfailures-%s" % access_key
@@ -141,7 +141,7 @@ class Authenticate(wsgi.Middleware):
 
     """Authenticate an EC2 request and add 'ec2.context' to WSGI environ."""
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         # Read request signature and access id.
         try:
@@ -190,7 +190,7 @@ class Requestify(wsgi.Middleware):
         super(Requestify, self).__init__(app)
         self.controller = utils.import_class(controller)()
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         non_args = ['Action', 'Signature', 'AWSAccessKeyId', 'SignatureMethod',
                     'SignatureVersion', 'Version', 'Timestamp']
@@ -275,7 +275,7 @@ class Authorizer(wsgi.Middleware):
             },
         }
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['ec2.context']
         controller = req.environ['ec2.request'].controller.__class__.__name__
@@ -309,7 +309,7 @@ class Executor(wsgi.Application):
     response, or a 400 upon failure.
     """
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         context = req.environ['ec2.context']
         api_request = req.environ['ec2.request']
@@ -371,7 +371,7 @@ class Executor(wsgi.Application):
 
 class Versions(wsgi.Application):
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         """Respond to a request for all EC2 versions."""
         # available api versions

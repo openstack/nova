@@ -133,10 +133,10 @@ class XVPConsoleProxy(object):
             return
         logging.debug(_("Starting xvp"))
         try:
-            utils.execute('xvp -p %s -c %s -l %s' %
-                          (FLAGS.console_xvp_pid,
-                           FLAGS.console_xvp_conf,
-                           FLAGS.console_xvp_log))
+            utils.execute('xvp',
+                          '-p', FLAGS.console_xvp_pid,
+                          '-c', FLAGS.console_xvp_conf,
+                          '-l', FLAGS.console_xvp_log)
         except exception.ProcessExecutionError, err:
             logging.error(_("Error starting xvp: %s") % err)
 
@@ -190,5 +190,5 @@ class XVPConsoleProxy(object):
             flag = '-x'
         #xvp will blow up on passwords that are too long (mdragon)
         password = password[:maxlen]
-        out, err = utils.execute('xvp %s' % flag, process_input=password)
+        out, err = utils.execute('xvp', flag, process_input=password)
         return out.strip()

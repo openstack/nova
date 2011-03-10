@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2011 OpenStack LLC.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,22 +16,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
-import webob
+from nova import exception
 
 
-def webob_factory(url):
-    """Factory for removing duplicate webob code from tests"""
+def ec2_id_to_id(ec2_id):
+    """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
+    try:
+        return int(ec2_id.split('-')[-1], 16)
+    except ValueError:
+        raise exception.NotFound(_("Id %s Not Found") % ec2_id)
 
-    base_url = url
 
-    def web_request(url, method=None, body=None):
-        req = webob.Request.blank("%s%s" % (base_url, url))
-        if method:
-            req.content_type = "application/json"
-            req.method = method
-        if body:
-            req.body = json.dumps(body)
-        return req
-    return web_request
+def id_to_ec2_id(instance_id, template='i-%08x'):
+    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
+    return template % instance_id
