@@ -41,8 +41,10 @@ from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi.volume_utils import StorageError
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -347,7 +349,7 @@ class VMHelper(HelperBase):
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
-        os_type = instance.os_type and instance.os_type or 'linux'
+        os_type = instance.os_type or FLAGS.default_os_type
 
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
