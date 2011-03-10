@@ -77,17 +77,17 @@ class S3ImageService(service.BaseImageService):
         # FIXME(vish): detail doesn't filter so we do it manually
         return self._filter(context, images)
 
-    @staticmethod
-    def _is_visible(context, image):
+    @classmethod
+    def _is_visible(cls, context, image):
         return (context.is_admin
                 or context.project_id == image['properties']['owner_id']
                 or image['properties']['is_public'] == 'True')
 
-    @staticmethod
-    def _filter(context, images):
+    @classmethod
+    def _filter(cls, context, images):
         filtered = []
         for image in images:
-            if not S3ImageService._is_visible(context, image):
+            if not cls._is_visible(context, image):
                 continue
             filtered.append(image)
         return filtered
@@ -148,7 +148,7 @@ class S3ImageService(service.BaseImageService):
                 image_format = 'aki'
                 image_type = 'kernel'
                 kernel_id = None
-        except:
+        except Exception:
             kernel_id = None
 
         try:
@@ -157,12 +157,12 @@ class S3ImageService(service.BaseImageService):
                 image_format = 'ari'
                 image_type = 'ramdisk'
                 ramdisk_id = None
-        except:
+        except Exception:
             ramdisk_id = None
 
         try:
             arch = manifest.find("machine_configuration/architecture").text
-        except:
+        except Exception:
             arch = 'x86_64'
 
         properties = metadata['properties']
@@ -235,7 +235,7 @@ class S3ImageService(service.BaseImageService):
 
     @staticmethod
     def _decrypt_image(encrypted_filename, encrypted_key, encrypted_iv,
-                      cloud_private_key, decrypted_filename):
+                       cloud_private_key, decrypted_filename):
         key, err = utils.execute(
                 'openssl rsautl -decrypt -inkey %s' % cloud_private_key,
                 process_input=encrypted_key,

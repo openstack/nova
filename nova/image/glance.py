@@ -74,7 +74,7 @@ class GlanceImageService(service.BaseImageService):
             if name == cantidate.get('name'):
                 image = cantidate
                 break
-        if image == None:
+        if image is None:
             raise exception.NotFound
         return image
 
