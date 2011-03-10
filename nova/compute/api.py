@@ -81,6 +81,11 @@ class API(base.Base):
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
     def _check_personality_file_quota(self, context, personality_files):
+        """
+        Enforce quota limits on personality files
+
+        Raises a QuotaError if any limit is exceeded
+        """
         limit = quota.allowed_personality_files(context)
         if len(personality_files) > limit:
             raise quota.QuotaError(_("Personality limit exceeded. You can "
