@@ -99,11 +99,18 @@ class TestOpenStackClient(object):
         if self.auth_result:
             return self.auth_result
 
+        auth_uri = self.auth_uri
         headers = {'X-Auth-User': self.auth_user,
                    'X-Auth-Key': self.auth_key}
-        response = self.request(self.auth_uri,
+        response = self.request(auth_uri,
                                 headers=headers)
-        if not response.status in [204]:
+        
+        http_status = response.status
+        LOG.debug(_("%(auth_uri)s => code %(http_status)s") % locals())
+
+        # Until bug732866 is fixed, we can't check this properly...
+        #if http_status == 401:
+        if http_status != 204:
             raise OpenstackApiAuthenticationException(response=response)
 
         auth_headers = {}
@@ -116,21 +123,21 @@ class TestOpenStackClient(object):
     def api_request(self, relative_uri, check_response_status=None, **kwargs):
         auth_result = self._authenticate()
 
-        base_uri = auth_result['X-Server-Management-Url']
+        #NOTE(justinsb): httplib 'helpfully' converts headers to lower case
+        base_uri = auth_result['x-server-management-url']
         full_uri = base_uri + relative_uri
 
         headers = kwargs.setdefault('headers', {})
-        headers['X-Auth-Token'] = auth_result['X-Auth-Token']
-
-        LOG.debug(_("HTTP request on %s") % (relative_uri))
+        headers['X-Auth-Token'] = auth_result['x-auth-token']
 
         response = self.request(full_uri, **kwargs)
-
-        LOG.debug(_("Response => code %s") % (response.status))
+        
+        http_status = response.status
+        LOG.debug(_("%(relative_uri)s => code %(http_status)s") % locals())
 
         if check_response_status:
-            if not response.status in check_response_status:
-                if response.status == 404:
+            if not http_status in check_response_status:
+                if http_status == 404:
                     raise OpenstackApiNotFoundException(response=response)
                 else:
                     raise OpenstackApiException(
@@ -202,8 +209,9 @@ class TestOpenStackClient(object):
     def get_image(self, image_id):
         return self.api_get('/images/%s' % image_id)['image']
 
-    def get_images_detail(self):
-        return self.api_get('/images/detail')['images']
+    def get_images(self, detail=True):
+        rel_url = '/images/detail' if detail else '/images'
+        return self.api_get(rel_url)['images']
 
     def post_image(self, image):
         return self.api_post('/images', image)['image']
@@ -214,8 +222,9 @@ class TestOpenStackClient(object):
     def get_flavor(self, flavor_id):
         return self.api_get('/flavors/%s' % flavor_id)['flavor']
 
-    def get_flavors_detail(self):
-        return self.api_get('/flavors/detail')['flavors']
+    def get_flavors(self, detail=True):
+        rel_url = '/flavors/detail' if detail else '/flavors'
+        return self.api_get(rel_url)['flavors']
 
     def post_flavor(self, flavor):
         return self.api_post('/flavors', flavor)['flavor']
