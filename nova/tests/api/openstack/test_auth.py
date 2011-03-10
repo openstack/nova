@@ -187,7 +187,7 @@ class TestLimiter(test.TestCase):
         token = result.headers['X-Auth-Token']
         self.stubs.Set(nova.api.openstack, 'APIRouter',
             fakes.FakeRouter)
-        req = webob.Request.blank'/v1.0/fake')
+        req = webob.Request.blank('/v1.0/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())
