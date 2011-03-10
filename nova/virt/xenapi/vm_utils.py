@@ -90,7 +90,7 @@ class VMHelper(HelperBase):
                                 get_instance_type(instance.instance_type)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
-        rec = {
+        vm_rec = {
             'name_label': instance.name,
             'name_description': '',
             'is_a_template': False,
@@ -122,23 +122,23 @@ class VMHelper(HelperBase):
         #Complete VM configuration record according to the image type
         #non-raw/raw with PV kernel/raw in HVM mode
         if instance.kernel_id:
-            rec['PV_bootloader'] = ''
-            rec['PV_kernel'] = kernel
-            rec['PV_ramdisk'] = ramdisk
-            rec['PV_args'] = 'root=/dev/xvda1'
-            rec['PV_bootloader_args'] = ''
-            rec['PV_legacy_args'] = ''
+            vm_rec['PV_bootloader'] = ''
+            vm_rec['PV_kernel'] = kernel
+            vm_rec['PV_ramdisk'] = ramdisk
+            vm_rec['PV_args'] = 'root=/dev/xvda1'
+            vm_rec['PV_bootloader_args'] = ''
+            vm_rec['PV_legacy_args'] = ''
         else:
             if pv_kernel:
-                rec['PV_args'] = 'noninteractive'
-                rec['PV_bootloader'] = 'pygrub'
+                vm_rec['PV_args'] = 'noninteractive'
+                vm_rec['PV_bootloader'] = 'pygrub'
             else:
-                rec['HVM_boot_policy'] = 'BIOS order'
-                rec['HVM_boot_params'] = {'order': 'dc'}
-                rec['platform'] = {'acpi': 'true', 'apic': 'true',
+                vm_rec['HVM_boot_policy'] = 'BIOS order'
+                vm_rec['HVM_boot_params'] = {'order': 'dc'}
+                vm_rec['platform'] = {'acpi': 'true', 'apic': 'true',
                                    'pae': 'true', 'viridian': 'true'}
         LOG.debug(_('Created VM %s...'), instance.name)
-        vm_ref = session.call_xenapi('VM.create', rec)
+        vm_ref = session.call_xenapi('VM.create', vm_rec)
         instance_name = instance.name
         LOG.debug(_('Created VM %(instance_name)s as %(vm_ref)s.') % locals())
         return vm_ref
