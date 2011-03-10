@@ -1,4 +1,4 @@
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -18,6 +18,7 @@ import common
 from nova import flags
 from nova import wsgi
 from nova import db
+from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
@@ -32,6 +33,10 @@ def _filter_keys(item, keys):
     return dict((k, v) for k, v in item.iteritems() if k in keys)
 
 
+def _exclude_keys(item, keys):
+    return dict((k, v) for k, v in item.iteritems() if k not in keys)
+
+
 def _scrub_zone(zone):
     return _filter_keys(zone, ('id', 'api_url'))
 
@@ -41,18 +46,29 @@ class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "zone": ["id", "api_url"]}}}
+                "zone": ["id", "api_url", "name", "capabilities"]}}}
 
     def index(self, req):
         """Return all zones in brief"""
-        items = db.zone_get_all(req.environ['nova.context'])
+        # Ask the ZoneManager in the Scheduler for most recent data,
+        # or fall-back to the database ...
+        items = api.API().get_zone_list(req.environ['nova.context'])
+        if not items:
+            items = db.zone_get_all(req.environ['nova.context'])
+
         items = common.limited(items, req)
-        items = [_scrub_zone(item) for item in items]
+        items = [_exclude_keys(item, ['username', 'password'])
+                      for item in items]
         return dict(zones=items)
 
     def detail(self, req):
         """Return all zones in detail"""
         return self.index(req)
+
+    def info(self, req):
+        """Return name and capabilities for this zone."""
+        return dict(zone=dict(name=FLAGS.zone_name,
+                    capabilities=FLAGS.zone_capabilities))
 
     def show(self, req, id):
         """Return data about the given zone id"""
