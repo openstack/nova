@@ -20,14 +20,11 @@ Utility functions for ESX Networking
 """
 
 from nova import log as logging
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
-from nova.virt.vmwareapi.vim import VimException
 
 LOG = logging.getLogger("nova.virt.vmwareapi.network_utils")
-
-PORT_GROUP_EXISTS_EXCEPTION = \
-        'The specified key, name, or identifier already exists.'
 
 
 class NetworkHelper:
@@ -38,7 +35,13 @@ class NetworkHelper:
         argument. """
         datacenters = session._call_method(vim_util, "get_objects",
                     "Datacenter", ["network"])
-        vm_networks = datacenters[0].propSet[0].val.ManagedObjectReference
+        vm_networks_ret = datacenters[0].propSet[0].val
+        #Meaning there are no networks on the host. suds responds with a ""
+        #in the parent property field rather than a [] in the
+        #ManagedObjectRefernce property field of the parent
+        if not vm_networks_ret:
+            return None
+        vm_networks = vm_networks_ret.ManagedObjectReference
         networks = session._call_method(vim_util,
                            "get_properites_for_a_collection_of_objects",
                            "Network", vm_networks, ["summary.name"])
@@ -54,9 +57,14 @@ class NetworkHelper:
         #Get the list of vSwicthes on the Host System
         host_mor = session._call_method(vim_util, "get_objects",
              "HostSystem")[0].obj
-        vswitches = session._call_method(vim_util,
+        vswitches_ret = session._call_method(vim_util,
                     "get_dynamic_property", host_mor,
-                    "HostSystem", "config.network.vswitch").HostVirtualSwitch
+                    "HostSystem", "config.network.vswitch")
+        #Meaning there are no vSwitches on the host. Shouldn't be the case,
+        #but just doing code check
+        if not vswitches_ret:
+            return
+        vswitches = vswitches_ret.HostVirtualSwitch
         #Get the vSwitch associated with the network adapter
         for elem in vswitches:
             try:
@@ -71,9 +79,13 @@ class NetworkHelper:
         """ Checks if the vlan_inteface exists on the esx host """
         host_net_system_mor = session._call_method(vim_util, "get_objects",
              "HostSystem", ["configManager.networkSystem"])[0].propSet[0].val
-        physical_nics = session._call_method(vim_util,
+        physical_nics_ret = session._call_method(vim_util,
                     "get_dynamic_property", host_net_system_mor,
-                    "HostNetworkSystem", "networkInfo.pnic").PhysicalNic
+                    "HostNetworkSystem", "networkInfo.pnic")
+        #Meaning there are no physical nics on the host
+        if not physical_nics_ret:
+            return False
+        physical_nics = physical_nics_ret.PhysicalNic
         for pnic in physical_nics:
             if vlan_interface == pnic.device:
                 return True
@@ -84,9 +96,15 @@ class NetworkHelper:
         """ Get the vlan id and vswicth associated with the port group """
         host_mor = session._call_method(vim_util, "get_objects",
              "HostSystem")[0].obj
-        port_grps_on_host = session._call_method(vim_util,
+        port_grps_on_host_ret = session._call_method(vim_util,
                     "get_dynamic_property", host_mor,
-                    "HostSystem", "config.network.portgroup").HostPortGroup
+                    "HostSystem", "config.network.portgroup")
+        if not port_grps_on_host_ret:
+            excep = ("ESX SOAP server returned an empty port group "
+                    "for the host system in its response")
+            LOG.exception(excep)
+            raise Exception(_(excep))
+        port_grps_on_host = port_grps_on_host_ret.HostPortGroup
         for p_gp in port_grps_on_host:
             if p_gp.spec.name == pg_name:
                 p_grp_vswitch_name = p_gp.vswitch.split("-")[-1]
@@ -113,13 +131,13 @@ class NetworkHelper:
             session._call_method(session._get_vim(),
                     "AddPortGroup", network_system_mor,
                     portgrp=add_prt_grp_spec)
-        except VimException, exc:
+        except error_util.VimFaultException, exc:
             #There can be a race condition when two instances try
             #adding port groups at the same time. One succeeds, then
             #the other one will get an exception. Since we are
             #concerned with the port group being created, which is done
             #by the other call, we can ignore the exception.
-            if str(exc).find(PORT_GROUP_EXISTS_EXCEPTION) == -1:
+            if error_util.FAULT_ALREADY_EXISTS not in exc.fault_list:
                 raise Exception(exc)
         LOG.debug(_("Created Port Group with name %s on "
                     "the ESX host") % pg_name)

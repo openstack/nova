@@ -40,6 +40,7 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
@@ -60,7 +61,7 @@ flags.DEFINE_string('vmwareapi_host_password',
                     'Password for connection to VMWare ESX host.'
                     'Used only if connection_type is vmwareapi.')
 flags.DEFINE_float('vmwareapi_task_poll_interval',
-                   1.0,
+                   5.0,
                    'The interval used for polling of remote tasks '
                    'Used only if connection_type is vmwareapi')
 flags.DEFINE_float('vmwareapi_api_retry_count',
@@ -264,13 +265,19 @@ class VMWareAPISession(object):
 
                 ret_val = temp_module(*args, **kwargs)
                 return ret_val
-            except vim.SessionFaultyException, excep:
+            except error_util.VimFaultException, excep:
                 # If it is a Session Fault Exception, it may point
                 # to a session gone bad. So we try re-creating a session
                 # and then proceeding ahead with the call.
                 exc = excep
-                self._create_session()
-            except vim.SessionOverLoadException, excep:
+                if error_util.FAULT_NOT_AUTHENTICATED in excep.fault_list:
+                    self._create_session()
+                else:
+                    #No re-trying for errors for API call has gone through
+                    #and is the caller's fault. Caller should handle these
+                    #errors. e.g, InvalidArgument fault.
+                    break
+            except error_util.SessionOverLoadException, excep:
                 # For exceptions which may come because of session overload,
                 # we retry
                 exc = excep
@@ -288,7 +295,7 @@ class VMWareAPISession(object):
 
         LOG.critical(_("In vmwareapi:_call_method, "
                      "got this exception: %s") % exc)
-        raise Exception(exc)
+        raise
 
     def _get_vim(self):
         """Gets the VIM object reference"""
@@ -301,11 +308,11 @@ class VMWareAPISession(object):
         The task is polled until it completes.
         """
         done = event.Event()
-        self.loop = utils.LoopingCall(self._poll_task, instance_id, task_ref,
+        loop = utils.LoopingCall(self._poll_task, instance_id, task_ref,
                                       done)
-        self.loop.start(FLAGS.vmwareapi_task_poll_interval, now=True)
+        loop.start(FLAGS.vmwareapi_task_poll_interval, now=True)
         ret_val = done.wait()
-        self.loop.stop()
+        loop.stop()
         return ret_val
 
     def _poll_task(self, instance_id, task_ref, done):

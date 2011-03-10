@@ -119,7 +119,7 @@ class VMRCSessionConsole(VMRCConsole):
             vim_session._get_vim(),
             "AcquireCloneTicket",
             vim_session._get_vim().get_service_content().sessionManager)
-        return str(vm_ref) + ":" + virtual_machine_ticket
+        return str(vm_ref.value) + ":" + virtual_machine_ticket
 
     def is_otp(self):
         """Is one time password."""

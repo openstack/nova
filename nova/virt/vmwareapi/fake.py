@@ -25,7 +25,7 @@ import uuid
 from nova import exception
 from nova import log as logging
 from nova.virt.vmwareapi import vim
-from nova.virt.vmwareapi.vim import SessionFaultyException
+from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
@@ -500,7 +500,7 @@ class FakeVim(object):
                 "out: %s") % s)
         del _db_content['session'][s]
 
-    def _terminate(self, *args, **kwargs):
+    def _terminate_session(self, *args, **kwargs):
         """ Terminates a session """
         s = kwargs.get("sessionId")[0]
         if s not in _db_content['session']:
@@ -512,7 +512,9 @@ class FakeVim(object):
         if (self._session is None or self._session not in
                  _db_content['session']):
             LOG.debug(_("Session is faulty"))
-            raise SessionFaultyException(_("Session Invalid"))
+            raise error_util.VimFaultException(
+                               [error_util.FAULT_NOT_AUTHENTICATED],
+                               _("Session Invalid"))
 
     def _create_vm(self, method, *args, **kwargs):
         """ Creates and registers a VM object with the Host System """
@@ -656,8 +658,9 @@ class FakeVim(object):
             return lambda *args, **kwargs: self._login()
         elif attr_name == "Logout":
             self._logout()
-        elif attr_name == "Terminate":
-            return lambda *args, **kwargs: self._terminate(*args, **kwargs)
+        elif attr_name == "TerminateSession":
+            return lambda *args, **kwargs: self._terminate_session(
+                                               *args, **kwargs)
         elif attr_name == "CreateVM_Task":
             return lambda *args, **kwargs: self._create_vm(attr_name,
                                                 *args, **kwargs)

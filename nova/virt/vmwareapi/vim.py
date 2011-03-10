@@ -21,11 +21,13 @@ Classes for making VMware VI SOAP calls
 
 import httplib
 
+from suds import WebFault
 from suds.client import Client
 from suds.plugin import MessagePlugin
 from suds.sudsobject import Property
 
 from nova import flags
+from nova.virt.vmwareapi import error_util
 
 RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml'
 CONN_ABORT_ERROR = 'Software caused connection abort'
@@ -38,33 +40,6 @@ flags.DEFINE_string('vmwareapi_wsdl_loc',
                    'E.g http://<server>/vimService.wsdl'
                    'Due to a bug in vSphere ESX 4.1 default wsdl'
                    'Read the readme for vmware to setup')
-
-
-class VimException(Exception):
-    """The VIM Exception class"""
-
-    def __init__(self, exception_summary, excep):
-        Exception.__init__(self)
-        self.exception_summary = exception_summary
-        self.exception_obj = excep
-
-    def __str__(self):
-        return self.exception_summary + str(self.exception_obj)
-
-
-class SessionOverLoadException(VimException):
-    """Session Overload Exception"""
-    pass
-
-
-class SessionFaultyException(VimException):
-    """Session Faulty Exception"""
-    pass
-
-
-class VimAttributeError(VimException):
-    """VI Attribute Error"""
-    pass
 
 
 class VIMMessagePlugin(MessagePlugin):
@@ -133,29 +108,49 @@ class Vim:
                     request_mo = \
                         self._request_managed_object_builder(managed_object)
                     request = getattr(self.client.service, attr_name)
-                    return request(request_mo, **kwargs)
+                    response = request(request_mo, **kwargs)
+                    #To check for the faults that are part of the message body
+                    #and not returned as Fault object response from the ESX
+                    #SOAP server
+                    if hasattr(error_util.FaultCheckers,
+                                    attr_name.lower() + "_fault_checker"):
+                        fault_checker = getattr(error_util.FaultCheckers,
+                                    attr_name.lower() + "_fault_checker")
+                        fault_checker(response)
+                    return response
+                #Catch the VimFaultException that is raised by the fault
+                #check of the SOAP response
+                except error_util.VimFaultException, excep:
+                    raise
+                except WebFault, excep:
+                    doc = excep.document
+                    detail = doc.childAtPath("/Envelope/Body/Fault/detail")
+                    fault_list = []
+                    for child in detail.getChildren():
+                        fault_list.append(child.get("type"))
+                    raise error_util.VimFaultException(fault_list, excep)
                 except AttributeError, excep:
-                    raise VimAttributeError(_("No such SOAP method '%s'"
-                         " provided by VI SDK") % (attr_name), excep)
+                    raise error_util.VimAttributeError(_("No such SOAP method "
+                         "'%s' provided by VI SDK") % (attr_name), excep)
                 except (httplib.CannotSendRequest,
                         httplib.ResponseNotReady,
                         httplib.CannotSendHeader), excep:
-                    raise SessionOverLoadException(_("httplib error in"
-                                    " %s: ") % (attr_name), excep)
+                    raise error_util.SessionOverLoadException(_("httplib "
+                                    "error in %s: ") % (attr_name), excep)
                 except Exception, excep:
                     # Socket errors which need special handling for they
                     # might be caused by ESX API call overload
                     if (str(excep).find(ADDRESS_IN_USE_ERROR) != -1 or
                         str(excep).find(CONN_ABORT_ERROR)) != -1:
-                        raise SessionOverLoadException(_("Socket error in"
-                                    " %s: ") % (attr_name), excep)
+                        raise error_util.SessionOverLoadException(_("Socket "
+                                    "error in %s: ") % (attr_name), excep)
                     # Type error that needs special handling for it might be
                     # caused by ESX host API call overload
                     elif str(excep).find(RESP_NOT_XML_ERROR) != -1:
-                        raise SessionOverLoadException(_("Type error in "
-                                    " %s: ") % (attr_name), excep)
+                        raise error_util.SessionOverLoadException(_("Type "
+                                    "error in  %s: ") % (attr_name), excep)
                     else:
-                        raise VimException(
+                        raise error_util.VimException(
                            _("Exception in %s ") % (attr_name), excep)
             return vim_request_handler
 

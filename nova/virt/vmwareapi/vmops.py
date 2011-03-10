@@ -373,10 +373,15 @@ class VMWareVMOps(object):
         def _check_if_tmp_folder_exists():
             #Copy the contents of the VM that were there just before the
             #snapshot was taken
-            ds_ref = vim_util.get_dynamic_property(self._session._get_vim(),
-                                      vm_ref,
-                                      "VirtualMachine",
-                                      "datastore").ManagedObjectReference[0]
+            ds_ref_ret = vim_util.get_dynamic_property(
+                                    self._session._get_vim(),
+                                    vm_ref,
+                                    "VirtualMachine",
+                                    "datastore")
+            if not ds_ref_ret:
+                raise Exception(_("Failed to get the datastore reference(s) "
+                                  "which the VM uses"))
+            ds_ref = ds_ref_ret.ManagedObjectReference[0]
             ds_browser = vim_util.get_dynamic_property(
                                        self._session._get_vim(),
                                        ds_ref,
