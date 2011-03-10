@@ -701,11 +701,21 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        session.query(models.Instance).\
-                     filter_by(id=instance_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': models.Instance.updated_at + 0})
+        session.execute('update instances set deleted=1,'
+                        'deleted_at=:at where id=:id',
+                        {'id': instance_id,
+                         'at': datetime.datetime.utcnow()})
+        # NOTE(klmitch): for some reason, using the SQLAlchemy code
+        # here instead of the direct SQL update above causes the
+        # test_run_terminate_timestamps test (and only that one) to
+        # fail with an obscure TypeError exception from deep within
+        # SQLAlchemy; the nearest nova function in the traceback is
+        # instance_get()
+        # session.query(models.Instance).\
+        #              filter_by(id=instance_id).\
+        #              update({'deleted': 1,
+        #                      'deleted_at': datetime.datetime.utcnow(),
+        #                      'updated_at': models.Instance.updated_at + 0})
         session.query(models.SecurityGroupInstanceAssociation).\
                      filter_by(instance_id=instance_id).\
                      update({'deleted': 1,
@@ -1837,12 +1847,15 @@ def user_create(_context, values):
 def user_delete(context, id):
     session = get_session()
     with session.begin():
-        session.execute('delete from user_project_association '
-                        'where user_id=:id', {'id': id})
-        session.execute('delete from user_role_association '
-                        'where user_id=:id', {'id': id})
-        session.execute('delete from user_project_role_association '
-                        'where user_id=:id', {'id': id})
+        session.query(models.UserProjectAssociation).\
+                     filter_by(user_id=id).\
+                     delete()
+        session.query(models.UserRoleAssociation).\
+                     filter_by(user_id=id).\
+                     delete()
+        session.query(models.UserProjectRoleAssociation).\
+                     filter_by(user_id=id).\
+                     delete()
         user_ref = user_get(context, id, session=session)
         session.delete(user_ref)
 
@@ -1933,10 +1946,12 @@ def project_update(context, project_id, values):
 def project_delete(context, id):
     session = get_session()
     with session.begin():
-        session.execute('delete from user_project_association '
-                        'where project_id=:id', {'id': id})
-        session.execute('delete from user_project_role_association '
-                        'where project_id=:id', {'id': id})
+        session.query(models.UserProjectAssociation).\
+                     filter_by(project_id=id).\
+                     delete()
+        session.query(models.UserProjectRoleAssociation).\
+                     filter_by(project_id=id).\
+                     delete()
         project_ref = project_get(context, id, session=session)
         session.delete(project_ref)
 
@@ -1961,11 +1976,11 @@ def user_get_roles_for_project(context, user_id, project_id):
 def user_remove_project_role(context, user_id, project_id, role):
     session = get_session()
     with session.begin():
-        session.execute('delete from user_project_role_association where '
-                        'user_id=:user_id and project_id=:project_id and '
-                        'role=:role', {'user_id': user_id,
-                                       'project_id': project_id,
-                                       'role': role})
+        session.query(models.UserProjectRoleAssociation).\
+                     filter_by(user_id=user_id).\
+                     filter_by(project_id=project_id).\
+                     filter_by(role=role).\
+                     delete()
 
 
 def user_remove_role(context, user_id, role):
@@ -2116,8 +2131,9 @@ def console_delete(context, console_id):
     session = get_session()
     with session.begin():
         # consoles are meant to be transient. (mdragon)
-        session.execute('delete from consoles '
-                        'where id=:id', {'id': console_id})
+        session.query(models.Console).\
+                     filter_by(id=console_id).\
+                     delete()
 
 
 def console_get_by_pool_instance(context, pool_id, instance_id):
@@ -2273,8 +2289,9 @@ def zone_update(context, zone_id, values):
 def zone_delete(context, zone_id):
     session = get_session()
     with session.begin():
-        session.execute('delete from zones '
-                        'where id=:id', {'id': zone_id})
+        session.query(models.Zone).\
+                     filter_by(id=zone_id).\
+                     delete()
 
 
 @require_admin_context
