@@ -348,7 +348,7 @@ DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
 # The service to use for image search and retrieval
-DEFINE_string('image_service', 'nova.image.s3.S3ImageService',
+DEFINE_string('image_service', 'nova.image.local.LocalImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),
@@ -356,3 +356,7 @@ DEFINE_string('host', socket.gethostname(),
 
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
+
+DEFINE_string('zone_name', 'nova', 'name of this zone')
+DEFINE_string('zone_capabilities', 'kypervisor:xenserver;os:linux',
+              'Key/Value tags which represent capabilities of this zone')

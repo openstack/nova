@@ -218,7 +218,7 @@ class ServersTest(test.TestCase):
 
     def test_create_instance(self):
         def instance_create(context, inst):
-            return {'id': '1', 'display_name': ''}
+            return {'id': '1', 'display_name': 'server_test'}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -259,8 +259,15 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
+        req.headers["Content-Type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual('serv', server['adminPass'][:4])
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual('1', server['id'])
 
         self.assertEqual(res.status_int, 200)
 
