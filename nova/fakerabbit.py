@@ -48,7 +48,6 @@ class Exchange(object):
         nm = self.name
         LOG.debug(_('(%(nm)s) publish (key: %(routing_key)s)'
                 ' %(message)s') % locals())
-        routing_key = routing_key.split('.')[0]
         if routing_key in self._routes:
             for f in self._routes[routing_key]:
                 LOG.debug(_('Publishing to route %s'), f)
