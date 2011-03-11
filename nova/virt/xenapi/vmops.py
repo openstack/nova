@@ -536,10 +536,10 @@ class VMOps(object):
         """
         instance_id = instance.id
         LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
-        vm = VMHelper.lookup(self._session, instance.name)
-        return self._destroy(instance, vm, shutdown=True)
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+        return self._destroy(instance, vm_ref, shutdown=True)
 
-    def _destroy(self, instance, vm, shutdown=True,
+    def _destroy(self, instance, vm_ref, shutdown=True,
                  destroy_kernel_ramdisk=True):
         """
         Destroys VM instance by performing:
@@ -549,17 +549,17 @@ class VMOps(object):
             3. Destroying kernel and ramdisk files (if necessary)
             4. Destroying that actual VM record
         """
-        if vm is None:
+        if vm_ref is None:
             LOG.warning(_("VM is not present, skipping destroy..."))
             return
 
         if shutdown:
-            self._shutdown(instance, vm)
+            self._shutdown(instance, vm_ref)
 
-        self._destroy_vdis(instance, vm)
+        self._destroy_vdis(instance, vm_ref)
         if destroy_kernel_ramdisk:
-            self._destroy_kernel_ramdisk(instance, vm)
-        self._destroy_vm(instance, vm)
+            self._destroy_kernel_ramdisk(instance, vm_ref)
+        self._destroy_vm(instance, vm_ref)
 
     def _wait_with_callback(self, instance_id, task, callback):
         ret = None
