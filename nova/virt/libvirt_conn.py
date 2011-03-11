@@ -1243,7 +1243,7 @@ class IptablesFirewallDriver(FirewallDriver):
             self.iptables.apply()
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
-                   'filtered'), instance['id'])
+                     'filtered'), instance['id'])
 
     def prepare_instance_filter(self, instance):
         self.instances[instance['id']] = instance
