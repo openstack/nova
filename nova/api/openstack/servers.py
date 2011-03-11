@@ -39,9 +39,41 @@ LOG = logging.getLogger('server')
 FLAGS = flags.FLAGS
 
 
-def _translate_detail_keys(req, inst):
+def _translate_keys(req, inst):
+    """ Coerces into dictionary format, excluding all model attributes
+    save for id and name """
+    return dict(server=dict(id=inst['id'], name=inst['display_name']))
+
+
+def _build_addresses_10(inst):
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    return dict(public=public_ips, private=private_ips)
+
+
+def _build_addresses_11(inst):
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    private_ips = [dict(version=4, addr=a) for a in private_ips]
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    public_ips = [dict(version=4, addr=a) for a in public_ips]
+    return dict(public=public_ips, private=private_ips)
+
+
+def addresses_builder(req):
+    version = req.environ['nova.context'].version
+    if version == '1.1':
+        return _build_addresses_11
+    else:
+        return _build_addresses_10
+
+
+def build_server(req, inst, is_detail):
     """ Coerces into dictionary format, mapping everything to Rackspace-like
     attributes for return"""
+
+    if not is_detail:
+        return dict(server=dict(id=inst['id'], name=inst['display_name']))
+
     power_mapping = {
         None: 'build',
         power_state.NOSTATE: 'build',
@@ -63,7 +95,7 @@ def _translate_detail_keys(req, inst):
         inst_dict[k] = inst[v]
 
     inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = _addresses_generator(version)(inst)
+    inst_dict['addresses'] = addresses_builder(req)(inst)
 
     # Return the metadata as a dictionary
     metadata = {}
@@ -77,33 +109,6 @@ def _translate_detail_keys(req, inst):
 
     return dict(server=inst_dict)
 
-
-def _translate_keys(req, inst):
-    """ Coerces into dictionary format, excluding all model attributes
-    save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['display_name']))
-
-
-def _addresses_generator(version):
-
-    def _gen_addresses_1_0(inst):
-        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-        return dict(public=public_ips, private=private_ips)
-
-    def _gen_addresses_1_1(inst):
-        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-        private_ips = [dict(version=4, addr=a) for a in private_ips]
-        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-        public_ips = [dict(version=4, addr=a) for a in public_ips]
-        return dict(public=public_ips, private=private_ips)
-
-    dispatch_table = {
-        '1.0': _gen_addresses_1_0,
-        '1.1': _gen_addresses_1_1,
-    }
-
-    return dispatch_table[version]
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
@@ -119,29 +124,37 @@ class Controller(wsgi.Controller):
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
+    def ips(self, req, id):
+        try:
+            instance = self.compute_api.get(req.environ['nova.context'], id)
+            return addresses_builder(req)(instance)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_translate_keys)
+        return self._items(req, is_detail=False)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_translate_detail_keys)
+        return self._items(req, is_detail=True)
 
-    def _items(self, req, entity_maker):
+    def _items(self, req, is_detail):
         """Returns a list of servers for a given user.
 
-        entity_maker - either _translate_detail_keys or _translate_keys
+        builder - the response model builder
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        res = [entity_maker(req, inst)['server'] for inst in limited_list]
+        res = [build_server(req, inst, is_detail)['server']
+                for inst in limited_list]
         return dict(servers=res)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _translate_detail_keys(req, instance)
+            return build_server(req, instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -193,7 +206,7 @@ class Controller(wsgi.Controller):
             metadata=metadata,
             onset_files=env.get('onset_files', []))
 
-        server = _translate_keys(req, instances[0])
+        server = build_server(req, instances[0], is_detail=False)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password

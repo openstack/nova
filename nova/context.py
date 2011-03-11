@@ -30,7 +30,7 @@ from nova import utils
 class RequestContext(object):
     def __init__(self, user, project, is_admin=None, read_deleted=False,
                  remote_address=None, timestamp=None, request_id=None,
-                 version='1.1'):
+                 version=None):
         if hasattr(user, 'id'):
             self._user = user
             self.user_id = user.id
