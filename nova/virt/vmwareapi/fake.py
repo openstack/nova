@@ -131,7 +131,7 @@ class ManagedObject(object):
         for elem in self.propSet:
             if elem.name == attr:
                 return elem.val
-        raise Exception(_("Property %(attr)s not set for the managed "
+        raise exception.Error(_("Property %(attr)s not set for the managed "
                         "object %(objName)s") %
                         {'attr': attr,
                          'objName': self.objName})
@@ -272,6 +272,13 @@ class HostSystem(ManagedObject):
         host_net_sys = _db_content["HostNetworkSystem"][host_net_key].obj
         self.set("configManager.networkSystem", host_net_sys)
 
+        if _db_content.get("Network", None) is None:
+            create_network()
+        net_ref = _db_content["Network"][_db_content["Network"].keys()[0]].obj
+        network_do = DataObject()
+        network_do.ManagedObjectReference = [net_ref]
+        self.set("network", network_do)
+
         vswitch_do = DataObject()
         vswitch_do.pnic = ["vmnic0"]
         vswitch_do.name = "vSwitch0"
@@ -390,12 +397,12 @@ def _add_file(file_path):
 def _remove_file(file_path):
     """ Removes a file reference from the db """
     if _db_content.get("files", None) is None:
-        raise Exception(_("No files have been added yet"))
+        raise exception.NotFound(_("No files have been added yet"))
     #Check if the remove is for a single file object or for a folder
     if file_path.find(".vmdk") != -1:
         if file_path not in _db_content.get("files"):
-            raise Exception(_("File- '%s' is not there in the datastore") %\
-                             file_path)
+            raise exception.NotFound(_("File- '%s' is not there in the "
+                           "datastore") % file_path)
         _db_content.get("files").remove(file_path)
     else:
         #Removes the files in the folder and the folder too from the db
@@ -430,10 +437,10 @@ def fake_get_vmdk_size_and_properties(image_id, instance):
 def _get_vm_mdo(vm_ref):
     """ Gets the Virtual Machine with the ref from the db """
     if _db_content.get("VirtualMachine", None) is None:
-            raise Exception(_("There is no VM registered"))
+            raise exception.NotFound(_("There is no VM registered"))
     if vm_ref not in _db_content.get("VirtualMachine"):
-        raise Exception(_("Virtual Machine with ref %s is not there") %\
-                        vm_ref)
+        raise exception.NotFound(_("Virtual Machine with ref %s is not "
+                        "there") % vm_ref)
     return _db_content.get("VirtualMachine")[vm_ref]
 
 
@@ -584,7 +591,7 @@ class FakeVim(object):
         """ Searches the datastore for a file """
         ds_path = kwargs.get("datastorePath")
         if _db_content.get("files", None) is None:
-            raise Exception(_("No files have been added yet"))
+            raise exception.NotFound(_("No files have been added yet"))
         for file in _db_content.get("files"):
             if file.find(ds_path) != -1:
                 task_mdo = create_task(method, "success")
@@ -596,16 +603,17 @@ class FakeVim(object):
         """ Creates a directory in the datastore """
         ds_path = kwargs.get("name")
         if _db_content.get("files", None) is None:
-            raise Exception(_("No files have been added yet"))
+            raise exception.NotFound(_("No files have been added yet"))
         _db_content["files"].append(ds_path)
 
     def _set_power_state(self, method, vm_ref, pwr_state="poweredOn"):
         """ Sets power state for the VM """
         if _db_content.get("VirtualMachine", None) is None:
-            raise Exception(_(" No Virtual Machine has been registered yet"))
+            raise exception.NotFound(_(" No Virtual Machine has been "
+                                       "registered yet"))
         if vm_ref not in _db_content.get("VirtualMachine"):
-            raise Exception(_("Virtual Machine with ref %s is not there") %\
-                            vm_ref)
+            raise exception.NotFound(_("Virtual Machine with ref %s is not "
+                                       "there") % vm_ref)
         vm_mdo = _db_content.get("VirtualMachine").get(vm_ref)
         vm_mdo.set("runtime.powerState", pwr_state)
         task_mdo = create_task(method, "success")

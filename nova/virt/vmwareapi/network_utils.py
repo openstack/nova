@@ -19,6 +19,7 @@
 Utility functions for ESX Networking
 """
 
+from nova import exception
 from nova import log as logging
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
@@ -33,9 +34,9 @@ class NetworkHelper:
     def get_network_with_the_name(cls, session, network_name="vmnet0"):
         """ Gets reference to the network whose name is passed as the
         argument. """
-        datacenters = session._call_method(vim_util, "get_objects",
-                    "Datacenter", ["network"])
-        vm_networks_ret = datacenters[0].propSet[0].val
+        hostsystems = session._call_method(vim_util, "get_objects",
+                    "HostSystem", ["network"])
+        vm_networks_ret = hostsystems[0].propSet[0].val
         #Meaning there are no networks on the host. suds responds with a ""
         #in the parent property field rather than a [] in the
         #ManagedObjectRefernce property field of the parent
@@ -103,7 +104,7 @@ class NetworkHelper:
             excep = ("ESX SOAP server returned an empty port group "
                     "for the host system in its response")
             LOG.exception(excep)
-            raise Exception(_(excep))
+            raise exception.Error(_(excep))
         port_grps_on_host = port_grps_on_host_ret.HostPortGroup
         for p_gp in port_grps_on_host:
             if p_gp.spec.name == pg_name:
@@ -138,6 +139,6 @@ class NetworkHelper:
             #concerned with the port group being created, which is done
             #by the other call, we can ignore the exception.
             if error_util.FAULT_ALREADY_EXISTS not in exc.fault_list:
-                raise Exception(exc)
+                raise exception.Error(exc)
         LOG.debug(_("Created Port Group with name %s on "
                     "the ESX host") % pg_name)

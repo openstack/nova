@@ -19,10 +19,13 @@
 VMRC console drivers.
 """
 
+import base64
+import json
+
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.virt.vmwareapi import vim_util
-from nova.virt.vmwareapi_conn import VMWareAPISession
 
 flags.DEFINE_integer('console_vmrc_port',
                      443,
@@ -65,23 +68,34 @@ class VMRCConsole(object):
         #TODO:Encrypt pool password
         return password
 
-    def generate_password(self, address, username, password, instance_name):
+    def generate_password(self, vim_session, pool, instance_name):
         """Returns a VMRC Connection credentials
-        Return string is of the form '<VM MOID>:<ESX Username>@<ESX Password>'.
+        Return string is of the form '<VM PATH>:<ESX Username>@<ESX Password>'.
         """
-        vim_session = VMWareAPISession(address,
-                                       username,
-                                       password,
-                                       FLAGS.console_vmrc_error_retries)
+        username, password = pool['username'], pool['password']
         vms = vim_session._call_method(vim_util, "get_objects",
-                    "VirtualMachine", ["name"])
+                    "VirtualMachine", ["name", "config.files.vmPathName"])
+        vm_ds_path_name = None
         vm_ref = None
         for vm in vms:
-            if vm.propSet[0].val == instance_name:
+            vm_name = None
+            ds_path_name = None
+            for prop in vm.propSet:
+                if prop.name == "name":
+                    vm_name = prop.val
+                elif prop.name == "config.files.vmPathName":
+                    ds_path_name = prop.val
+            if vm_name == instance_name:
                 vm_ref = vm.obj
+                vm_ds_path_name = ds_path_name
+                break
         if vm_ref is None:
-            raise Exception(_("instance - %s not present") % instance_name)
-        return str(vm_ref) + ":" + username + "@" + password
+            raise exception.NotFound(_("instance - %s not present") %
+                                     instance_name)
+        json_data = json.dumps({"vm_id": vm_ds_path_name,
+                    "username": username,
+                    "password": password})
+        return base64.b64encode(json_data)
 
     def is_otp(self):
         """Is one time password."""
@@ -98,14 +112,10 @@ class VMRCSessionConsole(VMRCConsole):
     def console_type(self):
         return 'vmrc+session'
 
-    def generate_password(self, address, username, password, instance_name):
+    def generate_password(self, vim_session, pool, instance_name):
         """Returns a VMRC Session
         Return string is of the form '<VM MOID>:<VMRC Ticket>'.
         """
-        vim_session = VMWareAPISession(address,
-                                       username,
-                                       password,
-                                       FLAGS.console_vmrc_error_retries)
         vms = vim_session._call_method(vim_util, "get_objects",
                     "VirtualMachine", ["name"])
         vm_ref = None
@@ -113,13 +123,17 @@ class VMRCSessionConsole(VMRCConsole):
             if vm.propSet[0].val == instance_name:
                 vm_ref = vm.obj
         if vm_ref is None:
-            raise Exception(_("instance - %s not present") % instance_name)
+            raise exception.NotFound(_("instance - %s not present") %
+                                     instance_name)
         virtual_machine_ticket = \
                         vim_session._call_method(
             vim_session._get_vim(),
             "AcquireCloneTicket",
             vim_session._get_vim().get_service_content().sessionManager)
-        return str(vm_ref.value) + ":" + virtual_machine_ticket
+        json_data = json.dumps({"vm_id": str(vm_ref.value),
+                     "username": virtual_machine_ticket,
+                     "password": virtual_machine_ticket})
+        return base64.b64encode(json_data)
 
     def is_otp(self):
         """Is one time password."""

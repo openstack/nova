@@ -20,6 +20,7 @@ Utility functions for Image transfer
 
 import time
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.virt.vmwareapi import io_util
@@ -58,10 +59,10 @@ def start_transfer(read_file_handle, write_file_handle, data_size):
             write_excep = write_thread.get_exception()
             if read_excep is not None:
                 LOG.exception(str(read_excep))
-                raise Exception(read_excep)
+                raise exception.Error(read_excep)
             if write_excep is not None:
                 LOG.exception(str(write_excep))
-                raise Exception(write_excep)
+                raise exception.Error(write_excep)
         time.sleep(2)
     LOG.debug(_("Finished image file transfer and closing the file handles"))
     #Close the file handles

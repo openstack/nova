@@ -37,6 +37,7 @@ from eventlet import event
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
@@ -228,7 +229,7 @@ class VMWareAPISession(object):
             except Exception, excep:
                 LOG.critical(_("In vmwareapi:_create_session, "
                               "got this exception: %s") % excep)
-                raise Exception(excep)
+                raise exception.Error(excep)
 
     def __del__(self):
         """Logs-out the session."""
