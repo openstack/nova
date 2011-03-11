@@ -202,13 +202,13 @@ class VMHelper(HelperBase):
     @classmethod
     def find_vbd_by_number(cls, session, vm_ref, number):
         """Get the VBD reference from the device number"""
-        vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+                    vbd_rec = session.get_xenapi().VBD.get_record(vbd_ref)
                     if vbd_rec['userdevice'] == str(number):
-                        return vbd
+                        return vbd_ref
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
         raise StorageError(_('VBD not found in instance %s') % vm_ref)

@@ -55,12 +55,12 @@ class VMOps(object):
 
     def list_instances(self):
         """List VM instances"""
-        vms = []
+        vm_refs = []
         for vm_ref in self._session.get_xenapi().VM.get_all():
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
-                vms.append(vm_rec["name_label"])
-        return vms
+                vm_refs.append(vm_rec["name_label"])
+        return vm_refs
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
