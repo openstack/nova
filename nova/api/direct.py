@@ -187,7 +187,7 @@ class ServiceWrapper(wsgi.Controller):
     def __init__(self, service_handle):
         self.service_handle = service_handle
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         arg_dict = req.environ['wsgiorg.routing_args'][1]
         action = arg_dict['action']
@@ -206,7 +206,7 @@ class ServiceWrapper(wsgi.Controller):
         params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
         if type(result) is dict or type(result) is list:
-            return self._serialize(result, req)
+            return self._serialize(result, req.best_match_content_type())
         else:
             return result
 
@@ -218,7 +218,7 @@ class Proxy(object):
         self.prefix = prefix
 
     def __do_request(self, path, context, **kwargs):
-        req = webob.Request.blank(path)
+        req = wsgi.Request.blank(path)
         req.method = 'POST'
         req.body = urllib.urlencode({'json': utils.dumps(kwargs)})
         req.environ['openstack.context'] = context

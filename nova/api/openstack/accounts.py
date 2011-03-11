@@ -74,7 +74,7 @@ class Controller(wsgi.Controller):
     def update(self, req, id):
         """This is really create or update."""
         self._check_admin(req.environ['nova.context'])
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         description = env['account'].get('description')
         manager = env['account'].get('manager')
         try:

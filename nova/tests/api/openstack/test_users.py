@@ -104,6 +104,7 @@ class UsersTest(test.TestCase):
                               secret='invasionIsInNormandy',
                               admin=True))
         req = webob.Request.blank('/v1.0/users')
+        req.headers["Content-Type"] = "application/json"
         req.method = 'POST'
         req.body = json.dumps(body)
 
@@ -125,6 +126,7 @@ class UsersTest(test.TestCase):
                               access='acc2',
                               secret='invasionIsInNormandy'))
         req = webob.Request.blank('/v1.0/users/guy2')
+        req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
 

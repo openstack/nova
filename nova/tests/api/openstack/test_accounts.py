@@ -90,6 +90,7 @@ class AccountsTest(test.TestCase):
         body = dict(account=dict(description='test account',
                               manager='guy1'))
         req = webob.Request.blank('/v1.0/accounts/newacct')
+        req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
 
@@ -109,6 +110,7 @@ class AccountsTest(test.TestCase):
         body = dict(account=dict(description='test account',
                               manager='guy2'))
         req = webob.Request.blank('/v1.0/accounts/test1')
+        req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
 

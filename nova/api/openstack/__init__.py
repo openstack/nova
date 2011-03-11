@@ -49,7 +49,7 @@ flags.DEFINE_bool('allow_admin_api',
 class FaultWrapper(wsgi.Middleware):
     """Calls down the middleware stack, making exceptions into faults."""
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         try:
             return req.get_response(self.application)
@@ -79,8 +79,8 @@ class APIRouter(wsgi.Router):
 
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
-            server_members["diagnostics"] = "GET"
-            server_members["actions"] = "GET"
+            server_members['diagnostics'] = 'GET'
+            server_members['actions'] = 'GET'
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
             server_members['rescue'] = 'POST'
@@ -89,7 +89,7 @@ class APIRouter(wsgi.Router):
             server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
-                        collection={'detail': 'GET'})
+                        collection={'detail': 'GET', 'info': 'GET'}),
 
             mapper.resource("user", "users", controller=users.Controller(),
                         collection={'detail': 'GET'})
@@ -124,7 +124,7 @@ class APIRouter(wsgi.Router):
 
 
 class Versions(wsgi.Application):
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
@@ -133,4 +133,6 @@ class Versions(wsgi.Application):
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
-        return wsgi.Serializer(req.environ, metadata).to_content_type(response)
+
+        content_type = req.best_match_content_type()
+        return wsgi.Serializer(metadata).serialize(response, content_type)

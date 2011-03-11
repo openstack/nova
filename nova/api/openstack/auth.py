@@ -48,7 +48,7 @@ class AuthMiddleware(wsgi.Middleware):
         self.auth = auth.manager.AuthManager()
         super(AuthMiddleware, self).__init__(application)
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         if not self.has_authentication(req):
             return self.authenticate(req)
@@ -132,7 +132,7 @@ class AuthMiddleware(wsgi.Middleware):
 
         username - string
         key - string API key
-        req - webob.Request object
+        req - wsgi.Request object
         """
         ctxt = context.get_admin_context()
         user = self.auth.get_user_from_access_key(key)

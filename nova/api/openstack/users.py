@@ -73,7 +73,7 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         self._check_admin(req.environ['nova.context'])
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         is_admin = env['user'].get('admin') in ('T', 'True', True)
         name = env['user'].get('name')
         access = env['user'].get('access')
@@ -83,7 +83,7 @@ class Controller(wsgi.Controller):
 
     def update(self, req, id):
         self._check_admin(req.environ['nova.context'])
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         is_admin = env['user'].get('admin')
         if is_admin is not None:
             is_admin = is_admin in ('T', 'True', True)
