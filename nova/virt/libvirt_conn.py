@@ -1238,7 +1238,7 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def unfilter_instance(self, instance):
-        if self.instances.pop(instance['id'], False):
+        if self.instances.pop(instance['id'], None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
         else:
