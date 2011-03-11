@@ -581,15 +581,15 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     # NOTE(vish): The nested select is because sqlite doesn't support
     #             JOINs in UPDATEs.
     inner_q = session.query(models.Network.id).\
-                 filter_by(host=host).\
-                 subquery()
+                      filter_by(host=host).\
+                      subquery()
     result = session.query(models.FixedIp).\
-                 filter(models.FixedIp.network_id.in_(inner_q)).\
-                 filter(models.FixedIp.updated_at < time).\
-                 filter(models.FixedIp.instance_id != None).\
-                 filter_by(allocated=0).\
-                 update({'instance_id': None,
-                         'leased': 0})
+                     filter(models.FixedIp.network_id.in_(inner_q)).\
+                     filter(models.FixedIp.updated_at < time).\
+                     filter(models.FixedIp.instance_id != None).\
+                     filter_by(allocated=0).\
+                     update({'instance_id': None,
+                             'leased': 0})
     return result
 
 
@@ -704,15 +704,15 @@ def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
         session.query(models.Instance).\
-                     filter_by(id=instance_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
-                     filter_by(instance_id=instance_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(instance_id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -955,10 +955,10 @@ def key_pair_destroy_all_by_user(context, user_id):
     session = get_session()
     with session.begin():
         session.query(models.KeyPair).\
-                     filter_by(user_id=user_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(user_id=user_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1079,8 +1079,8 @@ def network_disassociate(context, network_id):
 def network_disassociate_all(context):
     session = get_session()
     session.query(models.Network).\
-                 update({'project_id': None,
-                         'updated_at': literal_column('updated_at')})
+            update({'project_id': None,
+                    'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1463,16 +1463,16 @@ def volume_destroy(context, volume_id):
     session = get_session()
     with session.begin():
         session.query(models.Volume).\
-                     filter_by(id=volume_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(id=volume_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
         session.query(models.ExportDevice).\
-                     filter_by(volume_id=volume_id).\
-                     update({'volume_id': None})
+                filter_by(volume_id=volume_id).\
+                update({'volume_id': None})
         session.query(models.IscsiTarget).\
-                     filter_by(volume_id=volume_id).\
-                     update({'volume_id': None})
+                filter_by(volume_id=volume_id).\
+                update({'volume_id': None})
 
 
 @require_admin_context
@@ -1693,20 +1693,20 @@ def security_group_destroy(context, security_group_id):
     session = get_session()
     with session.begin():
         session.query(models.SecurityGroup).\
-                     filter_by(id=security_group_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(id=security_group_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
-                     filter_by(security_group_id=security_group_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(security_group_id=security_group_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
-                     filter_by(group_id=security_group_id).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                filter_by(group_id=security_group_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1715,13 +1715,13 @@ def security_group_destroy_all(context, session=None):
         session = get_session()
     with session.begin():
         session.query(models.SecurityGroup).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
-                     update({'deleted': 1,
-                             'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': literal_column('updated_at')})
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 ###################
@@ -1851,14 +1851,14 @@ def user_delete(context, id):
     session = get_session()
     with session.begin():
         session.query(models.UserProjectAssociation).\
-                     filter_by(user_id=id).\
-                     delete()
+                filter_by(user_id=id).\
+                delete()
         session.query(models.UserRoleAssociation).\
-                     filter_by(user_id=id).\
-                     delete()
+                filter_by(user_id=id).\
+                delete()
         session.query(models.UserProjectRoleAssociation).\
-                     filter_by(user_id=id).\
-                     delete()
+                filter_by(user_id=id).\
+                delete()
         user_ref = user_get(context, id, session=session)
         session.delete(user_ref)
 
@@ -1950,11 +1950,11 @@ def project_delete(context, id):
     session = get_session()
     with session.begin():
         session.query(models.UserProjectAssociation).\
-                     filter_by(project_id=id).\
-                     delete()
+                filter_by(project_id=id).\
+                delete()
         session.query(models.UserProjectRoleAssociation).\
-                     filter_by(project_id=id).\
-                     delete()
+                filter_by(project_id=id).\
+                delete()
         project_ref = project_get(context, id, session=session)
         session.delete(project_ref)
 
@@ -1980,10 +1980,10 @@ def user_remove_project_role(context, user_id, project_id, role):
     session = get_session()
     with session.begin():
         session.query(models.UserProjectRoleAssociation).\
-                     filter_by(user_id=user_id).\
-                     filter_by(project_id=project_id).\
-                     filter_by(role=role).\
-                     delete()
+                filter_by(user_id=user_id).\
+                filter_by(project_id=project_id).\
+                filter_by(role=role).\
+                delete()
 
 
 def user_remove_role(context, user_id, role):
@@ -2135,8 +2135,8 @@ def console_delete(context, console_id):
     with session.begin():
         # consoles are meant to be transient. (mdragon)
         session.query(models.Console).\
-                     filter_by(id=console_id).\
-                     delete()
+                filter_by(id=console_id).\
+                delete()
 
 
 def console_get_by_pool_instance(context, pool_id, instance_id):
@@ -2293,8 +2293,8 @@ def zone_delete(context, zone_id):
     session = get_session()
     with session.begin():
         session.query(models.Zone).\
-                     filter_by(id=zone_id).\
-                     delete()
+                filter_by(id=zone_id).\
+                delete()
 
 
 @require_admin_context
