@@ -51,7 +51,7 @@ class Test(test.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        f.add_user('user1_key', 
+        f.add_user('user1_key',
             nova.auth.manager.User(1, 'user1', None, None, None))
 
         req = webob.Request.blank('/v1.0/')
