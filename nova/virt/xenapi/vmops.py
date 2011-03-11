@@ -104,31 +104,26 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        kernel = ramdisk = pv_kernel = None
-
         # Are we building from a pre-existing disk?
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        if disk_image_type == ImageType.DISK_RAW:
-            # Have a look at the VDI and see if it has a PV kernel
-            pv_kernel = VMHelper.lookup_image(self._session, instance.id,
-                                              vdi_ref)
-        elif disk_image_type == ImageType.DISK_VHD:
-            # TODO(sirp): Assuming PV for now; this will need to be
-            # configurable as Windows will use HVM.
-            pv_kernel = True
 
+        kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
                 instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
 
+        ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
                 instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
 
-        vm_ref = VMHelper.create_vm(self._session,
-                                          instance, kernel, ramdisk, pv_kernel)
+        use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
+            vdi_ref, disk_image_type, instance.os_type)
+        vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
+                                    use_pv_kernel)
+
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
@@ -266,7 +261,7 @@ class VMOps(object):
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
             # call plugin to ship snapshot off to glance
             VMHelper.upload_image(
-                    self._session, instance.id, template_vdi_uuids, image_id)
+                    self._session, instance, template_vdi_uuids, image_id)
         finally:
             if template_vm_ref:
                 self._destroy(instance, template_vm_ref,
