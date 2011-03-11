@@ -434,7 +434,7 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def _shutdown(self, instance, vm, hard=True):
+    def _shutdown(self, instance, vm_ref, hard=True):
         """Shutdown an instance"""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
@@ -448,31 +448,33 @@ class VMOps(object):
         try:
             task = None
             if hard:
-                task = self._session.call_xenapi("Async.VM.hard_shutdown", vm)
+                task = self._session.call_xenapi("Async.VM.hard_shutdown",
+                                                 vm_ref)
             else:
-                task = self._session.call_xenapi('Async.VM.clean_shutdown', vm)
+                task = self._session.call_xenapi("Async.VM.clean_shutdown",
+                                                 vm_ref)
             self._session.wait_for_task(task, instance.id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
-    def _destroy_vdis(self, instance, vm):
-        """Destroys all VDIs associated with a VM """
+    def _destroy_vdis(self, instance, vm_ref):
+        """Destroys all VDIs associated with a VM"""
         instance_id = instance.id
         LOG.debug(_("Destroying VDIs for Instance %(instance_id)s")
                   % locals())
-        vdis = VMHelper.lookup_vm_vdis(self._session, vm)
+        vdi_refs = VMHelper.lookup_vm_vdis(self._session, vm_ref)
 
-        if not vdis:
+        if not vdi_refs:
             return
 
-        for vdi in vdis:
+        for vdi_ref in vdi_refs:
             try:
-                task = self._session.call_xenapi('Async.VDI.destroy', vdi)
+                task = self._session.call_xenapi('Async.VDI.destroy', vdi_ref)
                 self._session.wait_for_task(task, instance.id)
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
-    def _destroy_kernel_ramdisk(self, instance, vm):
+    def _destroy_kernel_ramdisk(self, instance, vm_ref):
         """
         Three situations can occur:
 
@@ -499,8 +501,8 @@ class VMOps(object):
                   "both" % locals()))
 
         # 3. We have both kernel and ramdisk
-        (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(
-            self._session, vm)
+        (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(self._session,
+                                                           vm_ref)
 
         LOG.debug(_("Removing kernel/ramdisk files"))
 
@@ -511,11 +513,11 @@ class VMOps(object):
 
         LOG.debug(_("kernel/ramdisk files removed"))
 
-    def _destroy_vm(self, instance, vm):
-        """Destroys a VM record """
+    def _destroy_vm(self, instance, vm_ref):
+        """Destroys a VM record"""
         instance_id = instance.id
         try:
-            task = self._session.call_xenapi('Async.VM.destroy', vm)
+            task = self._session.call_xenapi('Async.VM.destroy', vm_ref)
             self._session.wait_for_task(task, instance_id)
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
@@ -596,8 +598,9 @@ class VMOps(object):
             - spawn a rescue VM (the vm name-label will be instance-N-rescue)
 
         """
-        rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
-        if rescue_vm:
+        rescue_vm_ref = VMHelper.lookup(self._session,
+                                        instance.name + "-rescue")
+        if rescue_vm_ref:
             raise RuntimeError(_(
                 "Instance is already in Rescue Mode: %s" % instance.name))
 
@@ -609,8 +612,8 @@ class VMOps(object):
         self.spawn(instance)
         rescue_vm_ref = self._get_vm_opaque_ref(instance)
 
-        vbd = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
-        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd)["VDI"]
+        vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
+        vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
         vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref,
                                       1, False)
 
@@ -623,35 +626,37 @@ class VMOps(object):
             - release the bootlock to allow the instance VM to start
 
         """
-        rescue_vm = VMHelper.lookup(self._session, instance.name + "-rescue")
+        rescue_vm_ref = VMHelper.lookup(self._session,
+                                    instance.name + "-rescue")
 
-        if not rescue_vm:
+        if not rescue_vm_ref:
             raise exception.NotFound(_(
                 "Instance is not in Rescue Mode: %s" % instance.name))
 
         original_vm_ref = self._get_vm_opaque_ref(instance)
-        vbds = self._session.get_xenapi().VM.get_VBDs(rescue_vm)
+        vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
 
         instance._rescue = False
 
-        for vbd_ref in vbds:
+        for vbd_ref in vbd_refs:
             vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
             if vbd["userdevice"] == "1":
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
-        task1 = self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm)
+        task1 = self._session.call_xenapi("Async.VM.hard_shutdown",
+                                          rescue_vm_ref)
         self._session.wait_for_task(task1, instance.id)
 
-        vdis = VMHelper.lookup_vm_vdis(self._session, rescue_vm)
-        for vdi in vdis:
+        vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
+        for vdi_ref in vdi_refs:
             try:
-                task = self._session.call_xenapi('Async.VDI.destroy', vdi)
+                task = self._session.call_xenapi('Async.VDI.destroy', vdi_ref)
                 self._session.wait_for_task(task, instance.id)
             except self.XenAPI.Failure:
                 continue
 
-        task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm)
+        task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm_ref)
         self._session.wait_for_task(task2, instance.id)
 
         self._release_bootlock(original_vm_ref)
