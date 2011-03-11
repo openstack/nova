@@ -35,8 +35,8 @@ System Requirements
 -------------------
 Following software components are required for building the cloud using OpenStack on top of ESX/ESXi Server(s): 
 
-* OpenStack (Bexar Release)
-* Glance Image service (Bexar Release) 
+* OpenStack
+* Glance Image service
 * VMware ESX v4.1 or VMware ESXi(licensed) v4.1
 
 VMware ESX Requirements
@@ -45,7 +45,7 @@ VMware ESX Requirements
 * Single local hard disk at the ESX host
 * An ESX Virtual Machine Port Group (For Flat Networking)
 * An ESX physical network adapter (For VLAN networking)
-* Need to enable "vSphere Web Access" in Configuration->Security Profile->Firewall   
+* Need to enable "vSphere Web Access" in  "vSphere client" UI at Configuration->Security Profile->Firewall   
 
 Python dependencies 
 -------------------
@@ -104,6 +104,93 @@ Note:- Due to a faulty wsdl being shipped with ESX vSphere 4.1 we need a working
 * Go to SDK->WSDL->vim25 & host the files "vimService.wsdl" and "vim.wsdl" in a WEB SERVER
 * Set the flag "--vmwareapi_wsdl_loc" with url, "http://<WEB SERVER>/vimService.wsdl"
 
+
+VLAN Network Manager
+--------------------
+VLAN network support is added through a custom network driver in the nova-compute node i.e "nova.network.vmwareapi_net" and it uses a Physical ethernet adapter on the VMware ESX/ESXi host for VLAN Networking (the name of the ethernet adapter is specified as vlan_interface flag in the nova-compute configuration flag) in the nova-compute node.
+
+Using the physical adapter name the associated Virtual Switch will be determined. In VMware ESX there can be only one Virtual Switch associated with a Physical adapter.
+
+When VM Spawn request is issued with a VLAN ID the work flow looks like,
+
+1. Check that a Physical adapter with the given name exists. If no, throw an error.If yes, goto next step.
+
+2. Check if a Virtual Switch is associated with the Physical ethernet adapter with vlan interface name. If no, throw an error. If yes, goto next step.
+
+3. Check if a port group with the network bridge name exists. If no, create a port group in the Virtual switch with the give name and VLAN id and goto step 6. If yes, goto next step.
+
+4. Check if the port group is associated with the Virtual Switch. If no, throw an error. If yes, goto next step.
+
+5. Check if the port group is associated with the given VLAN Id. If no, throw an error. If yes, goto next step.
+
+6. Spawn the VM using this Port Group as the Network Name for the VM.
+
+
+Guest console Support
+---------------------
+| VMware VMRC console is a built-in console method providing graphical control of the VM remotely.
+|
+|        VMRC Console types supported:
+|            # Host based credentials
+|                Not secure (Sends ESX admin credentials in clear text)
+|
+|            # OTP (One time passwords)
+|                Secure but creates multiple session entries in DB for each OpenStack console create request.
+|                Console sessions created is can be used only once.
+|
+|        Install browser based VMware ESX plugins/activex on the client machine to connect
+|
+|            Windows:-
+|                Internet Explorer:
+|                    https://<VMware ESX Host>/ui/plugin/vmware-vmrc-win32-x86.exe
+|
+|                Mozilla Firefox:
+|                    https://<VMware ESX Host>/ui/plugin/vmware-vmrc-win32-x86.xpi
+|
+|            Linux:-
+|                Mozilla Firefox
+|                    32-Bit Linux:
+|                        https://<VMware ESX Host>/ui/plugin/vmware-vmrc-linux-x86.xpi
+|
+|                    64-Bit Linux:
+|                        https://<VMware ESX Host>/ui/plugin/vmware-vmrc-linux-x64.xpi
+|
+|        OpenStack Console Details:
+|            console_type = vmrc+credentials | vmrc+session
+|            host = <VMware ESX Host>
+|            port = <VMware ESX Port>
+|            password = {'vm_id': <VMware VM ID>,'username':<VMware ESX Username>, 'password':<VMware ESX Password>} //base64 + json encoded
+|
+|        Instantiate the plugin/activex object
+|            # In Internet Explorer
+|                <object id='vmrc' classid='CLSID:B94C2238-346E-4C5E-9B36-8CC627F35574'>
+|                </object>
+|
+|            # Mozilla Firefox and other browsers
+|                <object id='vmrc' type='application/x-vmware-vmrc;version=2.5.0.0'>
+|                </object>
+|
+|        Open vmrc connection
+|            # Host based credentials [type=vmrc+credentials]
+|                <script type="text/javascript">
+|                    var MODE_WINDOW = 2;
+|                    var vmrc = document.getElementById('vmrc');
+|                    vmrc.connect(<VMware ESX Host> + ':' + <VMware ESX Port>, <VMware ESX Username>, <VMware ESX Password>, '', <VMware VM ID>, MODE_WINDOW);
+|                </script>
+|
+|            # OTP (One time passwords) [type=vmrc+session]
+|                <script type="text/javascript">
+|                    var MODE_WINDOW = 2;
+|                    var vmrc = document.getElementById('vmrc');
+|                    vmrc.connectWithSession(<VMware ESX Host> + ':' + <VMware ESX Port>, <VMware VM ID>, <VMware ESX Password>, MODE_WINDOW);
+|                </script>
+
+
+Assumptions
+-----------
+1. The VMware images uploaded to the image repositories have VMware Tools installed.
+
+
 FAQ 
 ---
 
@@ -119,7 +206,7 @@ FAQ
     
 3. What is the guest tool?
 
-* The guest tool is a small python script that should be run either as a service or added to system startup. This script configures networking on the guest.
+* The guest tool is a small python script that should be run either as a service or added to system startup. This script configures networking on the guest. The guest tool is available at tools/esx/guest_tool.py
 
 
 4. What type of consoles are supported?
