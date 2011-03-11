@@ -299,5 +299,3 @@ class ComputeTestCase(test.TestCase):
         self.assertRaises(exception.Error, self.compute.prep_resize,
                 self.context, instance_id)
         self.compute.terminate_instance(self.context, instance_id)
-        type = instance_types.get_by_flavor_id("1")
-        self.assertEqual(type, 'm1.tiny')
