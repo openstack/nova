@@ -578,8 +578,6 @@ def fixed_ip_disassociate(context, address):
 @require_admin_context
 def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     session = get_session()
-    # NOTE(vish): The nested select is because sqlite doesn't support
-    #             JOINs in UPDATEs.
     inner_q = session.query(models.Network.id).\
                       filter_by(host=host).\
                       subquery()
