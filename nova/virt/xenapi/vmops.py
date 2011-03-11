@@ -236,8 +236,7 @@ class VMOps(object):
         """Create snapshot from a running VM instance
 
         :param instance: instance to be snapshotted
-        :param image_id: id of
-         image to upload to
+        :param image_id: id of image to upload to
 
         Steps involved in a XenServer snapshot:
 

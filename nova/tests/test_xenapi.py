@@ -38,6 +38,8 @@ from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
 
+from nova import log as LOG
+
 FLAGS = flags.FLAGS
 
 
@@ -297,6 +299,16 @@ class XenAPIVMTestCase(test.TestCase):
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
 
+    def test_spawn_vlanmanager(self):
+        self.flags(xenapi_image_service = 'glance',
+                   network_manager='nova.network.manager.VlanManager',
+                   network_driver='nova.network.xenapi_net')
+        LOG.debug("Self.network:%s",self.network)
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
+                         glance_stubs.FakeGlance.IMAGE_KERNEL,
+                         glance_stubs.FakeGlance.IMAGE_RAMDISK)
+        pass 
+    
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)

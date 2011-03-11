@@ -85,6 +85,8 @@ flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
 flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
+flags.DEFINE_string('vlan_interface', 'eth0',
+                    'network device for vlans')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
 flags.DEFINE_bool('update_dhcp_on_disassociate', False,
@@ -517,6 +519,7 @@ class VlanManager(NetworkManager):
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
+        LOG.debug("ENTERING SETUP COMPUTE NETWORK")
         network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])
