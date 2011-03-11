@@ -34,6 +34,7 @@ from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
+from nova.api.openstack import volumes
 from nova.api.openstack import zones
 
 
@@ -110,6 +111,11 @@ class APIRouter(wsgi.Router):
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
+
+        #NOTE(justinsb): volumes is not yet part of the official API
+        mapper.resource("volume", "volumes",
+                        controller=volumes.Controller(),
+                        collection={'detail': 'GET'})
 
         super(APIRouter, self).__init__(mapper)
 
