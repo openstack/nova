@@ -34,6 +34,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
 
@@ -702,28 +703,16 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        session.execute('update instances set deleted=1,'
-                        'deleted_at=:at where id=:id',
-                        {'id': instance_id,
-                         'at': datetime.datetime.utcnow()})
-        # NOTE(klmitch): for some reason, using the SQLAlchemy code
-        # here instead of the direct SQL update above causes the
-        # test_run_terminate_timestamps test (and only that one) to
-        # fail with an obscure TypeError exception from deep within
-        # SQLAlchemy; the nearest nova function in the traceback is
-        # instance_get()
-        # session.query(models.Instance).\
-        #              filter_by(id=instance_id).\
-        #              update({'deleted': 1,
-        #                      'deleted_at': datetime.datetime.utcnow(),
-        #                      'updated_at': models.Instance.updated_at + 0})
+        session.query(models.Instance).\
+                     filter_by(id=instance_id).\
+                     update({'deleted': 1,
+                             'deleted_at': datetime.datetime.utcnow(),
+                             'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                      filter_by(instance_id=instance_id).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at':
-                                 (models.SecurityGroupInstanceAssociation.
-                                  updated_at + 0)})
+                             'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -969,7 +958,7 @@ def key_pair_destroy_all_by_user(context, user_id):
                      filter_by(user_id=user_id).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': models.KeyPair.updated_at + 0})
+                             'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1082,7 +1071,7 @@ def network_disassociate_all(context):
     session = get_session()
     session.query(models.Network).\
                  update({'project_id': None,
-                         'updated_at': models.Network.updated_at + 0})
+                         'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1456,7 +1445,7 @@ def volume_destroy(context, volume_id):
                      filter_by(id=volume_id).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at': models.Volume.updated_at + 0})
+                             'updated_at': literal_column('updated_at')})
         session.query(models.ExportDevice).\
                      filter_by(volume_id=volume_id).\
                      update({'volume_id': None})
@@ -1686,22 +1675,17 @@ def security_group_destroy(context, security_group_id):
                      filter_by(id=security_group_id).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at':
-                                 models.SecurityGroup.updated_at + 0})
+                             'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                      filter_by(security_group_id=security_group_id).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at':
-                                 (models.SecurityGroupInstanceAssociation.
-                                  updated_at + 0)})
+                             'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
                      filter_by(group_id=security_group_id).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at':
-                                 (models.SecurityGroupIngressRule.
-                                  updated_at + 0)})
+                             'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1712,14 +1696,11 @@ def security_group_destroy_all(context, session=None):
         session.query(models.SecurityGroup).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at':
-                                 models.SecurityGroup.updated_at + 0})
+                             'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
                      update({'deleted': 1,
                              'deleted_at': datetime.datetime.utcnow(),
-                             'updated_at':
-                                 (models.SecurityGroupIngressRule.
-                                  updated_at + 0)})
+                             'updated_at': literal_column('updated_at')})
 
 
 ###################
