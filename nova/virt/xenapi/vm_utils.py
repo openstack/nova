@@ -101,7 +101,7 @@ class VMHelper(HelperBase):
                                 get_instance_type(instance.instance_type)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
-        vm_rec = {
+        rec = {
             'actions_after_crash': 'destroy',
             'actions_after_reboot': 'restart',
             'actions_after_shutdown': 'destroy',
@@ -145,21 +145,21 @@ class VMHelper(HelperBase):
             vm_rec['platform']['nx'] = 'false'
             if instance.kernel_id:
                 # 1. Kernel explicitly passed in, use that
-                vm_rec['PV_args'] = 'root=/dev/xvda1'
-                vm_rec['PV_kernel'] = kernel
-                vm_rec['PV_ramdisk'] = ramdisk
+                rec['PV_args'] = 'root=/dev/xvda1'
+                rec['PV_kernel'] = kernel
+                rec['PV_ramdisk'] = ramdisk
             else:
                 # 2. Use kernel within the image
-                vm_rec['PV_args'] = 'clocksource=jiffies'
-                vm_rec['PV_bootloader'] = 'pygrub'
+                rec['PV_args'] = 'clocksource=jiffies'
+                rec['PV_bootloader'] = 'pygrub'
         else:
             # 3. Using hardware virtualization
-            vm_rec['platform']['nx'] = 'true'
-            vm_rec['HVM_boot_params'] = {'order': 'dc'}
-            vm_rec['HVM_boot_policy'] = 'BIOS order'
+            rec['platform']['nx'] = 'true'
+            rec['HVM_boot_params'] = {'order': 'dc'}
+            rec['HVM_boot_policy'] = 'BIOS order'
 
         LOG.debug(_('Created VM %s...'), instance.name)
-        vm_ref = session.call_xenapi('VM.create', vm_rec)
+        vm_ref = session.call_xenapi('VM.create', rec)
         instance_name = instance.name
         LOG.debug(_('Created VM %(instance_name)s as %(vm_ref)s.') % locals())
         return vm_ref
