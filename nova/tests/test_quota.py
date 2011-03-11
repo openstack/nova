@@ -20,11 +20,12 @@ from nova import compute
 from nova import context
 from nova import db
 from nova import flags
+from nova import network
 from nova import quota
 from nova import test
 from nova import utils
+from nova import volume
 from nova.auth import manager
-from nova.api.ec2 import cloud
 from nova.compute import instance_types
 
 
@@ -41,7 +42,6 @@ class QuotaTestCase(test.TestCase):
                    quota_gigabytes=20,
                    quota_floating_ips=1)
 
-        self.cloud = cloud.CloudController()
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('admin', 'admin', 'admin')
@@ -57,7 +57,7 @@ class QuotaTestCase(test.TestCase):
     def _create_instance(self, cores=2):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
@@ -118,12 +118,12 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
-        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type='m1.small',
-                                            image_id='fake')
+                                            image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -131,12 +131,12 @@ class QuotaTestCase(test.TestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
-        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type='m1.small',
-                                            image_id='fake')
+                                            image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -145,9 +145,12 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_volumes):
             volume_id = self._create_volume()
             volume_ids.append(volume_id)
-        self.assertRaises(quota.QuotaError, self.cloud.create_volume,
-                                            self.context,
-                                            size=10)
+        self.assertRaises(quota.QuotaError,
+                          volume.API().create,
+                          self.context,
+                          size=10,
+                          name='',
+                          description='')
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
@@ -156,9 +159,11 @@ class QuotaTestCase(test.TestCase):
         volume_id = self._create_volume(size=20)
         volume_ids.append(volume_id)
         self.assertRaises(quota.QuotaError,
-                          self.cloud.create_volume,
+                          volume.API().create,
                           self.context,
-                          size=10)
+                          size=10,
+                          name='',
+                          description='')
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
@@ -172,7 +177,8 @@ class QuotaTestCase(test.TestCase):
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
-        self.assertRaises(quota.QuotaError, self.cloud.allocate_address,
+        self.assertRaises(quota.QuotaError,
+                          network.API().allocate_floating_ip,
                           self.context)
         db.floating_ip_destroy(context.get_admin_context(), address)
 

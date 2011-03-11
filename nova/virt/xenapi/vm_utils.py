@@ -468,19 +468,21 @@ class VMHelper(HelperBase):
                         "%(image_id)s, instance %(instance_id)s") % locals())
 
         def determine_from_glance():
-            glance_type2nova_type = {'machine': ImageType.DISK,
-                                     'raw': ImageType.DISK_RAW,
-                                     'vhd': ImageType.DISK_VHD,
-                                     'kernel': ImageType.KERNEL_RAMDISK,
-                                     'ramdisk': ImageType.KERNEL_RAMDISK}
+            glance_disk_format2nova_type = {
+                'ami': ImageType.DISK,
+                'aki': ImageType.KERNEL_RAMDISK,
+                'ari': ImageType.KERNEL_RAMDISK,
+                'raw': ImageType.DISK_RAW,
+                'vhd': ImageType.DISK_VHD}
             client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
             meta = client.get_image_meta(instance.image_id)
-            type_ = meta['type']
+            disk_format = meta['disk_format']
             try:
-                return glance_type2nova_type[type_]
+                return glance_disk_format2nova_type[disk_format]
             except KeyError:
                 raise exception.NotFound(
-                    _("Unrecognized image type '%(type_)s'") % locals())
+                    _("Unrecognized disk_format '%(disk_format)s'")
+                    % locals())
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -916,14 +918,13 @@ def _write_partition(virtual_size, dev):
     LOG.debug(_('Writing partition table %(primary_first)d %(primary_last)d'
             ' to %(dest)s...') % locals())
 
-    def execute(cmd, process_input=None, check_exit_code=True):
-        return utils.execute(cmd=cmd,
-                             process_input=process_input,
-                             check_exit_code=check_exit_code)
+    def execute(*cmd, **kwargs):
+        return utils.execute(*cmd, **kwargs)
 
-    execute('parted --script %s mklabel msdos' % dest)
-    execute('parted --script %s mkpart primary %ds %ds' %
-            (dest, primary_first, primary_last))
+    execute('parted', '--script', dest, 'mklabel', 'msdos')
+    execute('parted', '--script', dest, 'mkpart', 'primary',
+            '%ds' % primary_first,
+            '%ds' % primary_last)
 
     LOG.debug(_('Writing partition table %s done.'), dest)
 

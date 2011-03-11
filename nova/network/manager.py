@@ -73,6 +73,8 @@ flags.DEFINE_string('flat_interface', None,
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
+flags.DEFINE_string('vlan_interface', 'eth0',
+                    'network device for vlans')
 flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', '$my_ip',
                     'Public IP for the cloudpipe VPN servers')
@@ -85,8 +87,6 @@ flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
 flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
-flags.DEFINE_string('vlan_interface', 'eth0',
-                    'network device for vlans')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
                     'Driver to use for network creation')
 flags.DEFINE_bool('update_dhcp_on_disassociate', False,
@@ -566,6 +566,16 @@ class VlanManager(NetworkManager):
             # NOTE(vish): This makes ports unique accross the cloud, a more
             #             robust solution would be to make them unique per ip
             net['vpn_public_port'] = vpn_start + index
+            network_ref = None
+            try:
+                network_ref = db.network_get_by_cidr(context, cidr)
+            except exception.NotFound:
+                pass
+
+            if network_ref is not None:
+                raise ValueError(_('Network with cidr %s already exists' %
+                                   cidr))
+
             network_ref = self.db.network_create_safe(context, net)
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])
