@@ -633,37 +633,38 @@ class VMHelper(HelperBase):
         return is_pv
 
     @classmethod
-    def lookup(cls, session, i):
+    def lookup(cls, session, name_label):
         """Look the instance i up, and returns it if available"""
-        vms = session.get_xenapi().VM.get_by_name_label(i)
-        n = len(vms)
+        vm_refs = session.get_xenapi().VM.get_by_name_label(name_label)
+        n = len(vm_refs)
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') % i)
+            raise exception.Duplicate(_('duplicate name found: %s') %
+                                        name_label)
         else:
-            return vms[0]
+            return vm_refs[0]
 
     @classmethod
-    def lookup_vm_vdis(cls, session, vm):
+    def lookup_vm_vdis(cls, session, vm_ref):
         """Look for the VDIs that are attached to the VM"""
         # Firstly we get the VBDs, then the VDIs.
         # TODO(Armando): do we leave the read-only devices?
-        vbds = session.get_xenapi().VM.get_VBDs(vm)
-        vdis = []
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        vdi_refs = []
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vdi = session.get_xenapi().VBD.get_VDI(vbd)
+                    vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
                     # Test valid VDI
-                    record = session.get_xenapi().VDI.get_record(vdi)
+                    record = session.get_xenapi().VDI.get_record(vdi_ref)
                     LOG.debug(_('VDI %s is still available'), record['uuid'])
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
                 else:
-                    vdis.append(vdi)
-            if len(vdis) > 0:
-                return vdis
+                    vdi_refs.append(vdi_ref)
+            if len(vdi_refs) > 0:
+                return vdi_refs
             else:
                 return None
 

@@ -614,10 +614,10 @@ class VMOps(object):
 
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
-        vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref, vdi_ref,
-                                      1, False)
+        rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
+                                             vdi_ref, 1, False)
 
-        self._session.call_xenapi("Async.VBD.plug", vbd_ref)
+        self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
     def unrescue(self, instance, callback):
         """Unrescue the specified instance
