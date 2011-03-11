@@ -28,29 +28,32 @@ import time
 import urllib2
 import urlparse
 
+from nova import context
 from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.auth import manager
 from nova.auth import signer
-from nova.objectstore import image
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_bool('use_s3', True,
-                  'whether to get images from s3 or use local copy')
-
 LOG = logging.getLogger('nova.virt.images')
 
 
-def fetch(image, path, user, project):
-    if FLAGS.use_s3:
-        f = _fetch_s3_image
-    else:
-        f = _fetch_local_image
-    return f(image, path, user, project)
+def fetch(image_id, path, _user, _project):
+    # TODO(vish): Improve context handling and add owner and auth data
+    #             when it is added to glance.  Right now there is no
+    #             auth checking in glance, so we assume that access was
+    #             checked before we got here.
+    image_service = utils.import_object(FLAGS.image_service)
+    with open(path, "wb") as image_file:
+        elevated = context.get_admin_context()
+        metadata = image_service.get(elevated, image_id, image_file)
+    return metadata
 
 
+# NOTE(vish): The methods below should be unnecessary, but I'm leaving
+#             them in case the glance client does not work on windows.
 def _fetch_image_no_curl(url, path, headers):
     request = urllib2.Request(url)
     for (k, v) in headers.iteritems():
@@ -94,8 +97,7 @@ def _fetch_s3_image(image, path, user, project):
             cmd += ['-H', '\'%s: %s\'' % (k, v)]
 
         cmd += ['-o', path]
-        cmd_out = ' '.join(cmd)
-        return utils.execute(cmd_out)
+        return utils.execute(*cmd)
 
 
 def _fetch_local_image(image, path, user, project):
@@ -103,13 +105,15 @@ def _fetch_local_image(image, path, user, project):
     if sys.platform.startswith('win'):
         return shutil.copy(source, path)
     else:
-        return utils.execute('cp %s %s' % (source, path))
+        return utils.execute('cp', source, path)
 
 
 def _image_path(path):
     return os.path.join(FLAGS.images_path, path)
 
 
+# TODO(vish): xenapi should use the glance client code directly instead
+#             of retrieving the image using this method.
 def image_url(image):
     if FLAGS.image_service == "nova.image.glance.GlanceImageService":
         return "http://%s:%s/images/%s" % (FLAGS.glance_host,

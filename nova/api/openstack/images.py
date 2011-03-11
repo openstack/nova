@@ -151,7 +151,7 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
 
