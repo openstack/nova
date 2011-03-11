@@ -54,6 +54,7 @@ def main(dom_id, command, only_this_vif=None):
 
 def execute(*command, return_stdout=False):
     devnull = open(os.devnull, 'w')
+    command = map(str, command)
     proc = subprocess.Popen(command, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
     devnull.close()
