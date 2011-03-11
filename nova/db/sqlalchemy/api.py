@@ -1893,8 +1893,11 @@ def project_get_by_user(context, user_id):
     session = get_session()
     user = session.query(models.User).\
                    filter_by(deleted=can_read_deleted(context)).\
+                   filter_by(id=user_id).\
                    options(joinedload_all('projects')).\
                    first()
+    if not user:
+        raise exception.NotFound(_('Invalid user_id %s') % user_id)
     return user.projects
 
 
