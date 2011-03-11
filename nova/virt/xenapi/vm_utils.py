@@ -142,7 +142,7 @@ class VMHelper(HelperBase):
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode
         if use_pv_kernel:
-            vm_rec['platform']['nx'] = 'false'
+            rec['platform']['nx'] = 'false'
             if instance.kernel_id:
                 # 1. Kernel explicitly passed in, use that
                 rec['PV_args'] = 'root=/dev/xvda1'
