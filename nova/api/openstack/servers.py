@@ -39,7 +39,7 @@ LOG = logging.getLogger('server')
 FLAGS = flags.FLAGS
 
 
-def _translate_detail_keys(inst):
+def _translate_detail_keys(req, inst):
     """ Coerces into dictionary format, mapping everything to Rackspace-like
     attributes for return"""
     power_mapping = {
@@ -54,6 +54,7 @@ def _translate_detail_keys(inst):
         power_state.CRASHED: 'error',
         power_state.FAILED: 'error'}
     inst_dict = {}
+    version = req.environ['nova.context'].version
 
     mapped_keys = dict(status='state', imageId='image_id',
         flavorId='instance_type', name='display_name', id='id')
@@ -62,15 +63,7 @@ def _translate_detail_keys(inst):
         inst_dict[k] = inst[v]
 
     inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = dict(public=[], private=[])
-
-    # grab single private fixed ip
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    inst_dict['addresses']['private'] = private_ips
-
-    # grab all public floating ips
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    inst_dict['addresses']['public'] = public_ips
+    inst_dict['addresses'] = _addresses_generator(version)(inst)
 
     # Return the metadata as a dictionary
     metadata = {}
@@ -90,6 +83,27 @@ def _translate_keys(inst):
     save for id and name """
     return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
+
+def _addresses_generator(version):
+
+    def _gen_addresses_1_0(inst):
+        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+        return dict(public=public_ips, private=private_ips)
+
+    def _gen_addresses_1_1(inst):
+        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+        private_ips = [dict(version=4, addr=a) for a in private_ips]
+        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+        public_ips = [dict(version=4, addr=a) for a in public_ips]
+        return dict(public=public_ips, private=private_ips)
+
+    dispatch_table = {
+        '1.0': _gen_addresses_1_0,
+        '1.1': _gen_addresses_1_1,
+    }
+
+    return dispatch_table[version]
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
@@ -120,14 +134,14 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        res = [entity_maker(inst)['server'] for inst in limited_list]
+        res = [entity_maker(req, inst)['server'] for inst in limited_list]
         return dict(servers=res)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _translate_detail_keys(instance)
+            return _translate_detail_keys(req, instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 

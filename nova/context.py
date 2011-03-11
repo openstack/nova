@@ -29,7 +29,8 @@ from nova import utils
 
 class RequestContext(object):
     def __init__(self, user, project, is_admin=None, read_deleted=False,
-                 remote_address=None, timestamp=None, request_id=None):
+                 remote_address=None, timestamp=None, request_id=None,
+                 version='1.1'):
         if hasattr(user, 'id'):
             self._user = user
             self.user_id = user.id
@@ -60,6 +61,7 @@ class RequestContext(object):
             chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-'
             request_id = ''.join([random.choice(chars) for x in xrange(20)])
         self.request_id = request_id
+        self.version = version
 
     @property
     def user(self):
@@ -93,7 +95,8 @@ class RequestContext(object):
                 'read_deleted': self.read_deleted,
                 'remote_address': self.remote_address,
                 'timestamp': utils.isotime(self.timestamp),
-                'request_id': self.request_id}
+                'request_id': self.request_id,
+                'version': self.version}
 
     @classmethod
     def from_dict(cls, values):
