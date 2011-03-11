@@ -78,7 +78,7 @@ def _translate_detail_keys(req, inst):
     return dict(server=inst_dict)
 
 
-def _translate_keys(inst):
+def _translate_keys(req, inst):
     """ Coerces into dictionary format, excluding all model attributes
     save for id and name """
     return dict(server=dict(id=inst['id'], name=inst['display_name']))
@@ -193,7 +193,7 @@ class Controller(wsgi.Controller):
             metadata=metadata,
             onset_files=env.get('onset_files', []))
 
-        server = _translate_keys(instances[0])
+        server = _translate_keys(req, instances[0])
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
