@@ -16,11 +16,15 @@
 #    under the License.
 
 import unittest
+import os.path
 
 import webob
 
+from nova import flags
 from nova.api import openstack
 import nova.wsgi
+
+FLAGS = flags.FLAGS
 
 class StubController(nova.wsgi.Controller):
 
@@ -79,5 +83,20 @@ class ExtensionTest(unittest.TestCase):
         response = request.get_response(router)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
+
+
+class ExtensionManagerTest(unittest.TestCase):
+
+    def setUp(self):
+        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
+                                                    "extensions")
+
+    def test_get_resources(self):
+        router = openstack.APIRouter()
+        request = webob.Request.blank("/widgets")
+        response = request.get_response(router)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual("Buy more widgets!", response.body)
+
 
 

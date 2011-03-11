@@ -69,7 +69,7 @@ class APIRouter(wsgi.Router):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
         return cls()
 
-    def __init__(self, ext_manager=None):
+    def __init__(self, ext_mgr=None):
         mapper = routes.Mapper()
 
         server_members = {'action': 'POST'}
@@ -112,9 +112,10 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
 
-        if ext_manager is None:
-            ext_manager = extensions.ExtensionManager()
-        for resource in ext_manager.get_resources():
+        if ext_mgr is None:
+            ext_mgr = extensions.ExtensionManager(FLAGS.osapi_extensions_path)
+        for resource in ext_mgr.get_resources():
+            print resource
             resource.add_routes(mapper)
 
         super(APIRouter, self).__init__(mapper)
