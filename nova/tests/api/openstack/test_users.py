@@ -47,7 +47,7 @@ class UsersTest(test.TestCase):
                        fake_init)
         self.stubs.Set(nova.api.openstack.users.Controller, '_check_admin',
                        fake_admin_check)
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthManager.projects = dict(testacct=Project('testacct',
                                                                'testacct',
                                                                'guy1',
@@ -61,10 +61,8 @@ class UsersTest(test.TestCase):
         self.allow_admin = FLAGS.allow_admin_api
         FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
-        fakemgr.add_user('acc1', User('guy1', 'guy1', 'acc1',
-                                      'fortytwo!', False))
-        fakemgr.add_user('acc2', User('guy2', 'guy2', 'acc2',
-                                      'swordfish', True))
+        fakemgr.add_user(User('guy1', 'guy1', 'acc1', 'fortytwo!', False))
+        fakemgr.add_user(User('guy2', 'guy2', 'acc2', 'swordfish', True))
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -95,7 +93,7 @@ class UsersTest(test.TestCase):
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertTrue('guy1' not in [u.id for u in
-                        fakes.FakeAuthManager.auth_data.values()])
+                        fakes.FakeAuthManager.auth_data])
         self.assertEqual(res.status_int, 200)
 
     def test_user_create(self):
@@ -118,8 +116,8 @@ class UsersTest(test.TestCase):
         self.assertEqual(res_dict['user']['secret'], 'invasionIsInNormandy')
         self.assertEqual(res_dict['user']['admin'], True)
         self.assertTrue('test_guy' in [u.id for u in
-                        fakes.FakeAuthManager.auth_data.values()])
-        self.assertEqual(len(fakes.FakeAuthManager.auth_data.values()), 3)
+                        fakes.FakeAuthManager.auth_data])
+        self.assertEqual(len(fakes.FakeAuthManager.auth_data), 3)
 
     def test_user_update(self):
         body = dict(user=dict(name='guy2',

@@ -59,8 +59,8 @@ class AccountsTest(test.TestCase):
         fakemgr = fakes.FakeAuthManager()
         joeuser = User('guy1', 'guy1', 'acc1', 'fortytwo!', False)
         superuser = User('guy2', 'guy2', 'acc2', 'swordfish', True)
-        fakemgr.add_user(joeuser.access, joeuser)
-        fakemgr.add_user(superuser.access, superuser)
+        fakemgr.add_user(joeuser)
+        fakemgr.add_user(superuser)
         fakemgr.create_project('test1', joeuser)
         fakemgr.create_project('test2', superuser)
 
