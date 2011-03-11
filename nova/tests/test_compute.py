@@ -287,6 +287,30 @@ class ComputeTestCase(test.TestCase):
                 migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
 
+    def test_resize_invalid_flavor_fails(self):
+        """Ensure invalid flavors raise"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        self.compute.run_instance(self.context, instance_id)
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 200)
+
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_down_fails(self):
+        """Ensure invalid flavors raise"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id, 
+                {'instance_type': 'm1.large'})
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
     def test_get_by_flavor_id(self):
         type = instance_types.get_by_flavor_id(1)
         self.assertEqual(type, 'm1.tiny')
