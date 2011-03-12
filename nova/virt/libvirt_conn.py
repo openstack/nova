@@ -1247,13 +1247,12 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def unfilter_instance(self, instance):
-        if instance['id'] in self.instances:
-            del self.instances[instance['id']]
+        if self.instances.pop(instance['id'], None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
-                       'filtered'), instance['id'])
+                     'filtered'), instance['id'])
 
     def prepare_instance_filter(self, instance):
         self.instances[instance['id']] = instance
@@ -1396,11 +1395,11 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def refresh_security_group_rules(self, security_group):
-        for instance in self.instances.values():
-            # We use the semaphore to make sure noone applies the rule set
-            # after we've yanked the existing rules but before we've put in
-            # the new ones.
-            with self.iptables.semaphore:
+        # We use the semaphore to make sure noone applies the rule set
+        # after we've yanked the existing rules but before we've put in
+        # the new ones.
+        with self.iptables.semaphore:
+            for instance in self.instances.values():
                 self.remove_filters_for_instance(instance)
                 self.add_filters_for_instance(instance)
         self.iptables.apply()

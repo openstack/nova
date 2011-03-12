@@ -193,6 +193,8 @@ class Instance(BASE, NovaBase):
 
     locked = Column(Boolean)
 
+    os_type = Column(String(255))
+
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused
