@@ -308,7 +308,7 @@ class IptablesFirewallTestCase(test.TestCase):
       ':PREROUTING ACCEPT [1170:189210]',
       ':INPUT ACCEPT [844:71028]',
       ':OUTPUT ACCEPT [5149:405186]',
-      ':POSTROUTING ACCEPT [5063:386098]'
+      ':POSTROUTING ACCEPT [5063:386098]',
     ]
 
     in_filter_rules = [
