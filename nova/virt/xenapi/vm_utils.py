@@ -897,10 +897,10 @@ def with_vdi_attached_here(session, vdi_ref, read_only, f):
         session.get_xenapi().VBD.plug(vbd_ref)
         LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
         orig_dev = session.get_xenapi().VBD.get_device(vbd_ref)
-        LOG.debug(_('VBD %(vbd)s plugged as %(orig_dev)s') % locals())
+        LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
         dev = remap_vbd_dev(orig_dev)
         if dev != orig_dev:
-            LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
+            LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
         return f(dev)
     finally:
