@@ -34,80 +34,7 @@ import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
-
-
 FLAGS = flags.FLAGS
-
-
-def _translate_keys(req, inst):
-    """ Coerces into dictionary format, excluding all model attributes
-    save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['display_name']))
-
-
-def _build_addresses_10(inst):
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    return dict(public=public_ips, private=private_ips)
-
-
-def _build_addresses_11(inst):
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    private_ips = [dict(version=4, addr=a) for a in private_ips]
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    public_ips = [dict(version=4, addr=a) for a in public_ips]
-    return dict(public=public_ips, private=private_ips)
-
-
-def addresses_builder(req):
-    version = req.environ['nova.context'].version
-    if version == '1.1':
-        return _build_addresses_11
-    else:
-        return _build_addresses_10
-
-
-def build_server(req, inst, is_detail):
-    """ Coerces into dictionary format, mapping everything to Rackspace-like
-    attributes for return"""
-
-    if not is_detail:
-        return dict(server=dict(id=inst['id'], name=inst['display_name']))
-
-    power_mapping = {
-        None: 'build',
-        power_state.NOSTATE: 'build',
-        power_state.RUNNING: 'active',
-        power_state.BLOCKED: 'active',
-        power_state.SUSPENDED: 'suspended',
-        power_state.PAUSED: 'paused',
-        power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error',
-        power_state.FAILED: 'error'}
-    inst_dict = {}
-    version = req.environ['nova.context'].version
-
-    mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='id')
-
-    for k, v in mapped_keys.iteritems():
-        inst_dict[k] = inst[v]
-
-    inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = addresses_builder(req)(inst)
-
-    # Return the metadata as a dictionary
-    metadata = {}
-    for item in inst['metadata']:
-        metadata[item['key']] = item['value']
-    inst_dict['metadata'] = metadata
-
-    inst_dict['hostId'] = ''
-    if inst['host']:
-        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-
-    return dict(server=inst_dict)
 
 
 class Controller(wsgi.Controller):
@@ -127,7 +54,7 @@ class Controller(wsgi.Controller):
     def ips(self, req, id):
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return addresses_builder(req)(instance)
+            return _addresses_builder(req)(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -146,7 +73,7 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        res = [build_server(req, inst, is_detail)['server']
+        res = [_build_server(req, inst, is_detail)['server']
                 for inst in limited_list]
         return dict(servers=res)
 
@@ -154,7 +81,7 @@ class Controller(wsgi.Controller):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return build_server(req, instance, is_detail=True)
+            return _build_server(req, instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -206,7 +133,7 @@ class Controller(wsgi.Controller):
             metadata=metadata,
             onset_files=env.get('onset_files', []))
 
-        server = build_server(req, instances[0], is_detail=False)
+        server = _build_server(req, instances[0], is_detail=False)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
@@ -503,3 +430,70 @@ class Controller(wsgi.Controller):
                 _("Ramdisk not found for image %(image_id)s") % locals())
 
         return kernel_id, ramdisk_id
+
+
+def _build_server(req, inst, is_detail):
+    """ Coerces into dictionary format, mapping everything to Rackspace-like
+    attributes for return"""
+
+    if not is_detail:
+        return dict(server=dict(id=inst['id'], name=inst['display_name']))
+
+    power_mapping = {
+        None: 'build',
+        power_state.NOSTATE: 'build',
+        power_state.RUNNING: 'active',
+        power_state.BLOCKED: 'active',
+        power_state.SUSPENDED: 'suspended',
+        power_state.PAUSED: 'paused',
+        power_state.SHUTDOWN: 'active',
+        power_state.SHUTOFF: 'active',
+        power_state.CRASHED: 'error',
+        power_state.FAILED: 'error'}
+    inst_dict = {}
+    version = req.environ['nova.context'].version
+
+    mapped_keys = dict(status='state', imageId='image_id',
+        flavorId='instance_type', name='display_name', id='id')
+
+    for k, v in mapped_keys.iteritems():
+        inst_dict[k] = inst[v]
+
+    inst_dict['status'] = power_mapping[inst_dict['status']]
+    inst_dict['addresses'] = _addresses_builder(req)(inst)
+
+    # Return the metadata as a dictionary
+    metadata = {}
+    for item in inst['metadata']:
+        metadata[item['key']] = item['value']
+    inst_dict['metadata'] = metadata
+
+    inst_dict['hostId'] = ''
+    if inst['host']:
+        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
+
+    return dict(server=inst_dict)
+
+
+def _addresses_builder(req):
+    version = req.environ['nova.context'].version
+    if version == '1.1':
+        return _build_addresses_11
+    else:
+        return _build_addresses_10
+
+
+def _build_addresses_10(inst):
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    return dict(public=public_ips, private=private_ips)
+
+
+def _build_addresses_11(inst):
+    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
+    private_ips = [dict(version=4, addr=a) for a in private_ips]
+    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+    public_ips = [dict(version=4, addr=a) for a in public_ips]
+    return dict(public=public_ips, private=private_ips)
+
+
