@@ -87,8 +87,8 @@ class VMOps(object):
     def _spawn_with_disk(self, instance, vdi_uuid):
         """Create VM instance"""
         instance_name = instance.name
-        vm = VMHelper.lookup(self._session, instance_name)
-        if vm is not None:
+        vm_ref = VMHelper.lookup(self._session, instance_name)
+        if vm_ref is not None:
             raise exception.Duplicate(_('Attempted to create'
                     ' non-unique name %s') % instance_name)
 
@@ -639,8 +639,8 @@ class VMOps(object):
         instance._rescue = False
 
         for vbd_ref in vbd_refs:
-            vbd = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if vbd["userdevice"] == "1":
+            _vbd_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)
+            if _vbd_ref["userdevice"] == "1":
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
