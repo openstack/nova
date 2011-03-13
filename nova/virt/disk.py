@@ -223,5 +223,4 @@ def _inject_net_into_fs(net, fs, execute=None):
     utils.execute('sudo', 'chown', 'root:root', netdir)
     utils.execute('sudo', 'chmod', 755, netdir)
     netfile = os.path.join(netdir, 'interfaces')
-    utils.execute('sudo', 'tee', netfile,
-                  process_input=net)
+    utils.execute('sudo', 'tee', netfile, process_input=net)
