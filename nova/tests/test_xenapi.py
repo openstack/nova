@@ -268,7 +268,6 @@ class XenAPIVMTestCase(test.TestCase):
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
-        LOG.debug("VM:%s", self.vm)
         self.assertEquals(self.vm_info['max_mem'], mem_kib)
         self.assertEquals(self.vm_info['mem'], mem_kib)
         self.assertEquals(self.vm['memory_static_max'], mem_bytes)
