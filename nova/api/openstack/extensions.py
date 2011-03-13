@@ -38,6 +38,12 @@ class ExtensionManager(object):
         return resources
 
     def _load_extensions(self):
+        """
+        Load extensions from the configured path. The extension name is
+        constructed from the camel cased module_name + 'Extension'. If your
+        extension module was named widgets.py the extension class within that
+        module should be 'WidgetsExtension'.
+        """
         if not os.path.exists(self.path):
             return
 
@@ -46,7 +52,8 @@ class ExtensionManager(object):
             ext_path = os.path.join(self.path, f)
             if file_ext.lower() == '.py':
                 mod = imp.load_source(mod_name, ext_path)
-                self.extensions.append(getattr(mod, 'get_extension')())
+                ext_name = mod_name[0].upper() + mod_name[1:] + 'Extension'
+                self.extensions.append(getattr(mod, ext_name)())
 
 
 class ExtensionResource(object):
