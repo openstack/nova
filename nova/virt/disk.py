@@ -56,7 +56,7 @@ def extend(image, size):
         return
     utils.execute('truncate', '-s', size, image)
     # NOTE(vish): attempts to resize filesystem
-    utils.execute('e2fsck', '-fp', mage, check_exit_code=False)
+    utils.execute('e2fsck', '-fp', image, check_exit_code=False)
     utils.execute('resize2fs', image, check_exit_code=False)
 
 
@@ -223,4 +223,5 @@ def _inject_net_into_fs(net, fs, execute=None):
     utils.execute('sudo', 'chown', 'root:root', netdir)
     utils.execute('sudo', 'chmod', 755, netdir)
     netfile = os.path.join(netdir, 'interfaces')
-    utils.execute('sudo', 'tee', netfile, net)
+    utils.execute('sudo', 'tee', netfile,
+                  process_input=net)

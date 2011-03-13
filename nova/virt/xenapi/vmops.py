@@ -168,13 +168,14 @@ class VMOps(object):
 
         def _wait_for_boot():
             try:
+                LOG.debug("ENTERING WAIT FOR BOOT!")
                 state = self.get_info(instance_name)['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
-                    timer.stop()
                     _inject_onset_files()
+                    timer.stop()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -836,7 +837,7 @@ class VMOps(object):
         """
         instance_id = vm.id
         vm = self._get_vm_opaque_ref(vm)
-        rec = self._session.get_xenapi().VM.get_record(vm)
+        rec = self._session.call_xenapi('VM.get_record', vm)
         args = {'dom_id': rec['domid'], 'path': path}
         args.update(addl_args)
         try:

@@ -74,31 +74,6 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_instance_type_get_by_name(context, name):
         return INSTANCE_TYPES[name]
 
-    def fake_instance_create(values):
-        """ Stubs out the db.instance_create method """
-
-        type_data = INSTANCE_TYPES[values['instance_type']]
-
-        base_options = {
-            'name': values['name'],
-            'id': values['id'],
-            'reservation_id': utils.generate_uid('r'),
-            'image_id': values['image_id'],
-            'kernel_id': values['kernel_id'],
-            'ramdisk_id': values['ramdisk_id'],
-            'state_description': 'scheduling',
-            'user_id': values['user_id'],
-            'project_id': values['project_id'],
-            'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-            'instance_type': values['instance_type'],
-            'memory_mb': type_data['memory_mb'],
-            'mac_address': values['mac_address'],
-            'vcpus': type_data['vcpus'],
-            'local_gb': type_data['local_gb'],
-            'key_data': '',
-            }
-        return FakeModel(base_options)
-
     def fake_network_get_by_instance(context, instance_id):
         return FakeModel(network_fields)
 
@@ -115,7 +90,6 @@ def stub_out_db_instance_api(stubs, injected=True):
         l.append(FakeModel(fixed_ip_fields))
         return l
 
-    stubs.Set(db, 'instance_create', fake_instance_create)
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)

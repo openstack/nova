@@ -626,9 +626,10 @@ class VMHelper(HelperBase):
                     # Mount only Linux filesystems, to avoid disturbing
                     # NTFS images
                     try:
-                        out, err = utils.execute(
-                            'sudo mount -t ext2,ext3 "%s" "%s"' %
-                            (dev_path, tmpdir))
+                        out, err = utils.execute('sudo', 'mount',
+                                                 '-t', 'ext2,ext3',
+                                                 '"%s"' % dev_path,
+                                                 '"%s"' % tmpdir)
                     except exception.ProcessExecutionError as e:
                         err = str(e)
                     if err:
@@ -664,7 +665,7 @@ class VMHelper(HelperBase):
                                 disk.inject_data_into_fs(tmpdir, key, net,
                                     utils.execute)
                         finally:
-                            utils.execute('sudo umount "%s"' % dev_path)
+                            utils.execute('sudo', 'umount', dev_path)
                 finally:
                     # remove temporary directory
                     os.rmdir(tmpdir)

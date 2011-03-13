@@ -48,26 +48,32 @@ def fake_execute_set_repliers(repliers):
     _fake_execute_repliers = repliers
 
 
-def fake_execute_default_reply_handler(*ignore_args):
+def fake_execute_default_reply_handler(*ignore_args, **ignore_kwargs):
     """A reply handler for commands that haven't been added to the reply
     list.  Returns empty strings for stdout and stderr
     """
     return '', ''
 
 
-def fake_execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
+def fake_execute(*cmd, **kwargs):
     """This function stubs out execute, optionally executing
     a preconfigued function to return expected data
     """
     global _fake_execute_repliers
 
-    LOG.debug(_("Faking execution of cmd (subprocess): %s"), cmd)
-    _fake_execute_log.append(cmd)
+    process_input = kwargs.get('process_input', None)
+    addl_env = kwargs.get('addl_env', None)
+    check_exit_code = kwargs.get('check_exit_code', 0)
+    cmd_map = map(str, cmd)
+    cmd_str = ' '.join(cmd_map)
+
+    LOG.debug(_("Faking execution of cmd (subprocess): %s"), cmd_str)
+    _fake_execute_log.append(cmd_str)
 
     reply_handler = fake_execute_default_reply_handler
 
     for fake_replier in _fake_execute_repliers:
-        if re.match(fake_replier[0], cmd):
+        if re.match(fake_replier[0], cmd_str):
             reply_handler = fake_replier[1]
             LOG.debug(_('Faked command matched %s') % fake_replier[0])
             break
@@ -78,8 +84,10 @@ def fake_execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
     else:
         try:
             # Alternative is a function, so call it
-            reply = reply_handler(cmd, process_input, addl_env,
-                check_exit_code)
+            reply = reply_handler(cmd,
+                                  process_input=process_input,
+                                  addl_env=addl_env,
+                                  check_exit_code=check_exit_code)
         except exception.ProcessExecutionError as e:
             LOG.debug(_('Faked command raised an exception %s' % str(e)))
             raise

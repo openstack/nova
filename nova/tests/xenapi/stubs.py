@@ -21,6 +21,7 @@ from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
+from nova import utils
 
 
 def stubout_instance_snapshot(stubs):
@@ -137,13 +138,16 @@ def stubout_is_vdi_pv(stubs):
     stubs.Set(vm_utils, '_is_vdi_pv', f)
 
 
+def stubout_loopingcall_start(stubs):
+    def f_1(self, interval, now=True):
+        self.f(*self.args, **self.kw)
+    stubs.Set(utils.LoopingCall, 'start', f_1)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
-
-    def network_get_all_records_where(self, _1, _2):
-        return self.xenapi.network.get_all_records()
 
     def host_call_plugin(self, _1, _2, _3, _4, _5):
         sr_ref = fake.get_all('SR')[0]
@@ -177,12 +181,6 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VM_destroy(self, session_ref, vm_ref):
         fake.destroy_vm(vm_ref)
-
-    def VM_add_to_xenstore_data(self, session_ref, vm_ref, key, value):
-        fake.VM_add_to_xenstore_data(vm_ref, key, value)
-
-    def VM_remove_from_xenstore_data(self, session_ref, vm_ref, key):
-        fake.VM_remove_from_xenstore_data(vm_ref, key)
 
     def SR_scan(self, session_ref, sr_ref):
         pass

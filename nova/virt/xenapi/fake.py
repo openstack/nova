@@ -149,24 +149,6 @@ def create_vbd(vm_ref, vdi_ref):
     return vbd_ref
 
 
-def VM_get_xenstore_data(vm_ref):
-    return _db_content['VM'][vm_ref].get('xenstore_data', '')
-
-
-def VM_remove_from_xenstore_data(vm_ref, key):
-    db_ref = _db_content['VM'][vm_ref]
-    if not 'xenstore_data' in db_ref:
-        return
-    db_ref['xenstore_data'][key] = None
-
-
-def VM_add_to_xenstore_data(vm_ref, key, value):
-    db_ref = _db_content['VM'][vm_ref]
-    if not 'xenstore_data' in db_ref:
-        db_ref['xenstore_data'] = {}
-    db_ref['xenstore_data'][key] = value
-
-
 def after_VBD_create(vbd_ref, vbd_rec):
     """Create read-only fields and backref from VM to VBD when VBD is
     created."""
@@ -309,6 +291,25 @@ class SessionBase(object):
             raise Failure(['DEVICE_ALREADY_DETACHED', ref])
         rec['currently_attached'] = False
         rec['device'] = ''
+
+    def VM_get_xenstore_data(self, _1, vm_ref):
+        return _db_content['VM'][vm_ref].get('xenstore_data', '')
+
+    def VM_remove_from_xenstore_data(self, _1, vm_ref, key):
+        db_ref = _db_content['VM'][vm_ref]
+        if not 'xenstore_data' in db_ref:
+            return
+        db_ref['xenstore_data'][key] = None
+
+    def network_get_all_records_where(self, _1, _2):
+        # TODO (salvatore-orlando):filter table on _2
+        return _db_content['network']
+
+    def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
+        db_ref = _db_content['VM'][vm_ref]
+        if not 'xenstore_data' in db_ref:
+            db_ref['xenstore_data'] = {}
+        db_ref['xenstore_data'][key] = value
 
     def host_compute_free_memory(self, _1, ref):
         #Always return 12GB available
@@ -501,7 +502,7 @@ class SessionBase(object):
     def _check_session(self, params):
         if (self._session is None or
             self._session not in _db_content['session']):
-            raise Failure(['HANDLE_INVALID', 'session', self._session])
+                raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
             LOG.debug(_('Raising NotImplemented'))
             raise NotImplementedError('Call to XenAPI without using .xenapi')

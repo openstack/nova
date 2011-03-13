@@ -77,8 +77,8 @@ class APIRouter(wsgi.Router):
 
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
-            server_members["diagnostics"] = "GET"
-            server_members["actions"] = "GET"
+            server_members['diagnostics'] = 'GET'
+            server_members['actions'] = 'GET'
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
             server_members['rescue'] = 'POST'
@@ -87,7 +87,7 @@ class APIRouter(wsgi.Router):
             server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
-                        collection={'detail': 'GET'})
+                        collection={'detail': 'GET', 'info': 'GET'}),
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},

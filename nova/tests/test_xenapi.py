@@ -55,6 +55,7 @@ class XenAPIVolumeTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
+        self.context = context.RequestContext('fake', 'fake', False)
         FLAGS.target_host = '127.0.0.1'
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
@@ -62,7 +63,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         #db_fakes.stub_out_db_network_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
-        self.values = {'name': 1, 'id': 1,
+        self.values = {'id': 1,
                   'project_id': 'fake',
                   'user_id': 'fake',
                   'image_id': 1,
@@ -82,7 +83,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
-        return db.volume_create(context.get_admin_context(), vol)
+        return db.volume_create(self.context, vol)
 
     def test_create_iscsi_storage(self):
         """ This shows how to test helper classes' methods """
@@ -118,7 +119,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
         result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
 
@@ -138,7 +139,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         xenapi_fake.create_vm(instance.name, 'Running')
         self.assertRaises(Exception,
                           conn.attach_volume,
@@ -167,12 +168,12 @@ class XenAPIVMTestCase(test.TestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
         self.stubs = stubout.StubOutForTesting()
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   instance_name_template='%d')
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         db_fakes.stub_out_db_instance_api(self.stubs)
-        #db_fakes.stub_out_db_network_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
@@ -182,6 +183,7 @@ class XenAPIVMTestCase(test.TestCase):
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
         fake_utils.stub_out_utils_execute(self.stubs)
+        self.context = context.RequestContext('fake', 'fake', False)
         self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
@@ -235,8 +237,7 @@ class XenAPIVMTestCase(test.TestCase):
 
         # Get Nova record for VM
         vm_info = conn.get_info('1')
-
-        # Get XenAPI record for VM
+       # Get XenAPI record for VM
         vms = [(ref, rec) for ref, rec
                in xenapi_fake.get_all_records('VM').iteritems()
                if not rec['is_control_domain']]
@@ -262,7 +263,8 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(vm['power_state'], 'Running')
 
         if check_injection:
-            xenstore_data = xenapi_fake.VM_get_xenstore_data(vm_ref)
+            session = xenapi_conn.XenAPISession('fake', 'fake', 'fake')
+            xenstore_data = session.call_xenapi('VM.get_xenstore_data', vm_ref)
             key = 'vm-data/networking/aabbccddeeff'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
@@ -282,10 +284,8 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
         instance_type="m1.large", check_injection=False):
-
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': "1",
-                  'id': "1",
+        stubs.stubout_loopingcall_start(self.stubs)
+        values = {'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': image_id,
@@ -294,10 +294,9 @@ class XenAPIVMTestCase(test.TestCase):
                   'instance_type': instance_type,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
-        conn = xenapi_conn.get_connection(False)
-        instance = db.instance_create(values)
-        conn.spawn(instance)
-        self.check_vm_record(conn, check_injection=check_injection)
+        instance = db.instance_create(self.context, values)
+        self.conn.spawn(instance)
+        self.check_vm_record(self.conn, check_injection=check_injection)
 
     def test_spawn_not_enough_memory(self):
         FLAGS.xenapi_image_service = 'glance'
@@ -333,14 +332,12 @@ class XenAPIVMTestCase(test.TestCase):
 
         self._tee_executed = False
 
-        def _tee_handler(cmd, input, *ignore_args):
+        def _tee_handler(cmd, **kwargs):
+            input = kwargs.get('process_input', None)
             self.assertNotEqual(input, None)
-
             config = [line.strip() for line in input.split("\n")]
-
             # Find the start of eth0 configuration and check it
             index = config.index('auto eth0')
-
             self.assertEquals(config[index + 1:index + 8], [
                 'iface eth0 inet static',
                 'address 10.0.0.3',
@@ -349,9 +346,7 @@ class XenAPIVMTestCase(test.TestCase):
                 'gateway 10.0.0.1',
                 'dns-nameservers 10.0.0.2',
                 ''])
-
             self._tee_executed = True
-
             return '', ''
 
         fake_utils.fake_execute_set_repliers([
@@ -371,12 +366,14 @@ class XenAPIVMTestCase(test.TestCase):
 
         self._tee_executed = False
 
-        def _mount_handler(cmd, *ignore_args):
+        def _mount_handler(cmd, *ignore_args, **ignore_kwargs):
             # When mounting, create real files under the mountpoint to simulate
             # files in the mounted filesystem
 
             # RegExp extracts the path of the mountpoint
-            match = re.match(r'(sudo\s+)?mount[^"]*"[^"]*"\s+"([^"]*)"', cmd)
+            cmd_str = ' '.join(cmd)
+            match = re.match(r'(sudo\s+)?mount[^"]*"[^"]*"\s+"([^"]*)"',
+                             cmd_str)
             self._tmpdir = match.group(2)
             LOG.debug(_('Creating files in %s to simulate guest agent' %
                 self._tmpdir))
@@ -386,7 +383,7 @@ class XenAPIVMTestCase(test.TestCase):
                 'xe-update-networking'), 'w').close()
             return '', ''
 
-        def _umount_handler(cmd, *ignore_args):
+        def _umount_handler(cmd, *ignore_args, **ignore_kwargs):
             # Umount would normall make files in the m,ounted filesystem
             # disappear, so do that here
             LOG.debug(_('Removing simulated guest agent files in %s' %
@@ -397,7 +394,7 @@ class XenAPIVMTestCase(test.TestCase):
             os.rmdir(os.path.join(self._tmpdir, 'usr'))
             return '', ''
 
-        def _tee_handler(cmd, input, *ignore_args):
+        def _tee_handler(cmd, *ignore_args, **ignore_kwargs):
             self._tee_executed = True
             return '', ''
 
@@ -419,9 +416,9 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _create_instance(self):
         """Creates and spawns a test instance"""
+        stubs.stubout_loopingcall_start(self.stubs)
         values = {
-            'name': '1',
-            'id': '1',
+            'id': 1,
             'project_id': self.project.id,
             'user_id': self.user.id,
             'image_id': 1,
@@ -429,7 +426,7 @@ class XenAPIVMTestCase(test.TestCase):
             'ramdisk_id': 3,
             'instance_type': 'm1.large',
             'mac_address': 'aa:bb:cc:dd:ee:ff'}
-        instance = db.instance_create(values)
+        instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
         return instance
 
@@ -474,11 +471,13 @@ class XenAPIMigrateInstance(test.TestCase):
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
+        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.values = {'name': 1, 'id': 1,
+        self.context = context.RequestContext('fake', 'fake', False)
+        self.values = {'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': 1,
@@ -488,6 +487,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
         stubs.stub_out_migration_methods(self.stubs)
+        stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
 
@@ -498,14 +498,15 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.UnsetAll()
 
     def test_migrate_disk_and_power_off(self):
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
 
     def test_finish_resize(self):
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
 
