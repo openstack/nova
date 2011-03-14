@@ -420,7 +420,7 @@ class API(base.Base):
 
         :retval: A dict containing image metadata
         """
-        data = {'name': name, 'is_public': False}
+        data = {'name': name, 'is_public': False, 'instance_id': instance_id}
         image_meta = self.image_service.create(context, data)
         params = {'image_id': image_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,

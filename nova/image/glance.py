@@ -36,6 +36,7 @@ GlanceClient = utils.import_class('glance.client.Client')
 
 class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
+    IMAGE_PROPERTIES = ['instance_id', 'os_type']
 
     def __init__(self):
         self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
@@ -57,10 +58,12 @@ class GlanceImageService(service.BaseImageService):
         Returns a dict containing image data for the given opaque image id.
         """
         try:
-            image = self.client.get_image_meta(image_id)
+            metadata = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
             raise exception.NotFound
-        return image
+
+        meta = self._depropertify_metadata_from_glance(metadata)
+        return meta
 
     def show_by_name(self, context, name):
         """
@@ -88,7 +91,9 @@ class GlanceImageService(service.BaseImageService):
             raise exception.NotFound
         for chunk in image_chunks:
             data.write(chunk)
-        return metadata
+
+        meta = self._depropertify_metadata_from_glance(metadata)
+        return meta
 
     def create(self, context, metadata, data=None):
         """
@@ -97,7 +102,12 @@ class GlanceImageService(service.BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        return self.client.add_image(metadata, data)
+        LOG.debug(_("Creating image in Glance. Metdata passed in %s"),
+                  metadata)
+
+        meta = self._propertify_metadata_for_glance(metadata)
+        LOG.debug(_("Metadata after formatting for Glance %s"), meta)
+        return self.client.add_image(meta, data)
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data.
@@ -129,3 +139,43 @@ class GlanceImageService(service.BaseImageService):
         Clears out all images
         """
         pass
+
+    @classmethod
+    def _propertify_metadata_for_glance(cls, metadata):
+        """Return a metadata dict suitable for passing to Glance.
+
+        The ImageService exposes metadata as a flat-dict; however, Glance
+        distinguishes between two different types of metadata:
+
+            1. First-class attributes: These are columns on the image table
+               and represent metadata that is common to all images on all IAAS
+               providers.
+
+            2. Properties: These are entries in the image_properties table and
+               represent image/IAAS-provider specific metadata.
+
+        To reconcile this difference, this function accepts a flat-dict of
+        metadata, figures out which attributes are stored as image properties
+        in Glance, and then adds those to a `properties` dict nested within
+        the metadata.
+        """
+        new_metadata = metadata.copy()
+        properties = {}
+        for property_ in cls.IMAGE_PROPERTIES:
+            if property_ in new_metadata:
+                value = new_metadata.pop(property_)
+                properties[property_] = value
+        new_metadata['properties'] = properties
+        return new_metadata
+
+    @classmethod
+    def _depropertify_metadata_from_glance(cls, metadata):
+        """Return a metadata dict suitable for returning from ImageService
+        """
+        new_metadata = metadata.copy()
+        properties = new_metadata.pop('properties')
+        for property_ in cls.IMAGE_PROPERTIES:
+            if property_ in properties and property_ not in new_metadata:
+                value = properties[property_]
+                new_metadata[property_] = value
+        return new_metadata

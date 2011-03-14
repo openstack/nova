@@ -132,6 +132,19 @@ def stub_out_compute_api_snapshot(stubs):
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
+def stub_out_glance_add_image(stubs, sent_to_glance):
+    """
+    We return the metadata sent to glance by modifying the sent_to_glance dict
+    in place.
+    """
+    orig_add_image = glance_client.Client.add_image
+    def fake_add_image(context, metadata, data=None):
+        sent_to_glance['metadata'] = metadata
+        sent_to_glance['data'] = data
+        return orig_add_image(metadata, data)
+    stubs.Set(glance_client.Client, 'add_image', fake_add_image)
+
+
 def stub_out_glance(stubs, initial_fixtures=None):
 
     class FakeGlanceClient:
@@ -153,8 +166,10 @@ def stub_out_glance(stubs, initial_fixtures=None):
             raise glance_exc.NotFound
 
         def fake_add_image(self, image_meta, data=None):
-            id = ''.join(random.choice(string.letters) for _ in range(20))
-            image_meta['id'] = id
+            if 'id' not in image_meta:
+                image_id = ''.join(random.choice(string.letters)
+                                   for _ in range(20))
+                image_meta['id'] = image_id
             self.fixtures.append(image_meta)
             return image_meta
 

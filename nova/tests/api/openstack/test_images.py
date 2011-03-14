@@ -28,6 +28,7 @@ import tempfile
 import stubout
 import webob
 
+from glance import client as glance_client
 from nova import context
 from nova import exception
 from nova import flags
@@ -166,10 +167,50 @@ class GlanceImageServiceTest(test.TestCase,
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(None, None)
         self.service.delete_all()
+        self.sent_to_glance = {}
+        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
 
     def tearDown(self):
         self.stubs.UnsetAll()
         super(GlanceImageServiceTest, self).tearDown()
+
+    def test_create_propertified_images_with_instance_id(self):
+        """
+        Some attributes are passed to Glance as image-properties (ex.
+        instance_id).
+
+        This tests asserts that the ImageService exposes them as if they were
+        first-class attribrutes, but that they are passed to Glance as image
+        properties.
+        """
+        fixture = {'id': 123, 'instance_id': 42, 'name': 'test image'}
+        image_id = self.service.create(self.context, fixture)['id']
+
+        expected = {'id': 123,
+                    'name': 'test image',
+                    'properties': {'instance_id': 42}}
+        self.assertDictMatch(self.sent_to_glance['metadata'], expected)
+
+        # The ImageService shouldn't leak the fact that the instance_id
+        # happens to be stored as a property in Glance
+        expected = {'id': 123, 'instance_id': 42, 'name': 'test image'}
+        image_meta = self.service.show(self.context, image_id)
+        self.assertDictMatch(image_meta, expected)
+
+    def test_create_propertified_images_without_instance_id(self):
+        """
+        Some attributes are passed to Glance as image-properties (ex.
+        instance_id).
+
+        This tests asserts that the ImageService exposes them as if they were
+        first-class attribrutes, but that they are passed to Glance as image
+        properties.
+        """
+        fixture = {'id': 123, 'name': 'test image'}
+        image_id = self.service.create(self.context, fixture)['id']
+
+        expected = {'id': 123, 'name': 'test image', 'properties': {}}
+        self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
