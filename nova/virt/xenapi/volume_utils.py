@@ -117,16 +117,16 @@ class VolumeHelper(HelperBase):
     def introduce_vdi(cls, session, sr_ref):
         """Introduce VDI in the host"""
         try:
-            vdis = session.get_xenapi().SR.get_VDIs(sr_ref)
+            vdi_refs = session.get_xenapi().SR.get_VDIs(sr_ref)
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
         try:
-            vdi_rec = session.get_xenapi().VDI.get_record(vdis[0])
+            vdi_rec = session.get_xenapi().VDI.get_record(vdi_refs[0])
         except cls.XenAPI.Failure, exc:
             LOG.exception(exc)
             raise StorageError(_('Unable to get record'
-                                 ' of VDI %s on') % vdis[0])
+                                 ' of VDI %s on') % vdi_refs[0])
         else:
             try:
                 return session.get_xenapi().VDI.introduce(
