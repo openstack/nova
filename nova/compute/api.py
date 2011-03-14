@@ -482,7 +482,7 @@ class API(base.Base):
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_id,
-                              "instance_type": new_instance_type}})
+                              "flavor_id": flavor_id}})
 
     def pause(self, context, instance_id):
         """Pause the given instance."""

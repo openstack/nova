@@ -292,14 +292,18 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
         context = self.context.elevated()
+        small_inst_type_id = self._create_instance_type(dict(flavorid=1,
+                memory_mb=512, name='m1.small'))
+
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_id)
+        self.compute.prep_resize(context, instance_id, 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_id, 'pre-migrating')
         self.compute.resize_instance(context, instance_id,
                 migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
+        self.db.instance_type_purge(context, 'm1.small')
 
     def test_resize_invalid_flavor_fails(self):
         """Ensure invalid flavors raise"""
@@ -317,7 +321,7 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
 
         small_inst_type_id = self._create_instance_type(dict(flavorid=1,
-                memory_mb=512))
+                memory_mb=512, name='m1.small'))
         big_inst_type_id = self._create_instance_type(dict(flavorid=2,
                 name='m1.wowzers', memory_mb=8192))
 
@@ -331,6 +335,8 @@ class ComputeTestCase(test.TestCase):
                 context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
+        self.db.instance_type_purge(context, 'm1.small')
+        self.db.instance_type_purge(context, 'm1.wowzers')
 
     def test_get_by_flavor_id(self):
         type = instance_types.get_by_flavor_id(1)
@@ -340,7 +346,10 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance fails to migrate when source and destination are
         the same host"""
         instance_id = self._create_instance()
+        small_inst_type_id = self._create_instance_type(dict(flavorid=1,
+                memory_mb=512, name='m1.small'))
         self.compute.run_instance(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
-                self.context, instance_id)
+                self.context, instance_id, 1)
         self.compute.terminate_instance(self.context, instance_id)
+        self.db.instance_type_purge(context, 'm1.small')
