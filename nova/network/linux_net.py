@@ -18,7 +18,7 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 """
 
 import os
-import time
+import calendar
 
 from nova import db
 from nova import exception
@@ -380,12 +380,17 @@ interface %s
 def _host_lease(fixed_ip_ref):
     """Return a host string for an address in leasefile format"""
     instance_ref = fixed_ip_ref['instance']
-    timestamp = time.mktime(instance_ref['updated_at'].timetuple())
+    if instance_ref['updated_at']:
+        timestamp = instance_ref['updated_at']
+    else:
+        timestamp = instance_ref['created_at']
 
-    return "%d %s %s %s" % (timestamp + FLAGS.dhcp_lease_time,
-                            instance_ref['mac_address'],
-                            instance_ref['hostname'],
-                            fixed_ip_ref['address'])
+    seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
+
+    return "%d %s %s %s *" % (seconds_since_epoch + FLAGS.dhcp_lease_time,
+                              instance_ref['mac_address'],
+                              fixed_ip_ref['address'],
+                              instance_ref['hostname'] or '*')
 
 
 def _host_dhcp(fixed_ip_ref):
