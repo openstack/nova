@@ -32,6 +32,7 @@ flags.DECLARE('fake_network', 'nova.network.manager')
 FLAGS.network_size = 8
 FLAGS.num_networks = 2
 FLAGS.fake_network = True
+FLAGS.image_service = 'nova.image.local.LocalImageService'
 flags.DECLARE('num_shelves', 'nova.volume.driver')
 flags.DECLARE('blades_per_shelf', 'nova.volume.driver')
 flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')

@@ -27,6 +27,7 @@ import webob.exc
 from nova import flags
 from nova import log as logging
 from nova import wsgi
+from nova.api.openstack import accounts
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
@@ -34,6 +35,7 @@ from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
+from nova.api.openstack import users
 from nova.api.openstack import zones
 
 
@@ -77,8 +79,8 @@ class APIRouter(wsgi.Router):
 
             server_members['pause'] = 'POST'
             server_members['unpause'] = 'POST'
-            server_members["diagnostics"] = "GET"
-            server_members["actions"] = "GET"
+            server_members['diagnostics'] = 'GET'
+            server_members['actions'] = 'GET'
             server_members['suspend'] = 'POST'
             server_members['resume'] = 'POST'
             server_members['rescue'] = 'POST'
@@ -87,7 +89,14 @@ class APIRouter(wsgi.Router):
             server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
+                        collection={'detail': 'GET', 'info': 'GET'}),
+
+            mapper.resource("user", "users", controller=users.Controller(),
                         collection={'detail': 'GET'})
+
+            mapper.resource("account", "accounts",
+                            controller=accounts.Controller(),
+                            collection={'detail': 'GET'})
 
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
