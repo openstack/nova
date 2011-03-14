@@ -115,16 +115,7 @@ class ComputeTestCase(test.TestCase):
             finally:
                 db.instance_destroy(self.context, ref[0]['id'])
 
-    def test_create_instance_associates_security_groups_1(self):
-        """Make sure create associates security groups"""
-        group = self._create_group()
-        instance_ref = models.Instance()
-        instance_ref['id'] = 1
-        instance_ref['volumes'] = [{'id': 1}, {'id': 2}]
-        instance_ref['hostname'] = 'i-00000001'
-        return instance_ref
-
-    def test_create_instance_associates_security_groups_2(self):
+    def test_create_instance_associates_security_groups(self):
         """Make sure create associates security groups"""
         group = self._create_group()
         ref = self.compute_api.create(
