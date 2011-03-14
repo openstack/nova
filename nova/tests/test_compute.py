@@ -115,7 +115,7 @@ class ComputeTestCase(test.TestCase):
             finally:
                 db.instance_destroy(self.context, ref[0]['id'])
 
-    def test_create_instance_associates_security_groups(self):
+    def test_create_instance_associates_security_groups_1(self):
         """Make sure create associates security groups"""
         group = self._create_group()
         instance_ref = models.Instance()
@@ -124,18 +124,7 @@ class ComputeTestCase(test.TestCase):
         instance_ref['hostname'] = 'i-00000001'
         return instance_ref
 
-    def test_create_instance_defaults_display_name(self):
-        """Verify that an instance cannot be created without a display_name."""
-        cases = [dict(), dict(display_name=None)]
-        for instance in cases:
-            ref = self.compute_api.create(self.context,
-                FLAGS.default_instance_type, None, **instance)
-            try:
-                self.assertNotEqual(ref[0]['display_name'], None)
-            finally:
-                db.instance_destroy(self.context, ref[0]['id'])
-
-    def test_create_instance_associates_security_groups(self):
+    def test_create_instance_associates_security_groups_2(self):
         """Make sure create associates security groups"""
         group = self._create_group()
         ref = self.compute_api.create(
