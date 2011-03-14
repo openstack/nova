@@ -513,11 +513,9 @@ def ensure_bridge(bridge, interface, net_attrs=None):
         for line in out.split("\n"):
             fields = line.split()
             if fields and fields[0] == "inet":
-                params = ' '.join(fields[1:-1])
-                _execute('sudo', 'ip', 'addr',
-                         'del', params, 'dev', fields[-1])
-                _execute('sudo', 'ip', 'addr',
-                         'add', params, 'dev', bridge)
+                params = fields[1:-1]
+                _execute(*_ip_bridge_cmd('del', params, fields[-1]))
+                _execute(*_ip_bridge_cmd('add', params, bridge))
         if gateway:
             _execute('sudo', 'route', 'add', '0.0.0.0', 'gw', gateway)
         out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
@@ -739,3 +737,12 @@ def _ra_pid_for(bridge):
     if os.path.exists(pid_file):
         with open(pid_file, 'r') as f:
             return int(f.read())
+
+
+def _ip_bridge_cmd(action, params, device):
+    """Build commands to add/del ips to bridges/devices"""
+
+    cmd = ['sudo', 'ip', 'addr', action]
+    cmd.extend(params)
+    cmd.extend(['dev', device])
+    return cmd
