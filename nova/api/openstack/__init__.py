@@ -124,7 +124,6 @@ class APIRouter(wsgi.Router):
         if ext_mgr is None:
             ext_mgr = extensions.ExtensionManager(FLAGS.osapi_extensions_path)
         for resource in ext_mgr.get_resources():
-            print resource
             resource.add_routes(mapper)
 
         super(APIRouter, self).__init__(mapper)

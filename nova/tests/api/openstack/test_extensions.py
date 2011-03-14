@@ -15,16 +15,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import unittest
-import os.path
-
 import webob
+import os.path
 
 from nova import flags
 from nova.api import openstack
 import nova.wsgi
 
 FLAGS = flags.FLAGS
+
 
 class StubController(nova.wsgi.Controller):
 
@@ -34,6 +35,7 @@ class StubController(nova.wsgi.Controller):
     def index(self, req):
         return self.body
 
+
 class StubExtensionManager(object):
 
     def __init__(self, resources):
@@ -41,6 +43,7 @@ class StubExtensionManager(object):
 
     def get_resources(self):
         return self.resources
+
 
 class WidgetExtensionResource(object):
 
@@ -51,6 +54,7 @@ class WidgetExtensionResource(object):
 
     def add_routes(self, mapper):
         mapper.resource(self.name, self.collection, controller=self.wsgi_app)
+
 
 class ExtensionTest(unittest.TestCase):
 
@@ -99,4 +103,40 @@ class ExtensionManagerTest(unittest.TestCase):
         self.assertEqual("Buy more widgets!", response.body)
 
 
+class ExtendedActionTest(unittest.TestCase):
 
+    def setUp(self):
+        FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
+                                                    "extensions")
+
+    def test_extended_action(self):
+        app = openstack.APIRouter()
+        ext_midware = openstack.extensions.ExtensionMiddleware(app)
+        body = dict(add_widget=dict(name="test"))
+        request = webob.Request.blank("/servers/1/action")
+        request.method = 'POST'
+        request.content_type = 'application/json'
+        request.body = json.dumps(body)
+        response = request.get_response(ext_midware)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual("Widget Added.", response.body)
+
+    def test_invalid_action_body(self):
+        app = openstack.APIRouter()
+        ext_midware = openstack.extensions.ExtensionMiddleware(app)
+        body = dict(blah=dict(name="test"))  # Doesn't exist
+        request = webob.Request.blank("/servers/1/action")
+        request.method = 'POST'
+        request.content_type = 'application/json'
+        request.body = json.dumps(body)
+        response = request.get_response(ext_midware)
+        self.assertEqual(501, response.status_int)
+
+    def test_invalid_action(self):
+        app = openstack.APIRouter()
+        ext_midware = openstack.extensions.ExtensionMiddleware(app)
+        request = webob.Request.blank("/asdf/1/action")
+        request.method = 'POST'
+        request.content_type = 'application/json'
+        response = request.get_response(ext_midware)
+        self.assertEqual(404, response.status_int)
