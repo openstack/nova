@@ -202,13 +202,13 @@ class VMHelper(HelperBase):
     @classmethod
     def find_vbd_by_number(cls, session, vm_ref, number):
         """Get the VBD reference from the device number"""
-        vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+                    vbd_rec = session.get_xenapi().VBD.get_record(vbd_ref)
                     if vbd_rec['userdevice'] == str(number):
-                        return vbd
+                        return vbd_ref
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
         raise StorageError(_('VBD not found in instance %s') % vm_ref)
@@ -443,29 +443,29 @@ class VMHelper(HelperBase):
             vdi_size += MBR_SIZE_BYTES
 
         name_label = get_name_label_for_image(image)
-        vdi = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
+        vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
 
-        with_vdi_attached_here(session, vdi, False,
+        with_vdi_attached_here(session, vdi_ref, False,
                                lambda dev:
                                _stream_disk(dev, image_type,
                                             virtual_size, image_file))
         if image_type == ImageType.KERNEL_RAMDISK:
             #we need to invoke a plugin for copying VDI's
             #content into proper path
-            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi)
+            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
             fn = "copy_kernel_vdi"
             args = {}
-            args['vdi-ref'] = vdi
+            args['vdi-ref'] = vdi_ref
             #let the plugin copy the correct number of bytes
             args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
             filename = session.wait_for_task(task, instance_id)
             #remove the VDI as it is not needed anymore
-            session.get_xenapi().VDI.destroy(vdi)
-            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi)
+            session.get_xenapi().VDI.destroy(vdi_ref)
+            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
             return filename
         else:
-            return session.get_xenapi().VDI.get_uuid(vdi)
+            return session.get_xenapi().VDI.get_uuid(vdi_ref)
 
     @classmethod
     def determine_disk_image_type(cls, instance):
@@ -633,37 +633,38 @@ class VMHelper(HelperBase):
         return is_pv
 
     @classmethod
-    def lookup(cls, session, i):
+    def lookup(cls, session, name_label):
         """Look the instance i up, and returns it if available"""
-        vms = session.get_xenapi().VM.get_by_name_label(i)
-        n = len(vms)
+        vm_refs = session.get_xenapi().VM.get_by_name_label(name_label)
+        n = len(vm_refs)
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') % i)
+            raise exception.Duplicate(_('duplicate name found: %s') %
+                                        name_label)
         else:
-            return vms[0]
+            return vm_refs[0]
 
     @classmethod
-    def lookup_vm_vdis(cls, session, vm):
+    def lookup_vm_vdis(cls, session, vm_ref):
         """Look for the VDIs that are attached to the VM"""
         # Firstly we get the VBDs, then the VDIs.
         # TODO(Armando): do we leave the read-only devices?
-        vbds = session.get_xenapi().VM.get_VBDs(vm)
-        vdis = []
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        vdi_refs = []
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vdi = session.get_xenapi().VBD.get_VDI(vbd)
+                    vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
                     # Test valid VDI
-                    record = session.get_xenapi().VDI.get_record(vdi)
+                    record = session.get_xenapi().VDI.get_record(vdi_ref)
                     LOG.debug(_('VDI %s is still available'), record['uuid'])
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
                 else:
-                    vdis.append(vdi)
-            if len(vdis) > 0:
-                return vdis
+                    vdi_refs.append(vdi_ref)
+            if len(vdi_refs) > 0:
+                return vdi_refs
             else:
                 return None
 
@@ -839,16 +840,16 @@ def safe_find_sr(session):
 def find_sr(session):
     """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
-    srs = session.get_xenapi().SR.get_all()
-    for sr in srs:
-        sr_rec = session.get_xenapi().SR.get_record(sr)
+    sr_refs = session.get_xenapi().SR.get_all()
+    for sr_ref in sr_refs:
+        sr_rec = session.get_xenapi().SR.get_record(sr_ref)
         if not ('i18n-key' in sr_rec['other_config'] and
                 sr_rec['other_config']['i18n-key'] == 'local-storage'):
             continue
-        for pbd in sr_rec['PBDs']:
-            pbd_rec = session.get_xenapi().PBD.get_record(pbd)
+        for pbd_ref in sr_rec['PBDs']:
+            pbd_rec = session.get_xenapi().PBD.get_record(pbd_ref)
             if pbd_rec['host'] == host:
-                return sr
+                return sr_ref
     return None
 
 
@@ -873,11 +874,11 @@ def remap_vbd_dev(dev):
     return remapped_dev
 
 
-def with_vdi_attached_here(session, vdi, read_only, f):
+def with_vdi_attached_here(session, vdi_ref, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
     vbd_rec['VM'] = this_vm_ref
-    vbd_rec['VDI'] = vdi
+    vbd_rec['VDI'] = vdi_ref
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
@@ -888,28 +889,28 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
-    LOG.debug(_('Creating VBD for VDI %s ... '), vdi)
-    vbd = session.get_xenapi().VBD.create(vbd_rec)
-    LOG.debug(_('Creating VBD for VDI %s done.'), vdi)
+    LOG.debug(_('Creating VBD for VDI %s ... '), vdi_ref)
+    vbd_ref = session.get_xenapi().VBD.create(vbd_rec)
+    LOG.debug(_('Creating VBD for VDI %s done.'), vdi_ref)
     try:
-        LOG.debug(_('Plugging VBD %s ... '), vbd)
-        session.get_xenapi().VBD.plug(vbd)
-        LOG.debug(_('Plugging VBD %s done.'), vbd)
-        orig_dev = session.get_xenapi().VBD.get_device(vbd)
-        LOG.debug(_('VBD %(vbd)s plugged as %(orig_dev)s') % locals())
+        LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
+        session.get_xenapi().VBD.plug(vbd_ref)
+        LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
+        orig_dev = session.get_xenapi().VBD.get_device(vbd_ref)
+        LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
         dev = remap_vbd_dev(orig_dev)
         if dev != orig_dev:
-            LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
+            LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
         return f(dev)
     finally:
-        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi)
-        vbd_unplug_with_retry(session, vbd)
-        ignore_failure(session.get_xenapi().VBD.destroy, vbd)
-        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi)
+        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
+        vbd_unplug_with_retry(session, vbd_ref)
+        ignore_failure(session.get_xenapi().VBD.destroy, vbd_ref)
+        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
 
 
-def vbd_unplug_with_retry(session, vbd):
+def vbd_unplug_with_retry(session, vbd_ref):
     """Call VBD.unplug on the given VBD, with a retry if we get
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
@@ -917,7 +918,7 @@ def vbd_unplug_with_retry(session, vbd):
     # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
-            session.get_xenapi().VBD.unplug(vbd)
+            session.get_xenapi().VBD.unplug(vbd_ref)
             LOG.debug(_('VBD.unplug successful first time.'))
             return
         except VMHelper.XenAPI.Failure, e:
