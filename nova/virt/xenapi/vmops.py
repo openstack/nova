@@ -34,6 +34,7 @@ from nova import exception
 from nova import utils
 
 from nova.auth.manager import AuthManager
+from nova.compute import driver
 from nova.compute import power_state
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
@@ -55,12 +56,30 @@ class VMOps(object):
 
     def list_instances(self):
         """List VM instances"""
+        # TODO(justinsb): Should we just always use the details method?
+        #  Seems to be the same number of API calls..
         vm_refs = []
         for vm_ref in self._session.get_xenapi().VM.get_all():
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 vm_refs.append(vm_rec["name_label"])
         return vm_refs
+
+    def list_instances_detail(self):
+        """List VM instances, returning InstanceInfo objects"""
+        instance_infos = []
+        for vm_ref in self._session.get_xenapi().VM.get_all():
+            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
+                name = vm_rec["name_label"]
+                
+                #TODO(justinsb): Yuk...
+                openstack_format = VMHelper.compile_info(vm_rec)
+                state = openstack_format['state']
+
+                instance_info = driver.InstanceInfo(name, state)
+                instance_infos.append(instance_info)
+        return instance_infos
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""

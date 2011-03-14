@@ -67,6 +67,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.auth import manager
+from nova.compute import driver
 from nova.compute import power_state
 from nova.virt import images
 
@@ -108,8 +109,9 @@ def get_connection(_):
     return HyperVConnection()
 
 
-class HyperVConnection(object):
+class HyperVConnection(driver.ComputeDriver):
     def __init__(self):
+        super(HyperVConnection, self).__init__()
         self._conn = wmi.WMI(moniker='//./root/virtualization')
         self._cim_conn = wmi.WMI(moniker='//./root/cimv2')
 

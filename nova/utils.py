@@ -585,3 +585,12 @@ def get_from_path(items, path):
         return results
     else:
         return get_from_path(results, remainder)
+
+
+def check_instance(obj, cls):
+    """Checks that obj is of type cls, and lets PyLint infer types"""
+    if isinstance(obj, cls):
+        return obj
+    raise Exception(_("Expected object of type: %s") % (str(cls)))
+    #TODO(justinsb): Can we make this better??
+    return cls()  # Ugly PyLint hack

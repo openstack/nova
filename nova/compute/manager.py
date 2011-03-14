@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -51,6 +52,7 @@ from nova import manager
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
+from nova.compute import driver
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -115,7 +117,9 @@ class ComputeManager(manager.Manager):
         #             and redocument the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
-        self.driver = utils.import_object(compute_driver)
+        self.driver = utils.check_instance(utils.import_object(
+                                                            compute_driver),
+                                           driver.ComputeDriver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         super(ComputeManager, self).__init__(*args, **kwargs)
@@ -974,3 +978,53 @@ class ComputeManager(manager.Manager):
 
         for volume in instance_ref['volumes']:
             self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        super(ComputeManager, self).periodic_tasks(context)
+        try:
+            self._poll_instance_states(context)
+        except Exception as ex:
+            LOG.warning(_("Error during instance poll: %s"),
+                        unicode(ex))
+
+    def _poll_instance_states(self, context):
+        vm_instances = self.driver.list_instances_detail(context)
+        vm_instances = dict((vm.name, vm) for vm in vm_instances)
+
+        # Keep a list of VMs not in the DB, cross them off as we find them
+        vms_not_found_in_db = [vm.name for vm in vm_instances]
+
+        db_instances = self.db.instance_get_all_by_host(context, self.host)
+        for db_instance in db_instances:
+            name = db_instance['name']
+            vm_instance = vm_instances.get(name)
+            if vm_instance is None:
+                LOG.info(_("Found instance '%(name)' in DB but no VM. "
+                           "Shutting off.") % locals())
+                vm_state = power_state.SHUTOFF
+            else:
+                vm_state = vm_instance.state
+                vms_not_found_in_db.remove(name)
+
+            db_state = db_instance['state']
+            if vm_state != db_state:
+                LOG.info(_("DB/VM state mismatch. Changing state from "
+                           "%(db_state) to %(vm_state)") % locals())
+                self.db.instance_set_state(context,
+                                           db_instance['id'],
+                                           vm_state)
+
+            if vm_state == power_state.SHUTOFF:
+                # TODO(soren): This is what the compute manager does when you
+                # terminate an instance. At some point I figure we'll have a
+                # "terminated" state and some sort of cleanup job that runs
+                # occasionally, cleaning them out.
+                self.db.instance_destroy(context, db_instance['id'])
+
+        # Are there VMs not in the DB?
+        for vm_not_found_in_db in vms_not_found_in_db:
+            name = vm_not_found_in_db
+            #TODO(justinsb): What to do here?  Adopt it?  Shut it down?
+            LOG.warning(_("Found VM not in DB: %(name).  Ignoring")
+                        % locals())
