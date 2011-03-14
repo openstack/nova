@@ -534,7 +534,7 @@ class NetworkCommands(object):
                                     vpn_start=int(vpn_start),
                                     cidr_v6=fixed_range_v6,
                                     label=label,
-                                    flat_network_bridge)
+                                    bridge=flat_network_bridge)
 
     def list(self):
         """List all created networks"""

@@ -204,9 +204,9 @@ class ComputeManager(manager.Manager):
                                {"method": "allocate_mac_addresses",
                                 "args": {"instance_id": instance_id}})
 
-            self.network_manager.setup_compute_network(context,
-                                                       instance_id)
-
+            nw_info = rpc.call(context, self.get_network_topic(context),
+                               {"method": "allocate_for_instance",
+                                "args": {"instance_id": instance_id}})
         Log.debug(_("instance addresses: |%s|"), instance_ref['fixed_ips'])
 
         # TODO(vish) check to make sure the availability zone matches
