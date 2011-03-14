@@ -159,7 +159,7 @@ class VMOps(object):
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+                instance.ramdisk_id, user, project, ImageType.RAMDISK)
 
         use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
             vdi_ref, disk_image_type, instance.os_type)

@@ -472,7 +472,7 @@ class VMHelper(HelperBase):
                                    lambda dev:
                                    _stream_disk(dev, image_type,
                                                 virtual_size, image_file))
-            if image_type == ImageType.KERNEL_RAMDISK:
+            if image_type in (ImageType.KERNEL,ImageType.RAMDISK):
                 #we need to invoke a plugin for copying VDI's
                 #content into proper path
                 LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
@@ -490,9 +490,9 @@ class VMHelper(HelperBase):
             else:
                 return session.get_xenapi().VDI.get_uuid(vdi_ref)
         except BaseException as e:
-            if vdi:
+            if vdi_ref:
                 try:
-                    vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi)
+                    vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
                     e.args = e.args + ({image_type: vdi_uuid},)
                 except:
                     pass  # ignore failures in retrieving VDI
