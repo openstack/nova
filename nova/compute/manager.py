@@ -1007,7 +1007,7 @@ class ComputeManager(manager.Manager):
             vm_instance = vm_instances.get(name)
             if vm_instance is None:
                 LOG.info(_("Found instance '%(name)s' in DB but no VM. "
-                           "Shutting off.") % locals())
+                           "Setting state to shutoff.") % locals())
                 vm_state = power_state.SHUTOFF
             else:
                 vm_state = vm_instance.state
