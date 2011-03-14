@@ -106,7 +106,7 @@ class FakeConnection(driver.ComputeDriver):
 
     def list_instances_detail(self):
         info_list = []
-        for instance in self.instances:
+        for instance in self.instances.values():
             info_list.append(self._map_to_instance_info(instance))
         return info_list
 
@@ -448,3 +448,7 @@ class FakeConnection(driver.ComputeDriver):
     def unfilter_instance(self, instance_ref):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
+
+    def test_remove_vm(self, instance_name):
+        """ Removes the named VM, as if it crashed. For testing"""
+        self.instances.pop(instance_name)

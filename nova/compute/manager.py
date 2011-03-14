@@ -981,26 +981,32 @@ class ComputeManager(manager.Manager):
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
-        super(ComputeManager, self).periodic_tasks(context)
+        error_list = super(ComputeManager, self).periodic_tasks(context)
+        if error_list is None:
+            error_list = []
+
         try:
             self._poll_instance_states(context)
         except Exception as ex:
             LOG.warning(_("Error during instance poll: %s"),
                         unicode(ex))
+            error_list.append(ex)
+        return error_list
 
     def _poll_instance_states(self, context):
-        vm_instances = self.driver.list_instances_detail(context)
+        vm_instances = self.driver.list_instances_detail()
         vm_instances = dict((vm.name, vm) for vm in vm_instances)
 
         # Keep a list of VMs not in the DB, cross them off as we find them
         vms_not_found_in_db = [vm.name for vm in vm_instances]
 
         db_instances = self.db.instance_get_all_by_host(context, self.host)
+
         for db_instance in db_instances:
             name = db_instance['name']
             vm_instance = vm_instances.get(name)
             if vm_instance is None:
-                LOG.info(_("Found instance '%(name)' in DB but no VM. "
+                LOG.info(_("Found instance '%(name)s' in DB but no VM. "
                            "Shutting off.") % locals())
                 vm_state = power_state.SHUTOFF
             else:
@@ -1010,7 +1016,7 @@ class ComputeManager(manager.Manager):
             db_state = db_instance['state']
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
-                           "%(db_state) to %(vm_state)") % locals())
+                           "'%(db_state)s' to '%(vm_state)s'") % locals())
                 self.db.instance_set_state(context,
                                            db_instance['id'],
                                            vm_state)
@@ -1026,5 +1032,5 @@ class ComputeManager(manager.Manager):
         for vm_not_found_in_db in vms_not_found_in_db:
             name = vm_not_found_in_db
             #TODO(justinsb): What to do here?  Adopt it?  Shut it down?
-            LOG.warning(_("Found VM not in DB: %(name).  Ignoring")
+            LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
                         % locals())
