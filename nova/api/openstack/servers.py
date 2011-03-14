@@ -27,6 +27,8 @@ from nova import wsgi
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack.v1_0 import servers as v1_0
+from nova.api.openstack.v1_1 import servers as v1_1
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -54,7 +56,7 @@ class Controller(wsgi.Controller):
     def ips(self, req, id):
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _addresses_builder(req)(instance)
+            return _get_addresses_builder(req)(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -460,7 +462,7 @@ def _build_server(req, inst, is_detail):
         inst_dict[k] = inst[v]
 
     inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = _addresses_builder(req)(inst)
+    inst_dict['addresses'] = _get_addresses_builder(req)(inst)
 
     # Return the metadata as a dictionary
     metadata = {}
@@ -475,25 +477,9 @@ def _build_server(req, inst, is_detail):
     return dict(server=inst_dict)
 
 
-def _addresses_builder(req):
+def _get_addresses_builder(req):
     version = req.environ['nova.context'].version
     if version == '1.1':
-        return _build_addresses_11
+        return v1_1.build_addresses
     else:
-        return _build_addresses_10
-
-
-def _build_addresses_10(inst):
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    return dict(public=public_ips, private=private_ips)
-
-
-def _build_addresses_11(inst):
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    private_ips = [dict(version=4, addr=a) for a in private_ips]
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    public_ips = [dict(version=4, addr=a) for a in public_ips]
-    return dict(public=public_ips, private=private_ips)
-
-
+        return v1_0.build_addresses

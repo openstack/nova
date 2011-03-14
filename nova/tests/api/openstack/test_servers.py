@@ -21,6 +21,7 @@ import json
 import stubout
 import webob
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
@@ -175,6 +176,28 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses["public"][0], public[0])
         self.assertEqual(len(addresses["private"]), 1)
         self.assertEqual(addresses["private"][0], private)
+
+    def test_get_server_by_id_with_addresses_v1_1(self):
+        class FakeRequestContext(object):
+            def __init__(self, user, project, *args, **kwargs):
+                self.user_id = 1
+                self.project_id = 1
+                self.version = '1.1'
+        self.stubs.Set(context, 'RequestContext', FakeRequestContext)
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['name'], 'server1')
+        addresses = res_dict['server']['addresses']
+        self.assertEqual(len(addresses["public"]), len(public))
+        self.assertEqual(addresses["public"][0], {"version": 4, "addr": public[0]})
+        self.assertEqual(len(addresses["private"]), 1)
+        self.assertEqual(addresses["private"][0], {"version": 4, "addr": private})
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
