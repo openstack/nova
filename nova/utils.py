@@ -133,13 +133,14 @@ def fetchfile(url, target):
 
 
 def execute(*cmd, **kwargs):
-    process_input = kwargs.get('process_input', None)
-    addl_env = kwargs.get('addl_env', None)
-    check_exit_code = kwargs.get('check_exit_code', 0)
-    stdin = kwargs.get('stdin', subprocess.PIPE)
-    stdout = kwargs.get('stdout', subprocess.PIPE)
-    stderr = kwargs.get('stderr', subprocess.PIPE)
-    attempts = kwargs.get('attempts', 1)
+    process_input = kwargs.pop('process_input', None)
+    addl_env = kwargs.pop('addl_env', None)
+    check_exit_code = kwargs.pop('check_exit_code', 0)
+    delay_on_retry = kwargs.pop('delay_on_retry', True)
+    attempts = kwargs.pop('attempts', 1)
+    if len(kwargs):
+        raise exception.Error(_('Got unknown keyword args '
+                                'to utils.execute: %r') % kwargs)
     cmd = map(str, cmd)
 
     while attempts > 0:
@@ -149,8 +150,11 @@ def execute(*cmd, **kwargs):
             env = os.environ.copy()
             if addl_env:
                 env.update(addl_env)
-            obj = subprocess.Popen(cmd, stdin=stdin,
-                    stdout=stdout, stderr=stderr, env=env)
+            obj = subprocess.Popen(cmd,
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   env=env)
             result = None
             if process_input != None:
                 result = obj.communicate(process_input)
@@ -176,7 +180,8 @@ def execute(*cmd, **kwargs):
                 raise
             else:
                 LOG.debug(_("%r failed. Retrying."), cmd)
-                greenthread.sleep(random.randint(20, 200) / 100.0)
+                if delay_on_retry:
+                    greenthread.sleep(random.randint(20, 200) / 100.0)
 
 
 def ssh_execute(ssh, cmd, process_input=None,
