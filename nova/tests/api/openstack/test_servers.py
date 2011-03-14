@@ -120,7 +120,7 @@ class ServersTest(test.TestCase):
     def setUp(self):
         super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -188,9 +188,37 @@ class ServersTest(test.TestCase):
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
+    def test_get_servers_with_limit(self):
+        req = webob.Request.blank('/v1.0/servers?limit=3')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [0, 1, 2])
+
+        req = webob.Request.blank('/v1.0/servers?limit=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('limit' in res.body)
+
+    def test_get_servers_with_offset(self):
+        req = webob.Request.blank('/v1.0/servers?offset=2')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [2, 3, 4])
+
+        req = webob.Request.blank('/v1.0/servers?offset=aaa')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue('offset' in res.body)
+
+    def test_get_servers_with_limit_and_offset(self):
+        req = webob.Request.blank('/v1.0/servers?limit=2&offset=1')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [1, 2])
+
     def test_create_instance(self):
         def instance_create(context, inst):
-            return {'id': '1', 'display_name': ''}
+            return {'id': '1', 'display_name': 'server_test'}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -231,8 +259,15 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
+        req.headers["Content-Type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual('serv', server['adminPass'][:4])
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual('1', server['id'])
 
         self.assertEqual(res.status_int, 200)
 
@@ -405,7 +440,8 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/inject_network_info')
+        req = webob.Request.blank(
+              '/v1.0/servers/1/inject_network_info')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)

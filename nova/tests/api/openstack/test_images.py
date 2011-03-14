@@ -22,6 +22,8 @@ and as a WSGI layer
 
 import json
 import datetime
+import shutil
+import tempfile
 
 import stubout
 import webob
@@ -54,7 +56,7 @@ class BaseImageServiceTests(object):
 
         num_images = len(self.service.index(self.context))
 
-        id = self.service.create(self.context, fixture)
+        id = self.service.create(self.context, fixture)['id']
 
         self.assertNotEquals(None, id)
         self.assertEquals(num_images + 1,
@@ -71,7 +73,7 @@ class BaseImageServiceTests(object):
 
         num_images = len(self.service.index(self.context))
 
-        id = self.service.create(self.context, fixture)
+        id = self.service.create(self.context, fixture)['id']
 
         self.assertNotEquals(None, id)
 
@@ -89,7 +91,7 @@ class BaseImageServiceTests(object):
                    'instance_id': None,
                    'progress': None}
 
-        id = self.service.create(self.context, fixture)
+        id = self.service.create(self.context, fixture)['id']
 
         fixture['status'] = 'in progress'
 
@@ -118,7 +120,7 @@ class BaseImageServiceTests(object):
 
         ids = []
         for fixture in fixtures:
-            new_id = self.service.create(self.context, fixture)
+            new_id = self.service.create(self.context, fixture)['id']
             ids.append(new_id)
 
         num_images = len(self.service.index(self.context))
@@ -137,14 +139,15 @@ class LocalImageServiceTest(test.TestCase,
 
     def setUp(self):
         super(LocalImageServiceTest, self).setUp()
+        self.tempdir = tempfile.mkdtemp()
+        self.flags(images_path=self.tempdir)
         self.stubs = stubout.StubOutForTesting()
         service_class = 'nova.image.local.LocalImageService'
         self.service = utils.import_object(service_class)
         self.context = context.RequestContext(None, None)
 
     def tearDown(self):
-        self.service.delete_all()
-        self.service.delete_imagedir()
+        shutil.rmtree(self.tempdir)
         self.stubs.UnsetAll()
         super(LocalImageServiceTest, self).tearDown()
 
@@ -202,7 +205,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.orig_image_service = FLAGS.image_service
         FLAGS.image_service = 'nova.image.glance.GlanceImageService'
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

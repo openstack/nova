@@ -49,10 +49,10 @@ def extend(image, size):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    utils.execute('truncate -s %s %s' % (size, image))
+    utils.execute('truncate', '-s', size, image)
     # NOTE(vish): attempts to resize filesystem
-    utils.execute('e2fsck -fp %s' % image, check_exit_code=False)
-    utils.execute('resize2fs %s' % image, check_exit_code=False)
+    utils.execute('e2fsck', '-fp', image, check_exit_code=False)
+    utils.execute('resize2fs', image, check_exit_code=False)
 
 
 def inject_data(image, key=None, net=None, partition=None, nbd=False):
@@ -68,7 +68,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
     try:
         if not partition is None:
             # create partition
-            out, err = utils.execute('sudo kpartx -a %s' % device)
+            out, err = utils.execute('sudo', 'kpartx', '-a', device)
             if err:
                 raise exception.Error(_('Failed to load partition: %s') % err)
             mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
@@ -84,13 +84,14 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                   mapped_device)
 
         # Configure ext2fs so that it doesn't auto-check every N boots
-        out, err = utils.execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
+        out, err = utils.execute('sudo', 'tune2fs',
+                                 '-c', 0, '-i', 0, mapped_device)
 
         tmpdir = tempfile.mkdtemp()
         try:
             # mount loopback to dir
             out, err = utils.execute(
-                    'sudo mount %s %s' % (mapped_device, tmpdir))
+                    'sudo', 'mount', mapped_device, tmpdir)
             if err:
                 raise exception.Error(_('Failed to mount filesystem: %s')
                                       % err)
@@ -103,13 +104,13 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                     _inject_net_into_fs(net, tmpdir)
             finally:
                 # unmount device
-                utils.execute('sudo umount %s' % mapped_device)
+                utils.execute('sudo', 'umount', mapped_device)
         finally:
             # remove temporary directory
-            utils.execute('rmdir %s' % tmpdir)
+            utils.execute('rmdir', tmpdir)
             if not partition is None:
                 # remove partitions
-                utils.execute('sudo kpartx -d %s' % device)
+                utils.execute('sudo', 'kpartx', '-d', device)
     finally:
         _unlink_device(device, nbd)
 
@@ -118,7 +119,7 @@ def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:
         device = _allocate_device()
-        utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
+        utils.execute('sudo', 'qemu-nbd', '-c', device, image)
         # NOTE(vish): this forks into another process, so give it a chance
         #             to set up before continuuing
         for i in xrange(FLAGS.timeout_nbd):
@@ -127,7 +128,7 @@ def _link_device(image, nbd):
             time.sleep(1)
         raise exception.Error(_('nbd device %s did not show up') % device)
     else:
-        out, err = utils.execute('sudo losetup --find --show %s' % image)
+        out, err = utils.execute('sudo', 'losetup', '--find', '--show', image)
         if err:
             raise exception.Error(_('Could not attach image to loopback: %s')
                                   % err)
@@ -137,10 +138,10 @@ def _link_device(image, nbd):
 def _unlink_device(device, nbd):
     """Unlink image from device using loopback or nbd"""
     if nbd:
-        utils.execute('sudo qemu-nbd -d %s' % device)
+        utils.execute('sudo', 'qemu-nbd', '-d', device)
         _free_device(device)
     else:
-        utils.execute('sudo losetup --detach %s' % device)
+        utils.execute('sudo', 'losetup', '--detach', device)
 
 
 _DEVICES = ['/dev/nbd%s' % i for i in xrange(FLAGS.max_nbd_devices)]
@@ -170,11 +171,12 @@ def _inject_key_into_fs(key, fs):
     fs is the path to the base of the filesystem into which to inject the key.
     """
     sshdir = os.path.join(fs, 'root', '.ssh')
-    utils.execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
-    utils.execute('sudo chown root %s' % sshdir)
-    utils.execute('sudo chmod 700 %s' % sshdir)
+    utils.execute('sudo', 'mkdir', '-p', sshdir)  # existing dir doesn't matter
+    utils.execute('sudo', 'chown', 'root', sshdir)
+    utils.execute('sudo', 'chmod', '700', sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    utils.execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
+    utils.execute('sudo', 'tee', '-a', keyfile,
+            process_input='\n' + key.strip() + '\n')
 
 
 def _inject_net_into_fs(net, fs):
@@ -183,8 +185,8 @@ def _inject_net_into_fs(net, fs):
     net is the contents of /etc/network/interfaces.
     """
     netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
-    utils.execute('sudo mkdir -p %s' % netdir)  # existing dir doesn't matter
-    utils.execute('sudo chown root:root %s' % netdir)
-    utils.execute('sudo chmod 755 %s' % netdir)
+    utils.execute('sudo', 'mkdir', '-p', netdir)  # existing dir doesn't matter
+    utils.execute('sudo', 'chown', 'root:root', netdir)
+    utils.execute('sudo', 'chmod', 755, netdir)
     netfile = os.path.join(netdir, 'interfaces')
-    utils.execute('sudo tee %s' % netfile, net)
+    utils.execute('sudo', 'tee', netfile, process_input=net)
