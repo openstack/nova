@@ -138,7 +138,7 @@ class VMHelper(HelperBase):
             'VCPUs_at_startup': vcpus,
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
-            'xenstore_data': {}
+            'xenstore_data': {},
             }
 
         # Complete VM configuration record according to the image type
@@ -465,14 +465,14 @@ class VMHelper(HelperBase):
                 vdi_size += MBR_SIZE_BYTES
 
             name_label = get_name_label_for_image(image)
-            vdi_ref = cls.create_vdi(session, sr_ref, name_label, 
+            vdi_ref = cls.create_vdi(session, sr_ref, name_label,
                                      vdi_size, False)
-    
+
             with_vdi_attached_here(session, vdi_ref, False,
                                    lambda dev:
                                    _stream_disk(dev, image_type,
                                                 virtual_size, image_file))
-            if image_type in (ImageType.KERNEL,ImageType.RAMDISK):
+            if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
                 #we need to invoke a plugin for copying VDI's
                 #content into proper path
                 LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)

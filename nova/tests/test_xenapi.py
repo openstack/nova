@@ -78,7 +78,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'ramdisk_id': 3,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'
+                  'os_type': 'linux',
                   }
 
     def _create_volume(self, size='0'):
@@ -328,7 +328,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'ramdisk_id': ramdisk_id,
                   'instance_type': instance_type,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': os_type
+                  'os_type': os_type,
                   }
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
@@ -473,7 +473,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'ramdisk_id': None,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'
+                  'os_type': 'linux',
                   }
         stubs.stub_out_migration_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,

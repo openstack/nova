@@ -164,8 +164,8 @@ class VMOps(object):
         use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
             vdi_ref, disk_image_type, instance.os_type)
         try:
-            vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
-                                    use_pv_kernel)
+            vm_ref = VMHelper.create_vm(self._session, instance,
+                                        kernel, ramdisk, use_pv_kernel)
         except BaseException as vm_create_error:
             # if the spwan process fails here it will be necessary to
             # clean up kernel and ramdisk (VDIs and files in dom0)
