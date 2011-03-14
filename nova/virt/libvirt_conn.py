@@ -339,7 +339,11 @@ class LibvirtConnection(object):
     def reboot(self, instance):
         self.destroy(instance, False)
         xml = self.to_xml(instance)
+        self.firewall_driver.setup_basic_filtering(instance)
+        self.firewall_driver.prepare_instance_filter(instance)
         self._conn.createXML(xml, 0)
+        self.firewall_driver.apply_instance_filter(instance)
+
         timer = utils.LoopingCall(f=None)
 
         def _wait_for_reboot():
