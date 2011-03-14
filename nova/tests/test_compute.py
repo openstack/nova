@@ -76,6 +76,20 @@ class ComputeTestCase(test.TestCase):
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
 
+    def _create_instance_type(self, params={}):
+        """Create a test instance"""
+        inst = {}
+        inst['name'] = 'm1.small'
+        inst['memory_mb'] = '1024'
+        inst['vcpus'] = '1'
+        inst['local_gb'] = '20'
+        inst['flavorid'] = '1'
+        inst['swap'] = '2048'
+        inst['rxtx_quota'] = 100
+        inst['rxtx_cap'] = 200
+        inst.update(params)
+        return db.instance_type_create(self.context, inst)['id']
+
     def _create_group(self):
         values = {'name': 'testgroup',
                   'description': 'testgroup',
@@ -301,10 +315,17 @@ class ComputeTestCase(test.TestCase):
     def test_resize_down_fails(self):
         """Ensure invalid flavors raise"""
         instance_id = self._create_instance()
+
+        small_inst_type_id = self._create_instance_type(dict(flavorid=1,
+                memory_mb=512))
+        big_inst_type_id = self._create_instance_type(dict(flavorid=2,
+                name='m1.wowzers', memory_mb=8192))
+
         context = self.context.elevated()
         self.compute.run_instance(self.context, instance_id)
-        db.instance_update(self.context, instance_id, 
-                {'instance_type': 'm1.large'})
+        db.instance_update(self.context, instance_id,
+                {'instance_type': 'm1.wowzers',
+                 'memory_gb': 8192})
 
         self.assertRaises(exception.ApiError, self.compute_api.resize,
                 context, instance_id, 1)
