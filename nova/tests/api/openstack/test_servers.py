@@ -120,7 +120,7 @@ class ServersTest(test.TestCase):
     def setUp(self):
         super(ServersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
@@ -440,7 +440,8 @@ class ServersTest(test.TestCase):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
             personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/inject_network_info')
+        req = webob.Request.blank(
+              '/v1.0/servers/1/inject_network_info')
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)

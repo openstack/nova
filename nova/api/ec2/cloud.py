@@ -562,7 +562,7 @@ class CloudController(object):
         if context.is_admin:
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
-                volume['user_id'],
+                volume['project_id'],
                 volume['host'],
                 instance_data,
                 volume['mountpoint'])

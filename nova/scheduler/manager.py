@@ -29,6 +29,7 @@ from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
+from nova.scheduler import zone_manager
 
 LOG = logging.getLogger('nova.scheduler.manager')
 FLAGS = flags.FLAGS
@@ -43,11 +44,20 @@ class SchedulerManager(manager.Manager):
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = utils.import_object(scheduler_driver)
+        self.zone_manager = zone_manager.ZoneManager()
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
         """Converts all method calls to use the schedule method"""
         return functools.partial(self._schedule, key)
+
+    def periodic_tasks(self, context=None):
+        """Poll child zones periodically to get status."""
+        self.zone_manager.ping(context)
+
+    def get_zone_list(self, context=None):
+        """Get a list of zones from the ZoneManager."""
+        return self.zone_manager.get_zone_list()
 
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
