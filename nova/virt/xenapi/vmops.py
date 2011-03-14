@@ -82,7 +82,7 @@ class VMOps(object):
 
     def spawn(self, instance, network_info=None):
         vdi_uuid = self.create_disk(instance)
-        self._spawn_with_disk(instance, vdi_uuid=vdi_uuid, network_info)
+        self._spawn_with_disk(instance, vdi_uuid, network_info)
 
     def _spawn_with_disk(self, instance, vdi_uuid, network_info=None):
         """Create VM instance"""
