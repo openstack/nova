@@ -78,6 +78,7 @@ class ComputeTestCase(test.TestCase):
 
     def _create_instance_type(self, params={}):
         """Create a test instance"""
+        context = self.context.elevated()
         inst = {}
         inst['name'] = 'm1.small'
         inst['memory_mb'] = '1024'
@@ -88,7 +89,7 @@ class ComputeTestCase(test.TestCase):
         inst['rxtx_quota'] = 100
         inst['rxtx_cap'] = 200
         inst.update(params)
-        return db.instance_type_create(self.context, inst)['id']
+        return db.instance_type_create(context, inst)['id']
 
     def _create_group(self):
         values = {'name': 'testgroup',
@@ -292,8 +293,6 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
         context = self.context.elevated()
-        small_inst_type_id = self._create_instance_type(dict(flavorid=1,
-                memory_mb=512, name='m1.small'))
 
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id, {'host': 'foo'})
@@ -303,7 +302,6 @@ class ComputeTestCase(test.TestCase):
         self.compute.resize_instance(context, instance_id,
                 migration_ref['id'])
         self.compute.terminate_instance(context, instance_id)
-        self.db.instance_type_purge(context, 'm1.small')
 
     def test_resize_invalid_flavor_fails(self):
         """Ensure invalid flavors raise"""
@@ -311,32 +309,24 @@ class ComputeTestCase(test.TestCase):
         context = self.context.elevated()
         self.compute.run_instance(self.context, instance_id)
 
-        self.assertRaises(exception.ApiError, self.compute_api.resize,
+        self.assertRaises(exception.NotFound, self.compute_api.resize,
                 context, instance_id, 200)
 
         self.compute.terminate_instance(context, instance_id)
 
     def test_resize_down_fails(self):
         """Ensure invalid flavors raise"""
+        context = self.context.elevated()
         instance_id = self._create_instance()
 
-        small_inst_type_id = self._create_instance_type(dict(flavorid=1,
-                memory_mb=512, name='m1.small'))
-        big_inst_type_id = self._create_instance_type(dict(flavorid=2,
-                name='m1.wowzers', memory_mb=8192))
-
-        context = self.context.elevated()
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id,
-                {'instance_type': 'm1.wowzers',
-                 'memory_gb': 8192})
+                {'instance_type': 'm1.xlarge'})
 
         self.assertRaises(exception.ApiError, self.compute_api.resize,
                 context, instance_id, 1)
 
         self.compute.terminate_instance(context, instance_id)
-        self.db.instance_type_purge(context, 'm1.small')
-        self.db.instance_type_purge(context, 'm1.wowzers')
 
     def test_get_by_flavor_id(self):
         type = instance_types.get_by_flavor_id(1)
@@ -346,10 +336,7 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance fails to migrate when source and destination are
         the same host"""
         instance_id = self._create_instance()
-        small_inst_type_id = self._create_instance_type(dict(flavorid=1,
-                memory_mb=512, name='m1.small'))
         self.compute.run_instance(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
                 self.context, instance_id, 1)
         self.compute.terminate_instance(self.context, instance_id)
-        self.db.instance_type_purge(context, 'm1.small')

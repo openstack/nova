@@ -468,13 +468,13 @@ class API(base.Base):
         instance = self.db.instance_get(context, instance_id)
         current_instance_type = self.db.instance_type_get_by_name(
             context, instance['instance_type'])
-        
+
         new_instance_type = self.db.instance_type_get_by_flavor_id(
                 context, flavor_id)
         if not new_instance_type:
             raise exception.ApiError(_("Requested flavor does not exist"))
 
-        if current_instance_type.memory_mb > new_instance_typ.memory_mb:
+        if current_instance_type['memory_mb'] > new_instance_type['memory_mb']:
             raise exception.ApiError(_("Invalid flavor: cannot downsize"
                     "instances"))
 

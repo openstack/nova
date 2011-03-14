@@ -479,7 +479,7 @@ class ComputeManager(manager.Manager):
                  'source_compute': instance_ref['host'],
                  'dest_compute': FLAGS.host,
                  'dest_host':   self.driver.get_host_ip_addr(),
-                 'old_flavor_id': instance_type['flavor_id'],
+                 'old_flavor_id': instance_type['flavorid'],
                  'new_flavor_id': flavor_id,
                  'status':      'pre-migrating'})
 

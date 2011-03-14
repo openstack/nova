@@ -2185,8 +2185,8 @@ def instance_type_create(_context, values):
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()
-    except:
-        raise exception.DBError
+    except Exception, e:
+        raise exception.DBError(e)
     return instance_type_ref
 
 
