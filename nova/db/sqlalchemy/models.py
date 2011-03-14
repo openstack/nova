@@ -193,6 +193,8 @@ class Instance(BASE, NovaBase):
 
     locked = Column(Boolean)
 
+    os_type = Column(String(255))
+
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
     # vmstate_state = running, halted, suspended, paused
@@ -387,6 +389,18 @@ class KeyPair(BASE, NovaBase):
 
     fingerprint = Column(String(255))
     public_key = Column(Text)
+
+
+class Migration(BASE, NovaBase):
+    """Represents a running host-to-host migration."""
+    __tablename__ = 'migrations'
+    id = Column(Integer, primary_key=True, nullable=False)
+    source_compute = Column(String(255))
+    dest_compute = Column(String(255))
+    dest_host = Column(String(255))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    #TODO(_cerberus_): enum
+    status = Column(String(255))
 
 
 class Network(BASE, NovaBase):
@@ -598,7 +612,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata)
+              InstanceMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

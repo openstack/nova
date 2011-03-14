@@ -125,10 +125,15 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
         image = self.image_service.show(context, image_id)
+
+        os_type = None
+        if 'properties' in image and 'os_type' in image['properties']:
+            os_type = image['properties']['os_type']
+
         if kernel_id is None:
-            kernel_id = image.get('kernel_id', None)
+            kernel_id = image['properties'].get('kernel_id', None)
         if ramdisk_id is None:
-            ramdisk_id = image.get('ramdisk_id', None)
+            ramdisk_id = image['properties'].get('ramdisk_id', None)
         # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
@@ -165,6 +170,7 @@ class API(base.Base):
             'image_id': image_id,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'state': 0,
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
@@ -180,7 +186,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
-            'availability_zone': availability_zone}
+            'availability_zone': availability_zone,
+            'os_type': os_type}
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -404,6 +411,10 @@ class API(base.Base):
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
+    def _cast_scheduler_message(self, context, args):
+        """Generic handler for RPC calls to the scheduler"""
+        rpc.cast(context, FLAGS.scheduler_topic, args)
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -419,6 +430,45 @@ class API(base.Base):
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
+
+    def revert_resize(self, context, instance_id):
+        """Reverts a resize, deleting the 'new' instance in the process"""
+        context = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.NotFound(_("No finished migrations found for "
+                    "instance"))
+
+        params = {'migration_id': migration_ref['id']}
+        self._cast_compute_message('revert_resize', context, instance_id,
+                migration_ref['dest_compute'], params=params)
+
+    def confirm_resize(self, context, instance_id):
+        """Confirms a migration/resize, deleting the 'old' instance in the
+        process."""
+        context = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.NotFound(_("No finished migrations found for "
+                    "instance"))
+        instance_ref = self.db.instance_get(context, instance_id)
+        params = {'migration_id': migration_ref['id']}
+        self._cast_compute_message('confirm_resize', context, instance_id,
+                migration_ref['source_compute'], params=params)
+
+        self.db.migration_update(context, migration_id,
+                {'status': 'confirmed'})
+        self.db.instance_update(context, instance_id,
+                {'host': migration_ref['dest_compute'], })
+
+    def resize(self, context, instance_id, flavor):
+        """Resize a running instance."""
+        self._cast_scheduler_message(context,
+                    {"method": "prep_resize",
+                     "args": {"topic": FLAGS.compute_topic,
+                              "instance_id": instance_id, }},)
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
@@ -455,9 +505,10 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def set_admin_password(self, context, instance_id):
+    def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message('set_admin_password', context, instance_id)
+        self._cast_compute_message('set_admin_password', context, instance_id,
+                                    password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""
