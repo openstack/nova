@@ -293,6 +293,20 @@ class NetworkManager(manager.Manager):
                                               'address': address,
                                               'reserved': reserved})
 
+    def generate_mac_address(self):
+        """generate a mac address for a vif on an instance"""
+        mac = [0x02, 0x16, 0x3e,
+               random.randint(0x00, 0x7f),
+               random.randint(0x00, 0xff),
+               random.randint(0x00, 0xff)]
+        return ':'.join(map(lambda x: "%02x" % x, mac))
+
+
+#    def setup_new_instance(self, context, instance_id, host):
+#        """allocate the network config for a new instance on host"""
+#        for network in DB_NETWORKGETALLBYHOST():
+#            ip = self.allocate_fixed_ip(context, instance_id, network)
+
 
 class FlatManager(NetworkManager):
     """Basic network where no vlans are used.
@@ -332,31 +346,48 @@ class FlatManager(NetworkManager):
         for network in self.db.host_get_networks(ctxt, self.host):
             self._on_set_network_host(ctxt, network['id'])
 
-    def allocate_fixed_ip(self, context, instance_id, *args, **kwargs):
-        """Gets a fixed ip from the pool."""
+    def allocate_mac_addresses(self, context, instance_id):
+        """generates and stores mac addresses"""
+        mac_address = {'mac_address': self.generate_mac_address(),
+                       'instance_id': instance_id,
+                       'network_id': network.id}
+
+        networks = self.db.network_get_all(context)
+        for network in networks:
+            for i in range(5):
+                try:
+                    mac_address['mac_address'] = self.generate_mac_address(),
+                    self.db.mac_address_create(context, row)
+                    break
+                except:
+                    #TODO(tr3buchet) find this exception
+                    pass
+            else:
+                self.db.mac_address_delete(context, instance_id=instance_id)
+                raise exception.MacAddress(_("5 attempts at create failed"))
+
+    def allocate_fixed_ips(self, context, instance_id, *args, **kwargs):
+        """Gets a fixed ip from a host's pool."""
         # TODO(vish): when this is called by compute, we can associate compute
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        network_ref = self.db.network_get_by_bridge(context,
-                                                    FLAGS.flat_network_bridge)
-        address = self.db.fixed_ip_associate_pool(context.elevated(),
-                                                  network_ref['id'],
-                                                  instance_id)
-        self.db.fixed_ip_update(context, address, {'allocated': True})
-        return address
+        networks = self.db.network_get_all(context)
+#        network_ref = self.db.network_get_by_bridge(context,
+#                                                    FLAGS.flat_network_bridge)
+        for network in networks:
+            address = self.db.fixed_ip_associate_pool(context.elevated(),
+                                                      network.id,
+                                                      instance_id)
+            self.db.fixed_ip_update(context, address, {'allocated': True})
 
     def deallocate_fixed_ip(self, context, address, *args, **kwargs):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
         self.db.fixed_ip_disassociate(context.elevated(), address)
 
-    def setup_compute_network(self, context, instance_id):
-        """Network is created manually."""
-        pass
-
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, label, *args, **kwargs):
+                        cidr_v6, label, bridge, *args, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
@@ -368,7 +399,7 @@ class FlatManager(NetworkManager):
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
             net = {}
-            net['bridge'] = FLAGS.flat_network_bridge
+            net['bridge'] = bridge
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask())

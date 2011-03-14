@@ -630,11 +630,16 @@ def fixed_ip_get_all_by_instance(context, instance_id):
 @require_context
 def fixed_ip_get_instance_v6(context, address):
     session = get_session()
+
+    # convert IPv6 address to mac
     mac = utils.to_mac(address)
 
+    # get mac address row
+    mac_ref = mac_address_get(context, mac)
+
+    # look up instance based on instance_id from mac address row
     result = session.query(models.Instance).\
-                     filter_by(mac_address=mac).\
-                     first()
+                     filter_by(id=mac_ref.instance_id)
     return result
 
 
@@ -653,6 +658,98 @@ def fixed_ip_update(context, address, values):
                                                session=session)
         fixed_ip_ref.update(values)
         fixed_ip_ref.save(session=session)
+
+
+###################
+
+
+@require_context
+def mac_address_create(context, values):
+    """create a new mac address record in teh database
+
+    context = request context object
+    values = dict containing column values
+    """
+    mac_address_ref = models.MacAddress()
+    mac_address_ref.update(values)
+    mac_address_ref.save()
+
+    session = get_session()
+    with session.begin():
+        instance = instance_get(context, instance_id, session=session)
+        network = network_get(context, network_id, session=session)
+        mac_address.instance = instance
+        mac_address.network = network
+        mac_address_ref.save(session=session)
+    return mac_address_ref
+
+
+def mac_address_get(context, mac_address):
+    """gets a mac address from the table
+
+    context = request context object
+    mac_address = the mac you're looking to get
+    """
+    session = get_session()
+    with session.begin():
+        mac_address_ref = session.query(models.MacAddress).\
+                                  filter_by(mac_address=mac_address)
+        return mac_address_ref
+
+
+@require_context
+def mac_address_get_all_by_instance(context, instance_id):
+    """gets all mac addresses for instance
+
+    context = request context object
+    instance_id = instance to retreive macs for
+    """
+    session = get_session()
+    with session.begin():
+        mac_address_refs = session.query(models.MacAddress).\
+                                   filter_by(instance_id=instance_id)
+        return mac_address_refs
+
+
+@require_context
+def mac_address_get_all_by_network(context, network_id):
+    """gets all mac addresses for instance
+
+    context = request context object
+    network_id = network to retreive macs for
+    """
+    session = get_session()
+    with session.begin():
+        mac_address_refs = session.query(models.MacAddress).\
+                                   filter_by(network_id=network_id)
+        return mac_address_refs
+
+
+@require_context
+def mac_address_delete(context, mac_address):
+    """delete mac address record in teh database
+
+    context = request context object
+    instance_id = instance to remove macs for
+    """
+    ref = mac_address_get(mac_address)
+    session = get_session()
+    with session.begin():
+        ref.delete(session=session)
+
+
+@require_context
+def mac_address_delete_by_instance(context, instance_id):
+    """delete mac address record in teh database
+
+    context = request context object
+    instance_id = instance to remove macs for
+    """
+    refs = mac_address_get_all_by_instance(instance_id)
+    session = get_session()
+    with session.begin():
+        for ref in refs:
+            ref.delete(session=session)
 
 
 ###################
@@ -819,24 +916,35 @@ def instance_get_project_vpn(context, project_id):
 
 
 @require_context
-def instance_get_fixed_address(context, instance_id):
+def instance_get_fixed_addresses(context, instance_id):
     session = get_session()
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
-        if not instance_ref.fixed_ip:
+        if not instance_ref.fixed_ips:
             return None
-        return instance_ref.fixed_ip['address']
+        return [fixed_ip.address for fixed_ip in instance_ref.fixed_ips]
 
 
 @require_context
-def instance_get_fixed_address_v6(context, instance_id):
+def instance_get_fixed_addresses_v6(context, instance_id):
     session = get_session()
     with session.begin():
+        # get instance
         instance_ref = instance_get(context, instance_id, session=session)
-        network_ref = network_get_by_instance(context, instance_id)
-        prefix = network_ref.cidr_v6
-        mac = instance_ref.mac_address
-        return utils.to_global_ipv6(prefix, mac)
+        # get networks associated with instance
+        network_refs = network_get_all_by_instance(context, instance_id)
+        # compile a list of cidr_v6 prefixes sorted by network id
+        prefixes = [ref.cidr_v6 for ref in
+                    sorted(network_refs, key=lambda ref: ref.id)]
+        # get mac rows associated with instance
+        mac_refs = mac_address_get_all_by_instance(context, instance_ref.id)
+        # compile of list of the mac_addresses sorted by network id
+        macs = [ref.mac_address for ref in
+                sorted(mac_refs, key=lambda ref: ref.network_id)]
+        # combine prefixes and macs into (prefix,mac) pairs
+        prefix_mac_pairs = zip(prefixes, macs)
+        # return list containing ipv6 address for each pair
+        return [utils.to_global_ipv6(pair) for pair in prefix_mac_pairs]
 
 
 @require_context
@@ -1081,7 +1189,8 @@ def network_get(context, network_id, session=None):
 @require_admin_context
 def network_get_all(context):
     session = get_session()
-    result = session.query(models.Network)
+    result = session.query(models.Network).\
+                 filter_by(deleted=False)
     if not result:
         raise exception.NotFound(_('No networks defined'))
     return result

@@ -184,8 +184,7 @@ class API(base.Base):
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
-            instance = dict(mac_address=utils.generate_mac(),
-                            launch_index=num,
+            instance = dict(launch_index=num,
                             **base_options)
             instance = self.db.instance_create(context, instance)
             instance_id = instance['id']

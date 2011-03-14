@@ -193,15 +193,21 @@ class ComputeManager(manager.Manager):
         #             with the address currently, but I'm leaving it as
         #             a call to ensure that network setup completes.  We
         #             will eventually also need to save the address here.
+        #NOTE(tr3buchet): I don't see why we'd save it here when the network
+        #                 manager is saving it.
         if not FLAGS.stub_network:
-            address = rpc.call(context,
-                               self.get_network_topic(context),
-                               {"method": "allocate_fixed_ip",
+            rpc.call(context, self.get_network_topic(context),
+                               {"method": "allocate_fixed_ips",
                                 "args": {"instance_id": instance_id,
                                          "vpn": is_vpn}})
+            rpc.call(context, self.get_network_topic(context),
+                               {"method": "allocate_mac_addresses",
+                                "args": {"instance_id": instance_id}})
 
             self.network_manager.setup_compute_network(context,
                                                        instance_id)
+
+        Log.debug(_("instance addresses: |%s|"), instance_ref['fixed_ips'])
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,

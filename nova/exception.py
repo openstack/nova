@@ -123,3 +123,7 @@ def wrap_exception(f):
             raise
     _wrap.func_name = f.func_name
     return _wrap
+
+
+class MacAddress(Error):
+    pass

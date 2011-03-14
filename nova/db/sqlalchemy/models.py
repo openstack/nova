@@ -174,7 +174,6 @@ class Instance(BASE, NovaBase):
     user_data = Column(Text)
 
     reservation_id = Column(String(255))
-    mac_address = Column(String(255))
 
     scheduled_at = Column(DateTime)
     launched_at = Column(DateTime)
@@ -404,6 +403,53 @@ class Network(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
+# TODO(vish): can these both come from the same baseclass?
+class FixedIp(BASE, NovaBase):
+    """Represents a fixed ip for an instance."""
+    __tablename__ = 'fixed_ips'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
+    network = relationship(Network, backref=backref('fixed_ips'))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    instance = relationship(Instance,
+                            backref=backref('fixed_ips'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_('
+                                'FixedIp.instance_id == Instance.id,'
+                                'FixedIp.deleted == False)')
+    allocated = Column(Boolean, default=False)
+    leased = Column(Boolean, default=False)
+    reserved = Column(Boolean, default=False)
+
+
+class FloatingIp(BASE, NovaBase):
+    """Represents a floating ip that dynamically forwards to a fixed ip."""
+    __tablename__ = 'floating_ips'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255))
+    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
+    fixed_ip = relationship(FixedIp,
+                            backref=backref('floating_ips'),
+                            foreign_keys=fixed_ip_id,
+                            primaryjoin='and_('
+                                'FloatingIp.fixed_ip_id == FixedIp.id,'
+                                'FloatingIp.deleted == False)')
+    project_id = Column(String(255))
+    host = Column(String(255))  # , ForeignKey('hosts.id'))
+
+
+class MacAddress(BASE, NovaBase):
+    """Represents a mac address used by an instance"""
+    __tablename__ = 'mac_addresses'
+    id = Column(Integer, primary_key=True)
+    mac_address = Column(String(255), unique=True)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
+    network = relationship(Network, backref=backref('mac_addresses'))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance, backref=backref('mac_addresses'))
+
+
 class AuthToken(BASE, NovaBase):
     """Represents an authorization token for all API transactions.
 
@@ -417,26 +463,6 @@ class AuthToken(BASE, NovaBase):
     server_manageent_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
-
-
-# TODO(vish): can these both come from the same baseclass?
-class FixedIp(BASE, NovaBase):
-    """Represents a fixed ip for an instance."""
-    __tablename__ = 'fixed_ips'
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255))
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
-    network = relationship(Network, backref=backref('fixed_ips'))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
-    instance = relationship(Instance,
-                            backref=backref('fixed_ip', uselist=False),
-                            foreign_keys=instance_id,
-                            primaryjoin='and_('
-                                'FixedIp.instance_id == Instance.id,'
-                                'FixedIp.deleted == False)')
-    allocated = Column(Boolean, default=False)
-    leased = Column(Boolean, default=False)
-    reserved = Column(Boolean, default=False)
 
 
 class User(BASE, NovaBase):
@@ -497,22 +523,6 @@ class UserProjectAssociation(BASE, NovaBase):
     __tablename__ = 'user_project_association'
     user_id = Column(String(255), ForeignKey(User.id), primary_key=True)
     project_id = Column(String(255), ForeignKey(Project.id), primary_key=True)
-
-
-class FloatingIp(BASE, NovaBase):
-    """Represents a floating ip that dynamically forwards to a fixed ip."""
-    __tablename__ = 'floating_ips'
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255))
-    fixed_ip_id = Column(Integer, ForeignKey('fixed_ips.id'), nullable=True)
-    fixed_ip = relationship(FixedIp,
-                            backref=backref('floating_ips'),
-                            foreign_keys=fixed_ip_id,
-                            primaryjoin='and_('
-                                'FloatingIp.fixed_ip_id == FixedIp.id,'
-                                'FloatingIp.deleted == False)')
-    project_id = Column(String(255))
-    host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
 class ConsolePool(BASE, NovaBase):

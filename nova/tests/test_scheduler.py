@@ -160,7 +160,6 @@ class SimpleDriverTestCase(test.TestCase):
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
         inst['instance_type'] = 'm1.tiny'
-        inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         inst['vcpus'] = 1
         inst['availability_zone'] = kwargs.get('availability_zone', None)

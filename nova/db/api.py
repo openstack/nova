@@ -325,6 +325,37 @@ def fixed_ip_update(context, address, values):
 ####################
 
 
+def mac_address_create(context, values):
+    """create a new mac address record in teh database"""
+    return IMPL.mac_address_create(context, values)
+
+
+def mac_address_get(context, mac_address):
+    """gets a mac address from the table"""
+    return IMPL.mac_address_get(context, mac_address)
+
+
+def mac_address_get_all_by_instance(context, instance_id):
+    """gets all mac addresses for instance"""
+    return IMPL.mac_address_get_all_by_instance(context, instance_id)
+
+
+def mac_address_get_all_by_network(context, network_id):
+    """gets all mac addresses for instance"""
+    return IMPL.mac_address_get_all_by_network(context, network_id)
+
+
+def mac_address_delete(context, mac_address):
+    """delete mac address record in teh database"""
+    return IMPL.mac_address_delete(context, mac_address)
+
+
+def mac_address_delete_by_instance(context, instance_id):
+    """delete mac address record in teh database"""
+    return IMPL.mac_address_delete_by_instance(context, instance_id)
+####################
+
+
 def instance_create(context, values):
     """Create an instance from the values dictionary."""
     return IMPL.instance_create(context, values)
@@ -370,13 +401,13 @@ def instance_get_all_by_reservation(context, reservation_id):
     return IMPL.instance_get_all_by_reservation(context, reservation_id)
 
 
-def instance_get_fixed_address(context, instance_id):
+def instance_get_fixed_addresses(context, instance_id):
     """Get the fixed ip address of an instance."""
-    return IMPL.instance_get_fixed_address(context, instance_id)
+    return IMPL.instance_get_fixed_addresses(context, instance_id)
 
 
-def instance_get_fixed_address_v6(context, instance_id):
-    return IMPL.instance_get_fixed_address_v6(context, instance_id)
+def instance_get_fixed_addresses_v6(context, instance_id):
+    return IMPL.instance_get_fixed_addresses_v6(context, instance_id)
 
 
 def instance_get_floating_address(context, instance_id):
