@@ -126,6 +126,19 @@ class HyperVConnection(driver.ComputeDriver):
                 for v in self._conn.Msvm_ComputerSystem(['ElementName'])]
         return vms
 
+    def list_instances_detail(self):
+        #TODO(justinsb): This is a terrible implementation (1+N)
+        instance_infos = []
+        for instance_name in self.list_instances():
+            info = self.get_info(instance_name)
+
+            state = info['state']
+
+            instance_info = driver.InstanceInfo(instance_name, state)
+            instance_infos.append(instance_info)
+
+        return instance_infos
+
     def spawn(self, instance):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
@@ -347,7 +360,7 @@ class HyperVConnection(driver.ComputeDriver):
         newinst = cl.new()
         #Copy the properties from the original.
         for prop in wmi_obj._properties:
-            newinst.Properties_.Item(prop).Value =\
+            newinst.Properties_.Item(prop).Value = \
                     wmi_obj.Properties_.Item(prop).Value
         return newinst
 
