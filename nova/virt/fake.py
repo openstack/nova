@@ -448,4 +448,3 @@ class FakeConnection(driver.ComputeDriver):
     def unfilter_instance(self, instance_ref):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
-

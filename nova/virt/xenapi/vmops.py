@@ -72,7 +72,7 @@ class VMOps(object):
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 name = vm_rec["name_label"]
-                
+
                 #TODO(justinsb): Yuk...
                 openstack_format = VMHelper.compile_info(vm_rec)
                 state = openstack_format['state']
