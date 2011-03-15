@@ -85,12 +85,12 @@ class API(base.Base):
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None,
+               availability_zone=None, user_data=None, metadata=[],
                onset_files=None):
         """Create the number of instances requested if quota and
-        other arguments check out ok.
-        """
-        type_data = instance_types.INSTANCE_TYPES[instance_type]
+        other arguments check out ok."""
+
+        type_data = instance_types.get_instance_type(instance_type)
         num_instances = quota.allowed_instances(context, max_count, type_data)
         if num_instances < min_count:
             pid = context.project_id
@@ -100,25 +100,53 @@ class API(base.Base):
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
-        is_vpn = image_id == FLAGS.vpn_image_id
-        if not is_vpn:
-            image = self.image_service.show(context, image_id)
-            if kernel_id is None:
-                kernel_id = image.get('kernel_id', None)
-            if ramdisk_id is None:
-                ramdisk_id = image.get('ramdisk_id', None)
-            # No kernel and ramdisk for raw images
-            if kernel_id == str(FLAGS.null_kernel):
-                kernel_id = None
-                ramdisk_id = None
-                LOG.debug(_("Creating a raw instance"))
-            # Make sure we have access to kernel and ramdisk (if not raw)
-            logging.debug("Using Kernel=%s, Ramdisk=%s" %
-                           (kernel_id, ramdisk_id))
-            if kernel_id:
-                self.image_service.show(context, kernel_id)
-            if ramdisk_id:
-                self.image_service.show(context, ramdisk_id)
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            pid = context.project_id
+            msg = (_("Quota exceeeded for %(pid)s,"
+                     " tried to set %(num_metadata)s metadata properties")
+                   % locals())
+            LOG.warn(msg)
+            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        # Because metadata is stored in the DB, we hard-code the size limits
+        # In future, we may support more variable length strings, so we act
+        #  as if this is quota-controlled for forwards compatibility
+        for metadata_item in metadata:
+            k = metadata_item['key']
+            v = metadata_item['value']
+            if len(k) > 255 or len(v) > 255:
+                pid = context.project_id
+                msg = (_("Quota exceeeded for %(pid)s,"
+                         " metadata property key or value too long")
+                       % locals())
+                LOG.warn(msg)
+                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        image = self.image_service.show(context, image_id)
+
+        os_type = None
+        if 'properties' in image and 'os_type' in image['properties']:
+            os_type = image['properties']['os_type']
+
+        if kernel_id is None:
+            kernel_id = image['properties'].get('kernel_id', None)
+        if ramdisk_id is None:
+            ramdisk_id = image['properties'].get('ramdisk_id', None)
+        # FIXME(sirp): is there a way we can remove null_kernel?
+        # No kernel and ramdisk for raw images
+        if kernel_id == str(FLAGS.null_kernel):
+            kernel_id = None
+            ramdisk_id = None
+            LOG.debug(_("Creating a raw instance"))
+        # Make sure we have access to kernel and ramdisk (if not raw)
+        logging.debug("Using Kernel=%s, Ramdisk=%s" %
+                       (kernel_id, ramdisk_id))
+        if kernel_id:
+            self.image_service.show(context, kernel_id)
+        if ramdisk_id:
+            self.image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -142,6 +170,7 @@ class API(base.Base):
             'image_id': image_id,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'state': 0,
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
@@ -156,7 +185,9 @@ class API(base.Base):
             'key_name': key_name,
             'key_data': key_data,
             'locked': False,
-            'availability_zone': availability_zone}
+            'metadata': metadata,
+            'availability_zone': availability_zone,
+            'os_type': os_type}
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -295,12 +326,12 @@ class API(base.Base):
         try:
             instance = self.get(context, instance_id)
         except exception.NotFound:
-            LOG.warning(_("Instance %d was not found during terminate"),
+            LOG.warning(_("Instance %s was not found during terminate"),
                         instance_id)
             raise
 
         if (instance['state_description'] == 'terminating'):
-            LOG.warning(_("Instance %d is already being terminated"),
+            LOG.warning(_("Instance %s is already being terminated"),
                         instance_id)
             return
 
@@ -380,6 +411,10 @@ class API(base.Base):
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)
 
+    def _cast_scheduler_message(self, context, args):
+        """Generic handler for RPC calls to the scheduler"""
+        rpc.cast(context, FLAGS.scheduler_topic, args)
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -395,6 +430,45 @@ class API(base.Base):
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
+
+    def revert_resize(self, context, instance_id):
+        """Reverts a resize, deleting the 'new' instance in the process"""
+        context = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.NotFound(_("No finished migrations found for "
+                    "instance"))
+
+        params = {'migration_id': migration_ref['id']}
+        self._cast_compute_message('revert_resize', context, instance_id,
+                migration_ref['dest_compute'], params=params)
+
+    def confirm_resize(self, context, instance_id):
+        """Confirms a migration/resize, deleting the 'old' instance in the
+        process."""
+        context = context.elevated()
+        migration_ref = self.db.migration_get_by_instance_and_status(context,
+                instance_id, 'finished')
+        if not migration_ref:
+            raise exception.NotFound(_("No finished migrations found for "
+                    "instance"))
+        instance_ref = self.db.instance_get(context, instance_id)
+        params = {'migration_id': migration_ref['id']}
+        self._cast_compute_message('confirm_resize', context, instance_id,
+                migration_ref['source_compute'], params=params)
+
+        self.db.migration_update(context, migration_id,
+                {'status': 'confirmed'})
+        self.db.instance_update(context, instance_id,
+                {'host': migration_ref['dest_compute'], })
+
+    def resize(self, context, instance_id, flavor):
+        """Resize a running instance."""
+        self._cast_scheduler_message(context,
+                    {"method": "prep_resize",
+                     "args": {"topic": FLAGS.compute_topic,
+                              "instance_id": instance_id, }},)
 
     def pause(self, context, instance_id):
         """Pause the given instance."""
@@ -431,9 +505,10 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def set_admin_password(self, context, instance_id):
+    def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message('set_admin_password', context, instance_id)
+        self._cast_compute_message('set_admin_password', context, instance_id,
+                                    password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""
@@ -449,7 +524,7 @@ class API(base.Base):
                  {'method': 'authorize_ajax_console',
                   'args': {'token': output['token'], 'host': output['host'],
                   'port': output['port']}})
-        return {'url': '%s?token=%s' % (FLAGS.ajax_console_proxy_url,
+        return {'url': '%s/?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}
 
     def get_console_output(self, context, instance_id):
@@ -477,6 +552,13 @@ class API(base.Base):
 
         """
         self._cast_compute_message('reset_network', context, instance_id)
+
+    def inject_network_info(self, context, instance_id):
+        """
+        Inject network info for the instance.
+
+        """
+        self._cast_compute_message('inject_network_info', context, instance_id)
 
     def attach_volume(self, context, instance_id, volume_id, device):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):

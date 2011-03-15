@@ -139,6 +139,24 @@ class FakeConnection(object):
         """
         pass
 
+    def get_host_ip_addr(self):
+        """
+        Retrieves the IP address of the dom0
+        """
+        pass
+
+    def resize(self, instance, flavor):
+        """
+        Resizes/Migrates the specified instance.
+
+        The flavor parameter determines whether or not the instance RAM and
+        disk space are modified, and if so, to what size.
+
+        The work will be done asynchronously. This function returns a task
+        that allows the caller to detect when it is complete.
+        """
+        pass
+
     def set_admin_password(self, instance, new_pass):
         """
         Set the root password on the specified instance.
@@ -176,6 +194,19 @@ class FakeConnection(object):
     def unrescue(self, instance):
         """
         Unrescue the specified instance.
+        """
+        pass
+
+    def migrate_disk_and_power_off(self, instance, dest):
+        """
+        Transfers the disk of a running instance in multiple phases, turning
+        off the instance before the end.
+        """
+        pass
+
+    def attach_disk(self, instance, disk_info):
+        """
+        Attaches the disk to an instance given the metadata disk_info
         """
         pass
 
@@ -319,7 +350,9 @@ class FakeConnection(object):
         return 'FAKE CONSOLE OUTPUT'
 
     def get_ajax_console(self, instance):
-        return 'http://fakeajaxconsole.com/?token=FAKETOKEN'
+        return {'token': 'FAKETOKEN',
+                'host': 'fakeajaxconsole.com',
+                'port': 6969}
 
     def get_console_pool_info(self, console_type):
         return  {'address': '127.0.0.1',
@@ -373,6 +406,27 @@ class FakeConnection(object):
 
         """
         return True
+
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
+    def compare_cpu(self, xml):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only by libvirt."""
+        return
+
+    def unfilter_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
 
 class FakeInstance(object):

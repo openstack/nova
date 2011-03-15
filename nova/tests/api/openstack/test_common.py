@@ -19,14 +19,15 @@
 Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
-import unittest
+import webob.exc
 
 from webob import Request
 
+from nova import test
 from nova.api.openstack.common import limited
 
 
-class LimiterTest(unittest.TestCase):
+class LimiterTest(test.TestCase):
     """
     Unit tests for the `nova.api.openstack.common.limited` method which takes
     in a list of items and, depending on the 'offset' and 'limit' GET params,
@@ -37,6 +38,7 @@ class LimiterTest(unittest.TestCase):
         """
         Run before each test.
         """
+        super(LimiterTest, self).setUp()
         self.tiny = range(1)
         self.small = range(10)
         self.medium = range(1000)
@@ -77,20 +79,14 @@ class LimiterTest(unittest.TestCase):
         Test offset key works with a blank offset.
         """
         req = Request.blank('/?offset=')
-        self.assertEqual(limited(self.tiny, req), self.tiny)
-        self.assertEqual(limited(self.small, req), self.small)
-        self.assertEqual(limited(self.medium, req), self.medium)
-        self.assertEqual(limited(self.large, req), self.large[:1000])
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
 
     def test_limiter_offset_bad(self):
         """
         Test offset key works with a BAD offset.
         """
         req = Request.blank(u'/?offset=\u0020aa')
-        self.assertEqual(limited(self.tiny, req), self.tiny)
-        self.assertEqual(limited(self.small, req), self.small)
-        self.assertEqual(limited(self.medium, req), self.medium)
-        self.assertEqual(limited(self.large, req), self.large[:1000])
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
 
     def test_limiter_nothing(self):
         """
@@ -159,3 +155,17 @@ class LimiterTest(unittest.TestCase):
         self.assertEqual(limited(items, req, max_limit=2000), items[3:])
         req = Request.blank('/?offset=3000&limit=10')
         self.assertEqual(limited(items, req, max_limit=2000), [])
+
+    def test_limiter_negative_limit(self):
+        """
+        Test a negative limit.
+        """
+        req = Request.blank('/?limit=-3000')
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
+
+    def test_limiter_negative_offset(self):
+        """
+        Test a negative offset.
+        """
+        req = Request.blank('/?offset=-30')
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)

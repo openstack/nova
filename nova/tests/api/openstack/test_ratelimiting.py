@@ -1,15 +1,16 @@
 import httplib
 import StringIO
 import time
-import unittest
 import webob
 
+from nova import test
 import nova.api.openstack.ratelimiting as ratelimiting
 
 
-class LimiterTest(unittest.TestCase):
+class LimiterTest(test.TestCase):
 
     def setUp(self):
+        super(LimiterTest, self).setUp()
         self.limits = {
                 'a': (5, ratelimiting.PER_SECOND),
                 'b': (5, ratelimiting.PER_MINUTE),
@@ -83,9 +84,10 @@ class FakeLimiter(object):
         return self._delay
 
 
-class WSGIAppTest(unittest.TestCase):
+class WSGIAppTest(test.TestCase):
 
     def setUp(self):
+        super(WSGIAppTest, self).setUp()
         self.limiter = FakeLimiter(self)
         self.app = ratelimiting.WSGIApp(self.limiter)
 
@@ -206,7 +208,7 @@ def wire_HTTPConnection_to_WSGI(host, app):
     httplib.HTTPConnection = HTTPConnectionDecorator(httplib.HTTPConnection)
 
 
-class WSGIAppProxyTest(unittest.TestCase):
+class WSGIAppProxyTest(test.TestCase):
 
     def setUp(self):
         """Our WSGIAppProxy is going to call across an HTTPConnection to a
@@ -218,6 +220,7 @@ class WSGIAppProxyTest(unittest.TestCase):
         at the WSGIApp.  And the limiter isn't real -- it's a fake that
         behaves the way we tell it to.
         """
+        super(WSGIAppProxyTest, self).setUp()
         self.limiter = FakeLimiter(self)
         app = ratelimiting.WSGIApp(self.limiter)
         wire_HTTPConnection_to_WSGI('100.100.100.100:80', app)
@@ -238,7 +241,3 @@ class WSGIAppProxyTest(unittest.TestCase):
             self.limiter.mock('murder', 'brutus', None)
             self.proxy.perform('stab', 'brutus')
         self.assertRaises(AssertionError, shouldRaise)
-
-
-if __name__ == '__main__':
-    unittest.main()

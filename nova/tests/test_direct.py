@@ -19,7 +19,6 @@
 """Tests for Direct API."""
 
 import json
-import logging
 
 import webob
 
@@ -53,12 +52,14 @@ class DirectTestCase(test.TestCase):
 
     def tearDown(self):
         direct.ROUTES = {}
+        super(DirectTestCase, self).tearDown()
 
     def test_delegated_auth(self):
         req = webob.Request.blank('/fake/context')
         req.headers['X-OpenStack-User'] = 'user1'
         req.headers['X-OpenStack-Project'] = 'proj1'
         resp = req.get_response(self.auth_router)
+        self.assertEqual(resp.status_int, 200)
         data = json.loads(resp.body)
         self.assertEqual(data['user'], 'user1')
         self.assertEqual(data['project'], 'proj1')
@@ -69,6 +70,7 @@ class DirectTestCase(test.TestCase):
         req.method = 'POST'
         req.body = 'json=%s' % json.dumps({'data': 'foo'})
         resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 
@@ -78,6 +80,7 @@ class DirectTestCase(test.TestCase):
         req.method = 'POST'
         req.body = 'data=foo'
         resp = req.get_response(self.router)
+        self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 
@@ -90,8 +93,7 @@ class DirectTestCase(test.TestCase):
 class DirectCloudTestCase(test_cloud.CloudTestCase):
     def setUp(self):
         super(DirectCloudTestCase, self).setUp()
-        compute_handle = compute.API(image_service=self.cloud.image_service,
-                                     network_api=self.cloud.network_api,
+        compute_handle = compute.API(network_api=self.cloud.network_api,
                                      volume_api=self.cloud.volume_api)
         direct.register_service('compute', compute_handle)
         self.router = direct.JsonParamsMiddleware(direct.Router())

@@ -30,13 +30,14 @@ import simplejson as json
 
 
 def main(dom_id, command, only_this_vif=None):
-    xsls = execute("/usr/bin/xenstore-ls /local/domain/%s/vm-data/networking" \
-                  % dom_id, True)
+    xsls = execute('/usr/bin/xenstore-ls',
+                   '/local/domain/%s/vm-data/networking' % dom_id, True)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsr = "/usr/bin/xenstore-read /local/domain/%s/vm-data/networking/%s"
-        xsread = execute(xsr % (dom_id, mac), True)
+        xsread = execute('/usr/bin/enstore-read',
+                         '/local/domain/%s/vm-data/networking/%s' %
+                         (dom_id, mac), True)
         data = json.loads(xsread)
         for ip in data['ips']:
             if data["label"] == "public":
@@ -51,9 +52,10 @@ def main(dom_id, command, only_this_vif=None):
                 apply_iptables_rules(command, params)
 
 
-def execute(command, return_stdout=False):
+def execute(*command, return_stdout=False):
     devnull = open(os.devnull, 'w')
-    proc = subprocess.Popen(command, shell=True, close_fds=True,
+    command = map(str, command)
+    proc = subprocess.Popen(command, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
     devnull.close()
     if return_stdout:
@@ -67,45 +69,68 @@ def execute(command, return_stdout=False):
 
 
 def apply_iptables_rules(command, params):
-    iptables = lambda rule: execute("/sbin/iptables %s" % rule)
+    iptables = lambda *rule: execute('/sbin/iptables', *rule)
 
-    iptables("-D FORWARD -m physdev --physdev-in %(VIF)s -s %(IP)s \
-              -j ACCEPT" % params)
+    iptables('-D', 'FORWARD', '-m', 'physdev',
+             '--physdev-in', params['VIF'],
+             '-s', params['IP'],
+             '-j', 'ACCEPT')
     if command == 'online':
-        iptables("-A FORWARD -m physdev --physdev-in %(VIF)s -s %(IP)s \
-                  -j ACCEPT" % params)
+        iptables('-A', 'FORWARD', '-m', 'physdev',
+                 '--physdev-in', params['VIF'],
+                 '-s', params['IP'],
+                 '-j', 'ACCEPT')
 
 
 def apply_arptables_rules(command, params):
-    arptables = lambda rule: execute("/sbin/arptables %s" % rule)
+    arptables = lambda *rule: execute('/sbin/arptables', *rule)
 
-    arptables("-D FORWARD --opcode Request --in-interface %(VIF)s \
-               --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
-    arptables("-D FORWARD --opcode Reply --in-interface %(VIF)s \
-               --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
+    arptables('-D', 'FORWARD', '--opcode', 'Request',
+              '--in-interface', params['VIF'],
+              '--source-ip', params['IP'],
+              '--source-mac', params['MAC'],
+              '-j', 'ACCEPT')
+    arptables('-D', 'FORWARD', '--opcode', 'Reply',
+              '--in-interface', params['VIF'],
+              '--source-ip', params['IP'],
+              '--source-mac', params['MAC'],
+              '-j', 'ACCEPT')
     if command == 'online':
-        arptables("-A FORWARD --opcode Request --in-interface %(VIF)s \
-                  --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
-        arptables("-A FORWARD --opcode Reply --in-interface %(VIF)s \
-                  --source-ip %(IP)s --source-mac %(MAC)s -j ACCEPT" % params)
+        arptables('-A', 'FORWARD', '--opcode', 'Request',
+                  '--in-interface', params['VIF'],
+                  '--source-mac', params['MAC'],
+                  '-j', 'ACCEPT')
+        arptables('-A', 'FORWARD', '--opcode', 'Reply',
+                  '--in-interface', params['VIF'],
+                  '--source-ip', params['IP'],
+                  '--source-mac', params['MAC'],
+                  '-j', 'ACCEPT')
 
 
 def apply_ebtables_rules(command, params):
-    ebtables = lambda rule: execute("/sbin/ebtables %s" % rule)
+    ebtables = lambda *rule: execute("/sbin/ebtables", *rule)
 
-    ebtables("-D FORWARD -p 0806 -o %(VIF)s --arp-ip-dst %(IP)s -j ACCEPT" %
-             params)
-    ebtables("-D FORWARD -p 0800 -o %(VIF)s --ip-dst %(IP)s -j ACCEPT" %
-             params)
+    ebtables('-D', 'FORWARD', '-p', '0806', '-o', params['VIF'],
+             '--arp-ip-dst', params['IP'],
+             '-j', 'ACCEPT')
+    ebtables('-D', 'FORWARD', '-p', '0800', '-o',
+             params['VIF'], '--ip-dst', params['IP'],
+             '-j', 'ACCEPT')
     if command == 'online':
-        ebtables("-A FORWARD -p 0806 -o %(VIF)s --arp-ip-dst %(IP)s \
-                  -j ACCEPT" % params)
-        ebtables("-A FORWARD -p 0800 -o %(VIF)s --ip-dst %(IP)s \
-                  -j ACCEPT" % params)
+        ebtables('-A', 'FORWARD', '-p', '0806',
+                 '-o', params['VIF'],
+                 '--arp-ip-dst', params['IP'],
+                 '-j', 'ACCEPT')
+        ebtables('-A', 'FORWARD', '-p', '0800',
+                 '-o', params['VIF'],
+                 '--ip-dst', params['IP'],
+                 '-j', 'ACCEPT')
 
-    ebtables("-D FORWARD -s ! %(MAC)s -i %(VIF)s -j DROP" % params)
+    ebtables('-D', 'FORWARD', '-s', '!', params['MAC'],
+             '-i', params['VIF'], '-j', 'DROP')
     if command == 'online':
-        ebtables("-I FORWARD 1 -s ! %(MAC)s -i %(VIF)s -j DROP" % params)
+        ebtables('-I', 'FORWARD', '1', '-s', '!', params['MAC'],
+                 '-i', params['VIF'], '-j', 'DROP')
 
 
 if __name__ == "__main__":

@@ -107,10 +107,14 @@ class VolumeManager(manager.Manager):
             vol_size = volume_ref['size']
             LOG.debug(_("volume %(vol_name)s: creating lv of"
                     " size %(vol_size)sG") % locals())
-            self.driver.create_volume(volume_ref)
+            model_update = self.driver.create_volume(volume_ref)
+            if model_update:
+                self.db.volume_update(context, volume_ref['id'], model_update)
 
             LOG.debug(_("volume %s: creating export"), volume_ref['name'])
-            self.driver.create_export(context, volume_ref)
+            model_update = self.driver.create_export(context, volume_ref)
+            if model_update:
+                self.db.volume_update(context, volume_ref['id'], model_update)
         except Exception:
             self.db.volume_update(context,
                                   volume_ref['id'], {'status': 'error'})
@@ -156,7 +160,7 @@ class VolumeManager(manager.Manager):
         if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
             path = self.driver.local_path(volume_ref)
         else:
-            path = self.driver.discover_volume(volume_ref)
+            path = self.driver.discover_volume(context, volume_ref)
         return path
 
     def remove_compute_volume(self, context, volume_id):
@@ -167,3 +171,9 @@ class VolumeManager(manager.Manager):
             return True
         else:
             self.driver.undiscover_volume(volume_ref)
+
+    def check_for_export(self, context, instance_id):
+        """Make sure whether volume is exported."""
+        instance_ref = self.db.instance_get(context, instance_id)
+        for volume in instance_ref['volumes']:
+            self.driver.check_for_export(context, volume['id'])

@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-
 from webob import exc
 
 from nova import compute
@@ -153,7 +151,7 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
 

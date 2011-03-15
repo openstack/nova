@@ -15,34 +15,38 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
 import stubout
 import webob
 
+from nova import test
 import nova.api
+from nova import context
+from nova import db
 from nova.api.openstack import flavors
 from nova.tests.api.openstack import fakes
 
 
-class FlavorsTest(unittest.TestCase):
+class FlavorsTest(test.TestCase):
     def setUp(self):
+        super(FlavorsTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
+        self.context = context.get_admin_context()
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        super(FlavorsTest, self).tearDown()
 
     def test_get_flavor_list(self):
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
 
     def test_get_flavor_by_id(self):
-        pass
-
-if __name__ == '__main__':
-    unittest.main()
+        req = webob.Request.blank('/v1.0/flavors/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
