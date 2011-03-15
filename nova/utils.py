@@ -518,6 +518,9 @@ def synchronized(name):
     def wrap(f):
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            LOG.debug(_("Attempting to grab %(lock)s for method "
+                        "%(method)s..." % {"lock": name,
+                                           "method": f.__name__}))
             lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
                                                   'nova-%s.lock' % name))
             with lock:
