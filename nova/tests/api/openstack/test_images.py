@@ -151,6 +151,13 @@ class LocalImageServiceTest(test.TestCase,
         self.stubs.UnsetAll()
         super(LocalImageServiceTest, self).tearDown()
 
+    def test_get_all_ids_with_incorrect_directory_formats(self):
+        # create some old-style image directories (starting with 'ami-')
+        for x in [1, 2, 3]:
+            tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
+        found_images = self.service._ids()
+        self.assertEqual(True, isinstance(found_images, list))
+
 
 class GlanceImageServiceTest(test.TestCase,
                              BaseImageServiceTests):
