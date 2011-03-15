@@ -806,7 +806,7 @@ ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv\
 dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy\
 c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6\
 b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
-                }
+                },
             ],
         }}
         request = self.deserializer.deserialize(serial_request)
