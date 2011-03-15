@@ -358,15 +358,13 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
-        i = 0
-        for s in res_dict['servers']:
+        for i,s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], '10')
             self.assertEqual(s['flavorId'], '1')
             self.assertEqual(s['metadata']['seq'], i)
-            i += 1
 
     def test_get_all_server_details_v1_1(self):
         class FakeRequestContext(object):
@@ -381,15 +379,13 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
-        i = 0
-        for s in res_dict['servers']:
+        for i,s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
             self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
             self.assertEqual(s['metadata']['seq'], i)
-            i += 1
 
     def test_get_all_server_details_with_host(self):
         '''
