@@ -216,7 +216,7 @@ class ServersTest(test.TestCase):
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['id'] for s in servers], [1, 2])
 
-    def test_create_instance(self):
+    def _test_create_instance_helper(self, with_key_pair):
         def instance_create(context, inst):
             return {'id': '1', 'display_name': 'server_test'}
 
@@ -270,6 +270,13 @@ class ServersTest(test.TestCase):
         self.assertEqual('1', server['id'])
 
         self.assertEqual(res.status_int, 200)
+
+    def test_create_instance(self):
+        self._test_create_instance_helper(True)
+
+    def test_create_instance_no_key_pair(self):
+        fakes.stub_out_key_pair_funcs(self.stubs, False)
+        self._test_create_instance_helper(False)
 
     def test_update_no_body(self):
         req = webob.Request.blank('/v1.0/servers/1')
