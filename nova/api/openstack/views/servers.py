@@ -1,6 +1,8 @@
 import hashlib
 from nova.compute import power_state
+from nova.api.openstack.views import addresses as addresses_view
 from nova import utils
+
 
 def get_view_builder(req):
     '''
@@ -8,22 +10,31 @@ def get_view_builder(req):
     the api requested.
     '''
     version = req.environ['nova.context'].version
+    addresses_builder = addresses_view.get_view_builder(req)
     if version == '1.1':
-        return DataViewBuilder_1_1()
+        return ViewBuilder_1_1(addresses_builder)
     else:
-        return DataViewBuilder_1_0()
+        return ViewBuilder_1_0(addresses_builder)
 
 
-class DataViewBuilder(object):
-    ''' Models a server response as a python dictionary. '''
+class ViewBuilder(object):
+    ''' Models a server response as a python dictionary.'''
+
+    def __init__(self, addresses_builder):
+        self.addresses_builder = addresses_builder
 
     def build(self, inst, is_detail):
         """ Coerces into dictionary format, mapping everything to Rackspace-like
         attributes for return"""
+        if is_detail:
+            return self._build_detail(inst)
+        else:
+            return self._build_simple(inst)
 
-        if not is_detail:
+    def _build_simple(self, inst):
             return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
+    def _build_detail(self, inst):
         power_mapping = {
             None: 'build',
             power_state.NOSTATE: 'build',
@@ -44,7 +55,7 @@ class DataViewBuilder(object):
             inst_dict[k] = inst[v]
 
         inst_dict['status'] = power_mapping[inst_dict['status']]
-        inst_dict['addresses'] = self._build_addresses(inst)
+        inst_dict['addresses'] = self.addresses_builder.build(inst)
 
         # Return the metadata as a dictionary
         metadata = {}
@@ -59,18 +70,10 @@ class DataViewBuilder(object):
         return dict(server=inst_dict)
 
 
-class DataViewBuilder_1_0(DataViewBuilder):
-    def _build_addresses(self, inst):
-        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-        return dict(public=public_ips, private=private_ips)
+class ViewBuilder_1_0(ViewBuilder):
+    pass
 
 
-class DataViewBuilder_1_1(DataViewBuilder):
-    def _build_addresses(self, inst):
-        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-        private_ips = [dict(version=4, addr=a) for a in private_ips]
-        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-        public_ips = [dict(version=4, addr=a) for a in public_ips]
-        return dict(public=public_ips, private=private_ips)
+class ViewBuilder_1_1(ViewBuilder):
+    pass
 
