@@ -183,7 +183,7 @@ class ServersTest(test.TestCase):
         new_return_server = return_server_with_addresses(private, public)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         req = webob.Request.blank('/v1.1/servers/1')
-        req.environ['version'] = '1.1'
+        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], '1')
@@ -363,7 +363,7 @@ class ServersTest(test.TestCase):
 
     def test_get_all_server_details_v1_1(self):
         req = webob.Request.blank('/v1.1/servers/detail')
-        req.environ['version'] = '1.1'
+        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 

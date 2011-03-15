@@ -70,7 +70,7 @@ class AuthMiddleware(wsgi.Middleware):
 
         req.environ['nova.context'] = context.RequestContext(user, account)
         version = req.path.split('/')[1].replace('v', '')
-        req.environ['version'] = version
+        req.environ['nova.api.openstack.version'] = version
         return self.application
 
     def has_authentication(self, req):
