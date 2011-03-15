@@ -24,7 +24,7 @@ from nova import log as logging
 LOG = logging.getLogger('nova.tests.api')
 
 
-class OpenstackApiException(Exception):
+class OpenStackApiException(Exception):
     def __init__(self, message=None, response=None):
         self.response = response
         if not message:
@@ -37,22 +37,22 @@ class OpenstackApiException(Exception):
             message = _('%(message)s\nStatus Code: %(_status)s\n'
                         'Body: %(_body)s') % locals()
 
-        super(OpenstackApiException, self).__init__(message)
+        super(OpenStackApiException, self).__init__(message)
 
 
-class OpenstackApiAuthenticationException(OpenstackApiException):
+class OpenStackApiAuthenticationException(OpenStackApiException):
     def __init__(self, response=None, message=None):
         if not message:
             message = _("Authentication error")
-        super(OpenstackApiAuthenticationException, self).__init__(message,
+        super(OpenStackApiAuthenticationException, self).__init__(message,
                                                                   response)
 
 
-class OpenstackApiNotFoundException(OpenstackApiException):
+class OpenStackApiNotFoundException(OpenStackApiException):
     def __init__(self, response=None, message=None):
         if not message:
             message = _("Item not found")
-        super(OpenstackApiNotFoundException, self).__init__(message, response)
+        super(OpenStackApiNotFoundException, self).__init__(message, response)
 
 
 class TestOpenStackClient(object):
@@ -82,7 +82,7 @@ class TestOpenStackClient(object):
             conn = httplib.HTTPSConnection(hostname,
                                            port=port)
         else:
-            raise OpenstackApiException("Unknown scheme: %s" % url)
+            raise OpenStackApiException("Unknown scheme: %s" % url)
 
         relative_url = parsed_url.path
         if parsed_url.query:
@@ -112,7 +112,7 @@ class TestOpenStackClient(object):
         # bug732866
         #if http_status == 401:
         if http_status != 204:
-            raise OpenstackApiAuthenticationException(response=response)
+            raise OpenStackApiAuthenticationException(response=response)
 
         auth_headers = {}
         for k, v in response.getheaders():
@@ -139,9 +139,9 @@ class TestOpenStackClient(object):
         if check_response_status:
             if not http_status in check_response_status:
                 if http_status == 404:
-                    raise OpenstackApiNotFoundException(response=response)
+                    raise OpenStackApiNotFoundException(response=response)
                 else:
-                    raise OpenstackApiException(
+                    raise OpenStackApiException(
                                         message=_("Unexpected status code"),
                                         response=response)
 
