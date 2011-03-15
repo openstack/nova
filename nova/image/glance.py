@@ -52,9 +52,8 @@ class GlanceImageService(service.BaseImageService):
         Calls out to Glance for a list of detailed image information
         """
         image_metas = self.client.get_images_detailed()
-        return image_metas
-        return [self._depropertify_metadata_from_glance(image_meta)
-                for image_meta in image_metas]
+        translate = self._translate_from_glance_to_image_service
+        return [translate(image_meta) for image_meta in image_metas]
 
     def show(self, context, image_id):
         """
@@ -65,7 +64,7 @@ class GlanceImageService(service.BaseImageService):
         except glance_exception.NotFound:
             raise exception.NotFound
 
-        meta = self._depropertify_metadata_from_glance(metadata)
+        meta = self._translate_from_glance_to_image_service(metadata)
         return meta
 
     def show_by_name(self, context, name):
@@ -95,7 +94,7 @@ class GlanceImageService(service.BaseImageService):
         for chunk in image_chunks:
             data.write(chunk)
 
-        meta = self._depropertify_metadata_from_glance(metadata)
+        meta = self._translate_from_glance_to_image_service(metadata)
         return meta
 
     def create(self, context, metadata, data=None):
@@ -107,8 +106,7 @@ class GlanceImageService(service.BaseImageService):
         """
         LOG.debug(_("Creating image in Glance. Metdata passed in %s"),
                   metadata)
-
-        meta = self._propertify_metadata_for_glance(metadata)
+        meta = self._translate_from_image_service_to_glance(metadata)
         LOG.debug(_("Metadata after formatting for Glance %s"), meta)
         return self.client.add_image(meta, data)
 
@@ -144,7 +142,7 @@ class GlanceImageService(service.BaseImageService):
         pass
 
     @classmethod
-    def _propertify_metadata_for_glance(cls, metadata):
+    def _translate_from_image_service_to_glance(cls, metadata):
         """Return a metadata dict suitable for passing to Glance.
 
         The ImageService exposes metadata as a flat-dict; however, Glance
@@ -161,25 +159,46 @@ class GlanceImageService(service.BaseImageService):
         metadata, figures out which attributes are stored as image properties
         in Glance, and then adds those to a `properties` dict nested within
         the metadata.
+
         """
-        new_metadata = metadata.copy()
+        glance_metadata = metadata.copy()
         properties = {}
         for property_ in cls.IMAGE_PROPERTIES:
-            if property_ in new_metadata:
-                value = new_metadata.pop(property_)
-                properties[property_] = value
-        new_metadata['properties'] = properties
-        return new_metadata
+            if property_ in glance_metadata:
+                value = glance_metadata.pop(property_)
+                properties[property_] = str(value)
+        glance_metadata['properties'] = properties
+        return glance_metadata
 
     @classmethod
-    def _depropertify_metadata_from_glance(cls, metadata):
-        """Return a metadata dict suitable for returning from ImageService
+    def _translate_from_glance_to_image_service(cls, metadata):
+        """Convert Glance-style image metadata to ImageService-style
+
+        The steps in involved are:
+
+            1. Extracting Glance properties and making them ImageService
+               attributes
+
+            2. Converting any strings to appropriate values
         """
-        new_metadata = metadata.copy()
-        if 'properties' in new_metadata:
-            properties = new_metadata.pop('properties')
+        service_metadata = metadata.copy()
+
+        # 1. Extract properties
+        if 'properties' in service_metadata:
+            properties = service_metadata.pop('properties')
             for property_ in cls.IMAGE_PROPERTIES:
-                if property_ in properties and property_ not in new_metadata:
+                if ((property_ in properties) and
+                    (property_ not in service_metadata)):
                     value = properties[property_]
-                    new_metadata[property_] = value
-        return new_metadata
+                    service_metadata[property_] = value
+
+        # 2. Convert values
+        try:
+            service_metadata['instance_id'] = int(
+                service_metadata['instance_id'])
+        except KeyError:
+            pass  # instance_id is not required
+        except TypeError:
+            pass  # instance_id can be None
+
+        return service_metadata

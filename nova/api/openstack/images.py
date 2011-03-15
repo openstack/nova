@@ -116,7 +116,7 @@ def _translate_s3_like_images(image_metadata):
     return api_metadata
 
 
-def _translate_metadata_for_api_detail(image_metadata):
+def _translate_from_image_service_to_api(image_metadata):
     """Translate from ImageService to OpenStack API style attribute names
 
     This involves 3 steps:
@@ -227,7 +227,7 @@ class Controller(wsgi.Controller):
         if s3_like_image:
             translate = _translate_s3_like_images
         else:
-            translate = _translate_metadata_for_api_detail
+            translate = _translate_from_image_service_to_api
 
         api_image_metas = [translate(service_image_meta)
                            for service_image_meta in service_image_metas]

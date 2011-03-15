@@ -156,7 +156,17 @@ class LocalImageServiceTest(test.TestCase,
 class GlanceImageServiceTest(test.TestCase,
                              BaseImageServiceTests):
 
-    """Tests the Glance image service"""
+    """Tests the Glance image service, in particular that metadata translation
+    works properly.
+
+    At a high level, the translations involved are:
+
+        1. Glance -> ImageService - This is needed so we can support
+           multple ImageServices (Glance, Local, etc)
+
+        2. ImageService -> API - This is needed so we can support multple
+           APIs (OpenStack, EC2)
+    """
 
     def setUp(self):
         super(GlanceImageServiceTest, self).setUp()
@@ -174,21 +184,17 @@ class GlanceImageServiceTest(test.TestCase,
         self.stubs.UnsetAll()
         super(GlanceImageServiceTest, self).tearDown()
 
-    def test_create_propertified_images_with_instance_id(self):
+    def test_create_with_instance_id(self):
         """
-        Some attributes are passed to Glance as image-properties (ex.
-        instance_id).
-
-        This tests asserts that the ImageService exposes them as if they were
-        first-class attribrutes, but that they are passed to Glance as image
-        properties.
+        Ensure that a instance_id is stored in Glance as a image property
+        string and then converted back to an instance_id integer attribute.
         """
         fixture = {'instance_id': 42, 'name': 'test image'}
         image_id = self.service.create(self.context, fixture)['id']
 
         expected = {'id': image_id,
                     'name': 'test image',
-                    'properties': {'instance_id': 42}}
+                    'properties': {'instance_id': '42'}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
         # The ImageService shouldn't leak the fact that the instance_id
@@ -197,17 +203,14 @@ class GlanceImageServiceTest(test.TestCase,
         image_meta = self.service.show(self.context, image_id)
         self.assertDictMatch(image_meta, expected)
 
-        #image_metas = self.service.detail(self.context)
-        #self.assertDictMatch(image_metas[0], expected)
+        image_metas = self.service.detail(self.context)
+        self.assertDictMatch(image_metas[0], expected)
 
-    def test_create_propertified_images_without_instance_id(self):
+    def test_create_without_instance_id(self):
         """
-        Some attributes are passed to Glance as image-properties (ex.
-        instance_id).
-
-        This tests asserts that the ImageService exposes them as if they were
-        first-class attribrutes, but that they are passed to Glance as image
-        properties.
+        Ensure we can create an image without having to specify an
+        instance_id. Public images are an example of an image not tied to an
+        instance.
         """
         fixture = {'name': 'test image'}
         image_id = self.service.create(self.context, fixture)['id']
