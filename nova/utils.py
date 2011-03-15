@@ -262,19 +262,25 @@ def generate_mac():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
-def generate_password(length=20):
-    """Generate a random alphanumeric password, avoiding 'confusing' O,0,I,1.
+# Default symbols to use for passwords. Avoids visually confusing characters.
+# ~6 bits per symbol
+DEFAULT_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0,1
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ"  # Removed: I, O
+                            "abcdefghijkmnopqrstuvwxyz")  # Removed: l
+
+
+# ~5 bits per symbol
+EASIER_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0, 1
+                           "ABCDEFGHJKLMNPQRSTUVWXYZ")  # Removed: I, O
+
+
+def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
+    """Generate a random password from the supplied symbols.
 
     Believed to be reasonably secure (with a reasonable password length!)
     """
-    # 26 letters, 10 digits = 36 choices
-    # Remove O, 0, I, 1 => 32 choices
-    # 32 choices means we're just using the low 5 bit of each byte,
-    # so there's no bias introduced by using a modulo
-    chrs = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-    random_bytes = os.urandom(length)
-    return "".join([chrs[ord(random_bytes[i]) % 32] for i in xrange(length)])
+    r = random.SystemRandom()
+    return "".join([r.choice(symbols) for _i in xrange(length)])
 
 
 def last_octet(address):
