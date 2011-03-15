@@ -267,9 +267,10 @@ def generate_password(length=20):
 
     Believed to be reasonably secure (with a reasonable password length!)
     """
-    # 26 letters, 10 digits = 36
-    # Remove O, 0, I, 1 => 32 digits
-    # 32 digits means we're just using the low 5 bit of each byte
+    # 26 letters, 10 digits = 36 choices
+    # Remove O, 0, I, 1 => 32 choices
+    # 32 choices means we're just using the low 5 bit of each byte,
+    # so there's no bias introduced by using a modulo
     chrs = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
     random_bytes = os.urandom(length)
