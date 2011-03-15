@@ -1,178 +1,321 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""
+Tests dealing with HTTP rate-limiting.
+"""
+
 import httplib
+import json
 import StringIO
+import stubout
 import time
 import webob
 
 from nova import test
-import nova.api.openstack.ratelimiting as ratelimiting
+from nova.api.openstack import limits
+from nova.api.openstack.limits import Limit
 
+
+TEST_LIMITS = [
+    Limit("GET", "/delayed", "^/delayed", 1, limits.PER_MINUTE),
+    Limit("POST", "*", ".*", 7, limits.PER_MINUTE),
+    Limit("POST", "/servers", "^/servers", 3, limits.PER_MINUTE),
+    Limit("PUT", "*", "", 10, limits.PER_MINUTE),
+    Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
+]
 
 class LimiterTest(test.TestCase):
+    """
+    Tests for the in-memory `limits.Limiter` class.
+    """
 
     def setUp(self):
-        super(LimiterTest, self).setUp()
-        self.limits = {
-                'a': (5, ratelimiting.PER_SECOND),
-                'b': (5, ratelimiting.PER_MINUTE),
-                'c': (5, ratelimiting.PER_HOUR),
-                'd': (1, ratelimiting.PER_SECOND),
-                'e': (100, ratelimiting.PER_SECOND)}
-        self.rl = ratelimiting.Limiter(self.limits)
+        """Run before each test."""
+        test.TestCase.setUp(self)
+        self.time = 0.0
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        self.limiter = limits.Limiter(TEST_LIMITS)
 
-    def exhaust(self, action, times_until_exhausted, **kwargs):
-        for i in range(times_until_exhausted):
-            when = self.rl.perform(action, **kwargs)
-            self.assertEqual(when, None)
-        num, period = self.limits[action]
-        delay = period * 1.0 / num
-        # Verify that we are now thoroughly delayed
-        for i in range(10):
-            when = self.rl.perform(action, **kwargs)
-            self.assertAlmostEqual(when, delay, 2)
+    def tearDown(self):
+        """Run after each test."""
+        self.stubs.UnsetAll()
 
-    def test_second(self):
-        self.exhaust('a', 5)
-        time.sleep(0.2)
-        self.exhaust('a', 1)
-        time.sleep(1)
-        self.exhaust('a', 5)
+    def _get_time(self):
+        """Return the "time" according to this test suite."""
+        return self.time
 
-    def test_minute(self):
-        self.exhaust('b', 5)
+    def _check(self, num, verb, url, username=None):
+        """Check and yield results from checks."""
+        for x in xrange(num):
+            yield self.limiter.check_for_delay(verb, url, username)
 
-    def test_one_per_period(self):
-        def allow_once_and_deny_once():
-            when = self.rl.perform('d')
-            self.assertEqual(when, None)
-            when = self.rl.perform('d')
-            self.assertAlmostEqual(when, 1, 2)
-            return when
-        time.sleep(allow_once_and_deny_once())
-        time.sleep(allow_once_and_deny_once())
-        allow_once_and_deny_once()
+    def _check_sum(self, num, verb, url, username=None):
+        """Check and sum results from checks."""
+        results = self._check(num, verb, url, username)
+        return sum(filter(lambda x: x != None, results))
 
-    def test_we_can_go_indefinitely_if_we_spread_out_requests(self):
-        for i in range(200):
-            when = self.rl.perform('e')
-            self.assertEqual(when, None)
-            time.sleep(0.01)
+    def test_no_delay_GET(self):
+        """
+        Simple test to ensure no delay on a single call for a limit verb we
+        didn"t set.
+        """
+        delay = self.limiter.check_for_delay("GET", "/anything")
+        self.assertEqual(delay, None)
 
-    def test_users_get_separate_buckets(self):
-        self.exhaust('c', 5, username='alice')
-        self.exhaust('c', 5, username='bob')
-        self.exhaust('c', 5, username='chuck')
-        self.exhaust('c', 0, username='chuck')
-        self.exhaust('c', 0, username='bob')
-        self.exhaust('c', 0, username='alice')
+    def test_no_delay_PUT(self):
+        """
+        Simple test to ensure no delay on a single call for a known limit.
+        """
+        delay = self.limiter.check_for_delay("PUT", "/anything")
+        self.assertEqual(delay, None)
 
+    def test_delay_PUT(self):
+        """
+        Ensure the 11th PUT will result in a delay of 6.0 seconds until
+        the next request will be granced.
+        """
+        expected = [None] * 10 + [6.0]
+        results = list(self._check(11, "PUT", "/anything"))
 
-class FakeLimiter(object):
-    """Fake Limiter class that you can tell how to behave."""
+        self.assertEqual(expected, results)
 
-    def __init__(self, test):
-        self._action = self._username = self._delay = None
-        self.test = test
+    def test_delay_POST(self):
+        """
+        Ensure the 8th POST will result in a delay of 6.0 seconds until
+        the next request will be granced.
+        """
+        expected = [None] * 7
+        results = list(self._check(7, "POST", "/anything"))
+        self.assertEqual(expected, results)
 
-    def mock(self, action, username, delay):
-        self._action = action
-        self._username = username
-        self._delay = delay
+        expected = 60.0 / 7.0
+        results = self._check_sum(1, "POST", "/anything")
+        self.failUnlessAlmostEqual(expected, results, 8)
+            
+    def test_delay_GET(self):
+        """
+        Ensure the 11th GET will result in NO delay.
+        """
+        expected = [None] * 11
+        results = list(self._check(11, "GET", "/anything"))
 
-    def perform(self, action, username):
-        self.test.assertEqual(action, self._action)
-        self.test.assertEqual(username, self._username)
-        return self._delay
+        self.assertEqual(expected, results)
 
+    def test_delay_PUT_servers(self):
+        """
+        Ensure PUT on /servers limits at 5 requests, and PUT elsewhere is still
+        OK after 5 requests...but then after 11 total requests, PUT limiting
+        kicks in.
+        """
+        # First 6 requests on PUT /servers
+        expected = [None] * 5 + [12.0]
+        results = list(self._check(6, "PUT", "/servers"))
+        self.assertEqual(expected, results)
 
-class WSGIAppTest(test.TestCase):
+        # Next 5 request on PUT /anything
+        expected = [None] * 4 + [6.0]
+        results = list(self._check(5, "PUT", "/anything"))
+        self.assertEqual(expected, results)
+
+    def test_delay_PUT_wait(self):
+        """
+        Ensure after hitting the limit and then waiting for the correct
+        amount of time, the limit will be lifted.
+        """
+        expected = [None] * 10 + [6.0]
+        results = list(self._check(11, "PUT", "/anything"))
+        self.assertEqual(expected, results)
+
+        # Advance time
+        self.time += 6.0
+        
+        expected = [None, 6.0]
+        results = list(self._check(2, "PUT", "/anything"))
+        self.assertEqual(expected, results)
+
+    def test_multiple_delays(self):
+        """
+        Ensure multiple requests still get a delay.
+        """
+        expected = [None] * 10 + [6.0] * 10
+        results = list(self._check(20, "PUT", "/anything"))
+        self.assertEqual(expected, results)
+
+        self.time += 1.0
+
+        expected = [5.0] * 10
+        results = list(self._check(10, "PUT", "/anything"))
+        self.assertEqual(expected, results)
+
+    def test_multiple_users(self):
+        """
+        Tests involving multiple users.
+        """
+        # User1
+        expected = [None] * 10 + [6.0] * 10
+        results = list(self._check(20, "PUT", "/anything", "user1"))
+        self.assertEqual(expected, results)
+
+        # User2
+        expected = [None] * 10 + [6.0] * 5
+        results = list(self._check(15, "PUT", "/anything", "user2"))
+        self.assertEqual(expected, results)
+
+        self.time += 1.0
+
+        # User1 again
+        expected = [5.0] * 10
+        results = list(self._check(10, "PUT", "/anything", "user1"))
+        self.assertEqual(expected, results)
+
+        self.time += 1.0
+
+        # User1 again
+        expected = [4.0] * 5
+        results = list(self._check(5, "PUT", "/anything", "user2"))
+        self.assertEqual(expected, results)
+        
+    
+class WsgiLimiterTest(test.TestCase):
+    """
+    Tests for `limits.WsgiLimiter` class.
+    """
 
     def setUp(self):
-        super(WSGIAppTest, self).setUp()
-        self.limiter = FakeLimiter(self)
-        self.app = ratelimiting.WSGIApp(self.limiter)
+        """Run before each test."""
+        test.TestCase.setUp(self)
+        self.time = 0.0
+        self.app = limits.WsgiLimiter(TEST_LIMITS)
+        self.app._limiter._get_time = self._get_time
 
-    def test_invalid_methods(self):
-        requests = []
-        for method in ['GET', 'PUT', 'DELETE']:
-            req = webob.Request.blank('/limits/michael/breakdance',
-                                      dict(REQUEST_METHOD=method))
-            requests.append(req)
-        for req in requests:
-            self.assertEqual(req.get_response(self.app).status_int, 405)
+    def _get_time(self):
+        """Return the "time" according to this test suite."""
+        return self.time
 
-    def test_invalid_urls(self):
-        requests = []
-        for prefix in ['limit', '', 'limiter2', 'limiter/limits', 'limiter/1']:
-            req = webob.Request.blank('/%s/michael/breakdance' % prefix,
-                                      dict(REQUEST_METHOD='POST'))
-        requests.append(req)
-        for req in requests:
-            self.assertEqual(req.get_response(self.app).status_int, 404)
+    def _request_data(self, verb, path):
+        """Get data decribing a limit request verb/path."""
+        return json.dumps({"verb":verb, "path":path})
 
-    def verify(self, url, username, action, delay=None):
+    def _request(self, verb, url, username=None):
         """Make sure that POSTing to the given url causes the given username
         to perform the given action.  Make the internal rate limiter return
         delay and make sure that the WSGI app returns the correct response.
         """
-        req = webob.Request.blank(url, dict(REQUEST_METHOD='POST'))
-        self.limiter.mock(action, username, delay)
-        resp = req.get_response(self.app)
-        if not delay:
-            self.assertEqual(resp.status_int, 200)
+        if username:
+            request = webob.Request.blank("/%s" % username)
         else:
-            self.assertEqual(resp.status_int, 403)
-            self.assertEqual(resp.headers['X-Wait-Seconds'], "%.2f" % delay)
+            request = webob.Request.blank("/")
+    
+        request.method = "POST"
+        request.body = self._request_data(verb, url)
+        response = request.get_response(self.app)
 
-    def test_good_urls(self):
-        self.verify('/limiter/michael/hoot', 'michael', 'hoot')
+        if "X-Wait-Seconds" in response.headers:
+            self.assertEqual(response.status_int, 403)
+            return response.headers["X-Wait-Seconds"]
+            
+        self.assertEqual(response.status_int, 204)
+
+    def test_invalid_methods(self):
+        """Only POSTs should work."""
+        requests = []
+        for method in ["GET", "PUT", "DELETE", "HEAD", "OPTIONS"]:
+            request = webob.Request.blank("/")
+            request.body = self._request_data("GET", "/something")
+            response = request.get_response(self.app)
+            self.assertEqual(response.status_int, 405)
+
+    def test_good_url(self):
+        delay = self._request("GET", "/something")
+        self.assertEqual(delay, None)
 
     def test_escaping(self):
-        self.verify('/limiter/michael/jump%20up', 'michael', 'jump up')
+        delay = self._request("GET", "/something/jump%20up")
+        self.assertEqual(delay, None)
 
     def test_response_to_delays(self):
-        self.verify('/limiter/michael/hoot', 'michael', 'hoot', 1)
-        self.verify('/limiter/michael/hoot', 'michael', 'hoot', 1.56)
-        self.verify('/limiter/michael/hoot', 'michael', 'hoot', 1000)
+        delay = self._request("GET", "/delayed")
+        self.assertEqual(delay, None)
+
+        delay = self._request("GET", "/delayed")
+        self.assertEqual(delay, '60.00')
+
+    def test_response_to_delays_usernames(self):
+        delay = self._request("GET", "/delayed", "user1")
+        self.assertEqual(delay, None)
+
+        delay = self._request("GET", "/delayed", "user2")
+        self.assertEqual(delay, None)
+
+        delay = self._request("GET", "/delayed", "user1")
+        self.assertEqual(delay, '60.00')
+
+        delay = self._request("GET", "/delayed", "user2")
+        self.assertEqual(delay, '60.00')
 
 
 class FakeHttplibSocket(object):
-    """a fake socket implementation for httplib.HTTPResponse, trivial"""
+    """
+    Fake `httplib.HTTPResponse` replacement.
+    """
 
     def __init__(self, response_string):
+        """Initialize new `FakeHttplibSocket`."""
         self._buffer = StringIO.StringIO(response_string)
 
     def makefile(self, _mode, _other):
-        """Returns the socket's internal buffer"""
+        """Returns the socket's internal buffer."""
         return self._buffer
 
 
 class FakeHttplibConnection(object):
-    """A fake httplib.HTTPConnection
-
-    Requests made via this connection actually get translated and routed into
-    our WSGI app, we then wait for the response and turn it back into
-    an httplib.HTTPResponse.
     """
-    def __init__(self, app, host, is_secure=False):
+    Fake `httplib.HTTPConnection`.
+    """
+
+    def __init__(self, app, host):
+        """
+        Initialize `FakeHttplibConnection`.
+        """
         self.app = app
         self.host = host
 
-    def request(self, method, path, data='', headers={}):
+    def request(self, method, path, body="", headers={}):
+        """
+        Requests made via this connection actually get translated and routed into
+        our WSGI app, we then wait for the response and turn it back into
+        an `httplib.HTTPResponse`.
+        """
         req = webob.Request.blank(path)
         req.method = method
-        req.body = data
         req.headers = headers
         req.host = self.host
-        # Call the WSGI app, get the HTTP response
+        req.body = body
+
         resp = str(req.get_response(self.app))
-        # For some reason, the response doesn't have "HTTP/1.0 " prepended; I
-        # guess that's a function the web server usually provides.
         resp = "HTTP/1.0 %s" % resp
         sock = FakeHttplibSocket(resp)
         self.http_response = httplib.HTTPResponse(sock)
         self.http_response.begin()
 
     def getresponse(self):
+        """Return our generated response from the request."""
         return self.http_response
 
 
@@ -208,36 +351,36 @@ def wire_HTTPConnection_to_WSGI(host, app):
     httplib.HTTPConnection = HTTPConnectionDecorator(httplib.HTTPConnection)
 
 
-class WSGIAppProxyTest(test.TestCase):
+class WsgiLimiterProxyTest(test.TestCase):
+    """
+    Tests for the `limits.WsgiLimiterProxy` class.
+    """
 
     def setUp(self):
-        """Our WSGIAppProxy is going to call across an HTTPConnection to a
-        WSGIApp running a limiter.  The proxy will send input, and the proxy
-        should receive that same input, pass it to the limiter who gives a
-        result, and send the expected result back.
-
-        The HTTPConnection isn't real -- it's monkeypatched to point straight
-        at the WSGIApp.  And the limiter isn't real -- it's a fake that
-        behaves the way we tell it to.
         """
-        super(WSGIAppProxyTest, self).setUp()
-        self.limiter = FakeLimiter(self)
-        app = ratelimiting.WSGIApp(self.limiter)
-        wire_HTTPConnection_to_WSGI('100.100.100.100:80', app)
-        self.proxy = ratelimiting.WSGIAppProxy('100.100.100.100:80')
+        Do some nifty HTTP/WSGI magic which allows for WSGI to be called
+        directly by something like the `httplib` library.
+        """
+        test.TestCase.setUp(self)
+        self.time = 0.0
+        self.app = limits.WsgiLimiter(TEST_LIMITS)
+        self.app._limiter._get_time = self._get_time
+        wire_HTTPConnection_to_WSGI("169.254.0.1:80", self.app)
+        self.proxy = limits.WsgiLimiterProxy("169.254.0.1:80")
+
+    def _get_time(self):
+        """Return the "time" according to this test suite."""
+        return self.time
 
     def test_200(self):
-        self.limiter.mock('conquer', 'caesar', None)
-        when = self.proxy.perform('conquer', 'caesar')
-        self.assertEqual(when, None)
+        """Successful request test."""
+        delay = self.proxy.check_for_delay("GET", "/anything")
+        self.assertEqual(delay, None)
 
     def test_403(self):
-        self.limiter.mock('grumble', 'proletariat', 1.5)
-        when = self.proxy.perform('grumble', 'proletariat')
-        self.assertEqual(when, 1.5)
+        """Forbidden request test."""
+        delay = self.proxy.check_for_delay("GET", "/delayed")
+        self.assertEqual(delay, None)
 
-    def test_failure(self):
-        def shouldRaise():
-            self.limiter.mock('murder', 'brutus', None)
-            self.proxy.perform('stab', 'brutus')
-        self.assertRaises(AssertionError, shouldRaise)
+        delay = self.proxy.check_for_delay("GET", "/delayed")
+        self.assertEqual(delay, '60.00')

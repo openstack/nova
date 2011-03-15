@@ -23,7 +23,6 @@ from paste import urlmap
 from nova import flags
 from nova import test
 from nova.api import openstack
-from nova.api.openstack import ratelimiting
 from nova.api.openstack import auth
 from nova.tests.api.openstack import fakes
 
