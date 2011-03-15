@@ -5,7 +5,7 @@ def get_view_builder(req):
     A factory method that returns the correct builder based on the version of
     the api requested.
     '''
-    version = req.environ['nova.context'].version
+    version = req.environ['version']
     base_url = req.application_url
     if version == '1.1':
         return ViewBuilder_1_1(base_url)

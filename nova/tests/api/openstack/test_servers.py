@@ -178,17 +178,12 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses["private"][0], private)
 
     def test_get_server_by_id_with_addresses_v1_1(self):
-        class FakeRequestContext(object):
-            def __init__(self, user, project, *args, **kwargs):
-                self.user_id = 1
-                self.project_id = 1
-                self.version = '1.1'
-        self.stubs.Set(context, 'RequestContext', FakeRequestContext)
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         req = webob.Request.blank('/v1.1/servers/1')
+        req.environ['version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], '1')
@@ -367,15 +362,8 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['metadata']['seq'], i)
 
     def test_get_all_server_details_v1_1(self):
-        class FakeRequestContext(object):
-            def __init__(self, user, project, *args, **kwargs):
-                self.user_id = 1
-                self.project_id = 1
-                self.version = '1.1'
-                self.is_admin = True
-
-        self.stubs.Set(context, 'RequestContext', FakeRequestContext)
         req = webob.Request.blank('/v1.1/servers/detail')
+        req.environ['version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 

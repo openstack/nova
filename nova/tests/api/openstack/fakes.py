@@ -68,7 +68,9 @@ def fake_auth_init(self, application):
 
 @webob.dec.wsgify
 def fake_wsgi(self, req):
-    req.environ['nova.context'] = context.RequestContext(1, 1, version='1.0')
+    req.environ['nova.context'] = context.RequestContext(1, 1)
+    if not req.environ.get('version'):
+        req.environ['version'] = '1.0'
     if req.body:
         req.environ['inst_dict'] = json.loads(req.body)
     return self.application
