@@ -16,7 +16,8 @@ def get_view_builder(req):
     if version == '1.1':
         flavor_builder = flavors_view.get_view_builder(req)
         image_builder = images_view.get_view_builder(req)
-        return ViewBuilder_1_1(addresses_builder, flavor_builder, image_builder)
+        return ViewBuilder_1_1(addresses_builder, flavor_builder,
+                               image_builder)
     else:
         return ViewBuilder_1_0(addresses_builder)
 
@@ -28,8 +29,10 @@ class ViewBuilder(object):
         self.addresses_builder = addresses_builder
 
     def build(self, inst, is_detail):
-        """ Coerces into dictionary format, mapping everything to Rackspace-like
-        attributes for return"""
+        """
+        Coerces into dictionary format, mapping everything to
+        Rackspace-like attributes for return
+        """
         if is_detail:
             return self._build_detail(inst)
         else:
@@ -106,6 +109,5 @@ class ViewBuilder_1_1(ViewBuilder):
 
     def _build_flavor_ref(self, response, inst):
         flavor_id = inst["instance_type"]
-        response["flavorRef"]= self.flavor_builder.generate_href(flavor_id)
+        response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
         return response
-
