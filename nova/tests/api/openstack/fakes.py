@@ -321,7 +321,10 @@ class FakeAuthManager(object):
                        (user.id == p.project_manager_id)]
 
     def get_user_from_access_key(self, key):
-        return FakeAuthManager.auth_data.get(key, None)
+        try:
+            return FakeAuthManager.auth_data[key]
+        except KeyError:
+            raise exc.NotFound
 
 
 class FakeRateLimiter(object):

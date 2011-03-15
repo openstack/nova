@@ -36,10 +36,13 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
+import multiprocessing
 import os
 import shutil
+import sys
 import random
 import subprocess
+import time
 import uuid
 from xml.dom import minidom
 
@@ -69,6 +72,7 @@ Template = None
 LOG = logging.getLogger('nova.virt.libvirt_conn')
 
 FLAGS = flags.FLAGS
+flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 # TODO(vish): These flags should probably go into a shared location
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
@@ -99,6 +103,17 @@ flags.DEFINE_string('ajaxterm_portrange',
 flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
+flags.DEFINE_string('cpuinfo_xml_template',
+                    utils.abspath('virt/cpuinfo.xml.template'),
+                    'CpuInfo XML Template (Used only live migration now)')
+flags.DEFINE_string('live_migration_uri',
+                    "qemu+tcp://%s/system",
+                    'Define protocol used by live_migration feature')
+flags.DEFINE_string('live_migration_flag',
+                    "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
+                    'Define live migration behavior.')
+flags.DEFINE_integer('live_migration_bandwidth', 0,
+                    'Define live migration behavior')
 
 
 def get_connection(read_only):
@@ -145,6 +160,7 @@ class LibvirtConnection(object):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -346,19 +362,19 @@ class LibvirtConnection(object):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.APIError("pause not supported for libvirt.")
+        raise exception.ApiError("pause not supported for libvirt.")
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.APIError("unpause not supported for libvirt.")
+        raise exception.ApiError("unpause not supported for libvirt.")
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.APIError("suspend not supported for libvirt")
+        raise exception.ApiError("suspend not supported for libvirt")
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.APIError("resume not supported for libvirt")
+        raise exception.ApiError("resume not supported for libvirt")
 
     @exception.wrap_exception
     def rescue(self, instance, callback=None):
@@ -763,7 +779,7 @@ class LibvirtConnection(object):
                 'cpu_time': cpu_time}
 
     def get_diagnostics(self, instance_name):
-        raise exception.APIError(_("diagnostics are not supported "
+        raise exception.ApiError(_("diagnostics are not supported "
                                    "for libvirt"))
 
     def get_disks(self, instance_name):
@@ -850,6 +866,158 @@ class LibvirtConnection(object):
 
         return interfaces
 
+    def get_vcpu_total(self):
+        """Get vcpu number of physical computer.
+
+        :returns: the number of cpu core.
+
+        """
+
+        # On certain platforms, this will raise a NotImplementedError.
+        try:
+            return multiprocessing.cpu_count()
+        except NotImplementedError:
+            LOG.warn(_("Cannot get the number of cpu, because this "
+                       "function is not implemented for this platform. "
+                       "This error can be safely ignored for now."))
+            return 0
+
+    def get_memory_mb_total(self):
+        """Get the total memory size(MB) of physical computer.
+
+        :returns: the total amount of memory(MB).
+
+        """
+
+        if sys.platform.upper() != 'LINUX2':
+            return 0
+
+        meminfo = open('/proc/meminfo').read().split()
+        idx = meminfo.index('MemTotal:')
+        # transforming kb to mb.
+        return int(meminfo[idx + 1]) / 1024
+
+    def get_local_gb_total(self):
+        """Get the total hdd size(GB) of physical computer.
+
+        :returns:
+            The total amount of HDD(GB).
+            Note that this value shows a partition where
+            NOVA-INST-DIR/instances mounts.
+
+        """
+
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        return hddinfo.f_frsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+
+    def get_vcpu_used(self):
+        """ Get vcpu usage number of physical computer.
+
+        :returns: The total number of vcpu that currently used.
+
+        """
+
+        total = 0
+        for dom_id in self._conn.listDomainsID():
+            dom = self._conn.lookupByID(dom_id)
+            total += len(dom.vcpus()[1])
+        return total
+
+    def get_memory_mb_used(self):
+        """Get the free memory size(MB) of physical computer.
+
+        :returns: the total usage of memory(MB).
+
+        """
+
+        if sys.platform.upper() != 'LINUX2':
+            return 0
+
+        m = open('/proc/meminfo').read().split()
+        idx1 = m.index('MemFree:')
+        idx2 = m.index('Buffers:')
+        idx3 = m.index('Cached:')
+        avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1])) / 1024
+        return  self.get_memory_mb_total() - avail
+
+    def get_local_gb_used(self):
+        """Get the free hdd size(GB) of physical computer.
+
+        :returns:
+           The total usage of HDD(GB).
+           Note that this value shows a partition where
+           NOVA-INST-DIR/instances mounts.
+
+        """
+
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        avail = hddinfo.f_frsize * hddinfo.f_bavail / 1024 / 1024 / 1024
+        return self.get_local_gb_total() - avail
+
+    def get_hypervisor_type(self):
+        """Get hypervisor type.
+
+        :returns: hypervisor type (ex. qemu)
+
+        """
+
+        return self._conn.getType()
+
+    def get_hypervisor_version(self):
+        """Get hypervisor version.
+
+        :returns: hypervisor version (ex. 12003)
+
+        """
+
+        return self._conn.getVersion()
+
+    def get_cpu_info(self):
+        """Get cpuinfo information.
+
+        Obtains cpu feature from virConnect.getCapabilities,
+        and returns as a json string.
+
+        :return: see above description
+
+        """
+
+        xml = self._conn.getCapabilities()
+        xml = libxml2.parseDoc(xml)
+        nodes = xml.xpathEval('//cpu')
+        if len(nodes) != 1:
+            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
+                                      "but %d\n") % len(nodes)
+                                      + xml.serialize())
+
+        cpu_info = dict()
+        cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()
+        cpu_info['model'] = xml.xpathEval('//cpu/model')[0].getContent()
+        cpu_info['vendor'] = xml.xpathEval('//cpu/vendor')[0].getContent()
+
+        topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
+        topology = dict()
+        while topology_node != None:
+            name = topology_node.get_name()
+            topology[name] = topology_node.getContent()
+            topology_node = topology_node.get_next()
+
+        keys = ['cores', 'sockets', 'threads']
+        tkeys = topology.keys()
+        if list(set(tkeys)) != list(set(keys)):
+            ks = ', '.join(keys)
+            raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
+                                      "must have %(ks)s") % locals())
+
+        feature_nodes = xml.xpathEval('//cpu/feature')
+        features = list()
+        for nodes in feature_nodes:
+            features.append(nodes.get_properties().getContent())
+
+        cpu_info['topology'] = topology
+        cpu_info['features'] = features
+        return utils.dumps(cpu_info)
+
     def block_stats(self, instance_name, disk):
         """
         Note that this function takes an instance name, not an Instance, so
@@ -879,6 +1047,207 @@ class LibvirtConnection(object):
 
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def update_available_resource(self, ctxt, host):
+        """Updates compute manager resource info on ComputeNode table.
+
+        This method is called when nova-coompute launches, and
+        whenever admin executes "nova-manage service update_resource".
+
+        :param ctxt: security context
+        :param host: hostname that compute manager is currently running
+
+        """
+
+        try:
+            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
+        except exception.NotFound:
+            raise exception.Invalid(_("Cannot update compute manager "
+                                      "specific info, because no service "
+                                      "record was found."))
+
+        # Updating host information
+        dic = {'vcpus': self.get_vcpu_total(),
+               'memory_mb': self.get_memory_mb_total(),
+               'local_gb': self.get_local_gb_total(),
+               'vcpus_used': self.get_vcpu_used(),
+               'memory_mb_used': self.get_memory_mb_used(),
+               'local_gb_used': self.get_local_gb_used(),
+               'hypervisor_type': self.get_hypervisor_type(),
+               'hypervisor_version': self.get_hypervisor_version(),
+               'cpu_info': self.get_cpu_info()}
+
+        compute_node_ref = service_ref['compute_node']
+        if not compute_node_ref:
+            LOG.info(_('Compute_service record created for %s ') % host)
+            dic['service_id'] = service_ref['id']
+            db.compute_node_create(ctxt, dic)
+        else:
+            LOG.info(_('Compute_service record updated for %s ') % host)
+            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
+
+    def compare_cpu(self, cpu_info):
+        """Checks the host cpu is compatible to a cpu given by xml.
+
+        "xml" must be a part of libvirt.openReadonly().getCapabilities().
+        return values follows by virCPUCompareResult.
+        if 0 > return value, do live migration.
+        'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+
+        :param cpu_info: json string that shows cpu feature(see get_cpu_info())
+        :returns:
+            None. if given cpu info is not compatible to this server,
+            raise exception.
+
+        """
+
+        LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
+        dic = utils.loads(cpu_info)
+        xml = str(Template(self.cpuinfo_xml, searchList=dic))
+        LOG.info(_('to xml...\n:%s ' % xml))
+
+        u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
+        m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
+        # unknown character exists in xml, then libvirt complains
+        try:
+            ret = self._conn.compareCPU(xml, 0)
+        except libvirt.libvirtError, e:
+            ret = e.message
+            LOG.error(m % locals())
+            raise
+
+        if ret <= 0:
+            raise exception.Invalid(m % locals())
+
+        return
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """Setting up filtering rules and waiting for its completion.
+
+        To migrate an instance, filtering rules to hypervisors
+        and firewalls are inevitable on destination host.
+        ( Waiting only for filterling rules to hypervisor,
+        since filtering rules to firewall rules can be set faster).
+
+        Concretely, the below method must be called.
+        - setup_basic_filtering (for nova-basic, etc.)
+        - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
+
+        to_xml may have to be called since it defines PROJNET, PROJMASK.
+        but libvirt migrates those value through migrateToURI(),
+        so , no need to be called.
+
+        Don't use thread for this method since migration should
+        not be started when setting-up filtering rules operations
+        are not completed.
+
+        :params instance_ref: nova.db.sqlalchemy.models.Instance object
+
+        """
+
+        # If any instances never launch at destination host,
+        # basic-filtering must be set here.
+        self.firewall_driver.setup_basic_filtering(instance_ref)
+        # setting up n)ova-instance-instance-xx mainly.
+        self.firewall_driver.prepare_instance_filter(instance_ref)
+
+        # wait for completion
+        timeout_count = range(FLAGS.live_migration_retry_count)
+        while timeout_count:
+            try:
+                filter_name = 'nova-instance-%s' % instance_ref.name
+                self._conn.nwfilterLookupByName(filter_name)
+                break
+            except libvirt.libvirtError:
+                timeout_count.pop()
+                if len(timeout_count) == 0:
+                    ec2_id = instance_ref['hostname']
+                    iname = instance_ref.name
+                    msg = _('Timeout migrating for %(ec2_id)s(%(iname)s)')
+                    raise exception.Error(msg % locals())
+                time.sleep(1)
+
+    def live_migration(self, ctxt, instance_ref, dest,
+                       post_method, recover_method):
+        """Spawning live_migration operation for distributing high-load.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+
+        """
+
+        greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
+                          post_method, recover_method)
+
+    def _live_migration(self, ctxt, instance_ref, dest,
+                        post_method, recover_method):
+        """Do live migration.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+
+        """
+
+        # Do live migration.
+        try:
+            flaglist = FLAGS.live_migration_flag.split(',')
+            flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+            logical_sum = reduce(lambda x, y: x | y, flagvals)
+
+            if self.read_only:
+                tmpconn = self._connect(self.libvirt_uri, False)
+                dom = tmpconn.lookupByName(instance_ref.name)
+                dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 FLAGS.live_migration_bandwidth)
+                tmpconn.close()
+            else:
+                dom = self._conn.lookupByName(instance_ref.name)
+                dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 FLAGS.live_migration_bandwidth)
+
+        except Exception:
+            recover_method(ctxt, instance_ref)
+            raise
+
+        # Waiting for completion of live_migration.
+        timer = utils.LoopingCall(f=None)
+
+        def wait_for_live_migration():
+            """waiting for live migration completion"""
+            try:
+                self.get_info(instance_ref.name)['state']
+            except exception.NotFound:
+                timer.stop()
+                post_method(ctxt, instance_ref, dest)
+
+        timer.f = wait_for_live_migration
+        timer.start(interval=0.5, now=True)
+
+    def unfilter_instance(self, instance_ref):
+        """See comments of same method in firewall_driver."""
+        self.firewall_driver.unfilter_instance(instance_ref)
 
 
 class FirewallDriver(object):
