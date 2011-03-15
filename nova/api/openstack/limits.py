@@ -58,12 +58,12 @@ class LimitsController(Controller):
         rate_limits = req.environ.get("nova.limits", {})
 
         return {
-            "limits" : {
-                "rate" : rate_limits,
-                "absolute" : abs_limits,
+            "limits": {
+                "rate": rate_limits,
+                "absolute": abs_limits,
             },
         }
-        
+
 
 class Limit(object):
     """
@@ -71,10 +71,10 @@ class Limit(object):
     """
 
     UNITS = {
-        1 : "SECOND",
-        60 : "MINUTE",
-        60 * 60 : "HOUR",
-        60 * 60 * 24 : "DAY",
+        1: "SECOND",
+        60: "MINUTE",
+        60 * 60: "HOUR",
+        60 * 60 * 24: "DAY",
     }
 
     def __init__(self, verb, uri, regex, value, unit):
@@ -137,14 +137,13 @@ class Limit(object):
         cap = self.capacity
         water = self.water_level
         val = self.value
- 
+
         self.remaining = math.floor((cap - water) / cap * val)
-        print "Remaining:", self.remaining
         self.next_request = now
 
     def _get_time(self):
         """Retrieve the current time. Broken out for testability."""
-        return time.time() 
+        return time.time()
 
     def display_unit(self):
         """Display the string name of the unit."""
@@ -153,16 +152,14 @@ class Limit(object):
     def display(self):
         """Return a useful representation of this class."""
         return {
-            "verb" : self.verb,
-            "uri" : self.uri,
-            "regex" : self.regex,
-            "value" : self.value,
-            "remaining" : int(self.remaining),
-            "unit" : self.display_unit(),
-            "resetTime" : int(self.next_request or self._get_time()),
+            "verb": self.verb,
+            "uri": self.uri,
+            "regex": self.regex,
+            "value": self.value,
+            "remaining": int(self.remaining),
+            "unit": self.display_unit(),
+            "resetTime": int(self.next_request or self._get_time()),
         }
-
-
 
 # "Limit" format is a dictionary with the HTTP verb, human-readable URI,
 # a regular-expression to match, value and unit of measure (PER_DAY, etc.)
@@ -324,11 +321,11 @@ class WsgiLimiterProxy(object):
         self.limiter_address = limiter_address
 
     def check_for_delay(self, verb, path, username=None):
-        body = json.dumps({"verb":verb,"path":path})
-        headers = {"Content-Type" : "application/json"}
+        body = json.dumps({"verb": verb, "path": path})
+        headers = {"Content-Type": "application/json"}
 
         conn = httplib.HTTPConnection(self.limiter_address)
-        
+
         if username:
             conn.request("POST", "/%s" % (username), body, headers)
         else:

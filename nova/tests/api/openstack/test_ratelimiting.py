@@ -39,6 +39,7 @@ TEST_LIMITS = [
     Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
 ]
 
+
 class LimiterTest(test.TestCase):
     """
     Tests for the in-memory `limits.Limiter` class.
@@ -107,7 +108,7 @@ class LimiterTest(test.TestCase):
         expected = 60.0 / 7.0
         results = self._check_sum(1, "POST", "/anything")
         self.failUnlessAlmostEqual(expected, results, 8)
-            
+
     def test_delay_GET(self):
         """
         Ensure the 11th GET will result in NO delay.
@@ -144,7 +145,7 @@ class LimiterTest(test.TestCase):
 
         # Advance time
         self.time += 6.0
-        
+
         expected = [None, 6.0]
         results = list(self._check(2, "PUT", "/anything"))
         self.assertEqual(expected, results)
@@ -190,8 +191,8 @@ class LimiterTest(test.TestCase):
         expected = [4.0] * 5
         results = list(self._check(5, "PUT", "/anything", "user2"))
         self.assertEqual(expected, results)
-        
-    
+
+
 class WsgiLimiterTest(test.TestCase):
     """
     Tests for `limits.WsgiLimiter` class.
@@ -210,7 +211,7 @@ class WsgiLimiterTest(test.TestCase):
 
     def _request_data(self, verb, path):
         """Get data decribing a limit request verb/path."""
-        return json.dumps({"verb":verb, "path":path})
+        return json.dumps({"verb": verb, "path": path})
 
     def _request(self, verb, url, username=None):
         """Make sure that POSTing to the given url causes the given username
@@ -221,7 +222,7 @@ class WsgiLimiterTest(test.TestCase):
             request = webob.Request.blank("/%s" % username)
         else:
             request = webob.Request.blank("/")
-    
+
         request.method = "POST"
         request.body = self._request_data(verb, url)
         response = request.get_response(self.app)
@@ -229,7 +230,7 @@ class WsgiLimiterTest(test.TestCase):
         if "X-Wait-Seconds" in response.headers:
             self.assertEqual(response.status_int, 403)
             return response.headers["X-Wait-Seconds"]
-            
+
         self.assertEqual(response.status_int, 204)
 
     def test_invalid_methods(self):
@@ -298,8 +299,8 @@ class FakeHttplibConnection(object):
 
     def request(self, method, path, body="", headers={}):
         """
-        Requests made via this connection actually get translated and routed into
-        our WSGI app, we then wait for the response and turn it back into
+        Requests made via this connection actually get translated and routed
+        into our WSGI app, we then wait for the response and turn it back into
         an `httplib.HTTPResponse`.
         """
         req = webob.Request.blank(path)
