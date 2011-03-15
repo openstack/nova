@@ -23,6 +23,7 @@ Includes injection of SSH PGP keys into authorized_keys file.
 """
 
 import os
+import string
 import tempfile
 import time
 
@@ -138,13 +139,10 @@ def destroy_container(target, instance, nbd=False):
         container_dir = '%s/rootfs' % target
         utils.execute('sudo', 'umount', container_dir)
     finally:
-        image = os.path.join(FLAGS.instances_path, instance['name'], '' + 'disk')
-        out, err = utils.execute('sudo', 'losetup', '--find', '--show', image)
-        device = out.strip()
-        if err:
-            raise execption.Error(_('Could not find loopback image: %s')
-                                 %err)
-        utils.execute('sudo', 'losetup', '--detach', device)
+        for loop in os.popen('sudo losetup -a').readlines():
+            if instance['name'] in loop:
+                device = string.split(loop, ':')
+                utils.execute('sudo', 'losetup', '--detach', device)
 
 
 def _link_device(image, nbd):
