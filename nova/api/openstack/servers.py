@@ -221,15 +221,16 @@ class Controller(wsgi.Controller):
                 path = item['path']
                 contents = item['contents']
             except KeyError as key:
-                expl = 'Bad personality format: missing %s' % key
+                expl = _('Bad personality format: missing %s') % key
                 raise exc.HTTPBadRequest(explanation=expl)
             except TypeError:
-                raise exc.HTTPBadRequest(explanation='Bad personality format')
+                expl = _('Bad personality format')
+                raise exc.HTTPBadRequest(explanation=expl)
             try:
                 contents = base64.b64decode(contents)
             except TypeError:
-                msg = 'Personality content for %s cannot be decoded' % path
-                raise exc.HTTPBadRequest(explanation=msg)
+                expl = _('Personality content for %s cannot be decoded') % path
+                raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
         return injected_files
 
@@ -238,13 +239,13 @@ class Controller(wsgi.Controller):
         Reraise quota errors as api-specific http exceptions
         """
         if error.code == "OnsetFileLimitExceeded":
-            expl = "Personality file limit exceeded"
+            expl = _("Personality file limit exceeded")
             raise exc.HTTPBadRequest(explanation=expl)
         if error.code == "OnsetFilePathLimitExceeded":
-            expl = "Personality file path too long"
+            expl = _("Personality file path too long")
             raise exc.HTTPBadRequest(explanation=expl)
         if error.code == "OnsetFileContentLimitExceeded":
-            expl = "Personality file content too long"
+            expl = _("Personality file content too long")
             raise exc.HTTPBadRequest(explanation=expl)
         # if the original error is okay, just reraise it
         raise error
