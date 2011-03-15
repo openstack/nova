@@ -128,8 +128,11 @@ class Versions(wsgi.Application):
     def __call__(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
-                "versions": [
-                    dict(status="CURRENT", id="v1.0")]}
+            "versions": [
+                dict(status="DEPRECATED", id="v1.0"),
+                dict(status="CURRENT", id="v1.1"),
+            ],
+        }
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
