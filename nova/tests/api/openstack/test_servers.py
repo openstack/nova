@@ -722,7 +722,6 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
-
     def test_request_with_one_personality_missing_path(self):
         serial_request = """
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
@@ -822,7 +821,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
     </metadata>
 </server>"""
         request = self.deserializer.deserialize(serial_request)
-        expected = {"":"gamma"}
+        expected = {"": "gamma"}
         self.assertEquals(request["server"]["metadata"], expected)
 
     def test_request_with_metadata_duplicate_key(self):
