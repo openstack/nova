@@ -319,7 +319,7 @@ class VMOps(object):
             self._session.wait_for_task(task, instance.id)
 
             # Now power down the instance and transfer the COW VHD
-            self._shutdown(instance, vm_ref)
+            self._shutdown(instance, vm_ref, hard=False)
 
             params = {'host': dest,
                       'vdi_uuid': cow_uuid,
@@ -447,7 +447,8 @@ class VMOps(object):
         """Shutdown an instance"""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
-            LOG.warn(_("VM %(vm)s already halted, skipping shutdown...") %
+            instance_name = instance.name
+            LOG.warn(_("VM %(instance_name)s already halted, skipping shutdown...") %
                      locals())
             return
 
