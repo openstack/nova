@@ -129,7 +129,11 @@ def setup_container(image, container_dir=None, partition=None, nbd=False):
         _unlink_device(device, nbd)
 
 def destroy_container(target, instance, nbd=False):
-    """Destroy the container once it terminates"""
+    """Destroy the container once it terminates
+    
+    It will umount the container that is mounted, try to find the loopback
+    device associated with the container and delete it.
+    """
     try:
         container_dir = '%s/rootfs' % target
         utils.execute('sudo', 'umount', container_dir)
