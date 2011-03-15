@@ -467,19 +467,21 @@ class VMHelper(HelperBase):
                         "%(image_id)s, instance %(instance_id)s") % locals())
 
         def determine_from_glance():
-            glance_type2nova_type = {'machine': ImageType.DISK,
-                                     'raw': ImageType.DISK_RAW,
-                                     'vhd': ImageType.DISK_VHD,
-                                     'kernel': ImageType.KERNEL_RAMDISK,
-                                     'ramdisk': ImageType.KERNEL_RAMDISK}
+            glance_disk_format2nova_type = {
+                'ami': ImageType.DISK,
+                'aki': ImageType.KERNEL_RAMDISK,
+                'ari': ImageType.KERNEL_RAMDISK,
+                'raw': ImageType.DISK_RAW,
+                'vhd': ImageType.DISK_VHD}
             client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
             meta = client.get_image_meta(instance.image_id)
-            type_ = meta['type']
+            disk_format = meta['disk_format']
             try:
-                return glance_type2nova_type[type_]
+                return glance_disk_format2nova_type[disk_format]
             except KeyError:
                 raise exception.NotFound(
-                    _("Unrecognized image type '%(type_)s'") % locals())
+                    _("Unrecognized disk_format '%(disk_format)s'")
+                    % locals())
 
         def determine_from_instance():
             if instance.kernel_id:

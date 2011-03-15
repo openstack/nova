@@ -34,6 +34,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.scheduler import api as scheduler
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -50,7 +51,7 @@ class API(base.Base):
 
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
-                 **kwargs):
+                 scheduler_api=None, **kwargs):
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
         self.image_service = image_service
@@ -60,6 +61,9 @@ class API(base.Base):
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
+        if not scheduler_api:
+            scheduler_api = scheduler.API()
+        self.scheduler_api = scheduler_api
         self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
@@ -380,7 +384,9 @@ class API(base.Base):
         if not host:
             instance = self.get(context, instance_id)
             host = instance['host']
-        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        #queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        queue = self.scheduler_api.get_queue_for_instance(context,
+                                            FLAGS.compute_topic, host)
         params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
         rpc.cast(context, queue, kwargs)
@@ -399,7 +405,9 @@ class API(base.Base):
         if not host:
             instance = self.get(context, instance_id)
             host = instance["host"]
-        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        #queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
+        queue = self.scheduler_api.get_queue_for_instance(context,
+                                                FLAGS.compute_topic, host)
         params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)

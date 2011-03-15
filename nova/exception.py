@@ -92,6 +92,12 @@ class TimeoutException(Error):
     pass
 
 
+class ZoneRouteException(Error):
+    def __init__(self, zone, *args, **kwargs):
+        self.zone = zone
+        super(ZoneRouteException, self).__init__(args, kwargs)
+
+
 class DBError(Error):
     """Wraps an implementation specific exception"""
     def __init__(self, inner_exception):

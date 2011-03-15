@@ -17,6 +17,8 @@
 Handles all requests relating to schedulers.
 """
 
+from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
@@ -40,8 +42,12 @@ def _call_scheduler(method, context, params=None):
     return rpc.call(context, queue, kwargs)
 
 
-class API:
+class API(object):
     """API for interacting with the scheduler."""
+
+    @classmethod
+    def _is_current_zone(cls, zone):
+        return True
 
     @classmethod
     def get_zone_list(cls, context):
@@ -67,3 +73,13 @@ class API:
                       args=dict(service_name=service_name, host=host,
                                 capabilities=capabilities))
         return rpc.fanout_cast(context, 'scheduler', kwargs)
+
+    @classmethod
+    def get_queue_for_instance(cls, context, service, instance_id)
+        instance = db.instance_get(context, instance_id)
+        zone = db.get_zone(instance.zone.id)
+        if cls._is_current_zone(zone):
+            return db.queue_get_for(context, service, instance['host']):
+
+        # Throw a reroute Exception for the middleware to pick up. 
+        raise exception.ZoneRouteException(zone)

@@ -511,9 +511,7 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context,
                 migration_ref['instance_id'])
 
-        # this may get passed into the following spawn instead
-        new_disk_info = self.driver.attach_disk(instance_ref, disk_info)
-        self.driver.spawn(instance_ref, disk=new_disk_info)
+        self.driver.finish_resize(instance_ref, disk_info)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
