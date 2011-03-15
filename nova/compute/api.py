@@ -86,6 +86,8 @@ class API(base.Base):
 
         Raises a QuotaError if any limit is exceeded
         """
+        if onset_files is None:
+            return
         limit = quota.allowed_onset_files(context)
         if len(onset_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
@@ -96,7 +98,6 @@ class API(base.Base):
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
-        return onset_files
 
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
@@ -142,8 +143,7 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
-        if onset_files is not None:
-            onset_files = self._check_onset_file_quota(context, onset_files)
+        self._check_onset_file_quota(context, onset_files)
 
         image = self.image_service.show(context, image_id)
 
