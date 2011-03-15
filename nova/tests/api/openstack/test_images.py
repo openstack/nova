@@ -226,34 +226,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     NOW_SERVICE_STR = "2010-10-11T10:30:22"
     NOW_API_STR = "2010-10-11T10:30:22Z"
 
-    IMAGE_FIXTURES = [
-        {'id': 123,
-         'name': 'public image #1',
-         'created_at': NOW_SERVICE_STR,
-         'updated_at': NOW_SERVICE_STR,
-         'deleted_at': None,
-         'deleted': False,
-         'is_public': True,
-         'status': 'saving'},
-        {'id': 124,
-         'name': 'public image #2',
-         'created_at': NOW_SERVICE_STR,
-         'updated_at': NOW_SERVICE_STR,
-         'deleted_at': None,
-         'deleted': False,
-         'is_public': True,
-         'status': 'active',
-         'instance_id': 42},
-        {'id': 125,
-         'name': 'public image #3',
-         'created_at': NOW_SERVICE_STR,
-         'updated_at': NOW_SERVICE_STR,
-         'deleted_at': None,
-         'deleted': False,
-         'is_public': True,
-         'status': 'killed',
-         'instance_id': 42}]
-
     def setUp(self):
         super(ImageControllerWithGlanceServiceTest, self).setUp()
         self.orig_image_service = FLAGS.image_service
@@ -265,7 +237,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fakes.stub_out_glance(self.stubs, initial_fixtures=self.IMAGE_FIXTURES)
+        fixtures = self._make_image_fixtures()
+        fakes.stub_out_glance(self.stubs, initial_fixtures=fixtures)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -277,9 +250,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         image_metas = json.loads(res.body)['images']
 
-        expected = [{'id': 123, 'name': 'public image #1'},
-                    {'id': 124, 'name': 'public image #2'},
-                    {'id': 125, 'name': 'public image #3'}]
+        expected = [{'id': 123, 'name': 'public image'},
+                    {'id': 124, 'name': 'queued backup'},
+                    {'id': 125, 'name': 'saving backup'},
+                    {'id': 126, 'name': 'active backup'},
+                    {'id': 127, 'name': 'killed backup'}]
 
         self.assertDictListMatch(image_metas, expected)
 
@@ -289,12 +264,70 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_metas = json.loads(res.body)['images']
 
         expected = [
-            {'id': 123, 'name': 'public image #1', 'updated': self.NOW_API_STR,
-             'created': self.NOW_API_STR, 'status': 'SAVING', 'progress': 0},
-            {'id': 124, 'name': 'public image #2', 'updated': self.NOW_API_STR,
-             'created': self.NOW_API_STR, 'status': 'ACTIVE', 'serverId': 42},
-            {'id': 125, 'name': 'public image #3', 'updated': self.NOW_API_STR,
-             'created': self.NOW_API_STR, 'status': 'FAILED', 'serverId': 42},
+            {'id': 123, 'name': 'public image', 'updated': self.NOW_API_STR,
+             'created': self.NOW_API_STR, 'status': 'ACTIVE'},
+            {'id': 124, 'name': 'queued backup', 'serverId': 42,
+             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'status': 'QUEUED'},
+            {'id': 125, 'name': 'saving backup', 'serverId': 42,
+             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'status': 'SAVING', 'progress': 0},
+            {'id': 126, 'name': 'active backup', 'serverId': 42,
+             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'status': 'ACTIVE'},
+            {'id': 127, 'name': 'killed backup', 'serverId': 42,
+             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'status': 'FAILED'}
         ]
 
         self.assertDictListMatch(image_metas, expected)
+
+    @classmethod
+    def _make_image_fixtures(cls):
+        """
+        """
+        fixtures = []
+        public_image = {'id': 123,
+                        'name': 'public image',
+                        'is_public': True,
+                        'status': 'active'}
+        fixtures.append(public_image)
+
+        queued_backup = {'id': 124,
+                         'name': 'queued backup',
+                         'is_public': False,
+                         'status': 'queued',
+                         'instance_id': 42}
+        fixtures.append(queued_backup)
+
+        saving_backup = {'id': 125,
+                         'name': 'saving backup',
+                         'is_public': False,
+                         'status': 'saving',
+                         'instance_id': 42,
+                         'progress': 0}
+        fixtures.append(saving_backup)
+
+        active_backup = {'id': 126,
+                         'name': 'active backup',
+                         'is_public': False,
+                         'status': 'active',
+                         'instance_id': 42}
+        fixtures.append(active_backup)
+
+        killed_backup = {'id': 127,
+                         'name': 'killed backup',
+                         'is_public': False,
+                         'status': 'killed',
+                         'instance_id': 42}
+        fixtures.append(killed_backup)
+
+        base_attrs = {'created_at': cls.NOW_SERVICE_STR,
+                      'updated_at': cls.NOW_SERVICE_STR,
+                      'deleted_at': None,
+                      'deleted': False}
+
+        for fixture in fixtures:
+            fixture.update(base_attrs)
+
+        return fixtures
