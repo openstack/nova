@@ -79,7 +79,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
-        "image_id": 10,
+        "image_id": "10",
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
@@ -92,7 +92,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "local_gb": 0,
         "hostname": "",
         "host": None,
-        "instance_type": "",
+        "instance_type": "1",
         "user_data": "",
         "reservation_id": "",
         "mac_address": "",
@@ -353,7 +353,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '404 Not Found')
 
-    def test_get_all_server_details(self):
+    def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -363,7 +363,31 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], 10)
+            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['flavorId'], '1')
+            self.assertEqual(s['metadata']['seq'], i)
+            i += 1
+
+    def test_get_all_server_details_v1_1(self):
+        class FakeRequestContext(object):
+            def __init__(self, user, project, *args, **kwargs):
+                self.user_id = 1
+                self.project_id = 1
+                self.version = '1.1'
+                self.is_admin = True
+
+        self.stubs.Set(context, 'RequestContext', FakeRequestContext)
+        req = webob.Request.blank('/v1.1/servers/detail')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], '')
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
+            self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
             self.assertEqual(s['metadata']['seq'], i)
             i += 1
 

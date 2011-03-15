@@ -27,7 +27,8 @@ from nova import wsgi
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
-from nova.api.openstack.views.servers import get_view_builder
+from nova.api.openstack.views import servers as servers_views
+from nova.api.openstack.views import addresses as addresses_views
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -55,8 +56,8 @@ class Controller(wsgi.Controller):
     def ips(self, req, id):
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            builder = get_view_builder(req)
-            return builder._build_addresses(instance)
+            builder = addresses_views.get_view_builder(req)
+            return builder.build(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -75,7 +76,7 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        builder = get_view_builder(req)
+        builder = servers_views.get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
                 for inst in limited_list]
         return dict(servers=servers)
@@ -84,7 +85,7 @@ class Controller(wsgi.Controller):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            builder = get_view_builder(req)
+            builder = servers_views.get_view_builder(req)
             return builder.build(instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -137,7 +138,7 @@ class Controller(wsgi.Controller):
             metadata=metadata,
             onset_files=env.get('onset_files', []))
 
-        builder = get_view_builder(req)
+        builder = servers_views.get_view_builder(req)
         server = builder.build(instances[0], is_detail=False)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))

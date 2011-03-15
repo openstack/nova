@@ -1,6 +1,8 @@
 import hashlib
 from nova.compute import power_state
 from nova.api.openstack.views import addresses as addresses_view
+from nova.api.openstack.views import flavors as flavors_view
+from nova.api.openstack.views import images as images_view
 from nova import utils
 
 
@@ -12,7 +14,9 @@ def get_view_builder(req):
     version = req.environ['nova.context'].version
     addresses_builder = addresses_view.get_view_builder(req)
     if version == '1.1':
-        return ViewBuilder_1_1(addresses_builder)
+        flavor_builder = flavors_view.get_view_builder(req)
+        image_builder = images_view.get_view_builder(req)
+        return ViewBuilder_1_1(addresses_builder, flavor_builder, image_builder)
     else:
         return ViewBuilder_1_0(addresses_builder)
 
@@ -48,8 +52,10 @@ class ViewBuilder(object):
             power_state.FAILED: 'error'}
         inst_dict = {}
 
-        mapped_keys = dict(status='state', imageId='image_id',
-            flavorId='instance_type', name='display_name', id='id')
+        #mapped_keys = dict(status='state', imageId='image_id',
+        #    flavorId='instance_type', name='display_name', id='id')
+
+        mapped_keys = dict(status='state', name='display_name', id='id')
 
         for k, v in mapped_keys.iteritems():
             inst_dict[k] = inst[v]
@@ -67,13 +73,39 @@ class ViewBuilder(object):
         if inst['host']:
             inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
 
+        inst_dict = self._decorate_response(inst_dict, inst)
+
         return dict(server=inst_dict)
+
+    def _build_image_data(self, response, inst):
+        raise NotImplementedError()
 
 
 class ViewBuilder_1_0(ViewBuilder):
-    pass
+    def _decorate_response(self, response, inst):
+        response["imageId"] = inst["image_id"]
+        response["flavorId"] = inst["instance_type"]
+        return response
 
 
 class ViewBuilder_1_1(ViewBuilder):
-    pass
+    def __init__(self, addresses_builder, flavor_builder, image_builder):
+        ViewBuilder.__init__(self, addresses_builder)
+        self.flavor_builder = flavor_builder
+        self.image_builder = image_builder
+
+    def _decorate_response(self, response, inst):
+        response = self._build_image_ref(response, inst)
+        response = self._build_flavor_ref(response, inst)
+        return response
+
+    def _build_image_ref(self, response, inst):
+        image_id = inst["image_id"]
+        response["imageRef"] = self.image_builder.generate_href(image_id)
+        return response
+
+    def _build_flavor_ref(self, response, inst):
+        flavor_id = inst["instance_type"]
+        response["flavorRef"]= self.flavor_builder.generate_href(flavor_id)
+        return response
 
