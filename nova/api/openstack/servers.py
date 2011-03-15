@@ -575,7 +575,7 @@ class ServerCreateRequestXMLDeserializer(object):
         if metadata_node is None:
             return None
         metadata = {}
-        for meta_node in metadata_node.childNodes:
+        for meta_node in self._find_children_named(metadata_node, "meta"):
             key = meta_node.getAttribute("key")
             metadata[key] = self._extract_text(meta_node)
         return metadata
@@ -587,7 +587,7 @@ class ServerCreateRequestXMLDeserializer(object):
         if personality_node is None:
             return None
         personality = []
-        for file_node in personality_node.childNodes:
+        for file_node in self._find_children_named(personality_node, "file"):
             item = {}
             if file_node.hasAttribute("path"):
                 item["path"] = file_node.getAttribute("path")
@@ -601,6 +601,12 @@ class ServerCreateRequestXMLDeserializer(object):
             if node.nodeName == name:
                 return node
         return None
+
+    def _find_children_named(self, parent, name):
+        """Return all of a nodes children who have the given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                yield node
 
     def _extract_text(self, node):
         """Get the text field contained by the given node"""

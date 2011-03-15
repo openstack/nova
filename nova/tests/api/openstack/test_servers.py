@@ -610,7 +610,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_minimal_request(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1"/>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
@@ -622,8 +622,10 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_empty_metadata(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1"><metadata/></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata/>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
@@ -635,8 +637,10 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_empty_personality(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1"><personality/></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality/>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
@@ -648,9 +652,11 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_empty_metadata_and_personality(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata/><personality/></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata/>
+    <personality/>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
@@ -663,9 +669,11 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_empty_metadata_and_personality_reversed(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<personality/><metadata/></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality/>
+    <metadata/>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"server": {
                 "name": "new-server-test",
@@ -678,28 +686,47 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_one_personality(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<personality><file path="/etc/conf">aabbccdd</file></personality></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality>
+        <file path="/etc/conf">aabbccdd</file>
+    </personality>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
     def test_request_with_two_personalities(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<personality><file path="/etc/conf">aabbccdd</file>\
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+<personality><file path="/etc/conf">aabbccdd</file>
 <file path="/etc/sudoers">abcd</file></personality></server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"},
                     {"path": "/etc/sudoers", "contents": "abcd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
+    def test_request_second_personality_node_ignored(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality>
+        <file path="/etc/conf">aabbccdd</file>
+    </personality>
+    <personality>
+        <file path="/etc/ignoreme">anything</file>
+    </personality>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+
     def test_request_with_one_personality_missing_path(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
 <personality><file>aabbccdd</file></personality></server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = [{"contents": "aabbccdd"}]
@@ -707,8 +734,8 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_one_personality_empty_contents(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf"></file></personality></server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = [{"path": "/etc/conf", "contents": ""}]
@@ -716,8 +743,8 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_one_personality_empty_contents_variation(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf"/></personality></server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = [{"path": "/etc/conf", "contents": ""}]
@@ -725,57 +752,101 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def test_request_with_one_metadata(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata><meta key="alpha">beta</meta></metadata></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha">beta</meta>
+    </metadata>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"alpha": "beta"}
         self.assertEquals(request["server"]["metadata"], expected)
 
     def test_request_with_two_metadata(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata><meta key="alpha">beta</meta><meta key="foo">bar</meta>\
-</metadata></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha">beta</meta>
+        <meta key="foo">bar</meta>
+    </metadata>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"alpha": "beta", "foo": "bar"}
         self.assertEquals(request["server"]["metadata"], expected)
 
     def test_request_with_metadata_missing_value(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata><meta key="alpha"></meta></metadata></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha"></meta>
+    </metadata>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"alpha": ""}
         self.assertEquals(request["server"]["metadata"], expected)
 
+    def test_request_with_two_metadata_missing_value(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha"/>
+        <meta key="delta"/>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": "", "delta": ""}
+        self.assertEquals(request["server"]["metadata"], expected)
+
     def test_request_with_metadata_missing_key(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata><meta>beta</meta></metadata></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta>beta</meta>
+    </metadata>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"": "beta"}
         self.assertEquals(request["server"]["metadata"], expected)
 
+    def test_request_with_two_metadata_missing_key(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta>beta</meta>
+        <meta>gamma</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"":"gamma"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
     def test_request_with_metadata_duplicate_key(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata><meta key="foo">bar</meta><meta key="foo">baz</meta>\
-</metadata></server>"""
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="foo">bar</meta>
+        <meta key="foo">baz</meta>
+    </metadata>
+</server>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {"foo": "baz"}
         self.assertEquals(request["server"]["metadata"], expected)
 
     def test_canonical_request_from_docs(self):
         serial_request = """
-<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"\
- name="new-server-test" imageId="1" flavorId="1">\
-<metadata><meta key="My Server Name">Apache1</meta></metadata>\
-<personality><file path="/etc/banner.txt">\
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="My Server Name">Apache1</meta>
+    </metadata>
+    <personality>
+        <file path="/etc/banner.txt">\
 ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp\
 dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k\
 IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs\
@@ -784,8 +855,9 @@ QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo\
 ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv\
 dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy\
 c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6\
-b25zLiINCg0KLVJpY2hhcmQgQmFjaA==\
-</file></personality></server>"""
+b25zLiINCg0KLVJpY2hhcmQgQmFjaA==</file>
+    </personality>
+</server>"""
         expected = {"server": {
             "name": "new-server-test",
             "imageId": "1",
