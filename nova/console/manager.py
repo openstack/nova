@@ -69,7 +69,7 @@ class ConsoleProxyManager(manager.Manager):
         except exception.NotFound:
             logging.debug(_("Adding console"))
             if not password:
-                password = self.driver.generate_password()
+                password = utils.generate_password(8)
             if not port:
                 port = self.driver.get_port(context)
             console_data = {'instance_name': name,

@@ -263,12 +263,17 @@ def generate_mac():
 
 
 def generate_password(length=20):
-    """Generate a random sequence of letters and digits
-    to be used as a password. Note that this is not intended
-    to represent the ultimate in security.
+    """Generate a random alphanumeric password, avoiding 'confusing' O,0,I,1.
+
+    Believed to be reasonably secure (with a reasonable password length!)
     """
-    chrs = string.letters + string.digits
-    return "".join([random.choice(chrs) for i in xrange(length)])
+    # 26 letters, 10 digits = 36
+    # Remove O, 0, I, 1 => 32 digits
+    # 32 digits means we're just using the low 5 bit of each byte
+    chrs = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+    random_bytes = os.urandom(length)
+    return "".join([chrs[ord(random_bytes[i]) % 32] for i in xrange(length)])
 
 
 def last_octet(address):
