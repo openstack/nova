@@ -20,6 +20,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import os
+import sys
 import pickle
 import re
 import time
@@ -428,6 +429,8 @@ class VMHelper(HelperBase):
                       % locals())
             return vdi_uuid
         except BaseException as e:
+            LOG.exception(_("instance %s: Failed to fetch glance image"),
+                          instance_id, exc_info=sys.exc_info())
             try:
                 vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi)
                 e.args = e.args + ({image_type: vdi_uuid},)
@@ -490,12 +493,23 @@ class VMHelper(HelperBase):
             else:
                 return session.get_xenapi().VDI.get_uuid(vdi_ref)
         except BaseException as e:
+            LOG.exception(_("instance %s: Failed to fetch glance image"),
+                          instance_id, exc_info=sys.exc_info())
             if vdi_ref:
                 try:
                     vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
                     e.args = e.args + ({image_type: vdi_uuid},)
                 except:
                     pass  # ignore failures in retrieving VDI
+            if filename:
+                try:
+                    splits = filename.split("/")
+                    if len(splits) > 0:
+                        vdi_uuid = splits[len(splits) - 1]
+                        e.args = e.args + ({image_type: vdi_uuid},)
+                except:
+                    pass  # ignore errors parsing file name
+
             raise e
 
     @classmethod
@@ -1022,8 +1036,8 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dest, 'mklabel', 'msdos')
-    execute('parted', '--script', dest, 'mkpart', 'primary',
+    execute('sudo', 'parted', '--script', dest, 'mklabel', 'msdos')
+    execute('sudo', 'parted', '--script', dest, 'mkpart', 'primary',
             '%ds' % primary_first,
             '%ds' % primary_last)
 

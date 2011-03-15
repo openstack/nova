@@ -269,6 +269,27 @@ class XenAPIConnection(object):
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
 
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
+    def compare_cpu(self, xml):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only libvirt."""
+        return
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only by libvirt."""
+        return
+
+    def unfilter_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
@@ -339,11 +360,10 @@ class XenAPISession(object):
         try:
             name = self._session.xenapi.task.get_name_label(task)
             status = self._session.xenapi.task.get_status(task)
-            if id:
-                action = dict(
-                    instance_id=int(id),
-                    action=name[0:255],  # Ensure action is never > 255
-                    error=None)
+            action = dict(
+                action=name[0:255],  # Ensure action is never > 255
+                instance_id=id and int(id) or None,
+                error=None)
             if status == "pending":
                 return
             elif status == "success":

@@ -77,3 +77,55 @@ class SchedulerManager(manager.Manager):
                  {"method": method,
                   "args": kwargs})
         LOG.debug(_("Casting to %(topic)s %(host)s for %(method)s") % locals())
+
+    # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
+    #                    Based on bexar design summit discussion,
+    #                    just put this here for bexar release.
+    def show_host_resources(self, context, host, *args):
+        """Shows the physical/usage resource given by hosts.
+
+        :param context: security context
+        :param host: hostname
+        :returns:
+            example format is below.
+            {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
+            D: {'vcpus':3, 'memory_mb':2048, 'local_gb':2048}
+
+        """
+
+        compute_ref = db.service_get_all_compute_by_host(context, host)
+        compute_ref = compute_ref[0]
+
+        # Getting physical resource information
+        compute_node_ref = compute_ref['compute_node'][0]
+        resource = {'vcpus': compute_node_ref['vcpus'],
+                    'memory_mb': compute_node_ref['memory_mb'],
+                    'local_gb': compute_node_ref['local_gb'],
+                    'vcpus_used': compute_node_ref['vcpus_used'],
+                    'memory_mb_used': compute_node_ref['memory_mb_used'],
+                    'local_gb_used': compute_node_ref['local_gb_used']}
+
+        # Getting usage resource information
+        usage = {}
+        instance_refs = db.instance_get_all_by_host(context,
+                                                    compute_ref['host'])
+        if not instance_refs:
+            return {'resource': resource, 'usage': usage}
+
+        project_ids = [i['project_id'] for i in instance_refs]
+        project_ids = list(set(project_ids))
+        for project_id in project_ids:
+            vcpus = db.instance_get_vcpu_sum_by_host_and_project(context,
+                                                                 host,
+                                                                 project_id)
+            mem = db.instance_get_memory_sum_by_host_and_project(context,
+                                                                 host,
+                                                                 project_id)
+            hdd = db.instance_get_disk_sum_by_host_and_project(context,
+                                                               host,
+                                                               project_id)
+            usage[project_id] = {'vcpus': int(vcpus),
+                                 'memory_mb': int(mem),
+                                 'local_gb': int(hdd)}
+
+        return {'resource': resource, 'usage': usage}

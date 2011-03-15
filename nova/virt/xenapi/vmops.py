@@ -93,7 +93,10 @@ class VMOps(object):
                           instance.id, exc_info=sys.exc_info())
             LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
                       instance.id)
-            vdis = {}
+            vdis = {
+                    ImageType.KERNEL: None,
+                    ImageType.RAMDISK: None,
+                    }
             if vdi_uuid:
                 vdis[disk_image_type] = vdi_uuid
             #extract VDI uuid from spawn error
@@ -121,7 +124,8 @@ class VMOps(object):
             if remove_from_dom0:
                 LOG.debug(_("Removing kernel/ramdisk files from dom0"))
                 self._destroy_kernel_ramdisk_plugin_call(
-                        vdis[ImageType.KERNEL], vdis[ImageType.RAMDISK])
+                        vdis[ImageType.KERNEL], vdis[ImageType.RAMDISK],
+                        False)
 
             #re-throw the error
             raise spawn_error
@@ -540,12 +544,15 @@ class VMOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
-    def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk):
+    def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk,
+                                            filenames=True):
         args = {}
+        kernel_arg_name = "kernel-" + (filenames and "file" or "uuid")
+        ramdisk_arg_name = "ramdisk-" + (filenames and "file" or "uuid")
         if kernel:
-            args['kernel-uuid'] = kernel
+            args[kernel_arg_name] = kernel
         if ramdisk:
-            args['ramdisk-uuid'] = ramdisk
+            args[ramdisk_arg_name] = ramdisk
         task = self._session.async_call_plugin(
             'glance', 'remove_kernel_ramdisk', args)
         self._session.wait_for_task(task)
