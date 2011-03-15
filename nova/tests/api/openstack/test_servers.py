@@ -195,9 +195,11 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
         self.assertEqual(len(addresses["public"]), len(public))
-        self.assertEqual(addresses["public"][0], {"version": 4, "addr": public[0]})
+        self.assertEqual(addresses["public"][0],
+            {"version": 4, "addr": public[0]})
         self.assertEqual(len(addresses["private"]), 1)
-        self.assertEqual(addresses["private"][0], {"version": 4, "addr": private})
+        self.assertEqual(addresses["private"][0],
+            {"version": 4, "addr": private})
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')

@@ -27,8 +27,7 @@ from nova import wsgi
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
-from nova.api.openstack.v1_0 import servers as v1_0
-from nova.api.openstack.v1_1 import servers as v1_1
+from nova.api.openstack.views.servers import get_view_builder
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -56,7 +55,8 @@ class Controller(wsgi.Controller):
     def ips(self, req, id):
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _get_addresses_builder(req)(instance)
+            builder = get_view_builder(req)
+            return builder._build_addresses(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -75,15 +75,17 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        res = [_build_server(req, inst, is_detail)['server']
+        builder = get_view_builder(req)
+        servers = [builder.build(inst, is_detail)['server']
                 for inst in limited_list]
-        return dict(servers=res)
+        return dict(servers=servers)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _build_server(req, instance, is_detail=True)
+            builder = get_view_builder(req)
+            return builder.build(instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -135,7 +137,8 @@ class Controller(wsgi.Controller):
             metadata=metadata,
             onset_files=env.get('onset_files', []))
 
-        server = _build_server(req, instances[0], is_detail=False)
+        builder = get_view_builder(req)
+        server = builder.build(instances[0], is_detail=False)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
@@ -434,52 +437,4 @@ class Controller(wsgi.Controller):
         return kernel_id, ramdisk_id
 
 
-def _build_server(req, inst, is_detail):
-    """ Coerces into dictionary format, mapping everything to Rackspace-like
-    attributes for return"""
 
-    if not is_detail:
-        return dict(server=dict(id=inst['id'], name=inst['display_name']))
-
-    power_mapping = {
-        None: 'build',
-        power_state.NOSTATE: 'build',
-        power_state.RUNNING: 'active',
-        power_state.BLOCKED: 'active',
-        power_state.SUSPENDED: 'suspended',
-        power_state.PAUSED: 'paused',
-        power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error',
-        power_state.FAILED: 'error'}
-    inst_dict = {}
-    version = req.environ['nova.context'].version
-
-    mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='id')
-
-    for k, v in mapped_keys.iteritems():
-        inst_dict[k] = inst[v]
-
-    inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = _get_addresses_builder(req)(inst)
-
-    # Return the metadata as a dictionary
-    metadata = {}
-    for item in inst['metadata']:
-        metadata[item['key']] = item['value']
-    inst_dict['metadata'] = metadata
-
-    inst_dict['hostId'] = ''
-    if inst['host']:
-        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-
-    return dict(server=inst_dict)
-
-
-def _get_addresses_builder(req):
-    version = req.environ['nova.context'].version
-    if version == '1.1':
-        return v1_1.build_addresses
-    else:
-        return v1_0.build_addresses
