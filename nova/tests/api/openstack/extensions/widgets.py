@@ -9,22 +9,17 @@ class WidgetsController(wsgi.Controller):
         return "Buy more widgets!"
 
 
-class WidgetsExtensionResource(object):
-
-    def __init__(self):
-        pass
-
-    def add_routes(self, mapper):
-        mapper.resource('widget', 'widgets', controller=WidgetsController())
-
-
 class WidgetsExtension(object):
 
     def __init__(self):
         pass
 
     def get_resources(self):
-        return WidgetsExtensionResource()
+        resources = []
+        widgets = extensions.ExtensionResource('widget', 'widgets',
+                                               WidgetsController())
+        resources.append(widgets)
+        return resources
 
     def get_actions(self):
         actions = []

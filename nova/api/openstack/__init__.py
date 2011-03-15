@@ -31,7 +31,6 @@ from nova.api.openstack import accounts
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
-from nova.api.openstack import extensions
 from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
@@ -120,11 +119,6 @@ class APIRouter(wsgi.Router):
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
-
-        if ext_mgr is None:
-            ext_mgr = extensions.ExtensionManager(FLAGS.osapi_extensions_path)
-        for resource in ext_mgr.get_resources():
-            resource.add_routes(mapper)
 
         super(APIRouter, self).__init__(mapper)
 

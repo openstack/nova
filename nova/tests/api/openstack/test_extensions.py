@@ -22,6 +22,7 @@ import os.path
 
 from nova import flags
 from nova.api import openstack
+from nova.api.openstack import extensions
 import nova.wsgi
 
 FLAGS = flags.FLAGS
@@ -38,53 +39,51 @@ class StubController(nova.wsgi.Controller):
 
 class StubExtensionManager(object):
 
-    def __init__(self, resources):
-        self.resources = resources
+    def __init__(self, resource):
+        self.resource = resource
 
     def get_resources(self):
-        return self.resources
+        resources = []
+        if self.resource:
+            resources.append(self.resource)
+        return resources
+
+    def get_actions(self):
+        actions = []
+        return actions
 
 
-class WidgetExtensionResource(object):
-
-    def __init__(self, name, collection, wsgi_app):
-        self.name = name
-        self.collection = collection
-        self.wsgi_app = wsgi_app
-
-    def add_routes(self, mapper):
-        mapper.resource(self.name, self.collection, controller=self.wsgi_app)
-
-
-class ExtensionTest(unittest.TestCase):
+class ExtensionResourceTest(unittest.TestCase):
 
     def test_no_extension_present(self):
-        manager = StubExtensionManager([])
-        router = openstack.APIRouter(manager)
+        manager = StubExtensionManager(None)
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/widgets")
-        response = request.get_response(router)
+        response = request.get_response(ext_midware)
         self.assertEqual(404, response.status_int)
 
     def test_get_resources(self):
         response_body = "Buy more widgets!"
-        response = webob.Response()
-        response.body = response_body
-        resource1 = WidgetExtensionResource("widget", "widgets", response)
-        manager = StubExtensionManager([resource1])
-        router = openstack.APIRouter(manager)
+        widgets = extensions.ExtensionResource('widget', 'widgets',
+                                               StubController(response_body))
+        manager = StubExtensionManager(widgets)
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/widgets")
-        response = request.get_response(router)
+        response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
     def test_get_resources_with_controller(self):
         response_body = "Buy more widgets!"
-        controller = StubController(response_body)
-        resource1 = WidgetExtensionResource("widget", "widgets", controller)
-        manager = StubExtensionManager([resource1])
-        router = openstack.APIRouter(manager)
+        widgets = extensions.ExtensionResource('widget', 'widgets',
+                                               StubController(response_body))
+        manager = StubExtensionManager(widgets)
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/widgets")
-        response = request.get_response(router)
+        response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
@@ -96,9 +95,10 @@ class ExtensionManagerTest(unittest.TestCase):
                                                     "extensions")
 
     def test_get_resources(self):
-        router = openstack.APIRouter()
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/widgets")
-        response = request.get_response(router)
+        response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual("Buy more widgets!", response.body)
 
@@ -111,7 +111,7 @@ class ExtendedActionTest(unittest.TestCase):
 
     def test_extended_action(self):
         app = openstack.APIRouter()
-        ext_midware = openstack.extensions.ExtensionMiddleware(app)
+        ext_midware = extensions.ExtensionMiddleware(app)
         body = dict(add_widget=dict(name="test"))
         request = webob.Request.blank("/servers/1/action")
         request.method = 'POST'
@@ -123,7 +123,7 @@ class ExtendedActionTest(unittest.TestCase):
 
     def test_invalid_action_body(self):
         app = openstack.APIRouter()
-        ext_midware = openstack.extensions.ExtensionMiddleware(app)
+        ext_midware = extensions.ExtensionMiddleware(app)
         body = dict(blah=dict(name="test"))  # Doesn't exist
         request = webob.Request.blank("/servers/1/action")
         request.method = 'POST'
@@ -134,7 +134,7 @@ class ExtendedActionTest(unittest.TestCase):
 
     def test_invalid_action(self):
         app = openstack.APIRouter()
-        ext_midware = openstack.extensions.ExtensionMiddleware(app)
+        ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/asdf/1/action")
         request.method = 'POST'
         request.content_type = 'application/json'

@@ -68,7 +68,15 @@ class ExtensionMiddleware(wsgi.Middleware):
         if ext_mgr is None:
             ext_mgr = ExtensionManager(FLAGS.osapi_extensions_path)
 
-        # create custom mapper connections for extended actions
+        # extended resources
+        for resource in ext_mgr.get_resources():
+            mapper.resource(resource.member, resource.collection,
+                            controller=resource.controller,
+                            collection=resource.collection_actions,
+                            member=resource.member_actions,
+                            parent_resource=resource.parent)
+
+        # extended actions
         for action in ext_mgr.get_actions():
             controller = ExtensionActionController(application, action.name,
                                                     action.handler)
@@ -124,10 +132,13 @@ class ExtensionManager(object):
         """
         resources = []
         for ext in self.extensions:
-            resources.append(ext.get_resources())
+            resources.extend(ext.get_resources())
         return resources
 
     def get_actions(self):
+        """
+        returns a list of ExtensionAction objects
+        """
         actions = []
         for ext in self.extensions:
             actions.extend(ext.get_actions())
@@ -163,10 +174,12 @@ class ExtensionAction(object):
 
 
 class ExtensionResource(object):
-    """
-    Example ExtensionResource object. All ExtensionResource objects should
-    adhere to this interface.
-    """
 
-    def add_routes(self, mapper):
-        pass
+    def __init__(self, member, collection, controller,
+                 parent=None, collection_actions={}, member_actions={}):
+        self.member = member
+        self.collection = collection
+        self.controller = controller
+        self.parent = parent
+        self.collection_actions = collection_actions
+        self.member_actions = member_actions
