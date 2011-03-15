@@ -20,16 +20,10 @@ class ViewBuilder(object):
     def build(self, flavor_obj):
         raise NotImplementedError()
 
-    def _decorate_response(self, response, flavor_obj):
-        return response
-
 
 class ViewBuilder_1_1(ViewBuilder):
     def __init__(self, base_url):
         self.base_url = base_url
-
-    def _decorate_response(self, response, flavor_obj):
-        raise NotImplementedError()
 
     def generate_href(self, flavor_id):
         return "{0}/flavors/{1}".format(self.base_url, flavor_id)

@@ -23,7 +23,10 @@ def get_view_builder(req):
 
 
 class ViewBuilder(object):
-    ''' Models a server response as a python dictionary.'''
+    '''
+    Models a server response as a python dictionary.
+    Abstract methods: _build_image, _build_flavor
+    '''
 
     def __init__(self, addresses_builder):
         self.addresses_builder = addresses_builder
@@ -76,19 +79,24 @@ class ViewBuilder(object):
         if inst['host']:
             inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
 
-        inst_dict = self._decorate_response(inst_dict, inst)
+        self._build_image(inst_dict, inst)
+        self._build_flavor(inst_dict, inst)
 
         return dict(server=inst_dict)
 
-    def _build_image_data(self, response, inst):
+    def _build_image(self, response, inst):
+        raise NotImplementedError()
+
+    def _build_flavor(self, response, inst):
         raise NotImplementedError()
 
 
 class ViewBuilder_1_0(ViewBuilder):
-    def _decorate_response(self, response, inst):
+    def _build_image(self, response, inst):
         response["imageId"] = inst["image_id"]
+
+    def _build_flavor(self, response, inst):
         response["flavorId"] = inst["instance_type"]
-        return response
 
 
 class ViewBuilder_1_1(ViewBuilder):
@@ -97,17 +105,11 @@ class ViewBuilder_1_1(ViewBuilder):
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
 
-    def _decorate_response(self, response, inst):
-        response = self._build_image_ref(response, inst)
-        response = self._build_flavor_ref(response, inst)
-        return response
-
-    def _build_image_ref(self, response, inst):
+    def _build_image(self, response, inst):
         image_id = inst["image_id"]
         response["imageRef"] = self.image_builder.generate_href(image_id)
-        return response
 
-    def _build_flavor_ref(self, response, inst):
+    def _build_flavor(self, response, inst):
         flavor_id = inst["instance_type"]
         response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
-        return response
+
