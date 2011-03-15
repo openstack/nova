@@ -18,6 +18,7 @@
 import unittest
 
 from nova import flags
+from nova import test
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
@@ -29,7 +30,7 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
-class LoginTest(unittest.TestCase):
+class LoginTest(test.TestCase):
     def setUp(self):
         super(LoginTest, self).setUp()
         context = integrated_helpers.IntegratedUnitTestContext.startup()
@@ -72,6 +73,7 @@ class LoginTest(unittest.TestCase):
 
         self.assertRaises(client.OpenstackApiAuthenticationException,
                           bad_credentials_api.get_flavors)
+
 
 if __name__ == "__main__":
     unittest.main()
