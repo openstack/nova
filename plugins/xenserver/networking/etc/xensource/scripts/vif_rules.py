@@ -54,6 +54,7 @@ def main(dom_id, command, only_this_vif=None):
 
 def execute(*command, return_stdout=False):
     devnull = open(os.devnull, 'w')
+    command = map(str, command)
     proc = subprocess.Popen(command, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
     devnull.close()
@@ -71,13 +72,13 @@ def apply_iptables_rules(command, params):
     iptables = lambda *rule: execute('/sbin/iptables', *rule)
 
     iptables('-D', 'FORWARD', '-m', 'physdev',
-             '--physdev-in', '%(VIF)s' % params,
-             '-s', '%(IP)s' % params,
+             '--physdev-in', params['VIF'],
+             '-s', params['IP'],
              '-j', 'ACCEPT')
     if command == 'online':
         iptables('-A', 'FORWARD', '-m', 'physdev',
-                 '--physdev-in', '%(VIF)s' % params,
-                 '-s', '%(IP)s' % params,
+                 '--physdev-in', params['VIF'],
+                 '-s', params['IP'],
                  '-j', 'ACCEPT')
 
 
@@ -85,25 +86,24 @@ def apply_arptables_rules(command, params):
     arptables = lambda *rule: execute('/sbin/arptables', *rule)
 
     arptables('-D', 'FORWARD', '--opcode', 'Request',
-              '--in-interface', '%(VIF)s' % params,
-              '--source-ip', '%(IP)s' % params,
-              '--source-mac', '%(MAC)s' % params,
+              '--in-interface', params['VIF'],
+              '--source-ip', params['IP'],
+              '--source-mac', params['MAC'],
               '-j', 'ACCEPT')
     arptables('-D', 'FORWARD', '--opcode', 'Reply',
-              '--in-interface', '%(VIF)s' % params,
-              '--source-ip', '%(IP)s' % params,
-              '--source-mac', '%(MAC)s' % params,
+              '--in-interface', params['VIF'],
+              '--source-ip', params['IP'],
+              '--source-mac', params['MAC'],
               '-j', 'ACCEPT')
     if command == 'online':
         arptables('-A', 'FORWARD', '--opcode', 'Request',
-                  '--in-interface', '%(VIF)s' % params
-                  '--source-ip', '%(IP)s' % params,
-                  '--source-mac', '%(MAC)s' % params,
+                  '--in-interface', params['VIF'],
+                  '--source-mac', params['MAC'],
                   '-j', 'ACCEPT')
         arptables('-A', 'FORWARD', '--opcode', 'Reply',
-                  '--in-interface', '%(VIF)s' % params,
-                  '--source-ip', '%(IP)s' % params,
-                  '--source-mac', '%(MAC)s' % params,
+                  '--in-interface', params['VIF'],
+                  '--source-ip', params['IP'],
+                  '--source-mac', params['MAC'],
                   '-j', 'ACCEPT')
 
 
@@ -130,7 +130,7 @@ def apply_ebtables_rules(command, params):
              '-i', params['VIF'], '-j', 'DROP')
     if command == 'online':
         ebtables('-I', 'FORWARD', '1', '-s', '!', params['MAC'],
-                 '-i', '%(VIF)s', '-j', 'DROP')
+                 '-i', params['VIF'], '-j', 'DROP')
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ Unit Tests for network code
 """
 import IPy
 import os
+import time
 
 from nova import context
 from nova import db
@@ -462,6 +463,31 @@ class NetworkTestCase(test.TestCase):
         ip_count = db.network_count_available_ips(context.get_admin_context(),
                                                   network['id'])
         self.assertEqual(ip_count, num_available_ips)
+
+    def test_dhcp_lease_output(self):
+        admin_ctxt = context.get_admin_context()
+        address = self._create_address(0, self.instance_id)
+        lease_ip(address)
+        network_ref = db.network_get_by_instance(admin_ctxt, self.instance_id)
+        leases = linux_net.get_dhcp_leases(context.get_admin_context(),
+                                           network_ref['id'])
+        for line in leases.split('\n'):
+            seconds, mac, ip, hostname, client_id = line.split(' ')
+            self.assertTrue(int(seconds) > time.time(), 'Lease expires in '
+                                                        'the past')
+            octets = mac.split(':')
+            self.assertEqual(len(octets), 6, "Wrong number of octets "
+                                             "in %s" % (max,))
+            for octet in octets:
+                self.assertEqual(len(octet), 2, "Oddly sized octet: %s"
+                                                                    % (octet,))
+                # This will throw an exception if the octet is invalid
+                int(octet, 16)
+
+            # And this will raise an exception in case of an invalid IP
+            IPy.IP(ip)
+
+        release_ip(address)
 
 
 def is_allocated_in_project(address, project_id):
