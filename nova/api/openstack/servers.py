@@ -169,7 +169,7 @@ class Controller(wsgi.Controller):
                 metadata.append({'key': k, 'value': v})
 
         personality = env['server'].get('personality', [])
-        onset_files = self._get_onset_files(personality)
+        injected_files = self._get_injected_files(personality)
 
         try:
             instances = self.compute_api.create(
@@ -183,7 +183,7 @@ class Controller(wsgi.Controller):
                 key_name=key_pair['name'],
                 key_data=key_pair['public_key'],
                 metadata=metadata,
-                onset_files=onset_files)
+                injected_files=injected_files)
         except QuotaError as error:
             self._handle_quota_error(error)
 
@@ -207,15 +207,15 @@ class Controller(wsgi.Controller):
         else:
             return self._deserialize(request.body, request.get_content_type())
 
-    def _get_onset_files(self, personality):
+    def _get_injected_files(self, personality):
         """
-        Create a list of onset files from the personality attribute
+        Create a list of injected files from the personality attribute
 
-        At this time, onset_files must be formatted as a list of
+        At this time, injected_files must be formatted as a list of
         (file_path, file_content) pairs for compatibility with the
         underlying compute service.
         """
-        onset_files = []
+        injected_files = []
         for item in personality:
             try:
                 path = item['path']
@@ -230,8 +230,8 @@ class Controller(wsgi.Controller):
             except TypeError:
                 msg = 'Personality content for %s cannot be decoded' % path
                 raise exc.HTTPBadRequest(explanation=msg)
-            onset_files.append((path, contents))
-        return onset_files
+            injected_files.append((path, contents))
+        return injected_files
 
     def _handle_quota_errors(self, error):
         """

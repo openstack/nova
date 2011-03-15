@@ -179,7 +179,7 @@ class ComputeManager(manager.Manager):
         """Launch a new instance with specified options."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        instance_ref.onset_files = kwargs.get('onset_files', [])
+        instance_ref.injected_files = kwargs.get('injected_files', [])
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,

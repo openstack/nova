@@ -80,20 +80,20 @@ class API(base.Base):
                         topic,
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
-    def _check_onset_file_quota(self, context, onset_files):
+    def _check_injected_file_quota(self, context, injected_files):
         """
-        Enforce quota limits on onset files
+        Enforce quota limits on injected files
 
         Raises a QuotaError if any limit is exceeded
         """
-        if onset_files is None:
+        if injected_files is None:
             return
-        limit = quota.allowed_onset_files(context)
-        if len(onset_files) > limit:
+        limit = quota.allowed_injected_files(context)
+        if len(injected_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
-        path_limit = quota.allowed_onset_file_path_bytes(context)
-        content_limit = quota.allowed_onset_file_content_bytes(context)
-        for path, content in onset_files:
+        path_limit = quota.allowed_injected_file_path_bytes(context)
+        content_limit = quota.allowed_injected_file_content_bytes(context)
+        for path, content in injected_files:
             if len(path) > path_limit:
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
             if len(content) > content_limit:
@@ -105,7 +105,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=[],
-               onset_files=None):
+               injected_files=None):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
@@ -143,7 +143,7 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
-        self._check_onset_file_quota(context, onset_files)
+        self._check_injected_file_quota(context, injected_files)
 
         image = self.image_service.show(context, image_id)
 
@@ -246,7 +246,7 @@ class API(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
                                "availability_zone": availability_zone,
-                               "onset_files": onset_files}})
+                               "injected_files": injected_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)

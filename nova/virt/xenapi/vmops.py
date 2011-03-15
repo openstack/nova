@@ -137,19 +137,20 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
-        def _inject_onset_files():
-            onset_files = instance.onset_files
-            if onset_files:
+        def _inject_files():
+            injected_files = instance.injected_files
+            if injected_files:
                 # Check if this is a JSON-encoded string and convert if needed.
-                if isinstance(onset_files, basestring):
+                if isinstance(injected_files, basestring):
                     try:
-                        onset_files = json.loads(onset_files)
+                        injected_files = json.loads(injected_files)
                     except ValueError:
-                        LOG.exception(_("Invalid value for onset_files: '%s'")
-                                % onset_files)
-                        onset_files = []
+                        LOG.exception(
+                            _("Invalid value for injected_files: '%s'")
+                                % injected_files)
+                        injected_files = []
                 # Inject any files, if specified
-                for path, contents in instance.onset_files:
+                for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
         # NOTE(armando): Do we really need to do this in virt?
@@ -165,7 +166,7 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
-                    _inject_onset_files()
+                    _inject_files()
                     return True
             except Exception, exc:
                 LOG.warn(exc)

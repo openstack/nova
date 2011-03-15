@@ -37,12 +37,12 @@ flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
 flags.DEFINE_integer('quota_metadata_items', 128,
                      'number of metadata items allowed per instance')
-flags.DEFINE_integer('quota_max_onset_files', 5,
-                     'number of onset files allowed')
-flags.DEFINE_integer('quota_max_onset_file_content_bytes', 10 * 1024,
-                     'number of bytes allowed per onset file')
-flags.DEFINE_integer('quota_max_onset_file_path_bytes', 255,
-                     'number of bytes allowed per onset file path')
+flags.DEFINE_integer('quota_max_injected_files', 5,
+                     'number of injected files allowed')
+flags.DEFINE_integer('quota_max_injected_file_content_bytes', 10 * 1024,
+                     'number of bytes allowed per injected file')
+flags.DEFINE_integer('quota_max_injected_file_path_bytes', 255,
+                     'number of bytes allowed per injected file path')
 
 
 def get_quota(context, project_id):
@@ -113,19 +113,19 @@ def allowed_metadata_items(context, num_metadata_items):
     return min(num_metadata_items, num_allowed_metadata_items)
 
 
-def allowed_onset_files(context):
-    """Return the number of onset files allowed"""
-    return int(FLAGS.quota_max_onset_files)
+def allowed_injected_files(context):
+    """Return the number of injected files allowed"""
+    return FLAGS.quota_max_injected_files
 
 
-def allowed_onset_file_content_bytes(context):
-    """Return the number of bytes allowed per onset file content"""
-    return int(FLAGS.quota_max_onset_file_content_bytes)
+def allowed_injected_file_content_bytes(context):
+    """Return the number of bytes allowed per injected file content"""
+    return FLAGS.quota_max_injected_file_content_bytes
 
 
-def allowed_onset_file_path_bytes(context):
-    """Return the number of bytes allowed in an onset file path"""
-    return int(FLAGS.quota_max_onset_file_path_bytes)
+def allowed_injected_file_path_bytes(context):
+    """Return the number of bytes allowed in an injected file path"""
+    return FLAGS.quota_max_injected_file_path_bytes
 
 
 class QuotaError(exception.ApiError):
