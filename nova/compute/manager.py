@@ -541,7 +541,7 @@ class ComputeManager(manager.Manager):
         #after they're supported
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['new_flavor_id'])
-        self.db.instance_update(context, instance_ref,
+        self.db.instance_update(context, instance_id,
                dict(memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))

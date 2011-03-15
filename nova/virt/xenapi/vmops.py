@@ -304,7 +304,7 @@ class VMOps(object):
         try:
             # transfer the base copy
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
-            base_copy_uuid = template_vdi_uuids[1]
+            base_copy_uuid = template_vdi_uuids['snap']
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             cow_uuid = vm_vdi_rec['uuid']
@@ -319,7 +319,7 @@ class VMOps(object):
             self._session.wait_for_task(task, instance.id)
 
             # Now power down the instance and transfer the COW VHD
-            self._shutdown(instance, vm_ref, method='clean')
+            self._shutdown(instance, vm_ref)
 
             params = {'host': dest,
                       'vdi_uuid': cow_uuid,
