@@ -122,31 +122,26 @@ def setup_container(image, container_dir=None, partition=None, nbd=False):
     to create the root filesystem for the container
     """
     device = _link_device(image, nbd)
-    try:
-        if not partition is None:
-            # create partition
-            utils.execute('sudo kpartx -a %s' % device)
-            mapped_device = '/dev/mapper/%p%s' % (device.split('/')[-1],
-                                                  partition)
-        else:
-            mapped_device = device
-
-        utils.execute('sudo mount %s %s' %(mapped_device, container_dir))
-
-    except Exception as e:
-        LOG.warn(_('Unable to mount container'))
-        if not partition is None:
-            # remove partitions
-            utils.execute('sudo kpartx -s %s' % device)
+    err = utils.execute('sudo', 'mount', mapped_device, container_dir)
+    if err:
+        raise exception.Error(_('Failed to mount filesystem: %s')
+                             % err)
         _unlink_device(device, nbd)
 
 def destroy_container(target, instance, nbd=False):
     """Destroy the container once it terminates"""
     try:
-        utils.execute('sudo umount %s/rootfs' % target)
+        container_dir = '%s/rootfs' % target
+        utils.execute('sudo', 'umount', container_dir)
+    finally:
         image = os.path.join(FLAGS.instances_path, instance['name'], '' + 'disk')
-    except Exception as e:
-        LOG.warn(_('Unable to umount contianer'))
+        out, err = utils.execute('sudo', 'losetup', '--find', '--show', image)
+        device = out.strip()
+        if err:
+            raise execption.Error(_('Could not find loopback image: %s')
+                                 %err)
+        utils.execute('sudo', 'losetup', '--detach', device)
+
 
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
