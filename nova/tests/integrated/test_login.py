@@ -53,7 +53,7 @@ class LoginTest(test.TestCase):
                                                          "notso_password",
                                                          self.user.auth_url)
 
-        self.assertRaises(client.OpenstackApiAuthenticationException,
+        self.assertRaises(client.OpenStackApiAuthenticationException,
                           bad_credentials_api.get_flavors)
 
     def test_bad_login_username(self):
@@ -62,7 +62,7 @@ class LoginTest(test.TestCase):
                                                          self.user.secret,
                                                          self.user.auth_url)
 
-        self.assertRaises(client.OpenstackApiAuthenticationException,
+        self.assertRaises(client.OpenStackApiAuthenticationException,
                           bad_credentials_api.get_flavors)
 
     def test_bad_login_both_bad(self):
@@ -71,7 +71,7 @@ class LoginTest(test.TestCase):
                                                          "notso_password",
                                                          self.user.auth_url)
 
-        self.assertRaises(client.OpenstackApiAuthenticationException,
+        self.assertRaises(client.OpenStackApiAuthenticationException,
                           bad_credentials_api.get_flavors)
 
 
