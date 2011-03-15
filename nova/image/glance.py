@@ -22,12 +22,12 @@ from glance.common import exception as glance_exception
 
 from nova import exception
 from nova import flags
-from nova import log as logging
+from nova import log
 from nova import utils
 from nova.image import service
 
 
-LOG = logging.getLogger('nova.image.glance')
+LOG = log.getLogger('nova.image.glance')
 
 FLAGS = flags.FLAGS
 
@@ -51,7 +51,10 @@ class GlanceImageService(service.BaseImageService):
         """
         Calls out to Glance for a list of detailed image information
         """
-        return self.client.get_images_detailed()
+        image_metas = self.client.get_images_detailed()
+        return image_metas
+        return [self._depropertify_metadata_from_glance(image_meta)
+                for image_meta in image_metas]
 
     def show(self, context, image_id):
         """
@@ -173,9 +176,10 @@ class GlanceImageService(service.BaseImageService):
         """Return a metadata dict suitable for returning from ImageService
         """
         new_metadata = metadata.copy()
-        properties = new_metadata.pop('properties')
-        for property_ in cls.IMAGE_PROPERTIES:
-            if property_ in properties and property_ not in new_metadata:
-                value = properties[property_]
-                new_metadata[property_] = value
+        if 'properties' in new_metadata:
+            properties = new_metadata.pop('properties')
+            for property_ in cls.IMAGE_PROPERTIES:
+                if property_ in properties and property_ not in new_metadata:
+                    value = properties[property_]
+                    new_metadata[property_] = value
         return new_metadata

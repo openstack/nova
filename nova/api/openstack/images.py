@@ -15,10 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 from webob import exc
 
 from nova import compute
 from nova import flags
+from nova import log
 from nova import utils
 from nova import wsgi
 import nova.api.openstack
@@ -26,6 +29,8 @@ from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.image.service
 
+
+LOG = log.getLogger('nova.api.openstack.images')
 
 FLAGS = flags.FLAGS
 
@@ -84,8 +89,6 @@ def _translate_status(item):
         # S3ImageService
         pass
 
-    return item
-
 
 def _filter_keys(item, keys):
     """
@@ -102,6 +105,89 @@ def _convert_image_id_to_hash(image):
         image_id = abs(hash(image['imageId']))
         image['imageId'] = image_id
         image['id'] = image_id
+
+
+def _translate_s3_like_images(image_metadata):
+    """Work-around for leaky S3ImageService abstraction"""
+    api_metadata = image_metadata.copy()
+    _convert_image_id_to_hash(api_metadata)
+    api_metadata = _translate_keys(api_metadata)
+    _translate_status(api_metadata)
+    return api_metadata
+
+
+def _translate_metadata_for_api_detail(image_metadata):
+    """Translate from ImageService to OpenStack API style attribute names
+
+    This involves 3 steps:
+
+        1. Translating required keys
+
+        2. Translating optional keys (ex. progress, serverId)
+
+        3. Formatting values according to API spec (for example dates must
+           look like "2010-08-10T12:00:00Z")
+    """
+    service_metadata = image_metadata.copy()
+    api_metadata = {}
+
+    # 1. Translate required keys
+    required_image_service2api = {
+        'id': 'id',
+        'name': 'name',
+        'updated_at': 'updated',
+        'created_at': 'created',
+        'status': 'status'}
+    for service_attr, api_attr in required_image_service2api.items():
+        api_metadata[api_attr] = service_metadata[service_attr]
+
+    # 2. Translate optional keys
+    optional_image_service2api = {'instance_id': 'serverId'}
+    for service_attr, api_attr in optional_image_service2api.items():
+        if service_attr in service_metadata:
+            api_metadata[api_attr] = service_metadata[service_attr]
+
+    # 2a. Progress special case
+    # TODO(sirp): ImageService doesn't have a notion of progress yet, so for
+    # now just fake it
+    if service_metadata['status'] == 'saving':
+        api_metadata['progress'] = 0
+
+    # 3. Format values
+
+    # 3a. Format Image Status (API requires uppercase)
+    status_service2api = {'queued': 'QUEUED',
+                          'preparing': 'PREPARING',
+                          'saving': 'SAVING',
+                          'active': 'ACTIVE',
+                          'killed': 'FAILED'}
+    api_metadata['status'] = status_service2api[api_metadata['status']]
+
+    # 3b. Format timestamps
+    def _format_timestamp(dt_str):
+        """Return a timestamp formatted for OpenStack API
+
+        NOTE(sirp):
+
+        ImageService (specifically GlanceImageService) is currently
+        returning timestamps as strings. This should probably be datetime
+        objects. In the mean time, we work around this by using strptime() to
+        create datetime objects.
+        """
+        if dt_str is None:
+            return None
+
+        service_timestamp_fmt = "%Y-%m-%dT%H:%M:%S"
+        api_timestamp_fmt = "%Y-%m-%dT%H:%M:%SZ"
+        dt = datetime.datetime.strptime(dt_str, service_timestamp_fmt)
+        return dt.strftime(api_timestamp_fmt)
+
+    for ts_attr in ('created', 'updated'):
+        if ts_attr in api_metadata:
+            formatted_timestamp = _format_timestamp(api_metadata[ts_attr])
+            api_metadata[ts_attr] = formatted_timestamp
+
+    return api_metadata
 
 
 class Controller(wsgi.Controller):
@@ -125,16 +211,28 @@ class Controller(wsgi.Controller):
     def detail(self, req):
         """Return all public images in detail"""
         try:
-            items = self._service.detail(req.environ['nova.context'])
+            service_image_metas = self._service.detail(
+                req.environ['nova.context'])
         except NotImplementedError:
-            items = self._service.index(req.environ['nova.context'])
-        for image in items:
-            _convert_image_id_to_hash(image)
+            service_image_metas = self._service.index(
+                req.environ['nova.context'])
 
-        items = common.limited(items, req)
-        items = [_translate_keys(item) for item in items]
-        items = [_translate_status(item) for item in items]
-        return dict(images=items)
+        service_image_metas = common.limited(service_image_metas, req)
+
+        # FIXME(sirp): The S3ImageService appears to be leaking implementation
+        # details, including its internal attribute names, and internal
+        # `status` values. Working around it for now.
+        s3_like_image = (service_image_metas and
+                         ('imageId' in service_image_metas[0]))
+        if s3_like_image:
+            translate = _translate_s3_like_images
+        else:
+            translate = _translate_metadata_for_api_detail
+
+        api_image_metas = [translate(service_image_meta)
+                           for service_image_meta in service_image_metas]
+
+        return dict(images=api_image_metas)
 
     def show(self, req, id):
         """Return data about the given image id"""

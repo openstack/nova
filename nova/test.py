@@ -157,6 +157,12 @@ class TestCase(unittest.TestCase):
 
         This is a 'deep' match in the sense that it handles nested
         dictionaries appropriately.
+
+        NOTE:
+
+            If you don't care (or don't know) a given value, you can specify
+            the string DONTCARE as the value. This will cause that dict-item
+            to be skipped.
         """
         def raise_assertion(msg):
             d1str = str(d1)
@@ -178,6 +184,26 @@ class TestCase(unittest.TestCase):
             d2value = d2[key]
             if hasattr(d1value, 'keys') and hasattr(d2value, 'keys'):
                 self.assertDictMatch(d1value, d2value)
+            elif 'DONTCARE' in (d1value, d2value):
+                continue
             elif d1value != d2value:
                 raise_assertion("d1['%(key)s']=%(d1value)s != "
                                 "d2['%(key)s']=%(d2value)s" % locals())
+
+    def assertDictListMatch(self, L1, L2):
+        """Assert a list of dicts are equivalent"""
+        def raise_assertion(msg):
+            L1str = str(L1)
+            L2str = str(L2)
+            base_msg = ("List of dictionaries do not match: %(msg)s "
+                        "L1: %(L1str)s L2: %(L2str)s" % locals())
+            raise AssertionError(base_msg)
+
+        L1count = len(L1)
+        L2count = len(L2)
+        if L1count != L2count:
+            raise_assertion("Length mismatch: len(L1)=%(L1count)d != "
+                            "len(L2)=%(L2count)d" % locals())
+
+        for d1, d2 in zip(L1, L2):
+            self.assertDictMatch(d1, d2)

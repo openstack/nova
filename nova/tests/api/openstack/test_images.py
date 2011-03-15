@@ -156,7 +156,7 @@ class LocalImageServiceTest(test.TestCase,
 class GlanceImageServiceTest(test.TestCase,
                              BaseImageServiceTests):
 
-    """Tests the local image service"""
+    """Tests the Glance image service"""
 
     def setUp(self):
         super(GlanceImageServiceTest, self).setUp()
@@ -183,19 +183,22 @@ class GlanceImageServiceTest(test.TestCase,
         first-class attribrutes, but that they are passed to Glance as image
         properties.
         """
-        fixture = {'id': 123, 'instance_id': 42, 'name': 'test image'}
+        fixture = {'instance_id': 42, 'name': 'test image'}
         image_id = self.service.create(self.context, fixture)['id']
 
-        expected = {'id': 123,
+        expected = {'id': image_id,
                     'name': 'test image',
                     'properties': {'instance_id': 42}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
         # The ImageService shouldn't leak the fact that the instance_id
         # happens to be stored as a property in Glance
-        expected = {'id': 123, 'instance_id': 42, 'name': 'test image'}
+        expected = {'id': image_id, 'instance_id': 42, 'name': 'test image'}
         image_meta = self.service.show(self.context, image_id)
         self.assertDictMatch(image_meta, expected)
+
+        #image_metas = self.service.detail(self.context)
+        #self.assertDictMatch(image_metas[0], expected)
 
     def test_create_propertified_images_without_instance_id(self):
         """
@@ -206,10 +209,10 @@ class GlanceImageServiceTest(test.TestCase,
         first-class attribrutes, but that they are passed to Glance as image
         properties.
         """
-        fixture = {'id': 123, 'name': 'test image'}
+        fixture = {'name': 'test image'}
         image_id = self.service.create(self.context, fixture)['id']
 
-        expected = {'id': 123, 'name': 'test image', 'properties': {}}
+        expected = {'id': image_id, 'name': 'test image', 'properties': {}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
 
@@ -217,29 +220,39 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     """Test of the OpenStack API /images application controller"""
 
-    # Registered images at start of each test.
+    # FIXME(sirp): The ImageService and API use two different formats for
+    # timestamps. Ultimately, the ImageService should probably use datetime
+    # objects
+    NOW_SERVICE_STR = "2010-10-11T10:30:22"
+    NOW_API_STR = "2010-10-11T10:30:22Z"
 
     IMAGE_FIXTURES = [
-        {'id': '23g2ogk23k4hhkk4k42l',
-         'imageId': '23g2ogk23k4hhkk4k42l',
+        {'id': 123,
          'name': 'public image #1',
-         'created_at': str(datetime.datetime.utcnow()),
-         'updated_at': str(datetime.datetime.utcnow()),
+         'created_at': NOW_SERVICE_STR,
+         'updated_at': NOW_SERVICE_STR,
          'deleted_at': None,
          'deleted': False,
          'is_public': True,
-         'status': 'available',
-         'image_type': 'kernel'},
-        {'id': 'slkduhfas73kkaskgdas',
-         'imageId': 'slkduhfas73kkaskgdas',
+         'status': 'saving'},
+        {'id': 124,
          'name': 'public image #2',
-         'created_at': str(datetime.datetime.utcnow()),
-         'updated_at': str(datetime.datetime.utcnow()),
+         'created_at': NOW_SERVICE_STR,
+         'updated_at': NOW_SERVICE_STR,
          'deleted_at': None,
          'deleted': False,
          'is_public': True,
-         'status': 'available',
-         'image_type': 'ramdisk'}]
+         'status': 'active',
+         'instance_id': 42},
+        {'id': 125,
+         'name': 'public image #3',
+         'created_at': NOW_SERVICE_STR,
+         'updated_at': NOW_SERVICE_STR,
+         'deleted_at': None,
+         'deleted': False,
+         'is_public': True,
+         'status': 'killed',
+         'instance_id': 42}]
 
     def setUp(self):
         super(ImageControllerWithGlanceServiceTest, self).setUp()
@@ -262,34 +275,26 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        image_metas = json.loads(res.body)['images']
 
-        fixture_index = [dict(id=f['id'], name=f['name']) for f
-                         in self.IMAGE_FIXTURES]
+        expected = [{'id': 123, 'name': 'public image #1'},
+                    {'id': 124, 'name': 'public image #2'},
+                    {'id': 125, 'name': 'public image #3'}]
 
-        for image in res_dict['images']:
-            self.assertEquals(1, fixture_index.count(image),
-                              "image %s not in fixture index!" % str(image))
+        self.assertDictListMatch(image_metas, expected)
 
     def test_get_image_details(self):
         req = webob.Request.blank('/v1.0/images/detail')
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        image_metas = json.loads(res.body)['images']
 
-        def _is_equivalent_subset(x, y):
-            if set(x) <= set(y):
-                for k, v in x.iteritems():
-                    if x[k] != y[k]:
-                        if x[k] == 'active' and y[k] == 'available':
-                            continue
-                        return False
-                return True
-            return False
+        expected = [
+            {'id': 123, 'name': 'public image #1', 'updated': self.NOW_API_STR,
+             'created': self.NOW_API_STR, 'status': 'SAVING', 'progress': 0},
+            {'id': 124, 'name': 'public image #2', 'updated': self.NOW_API_STR,
+             'created': self.NOW_API_STR, 'status': 'ACTIVE', 'serverId': 42},
+            {'id': 125, 'name': 'public image #3', 'updated': self.NOW_API_STR,
+             'created': self.NOW_API_STR, 'status': 'FAILED', 'serverId': 42},
+        ]
 
-        for image in res_dict['images']:
-            for image_fixture in self.IMAGE_FIXTURES:
-                if _is_equivalent_subset(image, image_fixture):
-                    break
-            else:
-                self.assertEquals(1, 2, "image %s not in fixtures!" %
-                                                            str(image))
+        self.assertDictListMatch(image_metas, expected)
