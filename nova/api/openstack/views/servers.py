@@ -112,4 +112,3 @@ class ViewBuilder_1_1(ViewBuilder):
     def _build_flavor(self, response, inst):
         flavor_id = inst["instance_type"]
         response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
-
