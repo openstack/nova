@@ -45,8 +45,8 @@ class _BaseImageServiceTests(test.TestCase):
 
     """Tasks to test for all image services"""
 
-    def __init__(self):
-        super(_BaseImageServiceTests, self).__init__()
+    def __init__(self, *args, **kwargs):
+        super(_BaseImageServiceTests, self).__init__(*args, **kwargs)
         self.service = None
         self.context = None
 
