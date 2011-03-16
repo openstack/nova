@@ -697,7 +697,7 @@ class VMOps(object):
     def _get_network_info(self, instance, networks, IPs):
         """creates network info list for instance"""
 
-        tuple_list = []
+        network_info = []
         for network in networks:
             network_IPs = [ip for ip in IPs if ip.network_id == network.id]
 
@@ -714,8 +714,6 @@ class VMOps(object):
                     "gateway": ip6.gatewayV6,
                     "enabled": "1"}
 
-            mac_id = instance.mac_address.replace(':', '')
-            location = 'vm-data/networking/%s' % mac_id
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
@@ -723,7 +721,8 @@ class VMOps(object):
                 'dns': [network['dns']],
                 'ips': [ip_dict(ip) for ip in network_IPs],
                 'ip6s': [ip6_dict(ip) for ip in network_IPs]}
-            tuple_list.append((network, info))
+            network_info.append((network, info))
+        return network_info
 
     def inject_network_info(self, vm_ref, network_info):
         """
@@ -752,7 +751,7 @@ class VMOps(object):
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         device = 0
-        for (network, info) in networks:
+        for (network, info) in network_info:
             mac_address = info['mac']
             bridge = network['bridge']
             network_ref = \
