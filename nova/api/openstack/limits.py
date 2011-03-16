@@ -50,12 +50,24 @@ class LimitsController(Controller):
     Controller for accessing limits in the OpenStack API.
     """
 
+    _serialization_metadata = {
+        "application/xml": {
+            "attributes": {
+                "limit": ["verb", "URI", "regex", "value", "unit",
+                    "resetTime", "remaining", "name"],
+            },
+            "plurals" : {
+                "rate" : "limit",
+            },
+        },
+    }
+
     def index(self, req):
         """
         Return all global and rate limit information.
         """
         abs_limits = {}
-        rate_limits = req.environ.get("nova.limits", {})
+        rate_limits = req.environ.get("nova.limits", [])
 
         return {
             "limits": {
@@ -92,6 +104,7 @@ class Limit(object):
         self.regex = regex
         self.value = int(value)
         self.unit = unit
+        self.unit_string = self.display_unit().lower()
         self.remaining = int(value)
 
         if value <= 0:
@@ -101,8 +114,10 @@ class Limit(object):
         self.next_request = None
 
         self.water_level = 0
-        self.capacity = float(self.unit)
+        self.capacity = self.unit
         self.request_value = float(self.capacity) / float(self.value)
+        self.error_message = _("Only %(value)s %(verb)s request(s) can be "\
+            "made to %(uri)s every %(unit_string)s." % self.__dict__)
 
     def __call__(self, verb, url):
         """
@@ -153,7 +168,7 @@ class Limit(object):
         """Return a useful representation of this class."""
         return {
             "verb": self.verb,
-            "uri": self.uri,
+            "URI": self.uri,
             "regex": self.regex,
             "value": self.value,
             "remaining": int(self.remaining),
@@ -204,13 +219,12 @@ class RateLimitingMiddleware(Middleware):
         url = req.url
         username = req.environ["nova.context"].user_id
 
-        delay = self._limiter.check_for_delay(verb, url, username)
+        delay, error = self._limiter.check_for_delay(verb, url, username)
 
         if delay:
             msg = "This request was rate-limited."
-            details = "Error details."
             retry = time.time() + delay
-            return faults.OverLimitFault(msg, details, retry)
+            return faults.OverLimitFault(msg, error, retry)
 
         req.environ["nova.limits"] = self._limiter.get_limits(username)
 
@@ -240,19 +254,23 @@ class Limiter(object):
     def check_for_delay(self, verb, url, username=None):
         """
         Check the given verb/user/user triplet for limit.
+
+        @return: Tuple of delay (in seconds) and error message (or None, None)
         """
         def _get_delay_list():
             """Yield limit delays."""
             for limit in self.levels[username]:
                 delay = limit(verb, url)
                 if delay:
-                    yield delay
+                    yield delay, limit.error_message
 
         delays = list(_get_delay_list())
 
         if delays:
             delays.sort()
             return delays[0]
+
+        return None, None
 
 
 class WsgiLimiter(object):
@@ -298,11 +316,11 @@ class WsgiLimiter(object):
         verb = info.get("verb")
         path = info.get("path")
 
-        delay = self._limiter.check_for_delay(verb, path, username)
+        delay, error = self._limiter.check_for_delay(verb, path, username)
 
         if delay:
             headers = {"X-Wait-Seconds": "%.2f" % delay}
-            return webob.exc.HTTPForbidden(headers=headers)
+            return webob.exc.HTTPForbidden(headers=headers, explanation=error)
         else:
             return webob.exc.HTTPNoContent()
 
@@ -333,7 +351,9 @@ class WsgiLimiterProxy(object):
 
         resp = conn.getresponse()
 
-        if 200 >= resp.status < 300:
-            return None
+        print resp
 
-        return resp.getheader("X-Wait-Seconds")
+        if 200 >= resp.status < 300:
+            return None, None
+
+        return resp.getheader("X-Wait-Seconds"), resp.read() or None

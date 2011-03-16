@@ -482,6 +482,7 @@ class Serializer(object):
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
+        print "to_xml_node(%s, %s, %s, %s)" % (doc, metadata, nodename, data)
         result = doc.createElement(nodename)
         if type(data) is list:
             singular = metadata.get('plurals', {}).get(nodename, None)
