@@ -76,11 +76,16 @@ class API(object):
         
     @classmethod
     def get_instance_or_reroute(cls, context, instance_id):
-        instance = db.instance_get(context, instance_id)
-        zones = db.zone_get_all(context)
+        try:
+            instance = db.instance_get(context, instance_id)
+            return instance
+        except exception.InstanceNotFound, e:
+            LOG.debug(_("Instance %(instance_id)s not found locally: '%(e)s'" %
+                                                locals()))
 
-        LOG.debug("*** Firing ZoneRouteException")
         # Throw a reroute Exception for the middleware to pick up. 
+        LOG.debug("Firing ZoneRouteException")
+        zones = db.zone_get_all(context)
         raise exception.ZoneRouteException(zones)
 
     @classmethod

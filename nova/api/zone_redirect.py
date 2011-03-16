@@ -57,9 +57,20 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
 
             # Todo(sandy): This only works for OpenStack API currently.
             # Needs to be broken out into a driver. 
+            new_req = req.copy()
+
+            scheme, netloc, path, query, frag = \
+                                    urlparse.urlsplit(new_req.path_qs)
+            query = urlparse.parse_qsl(query)
+            query = [(key, value) for key, value in query if key != 'fresh']
+            query = urllib.urlencode(query)
+            url = urlparse.urlunsplit((scheme, netloc, path, query, frag))
+
+            m = re.search('/v\d+\.\d+/(.+)', url)
+            resource = m.group(1)
+
             for zone in e.zones:
-                url = zone.api_url
-                LOG.info(_("Zone redirect to:[url:%(api_url)s, "
+                LOG.debug(_("Zone redirect to:[url:%(api_url)s, "
                                                 "username:%(username)s]"
                             % dict(api_url=zone.api_url,
                                             username=zone.username)))
@@ -67,21 +78,6 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
                 nova = client.OpenStackClient(zone.username, zone.password,
                                                     zone.api_url)
                 nova.authenticate()
-                new_req = req.copy()
-
-                scheme, netloc, path, query, frag = \
-                                        urlparse.urlsplit(new_req.path_qs)
-                query = urlparse.parse_qsl(query)
-                query = [(key, value) for key, value in query if key != 'fresh']
-                query = urllib.urlencode(query)
-                url = urlparse.urlunsplit((scheme, netloc, path, query, frag))
-
-                m = re.search('/(v\d+\.\d+)/(.+)', url)
-                version = m.group(1)
-                resource = m.group(2)
-
-                #LOG.info(_("New Request Data: %s"), new_req.body)
-                #LOG.info(_("New Request Path: %s"), resource)
                 try:
                     if req.method == 'GET':
                         response, body = nova.get(resource, body=new_req.body)
@@ -97,7 +93,7 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
                                         e.code, e.message, e.details)
                     continue
 
-                LOG.info(_("Zone Response: %s [%s]/ %s"), response,
+                LOG.debug(_("Zone Response: %s [%s]/ %s"), response,
                                                         response.status, body)
                 if response.status == 200:
                     res = webob.Response()
@@ -106,7 +102,7 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
                     res.body = json.dumps(body)
                     return res
 
-            LOG.info(_("Returning 404 ..."))
+            LOG.debug(_("Zone Redirect Middleware returning 404 ..."))
             res = webob.Response()
             res.status = "404"
             return res
