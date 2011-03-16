@@ -76,10 +76,21 @@ class ViewBuilder_1_1(ViewBuilder):
         return flavor_obj
 
     def _build_links(self, flavor_obj):
+        href = self.generate_href(flavor_obj["id"])
         links = [
             {
                 "rel": "self",
-                "href": self.generate_href(flavor_obj["id"]),
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": href,
             },
         ]
         return links

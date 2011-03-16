@@ -143,6 +143,16 @@ class FlavorsTest(test.TestCase):
                     "rel": "self",
                     "href": "http://localhost/v1.1/flavors/12",
                 },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": "http://localhost/v1.1/flavors/12",
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": "http://localhost/v1.1/flavors/12",
+                },
             ],
         }
         self.assertEqual(flavor, expected)
@@ -162,6 +172,16 @@ class FlavorsTest(test.TestCase):
                         "rel": "self",
                         "href": "http://localhost/v1.1/flavors/1",
                     },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
                 ],
             },
             {
@@ -170,6 +190,16 @@ class FlavorsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
                         "href": "http://localhost/v1.1/flavors/2",
                     },
                 ],
@@ -194,6 +224,16 @@ class FlavorsTest(test.TestCase):
                         "rel": "self",
                         "href": "http://localhost/v1.1/flavors/1",
                     },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
                 ],
             },
             {
@@ -204,6 +244,16 @@ class FlavorsTest(test.TestCase):
                 "links": [
                     {
                         "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
                         "href": "http://localhost/v1.1/flavors/2",
                     },
                 ],
