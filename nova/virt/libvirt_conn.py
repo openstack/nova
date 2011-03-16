@@ -599,7 +599,7 @@ class LibvirtConnection(object):
 
         if FLAGS.libvirt_type == 'lxc':
             container_dir = '%s/rootfs' % basepath(suffix='')
-            utils.execute('mkdir -p %s' % container_dir)
+            utils.execute('mkdir', '-p', container_dir)
 
         # NOTE(vish): No need add the suffix to console.log
         os.close(os.open(basepath('console.log', ''),
