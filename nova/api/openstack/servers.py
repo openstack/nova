@@ -148,10 +148,14 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         context = req.environ['nova.context']
+
+        key_name = None
+        key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
-        if not key_pairs:
-            raise exception.NotFound(_("No keypairs defined"))
-        key_pair = key_pairs[0]
+        if key_pairs:
+            key_pair = key_pairs[0]
+            key_name = key_pair['name']
+            key_data = key_pair['public_key']
 
         image_id = common.get_image_id_from_image_hash(self._image_service,
             context, env['server']['imageId'])
@@ -180,8 +184,8 @@ class Controller(wsgi.Controller):
                 ramdisk_id=ramdisk_id,
                 display_name=env['server']['name'],
                 display_description=env['server']['name'],
-                key_name=key_pair['name'],
-                key_data=key_pair['public_key'],
+                key_name=key_name,
+                key_data=key_data,
                 metadata=metadata,
                 injected_files=injected_files)
         except QuotaError as error:
