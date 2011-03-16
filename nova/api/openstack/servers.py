@@ -46,7 +46,8 @@ class Controller(wsgi.Controller):
         'application/xml': {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress", "adminPass"]}}}
+                           "status", "progress", "adminPass", "flavorRef",
+                           "imageRef"]}}}
 
     def __init__(self):
         self.compute_api = compute.API()
