@@ -1597,6 +1597,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
+        self.iptables.ipv6['filter'].add_chain('sg-fallback')
+        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""
