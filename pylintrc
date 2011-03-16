@@ -4,7 +4,7 @@
 # W0511: TODOs in code comments are fine.
 # W0142: *args and **kwargs are fine.
 # W0622: Redefining id is fine.
-disable-msg=W0511,W0142,W0622
+disable=W0511,W0142,W0622
 
 [Basic]
 # Variable names can be 1 to 31 characters long, with lowercase and underscores
