@@ -15,11 +15,10 @@
 
 import base64
 import hashlib
-import json
 import traceback
-from xml.dom import minidom
 
 from webob import exc
+from xml.dom import minidom
 
 from nova import compute
 from nova import exception
@@ -33,7 +32,6 @@ from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
-import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
@@ -270,7 +268,7 @@ class Controller(wsgi.Controller):
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
             try:
                 self.compute_api.set_admin_password(ctxt, id)
-            except exception.TimeoutException, e:
+            except exception.TimeoutException:
                 return exc.HTTPRequestTimeout()
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
