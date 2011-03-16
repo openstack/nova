@@ -363,8 +363,7 @@ class VMOps(object):
     def resize_instance(self, instance, vdi_uuid):
         """Resize a running instance by changing it's RAM and disk size """
         vm_ref = VMHelper.lookup(self._session, instance.name)
-        vdi_ref, vm_vdi_rec = \
-                VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
+        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         new_disk_size = instance.local_gb
 
         #TODO(mdietz): this will need to be adjusted for swap later
