@@ -75,5 +75,6 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
             return image_id
     raise exception.NotFound(image_hash)
 
+
 def get_api_version(req):
     return req.environ.get('api.version')

@@ -17,6 +17,7 @@
 
 from nova.api.openstack import common
 
+
 def get_view_builder(req):
     '''
     A factory method that returns the correct builder based on the version of
