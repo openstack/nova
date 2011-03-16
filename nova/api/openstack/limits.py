@@ -225,7 +225,7 @@ class RateLimitingMiddleware(Middleware):
         delay, error = self._limiter.check_for_delay(verb, url, username)
 
         if delay:
-            msg = "This request was rate-limited."
+            msg = _("This request was rate-limited.")
             retry = time.time() + delay
             return faults.OverLimitFault(msg, error, retry)
 
