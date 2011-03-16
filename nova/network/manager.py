@@ -404,11 +404,6 @@ class FlatManager(NetworkManager):
         net = {}
         net['injected'] = FLAGS.flat_injected
         net['dns'] = FLAGS.flat_network_dns
-        if not FLAGS.fake_network:
-            if(FLAGS.use_ipv6):
-                net['gateway_v6'] = \
-                                 utils.get_my_linklocal(
-                                         FLAGS.flat_network_bridge)
         self.db.network_update(context, network_id, net)
 
     def allocate_floating_ip(self, context, project_id):
