@@ -217,6 +217,7 @@ class ServersTest(test.TestCase):
         self.assertEqual([s['id'] for s in servers], [1, 2])
 
     def _test_create_instance_helper(self):
+        """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
             return {'id': '1', 'display_name': 'server_test'}
 
