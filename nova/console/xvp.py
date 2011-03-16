@@ -91,10 +91,6 @@ class XVPConsoleProxy(object):
         """Trim password to length, and encode"""
         return self._xvp_encrypt(password)
 
-    def generate_password(self, length=8):
-        """Returns random console password"""
-        return os.urandom(length * 2).encode('base64')[:length]
-
     def _rebuild_xvp_conf(self, context):
         logging.debug(_("Rebuilding xvp conf"))
         pools = [pool for pool in
