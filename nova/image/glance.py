@@ -37,8 +37,10 @@ GlanceClient = utils.import_class('glance.client.Client')
 class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
-    def __init__(self):
-        self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
+    def __init__(self, client=None):
+        if client is None:
+            self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
+        self.client = client
 
     def index(self, context):
         """
