@@ -61,8 +61,8 @@ class UsersTest(test.TestCase):
         self.allow_admin = FLAGS.allow_admin_api
         FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
-        fakemgr.add_user(User('guy1', 'guy1', 'acc1', 'fortytwo!', False))
-        fakemgr.add_user(User('guy2', 'guy2', 'acc2', 'swordfish', True))
+        fakemgr.add_user(User(1, 'guy1', 'acc1', 'fortytwo!', False))
+        fakemgr.add_user(User(2, 'guy2', 'acc2', 'swordfish', True))
 
     def tearDown(self):
         self.stubs.UnsetAll()

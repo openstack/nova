@@ -57,8 +57,8 @@ class AccountsTest(test.TestCase):
         self.allow_admin = FLAGS.allow_admin_api
         FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
-        joeuser = User('guy1', 'guy1', 'acc1', 'fortytwo!', False)
-        superuser = User('guy2', 'guy2', 'acc2', 'swordfish', True)
+        joeuser = User(1, 'guy1', 'acc1', 'fortytwo!', False)
+        superuser = User(2, 'guy2', 'acc2', 'swordfish', True)
         fakemgr.add_user(joeuser)
         fakemgr.add_user(superuser)
         fakemgr.create_project('test1', joeuser)
