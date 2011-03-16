@@ -22,11 +22,11 @@ import json
 import StringIO
 import stubout
 import time
+import unittest
 import webob
 
 from xml.dom.minidom import parseString
 
-from nova import test
 from nova.api.openstack import limits
 from nova.api.openstack.limits import Limit
 
@@ -40,27 +40,33 @@ TEST_LIMITS = [
 ]
 
 
-class LimitsControllerTest(test.TestCase):
+class BaseLimitTestSuite(unittest.TestCase):
+    """Base test suite which provides relevant stubs and time abstraction."""
+
+    def setUp(self):
+        """Run before each test."""
+        self.time = 0.0
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+
+    def tearDown(self):
+        """Run after each test."""
+        self.stubs.UnsetAll()
+
+    def _get_time(self):
+        """Return the "time" according to this test suite."""
+        return self.time
+
+
+class LimitsControllerTest(BaseLimitTestSuite):
     """
     Tests for `limits.LimitsController` class.
     """
 
     def setUp(self):
         """Run before each test."""
-        test.TestCase.setUp(self)
-        self.time = 0.0
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        BaseLimitTestSuite.setUp(self)
         self.controller = limits.LimitsController()
-
-    def tearDown(self):
-        """Run after each test."""
-        self.stubs.UnsetAll()
-        test.TestCase.tearDown(self)
-
-    def _get_time(self):
-        """Return the "time" according to this test suite."""
-        return self.time
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -74,11 +80,11 @@ class LimitsControllerTest(test.TestCase):
 
     def _populate_limits(self, request):
         """Put limit info into a request."""
-        limits = [
+        _limits = [
             Limit("GET", "*", ".*", 10, 60).display(),
             Limit("POST", "*", ".*", 5, 60 * 60).display(),
         ]
-        request.environ["nova.limits"] = limits
+        request.environ["nova.limits"] = _limits
         return request
 
     def test_empty_index_json(self):
@@ -131,7 +137,7 @@ class LimitsControllerTest(test.TestCase):
         response = request.get_response(self.controller)
 
         expected = "<limits><rate/><absolute/></limits>"
-        body = response.body.replace("\n","").replace(" ", "")
+        body = response.body.replace("\n", "").replace(" ", "")
 
         self.assertEqual(expected, body)
 
@@ -144,7 +150,7 @@ class LimitsControllerTest(test.TestCase):
         expected = parseString("""
             <limits>
                 <rate>
-                    <limit URI="*" regex=".*" remaining="10" resetTime="0" 
+                    <limit URI="*" regex=".*" remaining="10" resetTime="0"
                         unit="MINUTE" value="10" verb="GET"/>
                     <limit URI="*" regex=".*" remaining="5" resetTime="0"
                         unit="HOUR" value="5" verb="POST"/>
@@ -157,27 +163,107 @@ class LimitsControllerTest(test.TestCase):
         self.assertEqual(expected.toxml(), body.toxml())
 
 
-class LimiterTest(test.TestCase):
+class LimitMiddlewareTest(BaseLimitTestSuite):
+    """
+    Tests for the `limits.RateLimitingMiddleware` class.
+    """
+
+    @webob.dec.wsgify
+    def _empty_app(self, request):
+        """Do-nothing WSGI app."""
+        pass
+
+    def setUp(self):
+        """Prepare middleware for use through fake WSGI app."""
+        BaseLimitTestSuite.setUp(self)
+        _limits = [
+            Limit("GET", "*", ".*", 1, 60),
+        ]
+        self.app = limits.RateLimitingMiddleware(self._empty_app, _limits)
+
+    def test_good_request(self):
+        """Test successful GET request through middleware."""
+        request = webob.Request.blank("/")
+        response = request.get_response(self.app)
+        self.assertEqual(200, response.status_int)
+
+    def test_limited_request_json(self):
+        """Test a rate-limited (403) GET request through middleware."""
+        request = webob.Request.blank("/")
+        response = request.get_response(self.app)
+        self.assertEqual(200, response.status_int)
+
+        request = webob.Request.blank("/")
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 403)
+
+        body = json.loads(response.body)
+        expected = "Only 1 GET request(s) can be made to * every minute."
+        value = body["overLimitFault"]["details"].strip()
+        self.assertEqual(value, expected)
+
+    def test_limited_request_xml(self):
+        """Test a rate-limited (403) response as XML"""
+        request = webob.Request.blank("/")
+        response = request.get_response(self.app)
+        self.assertEqual(200, response.status_int)
+
+        request = webob.Request.blank("/")
+        request.accept = "application/xml"
+        response = request.get_response(self.app)
+        self.assertEqual(response.status_int, 403)
+
+        root = parseString(response.body).childNodes[0]
+        expected = "Only 1 GET request(s) can be made to * every minute."
+
+        details = root.getElementsByTagName("details")
+        self.assertEqual(details.length, 1)
+
+        value = details.item(0).firstChild.data.strip()
+        self.assertEqual(value, expected)
+
+
+class LimitTest(BaseLimitTestSuite):
+    """
+    Tests for the `limits.Limit` class.
+    """
+
+    def test_GET_no_delay(self):
+        """Test a limit handles 1 GET per second."""
+        limit = Limit("GET", "*", ".*", 1, 1)
+        delay = limit("GET", "/anything")
+        self.assertEqual(None, delay)
+        self.assertEqual(0, limit.next_request)
+        self.assertEqual(0, limit.last_request)
+
+    def test_GET_delay(self):
+        """Test two calls to 1 GET per second limit."""
+        limit = Limit("GET", "*", ".*", 1, 1)
+        delay = limit("GET", "/anything")
+        self.assertEqual(None, delay)
+
+        delay = limit("GET", "/anything")
+        self.assertEqual(1, delay)
+        self.assertEqual(1, limit.next_request)
+        self.assertEqual(0, limit.last_request)
+
+        self.time += 4
+
+        delay = limit("GET", "/anything")
+        self.assertEqual(None, delay)
+        self.assertEqual(4, limit.next_request)
+        self.assertEqual(4, limit.last_request)
+
+
+class LimiterTest(BaseLimitTestSuite):
     """
     Tests for the in-memory `limits.Limiter` class.
     """
 
     def setUp(self):
         """Run before each test."""
-        test.TestCase.setUp(self)
-        self.time = 0.0
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        BaseLimitTestSuite.setUp(self)
         self.limiter = limits.Limiter(TEST_LIMITS)
-
-    def tearDown(self):
-        """Run after each test."""
-        self.stubs.UnsetAll()
-        test.TestCase.tearDown(self)
-
-    def _get_time(self):
-        """Return the "time" according to this test suite."""
-        return self.time
 
     def _check(self, num, verb, url, username=None):
         """Check and yield results from checks."""
@@ -311,27 +397,15 @@ class LimiterTest(test.TestCase):
         self.assertEqual(expected, results)
 
 
-class WsgiLimiterTest(test.TestCase):
+class WsgiLimiterTest(BaseLimitTestSuite):
     """
     Tests for `limits.WsgiLimiter` class.
     """
 
     def setUp(self):
         """Run before each test."""
-        test.TestCase.setUp(self)
-        self.time = 0.0
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        BaseLimitTestSuite.setUp(self)
         self.app = limits.WsgiLimiter(TEST_LIMITS)
-
-    def tearDown(self):
-        """Run after each test."""
-        self.stubs.UnsetAll()
-        test.TestCase.tearDown(self)
-
-    def _get_time(self):
-        """Return the "time" according to this test suite."""
-        return self.time
 
     def _request_data(self, verb, path):
         """Get data decribing a limit request verb/path."""
@@ -476,7 +550,7 @@ def wire_HTTPConnection_to_WSGI(host, app):
     httplib.HTTPConnection = HTTPConnectionDecorator(httplib.HTTPConnection)
 
 
-class WsgiLimiterProxyTest(test.TestCase):
+class WsgiLimiterProxyTest(BaseLimitTestSuite):
     """
     Tests for the `limits.WsgiLimiterProxy` class.
     """
@@ -486,22 +560,10 @@ class WsgiLimiterProxyTest(test.TestCase):
         Do some nifty HTTP/WSGI magic which allows for WSGI to be called
         directly by something like the `httplib` library.
         """
-        test.TestCase.setUp(self)
-        self.time = 0.0
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        BaseLimitTestSuite.setUp(self)
         self.app = limits.WsgiLimiter(TEST_LIMITS)
         wire_HTTPConnection_to_WSGI("169.254.0.1:80", self.app)
         self.proxy = limits.WsgiLimiterProxy("169.254.0.1:80")
-
-    def tearDown(self):
-        """Run after each test."""
-        self.stubs.UnsetAll()
-        test.TestCase.tearDown(self)
-
-    def _get_time(self):
-        """Return the "time" according to this test suite."""
-        return self.time
 
     def test_200(self):
         """Successful request test."""
@@ -519,4 +581,4 @@ class WsgiLimiterProxyTest(test.TestCase):
         expected = ("60.00", "403 Forbidden\n\nOnly 1 GET request(s) can be "\
             "made to /delayed every minute.")
 
-        self.assertEqual((delay, error), expected) 
+        self.assertEqual((delay, error), expected)

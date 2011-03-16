@@ -54,8 +54,8 @@ class LimitsController(Controller):
                 "limit": ["verb", "URI", "regex", "value", "unit",
                     "resetTime", "remaining", "name"],
             },
-            "plurals" : {
-                "rate" : "limit",
+            "plurals": {
+                "rate": "limit",
             },
         },
     }
@@ -215,7 +215,12 @@ class RateLimitingMiddleware(Middleware):
         """
         verb = req.method
         url = req.url
-        username = req.environ["nova.context"].user_id
+        context = req.environ.get("nova.context")
+
+        if context:
+            username = context.user_id
+        else:
+            username = None
 
         delay, error = self._limiter.check_for_delay(verb, url, username)
 
@@ -255,14 +260,12 @@ class Limiter(object):
 
         @return: Tuple of delay (in seconds) and error message (or None, None)
         """
-        def _get_delay_list():
-            """Yield limit delays."""
-            for limit in self.levels[username]:
-                delay = limit(verb, url)
-                if delay:
-                    yield delay, limit.error_message
+        delays = []
 
-        delays = list(_get_delay_list())
+        for limit in self.levels[username]:
+            delay = limit(verb, url)
+            if delay:
+                delays.append((delay, limit.error_message))
 
         if delays:
             delays.sort()
@@ -348,8 +351,6 @@ class WsgiLimiterProxy(object):
             conn.request("POST", "/", body, headers)
 
         resp = conn.getresponse()
-
-        print resp
 
         if 200 >= resp.status < 300:
             return None, None
