@@ -443,6 +443,8 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context, instance_id,
                 migration_ref['dest_compute'], params=params)
+        self.db.migration_update(context, migration_ref['id'],
+                {'status': 'reverted'})
 
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize, deleting the 'old' instance in the
@@ -458,7 +460,7 @@ class API(base.Base):
         self._cast_compute_message('confirm_resize', context, instance_id,
                 migration_ref['source_compute'], params=params)
 
-        self.db.migration_update(context, migration_id,
+        self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
