@@ -51,7 +51,7 @@ class Test(test.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'user1', 'user1_key', None, None)
+        u = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(u)
 
         req = webob.Request.blank('/v1.0/')
@@ -66,7 +66,7 @@ class Test(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'user1', 'user1_key', None, None)
+        u = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(u)
         f.create_project('user1_project', u)
 
@@ -124,7 +124,7 @@ class Test(test.TestCase):
 
     def test_bad_user_good_key(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'user1', 'user1_key', None, None)
+        u = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(u)
 
         req = webob.Request.blank('/v1.0/')
@@ -190,7 +190,7 @@ class TestLimiter(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        u = nova.auth.manager.User(1, 'user1', 'user1_key', None, None)
+        u = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
         f.add_user(u)
         f.create_project('test', u)
 
