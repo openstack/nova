@@ -80,10 +80,10 @@ class user_and_project_generator(object):
         self.manager.delete_project(self.project)
 
 
-class AuthManagerTestCase(object):
+class _AuthManagerBaseTestCase(test.TestCase):
     def setUp(self):
         FLAGS.auth_driver = self.auth_driver
-        super(AuthManagerTestCase, self).setUp()
+        super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(connection_type='fake')
         self.manager = manager.AuthManager(new=True)
 
@@ -324,11 +324,11 @@ class AuthManagerTestCase(object):
             self.assertTrue(user.is_admin())
 
 
-class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
+class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 
 
-class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
+class AuthManagerDbTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
 
 
