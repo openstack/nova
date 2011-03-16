@@ -77,8 +77,8 @@ def stub_out_db_instance_api(stubs):
             'mac_address': values['mac_address'],
             'vcpus': type_data['vcpus'],
             'local_gb': type_data['local_gb'],
-            'os_type': values['os_type']
-            }
+            'os_type': values['os_type']}
+
         return FakeModel(base_options)
 
     def fake_network_get_by_instance(context, instance_id):
