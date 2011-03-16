@@ -363,8 +363,10 @@ class VMOps(object):
     def resize_instance(self, instance, vdi_uuid):
         """Resize a running instance by changing it's RAM and disk size """
         vm_ref = VMHelper.lookup(self._session, instance.name)
-        new_disk_size = str(instance.local_gb * 1024 * 1024)
-        LOG.debug(_("Resizing VDI %s for instance %s. Expanding to %d megs") % (vdi_uuid,
+
+        #The new disk size must be in bytes
+        new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
+        LOG.debug(_("Resizing VDI %s for instance %s. Expanding to %s megs") % (vdi_uuid,
                 instance.name, new_disk_size))
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
