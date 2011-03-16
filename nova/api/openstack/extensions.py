@@ -345,7 +345,7 @@ class ActionExtension(object):
 
 class ResourceExtension(object):
     """
-    ResourceExtension objects can be used to add add top level resources
+    ResourceExtension objects can be used to add top level resources
     to the OpenStack API in nova.
     """
 
