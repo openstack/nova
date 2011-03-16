@@ -234,11 +234,11 @@ class VMHelper(HelperBase):
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
-    def create_vif(cls, session, vm_ref, network_ref, mac_address, dev="0"):
+    def create_vif(cls, session, vm_ref, network_ref, mac_address, dev):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
         vif_rec = {}
-        vif_rec['device'] = dev
+        vif_rec['device'] = str(dev)
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = mac_address

@@ -128,13 +128,17 @@ class VMOps(object):
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
         # inject_network_info and create vifs
-        if network_info is not None:
-            self.inject_network_info(instance, network_info)
-            self.create_vifs(instance, [nw for (nw, mapping) in network_info])
-        else:
-            # TODO(tr3buchet) - goes away with multi-nic
-            networks = self.inject_network_info(instance)
-            self.create_vifs(instance, networks)
+        # TODO(tr3buchet) - check to make sure we have network info, otherwise
+        # create it now. This goes away once nova-multi-nic hits.
+        if network_info is None:
+            admin_context = context.get_admin_context()
+            IPs = db.fixed_ip_get_all_by_instance(admin_context,
+                                                  instance['id'])
+            networks = db.network_get_all_by_instance(admin_context,
+                                                      instance['id'])
+            network_info = self._get_network_info(instance, networks, IPs)
+        self.inject_network_info(vm_ref, network_info)
+        self.create_vifs(vm_ref, network_info)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
@@ -689,104 +693,77 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
-    def inject_network_info(self, instance, network_info=None):
+    # TODO(tr3buchet) - remove this function after nova multi-nic
+    def _get_network_info(self, instance, networks, IPs):
+        """creates network info list for instance"""
+
+        tuple_list = []
+        for network in networks:
+            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+
+            def ip_dict(ip):
+                return {
+                    "ip": ip.address,
+                    "netmask": network["netmask"],
+                    "enabled": "1"}
+
+            def ip6_dict(ip6):
+                return {
+                    "ip": ip6.addressV6,
+                    "netmask": ip6.netmaskV6,
+                    "gateway": ip6.gatewayV6,
+                    "enabled": "1"}
+
+            mac_id = instance.mac_address.replace(':', '')
+            location = 'vm-data/networking/%s' % mac_id
+            info = {
+                'label': network['label'],
+                'gateway': network['gateway'],
+                'mac': instance.mac_address,
+                'dns': [network['dns']],
+                'ips': [ip_dict(ip) for ip in network_IPs],
+                'ip6s': [ip6_dict(ip) for ip in network_IPs]}
+            tuple_list.append((network, info))
+
+    def inject_network_info(self, vm_ref, network_info):
         """
         Generate the network info and make calls to place it into the
         xenstore and the xenstore param list
-
         """
-        vm_ref = self._get_vm_opaque_ref(instance.id)
-        logging.debug(_("injecting network info to xenstore for vm: |%s|"),
-                        vm_ref)
-        if network_info is not None:
-            for (network, mapping) in network_info:
-                self.write_to_param_xenstore(vm_ref, {location: mapping})
-                try:
-                    self.write_to_xenstore(vm_ref, location,
-                                                   mapping['location'])
-                except KeyError:
-                    # catch KeyError for domid if instance isn't running
-                    pass
-        else:
-            # TODO(tr3buchet) - this bit here when network_info is None goes
-            # away with multi-nic
-            admin_context = context.get_admin_context()
-            IPs = db.fixed_ip_get_all_by_instance(admin_context,
-                                                  instance['id'])
-            networks = db.network_get_all_by_instance(admin_context,
-                                                      instance['id'])
-            for network in networks:
-                network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+        logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
-                def ip_dict(ip):
-                    return {
-                        "ip": ip.address,
-                        "netmask": network["netmask"],
-                        "enabled": "1"}
+        # make sure we have a vm opaque ref (raises otherwise)
+        self._session.get_xenapi().VM.get_record(vm_ref)
 
-                def ip6_dict(ip6):
-                    return {
-                        "ip": ip6.addressV6,
-                        "netmask": ip6.netmaskV6,
-                        "gateway": ip6.gatewayV6,
-                        "enabled": "1"}
+        for (network, info) in network_info:
+            location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
+            self.write_to_param_xenstore(vm_ref, {location: info})
+            try:
+                self.write_to_xenstore(vm_ref, location, info)
+            except KeyError:
+                # catch KeyError for domid if instance isn't running
+                pass
 
-                mac_id = instance.mac_address.replace(':', '')
-                location = 'vm-data/networking/%s' % mac_id
-                mapping = {
-                    'label': network['label'],
-                    'gateway': network['gateway'],
-                    'mac': instance.mac_address,
-                    'dns': [network['dns']],
-                    'ips': [ip_dict(ip) for ip in network_IPs],
-                    'ip6s': [ip6_dict(ip) for ip in network_IPs]}
-
-                self.write_to_param_xenstore(vm_ref, {location: mapping})
-
-                try:
-                    self.write_to_xenstore(vm_ref, location,
-                                                   mapping['location'])
-                except KeyError:
-                    # catch KeyError for domid if instance isn't running
-                    pass
-
-            return networks
-
-    def create_vifs(self, instance, networks=None):
-        """
-        Creates vifs for an instance
-
-        """
-        vm_ref = self._get_vm_opaque_ref(instance.id)
+    def create_vifs(self, vm_ref, network_info):
+        """Creates vifs for an instance"""
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
-        # TODO(tr3buchet) - goes away with multi-nic
-        if networks is None:
-            networks = db.network_get_all_by_instance(admin_context,
-                                                      instance['id'])
-        # TODO(tr3buchet) - remove comment in multi-nic
-        # this bit here about creating the vifs will be updated
-        # in multi-nic to handle multiple IPs on the same network
-        # and multiple networks
-        # for now it works as there is only one of each
-        for network in networks:
+
+        # make sure we have a vm opaque ref (raises otherwise)
+        self._session.get_xenapi().VM.get_record(vm_ref)
+
+        device = 0
+        for (network, info) in networks:
+            mac_address = info['mac']
             bridge = network['bridge']
             network_ref = \
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
 
-            if network_ref:
-                try:
-                    device = "1" if instance._rescue else "0"
-                except AttributeError:
-                    device = "0"
-
-                VMHelper.create_vif(self._session, vm_ref, network_ref,
-                                    instance.mac_address, device)
+            VMHelper.create_vif(self._session, vm_ref, network_ref,
+                                mac_address, device)
+            device += 1
 
     def reset_network(self, instance):
-        """
-        Creates uuid arg to pass to make_agent_call and calls it.
-
-        """
+        """Creates uuid arg to pass to make_agent_call and calls it."""
         args = {'id': str(uuid.uuid4())}
         resp = self._make_agent_call('resetnetwork', instance, '', args)
 
