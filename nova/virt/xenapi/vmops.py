@@ -137,7 +137,7 @@ class VMOps(object):
             networks = db.network_get_all_by_instance(admin_context,
                                                       instance['id'])
             network_info = self._get_network_info(instance, networks, IPs)
-        self.inject_network_info(vm_ref, network_info)
+        self.inject_network_info(instance, vm_ref, network_info)
         self.create_vifs(vm_ref, network_info)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
@@ -188,7 +188,7 @@ class VMOps(object):
         timer.f = _wait_for_boot
 
         # call to reset network to configure network from xenstore
-        self.reset_network(instance)
+        self.reset_network(instance, vm_ref)
 
         return timer.start(interval=0.5, now=True)
 
@@ -724,7 +724,7 @@ class VMOps(object):
             network_info.append((network, info))
         return network_info
 
-    def inject_network_info(self, vm_ref, network_info):
+    def inject_network_info(self, instance, vm_ref, network_info):
         """
         Generate the network info and make calls to place it into the
         xenstore and the xenstore param list
@@ -738,7 +738,11 @@ class VMOps(object):
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
             self.write_to_param_xenstore(vm_ref, {location: info})
             try:
-                self.write_to_xenstore(vm_ref, location, info)
+                # TODO(tr3buchet): fix function call after refactor
+                #self.write_to_xenstore(vm_ref, location, info)
+                self._make_plugin_call('xenstore.py', 'write_record', instance,
+                                       location, {'value': json.dumps(info)},
+                                       vm_ref)
             except KeyError:
                 # catch KeyError for domid if instance isn't running
                 pass
@@ -764,8 +768,10 @@ class VMOps(object):
     def reset_network(self, instance, vm_ref):
         """Creates uuid arg to pass to make_agent_call and calls it."""
         args = {'id': str(uuid.uuid4())}
-        resp = self._make_agent_call('resetnetwork', instance, '', args,
-                                                                   vm_ref)
+        # TODO(tr3buchet): fix function call after refactor
+        #resp = self._make_agent_call('resetnetwork', instance, '', args)
+        resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
+                                                               args, vm_ref)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
@@ -806,16 +812,15 @@ class VMOps(object):
         """
         self._make_xenstore_call('delete_record', vm, path)
 
-    def _make_xenstore_call(self, method, vm, path, addl_args=None,
-                                                    vm_ref=None):
+    def _make_xenstore_call(self, method, vm, path, addl_args=None):
         """Handles calls to the xenstore xenapi plugin."""
         return self._make_plugin_call('xenstore.py', method=method, vm=vm,
-                path=path, addl_args=addl_args, vm_ref=vm_ref)
+                path=path, addl_args=addl_args)
 
-    def _make_agent_call(self, method, vm, path, addl_args=None, vm_ref=None):
+    def _make_agent_call(self, method, vm, path, addl_args=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
         return self._make_plugin_call('agent', method=method, vm=vm,
-                path=path, addl_args=addl_args, vm_ref=vm_ref)
+                path=path, addl_args=addl_args)
 
     def _make_plugin_call(self, plugin, method, vm, path, addl_args=None,
                                                           vm_ref=None):
