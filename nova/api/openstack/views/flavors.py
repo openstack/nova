@@ -35,13 +35,54 @@ class ViewBuilder(object):
     def __init__(self):
         pass
 
-    def build(self, flavor_obj):
-        raise NotImplementedError()
+    def build(self, flavor_obj, is_detail=False):
+        if is_detail:
+            flavor = self._build_detail(flavor_obj)
+        else:
+            flavor = self._build_simple(flavor_obj)
+
+        full_flavor = self._build_extra(flavor)
+
+        return full_flavor
+
+    def _build_simple(self, flavor_obj):
+        return {
+            "id": flavor_obj["flavorid"],
+            "name": flavor_obj["name"],
+        }
+
+    def _build_detail(self, flavor_obj):
+        simple = self._build_simple(flavor_obj)
+
+        detail = {
+            "ram": flavor_obj["memory_mb"],
+            "disk": flavor_obj["local_gb"],
+        }
+
+        detail.update(simple)
+
+        return detail 
+    
+    def _build_extra(self, flavor_obj):
+        return flavor_obj
 
 
 class ViewBuilder_1_1(ViewBuilder):
     def __init__(self, base_url):
         self.base_url = base_url
+
+    def _build_extra(self, flavor_obj):
+        flavor_obj["links"] = self._build_links(flavor_obj)
+        return flavor_obj
+
+    def _build_links(self, flavor_obj):
+        links = [
+            {
+                "rel": "self",
+                "href": self.generate_href(flavor_obj["id"]),
+            },
+        ]
+        return links
 
     def generate_href(self, flavor_id):
         return "%s/flavors/%s" % (self.base_url, flavor_id)
