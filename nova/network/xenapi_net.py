@@ -29,9 +29,12 @@ from nova.virt.xenapi.network_utils import NetworkHelper
 
 LOG = logging.getLogger("nova.xenapi_net")
 
+FLAGS = flags.FLAGS
+
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
     #open xenapi session
+    LOG.debug("ENTERING ensure_vlan_bridge in xenapi net")
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password

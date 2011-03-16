@@ -23,8 +23,9 @@ from nova import db
 from nova import test
 from nova import utils
 
+from nova import log as LOG
 
-def stub_out_db_instance_api(stubs):
+def stub_out_db_instance_api(stubs, injected=True):
     """ Stubs out the db API for creating Instances """
 
     INSTANCE_TYPES = {
@@ -35,6 +36,29 @@ def stub_out_db_instance_api(stubs):
         'm1.large': dict(memory_mb=8192, vcpus=4, local_gb=80, flavorid=4),
         'm1.xlarge':
             dict(memory_mb=16384, vcpus=8, local_gb=160, flavorid=5)}
+
+    flat_network_fields = {
+        'id': 'fake_flat',
+        'bridge': 'xenbr0',
+        'label': 'fake_flat_network',
+        'netmask': '255.255.255.0',
+        'gateway': '10.0.0.1',
+        'broadcast': '10.0.0.255',
+        'dns': '10.0.0.2',
+        'ra_server': None,
+        'injected': injected}
+
+    vlan_network_fields = {
+        'id': 'fake_vlan',
+        'bridge': 'br111',
+        'label': 'fake_vlan_network',
+        'netmask': '255.255.255.0',
+        'gateway': '10.0.0.1',
+        'broadcast': '10.0.0.255',
+        'dns': '10.0.0.2',
+        'ra_server': None,
+        'vlan': 111,
+        'injected': False}
 
     class FakeModel(object):
         """ Stubs out for model """
@@ -81,12 +105,23 @@ def stub_out_db_instance_api(stubs):
         return FakeModel(base_options)
 
     def fake_network_get_by_instance(context, instance_id):
-        fields = {
-            'bridge': 'xenbr0',
-            }
-        return FakeModel(fields)
+        #even instance numbers are on vlan networks
+        if instance_id % 2 == 0:
+            return FakeModel(vlan_network_fields)
+        else: 
+            return FakeModel(flat_network_fields)
+    
+    def fake_network_get_all_by_instance(context, instance_id):
+        l = []
+        #even instance numbers are on vlan networks
+        if instance_id % 2 == 0:
+            l.append(FakeModel(vlan_network_fields))
+        else: 
+            l.append(FakeModel(flat_network_fields))
+        return l
 
     stubs.Set(db, 'instance_create', fake_instance_create)
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
+    stubs.Set(db, 'network_get_all_by_instance', fake_network_get_all_by_instance)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)

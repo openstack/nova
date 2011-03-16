@@ -165,6 +165,7 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_connection_password = 'test_pass'
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
+        xenapi_fake.create_local_pifs()
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -252,6 +253,9 @@ class XenAPIVMTestCase(test.TestCase):
 
         # Check that the VM is running according to XenAPI.
         self.assertEquals(vm['power_state'], 'Running')
+        
+        # Check that VM network is consistent with nova network
+        LOG.debug("VM INFO - NETWORK:%s", vm_info)
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
                     instance_type="m1.large"):
@@ -301,13 +305,25 @@ class XenAPIVMTestCase(test.TestCase):
 
     def test_spawn_vlanmanager(self):
         self.flags(xenapi_image_service = 'glance',
-                   network_manager='nova.network.manager.VlanManager',
-                   network_driver='nova.network.xenapi_net')
+                   network_manager = 'nova.network.manager.VlanManager',
+                   network_driver = 'nova.network.xenapi_net',
+                   vlan_interface = 'fake0')
         LOG.debug("Self.network:%s",self.network)
+        LOG.debug("network driver:%s",FLAGS.network_driver)
+        fake_instance_id = 2
+        network_bk=self.network
+        #ensure we use xenapi_net driver
+        self.network = utils.import_object(FLAGS.network_manager)
+        self.network.setup_compute_network(None, fake_instance_id)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
-        pass 
+        url = FLAGS.xenapi_connection_url
+        username = FLAGS.xenapi_connection_username
+        password = FLAGS.xenapi_connection_password
+        session = xenapi_conn.XenAPISession(url, username, password)
+        
+        self.network = network_bk
     
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()

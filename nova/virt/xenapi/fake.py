@@ -61,7 +61,7 @@ from nova import log as logging
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
-            'PBD', 'VDI', 'VIF', 'VM', 'task']
+            'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
 
 _db_content = {}
 
@@ -102,7 +102,6 @@ def create_vm(name_label, status,
         'is_a_template': is_a_template,
         'is_control_domain': is_control_domain,
         })
-
 
 def destroy_vm(vm_ref):
     vm_rec = _db_content['VM'][vm_ref]
@@ -178,6 +177,12 @@ def create_task(name_label):
         })
 
 
+def create_local_pifs():
+    """Adds a PIF for each to the local database with VLAN=-1.  
+       Do this one per host."""
+    for host_ref in _db_content['host'].keys():
+        _create_local_pif(host_ref)
+
 def create_local_srs():
     """Create an SR that looks like the one created on the local disk by
     default by the XenServer installer.  Do this one per host."""
@@ -204,8 +209,18 @@ def _create_local_sr(host_ref):
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
 
+def _create_local_pif(host_ref):
+    pif_ref= _create_object('PIF', {
+        'name-label': 'Fake PIF',
+        'MAC': '00:11:22:33:44:55',
+        'physical': True,
+        'VLAN': -1,
+        'device': 'fake0',
+        'host_uuid': host_ref,
+        })
 
 def _create_object(table, obj):
+    LOG.debug("ENTERING _create_object:%s", obj)
     ref = str(uuid.uuid4())
     obj['uuid'] = str(uuid.uuid4())
     _db_content[table][ref] = obj
@@ -228,13 +243,30 @@ def _create_sr(table, obj):
     return sr_ref
 
 
+def _create_vlan(pif_ref, vlan_num, network_ref):
+    LOG.debug("ENTERING FAKE CREATE VLAN")
+    pif_rec = get_record('PIF', pif_ref)
+    vlan_pif_ref = _create_object('PIF', {
+        'name-label': 'Fake VLAN PIF',
+        'MAC': '00:11:22:33:44:55',
+        'physical': True,
+        'VLAN': vlan_num,
+        'device': pif_rec['device'],
+        'host_uuid': pif_rec['host_uuid'],
+        })
+    return _create_object('VLAN', {
+        'tagged-pif': pif_ref,
+        'untagged-pif': vlan_pif_ref,
+        'tag': vlan_num
+        })
+
+
 def get_all(table):
     return _db_content[table].keys()
 
 
 def get_all_records(table):
     return _db_content[table]
-
 
 def get_record(table, ref):
     if ref in _db_content[table]:
@@ -285,6 +317,26 @@ class SessionBase(object):
             raise Failure(['DEVICE_ALREADY_DETACHED', ref])
         rec['currently_attached'] = False
         rec['device'] = ''
+
+    def PIF_get_all_records_where(self, _1,_2):
+        # TODO (salvatore-orlando):filter table on _2 
+        return _db_content['PIF']
+
+    def VM_get_xenstore_data(self, _1, vm_ref):
+        return _db_content['VM'][vm_ref].get('xenstore_data', '')
+    
+    def VM_remove_from_xenstore_data(self, _1, vm_ref, key):
+        db_ref = _db_content['VM'][vm_ref]
+        if not 'xenstore_data' in db_ref:
+            return
+        db_ref['xenstore_data'][key] = None
+    
+    
+    def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
+        db_ref = _db_content['VM'][vm_ref]
+        if not 'xenstore_data' in db_ref:
+            db_ref['xenstore_data'] = {}
+        db_ref['xenstore_data'][key] = value
 
     def host_compute_free_memory(self, _1, ref):
         #Always return 12GB available
@@ -431,12 +483,17 @@ class SessionBase(object):
     def _create(self, name, params):
         self._check_session(params)
         is_sr_create = name == 'SR.create'
+        LOG.debug("NAME:%s",name)
+        is_vlan_create = name == 'VLAN.create'
         # Storage Repositories have a different API
-        expected = is_sr_create and 10 or 2
+        expected = is_sr_create and 10 or is_vlan_create and 4 or 2
         self._check_arg_count(params, expected)
         (cls, _) = name.split('.')
         ref = is_sr_create and \
-            _create_sr(cls, params) or _create_object(cls, params[1])
+              _create_sr(cls, params) or \
+              is_vlan_create and \
+              _create_vlan(params[1],params[2],params[3]) or \
+              _create_object(cls, params[1])
 
         # Call hook to provide any fixups needed (ex. creating backrefs)
         after_hook = 'after_%s_create' % cls

@@ -772,7 +772,7 @@ class VMOps(object):
             if network_ref:
                 try:
                     device = "1" if instance._rescue else "0"
-                except AttributeError:
+                except (AttributeError, KeyError):
                     device = "0"
 
                 VMHelper.create_vif(
