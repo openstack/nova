@@ -16,13 +16,17 @@
 #    under the License.
 
 import json
+import stubout
 import unittest
 import webob
 import os.path
 
+from nova import context
 from nova import flags
 from nova.api import openstack
 from nova.api.openstack import extensions
+from nova.api.openstack import flavors
+from nova.tests.api.openstack import fakes
 import nova.wsgi
 
 FLAGS = flags.FLAGS
@@ -39,21 +43,31 @@ class StubController(nova.wsgi.Controller):
 
 class StubExtensionManager(object):
 
-    def __init__(self, resource):
-        self.resource = resource
+    def __init__(self, resource_ext=None, action_ext=None, response_ext=None):
+        self.resource_ext = resource_ext
+        self.action_ext = action_ext
+        self.response_ext = response_ext
 
     def get_resources(self):
-        resources = []
-        if self.resource:
-            resources.append(self.resource)
-        return resources
+        resource_exts = []
+        if self.resource_ext:
+            resource_exts.append(self.resource_ext)
+        return resource_exts
 
     def get_actions(self):
-        actions = []
-        return actions
+        action_exts = []
+        if self.action_ext:
+            action_exts.append(self.action_ext)
+        return action_exts
+
+    def get_response_extensions(self):
+        response_exts = []
+        if self.response_ext:
+            response_exts.append(self.response_ext)
+        return response_exts
 
 
-class ExtensionResourceTest(unittest.TestCase):
+class ResourceExtensionTest(unittest.TestCase):
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
@@ -65,7 +79,7 @@ class ExtensionResourceTest(unittest.TestCase):
 
     def test_get_resources(self):
         response_body = "Buy more widgets!"
-        widgets = extensions.ExtensionResource('widget', 'widgets',
+        widgets = extensions.ResourceExtension('widgets',
                                                StubController(response_body))
         manager = StubExtensionManager(widgets)
         app = openstack.APIRouter()
@@ -77,7 +91,7 @@ class ExtensionResourceTest(unittest.TestCase):
 
     def test_get_resources_with_controller(self):
         response_body = "Buy more widgets!"
-        widgets = extensions.ExtensionResource('widget', 'widgets',
+        widgets = extensions.ResourceExtension('widgets',
                                                StubController(response_body))
         manager = StubExtensionManager(widgets)
         app = openstack.APIRouter()
@@ -103,40 +117,73 @@ class ExtensionManagerTest(unittest.TestCase):
         self.assertEqual("Buy more widgets!", response.body)
 
 
-class ExtendedActionTest(unittest.TestCase):
+class ActionExtensionTest(unittest.TestCase):
 
     def setUp(self):
         FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
                                                     "extensions")
 
-    def test_extended_action(self):
+    def _send_server_action_request(self, url, body):
         app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
-        body = dict(add_widget=dict(name="test"))
-        request = webob.Request.blank("/servers/1/action")
+        request = webob.Request.blank(url)
         request.method = 'POST'
         request.content_type = 'application/json'
         request.body = json.dumps(body)
         response = request.get_response(ext_midware)
+        return response
+
+    def test_extended_action(self):
+        body = dict(add_widget=dict(name="test"))
+        response = self._send_server_action_request("/servers/1/action", body)
         self.assertEqual(200, response.status_int)
         self.assertEqual("Widget Added.", response.body)
 
+        body = dict(delete_widget=dict(name="test"))
+        response = self._send_server_action_request("/servers/1/action", body)
+        self.assertEqual(200, response.status_int)
+        self.assertEqual("Widget Deleted.", response.body)
+
     def test_invalid_action_body(self):
-        app = openstack.APIRouter()
-        ext_midware = extensions.ExtensionMiddleware(app)
         body = dict(blah=dict(name="test"))  # Doesn't exist
-        request = webob.Request.blank("/servers/1/action")
-        request.method = 'POST'
-        request.content_type = 'application/json'
-        request.body = json.dumps(body)
-        response = request.get_response(ext_midware)
+        response = self._send_server_action_request("/servers/1/action", body)
         self.assertEqual(501, response.status_int)
 
     def test_invalid_action(self):
-        app = openstack.APIRouter()
-        ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/asdf/1/action")
-        request.method = 'POST'
-        request.content_type = 'application/json'
-        response = request.get_response(ext_midware)
+        body = dict(blah=dict(name="test"))
+        response = self._send_server_action_request("/asdf/1/action", body)
         self.assertEqual(404, response.status_int)
+
+
+class ResponseExtensionTest(unittest.TestCase):
+
+    def setUp(self):
+        super(ResponseExtensionTest, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.reset_fake_data()
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
+        self.context = context.get_admin_context()
+
+    def test_get_resources(self):
+
+        test_resp = "Buy more widgets!"
+
+        def _resp_handler(res):
+            # only handle JSON responses
+            data = json.loads(res.body)
+            data['flavor']['widgets'] = test_resp
+            return data
+
+        widgets = extensions.ResponseExtension('/v1.0/flavors/:(id)', 'GET',
+                                                _resp_handler)
+        manager = StubExtensionManager(None, None, widgets)
+        app = fakes.wsgi_app()
+        ext_midware = extensions.ExtensionMiddleware(app, manager)
+        request = webob.Request.blank("/v1.0/flavors/1")
+        response = request.get_response(ext_midware)
+        self.assertEqual(200, response.status_int)
+        response_data = json.loads(response.body)
+        self.assertEqual(test_resp, response_data['flavor']['widgets'])

@@ -33,22 +33,41 @@ LOG = logging.getLogger('extensions')
 FLAGS = flags.FLAGS
 
 
-class ExtensionActionController(wsgi.Controller):
+class ActionExtensionController(wsgi.Controller):
 
-    def __init__(self, application, action_name, handler):
+    def __init__(self, application):
 
         self.application = application
-        self.action_name = action_name
-        self.handler = handler
+        self.action_handlers = {}
+
+    def add_action(self, action_name, handler):
+        self.action_handlers[action_name] = handler
 
     def action(self, req, id):
 
         input_dict = self._deserialize(req.body, req.get_content_type())
-        if self.action_name in input_dict:
-            return self.handler(input_dict, req, id)
+        for action_name, handler in self.action_handlers.iteritems():
+            if action_name in input_dict:
+                return handler(input_dict, req, id)
         # no action handler found (bump to downstream application)
         res = self.application
         return res
+
+
+class ResponseExtensionController(wsgi.Controller):
+
+    def __init__(self, application):
+        self.application = application
+        self.handlers = []
+
+    def add_handler(self, handler):
+        self.handlers.append(handler)
+
+    def process(self, req, *args, **kwargs):
+        res = req.get_response(self.application)
+        # currently response handlers are un-ordered
+        for handler in self.handlers:
+            return handler(res)
 
 
 class ExtensionMiddleware(wsgi.Middleware):
@@ -62,32 +81,79 @@ class ExtensionMiddleware(wsgi.Middleware):
             return cls(app, **local_config)
         return _factory
 
+    def _actions_by_collection(self, application, ext_mgr):
+        """
+        Return a dict of ActionExtensionController objects by collection
+        """
+        action_controllers = {}
+        for action in ext_mgr.get_actions():
+            if not action.collection in action_controllers.keys():
+                controller = ActionExtensionController(application)
+                action_controllers[action.collection] = controller
+        return action_controllers
+
+    def _responses_by_collection(self, application, ext_mgr):
+        """
+        Return a dict of ResponseExtensionController objects by collection
+        """
+        response_ext_controllers = {}
+        for resp_ext in ext_mgr.get_response_extensions():
+            if not resp_ext.url_route in response_ext_controllers.keys():
+                controller = ResponseExtensionController(application)
+                response_ext_controllers[resp_ext.url_route] = controller
+        return response_ext_controllers
+
     def __init__(self, application, ext_mgr=None):
-        mapper = routes.Mapper()
 
         if ext_mgr is None:
             ext_mgr = ExtensionManager(FLAGS.osapi_extensions_path)
+        self.ext_mgr = ext_mgr
+
+        mapper = routes.Mapper()
 
         # extended resources
         for resource in ext_mgr.get_resources():
-            mapper.resource(resource.member, resource.collection,
+            LOG.debug(_('Extended resource: %s'),
+                        resource.collection)
+            mapper.resource(resource.collection, resource.collection,
                             controller=resource.controller,
                             collection=resource.collection_actions,
                             member=resource.member_actions,
                             parent_resource=resource.parent)
 
         # extended actions
+        action_controllers = self._actions_by_collection(application, ext_mgr)
         for action in ext_mgr.get_actions():
-            controller = ExtensionActionController(application, action.name,
-                                                    action.handler)
-            mapper.connect("/%s/{id}/action.:(format)" % action.collection,
+            LOG.debug(_('Extended collection/action: %s/%s'),
+                        action.collection,
+                        action.action_name)
+            controller = action_controllers[action.collection]
+            controller.add_action(action.action_name, action.handler)
+
+            mapper.connect("/%s/:(id)/action.:(format)" % action.collection,
                             action='action',
                             controller=controller,
                             conditions=dict(method=['POST']))
-            mapper.connect("/%s/{id}/action" % action.collection,
+            mapper.connect("/%s/:(id)/action" % action.collection,
                             action='action',
                             controller=controller,
                             conditions=dict(method=['POST']))
+
+        # extended responses
+        resp_controllers = self._responses_by_collection(application, ext_mgr)
+        for response_ext in ext_mgr.get_response_extensions():
+            LOG.debug(_('Extended response: %s'), response_ext.url_route)
+            controller = resp_controllers[response_ext.url_route]
+            controller.add_handler(response_ext.handler)
+            mapper.connect(response_ext.url_route + '.:(format)',
+                            action='process',
+                            controller=controller,
+                            conditions=response_ext.conditions)
+
+            mapper.connect(response_ext.url_route,
+                            action='process',
+                            controller=controller,
+                            conditions=response_ext.conditions)
 
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           mapper)
@@ -106,9 +172,8 @@ class ExtensionMiddleware(wsgi.Middleware):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def _dispatch(req):
         """
-        Called by self._router after matching the incoming request to a route
-        and putting the information into req.environ.  Either returns the
-        routed WSGI app's response or defers to the extended application.
+        Returns the routed WSGI app's response or defers to the extended
+        application.
         """
         match = req.environ['wsgiorg.routing_args'][1]
         if not match:
@@ -128,7 +193,7 @@ class ExtensionManager(object):
 
     def get_resources(self):
         """
-        returns a list of ExtensionResource objects
+        returns a list of ResourceExtension objects
         """
         resources = []
         for ext in self.extensions:
@@ -137,12 +202,21 @@ class ExtensionManager(object):
 
     def get_actions(self):
         """
-        returns a list of ExtensionAction objects
+        returns a list of ActionExtension objects
         """
         actions = []
         for ext in self.extensions:
             actions.extend(ext.get_actions())
         return actions
+
+    def get_response_extensions(self):
+        """
+        returns a list of ResponseExtension objects
+        """
+        response_exts = []
+        for ext in self.extensions:
+            response_exts.extend(ext.get_response_extensions())
+        return response_exts
 
     def _load_extensions(self):
         """
@@ -160,24 +234,42 @@ class ExtensionManager(object):
             ext_path = os.path.join(self.path, f)
             if file_ext.lower() == '.py':
                 mod = imp.load_source(mod_name, ext_path)
-                ext_name = mod_name[0].upper() + mod_name[1:] + 'Extension'
+                ext_name = mod_name[0].upper() + mod_name[1:]
                 self.extensions.append(getattr(mod, ext_name)())
 
 
-class ExtensionAction(object):
+class ResponseExtension(object):
+    """
+    ResponseExtension objects can be used to add data to responses from
+    core nova OpenStack API controllers.
+    """
 
-    def __init__(self, member, collection, name, handler):
-        self.member = member
-        self.collection = collection
-        self.name = name
+    def __init__(self, url_route, method, handler):
+        self.url_route = url_route
+        self.conditions = dict(method=[method])
         self.handler = handler
 
 
-class ExtensionResource(object):
+class ActionExtension(object):
+    """
+    ActionExtension objects can be used to add custom actions to core nova
+    nova OpenStack API controllers.
+    """
 
-    def __init__(self, member, collection, controller,
-                 parent=None, collection_actions={}, member_actions={}):
-        self.member = member
+    def __init__(self, collection, action_name, handler):
+        self.collection = collection
+        self.action_name = action_name
+        self.handler = handler
+
+
+class ResourceExtension(object):
+    """
+    ResourceExtension objects can be used to add add top level resources
+    to the OpenStack API in nova.
+    """
+
+    def __init__(self, collection, controller, parent=None,
+                 collection_actions={}, member_actions={}):
         self.collection = collection
         self.controller = controller
         self.parent = parent
