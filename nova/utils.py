@@ -262,13 +262,25 @@ def generate_mac():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
-def generate_password(length=20):
-    """Generate a random sequence of letters and digits
-    to be used as a password. Note that this is not intended
-    to represent the ultimate in security.
+# Default symbols to use for passwords. Avoids visually confusing characters.
+# ~6 bits per symbol
+DEFAULT_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0,1
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ"  # Removed: I, O
+                            "abcdefghijkmnopqrstuvwxyz")  # Removed: l
+
+
+# ~5 bits per symbol
+EASIER_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0, 1
+                           "ABCDEFGHJKLMNPQRSTUVWXYZ")  # Removed: I, O
+
+
+def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
+    """Generate a random password from the supplied symbols.
+
+    Believed to be reasonably secure (with a reasonable password length!)
     """
-    chrs = string.letters + string.digits
-    return "".join([random.choice(chrs) for i in xrange(length)])
+    r = random.SystemRandom()
+    return "".join([r.choice(symbols) for _i in xrange(length)])
 
 
 def last_octet(address):

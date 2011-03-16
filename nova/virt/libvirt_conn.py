@@ -502,7 +502,7 @@ class LibvirtConnection(object):
                 cmd = 'netcat', '0.0.0.0', port, '-w', '1'
                 try:
                     stdout, stderr = utils.execute(*cmd, process_input='')
-                except ProcessExecutionError:
+                except exception.ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
