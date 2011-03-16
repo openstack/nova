@@ -118,7 +118,7 @@ class ExtensionMiddleware(wsgi.Middleware):
             return cls(app, **local_config)
         return _factory
 
-    def _actions_by_collection(self, application, ext_mgr):
+    def _action_ext_controllers(self, application, ext_mgr, mapper):
         """
         Return a dict of ActionExtensionController objects by collection
         """
@@ -126,18 +126,38 @@ class ExtensionMiddleware(wsgi.Middleware):
         for action in ext_mgr.get_actions():
             if not action.collection in action_controllers.keys():
                 controller = ActionExtensionController(application)
+                mapper.connect("/%s/:(id)/action.:(format)" %
+                                action.collection,
+                                action='action',
+                                controller=controller,
+                                conditions=dict(method=['POST']))
+                mapper.connect("/%s/:(id)/action" % action.collection,
+                                action='action',
+                                controller=controller,
+                                conditions=dict(method=['POST']))
                 action_controllers[action.collection] = controller
+
         return action_controllers
 
-    def _responses_by_collection(self, application, ext_mgr):
+    def _response_ext_controllers(self, application, ext_mgr, mapper):
         """
         Return a dict of ResponseExtensionController objects by collection
         """
         response_ext_controllers = {}
         for resp_ext in ext_mgr.get_response_extensions():
-            if not resp_ext.url_route in response_ext_controllers.keys():
+            if not resp_ext.key in response_ext_controllers.keys():
                 controller = ResponseExtensionController(application)
-                response_ext_controllers[resp_ext.url_route] = controller
+                mapper.connect(resp_ext.url_route + '.:(format)',
+                                action='process',
+                                controller=controller,
+                                conditions=resp_ext.conditions)
+
+                mapper.connect(resp_ext.url_route,
+                                action='process',
+                                controller=controller,
+                                conditions=resp_ext.conditions)
+                response_ext_controllers[resp_ext.key] = controller
+
         return response_ext_controllers
 
     def __init__(self, application, ext_mgr=None):
@@ -159,38 +179,20 @@ class ExtensionMiddleware(wsgi.Middleware):
                             parent_resource=resource.parent)
 
         # extended actions
-        action_controllers = self._actions_by_collection(application, ext_mgr)
+        action_controllers = self._action_ext_controllers(application, ext_mgr,
+                                                        mapper)
         for action in ext_mgr.get_actions():
-            LOG.debug(_('Extended collection/action: %s/%s'),
-                        action.collection,
-                        action.action_name)
+            LOG.debug(_('Extended action: %s'), action.action_name)
             controller = action_controllers[action.collection]
             controller.add_action(action.action_name, action.handler)
 
-            mapper.connect("/%s/:(id)/action.:(format)" % action.collection,
-                            action='action',
-                            controller=controller,
-                            conditions=dict(method=['POST']))
-            mapper.connect("/%s/:(id)/action" % action.collection,
-                            action='action',
-                            controller=controller,
-                            conditions=dict(method=['POST']))
-
         # extended responses
-        resp_controllers = self._responses_by_collection(application, ext_mgr)
+        resp_controllers = self._response_ext_controllers(application, ext_mgr,
+                                                            mapper)
         for response_ext in ext_mgr.get_response_extensions():
-            LOG.debug(_('Extended response: %s'), response_ext.url_route)
-            controller = resp_controllers[response_ext.url_route]
+            LOG.debug(_('Extended response: %s'), response_ext.key)
+            controller = resp_controllers[response_ext.key]
             controller.add_handler(response_ext.handler)
-            mapper.connect(response_ext.url_route + '.:(format)',
-                            action='process',
-                            controller=controller,
-                            conditions=response_ext.conditions)
-
-            mapper.connect(response_ext.url_route,
-                            action='process',
-                            controller=controller,
-                            conditions=response_ext.conditions)
 
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           mapper)
@@ -322,10 +324,11 @@ class ResponseExtension(object):
     core nova OpenStack API controllers.
     """
 
-    def __init__(self, url_route, method, handler):
+    def __init__(self, method, url_route, handler):
         self.url_route = url_route
-        self.conditions = dict(method=[method])
         self.handler = handler
+        self.conditions = dict(method=[method])
+        self.key = "%s-%s" % (method, url_route)
 
 
 class ActionExtension(object):

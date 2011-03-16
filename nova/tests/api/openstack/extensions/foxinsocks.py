@@ -56,7 +56,7 @@ class Foxinsocks(object):
             data['flavor']['googoose'] = "Gooey goo for chewy chewing!"
             return data
 
-        resp_ext = extensions.ResponseExtension('/v1.0/flavors/:(id)', 'GET',
+        resp_ext = extensions.ResponseExtension('GET', '/flavors/:(id)',
                                                 _resp_handler)
         response_exts.append(resp_ext)
         return response_exts

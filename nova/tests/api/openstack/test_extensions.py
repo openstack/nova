@@ -31,6 +31,8 @@ import nova.wsgi
 
 FLAGS = flags.FLAGS
 
+response_body = "Try to say this Mr. Knox, sir..."
+
 
 class StubController(nova.wsgi.Controller):
 
@@ -92,10 +94,8 @@ class ExtensionControllerTest(unittest.TestCase):
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
 
-response_body = "Try to say this Mr. Knox, sir..."
 
 class ResourceExtensionTest(unittest.TestCase):
-
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
@@ -205,7 +205,8 @@ class ResponseExtensionTest(unittest.TestCase):
             data['flavor']['googoose'] = test_resp
             return data
 
-        resp_ext = extensions.ResponseExtension('/v1.0/flavors/:(id)', 'GET',
+        resp_ext = extensions.ResponseExtension('GET',
+                                                '/v1.0/flavors/:(id)',
                                                 _resp_handler)
         manager = StubExtensionManager(None, None, resp_ext)
         app = fakes.wsgi_app()
