@@ -83,8 +83,7 @@ networks = Table('networks', meta,
         Column(
         'label',
         String(length=255, convert_unicode=False, assert_unicode=None,
-               unicode_error=None, _warn_on_bytestring=False))
-        )
+               unicode_error=None, _warn_on_bytestring=False)))
 
 fixed_ips = Table('fixed_ips', meta,
         Column('created_at', DateTime(timezone=False)),
