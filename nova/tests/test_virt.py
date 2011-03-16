@@ -256,7 +256,7 @@ class LibvirtConnTestCase(test.TestCase):
                         'uml': ('uml:///system',
                              [(lambda t: t.find('.').get('type'), 'uml'),
                               (lambda t: t.find('./os/type').text, 'uml')]),
-                        'lxc': ('lxc://;',
+                        'lxc': ('lxc:///',
                             [(lambda t: t.find('.').get('type'), 'lxc'),
                             (lambda t: t.find('./os/type').text, 'exe')]),
                         'xen': ('xen:///',
