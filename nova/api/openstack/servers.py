@@ -57,10 +57,11 @@ class Controller(wsgi.Controller):
     def ips(self, req, id):
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            builder = addresses_views.get_view_builder(req)
-            return builder.build(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
+        builder = addresses_views.get_view_builder(req)
+        return builder.build(instance)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
