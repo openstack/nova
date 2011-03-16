@@ -136,6 +136,7 @@ class VMOps(object):
         """Spawn a new instance"""
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
+        instance_name = instance.name
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
