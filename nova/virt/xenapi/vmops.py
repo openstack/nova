@@ -761,10 +761,11 @@ class VMOps(object):
                                 mac_address, device)
             device += 1
 
-    def reset_network(self, instance):
+    def reset_network(self, instance, vm_ref):
         """Creates uuid arg to pass to make_agent_call and calls it."""
         args = {'id': str(uuid.uuid4())}
-        resp = self._make_agent_call('resetnetwork', instance, '', args)
+        resp = self._make_agent_call('resetnetwork', instance, '', args,
+                                                                   vm_ref)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
@@ -805,25 +806,27 @@ class VMOps(object):
         """
         self._make_xenstore_call('delete_record', vm, path)
 
-    def _make_xenstore_call(self, method, vm, path, addl_args={}):
+    def _make_xenstore_call(self, method, vm, path, addl_args=None,
+                                                    vm_ref=None):
         """Handles calls to the xenstore xenapi plugin."""
         return self._make_plugin_call('xenstore.py', method=method, vm=vm,
-                path=path, addl_args=addl_args)
+                path=path, addl_args=addl_args, vm_ref=vm_ref)
 
-    def _make_agent_call(self, method, vm, path, addl_args={}):
+    def _make_agent_call(self, method, vm, path, addl_args=None, vm_ref=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
         return self._make_plugin_call('agent', method=method, vm=vm,
-                path=path, addl_args=addl_args)
+                path=path, addl_args=addl_args, vm_ref=vm_ref)
 
-    def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
+    def _make_plugin_call(self, plugin, method, vm, path, addl_args=None,
+                                                          vm_ref=None):
         """Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
         instance_id = vm.id
-        vm_ref = self._get_vm_opaque_ref(vm)
+        vm_ref = vm_ref or self._get_vm_opaque_ref(vm)
         vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
         args = {'dom_id': vm_rec['domid'], 'path': path}
-        args.update(addl_args)
+        args.update(addl_args or {})
         try:
             task = self._session.async_call_plugin(plugin, method, args)
             ret = self._session.wait_for_task(task, instance_id)
