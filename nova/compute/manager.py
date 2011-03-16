@@ -458,7 +458,7 @@ class ComputeManager(manager.Manager):
 
         #Just roll back the record. There's no need to resize down since
         #the 'old' VM already has the preferred attributes
-        self.db.instance_update(context,
+        self.db.instance_update(context, instance_id
            dict(memory_mb=instance_type['memory_mb'],
                 vcpus=instance_type['vcpus'],
                 local_gb=instance_type['local_gb']))
@@ -542,7 +542,8 @@ class ComputeManager(manager.Manager):
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['new_flavor_id'])
         self.db.instance_update(context, instance_id,
-               dict(memory_mb=instance_type['memory_mb'],
+               dict(instance_type=instance_type['name'],
+                    memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))
 
