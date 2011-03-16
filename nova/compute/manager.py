@@ -458,7 +458,7 @@ class ComputeManager(manager.Manager):
 
         #Just roll back the record. There's no need to resize down since
         #the 'old' VM already has the preferred attributes
-        self.db.instance_update(context, instance_id
+        self.db.instance_update(context, instance_id,
            dict(memory_mb=instance_type['memory_mb'],
                 vcpus=instance_type['vcpus'],
                 local_gb=instance_type['local_gb']))
