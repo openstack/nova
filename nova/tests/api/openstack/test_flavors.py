@@ -39,9 +39,10 @@ def stub_flavor(flavorid, name, memory_mb="256", local_gb="10"):
 def return_instance_type_by_flavor_id(context, flavorid):
     return stub_flavor(flavorid, "flavor %s" % (flavorid,))
 
+
 def return_instance_types(context, num=2):
     instance_types = {}
-    for i in xrange(1,num+1):
+    for i in xrange(1, num + 1):
         name = "flavor %s" % (i,)
         instance_types[name] = stub_flavor(i, name)
     return instance_types
@@ -103,7 +104,6 @@ class FlavorsTest(test.TestCase):
             },
         ]
         self.assertEqual(flavors, expected)
-        
 
     def test_get_flavor_by_id(self):
         req = webob.Request.blank('/v1.0/flavors/12')
