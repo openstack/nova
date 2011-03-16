@@ -72,7 +72,7 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def create_disk(self, instance):
+    def _create_disk(self, instance):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
@@ -81,11 +81,11 @@ class VMOps(object):
         return vdi_uuid
 
     def spawn(self, instance):
-        vdi_uuid = self.create_disk(instance)
-        self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
+        vdi_uuid = self._create_disk(instance)
+        vm_ref = self._create_vm(instance, vdi_uuid)
+        self._spawn(instance, vm_ref)
 
-    def _spawn_with_disk(self, instance, vdi_uuid):
-        """Create VM instance"""
+    def _create_vm(self, instance, vdi_uuid):
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is not None:
@@ -130,7 +130,10 @@ class VMOps(object):
         # inject_network_info and create vifs
         networks = self.inject_network_info(instance)
         self.create_vifs(instance, networks)
+        return vm_ref
 
+    def _spawn(self, instance, vm_ref):
+        """Spawn a new instance"""
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
@@ -364,16 +367,14 @@ class VMOps(object):
         """Resize a running instance by changing it's RAM and disk size """
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
+        #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
         new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
         LOG.debug(_("Resizing VDI %s for instance %s. Expanding to %s megs") % (vdi_uuid,
                 instance.name, new_disk_size))
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
-        #TODO(mdietz): this will need to be adjusted for swap later
-        task = self._session.call_xenapi('VDI.resize_online', vdi_ref,
-                new_disk_size)
-        self._session.wait_for_task(task, instance.id)
+        self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
         LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):

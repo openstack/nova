@@ -168,8 +168,9 @@ class XenAPIConnection(object):
         """Completes a resize, turning on the migrated instance"""
         vdi_uuid = self._vmops.attach_disk(instance, disk_info['base_copy'],
                 disk_info['cow'])
+        self._vmops._create_vm(instance, vdi_uuid)
         self._vmops.resize_instance(instance, vdi_uuid)
-        self._vmops._spawn_with_disk(instance, vdi_uuid)
+        self._vmops._spawn_with_disk(instance)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
