@@ -104,7 +104,7 @@ class GlanceImageService(service.BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        LOG.debug(_("Creating image in Glance. Metdata passed in %s"),
+        LOG.debug(_("Creating image in Glance. Metadata passed in %s"),
                   metadata)
         meta = self._translate_from_image_service_to_glance(metadata)
         LOG.debug(_("Metadata after formatting for Glance %s"), meta)
