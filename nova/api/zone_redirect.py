@@ -28,6 +28,7 @@ import urllib
 from nova import exception
 from nova import log as logging
 from nova import wsgi
+from nova.scheduler import api
 
 import novaclient.client as client
 import novaclient.exceptions as osexceptions
@@ -39,6 +40,43 @@ except ImportError:
 
 
 LOG = logging.getLogger('server')
+
+
+class RequestForwarder(api.ChildZoneHelper):
+
+    def __init__(self, resource, method, body):
+        self.resource = resource
+        self.method = method
+        self.body = body
+    
+    def process(self, client, zone):
+        api_url = zone.api_url
+        LOG.debug(_("Zone redirect to: %(api_url)s, " % locals()))
+        try:
+            if self.method == 'GET':
+                response, body = client.get(self.resource, body=self.body)
+            elif self.method == 'POST':
+                response, body = client.post(self.resource, body=self.body)
+            elif self.method == 'PUT':
+                response, body = client.put(self.resource, body=self.body)
+            elif self.method == 'DELETE':
+                response, body = client.delete(self.resource, body=self.body)
+        except osexceptions.OpenStackException, e:
+            LOG.info(_("Zone returned error: %s ('%s', '%s')"),
+                                e.code, e.message, e.details)
+            res = webob.Response()
+            res.status = "404"
+            return res
+
+        status = response.status
+        LOG.debug(_("Zone %(api_url)s response: "
+                                "%(response)s [%(status)s]/ %(body)s") %
+                                    locals())
+        res = webob.Response()
+        res.status = response['status']
+        res.content_type = response['content-type']
+        res.body = json.dumps(body)
+        return res
 
 
 class ZoneRedirectMiddleware(wsgi.Middleware):
@@ -57,10 +95,8 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
 
             # Todo(sandy): This only works for OpenStack API currently.
             # Needs to be broken out into a driver. 
-            new_req = req.copy()
-
             scheme, netloc, path, query, frag = \
-                                    urlparse.urlsplit(new_req.path_qs)
+                                    urlparse.urlsplit(req.path_qs)
             query = urlparse.parse_qsl(query)
             query = [(key, value) for key, value in query if key != 'fresh']
             query = urllib.urlencode(query)
@@ -69,38 +105,11 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
             m = re.search('/v\d+\.\d+/(.+)', url)
             resource = m.group(1)
 
-            for zone in e.zones:
-                LOG.debug(_("Zone redirect to:[url:%(api_url)s, "
-                                                "username:%(username)s]"
-                            % dict(api_url=zone.api_url,
-                                            username=zone.username)))
-
-                nova = client.OpenStackClient(zone.username, zone.password,
-                                                    zone.api_url)
-                nova.authenticate()
-                try:
-                    if req.method == 'GET':
-                        response, body = nova.get(resource, body=new_req.body)
-                    elif req.method == 'POST':
-                        response, body = nova.post(resource, body=new_req.body)
-                    elif req.method == 'PUT':
-                        response, body = nova.put(resource, body=new_req.body)
-                    elif req.method == 'DELETE':
-                        response, body = nova.delete(resource,
-                                                            body=new_req.body)
-                except osexceptions.OpenStackException, e:
-                    LOG.info(_("Zone returned error: %s ('%s', '%s')"),
-                                        e.code, e.message, e.details)
-                    continue
-
-                LOG.debug(_("Zone Response: %s [%s]/ %s"), response,
-                                                        response.status, body)
-                if response.status == 200:
-                    res = webob.Response()
-                    res.status = response['status']
-                    res.content_type = response['content-type']
-                    res.body = json.dumps(body)
-                    return res
+            forwarder = RequestForwarder(resource, req.method, req.body)
+            for result in forwarder.start(e.zones):
+                # Todo(sandy): We need to aggregate multiple successes.
+                if result.status_int == 200:
+                    return result
 
             LOG.debug(_("Zone Redirect Middleware returning 404 ..."))
             res = webob.Response()

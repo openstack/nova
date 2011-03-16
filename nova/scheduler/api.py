@@ -23,6 +23,10 @@ from nova import flags
 from nova import log as logging
 from nova import rpc
 
+import novaclient.client as client
+
+from eventlet import greenpool
+
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.api')
 
@@ -76,6 +80,8 @@ class API(object):
         
     @classmethod
     def get_instance_or_reroute(cls, context, instance_id):
+        """Return an instance from the db or throw a ZoneRouteException
+           if not found."""
         try:
             instance = db.instance_get(context, instance_id)
             return instance
@@ -88,12 +94,30 @@ class API(object):
         zones = db.zone_get_all(context)
         raise exception.ZoneRouteException(zones)
 
-    @classmethod
-    def get_queue_for_instance(cls, context, service, instance_id):
-        instance = db.instance_get(context, instance_id)
-        zone = db.get_zone(instance.zone.id)
-        if cls._is_current_zone(zone):
-            return db.queue_get_for(context, service, instance['host'])
 
-        # Throw a reroute Exception for the middleware to pick up. 
-        raise exception.ZoneRouteException(zone)
+def _wrap_method(function, self):
+    def _wrap(*args, **kwargs):
+        return function(self, *args, **kwargs)
+    return _wrap
+
+
+def _process(self, zone):
+    nova = client.OpenStackClient(zone.username, zone.password,
+                                        zone.api_url)
+    nova.authenticate()
+    return self.process(nova, zone)
+   
+
+class ChildZoneHelper(object):
+    """Delegate a call to a set of Child Zones and wait for their
+       responses. Could be used for Zone Redirect or by the Scheduler
+       plug-ins to query the children."""
+
+    def start(self, zone_list):
+        self.green_pool = greenpool.GreenPool()
+        return [ result for result in self.green_pool.imap(
+                        _wrap_method(_process, self), zone_list)]
+  
+    def process(self, client, zone):
+        """Derived class must override."""
+        pass

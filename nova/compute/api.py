@@ -385,9 +385,7 @@ class API(base.Base):
         if not host:
             instance = self.get(context, instance_id)
             host = instance['host']
-        #queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        queue = self.scheduler_api.get_queue_for_instance(context,
-                                            FLAGS.compute_topic, host)
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
         rpc.cast(context, queue, kwargs)
@@ -406,9 +404,7 @@ class API(base.Base):
         if not host:
             instance = self.get(context, instance_id)
             host = instance["host"]
-        #queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        queue = self.scheduler_api.get_queue_for_instance(context,
-                                                FLAGS.compute_topic, host)
+        queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
         return rpc.call(context, queue, kwargs)

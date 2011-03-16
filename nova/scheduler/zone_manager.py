@@ -104,7 +104,7 @@ class ZoneManager(object):
     """Keeps the zone states updated."""
     def __init__(self):
         self.last_zone_db_check = datetime.min
-        self.zone_states = {}
+        self.zone_states = {}  # { <zone_id> : ZoneState }
         self.service_states = {}  # { <service> : { <host> : { cap k : v }}}
         self.green_pool = greenpool.GreenPool()
 
