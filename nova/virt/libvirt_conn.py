@@ -502,7 +502,7 @@ class LibvirtConnection(object):
                 cmd = 'netcat', '0.0.0.0', port, '-w', '1'
                 try:
                     stdout, stderr = utils.execute(*cmd, process_input='')
-                except ProcessExecutionError:
+                except exception.ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
@@ -1597,6 +1597,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
+        self.iptables.ipv6['filter'].add_chain('sg-fallback')
+        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""

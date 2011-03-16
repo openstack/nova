@@ -85,10 +85,17 @@ def wsgi_app(inner_application=None):
     return mapper
 
 
-def stub_out_key_pair_funcs(stubs):
+def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+
+    def no_key_pair(context, user_id):
+        return []
+
+    if have_key_pair:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+    else:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_image_service(stubs):
