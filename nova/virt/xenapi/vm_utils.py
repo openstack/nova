@@ -140,8 +140,7 @@ class VMHelper(HelperBase):
             'VCPUs_at_startup': vcpus,
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
-            'xenstore_data': {},
-            }
+            'xenstore_data': {}}
 
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode

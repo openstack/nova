@@ -572,7 +572,7 @@ class VmCommands(object):
         """
 
         ctxt = context.get_admin_context()
-        instance_id = ec2_id_to_id(ec2_id)
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
 
         if FLAGS.connection_type != 'libvirt':
             msg = _('Only KVM is supported for now. Sorry!')

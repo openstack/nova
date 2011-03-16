@@ -360,19 +360,19 @@ class LibvirtConnection(object):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.APIError("pause not supported for libvirt.")
+        raise exception.ApiError("pause not supported for libvirt.")
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.APIError("unpause not supported for libvirt.")
+        raise exception.ApiError("unpause not supported for libvirt.")
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.APIError("suspend not supported for libvirt")
+        raise exception.ApiError("suspend not supported for libvirt")
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.APIError("resume not supported for libvirt")
+        raise exception.ApiError("resume not supported for libvirt")
 
     @exception.wrap_exception
     def rescue(self, instance, callback=None):
@@ -762,7 +762,7 @@ class LibvirtConnection(object):
                 'cpu_time': cpu_time}
 
     def get_diagnostics(self, instance_name):
-        raise exception.APIError(_("diagnostics are not supported "
+        raise exception.ApiError(_("diagnostics are not supported "
                                    "for libvirt"))
 
     def get_disks(self, instance_name):
