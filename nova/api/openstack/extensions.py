@@ -25,6 +25,7 @@ import webob.exc
 from nova import flags
 from nova import log as logging
 from nova import wsgi
+from nova.api.openstack import faults
 
 
 LOG = logging.getLogger('extensions')
@@ -68,6 +69,42 @@ class ResponseExtensionController(wsgi.Controller):
         # currently response handlers are un-ordered
         for handler in self.handlers:
             return handler(res)
+
+
+class ExtensionController(wsgi.Controller):
+
+    def __init__(self, extension_manager):
+        self.extension_manager = extension_manager
+
+    def _translate(self, ext):
+        ext_data = {}
+        ext_data['name'] = ext.get_name()
+        ext_data['alias'] = ext.get_alias()
+        ext_data['description'] = ext.get_description()
+        ext_data['namespace'] = ext.get_namespace()
+        ext_data['updated'] = ext.get_updated()
+        ext_data['links'] = []  # TODO: implement extension links
+        return ext_data
+
+    def index(self, req):
+        extensions = []
+        for alias, ext in self.extension_manager.extensions.iteritems():
+            extensions.append(self._translate(ext))
+        return dict(extensions=extensions)
+
+    def show(self, req, id):
+        # NOTE: the extensions alias is used as the 'id' for show
+        ext = self.extension_manager.extensions[id]
+        return self._translate(ext)
+
+    def delete(self, req, id):
+        raise faults.Fault(exc.HTTPNotFound())
+
+    def create(self, req):
+        raise faults.Fault(exc.HTTPNotFound())
+
+    def delete(self, req, id):
+        raise faults.Fault(exc.HTTPNotFound())
 
 
 class ExtensionMiddleware(wsgi.Middleware):
@@ -183,12 +220,17 @@ class ExtensionMiddleware(wsgi.Middleware):
 
 
 class ExtensionManager(object):
+    """
+    Load extensions from the configured extension path.
+    See nova/tests/api/openstack/extensions/foxinsocks.py for an example
+    extension implementation.
+    """
 
     def __init__(self, path):
         LOG.audit(_('Initializing extension manager.'))
 
         self.path = path
-        self.extensions = []
+        self.extensions = {}
         self._load_extensions()
 
     def get_resources(self):
@@ -196,8 +238,14 @@ class ExtensionManager(object):
         returns a list of ResourceExtension objects
         """
         resources = []
-        for ext in self.extensions:
-            resources.extend(ext.get_resources())
+        resources.append(ResourceExtension('extensions',
+                                            ExtensionController(self)))
+        for alias, ext in self.extensions.iteritems():
+            try:
+                resources.extend(ext.get_resources())
+            except AttributeError:
+                # NOTE: Extension aren't required to have resource extensions
+                pass
         return resources
 
     def get_actions(self):
@@ -205,8 +253,12 @@ class ExtensionManager(object):
         returns a list of ActionExtension objects
         """
         actions = []
-        for ext in self.extensions:
-            actions.extend(ext.get_actions())
+        for alias, ext in self.extensions.iteritems():
+            try:
+                actions.extend(ext.get_actions())
+            except AttributeError:
+                # NOTE: Extension aren't required to have action extensions
+                pass
         return actions
 
     def get_response_extensions(self):
@@ -214,9 +266,26 @@ class ExtensionManager(object):
         returns a list of ResponseExtension objects
         """
         response_exts = []
-        for ext in self.extensions:
-            response_exts.extend(ext.get_response_extensions())
+        for alias, ext in self.extensions.iteritems():
+            try:
+                response_exts.extend(ext.get_response_extensions())
+            except AttributeError:
+                # NOTE: Extension aren't required to have response extensions
+                pass
         return response_exts
+
+    def _check_extension(self, extension):
+        """
+        Checks for required methods in extension objects.
+        """
+        try:
+            LOG.debug(_('Ext name: %s'), extension.get_name())
+            LOG.debug(_('Ext alias: %s'), extension.get_alias())
+            LOG.debug(_('Ext description: %s'), extension.get_description())
+            LOG.debug(_('Ext namespace: %s'), extension.get_namespace())
+            LOG.debug(_('Ext updated: %s'), extension.get_updated())
+        except AttributeError as ex:
+            LOG.exception(_("Exception loading extension: %s"), unicode(ex))
 
     def _load_extensions(self):
         """
@@ -224,6 +293,9 @@ class ExtensionManager(object):
         constructed from the camel cased module_name + 'Extension'. If your
         extension module was named widgets.py the extension class within that
         module should be 'WidgetsExtension'.
+
+        See nova/tests/api/openstack/extensions/foxinsocks.py for an example
+        extension implementation.
         """
         if not os.path.exists(self.path):
             return
@@ -235,7 +307,13 @@ class ExtensionManager(object):
             if file_ext.lower() == '.py':
                 mod = imp.load_source(mod_name, ext_path)
                 ext_name = mod_name[0].upper() + mod_name[1:]
-                self.extensions.append(getattr(mod, ext_name)())
+                try:
+                    new_ext = getattr(mod, ext_name)()
+                    self._check_extension(new_ext)
+                    self.extensions[new_ext.get_alias()] = new_ext
+                except AttributeError as ex:
+                    LOG.exception(_("Exception loading extension: %s"),
+                                   unicode(ex))
 
 
 class ResponseExtension(object):

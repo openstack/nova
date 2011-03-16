@@ -48,6 +48,15 @@ class StubExtensionManager(object):
         self.action_ext = action_ext
         self.response_ext = response_ext
 
+    def get_name(self):
+        return "Tweedle Beetle Extension"
+
+    def get_alias(self):
+        return "TWDLBETL"
+
+    def get_description(self):
+        return "Provides access to Tweedle Beetles"
+
     def get_resources(self):
         resource_exts = []
         if self.resource_ext:
@@ -67,42 +76,61 @@ class StubExtensionManager(object):
         return response_exts
 
 
+class ExtensionControllerTest(unittest.TestCase):
+
+    def test_index(self):
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        request = webob.Request.blank("/extensions")
+        response = request.get_response(ext_midware)
+        self.assertEqual(200, response.status_int)
+
+    def test_get_by_alias(self):
+        app = openstack.APIRouter()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        request = webob.Request.blank("/extensions/FOXNSOX")
+        response = request.get_response(ext_midware)
+        self.assertEqual(200, response.status_int)
+
+response_body = "Try to say this Mr. Knox, sir..."
+
 class ResourceExtensionTest(unittest.TestCase):
+
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
         app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/widgets")
+        request = webob.Request.blank("/blah")
         response = request.get_response(ext_midware)
         self.assertEqual(404, response.status_int)
 
     def test_get_resources(self):
-        response_body = "Buy more widgets!"
-        widgets = extensions.ResourceExtension('widgets',
+        res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
-        manager = StubExtensionManager(widgets)
+        manager = StubExtensionManager(res_ext)
         app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/widgets")
+        request = webob.Request.blank("/tweedles")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
     def test_get_resources_with_controller(self):
-        response_body = "Buy more widgets!"
-        widgets = extensions.ResourceExtension('widgets',
+        res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
-        manager = StubExtensionManager(widgets)
+        manager = StubExtensionManager(res_ext)
         app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/widgets")
+        request = webob.Request.blank("/tweedles")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
 
 class ExtensionManagerTest(unittest.TestCase):
+
+    response_body = "Try to say this Mr. Knox, sir..."
 
     def setUp(self):
         FLAGS.osapi_extensions_path = os.path.join(os.path.dirname(__file__),
@@ -111,10 +139,10 @@ class ExtensionManagerTest(unittest.TestCase):
     def test_get_resources(self):
         app = openstack.APIRouter()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/widgets")
+        request = webob.Request.blank("/foxnsocks")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
-        self.assertEqual("Buy more widgets!", response.body)
+        self.assertEqual(response_body, response.body)
 
 
 class ActionExtensionTest(unittest.TestCase):
@@ -134,15 +162,15 @@ class ActionExtensionTest(unittest.TestCase):
         return response
 
     def test_extended_action(self):
-        body = dict(add_widget=dict(name="test"))
+        body = dict(add_tweedle=dict(name="test"))
         response = self._send_server_action_request("/servers/1/action", body)
         self.assertEqual(200, response.status_int)
-        self.assertEqual("Widget Added.", response.body)
+        self.assertEqual("Tweedle Beetle Added.", response.body)
 
-        body = dict(delete_widget=dict(name="test"))
+        body = dict(delete_tweedle=dict(name="test"))
         response = self._send_server_action_request("/servers/1/action", body)
         self.assertEqual(200, response.status_int)
-        self.assertEqual("Widget Deleted.", response.body)
+        self.assertEqual("Tweedle Beetle Deleted.", response.body)
 
     def test_invalid_action_body(self):
         body = dict(blah=dict(name="test"))  # Doesn't exist
@@ -169,21 +197,21 @@ class ResponseExtensionTest(unittest.TestCase):
 
     def test_get_resources(self):
 
-        test_resp = "Buy more widgets!"
+        test_resp = "Gooey goo for chewy chewing!"
 
         def _resp_handler(res):
             # only handle JSON responses
             data = json.loads(res.body)
-            data['flavor']['widgets'] = test_resp
+            data['flavor']['googoose'] = test_resp
             return data
 
-        widgets = extensions.ResponseExtension('/v1.0/flavors/:(id)', 'GET',
+        resp_ext = extensions.ResponseExtension('/v1.0/flavors/:(id)', 'GET',
                                                 _resp_handler)
-        manager = StubExtensionManager(None, None, widgets)
+        manager = StubExtensionManager(None, None, resp_ext)
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/v1.0/flavors/1")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
-        self.assertEqual(test_resp, response_data['flavor']['widgets'])
+        self.assertEqual(test_resp, response_data['flavor']['googoose'])
