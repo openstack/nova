@@ -76,6 +76,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-migrate python-eventlet python-gflags python-ipy python-tempita
     sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
     sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
+    sudo apt-get install -y python-multiprocessing
 
     if [ "$USE_IPV6" == 1 ]; then
         sudo apt-get install -y radvd

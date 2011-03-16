@@ -276,7 +276,7 @@ def _db_error(caught_exception):
     print caught_exception
     print _("The above error may show that the database has not "
             "been created.\nPlease create a database using "
-            "nova-manage sync db before running this command.")
+            "'nova-manage db sync' before running this command.")
     exit(1)
 
 
@@ -437,6 +437,8 @@ class ProjectCommands(object):
                     "been created.\nPlease create a database by running a "
                     "nova-api server on this host.")
 
+AccountCommands = ProjectCommands
+
 
 class FixedIpCommands(object):
     """Class for managing fixed ip."""
@@ -558,6 +560,40 @@ class NetworkCommands(object):
         db.network_delete_safe(context.get_admin_context(), network.id)
 
 
+class VmCommands(object):
+    """Class for mangaging VM instances."""
+
+    def live_migration(self, ec2_id, dest):
+        """Migrates a running instance to a new machine.
+
+        :param ec2_id: instance id which comes from euca-describe-instance.
+        :param dest: destination host name.
+
+        """
+
+        ctxt = context.get_admin_context()
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
+
+        if FLAGS.connection_type != 'libvirt':
+            msg = _('Only KVM is supported for now. Sorry!')
+            raise exception.Error(msg)
+
+        if (FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
+            FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver'):
+            msg = _("Support only AOEDriver and ISCSIDriver. Sorry!")
+            raise exception.Error(msg)
+
+        rpc.call(ctxt,
+                 FLAGS.scheduler_topic,
+                 {"method": "live_migration",
+                  "args": {"instance_id": instance_id,
+                           "dest": dest,
+                           "topic": FLAGS.compute_topic}})
+
+        print _('Migration of %s initiated.'
+               'Check its progress using euca-describe-instances.') % ec2_id
+
+
 class ServiceCommands(object):
     """Enable and disable running services"""
 
@@ -601,6 +637,59 @@ class ServiceCommands(object):
             print "Unable to find service"
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
+
+    def describe_resource(self, host):
+        """Describes cpu/memory/hdd info for host.
+
+        :param host: hostname.
+
+        """
+
+        result = rpc.call(context.get_admin_context(),
+                     FLAGS.scheduler_topic,
+                     {"method": "show_host_resources",
+                      "args": {"host": host}})
+
+        if type(result) != dict:
+            print _('An unexpected error has occurred.')
+            print _('[Result]'), result
+        else:
+            cpu = result['resource']['vcpus']
+            mem = result['resource']['memory_mb']
+            hdd = result['resource']['local_gb']
+            cpu_u = result['resource']['vcpus_used']
+            mem_u = result['resource']['memory_mb_used']
+            hdd_u = result['resource']['local_gb_used']
+
+            print 'HOST\t\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
+            print '%s(total)\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
+            print '%s(used)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            for p_id, val in result['usage'].items():
+                print '%s\t\t%s\t\t%s\t%s\t%s' % (host,
+                                                  p_id,
+                                                  val['vcpus'],
+                                                  val['memory_mb'],
+                                                  val['local_gb'])
+
+    def update_resource(self, host):
+        """Updates available vcpu/memory/disk info for host.
+
+        :param host: hostname.
+
+        """
+
+        ctxt = context.get_admin_context()
+        service_refs = db.service_get_all_by_host(ctxt, host)
+        if len(service_refs) <= 0:
+            raise exception.Invalid(_('%s does not exist.') % host)
+
+        service_refs = [s for s in service_refs if s['topic'] == 'compute']
+        if len(service_refs) <= 0:
+            raise exception.Invalid(_('%s is not compute node.') % host)
+
+        rpc.call(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 {"method": "update_available_resource"})
 
 
 class LogCommands(object):
@@ -898,6 +987,7 @@ class ImageCommands(object):
 
 CATEGORIES = [
     ('user', UserCommands),
+    ('account', AccountCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
     ('shell', ShellCommands),
@@ -905,6 +995,7 @@ CATEGORIES = [
     ('fixed', FixedIpCommands),
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
+    ('vm', VmCommands),
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),

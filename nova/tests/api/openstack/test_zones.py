@@ -58,7 +58,7 @@ def zone_get_all_scheduler(*args):
         dict(id=1, api_url='http://example.com', username='bob',
                  password='xxx'),
         dict(id=2, api_url='http://example.org', username='alice',
-                 password='qwerty')
+                 password='qwerty'),
     ]
 
 
@@ -71,7 +71,7 @@ def zone_get_all_db(context):
         dict(id=1, api_url='http://example.com', username='bob',
                  password='xxx'),
         dict(id=2, api_url='http://example.org', username='alice',
-                 password='qwerty')
+                 password='qwerty'),
     ]
 
 
@@ -79,7 +79,7 @@ class ZonesTest(test.TestCase):
     def setUp(self):
         super(ZonesTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

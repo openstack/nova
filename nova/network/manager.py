@@ -115,7 +115,6 @@ class NetworkManager(manager.Manager):
     timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
-        LOG.debug("INIT - network driver:%s", network_driver)
         if not network_driver:
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
@@ -520,8 +519,6 @@ class VlanManager(NetworkManager):
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts."""
-        LOG.debug("ENTERING SETUP COMPUTE NETWORK")
-        LOG.debug("DRIVER:%s",self.driver)
         network_ref = db.network_get_by_instance(context, instance_id)
         self.driver.ensure_vlan_bridge(network_ref['vlan'],
                                        network_ref['bridge'])

@@ -103,6 +103,7 @@ def create_vm(name_label, status,
         'is_control_domain': is_control_domain,
         })
 
+
 def destroy_vm(vm_ref):
     vm_rec = _db_content['VM'][vm_ref]
 
@@ -178,10 +179,11 @@ def create_task(name_label):
 
 
 def create_local_pifs():
-    """Adds a PIF for each to the local database with VLAN=-1.  
+    """Adds a PIF for each to the local database with VLAN=-1.
        Do this one per host."""
     for host_ref in _db_content['host'].keys():
         _create_local_pif(host_ref)
+
 
 def create_local_srs():
     """Create an SR that looks like the one created on the local disk by
@@ -209,8 +211,9 @@ def _create_local_sr(host_ref):
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
 
+
 def _create_local_pif(host_ref):
-    pif_ref= _create_object('PIF', {
+    pif_ref = _create_object('PIF', {
         'name-label': 'Fake PIF',
         'MAC': '00:11:22:33:44:55',
         'physical': True,
@@ -218,6 +221,7 @@ def _create_local_pif(host_ref):
         'device': 'fake0',
         'host_uuid': host_ref,
         })
+
 
 def _create_object(table, obj):
     LOG.debug("ENTERING _create_object:%s", obj)
@@ -257,7 +261,7 @@ def _create_vlan(pif_ref, vlan_num, network_ref):
     return _create_object('VLAN', {
         'tagged-pif': pif_ref,
         'untagged-pif': vlan_pif_ref,
-        'tag': vlan_num
+        'tag': vlan_num,
         })
 
 
@@ -267,6 +271,7 @@ def get_all(table):
 
 def get_all_records(table):
     return _db_content[table]
+
 
 def get_record(table, ref):
     if ref in _db_content[table]:
@@ -318,20 +323,19 @@ class SessionBase(object):
         rec['currently_attached'] = False
         rec['device'] = ''
 
-    def PIF_get_all_records_where(self, _1,_2):
-        # TODO (salvatore-orlando):filter table on _2 
+    def PIF_get_all_records_where(self, _1, _2):
+        # TODO (salvatore-orlando):filter table on _2
         return _db_content['PIF']
 
     def VM_get_xenstore_data(self, _1, vm_ref):
         return _db_content['VM'][vm_ref].get('xenstore_data', '')
-    
+
     def VM_remove_from_xenstore_data(self, _1, vm_ref, key):
         db_ref = _db_content['VM'][vm_ref]
         if not 'xenstore_data' in db_ref:
             return
         db_ref['xenstore_data'][key] = None
-    
-    
+
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
         db_ref = _db_content['VM'][vm_ref]
         if not 'xenstore_data' in db_ref:
@@ -483,7 +487,6 @@ class SessionBase(object):
     def _create(self, name, params):
         self._check_session(params)
         is_sr_create = name == 'SR.create'
-        LOG.debug("NAME:%s",name)
         is_vlan_create = name == 'VLAN.create'
         # Storage Repositories have a different API
         expected = is_sr_create and 10 or is_vlan_create and 4 or 2
@@ -492,7 +495,7 @@ class SessionBase(object):
         ref = is_sr_create and \
               _create_sr(cls, params) or \
               is_vlan_create and \
-              _create_vlan(params[1],params[2],params[3]) or \
+              _create_vlan(params[1], params[2], params[3]) or \
               _create_object(cls, params[1])
 
         # Call hook to provide any fixups needed (ex. creating backrefs)

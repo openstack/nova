@@ -18,6 +18,7 @@
 Test suite for XenAPI
 """
 
+import functools
 import stubout
 
 from nova import db
@@ -37,10 +38,26 @@ from nova.virt.xenapi.vmops import VMOps
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
+from nova.tests import fake_utils
 
 from nova import log as LOG
 
 FLAGS = flags.FLAGS
+
+
+def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
+    """
+    vm_utils.with_vdi_attached_here needs to be stubbed out because it
+    calls down to the filesystem to attach a vdi. This provides a
+    decorator to handle that.
+    """
+    @functools.wraps(function)
+    def decorated_function(self, *args, **kwargs):
+        orig_with_vdi_attached_here = vm_utils.with_vdi_attached_here
+        vm_utils.with_vdi_attached_here = lambda *x: should_return
+        function(self, *args, **kwargs)
+        vm_utils.with_vdi_attached_here = orig_with_vdi_attached_here
+    return decorated_function
 
 
 class XenAPIVolumeTestCase(test.TestCase):
@@ -50,13 +67,15 @@ class XenAPIVolumeTestCase(test.TestCase):
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
+        self.context = context.RequestContext('fake', 'fake', False)
         FLAGS.target_host = '127.0.0.1'
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         db_fakes.stub_out_db_instance_api(self.stubs)
+        #db_fakes.stub_out_db_network_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
-        self.values = {'name': 1, 'id': 1,
+        self.values = {'id': 1,
                   'project_id': 'fake',
                   'user_id': 'fake',
                   'image_id': 1,
@@ -64,7 +83,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'ramdisk_id': 3,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  }
+                  'os_type': 'linux'}
 
     def _create_volume(self, size='0'):
         """Create a volume object."""
@@ -112,7 +131,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         vm = xenapi_fake.create_vm(instance.name, 'Running')
         result = conn.attach_volume(instance.name, volume['id'], '/dev/sdc')
 
@@ -132,7 +151,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         xenapi_fake.create_vm(instance.name, 'Running')
         self.assertRaises(Exception,
                           conn.attach_volume,
@@ -161,8 +180,9 @@ class XenAPIVMTestCase(test.TestCase):
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
         self.stubs = stubout.StubOutForTesting()
-        FLAGS.xenapi_connection_url = 'test_url'
-        FLAGS.xenapi_connection_password = 'test_pass'
+        self.flags(xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',
+                   instance_name_template='%d')
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
         xenapi_fake.create_local_pifs()
@@ -175,6 +195,8 @@ class XenAPIVMTestCase(test.TestCase):
         self.stubs.Set(VMOps, 'reset_network', reset_network)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
+        fake_utils.stub_out_utils_execute(self.stubs)
+        self.context = context.RequestContext('fake', 'fake', False)
         self.conn = xenapi_conn.get_connection(False)
 
     def test_list_instances_0(self):
@@ -199,7 +221,7 @@ class XenAPIVMTestCase(test.TestCase):
                 if not vm_rec["is_control_domain"]:
                     vm_labels.append(vm_rec["name_label"])
 
-            self.assertEquals(vm_labels, [1])
+            self.assertEquals(vm_labels, ['1'])
 
         def ensure_vbd_was_torn_down():
             vbd_labels = []
@@ -207,7 +229,7 @@ class XenAPIVMTestCase(test.TestCase):
                 vbd_rec = xenapi_fake.get_record('VBD', vbd_ref)
                 vbd_labels.append(vbd_rec["vm_name_label"])
 
-            self.assertEquals(vbd_labels, [1])
+            self.assertEquals(vbd_labels, ['1'])
 
         def ensure_vdi_was_torn_down():
             for vdi_ref in xenapi_fake.get_all('VDI'):
@@ -222,9 +244,9 @@ class XenAPIVMTestCase(test.TestCase):
 
         check()
 
-    def check_vm_record(self, conn):
+    def create_vm_record(self, conn, os_type):
         instances = conn.list_instances()
-        self.assertEquals(instances, [1])
+        self.assertEquals(instances, ['1'])
 
         # Get Nova record for VM
         vm_info = conn.get_info(1)
@@ -234,34 +256,65 @@ class XenAPIVMTestCase(test.TestCase):
                in xenapi_fake.get_all_records('VM').iteritems()
                if not rec['is_control_domain']]
         vm = vms[0]
+        self.vm_info = vm_info
+        self.vm = vm
 
+    def check_vm_record(self, conn):
         # Check that m1.large above turned into the right thing.
         instance_type = db.instance_type_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
         vcpus = instance_type['vcpus']
-        self.assertEquals(vm_info['max_mem'], mem_kib)
-        self.assertEquals(vm_info['mem'], mem_kib)
-        self.assertEquals(vm['memory_static_max'], mem_bytes)
-        self.assertEquals(vm['memory_dynamic_max'], mem_bytes)
-        self.assertEquals(vm['memory_dynamic_min'], mem_bytes)
-        self.assertEquals(vm['VCPUs_max'], str(vcpus))
-        self.assertEquals(vm['VCPUs_at_startup'], str(vcpus))
+        self.assertEquals(self.vm_info['max_mem'], mem_kib)
+        self.assertEquals(self.vm_info['mem'], mem_kib)
+        self.assertEquals(self.vm['memory_static_max'], mem_bytes)
+        self.assertEquals(self.vm['memory_dynamic_max'], mem_bytes)
+        self.assertEquals(self.vm['memory_dynamic_min'], mem_bytes)
+        self.assertEquals(self.vm['VCPUs_max'], str(vcpus))
+        self.assertEquals(self.vm['VCPUs_at_startup'], str(vcpus))
 
         # Check that the VM is running according to Nova
-        self.assertEquals(vm_info['state'], power_state.RUNNING)
+        self.assertEquals(self.vm_info['state'], power_state.RUNNING)
 
         # Check that the VM is running according to XenAPI.
-        self.assertEquals(vm['power_state'], 'Running')
-        
-        # Check that VM network is consistent with nova network
-        LOG.debug("VM INFO - NETWORK:%s", vm_info)
+        self.assertEquals(self.vm['power_state'], 'Running')
+
+    def check_vm_params_for_windows(self):
+        self.assertEquals(self.vm['platform']['nx'], 'true')
+        self.assertEquals(self.vm['HVM_boot_params'], {'order': 'dc'})
+        self.assertEquals(self.vm['HVM_boot_policy'], 'BIOS order')
+
+        # check that these are not set
+        self.assertEquals(self.vm['PV_args'], '')
+        self.assertEquals(self.vm['PV_bootloader'], '')
+        self.assertEquals(self.vm['PV_kernel'], '')
+        self.assertEquals(self.vm['PV_ramdisk'], '')
+
+    def check_vm_params_for_linux(self):
+        self.assertEquals(self.vm['platform']['nx'], 'false')
+        self.assertEquals(self.vm['PV_args'], 'clocksource=jiffies')
+        self.assertEquals(self.vm['PV_bootloader'], 'pygrub')
+
+        # check that these are not set
+        self.assertEquals(self.vm['PV_kernel'], '')
+        self.assertEquals(self.vm['PV_ramdisk'], '')
+        self.assertEquals(self.vm['HVM_boot_params'], {})
+        self.assertEquals(self.vm['HVM_boot_policy'], '')
+
+    def check_vm_params_for_linux_with_external_kernel(self):
+        self.assertEquals(self.vm['platform']['nx'], 'false')
+        self.assertEquals(self.vm['PV_args'], 'root=/dev/xvda1')
+        self.assertNotEquals(self.vm['PV_kernel'], '')
+        self.assertNotEquals(self.vm['PV_ramdisk'], '')
+
+        # check that these are not set
+        self.assertEquals(self.vm['HVM_boot_params'], {})
+        self.assertEquals(self.vm['HVM_boot_policy'], '')
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-                    instance_type="m1.large"):
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        values = {'name': 1,
-                  'id': 1,
+        instance_type="m1.large", os_type="linux"):
+        stubs.stubout_loopingcall_start(self.stubs)
+        values = {'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': image_id,
@@ -269,11 +322,11 @@ class XenAPIVMTestCase(test.TestCase):
                   'ramdisk_id': ramdisk_id,
                   'instance_type': instance_type,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  }
-        conn = xenapi_conn.get_connection(False)
-        instance = db.instance_create(values)
-        conn.spawn(instance)
-        self.check_vm_record(conn)
+                  'os_type': os_type}
+        instance = db.instance_create(self.context, values)
+        self.conn.spawn(instance)
+        self.create_vm_record(self.conn, os_type)
+        self.check_vm_record(self.conn)
 
     def test_spawn_not_enough_memory(self):
         FLAGS.xenapi_image_service = 'glance'
@@ -289,52 +342,61 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_image_service = 'objectstore'
         self._test_spawn(1, 2, 3)
 
+    @stub_vm_utils_with_vdi_attached_here
     def test_spawn_raw_glance(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_RAW, None, None)
+        self.check_vm_params_for_linux()
 
-    def test_spawn_vhd_glance(self):
+    def test_spawn_vhd_glance_linux(self):
         FLAGS.xenapi_image_service = 'glance'
-        self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None)
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
+                         os_type="linux")
+        self.check_vm_params_for_linux()
+
+    def test_spawn_vhd_glance_windows(self):
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
+                         os_type="windows")
+        self.check_vm_params_for_windows()
 
     def test_spawn_glance(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
+        self.check_vm_params_for_linux_with_external_kernel()
 
     def test_spawn_vlanmanager(self):
-        self.flags(xenapi_image_service = 'glance',
-                   network_manager = 'nova.network.manager.VlanManager',
-                   network_driver = 'nova.network.xenapi_net',
-                   vlan_interface = 'fake0')
-        LOG.debug("Self.network:%s",self.network)
-        LOG.debug("network driver:%s",FLAGS.network_driver)
+        self.flags(xenapi_image_service='glance',
+                   network_manager='nova.network.manager.VlanManager',
+                   network_driver='nova.network.xenapi_net',
+                   vlan_interface='fake0')
         fake_instance_id = 2
-        network_bk=self.network
+        network_bk = self.network
         #ensure we use xenapi_net driver
         self.network = utils.import_object(FLAGS.network_manager)
         self.network.setup_compute_network(None, fake_instance_id)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
-        url = FLAGS.xenapi_connection_url
-        username = FLAGS.xenapi_connection_username
-        password = FLAGS.xenapi_connection_password
-        session = xenapi_conn.XenAPISession(url, username, password)
-        
+        #TODO(salvatore-orlando): a complete test here would require
+        #a check for making sure the bridge for the VM's VIF is
+        #consistent with bridge specified in nova db
         self.network = network_bk
-    
+
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
+        self.vm_info = None
+        self.vm = None
         self.stubs.UnsetAll()
 
     def _create_instance(self):
         """Creates and spawns a test instance"""
+        stubs.stubout_loopingcall_start(self.stubs)
         values = {
-            'name': 1,
             'id': 1,
             'project_id': self.project.id,
             'user_id': self.user.id,
@@ -342,8 +404,9 @@ class XenAPIVMTestCase(test.TestCase):
             'kernel_id': 2,
             'ramdisk_id': 3,
             'instance_type': 'm1.large',
-            'mac_address': 'aa:bb:cc:dd:ee:ff'}
-        instance = db.instance_create(values)
+            'mac_address': 'aa:bb:cc:dd:ee:ff',
+            'os_type': 'linux'}
+        instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
         return instance
 
@@ -388,11 +451,13 @@ class XenAPIMigrateInstance(test.TestCase):
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
+        xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
-        self.values = {'name': 1, 'id': 1,
+        self.context = context.RequestContext('fake', 'fake', False)
+        self.values = {'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': 1,
@@ -400,8 +465,10 @@ class XenAPIMigrateInstance(test.TestCase):
                   'ramdisk_id': None,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  }
+                  'os_type': 'linux'}
+
         stubs.stub_out_migration_methods(self.stubs)
+        stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
 
@@ -412,14 +479,15 @@ class XenAPIMigrateInstance(test.TestCase):
         self.stubs.UnsetAll()
 
     def test_migrate_disk_and_power_off(self):
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         conn = xenapi_conn.get_connection(False)
         conn.migrate_disk_and_power_off(instance, '127.0.0.1')
 
     def test_finish_resize(self):
-        instance = db.instance_create(self.values)
+        instance = db.instance_create(self.context, self.values)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
+        stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
         conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
 
@@ -438,6 +506,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
 
         self.fake_instance = FakeInstance()
         self.fake_instance.id = 42
+        self.fake_instance.os_type = 'linux'
 
     def assert_disk_type(self, disk_type):
         dt = vm_utils.VMHelper.determine_disk_image_type(

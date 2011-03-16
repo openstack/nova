@@ -205,7 +205,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.orig_image_service = FLAGS.image_service
         FLAGS.image_service = 'nova.image.glance.GlanceImageService'
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

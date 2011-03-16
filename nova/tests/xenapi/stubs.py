@@ -21,6 +21,7 @@ from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
+from nova import utils
 
 
 def stubout_instance_snapshot(stubs):
@@ -135,6 +136,12 @@ def stubout_is_vdi_pv(stubs):
     def f(_1):
         return False
     stubs.Set(vm_utils, '_is_vdi_pv', f)
+
+
+def stubout_loopingcall_start(stubs):
+    def f_1(self, interval, now=True):
+        self.f(*self.args, **self.kw)
+    stubs.Set(utils.LoopingCall, 'start', f_1)
 
 
 class FakeSessionForVMTests(fake.SessionBase):

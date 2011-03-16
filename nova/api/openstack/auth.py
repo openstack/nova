@@ -28,11 +28,13 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import manager
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
 
+LOG = logging.getLogger('nova.api.openstack')
 FLAGS = flags.FLAGS
 
 
@@ -50,14 +52,23 @@ class AuthMiddleware(wsgi.Middleware):
     def __call__(self, req):
         if not self.has_authentication(req):
             return self.authenticate(req)
-
         user = self.get_user_by_authentication(req)
-
+        accounts = self.auth.get_projects(user=user)
         if not user:
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        project = self.auth.get_project(FLAGS.default_project)
-        req.environ['nova.context'] = context.RequestContext(user, project)
+        if accounts:
+            #we are punting on this til auth is settled,
+            #and possibly til api v1.1 (mdragon)
+            account = accounts[0]
+        else:
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
+        if not self.auth.is_admin(user) and \
+           not self.auth.is_project_member(user, account):
+            return faults.Fault(webob.exc.HTTPUnauthorized())
+
+        req.environ['nova.context'] = context.RequestContext(user, account)
         return self.application
 
     def has_authentication(self, req):
@@ -124,15 +135,20 @@ class AuthMiddleware(wsgi.Middleware):
         req - wsgi.Request object
         """
         ctxt = context.get_admin_context()
-        user = self.auth.get_user_from_access_key(key)
+
+        try:
+            user = self.auth.get_user_from_access_key(key)
+        except exception.NotFound:
+            user = None
+
         if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,
                 time.time())).hexdigest()
             token_dict = {}
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
-            # Same as auth url, e.g. http://foo.org:8774/baz/v1.0
-            token_dict['server_management_url'] = req.url
+            os_url = req.url
+            token_dict['server_management_url'] = os_url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)

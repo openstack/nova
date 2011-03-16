@@ -31,6 +31,7 @@ LOG = logging.getLogger("nova.xenapi_net")
 
 FLAGS = flags.FLAGS
 
+
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
     #open xenapi session
@@ -60,7 +61,7 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
         #multiple PIF are ok: we are dealing with a pool
         if len(pifs) == 0:
             raise Exception(
-                  _('Found no PID for device %s') % FLAGS.vlan_interface)
+                  _('Found no PIF for device %s') % FLAGS.vlan_interface)
         #3 - create vlan for network
         for pif_ref in pifs.keys():
             session.call_xenapi('VLAN.create', pif_ref,
