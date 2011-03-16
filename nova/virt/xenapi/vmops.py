@@ -370,7 +370,6 @@ class VMOps(object):
         #TODO(mdietz): this will need to be adjusted for swap later
         task = self._session.call_xenapi('VDI.resize_online', vdi_ref,
                 new_disk_size)
-        vm_ref = VMHelper.lookup(self._session, instance.name)
         self._session.wait_for_task(task, instance.id)
 
     def reboot(self, instance):
