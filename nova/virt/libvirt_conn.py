@@ -991,23 +991,35 @@ class LibvirtConnection(object):
                                       + xml.serialize())
 
         cpu_info = dict()
-        cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()
-        cpu_info['model'] = xml.xpathEval('//cpu/model')[0].getContent()
-        cpu_info['vendor'] = xml.xpathEval('//cpu/vendor')[0].getContent()
 
-        topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
+        arch_nodes = xml.xpathEval('//cpu/arch')
+        if len(arch_nodes):
+            cpu_info['arch'] = arch_nodes[0].getContent()
+
+        model_nodes = xml.xpathEval('//cpu/model')
+        if len(model_nodes):
+            cpu_info['model'] = model_nodes[0].getContent()
+
+        vendor_nodes = xml.xpathEval('//cpu/vendor')
+        if len(vendor_nodes):
+            cpu_info['vendor'] = vendor_nodes[0].getContent()
+
+        topology_nodes = xml.xpathEval('//cpu/topology')
         topology = dict()
-        while topology_node != None:
-            name = topology_node.get_name()
-            topology[name] = topology_node.getContent()
-            topology_node = topology_node.get_next()
+        if len(topology_nodes):
+            topology_node = topology_nodes[0].get_properties()
+            while topology_node != None:
+                name = topology_node.get_name()
+                topology[name] = topology_node.getContent()
+                topology_node = topology_node.get_next()
 
-        keys = ['cores', 'sockets', 'threads']
-        tkeys = topology.keys()
-        if list(set(tkeys)) != list(set(keys)):
-            ks = ', '.join(keys)
-            raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
-                                      "must have %(ks)s") % locals())
+            keys = ['cores', 'sockets', 'threads']
+            tkeys = topology.keys()
+            if list(set(tkeys)) != list(set(keys)):
+                ks = ', '.join(keys)
+                raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
+                                          "must have %(ks)s") % locals())
+
 
         feature_nodes = xml.xpathEval('//cpu/feature')
         features = list()
