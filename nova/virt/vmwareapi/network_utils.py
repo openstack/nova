@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-Utility functions for ESX Networking
+Utility functions for ESX Networking.
 """
 
 from nova import exception
@@ -32,8 +32,10 @@ class NetworkHelper:
 
     @classmethod
     def get_network_with_the_name(cls, session, network_name="vmnet0"):
-        """ Gets reference to the network whose name is passed as the
-        argument. """
+        """
+        Gets reference to the network whose name is passed as the
+        argument.
+        """
         hostsystems = session._call_method(vim_util, "get_objects",
                     "HostSystem", ["network"])
         vm_networks_ret = hostsystems[0].propSet[0].val
@@ -44,7 +46,7 @@ class NetworkHelper:
             return None
         vm_networks = vm_networks_ret.ManagedObjectReference
         networks = session._call_method(vim_util,
-                           "get_properites_for_a_collection_of_objects",
+                           "get_properties_for_a_collection_of_objects",
                            "Network", vm_networks, ["summary.name"])
         for network in networks:
             if network.propSet[0].val == network_name:
@@ -53,8 +55,10 @@ class NetworkHelper:
 
     @classmethod
     def get_vswitch_for_vlan_interface(cls, session, vlan_interface):
-        """ Gets the vswitch associated with the physical
-        network adapter with the name supplied"""
+        """
+        Gets the vswitch associated with the physical network adapter
+        with the name supplied.
+        """
         #Get the list of vSwicthes on the Host System
         host_mor = session._call_method(vim_util, "get_objects",
              "HostSystem")[0].obj
@@ -77,7 +81,7 @@ class NetworkHelper:
 
     @classmethod
     def check_if_vlan_interface_exists(cls, session, vlan_interface):
-        """ Checks if the vlan_inteface exists on the esx host """
+        """Checks if the vlan_inteface exists on the esx host."""
         host_net_system_mor = session._call_method(vim_util, "get_objects",
              "HostSystem", ["configManager.networkSystem"])[0].propSet[0].val
         physical_nics_ret = session._call_method(vim_util,
@@ -93,8 +97,8 @@ class NetworkHelper:
         return False
 
     @classmethod
-    def get_vlanid_and_vswicth_for_portgroup(cls, session, pg_name):
-        """ Get the vlan id and vswicth associated with the port group """
+    def get_vlanid_and_vswitch_for_portgroup(cls, session, pg_name):
+        """Get the vlan id and vswicth associated with the port group."""
         host_mor = session._call_method(vim_util, "get_objects",
              "HostSystem")[0].obj
         port_grps_on_host_ret = session._call_method(vim_util,
@@ -113,8 +117,10 @@ class NetworkHelper:
 
     @classmethod
     def create_port_group(cls, session, pg_name, vswitch_name, vlan_id=0):
-        """ Creates a port group on the host system with the vlan tags
-        supplied. VLAN id 0 means no vlan id association """
+        """
+        Creates a port group on the host system with the vlan tags
+        supplied. VLAN id 0 means no vlan id association.
+        """
         client_factory = session._get_vim().client.factory
         add_prt_grp_spec = vm_util.get_add_vswitch_port_group_spec(
                         client_factory,

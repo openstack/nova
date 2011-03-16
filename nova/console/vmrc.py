@@ -65,11 +65,13 @@ class VMRCConsole(object):
 
     def fix_pool_password(self, password):
         """Encode password."""
-        #TODO:Encrypt pool password
+        # TODO(sateesh): Encrypt pool password
         return password
 
     def generate_password(self, vim_session, pool, instance_name):
-        """Returns a VMRC Connection credentials
+        """
+        Returns VMRC Connection credentials.
+
         Return string is of the form '<VM PATH>:<ESX Username>@<ESX Password>'.
         """
         username, password = pool['username'], pool['password']
@@ -98,12 +100,12 @@ class VMRCConsole(object):
         return base64.b64encode(json_data)
 
     def is_otp(self):
-        """Is one time password."""
+        """Is one time password or not."""
         return False
 
 
 class VMRCSessionConsole(VMRCConsole):
-    """VMRC console driver with VMRC One Time Sessions"""
+    """VMRC console driver with VMRC One Time Sessions."""
 
     def __init__(self):
         super(VMRCSessionConsole, self).__init__()
@@ -113,7 +115,9 @@ class VMRCSessionConsole(VMRCConsole):
         return 'vmrc+session'
 
     def generate_password(self, vim_session, pool, instance_name):
-        """Returns a VMRC Session
+        """
+        Returns a VMRC Session.
+
         Return string is of the form '<VM MOID>:<VMRC Ticket>'.
         """
         vms = vim_session._call_method(vim_util, "get_objects",
@@ -136,5 +140,5 @@ class VMRCSessionConsole(VMRCConsole):
         return base64.b64encode(json_data)
 
     def is_otp(self):
-        """Is one time password."""
+        """Is one time password or not."""
         return True

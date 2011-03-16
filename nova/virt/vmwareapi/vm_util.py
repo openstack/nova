@@ -15,18 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-The VMware API VM utility module to build SOAP object specs
+The VMware API VM utility module to build SOAP object specs.
 """
 
 
 def build_datastore_path(datastore_name, path):
-    """Build the datastore compliant path"""
+    """Build the datastore compliant path."""
     return "[%s] %s" % (datastore_name, path)
 
 
 def split_datastore_path(datastore_path):
-    """Split the VMWare style datastore path to get the Datastore
-    name and the entity path
+    """
+    Split the VMWare style datastore path to get the Datastore
+    name and the entity path.
     """
     spl = datastore_path.split('[', 1)[1].split(']', 1)
     path = ""
@@ -40,7 +41,7 @@ def split_datastore_path(datastore_path):
 def get_vm_create_spec(client_factory, instance, data_store_name,
                        network_name="vmnet0",
                        os_type="otherGuest"):
-    """Builds the VM Create spec"""
+    """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = instance.name
     config_spec.guestId = os_type
@@ -70,11 +71,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
 
 
 def create_controller_spec(client_factory, key):
-    """Builds a Config Spec for the LSI Logic Controller's addition
-    which acts as the controller for the
-    Virtual Hard disk to be attached to the VM
     """
-    #Create a controller for the Virtual Hard Disk
+    Builds a Config Spec for the LSI Logic Controller's addition
+    which acts as the controller for the virtual hard disk to be attached
+    to the VM.
+    """
+    # Create a controller for the Virtual Hard Disk
     virtual_device_config = \
         client_factory.create('ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "add"
@@ -88,13 +90,15 @@ def create_controller_spec(client_factory, key):
 
 
 def create_network_spec(client_factory, network_name, mac_address):
-    """Builds a config spec for the addition of a new network
-    adapter to the VM"""
+    """
+    Builds a config spec for the addition of a new network
+    adapter to the VM.
+    """
     network_spec = \
          client_factory.create('ns0:VirtualDeviceConfigSpec')
     network_spec.operation = "add"
 
-    #Get the recommended card type for the VM based on the guest OS of the VM
+    # Get the recommended card type for the VM based on the guest OS of the VM
     net_device = client_factory.create('ns0:VirtualPCNet32')
 
     backing = \
@@ -110,9 +114,9 @@ def create_network_spec(client_factory, network_name, mac_address):
     net_device.connectable = connectable_spec
     net_device.backing = backing
 
-    #The Server assigns a Key to the device. Here we pass a -ve temporary key.
-    #-ve because actual keys are +ve numbers and we don't
-    #want a clash with the key that server might associate with the device
+    # The Server assigns a Key to the device. Here we pass a -ve temporary key.
+    # -ve because actual keys are +ve numbers and we don't
+    # want a clash with the key that server might associate with the device
     net_device.key = -47
     net_device.addressType = "manual"
     net_device.macAddress = mac_address
@@ -124,14 +128,14 @@ def create_network_spec(client_factory, network_name, mac_address):
 
 def get_vmdk_attach_config_spec(client_factory,
                 disksize, file_path, adapter_type="lsiLogic"):
-    """Builds the vmdk attach config spec"""
+    """Builds the vmdk attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
-    #The controller Key pertains to the Key of the LSI Logic Controller, which
-    #controls this Hard Disk
+    # The controller Key pertains to the Key of the LSI Logic Controller, which
+    # controls this Hard Disk
     device_config_spec = []
-    #For IDE devices, there are these two default controllers created in the
-    #VM having keys 200 and 201
+    # For IDE devices, there are these two default controllers created in the
+    # VM having keys 200 and 201
     if adapter_type == "ide":
         controller_key = 200
     else:
@@ -149,7 +153,7 @@ def get_vmdk_attach_config_spec(client_factory,
 
 
 def get_vmdk_file_path_and_adapter_type(client_factory, hardware_devices):
-    """Gets the vmdk file path and the storage adapter type"""
+    """Gets the vmdk file path and the storage adapter type."""
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
     vmdk_file_path = None
@@ -177,7 +181,7 @@ def get_vmdk_file_path_and_adapter_type(client_factory, hardware_devices):
 
 
 def get_copy_virtual_disk_spec(client_factory, adapter_type="lsilogic"):
-    """Builds the Virtual Disk copy spec"""
+    """Builds the Virtual Disk copy spec."""
     dest_spec = client_factory.create('ns0:VirtualDiskSpec')
     dest_spec.adapterType = adapter_type
     dest_spec.diskType = "thick"
@@ -185,7 +189,7 @@ def get_copy_virtual_disk_spec(client_factory, adapter_type="lsilogic"):
 
 
 def get_vmdk_create_spec(client_factory, size_in_kb, adapter_type="lsiLogic"):
-    """Builds the virtual disk create spec"""
+    """Builds the virtual disk create spec."""
     create_vmdk_spec = \
         client_factory.create('ns0:FileBackedVirtualDiskSpec')
     create_vmdk_spec.adapterType = adapter_type
@@ -196,8 +200,10 @@ def get_vmdk_create_spec(client_factory, size_in_kb, adapter_type="lsiLogic"):
 
 def create_virtual_disk_spec(client_factory,
                 disksize, controller_key, file_path=None):
-    """Creates a Spec for the addition/attaching of a
-    Virtual Disk to the VM"""
+    """
+    Builds spec for the creation of a new/ attaching of an already existing
+    Virtual Disk to the VM.
+    """
     virtual_device_config = \
         client_factory.create('ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "add"
@@ -223,9 +229,9 @@ def create_virtual_disk_spec(client_factory,
     virtual_disk.backing = disk_file_backing
     virtual_disk.connectable = connectable_spec
 
-    #The Server assigns a Key to the device. Here we pass a -ve temporary key.
-    #-ve because actual keys are +ve numbers and we don't
-    #want a clash with the key that server might associate with the device
+    # The Server assigns a Key to the device. Here we pass a -ve random key.
+    # -ve because actual keys are +ve numbers and we don't
+    # want a clash with the key that server might associate with the device
     virtual_disk.key = -100
     virtual_disk.controllerKey = controller_key
     virtual_disk.unitNumber = 0
@@ -237,7 +243,7 @@ def create_virtual_disk_spec(client_factory,
 
 
 def get_dummy_vm_create_spec(client_factory, name, data_store_name):
-    """Builds the dummy VM create spec"""
+    """Builds the dummy VM create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
     config_spec.name = name
@@ -269,7 +275,7 @@ def get_dummy_vm_create_spec(client_factory, name, data_store_name):
 
 
 def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway):
-    """Builds the machine id change config spec"""
+    """Builds the machine id change config spec."""
     machine_id_str = "%s;%s;%s;%s" % (mac, ip_addr, netmask, gateway)
     virtual_machine_config_spec = \
         client_factory.create('ns0:VirtualMachineConfigSpec')
@@ -283,12 +289,12 @@ def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway):
 
 def get_add_vswitch_port_group_spec(client_factory, vswitch_name,
                                            port_group_name, vlan_id):
-    """Builds the virtual switch port group add spec"""
+    """Builds the virtual switch port group add spec."""
     vswitch_port_group_spec = client_factory.create('ns0:HostPortGroupSpec')
     vswitch_port_group_spec.name = port_group_name
     vswitch_port_group_spec.vswitchName = vswitch_name
 
-    #VLAN ID of 0 means that VLAN tagging is not to be done for the network.
+    # VLAN ID of 0 means that VLAN tagging is not to be done for the network.
     vswitch_port_group_spec.vlanId = int(vlan_id)
 
     policy = client_factory.create('ns0:HostNetworkPolicy')

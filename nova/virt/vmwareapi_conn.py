@@ -29,6 +29,7 @@ A connection to the VMware ESX platform.
 :vmwareapi_api_retry_count:  The API retry count in case of failure such as
                              network failures (socket errors etc.)
                              (default: 10).
+
 """
 
 import time
@@ -78,7 +79,7 @@ TIME_BETWEEN_API_CALL_RETRIES = 2.0
 
 
 class Failure(Exception):
-    """Base Exception class for handling task failures"""
+    """Base Exception class for handling task failures."""
 
     def __init__(self, details):
         self.details = details
@@ -103,7 +104,7 @@ def get_connection(_):
 
 
 class VMWareESXConnection(object):
-    """The ESX host connection object"""
+    """The ESX host connection object."""
 
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
@@ -112,80 +113,85 @@ class VMWareESXConnection(object):
         self._vmops = VMWareVMOps(session)
 
     def init_host(self, host):
-        """Do the initialization that needs to be done"""
-        #FIXME(sateesh): implement this
+        """Do the initialization that needs to be done."""
+        # FIXME(sateesh): implement this
         pass
 
     def list_instances(self):
-        """List VM instances"""
+        """List VM instances."""
         return self._vmops.list_instances()
 
     def spawn(self, instance):
-        """Create VM instance"""
+        """Create VM instance."""
         self._vmops.spawn(instance)
 
     def snapshot(self, instance, name):
-        """Create snapshot from a running VM instance"""
+        """Create snapshot from a running VM instance."""
         self._vmops.snapshot(instance, name)
 
     def reboot(self, instance):
-        """Reboot VM instance"""
+        """Reboot VM instance."""
         self._vmops.reboot(instance)
 
     def destroy(self, instance):
-        """Destroy VM instance"""
+        """Destroy VM instance."""
         self._vmops.destroy(instance)
 
     def pause(self, instance, callback):
-        """Pause VM instance"""
+        """Pause VM instance."""
         self._vmops.pause(instance, callback)
 
     def unpause(self, instance, callback):
-        """Unpause paused VM instance"""
+        """Unpause paused VM instance."""
         self._vmops.unpause(instance, callback)
 
     def suspend(self, instance, callback):
-        """Suspend the specified instance"""
+        """Suspend the specified instance."""
         self._vmops.suspend(instance, callback)
 
     def resume(self, instance, callback):
-        """Resume the suspended VM instance"""
+        """Resume the suspended VM instance."""
         self._vmops.resume(instance, callback)
 
     def get_info(self, instance_id):
-        """Return info about the VM instance"""
+        """Return info about the VM instance."""
         return self._vmops.get_info(instance_id)
 
     def get_diagnostics(self, instance):
-        """Return data about VM diagnostics"""
+        """Return data about VM diagnostics."""
         return self._vmops.get_info(instance)
 
     def get_console_output(self, instance):
-        """Return snapshot of console"""
+        """Return snapshot of console."""
         return self._vmops.get_console_output(instance)
 
     def get_ajax_console(self, instance):
-        """Return link to instance's ajax console"""
+        """Return link to instance's ajax console."""
         return self._vmops.get_ajax_console(instance)
 
     def attach_volume(self, instance_name, device_path, mountpoint):
-        """Attach volume storage to VM instance"""
+        """Attach volume storage to VM instance."""
         pass
 
     def detach_volume(self, instance_name, mountpoint):
-        """Detach volume storage to VM instance"""
+        """Detach volume storage to VM instance."""
         pass
 
     def get_console_pool_info(self, console_type):
-        """Get info about the host on which the VM resides"""
+        """Get info about the host on which the VM resides."""
         return {'address': FLAGS.vmwareapi_host_ip,
                 'username': FLAGS.vmwareapi_host_username,
                 'password': FLAGS.vmwareapi_host_password}
 
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
 
 class VMWareAPISession(object):
-    """Sets up a session with the ESX host and handles all
-    the calls made to the host
+    """
+    Sets up a session with the ESX host and handles all
+    the calls made to the host.
     """
 
     def __init__(self, host_ip, host_username, host_password,
@@ -200,11 +206,11 @@ class VMWareAPISession(object):
         self._create_session()
 
     def _get_vim_object(self):
-        """Create the VIM Object instance"""
+        """Create the VIM Object instance."""
         return vim.Vim(protocol=self._scheme, host=self._host_ip)
 
     def _create_session(self):
-        """Creates a session with the ESX host"""
+        """Creates a session with the ESX host."""
         while True:
             try:
                 # Login and setup the session with the ESX host for making
@@ -241,12 +247,13 @@ class VMWareAPISession(object):
             pass
 
     def _is_vim_object(self, module):
-        """Check if the module is a VIM Object instance"""
+        """Check if the module is a VIM Object instance."""
         return isinstance(module, vim.Vim)
 
     def _call_method(self, module, method, *args, **kwargs):
-        """Calls a method within the module specified with
-        args provided
+        """
+        Calls a method within the module specified with
+        args provided.
         """
         args = list(args)
         retry_count = 0
@@ -254,7 +261,8 @@ class VMWareAPISession(object):
         while True:
             try:
                 if not self._is_vim_object(module):
-                    #If it is not the first try, then get the latest vim object
+                    # If it is not the first try, then get the latest
+                    # vim object
                     if retry_count > 0:
                         args = args[1:]
                     args = [self.vim] + args
@@ -264,8 +272,7 @@ class VMWareAPISession(object):
                 for method_elem in method.split("."):
                     temp_module = getattr(temp_module, method_elem)
 
-                ret_val = temp_module(*args, **kwargs)
-                return ret_val
+                return temp_module(*args, **kwargs)
             except error_util.VimFaultException, excep:
                 # If it is a Session Fault Exception, it may point
                 # to a session gone bad. So we try re-creating a session
@@ -274,9 +281,9 @@ class VMWareAPISession(object):
                 if error_util.FAULT_NOT_AUTHENTICATED in excep.fault_list:
                     self._create_session()
                 else:
-                    #No re-trying for errors for API call has gone through
-                    #and is the caller's fault. Caller should handle these
-                    #errors. e.g, InvalidArgument fault.
+                    # No re-trying for errors for API call has gone through
+                    # and is the caller's fault. Caller should handle these
+                    # errors. e.g, InvalidArgument fault.
                     break
             except error_util.SessionOverLoadException, excep:
                 # For exceptions which may come because of session overload,
@@ -299,13 +306,14 @@ class VMWareAPISession(object):
         raise
 
     def _get_vim(self):
-        """Gets the VIM object reference"""
+        """Gets the VIM object reference."""
         if self.vim is None:
             self._create_session()
         return self.vim
 
     def _wait_for_task(self, instance_id, task_ref):
-        """Return a Deferred that will give the result of the given task.
+        """
+        Return a Deferred that will give the result of the given task.
         The task is polled until it completes.
         """
         done = event.Event()
@@ -317,7 +325,8 @@ class VMWareAPISession(object):
         return ret_val
 
     def _poll_task(self, instance_id, task_ref, done):
-        """Poll the given task, and fires the given Deferred if we
+        """
+        Poll the given task, and fires the given Deferred if we
         get a result.
         """
         try:
@@ -331,7 +340,7 @@ class VMWareAPISession(object):
             if task_info.state in ['queued', 'running']:
                 return
             elif task_info.state == 'success':
-                LOG.info(_("Task [%(task_name)s] %(task_ref)s "
+                LOG.debug(_("Task [%(task_name)s] %(task_ref)s "
                             "status: success") % locals())
                 done.send("success")
             else:

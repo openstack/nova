@@ -25,17 +25,17 @@ from nova.virt.vmwareapi import vmware_images
 
 
 def fake_get_vim_object(arg):
-    """ Stubs out the VMWareAPISession's get_vim_object method """
+    """Stubs out the VMWareAPISession's get_vim_object method."""
     return fake.FakeVim()
 
 
 def fake_is_vim_object(arg, module):
-    """ Stubs out the VMWareAPISession's is_vim_object method """
+    """Stubs out the VMWareAPISession's is_vim_object method."""
     return isinstance(module, fake.FakeVim)
 
 
 def set_stubs(stubs):
-    """ Set the stubs """
+    """Set the stubs."""
     stubs.Set(vmware_images, 'fetch_image', fake.fake_fetch_image)
     stubs.Set(vmware_images, 'get_vmdk_size_and_properties',
               fake.fake_get_vmdk_size_and_properties)

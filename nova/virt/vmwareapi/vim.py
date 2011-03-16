@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-Classes for making VMware VI SOAP calls
+Classes for making VMware VI SOAP calls.
 """
 
 import httplib
@@ -37,49 +37,50 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('vmwareapi_wsdl_loc',
                    None,
                    'VIM Service WSDL Location'
-                   'E.g http://<server>/vimService.wsdl'
+                   'e.g http://<server>/vimService.wsdl'
                    'Due to a bug in vSphere ESX 4.1 default wsdl'
-                   'Read the readme for vmware to setup')
+                   'Refer readme-vmware to setup')
 
 
 class VIMMessagePlugin(MessagePlugin):
 
     def addAttributeForValue(self, node):
-        #suds does not handle AnyType properly
-        #VI SDK requires type attribute to be set when AnyType is used
+        # suds does not handle AnyType properly.
+        # VI SDK requires type attribute to be set when AnyType is used
         if node.name == 'value':
             node.set('xsi:type', 'xsd:string')
 
     def marshalled(self, context):
-        """Suds will send the specified soap envelope.
+        """suds will send the specified soap envelope.
         Provides the plugin with the opportunity to prune empty
-        nodes and fixup nodes before sending it to the server
+        nodes and fixup nodes before sending it to the server.
         """
-        #suds builds the entire request object based on the wsdl schema
-        #VI SDK throws server errors if optional SOAP nodes are sent without
-        #values. E.g <test/> as opposed to <test>test</test>
+        # suds builds the entire request object based on the wsdl schema.
+        # VI SDK throws server errors if optional SOAP nodes are sent without
+        # values, e.g. <test/> as opposed to <test>test</test>
         context.envelope.prune()
         context.envelope.walk(self.addAttributeForValue)
 
 
 class Vim:
-    """The VIM Object"""
+    """The VIM Object."""
 
     def __init__(self,
                  protocol="https",
                  host="localhost"):
         """
+        Creates the necessary Communication interfaces and gets the
+        ServiceContent for initiating SOAP transactions.
+
         protocol: http or https
         host    : ESX IPAddress[:port] or ESX Hostname[:port]
-        Creates the necessary Communication interfaces, Gets the
-        ServiceContent for initiating SOAP transactions
         """
         self._protocol = protocol
         self._host_name = host
         wsdl_url = FLAGS.vmwareapi_wsdl_loc
         if wsdl_url is None:
             raise Exception(_("Must specify vmwareapi_wsdl_loc"))
-        #Use this when VMware fixes their faulty wsdl
+        # Use this when VMware fixes their faulty wsdl
         #wsdl_url = '%s://%s/sdk/vimService.wsdl' % (self._protocol,
         #        self._host_name)
         url = '%s://%s/sdk' % (self._protocol, self._host_name)
@@ -89,37 +90,41 @@ class Vim:
                 self.RetrieveServiceContent("ServiceInstance")
 
     def get_service_content(self):
-        """Gets the service content object"""
+        """Gets the service content object."""
         return self._service_content
 
     def __getattr__(self, attr_name):
-        """Makes the API calls and gets the result"""
+        """Makes the API calls and gets the result."""
         try:
             return object.__getattr__(self, attr_name)
         except AttributeError:
 
             def vim_request_handler(managed_object, **kwargs):
-                """managed_object    : Managed Object Reference or Managed
-                                       Object Name
-                   **kw              : Keyword arguments of the call
                 """
-                #Dynamic handler for VI SDK Calls
+                Builds the SOAP message and parses the response for fault
+                checking and other errors.
+
+                managed_object    : Managed Object Reference or Managed
+                                    Object Name
+                **kwargs          : Keyword arguments of the call
+                """
+                # Dynamic handler for VI SDK Calls
                 try:
                     request_mo = \
                         self._request_managed_object_builder(managed_object)
                     request = getattr(self.client.service, attr_name)
                     response = request(request_mo, **kwargs)
-                    #To check for the faults that are part of the message body
-                    #and not returned as Fault object response from the ESX
-                    #SOAP server
+                    # To check for the faults that are part of the message body
+                    # and not returned as Fault object response from the ESX
+                    # SOAP server
                     if hasattr(error_util.FaultCheckers,
                                     attr_name.lower() + "_fault_checker"):
                         fault_checker = getattr(error_util.FaultCheckers,
                                     attr_name.lower() + "_fault_checker")
                         fault_checker(response)
                     return response
-                #Catch the VimFaultException that is raised by the fault
-                #check of the SOAP response
+                # Catch the VimFaultException that is raised by the fault
+                # check of the SOAP response
                 except error_util.VimFaultException, excep:
                     raise
                 except WebFault, excep:
@@ -155,8 +160,8 @@ class Vim:
             return vim_request_handler
 
     def _request_managed_object_builder(self, managed_object):
-        """Builds the request managed object"""
-        #Request Managed Object Builder
+        """Builds the request managed object."""
+        # Request Managed Object Builder
         if type(managed_object) == type(""):
             mo = Property(managed_object)
             mo._type = managed_object

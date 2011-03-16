@@ -16,19 +16,19 @@
 #    under the License.
 
 """
-The VMware API utility module
+The VMware API utility module.
 """
 
 
-def build_selcetion_spec(client_factory, name):
-    """ Builds the selection spec """
+def build_selection_spec(client_factory, name):
+    """Builds the selection spec."""
     sel_spec = client_factory.create('ns0:SelectionSpec')
     sel_spec.name = name
     return sel_spec
 
 
 def build_traversal_spec(client_factory, name, type, path, skip, select_set):
-    """ Builds the traversal spec object """
+    """Builds the traversal spec object."""
     traversal_spec = client_factory.create('ns0:TraversalSpec')
     traversal_spec.name = name
     traversal_spec.type = type
@@ -39,9 +39,11 @@ def build_traversal_spec(client_factory, name, type, path, skip, select_set):
 
 
 def build_recursive_traversal_spec(client_factory):
-    """ Builds the Recursive Traversal Spec to traverse the object managed
-    object hierarchy """
-    visit_folders_select_spec = build_selcetion_spec(client_factory,
+    """
+    Builds the Recursive Traversal Spec to traverse the object managed
+    object hierarchy.
+    """
+    visit_folders_select_spec = build_selection_spec(client_factory,
                                     "visitFolders")
     #For getting to hostFolder from datacnetr
     dc_to_hf = build_traversal_spec(client_factory, "dc_to_hf", "Datacenter",
@@ -64,8 +66,8 @@ def build_recursive_traversal_spec(client_factory):
     cr_to_ds = build_traversal_spec(client_factory, "cr_to_ds",
                                     "ComputeResource", "datastore", False, [])
 
-    rp_to_rp_select_spec = build_selcetion_spec(client_factory, "rp_to_rp")
-    rp_to_vm_select_spec = build_selcetion_spec(client_factory, "rp_to_vm")
+    rp_to_rp_select_spec = build_selection_spec(client_factory, "rp_to_rp")
+    rp_to_vm_select_spec = build_selection_spec(client_factory, "rp_to_vm")
     #For getting to resource pool from Compute Resource
     cr_to_rp = build_traversal_spec(client_factory, "cr_to_rp",
                                 "ComputeResource", "resourcePool", False,
@@ -94,7 +96,7 @@ def build_recursive_traversal_spec(client_factory):
 def build_property_spec(client_factory, type="VirtualMachine",
                         properties_to_collect=["name"],
                         all_properties=False):
-    """Builds the Property Spec"""
+    """Builds the Property Spec."""
     property_spec = client_factory.create('ns0:PropertySpec')
     property_spec.all = all_properties
     property_spec.pathSet = properties_to_collect
@@ -103,7 +105,7 @@ def build_property_spec(client_factory, type="VirtualMachine",
 
 
 def build_object_spec(client_factory, root_folder, traversal_specs):
-    """Builds the object Spec"""
+    """Builds the object Spec."""
     object_spec = client_factory.create('ns0:ObjectSpec')
     object_spec.obj = root_folder
     object_spec.skip = False
@@ -112,7 +114,7 @@ def build_object_spec(client_factory, root_folder, traversal_specs):
 
 
 def build_property_filter_spec(client_factory, property_specs, object_specs):
-    """Builds the Property Filter Spec"""
+    """Builds the Property Filter Spec."""
     property_filter_spec = client_factory.create('ns0:PropertyFilterSpec')
     property_filter_spec.propSet = property_specs
     property_filter_spec.objectSet = object_specs
@@ -120,7 +122,7 @@ def build_property_filter_spec(client_factory, property_specs, object_specs):
 
 
 def get_object_properties(vim, collector, mobj, type, properties):
-    """Gets the properties of the Managed object specified"""
+    """Gets the properties of the Managed object specified."""
     client_factory = vim.client.factory
     if mobj is None:
         return None
@@ -141,7 +143,7 @@ def get_object_properties(vim, collector, mobj, type, properties):
 
 
 def get_dynamic_property(vim, mobj, type, property_name):
-    """Gets a particular property of the Managed Object"""
+    """Gets a particular property of the Managed Object."""
     obj_content = \
         get_object_properties(vim, None, mobj, type, [property_name])
     property_value = None
@@ -153,7 +155,7 @@ def get_dynamic_property(vim, mobj, type, property_name):
 
 
 def get_objects(vim, type, properties_to_collect=["name"], all=False):
-    """Gets the list of objects of the type specified"""
+    """Gets the list of objects of the type specified."""
     client_factory = vim.client.factory
     object_spec = build_object_spec(client_factory,
                         vim.get_service_content().rootFolder,
@@ -169,7 +171,7 @@ def get_objects(vim, type, properties_to_collect=["name"], all=False):
 
 
 def get_prop_spec(client_factory, type, properties):
-    """Builds the Property Spec Object"""
+    """Builds the Property Spec Object."""
     prop_spec = client_factory.create('ns0:PropertySpec')
     prop_spec.type = type
     prop_spec.pathSet = properties
@@ -177,7 +179,7 @@ def get_prop_spec(client_factory, type, properties):
 
 
 def get_obj_spec(client_factory, obj, select_set=None):
-    """Builds the Object Spec object"""
+    """Builds the Object Spec object."""
     obj_spec = client_factory.create('ns0:ObjectSpec')
     obj_spec.obj = obj
     obj_spec.skip = False
@@ -187,7 +189,7 @@ def get_obj_spec(client_factory, obj, select_set=None):
 
 
 def get_prop_filter_spec(client_factory, obj_spec, prop_spec):
-    """Builds the Property Filter Spec Object"""
+    """Builds the Property Filter Spec Object."""
     prop_filter_spec = \
         client_factory.create('ns0:PropertyFilterSpec')
     prop_filter_spec.propSet = prop_spec
@@ -195,10 +197,11 @@ def get_prop_filter_spec(client_factory, obj_spec, prop_spec):
     return prop_filter_spec
 
 
-def get_properites_for_a_collection_of_objects(vim, type,
+def get_properties_for_a_collection_of_objects(vim, type,
                                                obj_list, properties):
-    """Gets the list of properties for the collection of
-    objects of the type specified
+    """
+    Gets the list of properties for the collection of
+    objects of the type specified.
     """
     client_factory = vim.client.factory
     if len(obj_list) == 0:

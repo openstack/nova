@@ -15,5 +15,5 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-:mod:`vmwareapi` -- Nova support for VMware ESX/ESXi Server through vSphere API
+:mod:`vmwareapi` -- Nova support for VMware ESX/ESXi Server through VMware API.
 """

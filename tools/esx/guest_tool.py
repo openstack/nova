@@ -36,7 +36,7 @@ ARCH_32_BIT = '32bit'
 ARCH_64_BIT = '64bit'
 NO_MACHINE_ID = 'No machine id'
 
-#Logging
+# Logging
 FORMAT = "%(asctime)s - %(levelname)s - %(message)s"
 if sys.platform == PLATFORM_WIN:
     LOG_DIR = os.path.join(os.environ.get('ALLUSERSPROFILE'), 'openstack')
@@ -56,7 +56,7 @@ else:
 
 
 class ProcessExecutionError:
-    """Process Execution Error Class"""
+    """Process Execution Error Class."""
 
     def __init__(self, exit_code, stdout, stderr, cmd):
         self.exit_code = exit_code
@@ -77,7 +77,8 @@ def _bytes2int(bytes):
 
 
 def _parse_network_details(machine_id):
-    """Parse the machine.id field to get MAC, IP, Netmask and Gateway fields
+    """
+    Parse the machine.id field to get MAC, IP, Netmask and Gateway fields
     machine.id is of the form MAC;IP;Netmask;Gateway;Broadcast;DNS1,DNS2
     where ';' is the separator.
     """
@@ -103,7 +104,7 @@ def _parse_network_details(machine_id):
 
 
 def _get_windows_network_adapters():
-    """Get the list of windows network adapters"""
+    """Get the list of windows network adapters."""
     import win32com.client
     wbem_locator = win32com.client.Dispatch('WbemScripting.SWbemLocator')
     wbem_service = wbem_locator.ConnectServer('.', 'root\cimv2')
@@ -132,7 +133,7 @@ def _get_windows_network_adapters():
 
 
 def _get_linux_network_adapters():
-    """Get the list of Linux network adapters"""
+    """Get the list of Linux network adapters."""
     import fcntl
     max_bytes = 8096
     arch = platform.architecture()[0]
@@ -177,7 +178,7 @@ def _get_linux_network_adapters():
 
 
 def _get_adapter_name_and_ip_address(network_adapters, mac_address):
-    """Get the adapter name based on the MAC address"""
+    """Get the adapter name based on the MAC address."""
     adapter_name = None
     ip_address = None
     for network_adapter in network_adapters:
@@ -189,19 +190,19 @@ def _get_adapter_name_and_ip_address(network_adapters, mac_address):
 
 
 def _get_win_adapter_name_and_ip_address(mac_address):
-    """Get Windows network adapter name"""
+    """Get Windows network adapter name."""
     network_adapters = _get_windows_network_adapters()
     return _get_adapter_name_and_ip_address(network_adapters, mac_address)
 
 
 def _get_linux_adapter_name_and_ip_address(mac_address):
-    """Get Linux network adapter name"""
+    """Get Linux network adapter name."""
     network_adapters = _get_linux_network_adapters()
     return _get_adapter_name_and_ip_address(network_adapters, mac_address)
 
 
 def _execute(cmd_list, process_input=None, check_exit_code=True):
-    """Executes the command with the list of arguments specified"""
+    """Executes the command with the list of arguments specified."""
     cmd = ' '.join(cmd_list)
     logging.debug(_("Executing command: '%s'") % cmd)
     env = os.environ.copy()
@@ -226,7 +227,7 @@ def _execute(cmd_list, process_input=None, check_exit_code=True):
 
 
 def _windows_set_networking():
-    """Set IP address for the windows VM"""
+    """Set IP address for the windows VM."""
     program_files = os.environ.get('PROGRAMFILES')
     program_files_x86 = os.environ.get('PROGRAMFILES(X86)')
     vmware_tools_bin = None
@@ -256,7 +257,7 @@ def _windows_set_networking():
                        'name="%s"' % adapter_name, 'source=static', ip_address,
                        subnet_mask, gateway, '1']
                 _execute(cmd)
-                #Windows doesn't let you manually set the broadcast address
+                # Windows doesn't let you manually set the broadcast address
                 for dns_server in dns_servers:
                     if dns_server:
                         cmd = ['netsh', 'interface', 'ip', 'add', 'dns',
@@ -285,9 +286,9 @@ def _set_rhel_networking(network_details=[]):
         if adapter_name and not ip_address == current_ip_address:
             interface_file_name = \
                 '/etc/sysconfig/network-scripts/ifcfg-%s' % adapter_name
-            #Remove file
+            # Remove file
             os.remove(interface_file_name)
-            #Touch file
+            # Touch file
             _execute(['touch', interface_file_name])
             interface_file = open(interface_file_name, 'w')
             interface_file.write('\nDEVICE=%s' % adapter_name)
@@ -315,7 +316,7 @@ def _set_rhel_networking(network_details=[]):
 
 
 def _linux_set_networking():
-    """Set IP address for the Linux VM"""
+    """Set IP address for the Linux VM."""
     vmware_tools_bin = None
     if os.path.exists('/usr/sbin/vmtoolsd'):
         vmware_tools_bin = '/usr/sbin/vmtoolsd'
@@ -329,7 +330,7 @@ def _linux_set_networking():
         cmd = [vmware_tools_bin, '--cmd', 'machine.id.get']
         network_details = _parse_network_details(_execute(cmd,
                                                 check_exit_code=False))
-        #TODO: For other distros like ubuntu, suse, debian, BSD, etc.
+        # TODO(sateesh): For other distros like ubuntu, suse, debian, BSD, etc.
         _set_rhel_networking(network_details)
     else:
         logging.warn(_("VMware Tools is not installed"))

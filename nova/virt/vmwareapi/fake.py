@@ -39,14 +39,14 @@ LOG = logging.getLogger("nova.virt.vmwareapi.fake")
 
 
 def log_db_contents(msg=None):
-    """ Log DB Contents"""
+    """Log DB Contents."""
     text = msg or ""
     content = pformat(_db_content)
     LOG.debug(_("%(text)s: _db_content => %(content)s") % locals())
 
 
 def reset():
-    """ Resets the db contents """
+    """Resets the db contents."""
     for c in _CLASSES:
         #We fake the datastore by keeping the file references as a list of
         #names in the db
@@ -63,18 +63,18 @@ def reset():
 
 
 def cleanup():
-    """ Clear the db contents """
+    """Clear the db contents."""
     for c in _CLASSES:
         _db_content[c] = {}
 
 
 def _create_object(table, obj):
-    """ Create an object in the db """
+    """Create an object in the db."""
     _db_content[table][obj.obj] = obj
 
 
 def _get_objects(type):
-    """ Get objects of the type """
+    """Get objects of the type."""
     lst_objs = []
     for key in _db_content[type]:
         lst_objs.append(_db_content[type][key])
@@ -82,7 +82,7 @@ def _get_objects(type):
 
 
 class Prop(object):
-    """ Property Object base class """
+    """Property Object base class."""
 
     def __init__(self):
         self.name = None
@@ -96,10 +96,10 @@ class Prop(object):
 
 
 class ManagedObject(object):
-    """ Managed Data Object base class """
+    """Managed Data Object base class."""
 
     def __init__(self, name="ManagedObject", obj_ref=None):
-        """ Sets the obj property which acts as a reference to the object"""
+        """Sets the obj property which acts as a reference to the object."""
         object.__setattr__(self, 'objName', name)
         if obj_ref is None:
             obj_ref = str(uuid.uuid4())
@@ -107,14 +107,18 @@ class ManagedObject(object):
         object.__setattr__(self, 'propSet', [])
 
     def set(self, attr, val):
-        """ Sets an attribute value. Not using the __setattr__ directly for we
+        """
+        Sets an attribute value. Not using the __setattr__ directly for we
         want to set attributes of the type 'a.b.c' and using this function
-        class we set the same """
+        class we set the same.
+        """
         self.__setattr__(attr, val)
 
     def get(self, attr):
-        """ Gets an attribute. Used as an intermediary to get nested
-        property like 'a.b.c' value """
+        """
+        Gets an attribute. Used as an intermediary to get nested
+        property like 'a.b.c' value.
+        """
         return self.__getattr__(attr)
 
     def __setattr__(self, attr, val):
@@ -138,7 +142,7 @@ class ManagedObject(object):
 
 
 class DataObject(object):
-    """ Data object base class """
+    """Data object base class."""
 
     def __init__(self):
         pass
@@ -151,30 +155,32 @@ class DataObject(object):
 
 
 class VirtualDisk(DataObject):
-    """ Virtual Disk class. Does nothing special except setting
+    """
+    Virtual Disk class. Does nothing special except setting
     __class__.__name__ to 'VirtualDisk'. Refer place where __class__.__name__
-    is used in the code """
+    is used in the code.
+    """
 
     def __init__(self):
         DataObject.__init__(self)
 
 
 class VirtualDiskFlatVer2BackingInfo(DataObject):
-    """ VirtualDiskFlatVer2BackingInfo class """
+    """VirtualDiskFlatVer2BackingInfo class."""
 
     def __init__(self):
         DataObject.__init__(self)
 
 
 class VirtualLsiLogicController(DataObject):
-    """ VirtualLsiLogicController class """
+    """VirtualLsiLogicController class."""
 
     def __init__(self):
         DataObject.__init__(self)
 
 
 class VirtualMachine(ManagedObject):
-    """ Virtual Machine class """
+    """Virtual Machine class."""
 
     def __init__(self, **kwargs):
         ManagedObject.__init__(self, "VirtualMachine")
@@ -195,8 +201,10 @@ class VirtualMachine(ManagedObject):
         self.set("config.extraConfig", kwargs.get("extra_config", None))
 
     def reconfig(self, factory, val):
-        """ Called to reconfigure the VM. Actually customizes the property
-        setting of the Virtual Machine object """
+        """
+        Called to reconfigure the VM. Actually customizes the property
+        setting of the Virtual Machine object.
+        """
         try:
             #Case of Reconfig of VM to attach disk
             controller_key = val.deviceChange[1].device.controllerKey
@@ -220,7 +228,7 @@ class VirtualMachine(ManagedObject):
 
 
 class Network(ManagedObject):
-    """ Network class """
+    """Network class."""
 
     def __init__(self):
         ManagedObject.__init__(self, "Network")
@@ -228,7 +236,7 @@ class Network(ManagedObject):
 
 
 class ResourcePool(ManagedObject):
-    """ Resource Pool class """
+    """Resource Pool class."""
 
     def __init__(self):
         ManagedObject.__init__(self, "ResourcePool")
@@ -236,7 +244,7 @@ class ResourcePool(ManagedObject):
 
 
 class Datastore(ManagedObject):
-    """ Datastore class """
+    """Datastore class."""
 
     def __init__(self):
         ManagedObject.__init__(self, "Datastore")
@@ -245,7 +253,7 @@ class Datastore(ManagedObject):
 
 
 class HostNetworkSystem(ManagedObject):
-    """ HostNetworkSystem class """
+    """HostNetworkSystem class."""
 
     def __init__(self):
         ManagedObject.__init__(self, "HostNetworkSystem")
@@ -261,7 +269,7 @@ class HostNetworkSystem(ManagedObject):
 
 
 class HostSystem(ManagedObject):
-    """ Host System class """
+    """Host System class."""
 
     def __init__(self):
         ManagedObject.__init__(self, "HostSystem")
@@ -302,7 +310,7 @@ class HostSystem(ManagedObject):
         self.set("config.network.portgroup", host_pg)
 
     def _add_port_group(self, spec):
-        """ Adds a port group to the host system object in the db """
+        """Adds a port group to the host system object in the db."""
         pg_name = spec.name
         vswitch_name = spec.vswitchName
         vlanid = spec.vlanId
@@ -328,7 +336,7 @@ class HostSystem(ManagedObject):
 
 
 class Datacenter(ManagedObject):
-    """ Datacenter class """
+    """Datacenter class."""
 
     def __init__(self):
         ManagedObject.__init__(self, "Datacenter")
@@ -343,7 +351,7 @@ class Datacenter(ManagedObject):
 
 
 class Task(ManagedObject):
-    """ Task class """
+    """Task class."""
 
     def __init__(self, task_name, state="running"):
         ManagedObject.__init__(self, "Task")
@@ -390,12 +398,12 @@ def create_task(task_name, state="running"):
 
 
 def _add_file(file_path):
-    """ Adds a file reference to the  db """
+    """Adds a file reference to the  db."""
     _db_content["files"].append(file_path)
 
 
 def _remove_file(file_path):
-    """ Removes a file reference from the db """
+    """Removes a file reference from the db."""
     if _db_content.get("files", None) is None:
         raise exception.NotFound(_("No files have been added yet"))
     #Check if the remove is for a single file object or for a folder
@@ -415,7 +423,7 @@ def _remove_file(file_path):
 
 
 def fake_fetch_image(image, instance, **kwargs):
-    """Fakes fetch image call. Just adds a reference to the db for the file """
+    """Fakes fetch image call. Just adds a reference to the db for the file."""
     ds_name = kwargs.get("datastore_name")
     file_path = kwargs.get("file_path")
     ds_file_path = "[" + ds_name + "] " + file_path
@@ -423,19 +431,19 @@ def fake_fetch_image(image, instance, **kwargs):
 
 
 def fake_upload_image(image, instance, **kwargs):
-    """Fakes the upload of an image """
+    """Fakes the upload of an image."""
     pass
 
 
 def fake_get_vmdk_size_and_properties(image_id, instance):
-    """ Fakes the file size and properties fetch for the image file """
+    """Fakes the file size and properties fetch for the image file."""
     props = {"vmware_ostype": "otherGuest",
             "vmware_adaptertype": "lsiLogic"}
     return _FAKE_FILE_SIZE, props
 
 
 def _get_vm_mdo(vm_ref):
-    """ Gets the Virtual Machine with the ref from the db """
+    """Gets the Virtual Machine with the ref from the db."""
     if _db_content.get("VirtualMachine", None) is None:
             raise exception.NotFound(_("There is no VM registered"))
     if vm_ref not in _db_content.get("VirtualMachine"):
@@ -445,22 +453,24 @@ def _get_vm_mdo(vm_ref):
 
 
 class FakeFactory(object):
-    """ Fake factory class for the suds client """
+    """Fake factory class for the suds client."""
 
     def __init__(self):
         pass
 
     def create(self, obj_name):
-        """ Creates a namespace object """
+        """Creates a namespace object."""
         return DataObject()
 
 
 class FakeVim(object):
-    """Fake VIM Class"""
+    """Fake VIM Class."""
 
     def __init__(self, protocol="https", host="localhost", trace=None):
-        """ Initializes the suds client object, sets the service content
-        contents and the cookies for the session """
+        """
+        Initializes the suds client object, sets the service content
+        contents and the cookies for the session.
+        """
         self._session = None
         self.client = DataObject()
         self.client.factory = FakeFactory()
@@ -490,7 +500,7 @@ class FakeVim(object):
         return "Fake VIM Object"
 
     def _login(self):
-        """ Logs in and sets the session object in the db """
+        """Logs in and sets the session object in the db."""
         self._session = str(uuid.uuid4())
         session = DataObject()
         session.key = self._session
@@ -498,7 +508,7 @@ class FakeVim(object):
         return session
 
     def _logout(self):
-        """ Logs out and remove the session object ref from the db """
+        """Logs out and remove the session object ref from the db."""
         s = self._session
         self._session = None
         if s not in _db_content['session']:
@@ -508,14 +518,14 @@ class FakeVim(object):
         del _db_content['session'][s]
 
     def _terminate_session(self, *args, **kwargs):
-        """ Terminates a session """
+        """Terminates a session."""
         s = kwargs.get("sessionId")[0]
         if s not in _db_content['session']:
             return
         del _db_content['session'][s]
 
     def _check_session(self):
-        """ Checks if the session is active """
+        """Checks if the session is active."""
         if (self._session is None or self._session not in
                  _db_content['session']):
             LOG.debug(_("Session is faulty"))
@@ -524,7 +534,7 @@ class FakeVim(object):
                                _("Session Invalid"))
 
     def _create_vm(self, method, *args, **kwargs):
-        """ Creates and registers a VM object with the Host System """
+        """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
         ds = _db_content["Datastore"][_db_content["Datastore"].keys()[0]]
         vm_dict = {"name": config_spec.name,
@@ -539,7 +549,7 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _reconfig_vm(self, method, *args, **kwargs):
-        """ Reconfigures a VM and sets the properties supplied """
+        """Reconfigures a VM and sets the properties supplied."""
         vm_ref = args[0]
         vm_mdo = _get_vm_mdo(vm_ref)
         vm_mdo.reconfig(self.client.factory, kwargs.get("spec"))
@@ -547,7 +557,7 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _create_copy_disk(self, method, vmdk_file_path):
-        """ Creates/copies a vmdk file object in the datastore """
+        """Creates/copies a vmdk file object in the datastore."""
         # We need to add/create both .vmdk and .-flat.vmdk files
         flat_vmdk_file_path = \
             vmdk_file_path.replace(".vmdk", "-flat.vmdk")
@@ -557,12 +567,12 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _snapshot_vm(self, method):
-        """ Snapshots a VM. Here we do nothing for faking sake """
+        """Snapshots a VM. Here we do nothing for faking sake."""
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
     def _delete_disk(self, method, *args, **kwargs):
-        """ Deletes .vmdk and -flat.vmdk files corresponding to the VM """
+        """Deletes .vmdk and -flat.vmdk files corresponding to the VM."""
         vmdk_file_path = kwargs.get("name")
         flat_vmdk_file_path = \
             vmdk_file_path.replace(".vmdk", "-flat.vmdk")
@@ -572,23 +582,23 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _delete_file(self, method, *args, **kwargs):
-        """ Deletes a file from the datastore """
+        """Deletes a file from the datastore."""
         _remove_file(kwargs.get("name"))
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
     def _just_return(self):
-        """ Fakes a return """
+        """Fakes a return."""
         return
 
     def _unregister_vm(self, method, *args, **kwargs):
-        """ Unregisters a VM from the Host System """
+        """Unregisters a VM from the Host System."""
         vm_ref = args[0]
         _get_vm_mdo(vm_ref)
         del _db_content["VirtualMachine"][vm_ref]
 
     def _search_ds(self, method, *args, **kwargs):
-        """ Searches the datastore for a file """
+        """Searches the datastore for a file."""
         ds_path = kwargs.get("datastorePath")
         if _db_content.get("files", None) is None:
             raise exception.NotFound(_("No files have been added yet"))
@@ -600,14 +610,14 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _make_dir(self, method, *args, **kwargs):
-        """ Creates a directory in the datastore """
+        """Creates a directory in the datastore."""
         ds_path = kwargs.get("name")
         if _db_content.get("files", None) is None:
             raise exception.NotFound(_("No files have been added yet"))
         _db_content["files"].append(ds_path)
 
     def _set_power_state(self, method, vm_ref, pwr_state="poweredOn"):
-        """ Sets power state for the VM """
+        """Sets power state for the VM."""
         if _db_content.get("VirtualMachine", None) is None:
             raise exception.NotFound(_(" No Virtual Machine has been "
                                        "registered yet"))
@@ -620,7 +630,7 @@ class FakeVim(object):
         return task_mdo.obj
 
     def _retrieve_properties(self, method, *args, **kwargs):
-        """ Retrieves properties based on the type """
+        """Retrieves properties based on the type."""
         spec_set = kwargs.get("specSet")[0]
         type = spec_set.propSet[0].type
         properties = spec_set.propSet[0].pathSet
@@ -654,7 +664,7 @@ class FakeVim(object):
         return lst_ret_objs
 
     def _add_port_group(self, method, *args, **kwargs):
-        """ Adds a port group to the host system """
+        """Adds a port group to the host system."""
         host_mdo = \
             _db_content["HostSystem"][_db_content["HostSystem"].keys()[0]]
         host_mdo._add_port_group(kwargs.get("portgrp"))

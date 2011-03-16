@@ -16,8 +16,9 @@
 #    under the License.
 
 """
-Test suite for VMWareAPI
+Test suite for VMWareAPI.
 """
+
 import stubout
 
 from nova import context
@@ -38,9 +39,7 @@ FLAGS = flags.FLAGS
 
 
 class VMWareAPIVMTestCase(test.TestCase):
-    """
-    Unit tests for Vmware API connection calls
-    """
+    """Unit tests for Vmware API connection calls."""
 
     def setUp(self):
         super(VMWareAPIVMTestCase, self).setUp()
@@ -61,7 +60,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.conn = vmwareapi_conn.get_connection(False)
 
     def _create_vm(self):
-        """ Create and spawn the VM """
+        """Create and spawn the VM."""
         values = {'name': 1,
                   'id': 1,
                   'project_id': self.project.id,
@@ -78,15 +77,17 @@ class VMWareAPIVMTestCase(test.TestCase):
         self._check_vm_record()
 
     def _check_vm_record(self):
-        """ Check if the spawned VM's properties corresponds to the instance in
-        the db """
+        """
+        Check if the spawned VM's properties correspond to the instance in
+        the db.
+        """
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)
 
         # Get Nova record for VM
         vm_info = self.conn.get_info(1)
 
-        # Get record for VMs
+        # Get record for VM
         vms = vmwareapi_fake._get_objects("VirtualMachine")
         vm = vms[0]
 
@@ -106,8 +107,10 @@ class VMWareAPIVMTestCase(test.TestCase):
         self.assertEquals(vm.get("runtime.powerState"), 'poweredOn')
 
     def _check_vm_info(self, info, pwr_state=power_state.RUNNING):
-        """ Check if the get_info returned values correspond to the instance
-        object in the db """
+        """
+        Check if the get_info returned values correspond to the instance
+        object in the db.
+        """
         mem_kib = long(self.type_data['memory_mb']) << 10
         self.assertEquals(info["state"], pwr_state)
         self.assertEquals(info["max_mem"], mem_kib)
@@ -194,8 +197,9 @@ class VMWareAPIVMTestCase(test.TestCase):
         pass
 
     def dummy_callback_handler(self, ret):
-        """ Dummy callback function to be passed to suspend, resume, etc.
-        calls """
+        """
+        Dummy callback function to be passed to suspend, resume, etc., calls.
+        """
         pass
 
     def tearDown(self):

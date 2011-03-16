@@ -26,7 +26,7 @@ The basic requirement is to support VMware vSphere 4.1 as a compute provider wit
 
 The 'vmwareapi' module is integrated with Glance, so that VM images can be streamed from there for boot on ESXi using Glance server for image storage & retrieval.
 
-Currently supports Nova's flat networking model (Flat Manager).
+Currently supports Nova's flat networking model (Flat Manager) & VLAN networking model.
 
 .. image:: images/vmwareapi_blockdiagram.jpg
 
@@ -212,4 +212,8 @@ FAQ
 4. What type of consoles are supported?
 
 * VMware VMRC based consoles are supported. There are 2 options for credentials one is OTP (Secure but creates multiple session entries in DB for each OpenStack console create request.) & other is host based credentials (It may not be secure as ESX credentials are transmitted as clear text).
+
+5. What does 'Vim' refer to as far as vmwareapi module is concerned?
+
+* Vim refers to VMware Virtual Infrastructure Methodology. This is not to be confused with "VIM" editor.
 

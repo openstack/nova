@@ -26,7 +26,7 @@ from nova import utils
 
 
 def stub_out_db_instance_api(stubs):
-    """ Stubs out the db API for creating Instances """
+    """Stubs out the db API for creating Instances."""
 
     INSTANCE_TYPES = {
         'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
@@ -38,7 +38,7 @@ def stub_out_db_instance_api(stubs):
             dict(memory_mb=16384, vcpus=8, local_gb=160, flavorid=5)}
 
     class FakeModel(object):
-        """ Stubs out for model """
+        """Stubs out for model."""
 
         def __init__(self, values):
             self.values = values
@@ -53,7 +53,7 @@ def stub_out_db_instance_api(stubs):
                 raise NotImplementedError()
 
     def fake_instance_create(values):
-        """ Stubs out the db.instance_create method """
+        """Stubs out the db.instance_create method."""
 
         type_data = INSTANCE_TYPES[values['instance_type']]
 
@@ -77,7 +77,7 @@ def stub_out_db_instance_api(stubs):
         return FakeModel(base_options)
 
     def fake_network_get_by_instance(context, instance_id):
-        """ Stubs out the db.network_get_by_instance method """
+        """Stubs out the db.network_get_by_instance method."""
 
         fields = {
             'bridge': 'vmnet0',
@@ -87,11 +87,11 @@ def stub_out_db_instance_api(stubs):
         return FakeModel(fields)
 
     def fake_instance_action_create(context, action):
-        """ Stubs out the db.instance_action_create method """
+        """Stubs out the db.instance_action_create method."""
         pass
 
     def fake_instance_get_fixed_address(context, instance_id):
-        """ Stubs out the db.instance_get_fixed_address method """
+        """Stubs out the db.instance_get_fixed_address method."""
         return '10.10.10.10'
 
     def fake_instance_type_get_all(context, inactive=0):

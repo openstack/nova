@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-Implements vlans for vmwareapi
+Implements vlans for vmwareapi.
 """
 
 from nova import db
@@ -36,8 +36,8 @@ flags.DEFINE_string('vlan_interface', 'vmnic0',
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
-    """Create a vlan and bridge unless they already exist"""
-    #open vmwareapi session
+    """Create a vlan and bridge unless they already exist."""
+    # Open vmwareapi session
     host_ip = FLAGS.vmwareapi_host_ip
     host_username = FLAGS.vmwareapi_host_username
     host_password = FLAGS.vmwareapi_host_password
@@ -49,49 +49,43 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     session = VMWareAPISession(host_ip, host_username, host_password,
                                FLAGS.vmwareapi_api_retry_count)
     vlan_interface = FLAGS.vlan_interface
-    #Check if the vlan_interface physical network adapter exists on the host
+    # Check if the vlan_interface physical network adapter exists on the host
     if not NetworkHelper.check_if_vlan_interface_exists(session,
                                                         vlan_interface):
         raise exception.NotFound(_("There is no physical network adapter with "
                           "the name %s on the ESX host") % vlan_interface)
 
-    #Get the vSwitch associated with the Physical Adapter
+    # Get the vSwitch associated with the Physical Adapter
     vswitch_associated = NetworkHelper.get_vswitch_for_vlan_interface(
                                         session, vlan_interface)
     if vswitch_associated is None:
         raise exception.NotFound(_("There is no virtual switch associated "
             "with the physical network adapter with name %s") %
             vlan_interface)
-    #check whether bridge already exists and retrieve the the ref of the
-    #network whose name_label is "bridge"
+    # Check whether bridge already exists and retrieve the the ref of the
+    # network whose name_label is "bridge"
     network_ref = NetworkHelper.get_network_with_the_name(session, bridge)
     if network_ref == None:
-        #Create a port group on the vSwitch associated with the vlan_interface
-        #corresponding physical network adapter on the ESX host
+        # Create a port group on the vSwitch associated with the vlan_interface
+        # corresponding physical network adapter on the ESX host
         NetworkHelper.create_port_group(session, bridge, vswitch_associated,
                                 vlan_num)
     else:
-        #Get the vlan id and vswitch corresponding to the port group
+        # Get the vlan id and vswitch corresponding to the port group
         pg_vlanid, pg_vswitch = \
-            NetworkHelper.get_vlanid_and_vswicth_for_portgroup(session, bridge)
+            NetworkHelper.get_vlanid_and_vswitch_for_portgroup(session, bridge)
 
-        #Check if the vsiwtch associated is proper
+        # Check if the vsiwtch associated is proper
         if pg_vswitch != vswitch_associated:
             raise exception.Invalid(_("vSwitch which contains the port group "
                             "%(bridge)s is not associated with the desired "
                             "physical adapter. Expected vSwitch is "
                             "%(vswitch_associated)s, but the one associated"
-                            " is %(pg_vswitch)s") %\
-                            {"bridge": bridge,
-                             "vswitch_associated": vswitch_associated,
-                             "pg_vswitch": pg_vswitch})
+                            " is %(pg_vswitch)s") % locals())
 
-        #Check if the vlan id is proper for the port group
+        # Check if the vlan id is proper for the port group
         if pg_vlanid != vlan_num:
             raise exception.Invalid(_("VLAN tag is not appropriate for the "
                             "port group %(bridge)s. Expected VLAN tag is "
                             "%(vlan_num)s, but the one associated with the "
-                            "port group is %(pg_vlanid)s") %\
-                            {"bridge": bridge,
-                             "vlan_num": vlan_num,
-                             "pg_vlanid": pg_vlanid})
+                            "port group is %(pg_vlanid)s") % locals())
