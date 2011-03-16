@@ -660,11 +660,10 @@ class LibvirtConnection(object):
         if network_ref['injected']:
             admin_context = context.get_admin_context()
             address = db.instance_get_fixed_address(admin_context, inst['id'])
-            address_v6 = db.instance_get_fixed_address_v6(admin_context,
-                                                         inst['id'])
-            gateway_v6 = network_ref['gateway_v6']
-            if not gateway_v6:
-                gateway_v6 = "fd00::"
+            address_v6 = None
+            if FLAGS.use_ipv6:
+                address_v6 = db.instance_get_fixed_address_v6(admin_context,
+                                                              inst['id'])
 
             interfaces_info = {'address': address,
                                'netmask': network_ref['netmask'],
