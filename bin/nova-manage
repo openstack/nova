@@ -739,8 +739,7 @@ class InstanceCommands(object):
             _('project'),
             _('user'),
             _('zone'),
-            _('index')
-        )
+            _('index'))
 
         if host == None:
             instances = db.instance_get_all(context.get_admin_context())
@@ -762,8 +761,7 @@ class InstanceCommands(object):
                 instance['project_id'],
                 instance['user_id'],
                 instance['availability_zone'],
-                instance['launch_index']
-                )
+                instance['launch_index'])
 
 
 class VolumeCommands(object):
@@ -1053,8 +1051,7 @@ CATEGORIES = [
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
     ('flavor', InstanceTypeCommands),
-    ('instance', InstanceCommands)
-]
+    ('instance', InstanceCommands)]
 
 
 def lazy_match(name, key_value_tuples):
