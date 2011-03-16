@@ -85,7 +85,8 @@ class VMOps(object):
         vm_ref = self._create_vm(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
-    def _create_vm(self, instance, vdi_uuid):
+    def _spawn(self, instance, vdi_uuid):
+        """Spawn a new instance"""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is not None:
@@ -130,13 +131,8 @@ class VMOps(object):
         # inject_network_info and create vifs
         networks = self.inject_network_info(instance)
         self.create_vifs(instance, networks)
-        return vm_ref
-
-    def _spawn(self, instance, vm_ref):
-        """Spawn a new instance"""
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
-        instance_name = instance.name
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
@@ -343,7 +339,7 @@ class VMOps(object):
         # sensible so we don't need to blindly pass around dictionaries
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
 
-    def attach_disk(self, instance, base_copy_uuid, cow_uuid):
+    def link_disks(self, instance, base_copy_uuid, cow_uuid):
         """Links the base copy VHD to the COW via the XAPI plugin"""
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
