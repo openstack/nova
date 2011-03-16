@@ -412,16 +412,18 @@ class LibvirtConnection(object):
         #             the normal xml file, we can just call reboot here
         self.reboot(instance)
 
+    # NOTE(ilyaalekseyev): Implementation like in multinics
+    # for xenapi(tr3buchet)
     @exception.wrap_exception
-    def spawn(self, instance):
-        xml = self.to_xml(instance)
+    def spawn(self, instance, network_info=None):
+        xml = self.to_xml(instance, network_info)
         db.instance_set_state(context.get_admin_context(),
                               instance['id'],
                               power_state.NOSTATE,
                               'launching')
-        self.firewall_driver.setup_basic_filtering(instance)
-        self.firewall_driver.prepare_instance_filter(instance)
-        self._create_image(instance, xml)
+        self.firewall_driver.setup_basic_filtering(instance, network_info)
+        self.firewall_driver.prepare_instance_filter(instance, network_info)
+        self._create_image(instance, xml, network_info)
         self._conn.createXML(xml, 0)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -578,7 +580,8 @@ class LibvirtConnection(object):
         utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
-    def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
+    def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
+                        network_info=None):
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
@@ -690,17 +693,7 @@ class LibvirtConnection(object):
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo', 'chown', 'root', basepath('disk'))
 
-    def to_xml(self, instance, rescue=False):
-        # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        # FIXME(vish): stick this in db
-        instance_type = instance['instance_type']
-        # instance_type = test.INSTANCE_TYPES[instance_type]
-        instance_type = instance_types.get_instance_type(instance_type)
-        ip_address = db.instance_get_fixed_address(context.get_admin_context(),
-                                                   instance['id'])
+    def _get_nic_for_xml(self, instance_id, network, mapping):
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         ra_server = network['ra_server']
@@ -728,6 +721,75 @@ class LibvirtConnection(object):
                               (net, mask)
         else:
             extra_params = "\n"
+
+        result = {
+            'id': mapping['mac'].replace(':', ''),
+            'bridge_name': network['bridge'],
+            'mac_address': mapping['mac'],
+            'ip_address': mapping['ips'][0]['ip'],
+            'dhcp_server': dhcp_server,
+            'extra_params': extra_params,
+        }
+
+        if ra_server:
+            result['ra_server'] = ra_server + "/128"
+
+        return result
+
+    def to_xml(self, instance, rescue=False, network_info=None):
+        admin_context = context.get_admin_context()
+
+        # TODO(termie): cache?
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+
+        ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
+                                                       instance['id'])
+
+        networks = db.network_get_all_by_instance(admin_context,
+                                                  instance['id'])
+
+        #TODO(ilyaalekseyev) remove network_info creation code
+        # when multinics will be completed
+        if network_info is None:
+            network_info = []
+
+            def ip_dict(ip):
+                return {
+                    "ip": ip.address,
+                    "netmask": network["netmask"],
+                    "enabled": "1"}
+
+            def ip6_dict(ip6):
+                return  {
+                    "ip": ip6.addressV6,
+                    "netmask": ip6.netmaskV6,
+                    "gateway": ip6.gatewayV6,
+                    "enabled": "1"}
+
+            for network in networks:
+                network_ips = [ip for ip in ip_addresses
+                               if ip.network_id == network.id]
+
+                mapping = {
+                    'label': network['label'],
+                    'gateway': network['gateway'],
+                    'mac': instance.mac_address,
+                    'dns': [network['dns']],
+                    'ips': [ip_dict(ip) for ip in network_ips],
+                    'ip6s': [ip6_dict(ip) for ip in network_ips]}
+
+                network_info.append((network, mapping))
+
+        nics = []
+        for (network, mapping) in network_info:
+            nics.append(self._get_nic_for_xml(instance['id'],
+                                              network,
+                                              mapping))
+        # FIXME(vish): stick this in db
+        instance_type = instance['instance_type']
+        # instance_type = test.INSTANCE_TYPES[instance_type]
+        instance_type = instance_types.get_instance_type(instance_type)
+
         if FLAGS.use_cow_images:
             driver_type = 'qcow2'
         else:
@@ -739,17 +801,11 @@ class LibvirtConnection(object):
                                              instance['name']),
                     'memory_kb': instance_type['memory_mb'] * 1024,
                     'vcpus': instance_type['vcpus'],
-                    'bridge_name': network['bridge'],
-                    'mac_address': instance['mac_address'],
-                    'ip_address': ip_address,
-                    'dhcp_server': dhcp_server,
-                    'extra_params': extra_params,
                     'rescue': rescue,
                     'local': instance_type['local_gb'],
-                    'driver_type': driver_type}
+                    'driver_type': driver_type,
+                    'nics': nics}
 
-        if ra_server:
-            xml_info['ra_server'] = ra_server + "/128"
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
@@ -762,7 +818,6 @@ class LibvirtConnection(object):
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         LOG.debug(_('instance %s: finished toXML method'),
                         instance['name'])
-
         return xml
 
     def get_info(self, instance_name):
@@ -1251,7 +1306,7 @@ class LibvirtConnection(object):
 
 
 class FirewallDriver(object):
-    def prepare_instance_filter(self, instance):
+    def prepare_instance_filter(self, instance, network_info=None):
         """Prepare filters for the instance.
 
         At this point, the instance isn't running yet."""
@@ -1285,7 +1340,7 @@ class FirewallDriver(object):
         the security group."""
         raise NotImplementedError()
 
-    def setup_basic_filtering(self, instance):
+    def setup_basic_filtering(self, instance, network_info=None):
         """Create rules to block spoofing and allow dhcp.
 
         This gets called when spawning an instance, before
@@ -1390,7 +1445,7 @@ class NWFilterFirewall(FirewallDriver):
                               </rule>
                             </filter>'''
 
-    def setup_basic_filtering(self, instance):
+    def setup_basic_filtering(self, instance, network_info=None):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
         logging.info('called setup_basic_filtering in nwfilter')
 
@@ -1495,7 +1550,7 @@ class NWFilterFirewall(FirewallDriver):
         # Nothing to do
         pass
 
-    def prepare_instance_filter(self, instance):
+    def prepare_instance_filter(self, instance, network_info=None):
         """
         Creates an NWFilter for the given instance. In the process,
         it makes sure the filters for the security groups as well as
@@ -1598,9 +1653,9 @@ class IptablesFirewallDriver(FirewallDriver):
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
 
-    def setup_basic_filtering(self, instance):
+    def setup_basic_filtering(self, instance, network_info=None):
         """Use NWFilter from libvirt for this."""
-        return self.nwfilter.setup_basic_filtering(instance)
+        return self.nwfilter.setup_basic_filtering(instance, network_info)
 
     def apply_instance_filter(self, instance):
         """No-op. Everything is done in prepare_instance_filter"""
@@ -1614,7 +1669,7 @@ class IptablesFirewallDriver(FirewallDriver):
             LOG.info(_('Attempted to unfilter instance %s which is not '
                      'filtered'), instance['id'])
 
-    def prepare_instance_filter(self, instance):
+    def prepare_instance_filter(self, instance, network_info=None):
         self.instances[instance['id']] = instance
         self.add_filters_for_instance(instance)
         self.iptables.apply()
