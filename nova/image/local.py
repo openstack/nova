@@ -51,12 +51,15 @@ class LocalImageService(service.BaseImageService):
     def _ids(self):
         """The list of all image ids."""
         images = []
-        for i in os.listdir(self._path):
+        for image_dir in os.listdir(self._path):
             try:
-                images.append(int(i, 16))
+                images.append(int(image_dir, 16))
+            except ValueError:
+                LOG.error(
+                    _("%s is not in correct directory naming format"\
+                       % image_dir))
             except:
-                LOG.debug(
-                    _("%s is not in correct directory naming format" % i))
+                raise
         return images
 
     def index(self, context):

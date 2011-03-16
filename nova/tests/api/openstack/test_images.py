@@ -22,6 +22,7 @@ and as a WSGI layer
 
 import json
 import datetime
+import os
 import shutil
 import tempfile
 
@@ -155,8 +156,12 @@ class LocalImageServiceTest(test.TestCase,
         # create some old-style image directories (starting with 'ami-')
         for x in [1, 2, 3]:
             tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
-        found_images = self.service._ids()
-        self.assertEqual(True, isinstance(found_images, list))
+        # create some valid image directories names
+        for x in ["1485baed", "1a60f0ee",  "3123a73d"]:
+            os.makedirs(os.path.join(self.tempdir, x))
+        found_image_ids = self.service._ids()
+        self.assertEqual(True, isinstance(found_image_ids, list))
+        self.assertEqual(3, len(found_image_ids), len(found_image_ids))
 
 
 class GlanceImageServiceTest(test.TestCase,
