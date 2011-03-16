@@ -41,8 +41,10 @@ from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi.volume_utils import StorageError
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -80,10 +82,19 @@ class VMHelper(HelperBase):
     """
 
     @classmethod
-    def create_vm(cls, session, instance, kernel, ramdisk, pv_kernel=False):
+    def create_vm(cls, session, instance, kernel, ramdisk,
+                  use_pv_kernel=False):
         """Create a VM record.  Returns a Deferred that gives the new
         VM reference.
-        the pv_kernel flag indicates whether the guest is HVM or PV
+        the use_pv_kernel flag indicates whether the guest is HVM or PV
+
+        There are 3 scenarios:
+
+            1. Using paravirtualization,  kernel passed in
+
+            2. Using paravirtualization, kernel within the image
+
+            3. Using hardware virtualization
         """
 
         instance_type = instance_types.\
@@ -91,52 +102,61 @@ class VMHelper(HelperBase):
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
-            'name_label': instance.name,
-            'name_description': '',
+            'actions_after_crash': 'destroy',
+            'actions_after_reboot': 'restart',
+            'actions_after_shutdown': 'destroy',
+            'affinity': '',
+            'blocked_operations': {},
+            'ha_always_run': False,
+            'ha_restart_priority': '',
+            'HVM_boot_params': {},
+            'HVM_boot_policy': '',
             'is_a_template': False,
-            'memory_static_min': '0',
-            'memory_static_max': mem,
             'memory_dynamic_min': mem,
             'memory_dynamic_max': mem,
+            'memory_static_min': '0',
+            'memory_static_max': mem,
+            'memory_target': mem,
+            'name_description': '',
+            'name_label': instance.name,
+            'other_config': {'allowvssprovider': False},
+            'other_config': {},
+            'PCI_bus': '',
+            'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
+                         'viridian': 'true', 'timeoffset': '0'},
+            'PV_args': '',
+            'PV_bootloader': '',
+            'PV_bootloader_args': '',
+            'PV_kernel': '',
+            'PV_legacy_args': '',
+            'PV_ramdisk': '',
+            'recommendations': '',
+            'tags': [],
+            'user_version': '0',
             'VCPUs_at_startup': vcpus,
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
-            'actions_after_shutdown': 'destroy',
-            'actions_after_reboot': 'restart',
-            'actions_after_crash': 'destroy',
-            'PV_bootloader': '',
-            'PV_kernel': '',
-            'PV_ramdisk': '',
-            'PV_args': '',
-            'PV_bootloader_args': '',
-            'PV_legacy_args': '',
-            'HVM_boot_policy': '',
-            'HVM_boot_params': {},
-            'platform': {},
-            'PCI_bus': '',
-            'recommendations': '',
-            'affinity': '',
-            'user_version': '0',
-            'other_config': {},
-            }
-        #Complete VM configuration record according to the image type
-        #non-raw/raw with PV kernel/raw in HVM mode
-        if instance.kernel_id:
-            rec['PV_bootloader'] = ''
-            rec['PV_kernel'] = kernel
-            rec['PV_ramdisk'] = ramdisk
-            rec['PV_args'] = 'root=/dev/xvda1'
-            rec['PV_bootloader_args'] = ''
-            rec['PV_legacy_args'] = ''
-        else:
-            if pv_kernel:
-                rec['PV_args'] = 'noninteractive'
-                rec['PV_bootloader'] = 'pygrub'
+            'xenstore_data': {}}
+
+        # Complete VM configuration record according to the image type
+        # non-raw/raw with PV kernel/raw in HVM mode
+        if use_pv_kernel:
+            rec['platform']['nx'] = 'false'
+            if instance.kernel_id:
+                # 1. Kernel explicitly passed in, use that
+                rec['PV_args'] = 'root=/dev/xvda1'
+                rec['PV_kernel'] = kernel
+                rec['PV_ramdisk'] = ramdisk
             else:
-                rec['HVM_boot_policy'] = 'BIOS order'
-                rec['HVM_boot_params'] = {'order': 'dc'}
-                rec['platform'] = {'acpi': 'true', 'apic': 'true',
-                                   'pae': 'true', 'viridian': 'true'}
+                # 2. Use kernel within the image
+                rec['PV_args'] = 'clocksource=jiffies'
+                rec['PV_bootloader'] = 'pygrub'
+        else:
+            # 3. Using hardware virtualization
+            rec['platform']['nx'] = 'true'
+            rec['HVM_boot_params'] = {'order': 'dc'}
+            rec['HVM_boot_policy'] = 'BIOS order'
+
         LOG.debug(_('Created VM %s...'), instance.name)
         vm_ref = session.call_xenapi('VM.create', rec)
         instance_name = instance.name
@@ -181,13 +201,13 @@ class VMHelper(HelperBase):
     @classmethod
     def find_vbd_by_number(cls, session, vm_ref, number):
         """Get the VBD reference from the device number"""
-        vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+                    vbd_rec = session.get_xenapi().VBD.get_record(vbd_ref)
                     if vbd_rec['userdevice'] == str(number):
-                        return vbd
+                        return vbd_ref
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
         raise StorageError(_('VBD not found in instance %s') % vm_ref)
@@ -319,7 +339,7 @@ class VMHelper(HelperBase):
         return os.path.join(FLAGS.xenapi_sr_base_path, sr_uuid)
 
     @classmethod
-    def upload_image(cls, session, instance_id, vdi_uuids, image_id):
+    def upload_image(cls, session, instance, vdi_uuids, image_id):
         """ Requests that the Glance plugin bundle the specified VDIs and
         push them into Glance using the specified human-friendly name.
         """
@@ -328,15 +348,18 @@ class VMHelper(HelperBase):
         logging.debug(_("Asking xapi to upload %(vdi_uuids)s as"
                 " ID %(image_id)s") % locals())
 
+        os_type = instance.os_type or FLAGS.default_os_type
+
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
                   'glance_host': FLAGS.glance_host,
                   'glance_port': FLAGS.glance_port,
-                  'sr_path': cls.get_sr_path(session)}
+                  'sr_path': cls.get_sr_path(session),
+                  'os_type': os_type}
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'upload_vhd', kwargs)
-        session.wait_for_task(task, instance_id)
+        session.wait_for_task(task, instance.id)
 
     @classmethod
     def fetch_image(cls, session, instance_id, image, user, project,
@@ -419,29 +442,29 @@ class VMHelper(HelperBase):
             vdi_size += MBR_SIZE_BYTES
 
         name_label = get_name_label_for_image(image)
-        vdi = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
+        vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
 
-        with_vdi_attached_here(session, vdi, False,
+        with_vdi_attached_here(session, vdi_ref, False,
                                lambda dev:
                                _stream_disk(dev, image_type,
                                             virtual_size, image_file))
         if image_type == ImageType.KERNEL_RAMDISK:
             #we need to invoke a plugin for copying VDI's
             #content into proper path
-            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi)
+            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
             fn = "copy_kernel_vdi"
             args = {}
-            args['vdi-ref'] = vdi
+            args['vdi-ref'] = vdi_ref
             #let the plugin copy the correct number of bytes
             args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
             filename = session.wait_for_task(task, instance_id)
             #remove the VDI as it is not needed anymore
-            session.get_xenapi().VDI.destroy(vdi)
-            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi)
+            session.get_xenapi().VDI.destroy(vdi_ref)
+            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
             return filename
         else:
-            return session.get_xenapi().VDI.get_uuid(vdi)
+            return session.get_xenapi().VDI.get_uuid(vdi_ref)
 
     @classmethod
     def determine_disk_image_type(cls, instance):
@@ -533,17 +556,33 @@ class VMHelper(HelperBase):
         return uuid
 
     @classmethod
-    def lookup_image(cls, session, instance_id, vdi_ref):
+    def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,
+                        os_type):
         """
-        Determine if VDI is using a PV kernel
+        Determine whether the VM will use a paravirtualized kernel or if it
+        will use hardware virtualization.
+
+            1. Objectstore (any image type):
+               We use plugin to figure out whether the VDI uses PV
+
+            2. Glance (VHD): then we use `os_type`, raise if not set
+
+            3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
+               available
+
+            4. Glance (DISK): pv is assumed
         """
         if FLAGS.xenapi_image_service == 'glance':
-            return cls._lookup_image_glance(session, vdi_ref)
+            # 2, 3, 4: Glance
+            return cls._determine_is_pv_glance(
+              session, vdi_ref, disk_image_type, os_type)
         else:
-            return cls._lookup_image_objectstore(session, instance_id, vdi_ref)
+            # 1. Objecstore
+            return cls._determine_is_pv_objectstore(session, instance_id,
+                                                    vdi_ref)
 
     @classmethod
-    def _lookup_image_objectstore(cls, session, instance_id, vdi_ref):
+    def _determine_is_pv_objectstore(cls, session, instance_id, vdi_ref):
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
         fn = "is_vdi_pv"
         args = {}
@@ -559,42 +598,72 @@ class VMHelper(HelperBase):
         return pv
 
     @classmethod
-    def _lookup_image_glance(cls, session, vdi_ref):
+    def _determine_is_pv_glance(cls, session, vdi_ref, disk_image_type,
+                                os_type):
+        """
+        For a Glance image, determine if we need paravirtualization.
+
+        The relevant scenarios are:
+            2. Glance (VHD): then we use `os_type`, raise if not set
+
+            3. Glance (DISK_RAW): use Pygrub to figure out if pv kernel is
+               available
+
+            4. Glance (DISK): pv is assumed
+        """
+
         LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
-        return with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
+        if disk_image_type == ImageType.DISK_VHD:
+            # 2. VHD
+            if os_type == 'windows':
+                is_pv = False
+            else:
+                is_pv = True
+        elif disk_image_type == ImageType.DISK_RAW:
+            # 3. RAW
+            is_pv = with_vdi_attached_here(session, vdi_ref, True, _is_vdi_pv)
+        elif disk_image_type == ImageType.DISK:
+            # 4. Disk
+            is_pv = True
+        else:
+            raise exception.Error(_("Unknown image format %(disk_image_type)s")
+                                  % locals())
+
+        return is_pv
 
     @classmethod
-    def lookup(cls, session, i):
+    def lookup(cls, session, name_label):
         """Look the instance i up, and returns it if available"""
-        vms = session.get_xenapi().VM.get_by_name_label(i)
-        n = len(vms)
+        vm_refs = session.get_xenapi().VM.get_by_name_label(name_label)
+        n = len(vm_refs)
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') % i)
+            raise exception.Duplicate(_('duplicate name found: %s') %
+                                        name_label)
         else:
-            return vms[0]
+            return vm_refs[0]
 
     @classmethod
-    def lookup_vm_vdis(cls, session, vm):
+    def lookup_vm_vdis(cls, session, vm_ref):
         """Look for the VDIs that are attached to the VM"""
         # Firstly we get the VBDs, then the VDIs.
         # TODO(Armando): do we leave the read-only devices?
-        vbds = session.get_xenapi().VM.get_VBDs(vm)
-        vdis = []
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        vdi_refs = []
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vdi = session.get_xenapi().VBD.get_VDI(vbd)
+                    vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
                     # Test valid VDI
-                    record = session.get_xenapi().VDI.get_record(vdi)
+                    record = session.get_xenapi().VDI.get_record(vdi_ref)
                     LOG.debug(_('VDI %s is still available'), record['uuid'])
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
                 else:
-                    vdis.append(vdi)
-            if len(vdis) > 0:
-                return vdis
+                    vdi_refs.append(vdi_ref)
+            if len(vdi_refs) > 0:
+                return vdi_refs
             else:
                 return None
 
@@ -770,16 +839,16 @@ def safe_find_sr(session):
 def find_sr(session):
     """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
-    srs = session.get_xenapi().SR.get_all()
-    for sr in srs:
-        sr_rec = session.get_xenapi().SR.get_record(sr)
+    sr_refs = session.get_xenapi().SR.get_all()
+    for sr_ref in sr_refs:
+        sr_rec = session.get_xenapi().SR.get_record(sr_ref)
         if not ('i18n-key' in sr_rec['other_config'] and
                 sr_rec['other_config']['i18n-key'] == 'local-storage'):
             continue
-        for pbd in sr_rec['PBDs']:
-            pbd_rec = session.get_xenapi().PBD.get_record(pbd)
+        for pbd_ref in sr_rec['PBDs']:
+            pbd_rec = session.get_xenapi().PBD.get_record(pbd_ref)
             if pbd_rec['host'] == host:
-                return sr
+                return sr_ref
     return None
 
 
@@ -804,11 +873,11 @@ def remap_vbd_dev(dev):
     return remapped_dev
 
 
-def with_vdi_attached_here(session, vdi, read_only, f):
+def with_vdi_attached_here(session, vdi_ref, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
     vbd_rec['VM'] = this_vm_ref
-    vbd_rec['VDI'] = vdi
+    vbd_rec['VDI'] = vdi_ref
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
@@ -819,28 +888,28 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
-    LOG.debug(_('Creating VBD for VDI %s ... '), vdi)
-    vbd = session.get_xenapi().VBD.create(vbd_rec)
-    LOG.debug(_('Creating VBD for VDI %s done.'), vdi)
+    LOG.debug(_('Creating VBD for VDI %s ... '), vdi_ref)
+    vbd_ref = session.get_xenapi().VBD.create(vbd_rec)
+    LOG.debug(_('Creating VBD for VDI %s done.'), vdi_ref)
     try:
-        LOG.debug(_('Plugging VBD %s ... '), vbd)
-        session.get_xenapi().VBD.plug(vbd)
-        LOG.debug(_('Plugging VBD %s done.'), vbd)
-        orig_dev = session.get_xenapi().VBD.get_device(vbd)
-        LOG.debug(_('VBD %(vbd)s plugged as %(orig_dev)s') % locals())
+        LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
+        session.get_xenapi().VBD.plug(vbd_ref)
+        LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
+        orig_dev = session.get_xenapi().VBD.get_device(vbd_ref)
+        LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
         dev = remap_vbd_dev(orig_dev)
         if dev != orig_dev:
-            LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
+            LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
         return f(dev)
     finally:
-        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi)
-        vbd_unplug_with_retry(session, vbd)
-        ignore_failure(session.get_xenapi().VBD.destroy, vbd)
-        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi)
+        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
+        vbd_unplug_with_retry(session, vbd_ref)
+        ignore_failure(session.get_xenapi().VBD.destroy, vbd_ref)
+        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
 
 
-def vbd_unplug_with_retry(session, vbd):
+def vbd_unplug_with_retry(session, vbd_ref):
     """Call VBD.unplug on the given VBD, with a retry if we get
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
@@ -848,7 +917,7 @@ def vbd_unplug_with_retry(session, vbd):
     # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
-            session.get_xenapi().VBD.unplug(vbd)
+            session.get_xenapi().VBD.unplug(vbd_ref)
             LOG.debug(_('VBD.unplug successful first time.'))
             return
         except VMHelper.XenAPI.Failure, e:

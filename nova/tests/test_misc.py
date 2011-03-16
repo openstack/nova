@@ -24,18 +24,19 @@ from nova.utils import parse_mailmap, str_dict_replace, synchronized
 
 class ProjectTestCase(test.TestCase):
     def test_authors_up_to_date(self):
-        if os.path.exists('.bzr'):
+        topdir = os.path.normpath(os.path.dirname(__file__) + '/../../')
+        if os.path.exists(os.path.join(topdir, '.bzr')):
             contributors = set()
 
-            mailmap = parse_mailmap('.mailmap')
+            mailmap = parse_mailmap(os.path.join(topdir, '.mailmap'))
 
             import bzrlib.workingtree
-            tree = bzrlib.workingtree.WorkingTree.open('.')
+            tree = bzrlib.workingtree.WorkingTree.open(topdir)
             tree.lock_read()
             try:
                 parents = tree.get_parent_ids()
                 g = tree.branch.repository.get_graph()
-                for p in parents[1:]:
+                for p in parents:
                     rev_ids = [r for r, _ in g.iter_ancestry(parents)
                                if r != "null:"]
                     revs = tree.branch.repository.get_revisions(rev_ids)
@@ -44,7 +45,8 @@ class ProjectTestCase(test.TestCase):
                             email = author.split(' ')[-1]
                             contributors.add(str_dict_replace(email, mailmap))
 
-                authors_file = open('Authors', 'r').read()
+                authors_file = open(os.path.join(topdir, 'Authors'),
+                                    'r').read()
 
                 missing = set()
                 for contributor in contributors:

@@ -125,6 +125,11 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
         image = self.image_service.show(context, image_id)
+
+        os_type = None
+        if 'properties' in image and 'os_type' in image['properties']:
+            os_type = image['properties']['os_type']
+
         if kernel_id is None:
             kernel_id = image['properties'].get('kernel_id', None)
         if ramdisk_id is None:
@@ -181,7 +186,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
-            'availability_zone': availability_zone}
+            'availability_zone': availability_zone,
+            'os_type': os_type}
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)

@@ -49,6 +49,12 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
                              address for the nova-volume host
 :target_port:                iSCSI Target Port, 3260 Default
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
+
+**Variable Naming Scheme**
+
+- suffix "_ref" for opaque references
+- suffix "_uuid" for UUIDs
+- suffix "_rec" for record objects
 """
 
 import sys
@@ -262,6 +268,27 @@ class XenAPIConnection(object):
         return  {'address': xs_url.netloc,
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
+
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
+    def compare_cpu(self, xml):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only libvirt."""
+        return
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only by libvirt."""
+        return
+
+    def unfilter_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
 
 class XenAPISession(object):

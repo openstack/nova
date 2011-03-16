@@ -34,6 +34,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.sql import exists
 from sqlalchemy.sql import func
+from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
 
@@ -118,6 +119,11 @@ def service_destroy(context, service_id):
         service_ref = service_get(context, service_id, session=session)
         service_ref.delete(session=session)
 
+        if service_ref.topic == 'compute' and \
+            len(service_ref.compute_node) != 0:
+            for c in service_ref.compute_node:
+                c.delete(session=session)
+
 
 @require_admin_context
 def service_get(context, service_id, session=None):
@@ -125,6 +131,7 @@ def service_get(context, service_id, session=None):
         session = get_session()
 
     result = session.query(models.Service).\
+                     options(joinedload('compute_node')).\
                      filter_by(id=service_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
@@ -172,6 +179,24 @@ def service_get_all_by_host(context, host):
                    filter_by(deleted=False).\
                    filter_by(host=host).\
                    all()
+
+
+@require_admin_context
+def service_get_all_compute_by_host(context, host):
+    topic = 'compute'
+    session = get_session()
+    result = session.query(models.Service).\
+                  options(joinedload('compute_node')).\
+                  filter_by(deleted=False).\
+                  filter_by(host=host).\
+                  filter_by(topic=topic).\
+                  all()
+
+    if not result:
+        raise exception.NotFound(_("%s does not exist or is not "
+                                   "a compute node.") % host)
+
+    return result
 
 
 @require_admin_context
@@ -279,6 +304,42 @@ def service_update(context, service_id, values):
         service_ref = service_get(context, service_id, session=session)
         service_ref.update(values)
         service_ref.save(session=session)
+
+
+###################
+
+
+@require_admin_context
+def compute_node_get(context, compute_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.ComputeNode).\
+                     filter_by(id=compute_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if not result:
+        raise exception.NotFound(_('No computeNode for id %s') % compute_id)
+
+    return result
+
+
+@require_admin_context
+def compute_node_create(context, values):
+    compute_node_ref = models.ComputeNode()
+    compute_node_ref.update(values)
+    compute_node_ref.save()
+    return compute_node_ref
+
+
+@require_admin_context
+def compute_node_update(context, compute_id, values):
+    session = get_session()
+    with session.begin():
+        compute_ref = compute_node_get(context, compute_id, session=session)
+        compute_ref.update(values)
+        compute_ref.save(session=session)
 
 
 ###################
@@ -505,6 +566,16 @@ def floating_ip_get_by_address(context, address, session=None):
     return result
 
 
+@require_context
+def floating_ip_update(context, address, values):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = floating_ip_get_by_address(context, address, session)
+        for (key, value) in values.iteritems():
+            floating_ip_ref[key] = value
+        floating_ip_ref.save(session=session)
+
+
 ###################
 
 
@@ -577,18 +648,17 @@ def fixed_ip_disassociate(context, address):
 @require_admin_context
 def fixed_ip_disassociate_all_by_timeout(_context, host, time):
     session = get_session()
-    # NOTE(vish): The nested select is because sqlite doesn't support
-    #             JOINs in UPDATEs.
-    result = session.execute('UPDATE fixed_ips SET instance_id = NULL, '
-                                                  'leased = 0 '
-                             'WHERE network_id IN (SELECT id FROM networks '
-                                                  'WHERE host = :host) '
-                             'AND updated_at < :time '
-                             'AND instance_id IS NOT NULL '
-                             'AND allocated = 0',
-                    {'host': host,
-                     'time': time})
-    return result.rowcount
+    inner_q = session.query(models.Network.id).\
+                      filter_by(host=host).\
+                      subquery()
+    result = session.query(models.FixedIp).\
+                     filter(models.FixedIp.network_id.in_(inner_q)).\
+                     filter(models.FixedIp.updated_at < time).\
+                     filter(models.FixedIp.instance_id != None).\
+                     filter_by(allocated=0).\
+                     update({'instance_id': None,
+                             'leased': 0})
+    return result
 
 
 @require_admin_context
@@ -701,14 +771,16 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     session = get_session()
     with session.begin():
-        session.execute('update instances set deleted=1,'
-                        'deleted_at=:at where id=:id',
-                        {'id': instance_id,
-                         'at': datetime.datetime.utcnow()})
-        session.execute('update security_group_instance_association '
-                        'set deleted=1,deleted_at=:at where instance_id=:id',
-                        {'id': instance_id,
-                         'at': datetime.datetime.utcnow()})
+        session.query(models.Instance).\
+                filter_by(id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -905,6 +977,45 @@ def instance_add_security_group(context, instance_id, security_group_id):
 
 
 @require_context
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.vcpus))
+    if not result:
+        return 0
+    return result
+
+
+@require_context
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.memory_mb))
+    if not result:
+        return 0
+    return result
+
+
+@require_context
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.local_gb))
+    if not result:
+        return 0
+    return result
+
+
+@require_context
 def instance_action_create(context, values):
     """Create an instance action from the values dictionary."""
     action_ref = models.InstanceActions()
@@ -950,9 +1061,11 @@ def key_pair_destroy_all_by_user(context, user_id):
     authorize_user_context(context, user_id)
     session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update key_pairs set deleted=1 where user_id=:id',
-                        {'id': user_id})
+        session.query(models.KeyPair).\
+                filter_by(user_id=user_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1072,7 +1185,9 @@ def network_disassociate(context, network_id):
 @require_admin_context
 def network_disassociate_all(context):
     session = get_session()
-    session.execute('update networks set project_id=NULL')
+    session.query(models.Network).\
+            update({'project_id': None,
+                    'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1454,15 +1569,17 @@ def volume_data_get_for_project(context, project_id):
 def volume_destroy(context, volume_id):
     session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update volumes set deleted=1 where id=:id',
-                        {'id': volume_id})
-        session.execute('update export_devices set volume_id=NULL '
-                        'where volume_id=:id',
-                        {'id': volume_id})
-        session.execute('update iscsi_targets set volume_id=NULL '
-                        'where volume_id=:id',
-                        {'id': volume_id})
+        session.query(models.Volume).\
+                filter_by(id=volume_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.ExportDevice).\
+                filter_by(volume_id=volume_id).\
+                update({'volume_id': None})
+        session.query(models.IscsiTarget).\
+                filter_by(volume_id=volume_id).\
+                update({'volume_id': None})
 
 
 @require_admin_context
@@ -1520,6 +1637,18 @@ def volume_get_all_by_host(context, host):
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+@require_admin_context
+def volume_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.Volume).\
+                     filter_by(instance_id=instance_id).\
+                     filter_by(deleted=False).\
+                     all()
+    if not result:
+        raise exception.NotFound(_('No volume for instance %s') % instance_id)
+    return result
 
 
 @require_context
@@ -1682,17 +1811,21 @@ def security_group_create(context, values):
 def security_group_destroy(context, security_group_id):
     session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update security_groups set deleted=1 where id=:id',
-                        {'id': security_group_id})
-        session.execute('update security_group_instance_association '
-                        'set deleted=1,deleted_at=:at '
-                        'where security_group_id=:id',
-                        {'id': security_group_id,
-                         'at': datetime.datetime.utcnow()})
-        session.execute('update security_group_rules set deleted=1 '
-                        'where group_id=:id',
-                        {'id': security_group_id})
+        session.query(models.SecurityGroup).\
+                filter_by(id=security_group_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(security_group_id=security_group_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupIngressRule).\
+                filter_by(group_id=security_group_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1700,9 +1833,14 @@ def security_group_destroy_all(context, session=None):
     if not session:
         session = get_session()
     with session.begin():
-        # TODO(vish): do we have to use sql here?
-        session.execute('update security_groups set deleted=1')
-        session.execute('update security_group_rules set deleted=1')
+        session.query(models.SecurityGroup).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupIngressRule).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 ###################
@@ -1831,12 +1969,15 @@ def user_create(_context, values):
 def user_delete(context, id):
     session = get_session()
     with session.begin():
-        session.execute('delete from user_project_association '
-                        'where user_id=:id', {'id': id})
-        session.execute('delete from user_role_association '
-                        'where user_id=:id', {'id': id})
-        session.execute('delete from user_project_role_association '
-                        'where user_id=:id', {'id': id})
+        session.query(models.UserProjectAssociation).\
+                filter_by(user_id=id).\
+                delete()
+        session.query(models.UserRoleAssociation).\
+                filter_by(user_id=id).\
+                delete()
+        session.query(models.UserProjectRoleAssociation).\
+                filter_by(user_id=id).\
+                delete()
         user_ref = user_get(context, id, session=session)
         session.delete(user_ref)
 
@@ -1930,10 +2071,12 @@ def project_update(context, project_id, values):
 def project_delete(context, id):
     session = get_session()
     with session.begin():
-        session.execute('delete from user_project_association '
-                        'where project_id=:id', {'id': id})
-        session.execute('delete from user_project_role_association '
-                        'where project_id=:id', {'id': id})
+        session.query(models.UserProjectAssociation).\
+                filter_by(project_id=id).\
+                delete()
+        session.query(models.UserProjectRoleAssociation).\
+                filter_by(project_id=id).\
+                delete()
         project_ref = project_get(context, id, session=session)
         session.delete(project_ref)
 
@@ -1958,11 +2101,11 @@ def user_get_roles_for_project(context, user_id, project_id):
 def user_remove_project_role(context, user_id, project_id, role):
     session = get_session()
     with session.begin():
-        session.execute('delete from user_project_role_association where '
-                        'user_id=:user_id and project_id=:project_id and '
-                        'role=:role', {'user_id': user_id,
-                                       'project_id': project_id,
-                                       'role': role})
+        session.query(models.UserProjectRoleAssociation).\
+                filter_by(user_id=user_id).\
+                filter_by(project_id=project_id).\
+                filter_by(role=role).\
+                delete()
 
 
 def user_remove_role(context, user_id, role):
@@ -2113,8 +2256,9 @@ def console_delete(context, console_id):
     session = get_session()
     with session.begin():
         # consoles are meant to be transient. (mdragon)
-        session.execute('delete from consoles '
-                        'where id=:id', {'id': console_id})
+        session.query(models.Console).\
+                filter_by(id=console_id).\
+                delete()
 
 
 def console_get_by_pool_instance(context, pool_id, instance_id):
@@ -2270,8 +2414,9 @@ def zone_update(context, zone_id, values):
 def zone_delete(context, zone_id):
     session = get_session()
     with session.begin():
-        session.execute('delete from zones '
-                        'where id=:id', {'id': zone_id})
+        session.query(models.Zone).\
+                filter_by(id=zone_id).\
+                delete()
 
 
 @require_admin_context
