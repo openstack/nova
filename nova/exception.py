@@ -93,9 +93,9 @@ class TimeoutException(Error):
 
 
 class ZoneRouteException(Error):
-    def __init__(self, zone, *args, **kwargs):
-        self.zone = zone
-        super(ZoneRouteException, self).__init__(args, kwargs)
+    def __init__(self, zones, *args, **kwargs):
+        self.zones = zones
+        super(ZoneRouteException, self).__init__(*args, **kwargs)
 
 
 class DBError(Error):

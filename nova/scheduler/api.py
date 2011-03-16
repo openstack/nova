@@ -73,13 +73,22 @@ class API(object):
                       args=dict(service_name=service_name, host=host,
                                 capabilities=capabilities))
         return rpc.fanout_cast(context, 'scheduler', kwargs)
+        
+    @classmethod
+    def get_instance_or_reroute(cls, context, instance_id):
+        instance = db.instance_get(context, instance_id)
+        zones = db.zone_get_all(context)
+
+        LOG.debug("*** Firing ZoneRouteException")
+        # Throw a reroute Exception for the middleware to pick up. 
+        raise exception.ZoneRouteException(zones)
 
     @classmethod
-    def get_queue_for_instance(cls, context, service, instance_id)
+    def get_queue_for_instance(cls, context, service, instance_id):
         instance = db.instance_get(context, instance_id)
         zone = db.get_zone(instance.zone.id)
         if cls._is_current_zone(zone):
-            return db.queue_get_for(context, service, instance['host']):
+            return db.queue_get_for(context, service, instance['host'])
 
         # Throw a reroute Exception for the middleware to pick up. 
         raise exception.ZoneRouteException(zone)
