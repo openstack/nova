@@ -25,8 +25,9 @@ from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
+from nova import quota
 from nova import utils
+from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
@@ -188,7 +189,7 @@ class Controller(wsgi.Controller):
                 key_data=key_data,
                 metadata=metadata,
                 injected_files=injected_files)
-        except QuotaError as error:
+        except quota.QuotaError as error:
             self._handle_quota_error(error)
 
         server = _translate_keys(instances[0])
@@ -238,7 +239,7 @@ class Controller(wsgi.Controller):
             injected_files.append((path, contents))
         return injected_files
 
-    def _handle_quota_errors(self, error):
+    def _handle_quota_error(self, error):
         """
         Reraise quota errors as api-specific http exceptions
         """
