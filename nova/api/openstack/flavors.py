@@ -48,7 +48,7 @@ class Controller(wsgi.Controller):
         """Return data about the given flavor id."""
         ctxt = req.environ['nova.context']
         values = db.instance_type_get_by_flavor_id(ctxt, id)
-        values.update({'id': values['flavorid']})
+        values['id'] = values['flavorid']
         return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
 
