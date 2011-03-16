@@ -15,8 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import datetime
 import json
+import unittest
+from xml.dom import minidom
 
 import stubout
 import webob
@@ -606,6 +609,530 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+
+class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
+
+    def setUp(self):
+        self.deserializer = servers.ServerCreateRequestXMLDeserializer()
+
+    def test_minimal_request(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1"/>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_metadata(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_personality(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "personality": [],
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_metadata_and_personality(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata/>
+    <personality/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_empty_metadata_and_personality_reversed(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality/>
+    <metadata/>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"server": {
+                "name": "new-server-test",
+                "imageId": "1",
+                "flavorId": "1",
+                "metadata": {},
+                "personality": [],
+                }}
+        self.assertEquals(request, expected)
+
+    def test_request_with_one_personality(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality>
+        <file path="/etc/conf">aabbccdd</file>
+    </personality>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_two_personalities(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+<personality><file path="/etc/conf">aabbccdd</file>
+<file path="/etc/sudoers">abcd</file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": "aabbccdd"},
+                    {"path": "/etc/sudoers", "contents": "abcd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_second_personality_node_ignored(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <personality>
+        <file path="/etc/conf">aabbccdd</file>
+    </personality>
+    <personality>
+        <file path="/etc/ignoreme">anything</file>
+    </personality>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_personality_missing_path(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+<personality><file>aabbccdd</file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"contents": "aabbccdd"}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_personality_empty_contents(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+<personality><file path="/etc/conf"></file></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": ""}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_personality_empty_contents_variation(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+<personality><file path="/etc/conf"/></personality></server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = [{"path": "/etc/conf", "contents": ""}]
+        self.assertEquals(request["server"]["personality"], expected)
+
+    def test_request_with_one_metadata(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha">beta</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": "beta"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_two_metadata(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha">beta</meta>
+        <meta key="foo">bar</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": "beta", "foo": "bar"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_metadata_missing_value(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha"></meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": ""}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_two_metadata_missing_value(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="alpha"/>
+        <meta key="delta"/>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"alpha": "", "delta": ""}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_metadata_missing_key(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta>beta</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"": "beta"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_two_metadata_missing_key(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta>beta</meta>
+        <meta>gamma</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"": "gamma"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_request_with_metadata_duplicate_key(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="foo">bar</meta>
+        <meta key="foo">baz</meta>
+    </metadata>
+</server>"""
+        request = self.deserializer.deserialize(serial_request)
+        expected = {"foo": "baz"}
+        self.assertEquals(request["server"]["metadata"], expected)
+
+    def test_canonical_request_from_docs(self):
+        serial_request = """
+<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
+ name="new-server-test" imageId="1" flavorId="1">
+    <metadata>
+        <meta key="My Server Name">Apache1</meta>
+    </metadata>
+    <personality>
+        <file path="/etc/banner.txt">\
+ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp\
+dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k\
+IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs\
+c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g\
+QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo\
+ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv\
+dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy\
+c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6\
+b25zLiINCg0KLVJpY2hhcmQgQmFjaA==</file>
+    </personality>
+</server>"""
+        expected = {"server": {
+            "name": "new-server-test",
+            "imageId": "1",
+            "flavorId": "1",
+            "metadata": {
+                "My Server Name": "Apache1",
+            },
+            "personality": [
+                {
+                    "path": "/etc/banner.txt",
+                    "contents": """\
+ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBp\
+dCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5k\
+IGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVs\
+c2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4g\
+QnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRo\
+ZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlv\
+dSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vy\
+c2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6\
+b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
+                },
+            ],
+        }}
+        request = self.deserializer.deserialize(serial_request)
+        self.assertEqual(request, expected)
+
+
+class TestServerInstanceCreation(test.TestCase):
+
+    def setUp(self):
+        super(TestServerInstanceCreation, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_auth(self.stubs)
+        fakes.stub_out_key_pair_funcs(self.stubs)
+        self.allow_admin = FLAGS.allow_admin_api
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        FLAGS.allow_admin_api = self.allow_admin
+        super(TestServerInstanceCreation, self).tearDown()
+
+    def _setup_mock_compute_api_for_personality(self):
+
+        class MockComputeAPI(object):
+
+            def __init__(self):
+                self.injected_files = None
+
+            def create(self, *args, **kwargs):
+                if 'injected_files' in kwargs:
+                    self.injected_files = kwargs['injected_files']
+                else:
+                    self.injected_files = None
+                return [{'id': '1234', 'display_name': 'fakeinstance'}]
+
+            def set_admin_password(self, *args, **kwargs):
+                pass
+
+        def make_stub_method(canned_return):
+            def stub_method(*args, **kwargs):
+                return canned_return
+            return stub_method
+
+        compute_api = MockComputeAPI()
+        self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
+        self.stubs.Set(nova.api.openstack.servers.Controller,
+            '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
+        self.stubs.Set(nova.api.openstack.common,
+            'get_image_id_from_image_hash', make_stub_method(2))
+        return compute_api
+
+    def _create_personality_request_dict(self, personality_files):
+        server = {}
+        server['name'] = 'new-server-test'
+        server['imageId'] = 1
+        server['flavorId'] = 1
+        if personality_files is not None:
+            personalities = []
+            for path, contents in personality_files:
+                personalities.append({'path': path, 'contents': contents})
+            server['personality'] = personalities
+        return {'server': server}
+
+    def _get_create_request_json(self, body_dict):
+        req = webob.Request.blank('/v1.0/servers')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        req.body = json.dumps(body_dict)
+        return req
+
+    def _run_create_instance_with_mock_compute_api(self, request):
+        compute_api = self._setup_mock_compute_api_for_personality()
+        response = request.get_response(fakes.wsgi_app())
+        return compute_api, response
+
+    def _format_xml_request_body(self, body_dict):
+        server = body_dict['server']
+        body_parts = []
+        body_parts.extend([
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"',
+            ' name="%s" imageId="%s" flavorId="%s">' % (
+                    server['name'], server['imageId'], server['flavorId'])])
+        if 'metadata' in server:
+            metadata = server['metadata']
+            body_parts.append('<metadata>')
+            for item in metadata.iteritems():
+                body_parts.append('<meta key="%s">%s</meta>' % item)
+            body_parts.append('</metadata>')
+        if 'personality' in server:
+            personalities = server['personality']
+            body_parts.append('<personality>')
+            for file in personalities:
+                item = (file['path'], file['contents'])
+                body_parts.append('<file path="%s">%s</file>' % item)
+            body_parts.append('</personality>')
+        body_parts.append('</server>')
+        return ''.join(body_parts)
+
+    def _get_create_request_xml(self, body_dict):
+        req = webob.Request.blank('/v1.0/servers')
+        req.content_type = 'application/xml'
+        req.accept = 'application/xml'
+        req.method = 'POST'
+        req.body = self._format_xml_request_body(body_dict)
+        return req
+
+    def _create_instance_with_personality_json(self, personality):
+        body_dict = self._create_personality_request_dict(personality)
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.injected_files
+
+    def _create_instance_with_personality_xml(self, personality):
+        body_dict = self._create_personality_request_dict(personality)
+        request = self._get_create_request_xml(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        return request, response, compute_api.injected_files
+
+    def test_create_instance_with_no_personality(self):
+        request, response, injected_files = \
+                self._create_instance_with_personality_json(personality=None)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, [])
+
+    def test_create_instance_with_no_personality_xml(self):
+        request, response, injected_files = \
+                self._create_instance_with_personality_xml(personality=None)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, [])
+
+    def test_create_instance_with_personality(self):
+        path = '/my/file/path'
+        contents = '#!/bin/bash\necho "Hello, World!"\n'
+        b64contents = base64.b64encode(contents)
+        personality = [(path, b64contents)]
+        request, response, injected_files = \
+            self._create_instance_with_personality_json(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, [(path, contents)])
+
+    def test_create_instance_with_personality_xml(self):
+        path = '/my/file/path'
+        contents = '#!/bin/bash\necho "Hello, World!"\n'
+        b64contents = base64.b64encode(contents)
+        personality = [(path, b64contents)]
+        request, response, injected_files = \
+            self._create_instance_with_personality_xml(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, [(path, contents)])
+
+    def test_create_instance_with_personality_no_path(self):
+        personality = [('/remove/this/path',
+            base64.b64encode('my\n\file\ncontents'))]
+        body_dict = self._create_personality_request_dict(personality)
+        del body_dict['server']['personality'][0]['path']
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.injected_files, None)
+
+    def _test_create_instance_with_personality_no_path_xml(self):
+        personality = [('/remove/this/path',
+            base64.b64encode('my\n\file\ncontents'))]
+        body_dict = self._create_personality_request_dict(personality)
+        request = self._get_create_request_xml(body_dict)
+        request.body = request.body.replace(' path="/remove/this/path"', '')
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.injected_files, None)
+
+    def test_create_instance_with_personality_no_contents(self):
+        personality = [('/test/path',
+            base64.b64encode('remove\nthese\ncontents'))]
+        body_dict = self._create_personality_request_dict(personality)
+        del body_dict['server']['personality'][0]['contents']
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.injected_files, None)
+
+    def test_create_instance_with_personality_not_a_list(self):
+        personality = [('/test/path', base64.b64encode('test\ncontents\n'))]
+        body_dict = self._create_personality_request_dict(personality)
+        body_dict['server']['personality'] = \
+            body_dict['server']['personality'][0]
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(compute_api.injected_files, None)
+
+    def test_create_instance_with_personality_with_non_b64_content(self):
+        path = '/my/file/path'
+        contents = '#!/bin/bash\necho "Oh no!"\n'
+        personality = [(path, contents)]
+        request, response, injected_files = \
+            self._create_instance_with_personality_json(personality)
+        self.assertEquals(response.status_int, 400)
+        self.assertEquals(injected_files, None)
+
+    def test_create_instance_with_three_personalities(self):
+        files = [
+            ('/etc/sudoers', 'ALL ALL=NOPASSWD: ALL\n'),
+            ('/etc/motd', 'Enjoy your root access!\n'),
+            ('/etc/dovecot.conf', 'dovecot\nconfig\nstuff\n'),
+            ]
+        personality = []
+        for path, content in files:
+            personality.append((path, base64.b64encode(content)))
+        request, response, injected_files = \
+            self._create_instance_with_personality_json(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, files)
+
+    def test_create_instance_personality_empty_content(self):
+        path = '/my/file/path'
+        contents = ''
+        personality = [(path, contents)]
+        request, response, injected_files = \
+            self._create_instance_with_personality_json(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, [(path, contents)])
+
+    def test_create_instance_admin_pass_json(self):
+        request, response, dummy = \
+            self._create_instance_with_personality_json(None)
+        self.assertEquals(response.status_int, 200)
+        response = json.loads(response.body)
+        self.assertTrue('adminPass' in response['server'])
+        self.assertTrue(response['server']['adminPass'].startswith('fake'))
+
+    def test_create_instance_admin_pass_xml(self):
+        request, response, dummy = \
+            self._create_instance_with_personality_xml(None)
+        self.assertEquals(response.status_int, 200)
+        dom = minidom.parseString(response.body)
+        server = dom.childNodes[0]
+        self.assertEquals(server.nodeName, 'server')
+        self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
+
 
 if __name__ == "__main__":
     unittest.main()
