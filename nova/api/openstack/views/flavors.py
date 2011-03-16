@@ -61,8 +61,8 @@ class ViewBuilder(object):
 
         detail.update(simple)
 
-        return detail 
-    
+        return detail
+
     def _build_extra(self, flavor_obj):
         return flavor_obj
 

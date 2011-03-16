@@ -46,6 +46,7 @@ def return_instance_types(context, num=2):
         instance_types[name] = stub_flavor(i, name)
     return instance_types
 
+
 def return_instance_type_not_found(context, flavorid):
     raise exception.NotFound()
 
@@ -205,7 +206,7 @@ class FlavorsTest(test.TestCase):
                 ],
             },
         ]
-        self.assertEqual(flavor, expected)    
+        self.assertEqual(flavor, expected)
 
     def test_get_flavor_list_detail_v1_1(self):
         req = webob.Request.blank('/v1.1/flavors/detail')
