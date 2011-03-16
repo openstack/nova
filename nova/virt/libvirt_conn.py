@@ -995,7 +995,8 @@ class LibvirtConnection(object):
         cpu_info['model'] = xml.xpathEval('//host/cpu/model')[0].getContent()
         cpu_info['vendor'] = xml.xpathEval('//host/cpu/vendor')[0].getContent()
 
-        topology_node = xml.xpathEval('//host/cpu/topology')[0].get_properties()
+        topology_node = xml.xpathEval('//host/cpu/topology')[0]\
+                        .get_properties()
         topology = dict()
         while topology_node != None:
             name = topology_node.get_name()
