@@ -500,7 +500,8 @@ class ISCSIDriver(VolumeDriver):
 
         tid = self.db.volume_get_iscsi_target_num(context, volume_id)
         try:
-            self._execute('sudo', 'ietadm', '--op', 'show', '--tid=%(tid)d' % locals())
+            self._execute('sudo', 'ietadm', '--op', 'show',
+                          '--tid=%(tid)d' % locals())
         except exception.ProcessExecutionError, e:
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume
