@@ -146,17 +146,21 @@ def stubout_lookup_image(stubs):
 
 def stubout_fetch_image_glance_disk(stubs):
     """Simulates a failure in fetch image_glance_disk"""
-    def f(_1, _2, _3, _4, _5, _6):
-        raise Exception("Test Exception raised by " +
-                        "fake fetch_image_glance_disk")
+
+    @classmethod
+    def f(cls, *args):
+        raise fake.Failure("Test Exception raised by " +
+                           "fake fetch_image_glance_disk")
     stubs.Set(vm_utils.VMHelper, '_fetch_image_glance_disk', f)
 
 
 def stubout_create_vm(stubs):
     """Simulates a failure in create_vm"""
-    def f(_1, _2, _3, _4, _5, _6):
-        raise Exception("Test Exception raised by " +
-                        "fake create_vm")
+
+    @classmethod
+    def f(cls, *args):
+        raise fake.Failure("Test Exception raised by " +
+                           "fake create_vm")
     stubs.Set(vm_utils.VMHelper, 'create_vm', f)
 
 

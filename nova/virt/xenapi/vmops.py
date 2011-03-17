@@ -87,46 +87,13 @@ class VMOps(object):
             vdi_uuid = disk_image_type = None
             (vdi_uuid, disk_image_type) = self.create_disk(instance)
             self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
-        except BaseException as spawn_error:
+        except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
 
             LOG.exception(_("instance %s: Failed to spawn"),
                           instance.id, exc_info=sys.exc_info())
             LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
                       instance.id)
-            vdis = {
-                    ImageType.KERNEL: None,
-                    ImageType.RAMDISK: None,
-                    }
-            if vdi_uuid:
-                vdis[disk_image_type] = vdi_uuid
-            #extract VDI uuid from spawn error
-            if len(spawn_error.args) > 0:
-                last_arg = spawn_error.args[len(spawn_error.args) - 1]
-                if isinstance(last_arg, dict):
-                    for item in last_arg:
-                        vdis[item] = last_arg[item]
-            LOG.debug(_("VDIS to remove:%s"), vdis)
-            remove_from_dom0 = False
-            for vdi_type in vdis:
-                vdi_to_remove = vdis[vdi_type]
-                if vdi_type in (ImageType.KERNEL, ImageType.RAMDISK):
-                    remove_from_dom0 = True
-                try:
-                    vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                            vdi_to_remove)
-                    LOG.debug(_('Removing VDI %(vdi_ref)s' +
-                                '(uuid:%(vdi_to_remove)s)'), locals())
-                except:
-                    #vdi already deleted
-                    LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
-                    continue
-                VMHelper.destroy_vdi(self._session, vdi_ref)
-            if remove_from_dom0:
-                LOG.debug(_("Removing kernel/ramdisk files from dom0"))
-                self._destroy_kernel_ramdisk_plugin_call(
-                        vdis[ImageType.KERNEL], vdis[ImageType.RAMDISK],
-                        False)
-
+            self._handle_spawn_error(vdi_uuid, disk_image_type, spawn_error)
             #re-throw the error
             raise spawn_error
 
@@ -170,7 +137,7 @@ class VMOps(object):
         try:
             vm_ref = VMHelper.create_vm(self._session, instance,
                                         kernel, ramdisk, use_pv_kernel)
-        except BaseException as vm_create_error:
+        except self.XenAPI.Failure as vm_create_error:
             # if the spwan process fails here it will be necessary to
             # clean up kernel and ramdisk (VDIs and files in dom0)
 
@@ -252,6 +219,41 @@ class VMOps(object):
         self.reset_network(instance)
 
         return timer.start(interval=0.5, now=True)
+
+    def _handle_spawn_error(self, vdi_uuid, disk_image_type, spawn_error):
+        vdis = {
+                ImageType.KERNEL: None,
+                ImageType.RAMDISK: None,
+                }
+        if vdi_uuid:
+            vdis[disk_image_type] = vdi_uuid
+        #extract VDI uuid from spawn error
+        if len(spawn_error.args) > 0:
+            last_arg = spawn_error.args[len(spawn_error.args) - 1]
+            if isinstance(last_arg, dict):
+                for item in last_arg:
+                    vdis[item] = last_arg[item]
+        LOG.debug(_("VDIS to remove:%s"), vdis)
+        remove_from_dom0 = False
+        for vdi_type in vdis:
+            vdi_to_remove = vdis[vdi_type]
+            if vdi_type in (ImageType.KERNEL, ImageType.RAMDISK):
+                remove_from_dom0 = True
+            try:
+                vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                        vdi_to_remove)
+                LOG.debug(_('Removing VDI %(vdi_ref)s' +
+                            '(uuid:%(vdi_to_remove)s)'), locals())
+            except:
+                #vdi already deleted
+                LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
+                continue
+            VMHelper.destroy_vdi(self._session, vdi_ref)
+        if remove_from_dom0:
+            LOG.debug(_("Removing kernel/ramdisk files from dom0"))
+            self._destroy_kernel_ramdisk_plugin_call(
+                    vdis[ImageType.KERNEL], vdis[ImageType.RAMDISK],
+                    False)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
         """Refactored out the common code of many methods that receive either

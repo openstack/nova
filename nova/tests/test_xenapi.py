@@ -346,7 +346,7 @@ class XenAPIVMTestCase(test.TestCase):
         Verifies VDI create are properly cleaned up"""
         FLAGS.xenapi_image_service = 'glance'
         stubs.stubout_fetch_image_glance_disk(self.stubs)
-        self.assertRaises(Exception,
+        self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
         #ensure there is no VDI without a VBD
         self._check_no_unbound_vdi()
@@ -356,7 +356,7 @@ class XenAPIVMTestCase(test.TestCase):
         Verifies VDI create are properly cleaned up"""
         FLAGS.xenapi_image_service = 'glance'
         stubs.stubout_create_vm(self.stubs)
-        self.assertRaises(Exception,
+        self.assertRaises(xenapi_fake.Failure,
                           self._test_spawn, 1, 2, 3)
         #ensure there is no VDI without a VBD
         self._check_no_unbound_vdi()

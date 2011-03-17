@@ -397,24 +397,26 @@ class VMHelper(HelperBase):
                                 image_type):
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
+        sr_ref = safe_find_sr(session)
+
+        # NOTE(sirp): The Glance plugin runs under Python 2.4
+        # which does not have the `uuid` module. To work around this,
+        # we generate the uuids here (under Python 2.6+) and
+        # pass them as arguments
+        uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
+
+        params = {'image_id': image,
+                  'glance_host': FLAGS.glance_host,
+                  'glance_port': FLAGS.glance_port,
+                  'uuid_stack': uuid_stack,
+                  'sr_path': cls.get_sr_path(session)}
+
+        kwargs = {'params': pickle.dumps(params)}
+        task = session.async_call_plugin('glance', 'download_vhd', kwargs)
+        vdi_uuid = session.wait_for_task(task, instance_id)
+        #from this point we have a VDI on Xen host
+        #if anything goes wrong, we need to remember its uuid
         try:
-            sr_ref = safe_find_sr(session)
-
-            # NOTE(sirp): The Glance plugin runs under Python 2.4
-            # which does not have the `uuid` module. To work around this,
-            # we generate the uuids here (under Python 2.6+) and
-            # pass them as arguments
-            uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
-
-            params = {'image_id': image,
-                      'glance_host': FLAGS.glance_host,
-                      'glance_port': FLAGS.glance_port,
-                      'uuid_stack': uuid_stack,
-                      'sr_path': cls.get_sr_path(session)}
-
-            kwargs = {'params': pickle.dumps(params)}
-            task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-            vdi_uuid = session.wait_for_task(task, instance_id)
 
             cls.scan_sr(session, instance_id, sr_ref)
 
@@ -426,14 +428,11 @@ class VMHelper(HelperBase):
             LOG.debug(_("xapi 'download_vhd' returned VDI UUID %(vdi_uuid)s")
                       % locals())
             return vdi_uuid
-        except BaseException as e:
+        except cls.XenAPI.Failure as e:
+            #Looking for XenAPI failures only
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
-            try:
-                vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi)
-                e.args = e.args + ({image_type: vdi_uuid},)
-            except:
-                pass  # ignore failures in retrieving VDI
+            e.args = e.args + ({image_type: vdi_uuid},)
             raise e
 
     @classmethod
@@ -451,24 +450,25 @@ class VMHelper(HelperBase):
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
         # DISK restores
         LOG.debug(_("Fetching image %(image)s") % locals())
+        sr_ref = safe_find_sr(session)
+
+        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
+        meta, image_file = client.get_image(image)
+        virtual_size = int(meta['size'])
+        vdi_size = virtual_size
+        LOG.debug(_("Size for image %(image)s:" +
+                    "%(virtual_size)d") % locals())
+
+        if image_type == ImageType.DISK:
+            # Make room for MBR.
+            vdi_size += MBR_SIZE_BYTES
+
+        name_label = get_name_label_for_image(image)
+        vdi_ref = cls.create_vdi(session, sr_ref, name_label,
+                                 vdi_size, False)
+        #from this point we have a VDI on Xen host
+        #if anything goes wrong, we need to remember its uuid
         try:
-            sr_ref = safe_find_sr(session)
-
-            client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-            meta, image_file = client.get_image(image)
-            virtual_size = int(meta['size'])
-            vdi_size = virtual_size
-            LOG.debug(_("Size for image %(image)s:" +
-                        "%(virtual_size)d") % locals())
-
-            if image_type == ImageType.DISK:
-                # Make room for MBR.
-                vdi_size += MBR_SIZE_BYTES
-
-            name_label = get_name_label_for_image(image)
-            vdi_ref = cls.create_vdi(session, sr_ref, name_label,
-                                     vdi_size, False)
-
             with_vdi_attached_here(session, vdi_ref, False,
                                    lambda dev:
                                    _stream_disk(dev, image_type,
@@ -490,24 +490,22 @@ class VMHelper(HelperBase):
                 return filename
             else:
                 return session.get_xenapi().VDI.get_uuid(vdi_ref)
-        except BaseException as e:
+        except (cls.XenAPI.Failure, IOError, OSError) as e:
+            #Looking for XenAPI and OS failures
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
             if vdi_ref:
                 try:
                     vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
                     e.args = e.args + ({image_type: vdi_uuid},)
-                except:
+                except cls.XenAPI.Failure:
                     pass  # ignore failures in retrieving VDI
             if filename:
-                try:
-                    splits = filename.split("/")
-                    if len(splits) > 0:
-                        vdi_uuid = splits[len(splits) - 1]
-                        e.args = e.args + ({image_type: vdi_uuid},)
-                except:
-                    pass  # ignore errors parsing file name
-
+                splits = filename.split("/")
+                #split always return at least the original string
+                if splits[len(splits) - 1] != None:
+                    vdi_uuid = splits[len(splits) - 1]
+                    e.args = e.args + ({image_type: vdi_uuid},)
             raise e
 
     @classmethod
