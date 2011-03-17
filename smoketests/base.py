@@ -203,13 +203,13 @@ def run_tests(suites):
         except KeyError:
             print >> sys.stderr, 'Available test suites:', \
                                  ', '.join(suites.keys())
-            return 1
+            return False
 
         return unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
     else:
         successful = True
         for suite in suites.itervalues():
             result = unittest.TextTestRunner(verbosity=2).run(suite)
-            if not result.wasSuccesful():
+            if not result.wasSuccessful():
                 successful = False
         return successful
