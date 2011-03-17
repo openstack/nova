@@ -108,7 +108,7 @@ class GlanceImageService(service.BaseImageService):
             raise exception.NotFound
         for chunk in image_chunks:
             data.write(chunk)
-        return metadata
+        return self._convert_timestamps_to_datetimes(metadata)
 
     def create(self, context, metadata, data=None):
         """

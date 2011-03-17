@@ -14,7 +14,17 @@ class StubGlanceClient(object):
     def get_images_detailed(self):
         return self.images.itervalues()
 
-class TestGlance(unittest.TestCase):
+    def get_image(self, id):
+        return self.images[id], []
+
+
+class NullWriter(object):
+
+    def write(self, *arg, **kwargs):
+        pass
+
+
+class TestGlanceImageServiceDatetimes(unittest.TestCase):
 
     def setUp(self):
         self.client = StubGlanceClient(None)
@@ -87,3 +97,21 @@ class TestGlance(unittest.TestCase):
         self.assertEqual(i1['updated_at'], now)
         self.assertEqual(i1['deleted_at'], None)
         self.assertEqual(i2['deleted_at'], now)
+
+    def test_get_handles_timestamps(self):
+        now = dt.datetime.utcnow()
+        self.client.images = {'abcd': {
+            'id': 'abcd',
+            'name': 'nifty image',
+            'created_at': now.isoformat(),
+            'updated_at': now.isoformat(),
+            'deleted_at': now.isoformat(),
+        }}
+        actual = self.service.get({}, 'abcd', NullWriter())
+        for attr in ('created_at', 'updated_at', 'deleted_at'):
+            self.assertEqual(actual[attr], now)
+
+    def test_get_handles_deleted_at_none(self):
+        self.client.images = {'abcd': {'deleted_at': None}}
+        actual = self.service.get({}, 'abcd', NullWriter())
+        self.assertEqual(actual['deleted_at'], None)
