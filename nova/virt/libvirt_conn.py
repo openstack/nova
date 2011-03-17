@@ -1008,7 +1008,7 @@ class LibvirtConnection(object):
         topology = dict()
         if topology_nodes:
             topology_node = topology_nodes[0].get_properties()
-            while topology_node != None:
+            while topology_node:
                 name = topology_node.get_name()
                 topology[name] = topology_node.getContent()
                 topology_node = topology_node.get_next()
