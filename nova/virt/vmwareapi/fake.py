@@ -48,8 +48,8 @@ def log_db_contents(msg=None):
 def reset():
     """Resets the db contents."""
     for c in _CLASSES:
-        #We fake the datastore by keeping the file references as a list of
-        #names in the db
+        # We fake the datastore by keeping the file references as a list of
+        # names in the db
         if c == 'files':
             _db_content[c] = []
         else:
@@ -206,7 +206,7 @@ class VirtualMachine(ManagedObject):
         setting of the Virtual Machine object.
         """
         try:
-            #Case of Reconfig of VM to attach disk
+            # Case of Reconfig of VM to attach disk
             controller_key = val.deviceChange[1].device.controllerKey
             filename = val.deviceChange[1].device.backing.fileName
 
@@ -223,7 +223,7 @@ class VirtualMachine(ManagedObject):
 
             self.set("config.hardware.device", [disk, controller])
         except Exception:
-            #Case of Reconfig of VM to set extra params
+            # Case of Reconfig of VM to set extra params
             self.set("config.extraConfig", val.extraConfig)
 
 
@@ -406,14 +406,14 @@ def _remove_file(file_path):
     """Removes a file reference from the db."""
     if _db_content.get("files", None) is None:
         raise exception.NotFound(_("No files have been added yet"))
-    #Check if the remove is for a single file object or for a folder
+    # Check if the remove is for a single file object or for a folder
     if file_path.find(".vmdk") != -1:
         if file_path not in _db_content.get("files"):
             raise exception.NotFound(_("File- '%s' is not there in the "
                            "datastore") % file_path)
         _db_content.get("files").remove(file_path)
     else:
-        #Removes the files in the folder and the folder too from the db
+        # Removes the files in the folder and the folder too from the db
         for file in _db_content.get("files"):
             if file.find(file_path) != -1:
                 try:
@@ -639,15 +639,15 @@ class FakeVim(object):
         for obj in objs:
             try:
                 obj_ref = obj.obj
-                #This means that we are doing a search for the managed
-                #dataobects of the type in the inventory
+                # This means that we are doing a search for the managed
+                # dataobjects of the type in the inventory
                 if obj_ref == "RootFolder":
                     for mdo_ref in _db_content[type]:
                         mdo = _db_content[type][mdo_ref]
-                        #Create a temp Managed object which has the same ref
-                        #as the parent object and copies just the properties
-                        #asked for. We need .obj along with the propSet of
-                        #just the properties asked for
+                        # Create a temp Managed object which has the same ref
+                        # as the parent object and copies just the properties
+                        # asked for. We need .obj along with the propSet of
+                        # just the properties asked for
                         temp_mdo = ManagedObject(mdo.objName, mdo.obj)
                         for prop in properties:
                             temp_mdo.set(prop, mdo.get(prop))

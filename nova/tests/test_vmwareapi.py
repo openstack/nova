@@ -43,15 +43,15 @@ class VMWareAPIVMTestCase(test.TestCase):
 
     def setUp(self):
         super(VMWareAPIVMTestCase, self).setUp()
+        self.flags(vmwareapi_host_ip='test_url',
+                   vmwareapi_host_username='test_username',
+                   vmware_host_password='test_pass')
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)
         self.project = self.manager.create_project('fake', 'fake', 'fake')
         self.network = utils.import_object(FLAGS.network_manager)
         self.stubs = stubout.StubOutForTesting()
-        FLAGS.vmwareapi_host_ip = 'test_url'
-        FLAGS.vmwareapi_host_username = 'test_username'
-        FLAGS.vmwareapi_host_password = 'test_pass'
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)

@@ -29,7 +29,7 @@ from suds.sudsobject import Property
 from nova import flags
 from nova.virt.vmwareapi import error_util
 
-RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml'
+RESP_NOT_XML_ERROR = 'Response is "text/html", not "text/xml"'
 CONN_ABORT_ERROR = 'Software caused connection abort'
 ADDRESS_IN_USE_ERROR = 'Address already in use'
 

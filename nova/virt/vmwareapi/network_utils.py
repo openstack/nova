@@ -39,9 +39,9 @@ class NetworkHelper:
         hostsystems = session._call_method(vim_util, "get_objects",
                     "HostSystem", ["network"])
         vm_networks_ret = hostsystems[0].propSet[0].val
-        #Meaning there are no networks on the host. suds responds with a ""
-        #in the parent property field rather than a [] in the
-        #ManagedObjectRefernce property field of the parent
+        # Meaning there are no networks on the host. suds responds with a ""
+        # in the parent property field rather than a [] in the
+        # ManagedObjectRefernce property field of the parent
         if not vm_networks_ret:
             return None
         vm_networks = vm_networks_ret.ManagedObjectReference
@@ -59,18 +59,18 @@ class NetworkHelper:
         Gets the vswitch associated with the physical network adapter
         with the name supplied.
         """
-        #Get the list of vSwicthes on the Host System
+        # Get the list of vSwicthes on the Host System
         host_mor = session._call_method(vim_util, "get_objects",
              "HostSystem")[0].obj
         vswitches_ret = session._call_method(vim_util,
                     "get_dynamic_property", host_mor,
                     "HostSystem", "config.network.vswitch")
-        #Meaning there are no vSwitches on the host. Shouldn't be the case,
-        #but just doing code check
+        # Meaning there are no vSwitches on the host. Shouldn't be the case,
+        # but just doing code check
         if not vswitches_ret:
             return
         vswitches = vswitches_ret.HostVirtualSwitch
-        #Get the vSwitch associated with the network adapter
+        # Get the vSwitch associated with the network adapter
         for elem in vswitches:
             try:
                 for nic_elem in elem.pnic:
@@ -87,7 +87,7 @@ class NetworkHelper:
         physical_nics_ret = session._call_method(vim_util,
                     "get_dynamic_property", host_net_system_mor,
                     "HostNetworkSystem", "networkInfo.pnic")
-        #Meaning there are no physical nics on the host
+        # Meaning there are no physical nics on the host
         if not physical_nics_ret:
             return False
         physical_nics = physical_nics_ret.PhysicalNic
@@ -139,11 +139,11 @@ class NetworkHelper:
                     "AddPortGroup", network_system_mor,
                     portgrp=add_prt_grp_spec)
         except error_util.VimFaultException, exc:
-            #There can be a race condition when two instances try
-            #adding port groups at the same time. One succeeds, then
-            #the other one will get an exception. Since we are
-            #concerned with the port group being created, which is done
-            #by the other call, we can ignore the exception.
+            # There can be a race condition when two instances try
+            # adding port groups at the same time. One succeeds, then
+            # the other one will get an exception. Since we are
+            # concerned with the port group being created, which is done
+            # by the other call, we can ignore the exception.
             if error_util.FAULT_ALREADY_EXISTS not in exc.fault_list:
                 raise exception.Error(exc)
         LOG.debug(_("Created Port Group with name %s on "

@@ -45,46 +45,46 @@ def build_recursive_traversal_spec(client_factory):
     """
     visit_folders_select_spec = build_selection_spec(client_factory,
                                     "visitFolders")
-    #For getting to hostFolder from datacnetr
+    # For getting to hostFolder from datacenter
     dc_to_hf = build_traversal_spec(client_factory, "dc_to_hf", "Datacenter",
                                     "hostFolder", False,
                                     [visit_folders_select_spec])
-    #For getting to vmFolder from datacenter
+    # For getting to vmFolder from datacenter
     dc_to_vmf = build_traversal_spec(client_factory, "dc_to_vmf", "Datacenter",
                                      "vmFolder", False,
                                      [visit_folders_select_spec])
-    #For getting Host System to virtual machine
+    # For getting Host System to virtual machine
     h_to_vm = build_traversal_spec(client_factory, "h_to_vm", "HostSystem",
                                    "vm", False,
                                    [visit_folders_select_spec])
 
-    #For getting to Host System from Compute Resource
+    # For getting to Host System from Compute Resource
     cr_to_h = build_traversal_spec(client_factory, "cr_to_h",
                                    "ComputeResource", "host", False, [])
 
-    #For getting to datastore from Compute Resource
+    # For getting to datastore from Compute Resource
     cr_to_ds = build_traversal_spec(client_factory, "cr_to_ds",
                                     "ComputeResource", "datastore", False, [])
 
     rp_to_rp_select_spec = build_selection_spec(client_factory, "rp_to_rp")
     rp_to_vm_select_spec = build_selection_spec(client_factory, "rp_to_vm")
-    #For getting to resource pool from Compute Resource
+    # For getting to resource pool from Compute Resource
     cr_to_rp = build_traversal_spec(client_factory, "cr_to_rp",
                                 "ComputeResource", "resourcePool", False,
                                 [rp_to_rp_select_spec, rp_to_vm_select_spec])
 
-    #For getting to child res pool from the parent res pool
+    # For getting to child res pool from the parent res pool
     rp_to_rp = build_traversal_spec(client_factory, "rp_to_rp", "ResourcePool",
                                 "resourcePool", False,
                                 [rp_to_rp_select_spec, rp_to_vm_select_spec])
 
-    #For getting to Virtual Machine from the Resource Pool
+    # For getting to Virtual Machine from the Resource Pool
     rp_to_vm = build_traversal_spec(client_factory, "rp_to_vm", "ResourcePool",
                                 "vm", False,
                                 [rp_to_rp_select_spec, rp_to_vm_select_spec])
 
-    #Get the assorted traversal spec which takes care of the objects to
-    #be searched for from the root folder
+    # Get the assorted traversal spec which takes care of the objects to
+    # be searched for from the root folder
     traversal_spec = build_traversal_spec(client_factory, "visitFolders",
                                   "Folder", "childEntity", False,
                                   [visit_folders_select_spec, dc_to_hf,

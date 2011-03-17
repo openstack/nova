@@ -1,5 +1,4 @@
 ..
-
       Copyright (c) 2010 Citrix Systems, Inc.
       Copyright 2010 OpenStack LLC.
 
