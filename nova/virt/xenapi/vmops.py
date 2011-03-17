@@ -19,6 +19,7 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
+import base64
 import json
 import M2Crypto
 import os
@@ -122,43 +123,43 @@ class VMOps(object):
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
 
-        kernel = None
-        if instance.kernel_id:
-            kernel = VMHelper.fetch_image(self._session, instance.id,
-                instance.kernel_id, user, project, ImageType.KERNEL)
-
-        ramdisk = None
-        if instance.ramdisk_id:
-            ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                instance.ramdisk_id, user, project, ImageType.RAMDISK)
-
-        use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
-            vdi_ref, disk_image_type, instance.os_type)
         try:
+            kernel = None
+            ramdisk = None
+
+            if instance.kernel_id:
+                kernel = VMHelper.fetch_image(self._session,
+                    instance.id, instance.kernel_id, user, project,
+                    ImageType.KERNEL)
+
+            if instance.ramdisk_id:
+                ramdisk = VMHelper.fetch_image(self._session,
+                    instance.id, instance.ramdisk_id, user, project,
+                    ImageType.RAMDISK)
+
+            use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                instance.id, vdi_ref, disk_image_type, instance.os_type)
+
             vm_ref = VMHelper.create_vm(self._session, instance,
                                         kernel, ramdisk, use_pv_kernel)
         except self.XenAPI.Failure as vm_create_error:
-            # if the spwan process fails here it will be necessary to
-            # clean up kernel and ramdisk (VDIs and files in dom0)
-
-            def _vdi_uuid(filename):
-                #Note: we assume the file name is the same as
-                #the uuid of the VDI. If this changes in
-                #_copy_kernel_vdi (glance plugin)
-                #this function must be updated accordingly
-                splits = filename.split('/')
-                n_splits = len(splits)
-                if n_splits > 0:
-                    return splits[n_splits - 1]
-                return None
-
+            # if the spawn process fails here it will be necessary to
+            # clean up kernel and ramdisk (only files in dom0)
             LOG.exception(_("instance %s: Failed to spawn - " +
                             "Unable to create VM"),
                           instance.id, exc_info=sys.exc_info())
-            vdis = {}
-            vdis[ImageType.KERNEL] = kernel and _vdi_uuid(kernel) or None
-            vdis[ImageType.RAMDISK] = ramdisk and _vdi_uuid(ramdisk) or None
-            vm_create_error.args = vm_create_error.args + (vdis,)
+
+            last_arg = None
+            resources = {}
+            if len(vm_create_error.args) > 0:
+                last_arg = vm_create_error.args[len(vm_create_error.args) - 1]
+            if isinstance(last_arg, dict):
+                resources = last_arg
+            if ImageType.KERNEL not in resources and kernel:
+                resources[ImageType.KERNEL] = (None, kernel)
+            if ImageType.RAMDISK not in resources and ramdisk:
+                resources[ImageType.RAMDISK] = (None, ramdisk)
+            vm_create_error.args = vm_create_error.args + (resources,)
             raise vm_create_error
 
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
@@ -173,19 +174,20 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
-        def _inject_onset_files():
-            onset_files = instance.onset_files
-            if onset_files:
+        def _inject_files():
+            injected_files = instance.injected_files
+            if injected_files:
                 # Check if this is a JSON-encoded string and convert if needed.
-                if isinstance(onset_files, basestring):
+                if isinstance(injected_files, basestring):
                     try:
-                        onset_files = json.loads(onset_files)
+                        injected_files = json.loads(injected_files)
                     except ValueError:
-                        LOG.exception(_("Invalid value for onset_files: '%s'")
-                                % onset_files)
-                        onset_files = []
+                        LOG.exception(
+                            _("Invalid value for injected_files: '%s'")
+                                % injected_files)
+                        injected_files = []
                 # Inject any files, if specified
-                for path, contents in instance.onset_files:
+                for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
         # NOTE(armando): Do we really need to do this in virt?
@@ -201,7 +203,7 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
-                    _inject_onset_files()
+                    _inject_files()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -221,39 +223,39 @@ class VMOps(object):
         return timer.start(interval=0.5, now=True)
 
     def _handle_spawn_error(self, vdi_uuid, disk_image_type, spawn_error):
-        vdis = {
-                ImageType.KERNEL: None,
-                ImageType.RAMDISK: None,
-                }
+        resources = {}
         if vdi_uuid:
-            vdis[disk_image_type] = vdi_uuid
-        #extract VDI uuid from spawn error
+            resources[disk_image_type] = (vdi_uuid,)
+        #extract resource dictionary from spawn error
         if len(spawn_error.args) > 0:
             last_arg = spawn_error.args[len(spawn_error.args) - 1]
             if isinstance(last_arg, dict):
                 for item in last_arg:
-                    vdis[item] = last_arg[item]
-        LOG.debug(_("VDIS to remove:%s"), vdis)
-        remove_from_dom0 = False
-        for vdi_type in vdis:
-            vdi_to_remove = vdis[vdi_type]
-            if vdi_type in (ImageType.KERNEL, ImageType.RAMDISK):
-                remove_from_dom0 = True
-            try:
-                vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                        vdi_to_remove)
-                LOG.debug(_('Removing VDI %(vdi_ref)s' +
-                            '(uuid:%(vdi_to_remove)s)'), locals())
-            except:
-                #vdi already deleted
-                LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
-                continue
-            VMHelper.destroy_vdi(self._session, vdi_ref)
-        if remove_from_dom0:
+                    resources[item] = last_arg[item]
+        LOG.debug(_("resources to remove:%s"), resources)
+        files_to_remove = {}
+        for vdi_type in resources:
+            items_to_remove = resources[vdi_type]
+            vdi_to_remove = items_to_remove[0]
+            if vdi_to_remove != None:
+                try:
+                    vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                            vdi_to_remove)
+                    LOG.debug(_('Removing VDI %(vdi_ref)s' +
+                                '(uuid:%(vdi_to_remove)s)'), locals())
+                except self.XenAPI.Failure:
+                    #vdi already deleted
+                    LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
+                    continue
+                VMHelper.destroy_vdi(self._session, vdi_ref)
+            if len(items_to_remove) > 1:
+                # there is also a file to remove
+                files_to_remove[vdi_type] = items_to_remove[1]
+        if len(files_to_remove) > 0:
             LOG.debug(_("Removing kernel/ramdisk files from dom0"))
             self._destroy_kernel_ramdisk_plugin_call(
-                    vdis[ImageType.KERNEL], vdis[ImageType.RAMDISK],
-                    False)
+                    files_to_remove.get(ImageType.KERNEL, None),
+                    files_to_remove.get(ImageType.RAMDISK, None))
 
     def _get_vm_opaque_ref(self, instance_or_vm):
         """Refactored out the common code of many methods that receive either
@@ -480,17 +482,16 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def inject_file(self, instance, b64_path, b64_contents):
+    def inject_file(self, instance, path, contents):
         """Write a file to the VM instance. The path to which it is to be
-        written and the contents of the file need to be supplied; both should
+        written and the contents of the file need to be supplied; both will
         be base64-encoded to prevent errors with non-ASCII characters being
         transmitted. If the agent does not support file injection, or the user
         has disabled it, a NotImplementedError will be raised.
         """
-        # Files/paths *should* be base64-encoded at this point, but
-        # double-check to make sure.
-        b64_path = utils.ensure_b64_encoding(b64_path)
-        b64_contents = utils.ensure_b64_encoding(b64_contents)
+        # Files/paths must be base64-encoded for transmission to agent
+        b64_path = base64.b64encode(path)
+        b64_contents = base64.b64encode(contents)
 
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
@@ -546,15 +547,12 @@ class VMOps(object):
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
 
-    def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk,
-                                            filenames=True):
+    def _destroy_kernel_ramdisk_plugin_call(self, kernel, ramdisk):
         args = {}
-        kernel_arg_name = "kernel-" + (filenames and "file" or "uuid")
-        ramdisk_arg_name = "ramdisk-" + (filenames and "file" or "uuid")
         if kernel:
-            args[kernel_arg_name] = kernel
+            args['kernel-file'] = kernel
         if ramdisk:
-            args[ramdisk_arg_name] = ramdisk
+            args['ramdisk-file'] = ramdisk
         task = self._session.async_call_plugin(
             'glance', 'remove_kernel_ramdisk', args)
         self._session.wait_for_task(task)

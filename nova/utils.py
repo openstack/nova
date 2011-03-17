@@ -262,13 +262,25 @@ def generate_mac():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
-def generate_password(length=20):
-    """Generate a random sequence of letters and digits
-    to be used as a password. Note that this is not intended
-    to represent the ultimate in security.
+# Default symbols to use for passwords. Avoids visually confusing characters.
+# ~6 bits per symbol
+DEFAULT_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0,1
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ"  # Removed: I, O
+                            "abcdefghijkmnopqrstuvwxyz")  # Removed: l
+
+
+# ~5 bits per symbol
+EASIER_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0, 1
+                           "ABCDEFGHJKLMNPQRSTUVWXYZ")  # Removed: I, O
+
+
+def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
+    """Generate a random password from the supplied symbols.
+
+    Believed to be reasonably secure (with a reasonable password length!)
     """
-    chrs = string.letters + string.digits
-    return "".join([random.choice(chrs) for i in xrange(length)])
+    r = random.SystemRandom()
+    return "".join([r.choice(symbols) for _i in xrange(length)])
 
 
 def last_octet(address):
@@ -518,24 +530,15 @@ def synchronized(name):
     def wrap(f):
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            LOG.debug(_("Attempting to grab %(lock)s for method "
+                        "%(method)s..." % {"lock": name,
+                                           "method": f.__name__}))
             lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
                                                   'nova-%s.lock' % name))
             with lock:
                 return f(*args, **kwargs)
         return inner
     return wrap
-
-
-def ensure_b64_encoding(val):
-    """Safety method to ensure that values expected to be base64-encoded
-    actually are. If they are, the value is returned unchanged. Otherwise,
-    the encoded value is returned.
-    """
-    try:
-        dummy = base64.decode(val)
-        return val
-    except TypeError:
-        return base64.b64encode(val)
 
 
 def get_from_path(items, path):

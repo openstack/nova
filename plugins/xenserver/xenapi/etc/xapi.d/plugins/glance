@@ -371,16 +371,8 @@ def remove_kernel_ramdisk(session, args):
     ramdisk_file = optional(args, 'ramdisk-file')
     if kernel_file:
         os.remove(kernel_file)
-    else:
-        kernel_uuid = optional(args, 'kernel-uuid')
-        if kernel_uuid:
-            os.remove(KERNEL_DIR + '/' + kernel_uuid)
     if ramdisk_file:
         os.remove(ramdisk_file)
-    else:
-        ramdisk_uuid = optional(args, 'ramdisk-uuid')
-        if ramdisk_uuid:
-            os.remove(KERNEL_DIR + '/' + ramdisk_uuid)
     return "ok"
 
 if __name__ == '__main__':

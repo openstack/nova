@@ -502,7 +502,7 @@ class LibvirtConnection(object):
                 cmd = 'netcat', '0.0.0.0', port, '-w', '1'
                 try:
                     stdout, stderr = utils.execute(*cmd, process_input='')
-                except ProcessExecutionError:
+                except exception.ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
@@ -984,18 +984,19 @@ class LibvirtConnection(object):
 
         xml = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xml)
-        nodes = xml.xpathEval('//cpu')
+        nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
             raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
                                       "but %d\n") % len(nodes)
                                       + xml.serialize())
 
         cpu_info = dict()
-        cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()
-        cpu_info['model'] = xml.xpathEval('//cpu/model')[0].getContent()
-        cpu_info['vendor'] = xml.xpathEval('//cpu/vendor')[0].getContent()
+        cpu_info['arch'] = xml.xpathEval('//host/cpu/arch')[0].getContent()
+        cpu_info['model'] = xml.xpathEval('//host/cpu/model')[0].getContent()
+        cpu_info['vendor'] = xml.xpathEval('//host/cpu/vendor')[0].getContent()
 
-        topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
+        topology_node = xml.xpathEval('//host/cpu/topology')[0]\
+                        .get_properties()
         topology = dict()
         while topology_node != None:
             name = topology_node.get_name()
@@ -1009,7 +1010,7 @@ class LibvirtConnection(object):
             raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
                                       "must have %(ks)s") % locals())
 
-        feature_nodes = xml.xpathEval('//cpu/feature')
+        feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
         for nodes in feature_nodes:
             features.append(nodes.get_properties().getContent())
@@ -1597,6 +1598,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
+        self.iptables.ipv6['filter'].add_chain('sg-fallback')
+        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""

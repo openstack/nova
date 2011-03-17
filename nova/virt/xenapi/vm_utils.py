@@ -432,7 +432,7 @@ class VMHelper(HelperBase):
             #Looking for XenAPI failures only
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
-            e.args = e.args + ({image_type: vdi_uuid},)
+            e.args = e.args + ({image_type: (vdi_uuid,)},)
             raise e
 
     @classmethod
@@ -469,6 +469,8 @@ class VMHelper(HelperBase):
         #from this point we have a VDI on Xen host
         #if anything goes wrong, we need to remember its uuid
         try:
+            vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
+            filename = None
             with_vdi_attached_here(session, vdi_ref, False,
                                    lambda dev:
                                    _stream_disk(dev, image_type,
@@ -489,23 +491,12 @@ class VMHelper(HelperBase):
                 LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
                 return filename
             else:
-                return session.get_xenapi().VDI.get_uuid(vdi_ref)
+                return vdi_uuid
         except (cls.XenAPI.Failure, IOError, OSError) as e:
             #Looking for XenAPI and OS failures
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
-            if vdi_ref:
-                try:
-                    vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
-                    e.args = e.args + ({image_type: vdi_uuid},)
-                except cls.XenAPI.Failure:
-                    pass  # ignore failures in retrieving VDI
-            if filename:
-                splits = filename.split("/")
-                #split always return at least the original string
-                if splits[len(splits) - 1] != None:
-                    vdi_uuid = splits[len(splits) - 1]
-                    e.args = e.args + ({image_type: vdi_uuid},)
+            e.args = e.args + ({image_type: (vdi_uuid, filename)},)
             raise e
 
     @classmethod
