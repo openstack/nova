@@ -48,7 +48,7 @@ class RequestForwarder(api.ChildZoneHelper):
         self.resource = resource
         self.method = method
         self.body = body
-    
+
     def process(self, client, zone):
         api_url = zone.api_url
         LOG.debug(_("Zone redirect to: %(api_url)s, " % locals()))
@@ -89,12 +89,12 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
             return req.get_response(self.application)
         except exception.ZoneRouteException as e:
             if not e.zones:
-                exc = webob.exc.HTTPInternalServerError(explanation=
-                                        _("No zones to reroute to."))
+                exc = webob.exc.HTTPInternalServerError(explanation=_(
+                                            "No zones to reroute to."))
                 return faults.Fault(exc)
 
             # Todo(sandy): This only works for OpenStack API currently.
-            # Needs to be broken out into a driver. 
+            # Needs to be broken out into a driver.
             scheme, netloc, path, query, frag = \
                                     urlparse.urlsplit(req.path_qs)
             query = urlparse.parse_qsl(query)
