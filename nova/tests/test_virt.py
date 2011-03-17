@@ -239,8 +239,8 @@ class LibvirtConnTestCase(test.TestCase):
         network_ref = db.project_get_network(context.get_admin_context(),
                                              self.project.id)
 
-        fixed_ip = {'address':    self.test_ip,
-                    'network_id': network_ref['id']}
+        fixed_ip = {'address':  self.test_ip,
+                    'network_id':   network_ref['id']}
 
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
@@ -259,13 +259,13 @@ class LibvirtConnTestCase(test.TestCase):
 
         check = [
         (lambda t: t.find('.').get('type'), 'lxc'),
-        (lambda t: t.find('./os/type').text, 'exe'),
+        (lambda t: t.find('./os/type').text, 'exe')
         ]
 
         for i, (check, expected_result) in enumerate(check):
-            self.assertEqual(check(tree),
-                            expected_result,
-                            '%s failed common check %d' % (xml, i))
+                 self.assertEqual(check(tree),
+                                  expected_result,
+                                  '%s failed common check %d' % (xml, i))
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
@@ -342,7 +342,6 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find('./devices/serial/source').get(
                 'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
-
         if rescue:
             common_checks += [
                 (lambda t: t.findall('./devices/disk/source')[0].get(
