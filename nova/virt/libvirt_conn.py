@@ -1015,7 +1015,7 @@ class LibvirtConnection(object):
 
             keys = ['cores', 'sockets', 'threads']
             tkeys = topology.keys()
-            if list(set(tkeys)) != list(set(keys)):
+            if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
                 raise exception.Invalid(_("Invalid xml: topology"
                                           "(%(topology)s) must have "
