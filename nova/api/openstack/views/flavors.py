@@ -32,26 +32,27 @@ def get_view_builder(req):
 
 
 class ViewBuilder(object):
-    def __init__(self):
-        pass
 
     def build(self, flavor_obj, is_detail=False):
+        """Generic method used to generate a flavor entity."""
         if is_detail:
             flavor = self._build_detail(flavor_obj)
         else:
             flavor = self._build_simple(flavor_obj)
 
-        full_flavor = self._build_extra(flavor)
+        self._build_extra(flavor)
 
-        return full_flavor
+        return flavor
 
     def _build_simple(self, flavor_obj):
+        """Build a minimal representation of a flavor."""
         return {
             "id": flavor_obj["flavorid"],
             "name": flavor_obj["name"],
         }
 
     def _build_detail(self, flavor_obj):
+        """Build a more complete representation of a flavor."""
         simple = self._build_simple(flavor_obj)
 
         detail = {
@@ -64,19 +65,26 @@ class ViewBuilder(object):
         return detail
 
     def _build_extra(self, flavor_obj):
-        return flavor_obj
+        """Hook for version-specific changes to newly created flavor object."""
+        pass
 
 
 class ViewBuilder_1_1(ViewBuilder):
+    """Openstack API v1.1 flavors view builder."""
+
     def __init__(self, base_url):
+        """
+        :param base_url: url of the root wsgi application
+        """
         self.base_url = base_url
 
     def _build_extra(self, flavor_obj):
         flavor_obj["links"] = self._build_links(flavor_obj)
-        return flavor_obj
 
     def _build_links(self, flavor_obj):
+        """Generate a container of links that refer to the provided flavor."""
         href = self.generate_href(flavor_obj["id"])
+
         links = [
             {
                 "rel": "self",
@@ -93,11 +101,17 @@ class ViewBuilder_1_1(ViewBuilder):
                 "href": href,
             },
         ]
+
         return links
 
     def generate_href(self, flavor_id):
+        """Create an url that refers to a specific flavor id."""
         return "%s/flavors/%s" % (self.base_url, flavor_id)
 
 
 class ViewBuilder_1_0(ViewBuilder):
+    """
+    Openstack API v1.0 flavors view builder. Currently, there
+    are no 1.0-specific attributes of a flavor.
+    """
     pass

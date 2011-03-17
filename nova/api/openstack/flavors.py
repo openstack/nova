@@ -46,7 +46,7 @@ class Controller(wsgi.Controller):
         ctxt = req.environ['nova.context']
         flavors = db.api.instance_type_get_all(ctxt)
         builder = flavors_views.get_view_builder(req)
-        items = [builder.build(flavor, is_detail=is_detail) \
+        items = [builder.build(flavor, is_detail=is_detail)
                  for flavor in flavors.values()]
         return items
 
