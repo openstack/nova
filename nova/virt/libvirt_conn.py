@@ -155,6 +155,8 @@ def _get_ip_version(cidr):
 
 
 def _get_network_info(instance):
+    #TODO(ilyaalekseyev) If we will keep this function
+    # we should cache network_info
     admin_context = context.get_admin_context()
 
     ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
@@ -189,7 +191,7 @@ def _get_network_info(instance):
             'ips': [ip_dict(ip) for ip in network_ips],
             'ip6s': [ip6_dict(ip) for ip in network_ips]}
 
-    network_info.append((network, mapping))
+        network_info.append((network, mapping))
     return network_info
 
 
