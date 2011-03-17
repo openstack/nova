@@ -48,7 +48,6 @@ from nova import scheduler_manager
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
-from nova.scheduler import api as scheduler_api
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -523,9 +522,7 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
         """Pause an instance on this server."""
         context = context.elevated()
         LOG.debug(_('*** instance %s: starting pause'), instance_id)
-        instance_ref = scheduler_api.get_instance_or_reroute(context,
-                                            instance_id)
-        #instance_ref = self.db.instance_get(context, instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: pausing'), instance_id, context=context)
         self.db.instance_set_state(context,
                                    instance_id,

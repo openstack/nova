@@ -78,30 +78,16 @@ class API(object):
                                 capabilities=capabilities))
         return rpc.fanout_cast(context, 'scheduler', kwargs)
         
-    @classmethod
-    def get_instance_or_reroute(cls, context, instance_id):
-        """Return an instance from the db or throw a ZoneRouteException
-           if not found."""
-        try:
-            instance = db.instance_get(context, instance_id)
-            return instance
-        except exception.InstanceNotFound, e:
-            LOG.debug(_("Instance %(instance_id)s not found locally: '%(e)s'" %
-                                                locals()))
-
-        # Throw a reroute Exception for the middleware to pick up. 
-        LOG.debug("Firing ZoneRouteException")
-        zones = db.zone_get_all(context)
-        raise exception.ZoneRouteException(zones)
-
 
 def _wrap_method(function, self):
+    """Wrap method to supply 'self'."""
     def _wrap(*args, **kwargs):
         return function(self, *args, **kwargs)
     return _wrap
 
 
 def _process(self, zone):
+    """Worker stub for green thread pool"""
     nova = client.OpenStackClient(zone.username, zone.password,
                                         zone.api_url)
     nova.authenticate()
@@ -114,10 +100,13 @@ class ChildZoneHelper(object):
        plug-ins to query the children."""
 
     def start(self, zone_list):
+        """Spawn a green thread for each child zone, calling the
+        derived classes process() method as the worker. Returns
+        a list of HTTP Responses. 1 per child."""
         self.green_pool = greenpool.GreenPool()
         return [ result for result in self.green_pool.imap(
                         _wrap_method(_process, self), zone_list)]
   
     def process(self, client, zone):
-        """Derived class must override."""
+        """Worker Method. Derived class must override."""
         pass

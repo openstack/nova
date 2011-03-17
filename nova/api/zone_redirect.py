@@ -43,7 +43,7 @@ LOG = logging.getLogger('server')
 
 
 class RequestForwarder(api.ChildZoneHelper):
-
+    """Worker for sending an OpenStack Request to each child zone."""
     def __init__(self, resource, method, body):
         self.resource = resource
         self.method = method
@@ -98,10 +98,13 @@ class ZoneRedirectMiddleware(wsgi.Middleware):
             scheme, netloc, path, query, frag = \
                                     urlparse.urlsplit(req.path_qs)
             query = urlparse.parse_qsl(query)
+            # Remove any cache busters from old novaclient calls ...
             query = [(key, value) for key, value in query if key != 'fresh']
             query = urllib.urlencode(query)
             url = urlparse.urlunsplit((scheme, netloc, path, query, frag))
 
+            # Strip off the API version, since this is given when the
+            # child zone was added.
             m = re.search('/v\d+\.\d+/(.+)', url)
             resource = m.group(1)
 

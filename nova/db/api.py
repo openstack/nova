@@ -34,6 +34,7 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 
 
@@ -50,6 +51,9 @@ flags.DEFINE_string('volume_name_template', 'volume-%08x',
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
+
+
+LOG = logging.getLogger('server')
 
 
 class NoMoreAddresses(exception.Error):
@@ -70,6 +74,34 @@ class NoMoreNetworks(exception.Error):
 class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
+
+
+###################
+
+
+def reroute_if_not_found(key_args_index=None):
+    """Decorator used to indicate that the method should throw
+       a RouteRedirectException if the query can't find anything.
+    """
+    def wrap(f):
+        def wrapped_f(*args, **kwargs):
+            try:
+                return f(*args, **kwargs)
+            except exception.InstanceNotFound, e:
+                context = args[0]
+                key = None
+                if key_args_index:
+                    key = args[key_args_index]
+                LOG.debug(_("Instance %(key)s not found locally: '%(e)s'" %
+                                                    locals()))
+
+                # Throw a reroute Exception for the middleware to pick up. 
+                LOG.debug("Firing ZoneRouteException")
+                zones = zone_get_all(context)
+                raise exception.ZoneRouteException(zones, e)
+        return wrapped_f
+    return wrap
+
 
 ###################
 
@@ -367,7 +399,8 @@ def instance_destroy(context, instance_id):
     return IMPL.instance_destroy(context, instance_id)
 
 
-def instance_get(context, instance_id):
+@reroute_if_not_found(key_args_index=1)
+def instance_get(context, instance_id, reroute=True):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)
 

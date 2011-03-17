@@ -34,7 +34,6 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
-from nova.scheduler import api as scheduler
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -51,7 +50,7 @@ class API(base.Base):
 
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
-                 scheduler_api=None, **kwargs):
+                 **kwargs):
         if not image_service:
             image_service = utils.import_object(FLAGS.image_service)
         self.image_service = image_service
@@ -61,9 +60,6 @@ class API(base.Base):
         if not volume_api:
             volume_api = volume.API()
         self.volume_api = volume_api
-        if not scheduler_api:
-            scheduler_api = scheduler.API()
-        self.scheduler_api = scheduler_api
         self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
@@ -347,8 +343,7 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
-        rv = self.scheduler_api.get_instance_or_reroute(context, instance_id)
-        #rv = self.db.instance_get(context, instance_id)
+        rv = self.db.instance_get(context, instance_id)
         return dict(rv.iteritems())
 
     def get_all(self, context, project_id=None, reservation_id=None,
@@ -513,7 +508,6 @@ class API(base.Base):
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
-        instance = self.get(context, instance_id)
         output = self._call_compute_message('get_ajax_console',
                                             context,
                                             instance_id)

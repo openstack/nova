@@ -93,8 +93,10 @@ class TimeoutException(Error):
 
 
 class ZoneRouteException(Error):
-    def __init__(self, zones, *args, **kwargs):
+    """Thrown in API to reroute request to child zones."""
+    def __init__(self, zones, original_exception, *args, **kwargs):
         self.zones = zones
+        self.original_exception = original_exception
         super(ZoneRouteException, self).__init__(*args, **kwargs)
 
 
