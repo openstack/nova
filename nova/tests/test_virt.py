@@ -326,7 +326,6 @@ class LibvirtConnTestCase(test.TestCase):
                     check = (lambda t: t.find('./os/initrd'), None)
                 check_list.append(check)
 
-
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
             (lambda t: t.find(
@@ -371,7 +370,6 @@ class LibvirtConnTestCase(test.TestCase):
                         self.assertEqual(check(tree),
                                         expected_result,
                                         '%s failed check %d' % (xml, i))
-
 
             for i, (check, expected_result) in enumerate(common_checks):
                    self.assertEqual(check(tree),

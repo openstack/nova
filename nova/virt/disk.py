@@ -129,6 +129,7 @@ def setup_container(image, container_dir=None, partition=None, nbd=False):
                              % err)
         _unlink_device(device, nbd)
 
+
 def destroy_container(target, instance, nbd=False):
     """Destroy the container once it terminates
     
