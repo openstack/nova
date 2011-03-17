@@ -943,7 +943,7 @@ class TestServerInstanceCreation(test.TestCase):
         server['name'] = 'new-server-test'
         server['imageId'] = 1
         server['flavorId'] = 1
-        if personality_files:
+        if personality_files is not None:
             personalities = []
             for path, contents in personality_files:
                 personalities.append({'path': path, 'contents': contents})

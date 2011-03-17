@@ -221,7 +221,6 @@ class Controller(wsgi.Controller):
         """
         injected_files = []
 
-        # NOTE(dprince): handle case where 'personality: null' is in JSON req
         if not personality:
             return injected_files
 
