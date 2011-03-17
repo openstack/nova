@@ -502,7 +502,7 @@ class LibvirtConnection(object):
                 cmd = 'netcat', '0.0.0.0', port, '-w', '1'
                 try:
                     stdout, stderr = utils.execute(*cmd, process_input='')
-                except ProcessExecutionError:
+                except exception.ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
@@ -984,7 +984,7 @@ class LibvirtConnection(object):
 
         xml = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xml)
-        nodes = xml.xpathEval('//cpu')
+        nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
             raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
                                       "but %d\n") % len(nodes)
@@ -992,15 +992,15 @@ class LibvirtConnection(object):
 
         cpu_info = dict()
 
-        arch_nodes = xml.xpathEval('//cpu/arch')
+        arch_nodes = xml.xpathEval('//host/cpu/arch')
         if arch_nodes:
             cpu_info['arch'] = arch_nodes[0].getContent()
 
-        model_nodes = xml.xpathEval('//cpu/model')
+        model_nodes = xml.xpathEval('//host/cpu/model')
         if model_nodes:
             cpu_info['model'] = model_nodes[0].getContent()
 
-        vendor_nodes = xml.xpathEval('//cpu/vendor')
+        vendor_nodes = xml.xpathEval('//host/cpu/vendor')
         if vendor_nodes:
             cpu_info['vendor'] = vendor_nodes[0].getContent()
 
@@ -1021,7 +1021,7 @@ class LibvirtConnection(object):
                                           "must have %(ks)s") % locals())
 
 
-        feature_nodes = xml.xpathEval('//cpu/feature')
+        feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
         for nodes in feature_nodes:
             features.append(nodes.get_properties().getContent())
@@ -1609,6 +1609,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
+        self.iptables.ipv6['filter'].add_chain('sg-fallback')
+        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""

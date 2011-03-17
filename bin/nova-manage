@@ -446,10 +446,15 @@ class FixedIpCommands(object):
     def list(self, host=None):
         """Lists all fixed ips (optionally by host) arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
-            fixed_ips = db.fixed_ip_get_all(ctxt)
-        else:
-            fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+
+        try:
+            if host == None:
+                fixed_ips = db.fixed_ip_get_all(ctxt)
+            else:
+                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
 
         print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (_('network'),
                                                   _('IP address'),
@@ -466,9 +471,9 @@ class FixedIpCommands(object):
                 host = instance['host']
                 mac_address = instance['mac_address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
-                                  fixed_ip['network']['cidr'],
-                                  fixed_ip['address'],
-                                  mac_address, hostname, host)
+                    fixed_ip['network']['cidr'],
+                    fixed_ip['address'],
+                    mac_address, hostname, host)
 
 
 class FloatingIpCommands(object):
@@ -716,6 +721,49 @@ class DbCommands(object):
     def version(self):
         """Print the current database version."""
         print migration.db_version()
+
+
+class InstanceCommands(object):
+    """Class for managing instances."""
+
+    def list(self, host=None, instance=None):
+        """Show a list of all instances"""
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+              "  %-10s %-10s %-10s %-5s" % (
+            _('instance'),
+            _('node'),
+            _('type'),
+            _('state'),
+            _('launched'),
+            _('image'),
+            _('kernel'),
+            _('ramdisk'),
+            _('project'),
+            _('user'),
+            _('zone'),
+            _('index'))
+
+        if host == None:
+            instances = db.instance_get_all(context.get_admin_context())
+        else:
+            instances = db.instance_get_all_by_host(
+                           context.get_admin_context(), host)
+
+        for instance in instances:
+            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+                  "  %-10s %-10s %-10s %-5d" % (
+                instance['hostname'],
+                instance['host'],
+                instance['instance_type'],
+                instance['state_description'],
+                instance['launched_at'],
+                instance['image_id'],
+                instance['kernel_id'],
+                instance['ramdisk_id'],
+                instance['project_id'],
+                instance['user_id'],
+                instance['availability_zone'],
+                instance['launch_index'])
 
 
 class VolumeCommands(object):
@@ -1004,7 +1052,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('instance', InstanceCommands)]
 
 
 def lazy_match(name, key_value_tuples):
