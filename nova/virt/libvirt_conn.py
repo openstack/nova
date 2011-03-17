@@ -1663,6 +1663,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
     def setup_basic_filtering(self, instance, network_info=None):
         """Use NWFilter from libvirt for this."""
+        if not network_info:
+            network_info = _get_network_info(instance)
         return self.nwfilter.setup_basic_filtering(instance, network_info)
 
     def apply_instance_filter(self, instance):
@@ -1678,28 +1680,47 @@ class IptablesFirewallDriver(FirewallDriver):
                      'filtered'), instance['id'])
 
     def prepare_instance_filter(self, instance, network_info=None):
+        if not network_info:
+            network_info = _get_network_info(instance)
         self.instances[instance['id']] = instance
-        self.add_filters_for_instance(instance)
+        self.add_filters_for_instance(instance, network_info)
         self.iptables.apply()
 
-    def add_filters_for_instance(self, instance):
+    def add_filters_for_instance(self, instance, network_info=None):
+        if not network_info:
+            network_info = _get_network_info(instance)
         chain_name = self._instance_chain_name(instance)
 
         self.iptables.ipv4['filter'].add_chain(chain_name)
-        ipv4_address = self._ip_for_instance(instance)
-        self.iptables.ipv4['filter'].add_rule('local',
-                                              '-d %s -j $%s' %
-                                              (ipv4_address, chain_name))
+
+        if network_info:
+            ips_v4 = []
+            for (_n, mapping) in network_info:
+                for ip in mapping['ips']:
+                    ips_v4.append(ip['ip'])
+        else:
+            ips_v4 = [self._ip_for_instance(instance)]
+
+        for ipv4_address in ips_v4:
+            self.iptables.ipv4['filter'].add_rule('local',
+                                                  '-d %s -j $%s' %
+                                                  (ipv4_address, chain_name))
 
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
-            ipv6_address = self._ip_for_instance_v6(instance)
-            self.iptables.ipv6['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv6_address,
-                                                   chain_name))
+            if network_info:
+                ips_v6 = [ip['ip'] for ip in mapping['ip6s'] for (_n, mapping)
+                        in network_info]
+            else:
+                ips_v6 = [self._ip_for_instance_v6(instance)]
 
-        ipv4_rules, ipv6_rules = self.instance_rules(instance)
+            for ipv6_address in ips_v6:
+                self.iptables.ipv6['filter'].add_rule('local',
+                                                      '-d %s -j $%s' %
+                                                      (ipv6_address,
+                                                       chain_name))
+
+        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
 
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
@@ -1715,7 +1736,9 @@ class IptablesFirewallDriver(FirewallDriver):
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].remove_chain(chain_name)
 
-    def instance_rules(self, instance):
+    def instance_rules(self, instance, network_info=None):
+        if not network_info:
+            network_info = _get_network_info(instance)
         ctxt = context.get_admin_context()
 
         ipv4_rules = []
@@ -1729,28 +1752,49 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
         ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
 
-        dhcp_server = self._dhcp_server_for_instance(instance)
-        ipv4_rules += ['-s %s -p udp --sport 67 --dport 68 '
-                       '-j ACCEPT' % (dhcp_server,)]
+        if network_info:
+            dhcp_servers = [network['gateway'] for (network, _m)
+                            in network_info]
+        else:
+            dhcp_servers = [self._dhcp_server_for_instance(instance)]
+
+        for dhcp_server in dhcp_servers:
+            ipv4_rules += ['-s %s -p udp --sport 67 --dport 68 '
+                           '-j ACCEPT' % (dhcp_server,)]
 
         #Allow project network traffic
         if FLAGS.allow_project_net_traffic:
-            cidr = self._project_cidr_for_instance(instance)
-            ipv4_rules += ['-s %s -j ACCEPT' % (cidr,)]
+            if network_info:
+                cidrs = [network['cidr'] for (network, _m) in network_info]
+            else:
+                cidrs = [self._project_cidr_for_instance(instance)]
+            for cidr in cidrs:
+                ipv4_rules += ['-s %s -j ACCEPT' % (cidr,)]
 
         # We wrap these in FLAGS.use_ipv6 because they might cause
         # a DB lookup. The other ones are just list operations, so
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            ra_server = self._ra_server_for_instance(instance)
-            if ra_server:
+            if network_info:
+                ra_servers = [network['ra_server'] for (network, _m)
+                             in network_info]
+            else:
+                ra_servers = [self._ra_server_for_instance(instance)]
+
+            for ra_server in ra_servers:
                 ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (ra_server,)]
 
             #Allow project network traffic
             if FLAGS.allow_project_net_traffic:
-                cidrv6 = self._project_cidrv6_for_instance(instance)
-                ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
+                if network_info:
+                    cidrv6s = [network['cidr_v6'] for (network, _m)
+                              in network_info]
+                else:
+                    cidrv6s = [self._project_cidrv6_for_instance(instance)]
+
+                for cidrv6 in cidrv6s:
+                    ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
 
         security_groups = db.security_group_get_by_instance(ctxt,
                                                             instance['id'])
