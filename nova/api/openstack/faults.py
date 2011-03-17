@@ -71,9 +71,9 @@ class OverLimitFault(webob.exc.HTTPException):
     _serialization_metadata = {
         "application/xml": {
             "attributes": {
-                "overLimitFault": "code"
-            }
-        }
+                "overLimitFault": "code",
+            },
+        },
     }
 
     def __init__(self, message, details, retry_time):
