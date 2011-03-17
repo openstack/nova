@@ -133,8 +133,8 @@ class VMOps(object):
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
-        self.inject_network_info(instance, vm_ref, network_info)
         self.create_vifs(vm_ref, network_info)
+        self.inject_network_info(instance, vm_ref, network_info)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
