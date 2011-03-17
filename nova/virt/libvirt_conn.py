@@ -623,6 +623,9 @@ class LibvirtConnection(object):
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
                         network_info=None):
+        if network_info is None:
+            network_info = _get_network_info(inst)
+
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
@@ -698,21 +701,32 @@ class LibvirtConnection(object):
 
         key = str(inst['key_data'])
         net = None
-        network_ref = db.network_get_by_instance(context.get_admin_context(),
-                                                 inst['id'])
-        if network_ref['injected']:
-            admin_context = context.get_admin_context()
-            address = db.instance_get_fixed_address(admin_context, inst['id'])
-            ra_server = network_ref['ra_server']
-            if not ra_server:
-                ra_server = "fd00::"
-            with open(FLAGS.injected_network_template) as f:
-                net = f.read() % {'address': address,
-                                  'netmask': network_ref['netmask'],
-                                  'gateway': network_ref['gateway'],
-                                  'broadcast': network_ref['broadcast'],
-                                  'dns': network_ref['dns'],
-                                  'ra_server': ra_server}
+        #network_ref = db.network_get_by_instance(context.get_admin_context(),
+        #                                         inst['id'])
+
+        nets = []
+        ifc_template = open(FLAGS.injected_network_template).read()
+        ifc_num = -1
+        for (network_ref, _m) in network_info:
+            ifc_num += 1
+            if network_ref['injected']:
+                admin_context = context.get_admin_context()
+                address = db.instance_get_fixed_address(
+                                admin_context, inst['id'])
+                ra_server = network_ref['ra_server']
+                if not ra_server:
+                    ra_server = "fd00::"
+                net_info = {'name': 'eth%d' % ifc_num,
+                       'address': address,
+                       'netmask': network_ref['netmask'],
+                       'gateway': network_ref['gateway'],
+                       'broadcast': network_ref['broadcast'],
+                       'dns': network_ref['dns'],
+                       'ra_server': ra_server}
+                nets.append(net_info)
+
+        net = str(Template(ifc_template, searchList=[{'interfaces': nets}]))
+
         if key or net:
             inst_name = inst['name']
             img_id = inst.image_id
@@ -738,6 +752,7 @@ class LibvirtConnection(object):
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         ra_server = network['ra_server']
+        mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
             if FLAGS.use_ipv6:
@@ -764,7 +779,7 @@ class LibvirtConnection(object):
             extra_params = "\n"
 
         result = {
-            'id': mapping['mac'].replace(':', ''),
+            'id': mac_id,
             'bridge_name': network['bridge'],
             'mac_address': mapping['mac'],
             'ip_address': mapping['ips'][0]['ip'],
@@ -1362,6 +1377,11 @@ class FirewallDriver(object):
                                              instance['id'])
         return network['ra_server']
 
+    def _all_ra_servers_for_instance(selfself, instance):
+        networks = db.network_get_all_by_instance(context.get_admin_context(),
+                                                  instance['id'])
+        return [network['ra_server'] for network in networks]
+
 
 class NWFilterFirewall(FirewallDriver):
     """
@@ -1576,8 +1596,10 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
         if FLAGS.use_ipv6:
-            ra_server = self._ra_server_for_instance(instance)
-            if ra_server:
+            #ra_server = self._ra_server_for_instance(instance)
+            ra_servers = self._all_ra_servers_for_instance(instance)
+            #if ra_server:
+            if len(ra_servers) != 0:
                 instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
@@ -1693,13 +1715,10 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain(chain_name)
 
-        if network_info:
-            ips_v4 = []
-            for (_n, mapping) in network_info:
-                for ip in mapping['ips']:
-                    ips_v4.append(ip['ip'])
-        else:
-            ips_v4 = [self._ip_for_instance(instance)]
+        ips_v4 = []
+        for (_n, mapping) in network_info:
+            for ip in mapping['ips']:
+                ips_v4.append(ip['ip'])
 
         for ipv4_address in ips_v4:
             self.iptables.ipv4['filter'].add_rule('local',
@@ -1708,11 +1727,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
-            if network_info:
-                ips_v6 = [ip['ip'] for ip in mapping['ip6s'] for (_n, mapping)
+            ips_v6 = [ip['ip'] for ip in mapping['ip6s'] for (_n, mapping)
                         in network_info]
-            else:
-                ips_v6 = [self._ip_for_instance_v6(instance)]
 
             for ipv6_address in ips_v6:
                 self.iptables.ipv6['filter'].add_rule('local',
@@ -1752,11 +1768,7 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
         ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
 
-        if network_info:
-            dhcp_servers = [network['gateway'] for (network, _m)
-                            in network_info]
-        else:
-            dhcp_servers = [self._dhcp_server_for_instance(instance)]
+        dhcp_servers = [network['gateway'] for (network, _m) in network_info]
 
         for dhcp_server in dhcp_servers:
             ipv4_rules += ['-s %s -p udp --sport 67 --dport 68 '
@@ -1764,10 +1776,7 @@ class IptablesFirewallDriver(FirewallDriver):
 
         #Allow project network traffic
         if FLAGS.allow_project_net_traffic:
-            if network_info:
-                cidrs = [network['cidr'] for (network, _m) in network_info]
-            else:
-                cidrs = [self._project_cidr_for_instance(instance)]
+            cidrs = [network['cidr'] for (network, _m) in network_info]
             for cidr in cidrs:
                 ipv4_rules += ['-s %s -j ACCEPT' % (cidr,)]
 
@@ -1776,22 +1785,16 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            if network_info:
-                ra_servers = [network['ra_server'] for (network, _m)
-                             in network_info]
-            else:
-                ra_servers = [self._ra_server_for_instance(instance)]
+            ra_servers = [network['ra_server'] for (network, _m)
+                          in network_info]
 
             for ra_server in ra_servers:
                 ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (ra_server,)]
 
             #Allow project network traffic
             if FLAGS.allow_project_net_traffic:
-                if network_info:
-                    cidrv6s = [network['cidr_v6'] for (network, _m)
-                              in network_info]
-                else:
-                    cidrv6s = [self._project_cidrv6_for_instance(instance)]
+                cidrv6s = [network['cidr_v6'] for (network, _m)
+                          in network_info]
 
                 for cidrv6 in cidrv6s:
                     ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
@@ -1876,31 +1879,3 @@ class IptablesFirewallDriver(FirewallDriver):
 
     def _instance_chain_name(self, instance):
         return 'inst-%s' % (instance['id'],)
-
-    def _ip_for_instance(self, instance):
-        return db.instance_get_fixed_address(context.get_admin_context(),
-                                             instance['id'])
-
-    def _ip_for_instance_v6(self, instance):
-        return db.instance_get_fixed_address_v6(context.get_admin_context(),
-                                             instance['id'])
-
-    def _dhcp_server_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['gateway']
-
-    def _ra_server_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['ra_server']
-
-    def _project_cidr_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['cidr']
-
-    def _project_cidrv6_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['cidr_v6']
