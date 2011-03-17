@@ -512,7 +512,6 @@ class Controller(wsgi.Controller):
 
         return kernel_id, ramdisk_id
 
-
 class ControllerV10(Controller):
     def _image_id_from_req_data(self, data):
         return data['server']['imageId']
@@ -532,11 +531,11 @@ class ControllerV10(Controller):
 class ControllerV11(Controller):
     def _image_id_from_req_data(self, data):
         href = data['server']['imageRef']
-        return href.split('/')[-1]
+        return common.get_id_from_href(href)
 
     def _flavor_id_from_req_data(self, data):
         href = data['server']['flavorRef']
-        return href.split('/')[-1]
+        return common.get_id_from_href(href)
 
     def _get_view_builder(self, req):
         base_url = req.application_url

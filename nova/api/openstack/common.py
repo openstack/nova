@@ -15,9 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.exc
-
+import re
 from nova import exception
+from webob import exc
+import webob.exc
 
 
 def limited(items, request, max_limit=1000):
@@ -74,3 +75,10 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
         if abs(hash(image_id)) == int(image_hash):
             return image_id
     raise exception.NotFound(image_hash)
+
+
+def get_id_from_href(href):
+    m = re.match(r'http.+/.+/(\d)+$', href)
+    if not m:
+        raise exc.HTTPBadRequest(_('could not parse id from href'))
+    return int(m.group(1))
