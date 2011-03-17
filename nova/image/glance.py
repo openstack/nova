@@ -42,7 +42,8 @@ class GlanceImageService(service.BaseImageService):
     def __init__(self, client=None):
         if client is None:
             self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
-        self.client = client
+        else:
+            self.client = client
 
     def index(self, context):
         """
@@ -54,8 +55,8 @@ class GlanceImageService(service.BaseImageService):
         """
         Calls out to Glance for a list of detailed image information
         """
-        for image in self.client.get_images_detailed():
-            yield self._convert_timestamps_to_datetimes(image)
+        return [self._convert_timestamps_to_datetimes(image)
+                for image in self.client.get_images_detailed()]
 
     def show(self, context, image_id):
         """
