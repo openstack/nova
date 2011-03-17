@@ -178,7 +178,7 @@ class ZonesTest(test.TestCase):
 
     def test_zone_info(self):
         FLAGS.zone_name = 'darksecret'
-        FLAGS.zone_capabilities = 'cap1:a,b;cap2:c,d'
+        FLAGS.zone_capabilities = ['cap1=a;b', 'cap2=c;d']
         self.stubs.Set(api, '_call_scheduler', zone_caps)
 
         body = dict(zone=dict(username='zeb', password='sneaky'))
@@ -188,5 +188,5 @@ class ZonesTest(test.TestCase):
         res_dict = json.loads(res.body)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res_dict['zone']['name'], 'darksecret')
-        self.assertEqual(res_dict['zone']['cap1'], 'a,b')
-        self.assertEqual(res_dict['zone']['cap2'], 'c,d')
+        self.assertEqual(res_dict['zone']['cap1'], 'a;b')
+        self.assertEqual(res_dict['zone']['cap2'], 'c;d')

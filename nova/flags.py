@@ -358,5 +358,6 @@ DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
 DEFINE_string('zone_name', 'nova', 'name of this zone')
-DEFINE_string('zone_capabilities', 'hypervisor:xenserver;os:linux',
-              'Key/Value tags which represent capabilities of this zone')
+DEFINE_list('zone_capabilities',
+                ['hypervisor=xenserver;kvm', 'os=linux;windows'],
+                'Key/Multi-value list representng capabilities of this zone')
