@@ -3,6 +3,7 @@ import unittest
 
 from nova.image import glance
 
+
 class StubGlanceClient(object):
 
     def __init__(self, images):
