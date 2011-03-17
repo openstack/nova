@@ -530,24 +530,15 @@ def synchronized(name):
     def wrap(f):
         @functools.wraps(f)
         def inner(*args, **kwargs):
+            LOG.debug(_("Attempting to grab %(lock)s for method "
+                        "%(method)s..." % {"lock": name,
+                                           "method": f.__name__}))
             lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
                                                   'nova-%s.lock' % name))
             with lock:
                 return f(*args, **kwargs)
         return inner
     return wrap
-
-
-def ensure_b64_encoding(val):
-    """Safety method to ensure that values expected to be base64-encoded
-    actually are. If they are, the value is returned unchanged. Otherwise,
-    the encoded value is returned.
-    """
-    try:
-        dummy = base64.decode(val)
-        return val
-    except TypeError:
-        return base64.b64encode(val)
 
 
 def get_from_path(items, path):
