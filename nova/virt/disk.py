@@ -132,7 +132,7 @@ def setup_container(image, container_dir=None, partition=None):
 
 def destroy_container(target, instance):
     """Destroy the container once it terminates
- 
+
     It will umount the container that is mounted, try to find the loopback
     device associated with the container and delete it.
     """
