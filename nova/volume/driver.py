@@ -207,8 +207,8 @@ class AOEDriver(VolumeDriver):
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         _volume['id'])
-        self._execute("sudo aoe-discover")
-        out, err = self._execute("sudo aoe-stat", check_exit_code=False)
+        self._execute('sudo', 'aoe-discover')
+        out, err = self._execute('sudo', 'aoe-stat', check_exit_code=False)
         device_path = 'e%(shelf_id)d.%(blade_id)d' % locals()
         if out.find(device_path) >= 0:
             return "/dev/etherd/%s" % device_path
@@ -224,8 +224,8 @@ class AOEDriver(VolumeDriver):
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume_id)
-        cmd = "sudo vblade-persist ls --no-header"
-        out, _err = self._execute(cmd)
+        cmd = ('sudo', 'vblade-persist', 'ls', '--no-header')
+        out, _err = self._execute(*cmd)
         exported = False
         for line in out.split('\n'):
             param = line.split(' ')
@@ -318,8 +318,8 @@ class ISCSIDriver(VolumeDriver):
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         self._execute('sudo', 'ietadm', '--op', 'new',
-                      '--tid=%s --params Name=%s' %
-                      (iscsi_target, iscsi_name))
+                      '--tid=%s' % iscsi_target,
+                      '--params', 'Name=%s' % iscsi_name)
         self._execute('sudo', 'ietadm', '--op', 'new',
                       '--tid=%s' % iscsi_target,
                       '--lun=0', '--params',
@@ -500,7 +500,7 @@ class ISCSIDriver(VolumeDriver):
 
         tid = self.db.volume_get_iscsi_target_num(context, volume_id)
         try:
-            self._execute("sudo ietadm --op show --tid=%(tid)d" % locals())
+            self._execute('sudo', 'ietadm', '--op', 'show', '--tid=%(tid)d' % locals())
         except exception.ProcessExecutionError, e:
             # Instances remount read-only in this case.
             # /etc/init.d/iscsitarget restart and rebooting nova-volume
@@ -551,7 +551,7 @@ class RBDDriver(VolumeDriver):
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
-                          'rm', voluname['name'])
+                          'rm', volume['name'])
 
     def local_path(self, volume):
         """Returns the path of the rbd volume."""
