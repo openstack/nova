@@ -18,6 +18,8 @@
 
 from __future__ import absolute_import
 
+import datetime as dt
+
 from glance.common import exception as glance_exception
 
 from nova import exception
@@ -60,6 +62,18 @@ class GlanceImageService(service.BaseImageService):
         """
         try:
             image = self.client.get_image_meta(image_id)
+            if 'created_at' in image:
+                image['created_at'] = \
+                        dt.datetime.strptime(image['created_at'],
+                                             "%Y-%m-%dT%H:%M:%S.%f")
+            if 'updated_at' in image:
+                image['updated_at'] = \
+                        dt.datetime.strptime(image['updated_at'],
+                                             "%Y-%m-%dT%H:%M:%S.%f")
+            if 'deleted_at' in image and image['deleted_at'] is not None:
+                image['deleted_at'] = \
+                        dt.datetime.strptime(image['deleted_at'],
+                                             "%Y-%m-%dT%H:%M:%S.%f")
         except glance_exception.NotFound:
             raise exception.NotFound
         return image
