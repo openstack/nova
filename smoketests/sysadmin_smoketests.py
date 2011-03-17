@@ -290,4 +290,4 @@ if __name__ == "__main__":
               'instance': unittest.makeSuite(InstanceTests),
               'volume': unittest.makeSuite(VolumeTests)
               }
-    sys.exit(base.run_tests(suites))
+    sys.exit(not base.run_tests(suites))

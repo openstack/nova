@@ -95,4 +95,4 @@ class UserTests(AdminSmokeTestCase):
 
 if __name__ == "__main__":
     suites = {'user': unittest.makeSuite(UserTests)}
-    sys.exit(base.run_tests(suites))
+    sys.exit(not base.run_tests(suites))

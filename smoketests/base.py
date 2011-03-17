@@ -205,7 +205,12 @@ def run_tests(suites):
                                  ', '.join(suites.keys())
             return 1
 
-        unittest.TextTestRunner(verbosity=2).run(suite)
+        return unittest.TextTestRunner(verbosity=2).run(suite).wasSuccessful()
     else:
+        successful = True
         for suite in suites.itervalues():
-            unittest.TextTestRunner(verbosity=2).run(suite)
+            result = unittest.TextTestRunner(verbosity=2).run(suite)
+            if not result.wasSuccesful():
+                successful = False
+        return successful
+

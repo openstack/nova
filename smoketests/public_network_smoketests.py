@@ -184,4 +184,4 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
 
 if __name__ == "__main__":
     suites = {'instance': unittest.makeSuite(InstanceTestsFromPublic)}
-    sys.exit(base.run_tests(suites))
+    sys.exit(not base.run_tests(suites))

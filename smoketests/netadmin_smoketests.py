@@ -191,4 +191,4 @@ if __name__ == "__main__":
     suites = {'address': unittest.makeSuite(AddressTests),
               'security_group': unittest.makeSuite(SecurityGroupTests)
               }
-    sys.exit(base.run_tests(suites))
+    sys.exit(not base.run_tests(suites))
