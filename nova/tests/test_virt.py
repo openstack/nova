@@ -256,15 +256,12 @@ class LibvirtConnTestCase(test.TestCase):
                         'uml': ('uml:///system',
                              [(lambda t: t.find('.').get('type'), 'uml'),
                               (lambda t: t.find('./os/type').text, 'uml')]),
-                        'lxc': ('lxc:///',
-                            [(lambda t: t.find('.').get('type'), 'lxc'),
-                            (lambda t: t.find('./os/type').text, 'exe')]),
                         'xen': ('xen:///',
                              [(lambda t: t.find('.').get('type'), 'xen'),
                               (lambda t: t.find('./os/type').text, 'linux')]),
                               }
 
-        for hypervisor_type in ['qemu', 'kvm', 'lxc', 'xen']:
+        for hypervisor_type in ['qemu', 'kvm', 'xen']:
             check_list = type_uri_map[hypervisor_type][1]
 
             if rescue:
