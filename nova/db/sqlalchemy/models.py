@@ -161,7 +161,7 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    onset_files = []
+    injected_files = []
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 

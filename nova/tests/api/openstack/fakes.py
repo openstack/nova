@@ -69,10 +69,6 @@ def fake_auth_init(self, application):
 @webob.dec.wsgify
 def fake_wsgi(self, req):
     req.environ['nova.context'] = context.RequestContext(1, 1)
-    if not req.environ.get('api.version'):
-        req.environ['api.version'] = '1.0'
-    if req.body:
-        req.environ['inst_dict'] = json.loads(req.body)
     return self.application
 
 
@@ -88,10 +84,17 @@ def wsgi_app(inner_application=None):
     return mapper
 
 
-def stub_out_key_pair_funcs(stubs):
+def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+
+    def no_key_pair(context, user_id):
+        return []
+
+    if have_key_pair:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+    else:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_image_service(stubs):
@@ -324,7 +327,10 @@ class FakeAuthManager(object):
                        (user.id == p.project_manager_id)]
 
     def get_user_from_access_key(self, key):
-        return FakeAuthManager.auth_data.get(key, None)
+        try:
+            return FakeAuthManager.auth_data[key]
+        except KeyError:
+            raise exc.NotFound
 
 
 class FakeRateLimiter(object):

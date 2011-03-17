@@ -33,6 +33,12 @@ FLAGS = flags.FLAGS
 
 
 class QuotaTestCase(test.TestCase):
+
+    class StubImageService(object):
+
+        def show(self, *args, **kwargs):
+            return {"properties": {}}
+
     def setUp(self):
         super(QuotaTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -193,3 +199,67 @@ class QuotaTestCase(test.TestCase):
                                             instance_type='m1.small',
                                             image_id='fake',
                                             metadata=metadata)
+
+    def test_allowed_injected_files(self):
+        self.assertEqual(
+                quota.allowed_injected_files(self.context),
+                FLAGS.quota_max_injected_files)
+
+    def _create_with_injected_files(self, files):
+        api = compute.API(image_service=self.StubImageService())
+        api.create(self.context, min_count=1, max_count=1,
+                instance_type='m1.small', image_id='fake',
+                injected_files=files)
+
+    def test_no_injected_files(self):
+        api = compute.API(image_service=self.StubImageService())
+        api.create(self.context, instance_type='m1.small', image_id='fake')
+
+    def test_max_injected_files(self):
+        files = []
+        for i in xrange(FLAGS.quota_max_injected_files):
+            files.append(('/my/path%d' % i, 'config = test\n'))
+        self._create_with_injected_files(files)  # no QuotaError
+
+    def test_too_many_injected_files(self):
+        files = []
+        for i in xrange(FLAGS.quota_max_injected_files + 1):
+            files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_injected_files, files)
+
+    def test_allowed_injected_file_content_bytes(self):
+        self.assertEqual(
+                quota.allowed_injected_file_content_bytes(self.context),
+                FLAGS.quota_max_injected_file_content_bytes)
+
+    def test_max_injected_file_content_bytes(self):
+        max = FLAGS.quota_max_injected_file_content_bytes
+        content = ''.join(['a' for i in xrange(max)])
+        files = [('/test/path', content)]
+        self._create_with_injected_files(files)  # no QuotaError
+
+    def test_too_many_injected_file_content_bytes(self):
+        max = FLAGS.quota_max_injected_file_content_bytes
+        content = ''.join(['a' for i in xrange(max + 1)])
+        files = [('/test/path', content)]
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_injected_files, files)
+
+    def test_allowed_injected_file_path_bytes(self):
+        self.assertEqual(
+                quota.allowed_injected_file_path_bytes(self.context),
+                FLAGS.quota_max_injected_file_path_bytes)
+
+    def test_max_injected_file_path_bytes(self):
+        max = FLAGS.quota_max_injected_file_path_bytes
+        path = ''.join(['a' for i in xrange(max)])
+        files = [(path, 'config = quotatest')]
+        self._create_with_injected_files(files)  # no QuotaError
+
+    def test_too_many_injected_file_path_bytes(self):
+        max = FLAGS.quota_max_injected_file_path_bytes
+        path = ''.join(['a' for i in xrange(max + 1)])
+        files = [(path, 'config = quotatest')]
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_injected_files, files)
