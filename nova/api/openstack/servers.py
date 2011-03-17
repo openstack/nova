@@ -69,7 +69,7 @@ def _translate_detail_keys(inst):
     ctxt = context.get_admin_context()
     try:
         migration = db.migration_get_by_instance_and_status(ctxt,
-                inst['id'], 'finished') 
+                inst['id'], 'finished')
         inst_dict['status'] = 'resize-confirm'
     except Exception, e:
         inst_dict['status'] = power_mapping[inst_dict['status']]
