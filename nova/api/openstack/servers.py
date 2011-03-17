@@ -66,7 +66,7 @@ def _translate_detail_keys(inst):
             inst['id'], 'finished') 
     if migration:
         inst_dict['status'] = 'resize-confirm'
-    else
+    else:
         inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
 
