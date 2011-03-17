@@ -77,7 +77,7 @@ class API(object):
                       args=dict(service_name=service_name, host=host,
                                 capabilities=capabilities))
         return rpc.fanout_cast(context, 'scheduler', kwargs)
-        
+
 
 def _wrap_method(function, self):
     """Wrap method to supply 'self'."""
@@ -92,7 +92,7 @@ def _process(self, zone):
                                         zone.api_url)
     nova.authenticate()
     return self.process(nova, zone)
-   
+
 
 class ChildZoneHelper(object):
     """Delegate a call to a set of Child Zones and wait for their
@@ -104,9 +104,9 @@ class ChildZoneHelper(object):
         derived classes process() method as the worker. Returns
         a list of HTTP Responses. 1 per child."""
         self.green_pool = greenpool.GreenPool()
-        return [ result for result in self.green_pool.imap(
+        return [result for result in self.green_pool.imap(
                         _wrap_method(_process, self), zone_list)]
-  
+
     def process(self, client, zone):
         """Worker Method. Derived class must override."""
         pass

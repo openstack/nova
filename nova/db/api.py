@@ -95,7 +95,7 @@ def reroute_if_not_found(key_args_index=None):
                 LOG.debug(_("Instance %(key)s not found locally: '%(e)s'" %
                                                     locals()))
 
-                # Throw a reroute Exception for the middleware to pick up. 
+                # Throw a reroute Exception for the middleware to pick up.
                 LOG.debug("Firing ZoneRouteException")
                 zones = zone_get_all(context)
                 raise exception.ZoneRouteException(zones, e)
