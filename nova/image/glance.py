@@ -62,21 +62,24 @@ class GlanceImageService(service.BaseImageService):
         """
         try:
             image = self.client.get_image_meta(image_id)
-            if 'created_at' in image:
-                image['created_at'] = \
-                        dt.datetime.strptime(image['created_at'],
-                                             "%Y-%m-%dT%H:%M:%S.%f")
-            if 'updated_at' in image:
-                image['updated_at'] = \
-                        dt.datetime.strptime(image['updated_at'],
-                                             "%Y-%m-%dT%H:%M:%S.%f")
-            if 'deleted_at' in image and image['deleted_at'] is not None:
-                image['deleted_at'] = \
-                        dt.datetime.strptime(image['deleted_at'],
-                                             "%Y-%m-%dT%H:%M:%S.%f")
         except glance_exception.NotFound:
             raise exception.NotFound
+        return self._convert_timestamps_to_datetimes(image)
+
+    def _convert_timestamps_to_datetimes(self, image):
+        """
+        Returns image with known timestamp fields converted to datetime objects
+        """
+        for attr in ['created_at', 'updated_at', 'deleted_at']:
+            if attr in image and image[attr] is not None:
+                image[attr] = self._parse_glance_iso8601_timestamp(image[attr])
         return image
+
+    def _parse_glance_iso8601_timestamp(self, timestamp):
+        """
+        Parse a subset of iso8601 timestamps into datetime objects
+        """
+        return dt.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f")
 
     def show_by_name(self, context, name):
         """
