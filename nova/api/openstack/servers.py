@@ -32,6 +32,7 @@ from nova.api.openstack import faults
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.quota import QuotaError
 import nova.api.openstack
 
 
@@ -189,7 +190,7 @@ class Controller(wsgi.Controller):
                 metadata=metadata,
                 injected_files=injected_files)
         except QuotaError as error:
-            self._handle_quota_error(error)
+            self._handle_quota_errors(error)
 
         server = _translate_keys(instances[0])
         password = "%s%s" % (server['server']['name'][:4],
