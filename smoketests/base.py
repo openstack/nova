@@ -213,4 +213,3 @@ def run_tests(suites):
             if not result.wasSuccesful():
                 successful = False
         return successful
-

@@ -34,8 +34,6 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 from smoketests import flags
 from smoketests import base
 
-
-
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
               'Local kernel file to use for bundling tests')
@@ -46,6 +44,8 @@ TEST_PREFIX = 'test%s' % int(random.random() * 1000000)
 TEST_BUCKET = '%s_bucket' % TEST_PREFIX
 TEST_KEY = '%s_key' % TEST_PREFIX
 TEST_GROUP = '%s_group' % TEST_PREFIX
+
+
 class ImageTests(base.UserSmokeTestCase):
     def test_001_can_bundle_image(self):
         self.assertTrue(self.bundle_image(FLAGS.bundle_image))
