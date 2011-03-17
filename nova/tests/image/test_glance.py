@@ -6,8 +6,10 @@ from nova.image import glance
 
 class StubGlanceClient(object):
 
-    def __init__(self, images):
+    def __init__(self, images, add_response=None, update_response=None):
         self.images = images
+        self.add_response = add_response
+        self.update_response = update_response
 
     def get_image_meta(self, id):
         return self.images[id]
@@ -17,6 +19,12 @@ class StubGlanceClient(object):
 
     def get_image(self, id):
         return self.images[id], []
+
+    def add_image(self, metadata, data):
+        return self.add_response
+
+    def update_image(self, image_id, metadata, data):
+        return self.update_response
 
 
 class NullWriter(object):
@@ -115,4 +123,48 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
     def test_get_handles_deleted_at_none(self):
         self.client.images = {'abcd': {'deleted_at': None}}
         actual = self.service.get({}, 'abcd', NullWriter())
+        self.assertEqual(actual['deleted_at'], None)
+
+    def test_create_handles_timestamps(self):
+        now = dt.datetime.utcnow()
+        self.client.add_response = {
+            'id': 'abcd',
+            'name': 'blah',
+            'created_at': now.isoformat(),
+            'updated_at': now.isoformat(),
+            'deleted_at': now.isoformat(),
+        }
+        actual = self.service.create({}, {})
+        for attr in ('created_at', 'updated_at', 'deleted_at'):
+            self.assertEqual(actual[attr], now)
+
+    def test_create_handles_deleted_at_none(self):
+        self.client.add_response = {
+            'id': 'abcd',
+            'name': 'blah',
+            'deleted_at': None,
+        }
+        actual = self.service.create({}, {})
+        self.assertEqual(actual['deleted_at'], None)
+
+    def test_update_handles_timestamps(self):
+        now = dt.datetime.utcnow()
+        self.client.update_response = {
+            'id': 'abcd',
+            'name': 'blah',
+            'created_at': now.isoformat(),
+            'updated_at': now.isoformat(),
+            'deleted_at': now.isoformat(),
+        }
+        actual = self.service.update({}, 'dummy_id', {})
+        for attr in ('created_at', 'updated_at', 'deleted_at'):
+            self.assertEqual(actual[attr], now)
+
+    def test_create_handles_deleted_at_none(self):
+        self.client.update_response = {
+            'id': 'abcd',
+            'name': 'blah',
+            'deleted_at': None,
+        }
+        actual = self.service.update({}, 'dummy_id', {})
         self.assertEqual(actual['deleted_at'], None)

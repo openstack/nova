@@ -88,7 +88,7 @@ class BaseImageService(object):
 
     def create(self, context, metadata, data=None):
         """
-        Store the image metadata and data and return the new image id.
+        Store the image metadata and data and return the new image metadata.
 
         :raises AlreadyExists if the image already exist.
 
@@ -96,7 +96,7 @@ class BaseImageService(object):
         raise NotImplementedError
 
     def update(self, context, image_id, metadata, data=None):
-        """Update the given image with the new metadata and data.
+        """Update the given image metadata and data and return the metadata
 
         :raises NotFound if the image does not exist.
 

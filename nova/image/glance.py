@@ -118,7 +118,8 @@ class GlanceImageService(service.BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        return self.client.add_image(metadata, data)
+        return self._convert_timestamps_to_datetimes(
+            self.client.add_image(metadata, data))
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data.
@@ -127,10 +128,10 @@ class GlanceImageService(service.BaseImageService):
 
         """
         try:
-            result = self.client.update_image(image_id, metadata, data)
+            metadata = self.client.update_image(image_id, metadata, data)
         except glance_exception.NotFound:
             raise exception.NotFound
-        return result
+        return self._convert_timestamps_to_datetimes(metadata)
 
     def delete(self, context, image_id):
         """
