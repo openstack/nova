@@ -273,7 +273,7 @@ class LimiterTest(BaseLimitTestSuite):
     def _check_sum(self, num, verb, url, username=None):
         """Check and sum results from checks."""
         results = self._check(num, verb, url, username)
-        return sum(filter(lambda x: x != None, results))
+        return sum(item for item in results if item)
 
     def test_no_delay_GET(self):
         """

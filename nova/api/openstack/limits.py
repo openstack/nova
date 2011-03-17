@@ -151,7 +151,7 @@ class Limit(object):
         water = self.water_level
         val = self.value
 
-        self.remaining = math.floor((cap - water) / cap * val)
+        self.remaining = math.floor(((cap - water) / cap) * val)
         self.next_request = now
 
     def _get_time(self):
