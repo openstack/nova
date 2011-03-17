@@ -13,9 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import hashlib
 import json
 import traceback
+from xml.dom import minidom
 
 from webob import exc
 
@@ -103,15 +105,19 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        env = self._deserialize(req.body, req.get_content_type())
+        env = self._deserialize_create(req)
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         context = req.environ['nova.context']
+
+        key_name = None
+        key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
-        if not key_pairs:
-            raise exception.NotFound(_("No keypairs defined"))
-        key_pair = key_pairs[0]
+        if key_pairs:
+            key_pair = key_pairs[0]
+            key_name = key_pair['name']
+            key_data = key_pair['public_key']
 
         requested_image_id = self._image_id_from_req_data(env)
         image_id = common.get_image_id_from_image_hash(self._image_service,
@@ -129,19 +135,26 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
+        personality = env['server'].get('personality', [])
+        injected_files = self._get_injected_files(personality)
+
         flavor_id = self._flavor_id_from_req_data(env)
-        (inst,) = self.compute_api.create(
-            context,
-            instance_types.get_by_flavor_id(flavor_id),
-            image_id,
-            kernel_id=kernel_id,
-            ramdisk_id=ramdisk_id,
-            display_name=env['server']['name'],
-            display_description=env['server']['name'],
-            key_name=key_pair['name'],
-            key_data=key_pair['public_key'],
-            metadata=metadata,
-            onset_files=env.get('onset_files', []))
+        try:
+            (inst,) = self.compute_api.create(
+                context,
+                instance_types.get_by_flavor_id(flavor_id),
+                image_id,
+                kernel_id=kernel_id,
+                ramdisk_id=ramdisk_id,
+                display_name=env['server']['name'],
+                display_description=env['server']['name'],
+                key_name=key_name,
+                key_data=key_data,
+                metadata=metadata,
+                injected_files=injected_files)
+        except QuotaError as error:
+            self._handle_quota_error(error)
+
         inst['instance_type'] = flavor_id
         inst['image_id'] = requested_image_id
 
@@ -153,6 +166,61 @@ class Controller(wsgi.Controller):
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
         return server
+
+    def _deserialize_create(self, request):
+        """
+        Deserialize a create request
+
+        Overrides normal behavior in the case of xml content
+        """
+        if request.content_type == "application/xml":
+            deserializer = ServerCreateRequestXMLDeserializer()
+            return deserializer.deserialize(request.body)
+        else:
+            return self._deserialize(request.body, request.get_content_type())
+
+    def _get_injected_files(self, personality):
+        """
+        Create a list of injected files from the personality attribute
+
+        At this time, injected_files must be formatted as a list of
+        (file_path, file_content) pairs for compatibility with the
+        underlying compute service.
+        """
+        injected_files = []
+        for item in personality:
+            try:
+                path = item['path']
+                contents = item['contents']
+            except KeyError as key:
+                expl = _('Bad personality format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad personality format')
+                raise exc.HTTPBadRequest(explanation=expl)
+            try:
+                contents = base64.b64decode(contents)
+            except TypeError:
+                expl = _('Personality content for %s cannot be decoded') % path
+                raise exc.HTTPBadRequest(explanation=expl)
+            injected_files.append((path, contents))
+        return injected_files
+
+    def _handle_quota_errors(self, error):
+        """
+        Reraise quota errors as api-specific http exceptions
+        """
+        if error.code == "OnsetFileLimitExceeded":
+            expl = _("Personality file limit exceeded")
+            raise exc.HTTPBadRequest(explanation=expl)
+        if error.code == "OnsetFilePathLimitExceeded":
+            expl = _("Personality file path too long")
+            raise exc.HTTPBadRequest(explanation=expl)
+        if error.code == "OnsetFileContentLimitExceeded":
+            expl = _("Personality file content too long")
+            raise exc.HTTPBadRequest(explanation=expl)
+        # if the original error is okay, just reraise it
+        raise error
 
     def update(self, req, id):
         """ Updates the server name or password """
@@ -482,3 +550,79 @@ class ControllerV11(Controller):
 
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV11(req)
+
+
+class ServerCreateRequestXMLDeserializer(object):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    def deserialize(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'server': server}
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self._find_first_child_named(node, 'server')
+        for attr in ["name", "imageId", "flavorId"]:
+            server[attr] = server_node.getAttribute(attr)
+        metadata = self._extract_metadata(server_node)
+        if metadata is not None:
+            server["metadata"] = metadata
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
+        return server
+
+    def _extract_metadata(self, server_node):
+        """Marshal the metadata attribute of a parsed request"""
+        metadata_node = self._find_first_child_named(server_node, "metadata")
+        if metadata_node is None:
+            return None
+        metadata = {}
+        for meta_node in self._find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self._extract_text(meta_node)
+        return metadata
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        personality_node = \
+                self._find_first_child_named(server_node, "personality")
+        if personality_node is None:
+            return None
+        personality = []
+        for file_node in self._find_children_named(personality_node, "file"):
+            item = {}
+            if file_node.hasAttribute("path"):
+                item["path"] = file_node.getAttribute("path")
+            item["contents"] = self._extract_text(file_node)
+            personality.append(item)
+        return personality
+
+    def _find_first_child_named(self, parent, name):
+        """Search a nodes children for the first child with a given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                return node
+        return None
+
+    def _find_children_named(self, parent, name):
+        """Return all of a nodes children who have the given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                yield node
+
+    def _extract_text(self, node):
+        """Get the text field contained by the given node"""
+        if len(node.childNodes) == 1:
+            child = node.childNodes[0]
+            if child.nodeType == child.TEXT_NODE:
+                return child.nodeValue
+        return ""
