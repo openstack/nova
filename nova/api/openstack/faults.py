@@ -94,5 +94,6 @@ class OverLimitFault(webob.exc.HTTPException):
         """Currently just return the wrapped exception."""
         serializer = wsgi.Serializer(self._serialization_metadata)
         content_type = request.best_match_content_type()
-        self.wrapped_exc.body = serializer.serialize(self.content, content_type)
+        content = serializer.serialize(self.content, content_type)
+        self.wrapped_exc.body = content
         return self.wrapped_exc
