@@ -30,7 +30,7 @@ class Controller(wsgi.Controller):
         'application/xml': {
             "attributes": {
                 "flavor": ["id", "name", "ram", "disk"],
-                "link": ["rel","type","href"],
+                "link": ["rel", "type", "href"],
             }
         }
     }
