@@ -20,6 +20,8 @@ import traceback
 from webob import exc
 
 from nova import compute
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -61,12 +63,12 @@ def _translate_detail_keys(inst):
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
 
-    context = req.environ['nova.context'].elevated()
-    migration = self.db.migrate_get_by_instance_and_status(context,
-            inst['id'], 'finished') 
-    if migration:
+    ctxt = context.get_admin_context()
+    try:
+        migration = db.migration_get_by_instance_and_status(ctxt,
+                inst['id'], 'finished') 
         inst_dict['status'] = 'resize-confirm'
-    else:
+    except Exception, e:
         inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
 
