@@ -1004,7 +1004,7 @@ class LibvirtConnection(object):
         if vendor_nodes:
             cpu_info['vendor'] = vendor_nodes[0].getContent()
 
-        topology_nodes = xml.xpathEval('//cpu/topology')
+        topology_nodes = xml.xpathEval('//host/cpu/topology')
         topology = dict()
         if topology_nodes:
             topology_node = topology_nodes[0].get_properties()
