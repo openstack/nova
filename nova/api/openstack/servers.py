@@ -61,7 +61,13 @@ def _translate_detail_keys(inst):
     for k, v in mapped_keys.iteritems():
         inst_dict[k] = inst[v]
 
-    inst_dict['status'] = power_mapping[inst_dict['status']]
+    context = req.environ['nova.context'].elevated()
+    migration = self.db.migrate_get_by_instance_and_status(context,
+            inst['id'], 'finished') 
+    if migration:
+        inst_dict['status'] = 'resize-confirm'
+    else
+        inst_dict['status'] = power_mapping[inst_dict['status']]
     inst_dict['addresses'] = dict(public=[], private=[])
 
     # grab single private fixed ip

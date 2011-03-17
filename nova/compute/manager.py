@@ -544,6 +544,8 @@ class ComputeManager(manager.Manager):
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))
 
+        # reload the updated instance ref
+        # FIXME: is there reload functionality?
         instance_ref = self.db.instance_get(context, instance_id)
         self.driver.finish_resize(instance_ref, disk_info)
 
