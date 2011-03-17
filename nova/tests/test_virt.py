@@ -228,16 +228,16 @@ class LibvirtConnTestCase(test.TestCase):
                                 expect_ramdisk=True, rescue=True)
 
     def test_lxc_container_and_uri(self):
-        instance_data = dict(self.test_instace)
+        instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
 
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
-        instance_ref = db.instance_create(user_context,instance)
+        instance_ref = db.instance_create(user_context, instance)
         host = self.network.get_network_host(user_context.elevated())
-        network_ref= db.project_get_network(context.get_admin_context(),
-                                            self.project.id)
+        network_ref = db.project_get_network(context.get_admin_context(),
+                                             self.project.id)
 
         fixed_ip = {'address':    self.test_ip,
                     'network_id': network_ref['id']}
@@ -245,24 +245,28 @@ class LibvirtConnTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
         db.fixed_ip_update(ctxt, self.test_ip,
-                           {'allocated':   True,
-                            'instance_id': instance_ref['id']})
+                                 {'allocated':   True,
+                                  'instance_id': instance_ref['id']})
 
         FLAGS.libvirt_type = 'lxc'
+        conn = libvirt_conn.LibvirtConnection(True)
+
+        uri = conn.get_uri()
         self.assertEquals(uri, 'lxc:///')
 
         xml = conn.to_xml(instance_ref)
         tree = xml_to_tree(xml)
 
         check = [
-            (lambda t: t.find('.').get('type'), 'lxc'),
-            (lambda t: t.find('./os/type').text, 'exe')
+        (lambda t: t.find('.').get('type'), 'lxc'),
+        (lambda t: t.find('./os/type').text, 'exe'),
         ]
 
-        for i (check, expected_result) in enumerate(check):
-            self.aseertEqual(check(time),
+        for i, (check, expected_result) in enumerate(check):
+            self.assertEqual(check(tree),
                             expected_result,
                             '%s failed common check %d' % (xml, i))
+
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
         user_context = context.RequestContext(project=self.project,
@@ -322,6 +326,7 @@ class LibvirtConnTestCase(test.TestCase):
                     check = (lambda t: t.find('./os/initrd'), None)
                 check_list.append(check)
 
+
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
             (lambda t: t.find(
@@ -338,8 +343,9 @@ class LibvirtConnTestCase(test.TestCase):
             (lambda t: t.find('./devices/serial/source').get(
                 'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]
+
         if rescue:
-            common_checks += [
+            common_checks = [
                 (lambda t: t.findall('./devices/disk/source')[0].get(
                     'file').split('/')[1], 'disk.rescue'),
                 (lambda t: t.findall('./devices/disk/source')[1].get(
@@ -362,14 +368,15 @@ class LibvirtConnTestCase(test.TestCase):
             xml = conn.to_xml(instance_ref, rescue)
             tree = xml_to_tree(xml)
             for i, (check, expected_result) in enumerate(checks):
-                self.assertEqual(check(tree),
-                                 expected_result,
-                                 '%s failed check %d' % (xml, i))
+                        self.assertEqual(check(tree),
+                                        expected_result,
+                                        '%s failed check %d' % (xml, i))
+
 
             for i, (check, expected_result) in enumerate(common_checks):
-                self.assertEqual(check(tree),
-                                 expected_result,
-                                 '%s failed common check %d' % (xml, i))
+                   self.assertEqual(check(tree),
+                                    expected_result,
+                                    '%s failed common check %d' % (xml, i))
 
         # This test is supposed to make sure we don't
         # override a specifically set uri
