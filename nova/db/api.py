@@ -400,7 +400,7 @@ def instance_destroy(context, instance_id):
 
 
 @reroute_if_not_found(key_args_index=1)
-def instance_get(context, instance_id, reroute=True):
+def instance_get(context, instance_id):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)
 

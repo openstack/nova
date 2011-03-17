@@ -521,7 +521,6 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
     def pause_instance(self, context, instance_id):
         """Pause an instance on this server."""
         context = context.elevated()
-        LOG.debug(_('*** instance %s: starting pause'), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: pausing'), instance_id, context=context)
         self.db.instance_set_state(context,

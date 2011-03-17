@@ -343,7 +343,6 @@ class Controller(wsgi.Controller):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
         try:
-            LOG.debug(_("*** Compute.api::pause %s"), id)
             self.compute_api.pause(ctxt, id)
         except:
             readable = traceback.format_exc()
