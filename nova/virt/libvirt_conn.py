@@ -998,14 +998,14 @@ class LibvirtConnection(object):
         topology_node = xml.xpathEval('//host/cpu/topology')[0]\
                         .get_properties()
         topology = dict()
-        while topology_node != None:
+        while topology_node:
             name = topology_node.get_name()
             topology[name] = topology_node.getContent()
             topology_node = topology_node.get_next()
 
         keys = ['cores', 'sockets', 'threads']
         tkeys = topology.keys()
-        if list(set(tkeys)) != list(set(keys)):
+        if set(tkeys) != set(keys):
             ks = ', '.join(keys)
             raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
                                       "must have %(ks)s") % locals())
