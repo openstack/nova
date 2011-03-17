@@ -29,7 +29,11 @@ class Controller(wsgi.Controller):
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
-                "flavor": ["id", "name", "ram", "disk"]}}}
+                "flavor": ["id", "name", "ram", "disk"],
+                "link": ["rel","type","href"],
+            }
+        }
+    }
 
     def index(self, req):
         """Return all flavors in brief."""
