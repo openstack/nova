@@ -20,10 +20,12 @@ Tests For Scheduler
 """
 
 import datetime
+import mox
 
 from mox import IgnoreArg
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import service
 from nova import test
@@ -32,11 +34,14 @@ from nova import utils
 from nova.auth import manager as auth_manager
 from nova.scheduler import manager
 from nova.scheduler import driver
+from nova.compute import power_state
+from nova.db.sqlalchemy import models
 
 
 FLAGS = flags.FLAGS
 flags.DECLARE('max_cores', 'nova.scheduler.simple')
 flags.DECLARE('stub_network', 'nova.compute.manager')
+flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
 class TestDriver(driver.Scheduler):
@@ -53,6 +58,34 @@ class SchedulerTestCase(test.TestCase):
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
         self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
+
+    def _create_compute_service(self):
+        """Create compute-manager(ComputeNode and Service record)."""
+        ctxt = context.get_admin_context()
+        dic = {'host': 'dummy', 'binary': 'nova-compute', 'topic': 'compute',
+               'report_count': 0, 'availability_zone': 'dummyzone'}
+        s_ref = db.service_create(ctxt, dic)
+
+        dic = {'service_id': s_ref['id'],
+               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
+               'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
+               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
+               'cpu_info': ''}
+        db.compute_node_create(ctxt, dic)
+
+        return db.service_get(ctxt, s_ref['id'])
+
+    def _create_instance(self, **kwargs):
+        """Create a test instance"""
+        ctxt = context.get_admin_context()
+        inst = {}
+        inst['user_id'] = 'admin'
+        inst['project_id'] = kwargs.get('project_id', 'fake')
+        inst['host'] = kwargs.get('host', 'dummy')
+        inst['vcpus'] = kwargs.get('vcpus', 1)
+        inst['memory_mb'] = kwargs.get('memory_mb', 10)
+        inst['local_gb'] = kwargs.get('local_gb', 20)
+        return db.instance_create(ctxt, inst)
 
     def test_fallback(self):
         scheduler = manager.SchedulerManager()
@@ -75,6 +108,73 @@ class SchedulerTestCase(test.TestCase):
                   'args': {'num': 7}})
         self.mox.ReplayAll()
         scheduler.named_method(ctxt, 'topic', num=7)
+
+    def test_show_host_resources_host_not_exit(self):
+        """A host given as an argument does not exists."""
+
+        scheduler = manager.SchedulerManager()
+        dest = 'dummydest'
+        ctxt = context.get_admin_context()
+
+        try:
+            scheduler.show_host_resources(ctxt, dest)
+        except exception.NotFound, e:
+            c1 = (e.message.find(_("does not exist or is not a "
+                                   "compute node.")) >= 0)
+        self.assertTrue(c1)
+
+    def _dic_is_equal(self, dic1, dic2, keys=None):
+        """Compares 2 dictionary contents(Helper method)"""
+        if not keys:
+            keys = ['vcpus', 'memory_mb', 'local_gb',
+                    'vcpus_used', 'memory_mb_used', 'local_gb_used']
+
+        for key in keys:
+            if not (dic1[key] == dic2[key]):
+                return False
+        return True
+
+    def test_show_host_resources_no_project(self):
+        """No instance are running on the given host."""
+
+        scheduler = manager.SchedulerManager()
+        ctxt = context.get_admin_context()
+        s_ref = self._create_compute_service()
+
+        result = scheduler.show_host_resources(ctxt, s_ref['host'])
+
+        # result checking
+        c1 = ('resource' in result and 'usage' in result)
+        compute_node = s_ref['compute_node'][0]
+        c2 = self._dic_is_equal(result['resource'], compute_node)
+        c3 = result['usage'] == {}
+        self.assertTrue(c1 and c2 and c3)
+        db.service_destroy(ctxt, s_ref['id'])
+
+    def test_show_host_resources_works_correctly(self):
+        """Show_host_resources() works correctly as expected."""
+
+        scheduler = manager.SchedulerManager()
+        ctxt = context.get_admin_context()
+        s_ref = self._create_compute_service()
+        i_ref1 = self._create_instance(project_id='p-01', host=s_ref['host'])
+        i_ref2 = self._create_instance(project_id='p-02', vcpus=3,
+                                       host=s_ref['host'])
+
+        result = scheduler.show_host_resources(ctxt, s_ref['host'])
+
+        c1 = ('resource' in result and 'usage' in result)
+        compute_node = s_ref['compute_node'][0]
+        c2 = self._dic_is_equal(result['resource'], compute_node)
+        c3 = result['usage'].keys() == ['p-01', 'p-02']
+        keys = ['vcpus', 'memory_mb', 'local_gb']
+        c4 = self._dic_is_equal(result['usage']['p-01'], i_ref1, keys)
+        c5 = self._dic_is_equal(result['usage']['p-02'], i_ref2, keys)
+        self.assertTrue(c1 and c2 and c3 and c4 and c5)
+
+        db.service_destroy(ctxt, s_ref['id'])
+        db.instance_destroy(ctxt, i_ref1['id'])
+        db.instance_destroy(ctxt, i_ref2['id'])
 
 
 class ZoneSchedulerTestCase(test.TestCase):
@@ -155,25 +255,234 @@ class SimpleDriverTestCase(test.TestCase):
     def _create_instance(self, **kwargs):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
         inst['instance_type'] = 'm1.tiny'
         inst['mac_address'] = utils.generate_mac()
+        inst['vcpus'] = kwargs.get('vcpus', 1)
         inst['ami_launch_index'] = 0
-        inst['vcpus'] = 1
         inst['availability_zone'] = kwargs.get('availability_zone', None)
+        inst['host'] = kwargs.get('host', 'dummy')
+        inst['memory_mb'] = kwargs.get('memory_mb', 20)
+        inst['local_gb'] = kwargs.get('local_gb', 30)
+        inst['launched_on'] = kwargs.get('launghed_on', 'dummy')
+        inst['state_description'] = kwargs.get('state_description', 'running')
+        inst['state'] = kwargs.get('state', power_state.RUNNING)
         return db.instance_create(self.context, inst)['id']
 
     def _create_volume(self):
         """Create a test volume"""
         vol = {}
-        vol['image_id'] = 'ami-test'
-        vol['reservation_id'] = 'r-fakeres'
         vol['size'] = 1
         vol['availability_zone'] = 'test'
         return db.volume_create(self.context, vol)['id']
+
+    def _create_compute_service(self, **kwargs):
+        """Create a compute service."""
+
+        dic = {'binary': 'nova-compute', 'topic': 'compute',
+               'report_count': 0, 'availability_zone': 'dummyzone'}
+        dic['host'] = kwargs.get('host', 'dummy')
+        s_ref = db.service_create(self.context, dic)
+        if 'created_at' in kwargs.keys() or 'updated_at' in kwargs.keys():
+            t = datetime.datetime.utcnow() - datetime.timedelta(0)
+            dic['created_at'] = kwargs.get('created_at', t)
+            dic['updated_at'] = kwargs.get('updated_at', t)
+            db.service_update(self.context, s_ref['id'], dic)
+
+        dic = {'service_id': s_ref['id'],
+               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
+               'vcpus_used': 16, 'local_gb_used': 10,
+               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
+               'cpu_info': ''}
+        dic['memory_mb_used'] = kwargs.get('memory_mb_used', 32)
+        dic['hypervisor_type'] = kwargs.get('hypervisor_type', 'qemu')
+        dic['hypervisor_version'] = kwargs.get('hypervisor_version', 12003)
+        db.compute_node_create(self.context, dic)
+        return db.service_get(self.context, s_ref['id'])
+
+    def test_doesnt_report_disabled_hosts_as_up(self):
+        """Ensures driver doesn't find hosts before they are enabled"""
+        # NOTE(vish): constructing service without create method
+        #             because we are going to use it without queue
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        s2 = db.service_get_by_args(self.context, 'host2', 'nova-compute')
+        db.service_update(self.context, s1['id'], {'disabled': True})
+        db.service_update(self.context, s2['id'], {'disabled': True})
+        hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
+        self.assertEqual(0, len(hosts))
+        compute1.kill()
+        compute2.kill()
+
+    def test_reports_enabled_hosts_as_up(self):
+        """Ensures driver can find the hosts that are up"""
+        # NOTE(vish): constructing service without create method
+        #             because we are going to use it without queue
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        hosts = self.scheduler.driver.hosts_up(self.context, 'compute')
+        self.assertEqual(2, len(hosts))
+        compute1.kill()
+        compute2.kill()
+
+    def test_least_busy_host_gets_instance(self):
+        """Ensures the host with less cores gets the next one"""
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        instance_id1 = self._create_instance()
+        compute1.run_instance(self.context, instance_id1)
+        instance_id2 = self._create_instance()
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           instance_id2)
+        self.assertEqual(host, 'host2')
+        compute1.terminate_instance(self.context, instance_id1)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
+        compute2.kill()
+
+    def test_specific_host_gets_instance(self):
+        """Ensures if you set availability_zone it launches on that zone"""
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        instance_id1 = self._create_instance()
+        compute1.run_instance(self.context, instance_id1)
+        instance_id2 = self._create_instance(availability_zone='nova:host1')
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           instance_id2)
+        self.assertEqual('host1', host)
+        compute1.terminate_instance(self.context, instance_id1)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
+        compute2.kill()
+
+    def test_wont_sechedule_if_specified_host_is_down(self):
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        now = datetime.datetime.utcnow()
+        delta = datetime.timedelta(seconds=FLAGS.service_down_time * 2)
+        past = now - delta
+        db.service_update(self.context, s1['id'], {'updated_at': past})
+        instance_id2 = self._create_instance(availability_zone='nova:host1')
+        self.assertRaises(driver.WillNotSchedule,
+                          self.scheduler.driver.schedule_run_instance,
+                          self.context,
+                          instance_id2)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
+
+    def test_will_schedule_on_disabled_host_if_specified(self):
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
+        db.service_update(self.context, s1['id'], {'disabled': True})
+        instance_id2 = self._create_instance(availability_zone='nova:host1')
+        host = self.scheduler.driver.schedule_run_instance(self.context,
+                                                           instance_id2)
+        self.assertEqual('host1', host)
+        db.instance_destroy(self.context, instance_id2)
+        compute1.kill()
+
+    def test_too_many_cores(self):
+        """Ensures we don't go over max cores"""
+        compute1 = service.Service('host1',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute1.start()
+        compute2 = service.Service('host2',
+                                   'nova-compute',
+                                   'compute',
+                                   FLAGS.compute_manager)
+        compute2.start()
+        instance_ids1 = []
+        instance_ids2 = []
+        for index in xrange(FLAGS.max_cores):
+            instance_id = self._create_instance()
+            compute1.run_instance(self.context, instance_id)
+            instance_ids1.append(instance_id)
+            instance_id = self._create_instance()
+            compute2.run_instance(self.context, instance_id)
+            instance_ids2.append(instance_id)
+        instance_id = self._create_instance()
+        self.assertRaises(driver.NoValidHost,
+                          self.scheduler.driver.schedule_run_instance,
+                          self.context,
+                          instance_id)
+        for instance_id in instance_ids1:
+            compute1.terminate_instance(self.context, instance_id)
+        for instance_id in instance_ids2:
+            compute2.terminate_instance(self.context, instance_id)
+        compute1.kill()
+        compute2.kill()
+
+    def test_least_busy_host_gets_volume(self):
+        """Ensures the host with less gigabytes gets the next one"""
+        volume1 = service.Service('host1',
+                                   'nova-volume',
+                                   'volume',
+                                   FLAGS.volume_manager)
+        volume1.start()
+        volume2 = service.Service('host2',
+                                   'nova-volume',
+                                   'volume',
+                                   FLAGS.volume_manager)
+        volume2.start()
+        volume_id1 = self._create_volume()
+        volume1.create_volume(self.context, volume_id1)
+        volume_id2 = self._create_volume()
+        host = self.scheduler.driver.schedule_create_volume(self.context,
+                                                            volume_id2)
+        self.assertEqual(host, 'host2')
+        volume1.delete_volume(self.context, volume_id1)
+        db.volume_destroy(self.context, volume_id2)
+        dic = {'service_id': s_ref['id'],
+               'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
+               'vcpus_used': 16, 'memory_mb_used': 12, 'local_gb_used': 10,
+               'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
+               'cpu_info': ''}
 
     def test_doesnt_report_disabled_hosts_as_up(self):
         """Ensures driver doesn't find hosts before they are enabled"""
@@ -318,3 +627,313 @@ class SimpleDriverTestCase(test.TestCase):
             volume2.delete_volume(self.context, volume_id)
         volume1.kill()
         volume2.kill()
+
+    def test_scheduler_live_migration_with_volume(self):
+        """scheduler_live_migration() works correctly as expected.
+
+        Also, checks instance state is changed from 'running' -> 'migrating'.
+
+        """
+
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        dic = {'instance_id': instance_id, 'size': 1}
+        v_ref = db.volume_create(self.context, dic)
+
+        # cannot check 2nd argument b/c the addresses of instance object
+        # is different.
+        driver_i = self.scheduler.driver
+        nocare = mox.IgnoreArg()
+        self.mox.StubOutWithMock(driver_i, '_live_migration_src_check')
+        self.mox.StubOutWithMock(driver_i, '_live_migration_dest_check')
+        self.mox.StubOutWithMock(driver_i, '_live_migration_common_check')
+        driver_i._live_migration_src_check(nocare, nocare)
+        driver_i._live_migration_dest_check(nocare, nocare, i_ref['host'])
+        driver_i._live_migration_common_check(nocare, nocare, i_ref['host'])
+        self.mox.StubOutWithMock(rpc, 'cast', use_mock_anything=True)
+        kwargs = {'instance_id': instance_id, 'dest': i_ref['host']}
+        rpc.cast(self.context,
+                 db.queue_get_for(nocare, FLAGS.compute_topic, i_ref['host']),
+                 {"method": 'live_migration', "args": kwargs})
+
+        self.mox.ReplayAll()
+        self.scheduler.live_migration(self.context, FLAGS.compute_topic,
+                                      instance_id=instance_id,
+                                      dest=i_ref['host'])
+
+        i_ref = db.instance_get(self.context, instance_id)
+        self.assertTrue(i_ref['state_description'] == 'migrating')
+        db.instance_destroy(self.context, instance_id)
+        db.volume_destroy(self.context, v_ref['id'])
+
+    def test_live_migration_src_check_instance_not_running(self):
+        """The instance given by instance_id is not running."""
+
+        instance_id = self._create_instance(state_description='migrating')
+        i_ref = db.instance_get(self.context, instance_id)
+
+        try:
+            self.scheduler.driver._live_migration_src_check(self.context,
+                                                            i_ref)
+        except exception.Invalid, e:
+            c = (e.message.find('is not running') > 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+
+    def test_live_migration_src_check_volume_node_not_alive(self):
+        """Raise exception when volume node is not alive."""
+
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        dic = {'instance_id': instance_id, 'size': 1}
+        v_ref = db.volume_create(self.context, {'instance_id': instance_id,
+                                                'size': 1})
+        t1 = datetime.datetime.utcnow() - datetime.timedelta(1)
+        dic = {'created_at': t1, 'updated_at': t1, 'binary': 'nova-volume',
+               'topic': 'volume', 'report_count': 0}
+        s_ref = db.service_create(self.context, dic)
+
+        try:
+            self.scheduler.driver.schedule_live_migration(self.context,
+                                                          instance_id,
+                                                          i_ref['host'])
+        except exception.Invalid, e:
+            c = (e.message.find('volume node is not alive') >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+        db.volume_destroy(self.context, v_ref['id'])
+
+    def test_live_migration_src_check_compute_node_not_alive(self):
+        """Confirms src-compute node is alive."""
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        t = datetime.datetime.utcnow() - datetime.timedelta(10)
+        s_ref = self._create_compute_service(created_at=t, updated_at=t,
+                                             host=i_ref['host'])
+
+        try:
+            self.scheduler.driver._live_migration_src_check(self.context,
+                                                            i_ref)
+        except exception.Invalid, e:
+            c = (e.message.find('is not alive') >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_src_check_works_correctly(self):
+        """Confirms this method finishes with no error."""
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        s_ref = self._create_compute_service(host=i_ref['host'])
+
+        ret = self.scheduler.driver._live_migration_src_check(self.context,
+                                                              i_ref)
+
+        self.assertTrue(ret == None)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_dest_check_not_alive(self):
+        """Confirms exception raises in case dest host does not exist."""
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        t = datetime.datetime.utcnow() - datetime.timedelta(10)
+        s_ref = self._create_compute_service(created_at=t, updated_at=t,
+                                             host=i_ref['host'])
+
+        try:
+            self.scheduler.driver._live_migration_dest_check(self.context,
+                                                             i_ref,
+                                                             i_ref['host'])
+        except exception.Invalid, e:
+            c = (e.message.find('is not alive') >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_dest_check_service_same_host(self):
+        """Confirms exceptioin raises in case dest and src is same host."""
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        s_ref = self._create_compute_service(host=i_ref['host'])
+
+        try:
+            self.scheduler.driver._live_migration_dest_check(self.context,
+                                                             i_ref,
+                                                             i_ref['host'])
+        except exception.Invalid, e:
+            c = (e.message.find('choose other host') >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_dest_check_service_lack_memory(self):
+        """Confirms exception raises when dest doesn't have enough memory."""
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        s_ref = self._create_compute_service(host='somewhere',
+                                             memory_mb_used=12)
+
+        try:
+            self.scheduler.driver._live_migration_dest_check(self.context,
+                                                             i_ref,
+                                                             'somewhere')
+        except exception.NotEmpty, e:
+            c = (e.message.find('Unable to migrate') >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_dest_check_service_works_correctly(self):
+        """Confirms method finishes with no error."""
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        s_ref = self._create_compute_service(host='somewhere',
+                                             memory_mb_used=5)
+
+        ret = self.scheduler.driver._live_migration_dest_check(self.context,
+                                                             i_ref,
+                                                             'somewhere')
+        self.assertTrue(ret == None)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_common_check_service_orig_not_exists(self):
+        """Destination host does not exist."""
+
+        dest = 'dummydest'
+        # mocks for live_migration_common_check()
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+        t1 = datetime.datetime.utcnow() - datetime.timedelta(10)
+        s_ref = self._create_compute_service(created_at=t1, updated_at=t1,
+                                             host=dest)
+
+        # mocks for mounted_on_same_shared_storage()
+        fpath = '/test/20110127120000'
+        self.mox.StubOutWithMock(driver, 'rpc', use_mock_anything=True)
+        topic = FLAGS.compute_topic
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(self.context, topic, dest),
+            {"method": 'create_shared_storage_test_file'}).AndReturn(fpath)
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(mox.IgnoreArg(), topic, i_ref['host']),
+            {"method": 'check_shared_storage_test_file',
+             "args": {'filename': fpath}})
+        driver.rpc.call(mox.IgnoreArg(),
+            db.queue_get_for(mox.IgnoreArg(), topic, dest),
+            {"method": 'cleanup_shared_storage_test_file',
+             "args": {'filename': fpath}})
+
+        self.mox.ReplayAll()
+        try:
+            self.scheduler.driver._live_migration_common_check(self.context,
+                                                               i_ref,
+                                                               dest)
+        except exception.Invalid, e:
+            c = (e.message.find('does not exist') >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+
+    def test_live_migration_common_check_service_different_hypervisor(self):
+        """Original host and dest host has different hypervisor type."""
+        dest = 'dummydest'
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+
+        # compute service for destination
+        s_ref = self._create_compute_service(host=i_ref['host'])
+        # compute service for original host
+        s_ref2 = self._create_compute_service(host=dest, hypervisor_type='xen')
+
+        # mocks
+        driver = self.scheduler.driver
+        self.mox.StubOutWithMock(driver, 'mounted_on_same_shared_storage')
+        driver.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
+
+        self.mox.ReplayAll()
+        try:
+            self.scheduler.driver._live_migration_common_check(self.context,
+                                                               i_ref,
+                                                               dest)
+        except exception.Invalid, e:
+            c = (e.message.find(_('Different hypervisor type')) >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+        db.service_destroy(self.context, s_ref2['id'])
+
+    def test_live_migration_common_check_service_different_version(self):
+        """Original host and dest host has different hypervisor version."""
+        dest = 'dummydest'
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+
+        # compute service for destination
+        s_ref = self._create_compute_service(host=i_ref['host'])
+        # compute service for original host
+        s_ref2 = self._create_compute_service(host=dest,
+                                              hypervisor_version=12002)
+
+        # mocks
+        driver = self.scheduler.driver
+        self.mox.StubOutWithMock(driver, 'mounted_on_same_shared_storage')
+        driver.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
+
+        self.mox.ReplayAll()
+        try:
+            self.scheduler.driver._live_migration_common_check(self.context,
+                                                               i_ref,
+                                                               dest)
+        except exception.Invalid, e:
+            c = (e.message.find(_('Older hypervisor version')) >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+        db.service_destroy(self.context, s_ref2['id'])
+
+    def test_live_migration_common_check_checking_cpuinfo_fail(self):
+        """Raise excetion when original host doen't have compatible cpu."""
+
+        dest = 'dummydest'
+        instance_id = self._create_instance()
+        i_ref = db.instance_get(self.context, instance_id)
+
+        # compute service for destination
+        s_ref = self._create_compute_service(host=i_ref['host'])
+        # compute service for original host
+        s_ref2 = self._create_compute_service(host=dest)
+
+        # mocks
+        driver = self.scheduler.driver
+        self.mox.StubOutWithMock(driver, 'mounted_on_same_shared_storage')
+        driver.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
+        self.mox.StubOutWithMock(rpc, 'call', use_mock_anything=True)
+        rpc.call(mox.IgnoreArg(), mox.IgnoreArg(),
+            {"method": 'compare_cpu',
+            "args": {'cpu_info': s_ref2['compute_node'][0]['cpu_info']}}).\
+             AndRaise(rpc.RemoteError("doesn't have compatibility to", "", ""))
+
+        self.mox.ReplayAll()
+        try:
+            self.scheduler.driver._live_migration_common_check(self.context,
+                                                               i_ref,
+                                                               dest)
+        except rpc.RemoteError, e:
+            c = (e.message.find(_("doesn't have compatibility to")) >= 0)
+
+        self.assertTrue(c)
+        db.instance_destroy(self.context, instance_id)
+        db.service_destroy(self.context, s_ref['id'])
+        db.service_destroy(self.context, s_ref2['id'])

@@ -25,8 +25,8 @@ import webob.dec
 from paste import urlmap
 
 from glance import client as glance_client
+from glance.common import exception as glance_exc
 
-from nova import auth
 from nova import context
 from nova import exception as exc
 from nova import flags
@@ -35,6 +35,7 @@ import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
 from nova.api.openstack import ratelimiting
+from nova.auth.manager import User, Project
 from nova.image import glance
 from nova.image import local
 from nova.image import service
@@ -68,8 +69,6 @@ def fake_auth_init(self, application):
 @webob.dec.wsgify
 def fake_wsgi(self, req):
     req.environ['nova.context'] = context.RequestContext(1, 1)
-    if req.body:
-        req.environ['inst_dict'] = json.loads(req.body)
     return self.application
 
 
@@ -84,10 +83,17 @@ def wsgi_app(inner_application=None):
     return mapper
 
 
-def stub_out_key_pair_funcs(stubs):
+def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+
+    def no_key_pair(context, user_id):
+        return []
+
+    if have_key_pair:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+    else:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_image_service(stubs):
@@ -149,25 +155,26 @@ def stub_out_glance(stubs, initial_fixtures=None):
             for f in self.fixtures:
                 if f['id'] == image_id:
                     return f
-            return None
+            raise glance_exc.NotFound
 
-        def fake_add_image(self, image_meta):
+        def fake_add_image(self, image_meta, data=None):
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_meta['id'] = id
             self.fixtures.append(image_meta)
-            return id
+            return image_meta
 
-        def fake_update_image(self, image_id, image_meta):
+        def fake_update_image(self, image_id, image_meta, data=None):
             f = self.fake_get_image_meta(image_id)
             if not f:
-                raise exc.NotFound
+                raise glance_exc.NotFound
 
             f.update(image_meta)
+            return f
 
         def fake_delete_image(self, image_id):
             f = self.fake_get_image_meta(image_id)
             if not f:
-                raise exc.NotFound
+                raise glance_exc.NotFound
 
             self.fixtures.remove(f)
 
@@ -227,9 +234,28 @@ class FakeAuthDatabase(object):
 
 class FakeAuthManager(object):
     auth_data = {}
+    projects = {}
+
+    @classmethod
+    def clear_fakes(cls):
+        cls.auth_data = {}
+        cls.projects = {}
+
+    @classmethod
+    def reset_fake_data(cls):
+        cls.auth_data = dict(acc1=User('guy1', 'guy1', 'acc1',
+                                       'fortytwo!', False))
+        cls.projects = dict(testacct=Project('testacct',
+                                             'testacct',
+                                             'guy1',
+                                             'test',
+                                              []))
 
     def add_user(self, key, user):
         FakeAuthManager.auth_data[key] = user
+
+    def get_users(self):
+        return FakeAuthManager.auth_data.values()
 
     def get_user(self, uid):
         for k, v in FakeAuthManager.auth_data.iteritems():
@@ -237,11 +263,73 @@ class FakeAuthManager(object):
                 return v
         return None
 
-    def get_project(self, pid):
+    def delete_user(self, uid):
+        for k, v in FakeAuthManager.auth_data.items():
+            if v.id == uid:
+                del FakeAuthManager.auth_data[k]
         return None
 
+    def create_user(self, name, access=None, secret=None, admin=False):
+        u = User(name, name, access, secret, admin)
+        FakeAuthManager.auth_data[access] = u
+        return u
+
+    def modify_user(self, user_id, access=None, secret=None, admin=None):
+        user = None
+        for k, v in FakeAuthManager.auth_data.iteritems():
+            if v.id == user_id:
+                user = v
+        if user:
+            user.access = access
+            user.secret = secret
+            if admin is not None:
+                user.admin = admin
+
+    def is_admin(self, user):
+        return user.admin
+
+    def is_project_member(self, user, project):
+        return ((user.id in project.member_ids) or
+                (user.id == project.project_manager_id))
+
+    def create_project(self, name, manager_user, description=None,
+                       member_users=None):
+        member_ids = [User.safe_id(m) for m in member_users] \
+                     if member_users else []
+        p = Project(name, name, User.safe_id(manager_user),
+                                 description, member_ids)
+        FakeAuthManager.projects[name] = p
+        return p
+
+    def delete_project(self, pid):
+        if pid in FakeAuthManager.projects:
+            del FakeAuthManager.projects[pid]
+
+    def modify_project(self, project, manager_user=None, description=None):
+        p = FakeAuthManager.projects.get(project)
+        p.project_manager_id = User.safe_id(manager_user)
+        p.description = description
+
+    def get_project(self, pid):
+        p = FakeAuthManager.projects.get(pid)
+        if p:
+            return p
+        else:
+            raise exc.NotFound
+
+    def get_projects(self, user=None):
+        if not user:
+            return FakeAuthManager.projects.values()
+        else:
+            return [p for p in FakeAuthManager.projects.values()
+                    if (user.id in p.member_ids) or
+                       (user.id == p.project_manager_id)]
+
     def get_user_from_access_key(self, key):
-        return FakeAuthManager.auth_data.get(key, None)
+        try:
+            return FakeAuthManager.auth_data[key]
+        except KeyError:
+            raise exc.NotFound
 
 
 class FakeRateLimiter(object):

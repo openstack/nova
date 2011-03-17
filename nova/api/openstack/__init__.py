@@ -27,6 +27,7 @@ import webob.exc
 from nova import flags
 from nova import log as logging
 from nova import wsgi
+from nova.api.openstack import accounts
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
@@ -34,6 +35,7 @@ from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
+from nova.api.openstack import users
 from nova.api.openstack import zones
 
 
@@ -47,7 +49,7 @@ flags.DEFINE_bool('allow_admin_api',
 class FaultWrapper(wsgi.Middleware):
     """Calls down the middleware stack, making exceptions into faults."""
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         try:
             return req.get_response(self.application)
@@ -89,6 +91,13 @@ class APIRouter(wsgi.Router):
             mapper.resource("zone", "zones", controller=zones.Controller(),
                         collection={'detail': 'GET', 'info': 'GET'}),
 
+            mapper.resource("user", "users", controller=users.Controller(),
+                        collection={'detail': 'GET'})
+
+            mapper.resource("account", "accounts",
+                            controller=accounts.Controller(),
+                            collection={'detail': 'GET'})
+
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
                         member=server_members)
@@ -115,7 +124,7 @@ class APIRouter(wsgi.Router):
 
 
 class Versions(wsgi.Application):
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
@@ -124,4 +133,6 @@ class Versions(wsgi.Application):
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}
-        return wsgi.Serializer(req.environ, metadata).to_content_type(response)
+
+        content_type = req.best_match_content_type()
+        return wsgi.Serializer(metadata).serialize(response, content_type)

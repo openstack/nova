@@ -55,7 +55,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import scheduler_manager
+from nova import manager
 from nova import utils
 from nova import rpc
 
@@ -105,7 +105,7 @@ class AddressAlreadyAllocated(exception.Error):
     pass
 
 
-class NetworkManager(scheduler_manager.SchedulerDependentManager):
+class NetworkManager(manager.SchedulerDependentManager):
     """Implements common network manager functionality.
 
     This class must be subclassed to support specific topologies.
@@ -564,6 +564,16 @@ class VlanManager(NetworkManager):
             # NOTE(vish): This makes ports unique accross the cloud, a more
             #             robust solution would be to make them unique per ip
             net['vpn_public_port'] = vpn_start + index
+            network_ref = None
+            try:
+                network_ref = db.network_get_by_cidr(context, cidr)
+            except exception.NotFound:
+                pass
+
+            if network_ref is not None:
+                raise ValueError(_('Network with cidr %s already exists' %
+                                   cidr))
+
             network_ref = self.db.network_create_safe(context, net)
             if network_ref:
                 self._create_fixed_ips(context, network_ref['id'])

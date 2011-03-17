@@ -34,17 +34,19 @@ terminating it.
                   :func:`nova.utils.import_object`
 """
 
-import base64
 import datetime
+import os
 import random
 import string
 import socket
+import tempfile
+import time
 import functools
 
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import scheduler_manager
+from nova import manager
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
@@ -61,6 +63,9 @@ flags.DEFINE_integer('password_length', 12,
 flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
+flags.DEFINE_integer('live_migration_retry_count', 30,
+                    ("Retry count needed in live_migration."
+                     " sleep 1 sec for each count"))
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -99,7 +104,7 @@ def checks_instance_lock(function):
     return decorated_function
 
 
-class ComputeManager(scheduler_manager.SchedulerDependentManager):
+class ComputeManager(manager.SchedulerDependentManager):
 
     """Manages the running instances from creation to destruction."""
 
@@ -175,14 +180,14 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
         """Launch a new instance with specified options."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        instance_ref.onset_files = kwargs.get('onset_files', [])
+        instance_ref.injected_files = kwargs.get('injected_files', [])
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
         self.db.instance_update(context,
                                 instance_id,
-                                {'host': self.host})
+                                {'host': self.host, 'launched_on': self.host})
 
         self.db.instance_set_state(context,
                                    instance_id,
@@ -354,15 +359,10 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
             LOG.warn(_('trying to inject a file into a non-running '
                     'instance: %(instance_id)s (state: %(instance_state)s '
                     'expected: %(expected_state)s)') % locals())
-        # Files/paths *should* be base64-encoded at this point, but
-        # double-check to make sure.
-        b64_path = utils.ensure_b64_encoding(path)
-        b64_contents = utils.ensure_b64_encoding(file_contents)
-        plain_path = base64.b64decode(b64_path)
         nm = instance_ref['name']
-        msg = _('instance %(nm)s: injecting file to %(plain_path)s') % locals()
+        msg = _('instance %(nm)s: injecting file to %(path)s') % locals()
         LOG.audit(msg)
-        self.driver.inject_file(instance_ref, b64_path, b64_contents)
+        self.driver.inject_file(instance_ref, path, file_contents)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -724,3 +724,248 @@ class ComputeManager(scheduler_manager.SchedulerDependentManager):
         self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
         return True
+
+    @exception.wrap_exception
+    def compare_cpu(self, context, cpu_info):
+        """Checks the host cpu is compatible to a cpu given by xml.
+
+        :param context: security context
+        :param cpu_info: json string obtained from virConnect.getCapabilities
+        :returns: See driver.compare_cpu
+
+        """
+        return self.driver.compare_cpu(cpu_info)
+
+    @exception.wrap_exception
+    def create_shared_storage_test_file(self, context):
+        """Makes tmpfile under FLAGS.instance_path.
+
+        This method enables compute nodes to recognize that they mounts
+        same shared storage. (create|check|creanup)_shared_storage_test_file()
+        is a pair.
+
+        :param context: security context
+        :returns: tmpfile name(basename)
+
+        """
+
+        dirpath = FLAGS.instances_path
+        fd, tmp_file = tempfile.mkstemp(dir=dirpath)
+        LOG.debug(_("Creating tmpfile %s to notify to other "
+                    "compute nodes that they should mount "
+                    "the same storage.") % tmp_file)
+        os.close(fd)
+        return os.path.basename(tmp_file)
+
+    @exception.wrap_exception
+    def check_shared_storage_test_file(self, context, filename):
+        """Confirms existence of the tmpfile under FLAGS.instances_path.
+
+        :param context: security context
+        :param filename: confirm existence of FLAGS.instances_path/thisfile
+
+        """
+
+        tmp_file = os.path.join(FLAGS.instances_path, filename)
+        if not os.path.exists(tmp_file):
+            raise exception.NotFound(_('%s not found') % tmp_file)
+
+    @exception.wrap_exception
+    def cleanup_shared_storage_test_file(self, context, filename):
+        """Removes existence of the tmpfile under FLAGS.instances_path.
+
+        :param context: security context
+        :param filename: remove existence of FLAGS.instances_path/thisfile
+
+        """
+
+        tmp_file = os.path.join(FLAGS.instances_path, filename)
+        os.remove(tmp_file)
+
+    @exception.wrap_exception
+    def update_available_resource(self, context):
+        """See comments update_resource_info.
+
+        :param context: security context
+        :returns: See driver.update_available_resource()
+
+        """
+
+        return self.driver.update_available_resource(context, self.host)
+
+    def pre_live_migration(self, context, instance_id):
+        """Preparations for live migration at dest host.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+
+        """
+
+        # Getting instance info
+        instance_ref = self.db.instance_get(context, instance_id)
+        ec2_id = instance_ref['hostname']
+
+        # Getting fixed ips
+        fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
+        if not fixed_ip:
+            msg = _("%(instance_id)s(%(ec2_id)s) does not have fixed_ip.")
+            raise exception.NotFound(msg % locals())
+
+        # If any volume is mounted, prepare here.
+        if not instance_ref['volumes']:
+            LOG.info(_("%s has no volume."), ec2_id)
+        else:
+            for v in instance_ref['volumes']:
+                self.volume_manager.setup_compute_volume(context, v['id'])
+
+        # Bridge settings.
+        # Call this method prior to ensure_filtering_rules_for_instance,
+        # since bridge is not set up, ensure_filtering_rules_for instance
+        # fails.
+        #
+        # Retry operation is necessary because continuously request comes,
+        # concorrent request occurs to iptables, then it complains.
+        max_retry = FLAGS.live_migration_retry_count
+        for cnt in range(max_retry):
+            try:
+                self.network_manager.setup_compute_network(context,
+                                                           instance_id)
+                break
+            except exception.ProcessExecutionError:
+                if cnt == max_retry - 1:
+                    raise
+                else:
+                    LOG.warn(_("setup_compute_network() failed %(cnt)d."
+                               "Retry up to %(max_retry)d for %(ec2_id)s.")
+                               % locals())
+                    time.sleep(1)
+
+        # Creating filters to hypervisors and firewalls.
+        # An example is that nova-instance-instance-xxx,
+        # which is written to libvirt.xml(Check "virsh nwfilter-list")
+        # This nwfilter is necessary on the destination host.
+        # In addition, this method is creating filtering rule
+        # onto destination host.
+        self.driver.ensure_filtering_rules_for_instance(instance_ref)
+
+    def live_migration(self, context, instance_id, dest):
+        """Executing live migration.
+
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param dest: destination host
+
+        """
+
+        # Get instance for error handling.
+        instance_ref = self.db.instance_get(context, instance_id)
+        i_name = instance_ref.name
+
+        try:
+            # Checking volume node is working correctly when any volumes
+            # are attached to instances.
+            if instance_ref['volumes']:
+                rpc.call(context,
+                          FLAGS.volume_topic,
+                          {"method": "check_for_export",
+                           "args": {'instance_id': instance_id}})
+
+            # Asking dest host to preparing live migration.
+            rpc.call(context,
+                     self.db.queue_get_for(context, FLAGS.compute_topic, dest),
+                     {"method": "pre_live_migration",
+                      "args": {'instance_id': instance_id}})
+
+        except Exception:
+            msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
+            LOG.error(msg % locals())
+            self.recover_live_migration(context, instance_ref)
+            raise
+
+        # Executing live migration
+        # live_migration might raises exceptions, but
+        # nothing must be recovered in this version.
+        self.driver.live_migration(context, instance_ref, dest,
+                                   self.post_live_migration,
+                                   self.recover_live_migration)
+
+    def post_live_migration(self, ctxt, instance_ref, dest):
+        """Post operations for live migration.
+
+        This method is called from live_migration
+        and mainly updating database record.
+
+        :param ctxt: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param dest: destination host
+
+        """
+
+        LOG.info(_('post_live_migration() is started..'))
+        instance_id = instance_ref['id']
+
+        # Detaching volumes.
+        try:
+            for vol in self.db.volume_get_all_by_instance(ctxt, instance_id):
+                self.volume_manager.remove_compute_volume(ctxt, vol['id'])
+        except exception.NotFound:
+            pass
+
+        # Releasing vlan.
+        # (not necessary in current implementation?)
+
+        # Releasing security group ingress rule.
+        self.driver.unfilter_instance(instance_ref)
+
+        # Database updating.
+        i_name = instance_ref.name
+        try:
+            # Not return if floating_ip is not found, otherwise,
+            # instance never be accessible..
+            floating_ip = self.db.instance_get_floating_address(ctxt,
+                                                         instance_id)
+            if not floating_ip:
+                LOG.info(_('No floating_ip is found for %s.'), i_name)
+            else:
+                floating_ip_ref = self.db.floating_ip_get_by_address(ctxt,
+                                                              floating_ip)
+                self.db.floating_ip_update(ctxt,
+                                           floating_ip_ref['address'],
+                                           {'host': dest})
+        except exception.NotFound:
+            LOG.info(_('No floating_ip is found for %s.'), i_name)
+        except:
+            LOG.error(_("Live migration: Unexpected error:"
+                        "%s cannot inherit floating ip..") % i_name)
+
+        # Restore instance/volume state
+        self.recover_live_migration(ctxt, instance_ref, dest)
+
+        LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
+                 % locals())
+        LOG.info(_("You may see the error \"libvirt: QEMU error: "
+                   "Domain not found: no domain with matching name.\" "
+                   "This error can be safely ignored."))
+
+    def recover_live_migration(self, ctxt, instance_ref, host=None):
+        """Recovers Instance/volume state from migrating -> running.
+
+        :param ctxt: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param host:
+            DB column value is updated by this hostname.
+            if none, the host instance currently running is selected.
+
+        """
+
+        if not host:
+            host = instance_ref['host']
+
+        self.db.instance_update(ctxt,
+                                instance_ref['id'],
+                                {'state_description': 'running',
+                                 'state': power_state.RUNNING,
+                                 'host': host})
+
+        for volume in instance_ref['volumes']:
+            self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})

@@ -92,13 +92,13 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         zone = db.zone_create(context, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
     def update(self, req, id):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
         zone = db.zone_update(context, zone_id, env["zone"])
         return dict(zone=_scrub_zone(zone))

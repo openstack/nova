@@ -88,6 +88,10 @@ class InvalidInputException(Error):
     pass
 
 
+class InvalidContentType(Error):
+    pass
+
+
 class TimeoutException(Error):
     pass
 

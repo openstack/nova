@@ -76,6 +76,7 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y python-migrate python-eventlet python-gflags python-ipy python-tempita
     sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
     sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
+    sudo apt-get install -y python-multiprocessing
 
     if [ "$USE_IPV6" == 1 ]; then
         sudo apt-get install -y radvd
@@ -166,9 +167,6 @@ NOVA_CONF_EOF
     $NOVA_DIR/bin/nova-manage user admin admin admin admin
     # create a project called 'admin' with project manager of 'admin'
     $NOVA_DIR/bin/nova-manage project create admin admin
-    # export environment variables for project 'admin' and user 'admin'
-    $NOVA_DIR/bin/nova-manage project zipfile admin admin $NOVA_DIR/nova.zip
-    unzip -o $NOVA_DIR/nova.zip -d $NOVA_DIR/
     # create a small network
     $NOVA_DIR/bin/nova-manage network create 10.0.0.0/8 1 32
 
@@ -184,6 +182,11 @@ NOVA_CONF_EOF
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler"
     screen_it volume "$NOVA_DIR/bin/nova-volume"
     screen_it ajax_console_proxy "$NOVA_DIR/bin/nova-ajax-console-proxy"
+    sleep 2
+    # export environment variables for project 'admin' and user 'admin'
+    $NOVA_DIR/bin/nova-manage project zipfile admin admin $NOVA_DIR/nova.zip
+    unzip -o $NOVA_DIR/nova.zip -d $NOVA_DIR/
+
     screen_it test ". $NOVA_DIR/novarc"
     screen -S nova -x
 fi

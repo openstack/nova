@@ -36,17 +36,19 @@ Supports KVM, QEMU, UML, and XEN.
 
 """
 
+import multiprocessing
 import os
 import shutil
+import sys
 import random
 import subprocess
+import time
 import uuid
 from xml.dom import minidom
 
 
-from eventlet import greenthread
-from eventlet import event
 from eventlet import tpool
+from eventlet import semaphore
 
 import IPy
 
@@ -57,7 +59,6 @@ from nova import flags
 from nova import log as logging
 #from nova import test
 from nova import utils
-#from nova.api import context
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -71,6 +72,7 @@ Template = None
 LOG = logging.getLogger('nova.virt.libvirt_conn')
 
 FLAGS = flags.FLAGS
+flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 # TODO(vish): These flags should probably go into a shared location
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
@@ -101,6 +103,17 @@ flags.DEFINE_string('ajaxterm_portrange',
 flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt_conn.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
+flags.DEFINE_string('cpuinfo_xml_template',
+                    utils.abspath('virt/cpuinfo.xml.template'),
+                    'CpuInfo XML Template (Used only live migration now)')
+flags.DEFINE_string('live_migration_uri',
+                    "qemu+tcp://%s/system",
+                    'Define protocol used by live_migration feature')
+flags.DEFINE_string('live_migration_flag',
+                    "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER",
+                    'Define live migration behavior.')
+flags.DEFINE_integer('live_migration_bandwidth', 0,
+                    'Define live migration behavior')
 
 
 def get_connection(read_only):
@@ -147,6 +160,7 @@ class LibvirtConnection(object):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
 
@@ -348,19 +362,19 @@ class LibvirtConnection(object):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.APIError("pause not supported for libvirt.")
+        raise exception.ApiError("pause not supported for libvirt.")
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.APIError("unpause not supported for libvirt.")
+        raise exception.ApiError("unpause not supported for libvirt.")
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.APIError("suspend not supported for libvirt")
+        raise exception.ApiError("suspend not supported for libvirt")
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.APIError("resume not supported for libvirt")
+        raise exception.ApiError("resume not supported for libvirt")
 
     @exception.wrap_exception
     def rescue(self, instance, callback=None):
@@ -439,8 +453,10 @@ class LibvirtConnection(object):
 
         if virsh_output.startswith('/dev/'):
             LOG.info(_("cool, it's a device"))
-            out, err = utils.execute("sudo dd if=%s iflag=nonblock" %
-                                     virsh_output, check_exit_code=False)
+            out, err = utils.execute('sudo', 'dd',
+                                     "if=%s" % virsh_output,
+                                     'iflag=nonblock',
+                                     check_exit_code=False)
             return out
         else:
             return ''
@@ -462,11 +478,11 @@ class LibvirtConnection(object):
         console_log = os.path.join(FLAGS.instances_path, instance['name'],
                                    'console.log')
 
-        utils.execute('sudo chown %d %s' % (os.getuid(), console_log))
+        utils.execute('sudo', 'chown', os.getuid(), console_log)
 
         if FLAGS.libvirt_type == 'xen':
             # Xen is special
-            virsh_output = utils.execute("virsh ttyconsole %s" %
+            virsh_output = utils.execute('virsh', 'ttyconsole',
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
@@ -483,9 +499,10 @@ class LibvirtConnection(object):
                 port = random.randint(int(start_port), int(end_port))
                 # netcat will exit with 0 only if the port is in use,
                 # so a nonzero return value implies it is unused
-                cmd = 'netcat 0.0.0.0 %s -w 1 </dev/null || echo free' % (port)
-                stdout, stderr = utils.execute(cmd)
-                if stdout.strip() == 'free':
+                cmd = 'netcat', '0.0.0.0', port, '-w', '1'
+                try:
+                    stdout, stderr = utils.execute(*cmd, process_input='')
+                except exception.ProcessExecutionError:
                     return port
             raise Exception(_('Unable to find an open port'))
 
@@ -512,7 +529,10 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
-    def _cache_image(self, fn, target, fname, cow=False, *args, **kwargs):
+    _image_sems = {}
+
+    @staticmethod
+    def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.
 
         This wrapper will save the image into a common store and create a
@@ -531,14 +551,21 @@ class LibvirtConnection(object):
             if not os.path.exists(base_dir):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
-            if not os.path.exists(base):
-                fn(target=base, *args, **kwargs)
+
+            if fname not in LibvirtConnection._image_sems:
+                LibvirtConnection._image_sems[fname] = semaphore.Semaphore()
+            with LibvirtConnection._image_sems[fname]:
+                if not os.path.exists(base):
+                    fn(target=base, *args, **kwargs)
+            if not LibvirtConnection._image_sems[fname].locked():
+                del LibvirtConnection._image_sems[fname]
+
             if cow:
-                utils.execute('qemu-img create -f qcow2 -o '
-                              'cluster_size=2M,backing_file=%s %s'
-                              % (base, target))
+                utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
+                              'cluster_size=2M,backing_file=%s' % base,
+                              target)
             else:
-                utils.execute('cp %s %s' % (base, target))
+                utils.execute('cp', base, target)
 
     def _fetch_image(self, target, image_id, user, project, size=None):
         """Grab image and optionally attempt to resize it"""
@@ -548,7 +575,7 @@ class LibvirtConnection(object):
 
     def _create_local(self, target, local_gb):
         """Create a blank image of specified size"""
-        utils.execute('truncate %s -s %dG' % (target, local_gb))
+        utils.execute('truncate', target, '-s', "%dG" % local_gb)
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None):
@@ -559,7 +586,7 @@ class LibvirtConnection(object):
                                 fname + suffix)
 
         # ensure directories exist and are writable
-        utils.execute('mkdir -p %s' % basepath(suffix=''))
+        utils.execute('mkdir', '-p', basepath(suffix=''))
 
         LOG.info(_('instance %s: Creating image'), inst['name'])
         f = open(basepath('libvirt.xml'), 'w')
@@ -579,21 +606,23 @@ class LibvirtConnection(object):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
+            fname = '%08x' % int(disk_images['kernel_id'])
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
-                              fname=disk_images['kernel_id'],
+                              fname=fname,
                               image_id=disk_images['kernel_id'],
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
+                fname = '%08x' % int(disk_images['ramdisk_id'])
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
-                                  fname=disk_images['ramdisk_id'],
+                                  fname=fname,
                                   image_id=disk_images['ramdisk_id'],
                                   user=user,
                                   project=project)
 
-        root_fname = disk_images['image_id']
+        root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
         if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
             size = None
@@ -659,7 +688,7 @@ class LibvirtConnection(object):
                         ' data into image %(img_id)s (%(e)s)') % locals())
 
         if FLAGS.libvirt_type == 'uml':
-            utils.execute('sudo chown root %s' % basepath('disk'))
+            utils.execute('sudo', 'chown', 'root', basepath('disk'))
 
     def to_xml(self, instance, rescue=False):
         # TODO(termie): cache?
@@ -750,7 +779,7 @@ class LibvirtConnection(object):
                 'cpu_time': cpu_time}
 
     def get_diagnostics(self, instance_name):
-        raise exception.APIError(_("diagnostics are not supported "
+        raise exception.ApiError(_("diagnostics are not supported "
                                    "for libvirt"))
 
     def get_disks(self, instance_name):
@@ -837,6 +866,159 @@ class LibvirtConnection(object):
 
         return interfaces
 
+    def get_vcpu_total(self):
+        """Get vcpu number of physical computer.
+
+        :returns: the number of cpu core.
+
+        """
+
+        # On certain platforms, this will raise a NotImplementedError.
+        try:
+            return multiprocessing.cpu_count()
+        except NotImplementedError:
+            LOG.warn(_("Cannot get the number of cpu, because this "
+                       "function is not implemented for this platform. "
+                       "This error can be safely ignored for now."))
+            return 0
+
+    def get_memory_mb_total(self):
+        """Get the total memory size(MB) of physical computer.
+
+        :returns: the total amount of memory(MB).
+
+        """
+
+        if sys.platform.upper() != 'LINUX2':
+            return 0
+
+        meminfo = open('/proc/meminfo').read().split()
+        idx = meminfo.index('MemTotal:')
+        # transforming kb to mb.
+        return int(meminfo[idx + 1]) / 1024
+
+    def get_local_gb_total(self):
+        """Get the total hdd size(GB) of physical computer.
+
+        :returns:
+            The total amount of HDD(GB).
+            Note that this value shows a partition where
+            NOVA-INST-DIR/instances mounts.
+
+        """
+
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        return hddinfo.f_frsize * hddinfo.f_blocks / 1024 / 1024 / 1024
+
+    def get_vcpu_used(self):
+        """ Get vcpu usage number of physical computer.
+
+        :returns: The total number of vcpu that currently used.
+
+        """
+
+        total = 0
+        for dom_id in self._conn.listDomainsID():
+            dom = self._conn.lookupByID(dom_id)
+            total += len(dom.vcpus()[1])
+        return total
+
+    def get_memory_mb_used(self):
+        """Get the free memory size(MB) of physical computer.
+
+        :returns: the total usage of memory(MB).
+
+        """
+
+        if sys.platform.upper() != 'LINUX2':
+            return 0
+
+        m = open('/proc/meminfo').read().split()
+        idx1 = m.index('MemFree:')
+        idx2 = m.index('Buffers:')
+        idx3 = m.index('Cached:')
+        avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1])) / 1024
+        return  self.get_memory_mb_total() - avail
+
+    def get_local_gb_used(self):
+        """Get the free hdd size(GB) of physical computer.
+
+        :returns:
+           The total usage of HDD(GB).
+           Note that this value shows a partition where
+           NOVA-INST-DIR/instances mounts.
+
+        """
+
+        hddinfo = os.statvfs(FLAGS.instances_path)
+        avail = hddinfo.f_frsize * hddinfo.f_bavail / 1024 / 1024 / 1024
+        return self.get_local_gb_total() - avail
+
+    def get_hypervisor_type(self):
+        """Get hypervisor type.
+
+        :returns: hypervisor type (ex. qemu)
+
+        """
+
+        return self._conn.getType()
+
+    def get_hypervisor_version(self):
+        """Get hypervisor version.
+
+        :returns: hypervisor version (ex. 12003)
+
+        """
+
+        return self._conn.getVersion()
+
+    def get_cpu_info(self):
+        """Get cpuinfo information.
+
+        Obtains cpu feature from virConnect.getCapabilities,
+        and returns as a json string.
+
+        :return: see above description
+
+        """
+
+        xml = self._conn.getCapabilities()
+        xml = libxml2.parseDoc(xml)
+        nodes = xml.xpathEval('//host/cpu')
+        if len(nodes) != 1:
+            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
+                                      "but %d\n") % len(nodes)
+                                      + xml.serialize())
+
+        cpu_info = dict()
+        cpu_info['arch'] = xml.xpathEval('//host/cpu/arch')[0].getContent()
+        cpu_info['model'] = xml.xpathEval('//host/cpu/model')[0].getContent()
+        cpu_info['vendor'] = xml.xpathEval('//host/cpu/vendor')[0].getContent()
+
+        topology_node = xml.xpathEval('//host/cpu/topology')[0]\
+                        .get_properties()
+        topology = dict()
+        while topology_node != None:
+            name = topology_node.get_name()
+            topology[name] = topology_node.getContent()
+            topology_node = topology_node.get_next()
+
+        keys = ['cores', 'sockets', 'threads']
+        tkeys = topology.keys()
+        if list(set(tkeys)) != list(set(keys)):
+            ks = ', '.join(keys)
+            raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
+                                      "must have %(ks)s") % locals())
+
+        feature_nodes = xml.xpathEval('//host/cpu/feature')
+        features = list()
+        for nodes in feature_nodes:
+            features.append(nodes.get_properties().getContent())
+
+        cpu_info['topology'] = topology
+        cpu_info['features'] = features
+        return utils.dumps(cpu_info)
+
     def block_stats(self, instance_name, disk):
         """
         Note that this function takes an instance name, not an Instance, so
@@ -866,6 +1048,207 @@ class LibvirtConnection(object):
 
     def refresh_security_group_members(self, security_group_id):
         self.firewall_driver.refresh_security_group_members(security_group_id)
+
+    def update_available_resource(self, ctxt, host):
+        """Updates compute manager resource info on ComputeNode table.
+
+        This method is called when nova-coompute launches, and
+        whenever admin executes "nova-manage service update_resource".
+
+        :param ctxt: security context
+        :param host: hostname that compute manager is currently running
+
+        """
+
+        try:
+            service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
+        except exception.NotFound:
+            raise exception.Invalid(_("Cannot update compute manager "
+                                      "specific info, because no service "
+                                      "record was found."))
+
+        # Updating host information
+        dic = {'vcpus': self.get_vcpu_total(),
+               'memory_mb': self.get_memory_mb_total(),
+               'local_gb': self.get_local_gb_total(),
+               'vcpus_used': self.get_vcpu_used(),
+               'memory_mb_used': self.get_memory_mb_used(),
+               'local_gb_used': self.get_local_gb_used(),
+               'hypervisor_type': self.get_hypervisor_type(),
+               'hypervisor_version': self.get_hypervisor_version(),
+               'cpu_info': self.get_cpu_info()}
+
+        compute_node_ref = service_ref['compute_node']
+        if not compute_node_ref:
+            LOG.info(_('Compute_service record created for %s ') % host)
+            dic['service_id'] = service_ref['id']
+            db.compute_node_create(ctxt, dic)
+        else:
+            LOG.info(_('Compute_service record updated for %s ') % host)
+            db.compute_node_update(ctxt, compute_node_ref[0]['id'], dic)
+
+    def compare_cpu(self, cpu_info):
+        """Checks the host cpu is compatible to a cpu given by xml.
+
+        "xml" must be a part of libvirt.openReadonly().getCapabilities().
+        return values follows by virCPUCompareResult.
+        if 0 > return value, do live migration.
+        'http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult'
+
+        :param cpu_info: json string that shows cpu feature(see get_cpu_info())
+        :returns:
+            None. if given cpu info is not compatible to this server,
+            raise exception.
+
+        """
+
+        LOG.info(_('Instance launched has CPU info:\n%s') % cpu_info)
+        dic = utils.loads(cpu_info)
+        xml = str(Template(self.cpuinfo_xml, searchList=dic))
+        LOG.info(_('to xml...\n:%s ' % xml))
+
+        u = "http://libvirt.org/html/libvirt-libvirt.html#virCPUCompareResult"
+        m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
+        # unknown character exists in xml, then libvirt complains
+        try:
+            ret = self._conn.compareCPU(xml, 0)
+        except libvirt.libvirtError, e:
+            ret = e.message
+            LOG.error(m % locals())
+            raise
+
+        if ret <= 0:
+            raise exception.Invalid(m % locals())
+
+        return
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """Setting up filtering rules and waiting for its completion.
+
+        To migrate an instance, filtering rules to hypervisors
+        and firewalls are inevitable on destination host.
+        ( Waiting only for filterling rules to hypervisor,
+        since filtering rules to firewall rules can be set faster).
+
+        Concretely, the below method must be called.
+        - setup_basic_filtering (for nova-basic, etc.)
+        - prepare_instance_filter(for nova-instance-instance-xxx, etc.)
+
+        to_xml may have to be called since it defines PROJNET, PROJMASK.
+        but libvirt migrates those value through migrateToURI(),
+        so , no need to be called.
+
+        Don't use thread for this method since migration should
+        not be started when setting-up filtering rules operations
+        are not completed.
+
+        :params instance_ref: nova.db.sqlalchemy.models.Instance object
+
+        """
+
+        # If any instances never launch at destination host,
+        # basic-filtering must be set here.
+        self.firewall_driver.setup_basic_filtering(instance_ref)
+        # setting up n)ova-instance-instance-xx mainly.
+        self.firewall_driver.prepare_instance_filter(instance_ref)
+
+        # wait for completion
+        timeout_count = range(FLAGS.live_migration_retry_count)
+        while timeout_count:
+            try:
+                filter_name = 'nova-instance-%s' % instance_ref.name
+                self._conn.nwfilterLookupByName(filter_name)
+                break
+            except libvirt.libvirtError:
+                timeout_count.pop()
+                if len(timeout_count) == 0:
+                    ec2_id = instance_ref['hostname']
+                    iname = instance_ref.name
+                    msg = _('Timeout migrating for %(ec2_id)s(%(iname)s)')
+                    raise exception.Error(msg % locals())
+                time.sleep(1)
+
+    def live_migration(self, ctxt, instance_ref, dest,
+                       post_method, recover_method):
+        """Spawning live_migration operation for distributing high-load.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+
+        """
+
+        greenthread.spawn(self._live_migration, ctxt, instance_ref, dest,
+                          post_method, recover_method)
+
+    def _live_migration(self, ctxt, instance_ref, dest,
+                        post_method, recover_method):
+        """Do live migration.
+
+        :params ctxt: security context
+        :params instance_ref:
+            nova.db.sqlalchemy.models.Instance object
+            instance object that is migrated.
+        :params dest: destination host
+        :params post_method:
+            post operation method.
+            expected nova.compute.manager.post_live_migration.
+        :params recover_method:
+            recovery method when any exception occurs.
+            expected nova.compute.manager.recover_live_migration.
+
+        """
+
+        # Do live migration.
+        try:
+            flaglist = FLAGS.live_migration_flag.split(',')
+            flagvals = [getattr(libvirt, x.strip()) for x in flaglist]
+            logical_sum = reduce(lambda x, y: x | y, flagvals)
+
+            if self.read_only:
+                tmpconn = self._connect(self.libvirt_uri, False)
+                dom = tmpconn.lookupByName(instance_ref.name)
+                dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 FLAGS.live_migration_bandwidth)
+                tmpconn.close()
+            else:
+                dom = self._conn.lookupByName(instance_ref.name)
+                dom.migrateToURI(FLAGS.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 FLAGS.live_migration_bandwidth)
+
+        except Exception:
+            recover_method(ctxt, instance_ref)
+            raise
+
+        # Waiting for completion of live_migration.
+        timer = utils.LoopingCall(f=None)
+
+        def wait_for_live_migration():
+            """waiting for live migration completion"""
+            try:
+                self.get_info(instance_ref.name)['state']
+            except exception.NotFound:
+                timer.stop()
+                post_method(ctxt, instance_ref, dest)
+
+        timer.f = wait_for_live_migration
+        timer.start(interval=0.5, now=True)
+
+    def unfilter_instance(self, instance_ref):
+        """See comments of same method in firewall_driver."""
+        self.firewall_driver.unfilter_instance(instance_ref)
 
 
 class FirewallDriver(object):
@@ -1208,9 +1591,15 @@ class NWFilterFirewall(FirewallDriver):
 
 class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, execute=None, **kwargs):
-        self.execute = execute or utils.execute
+        from nova.network import linux_net
+        self.iptables = linux_net.iptables_manager
         self.instances = {}
         self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
+
+        self.iptables.ipv4['filter'].add_chain('sg-fallback')
+        self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
+        self.iptables.ipv6['filter'].add_chain('sg-fallback')
+        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""
@@ -1220,126 +1609,96 @@ class IptablesFirewallDriver(FirewallDriver):
         """No-op. Everything is done in prepare_instance_filter"""
         pass
 
-    def remove_instance(self, instance):
-        if instance['id'] in self.instances:
-            del self.instances[instance['id']]
+    def unfilter_instance(self, instance):
+        if self.instances.pop(instance['id'], None):
+            self.remove_filters_for_instance(instance)
+            self.iptables.apply()
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
-                       'filtered'), instance['id'])
-
-    def add_instance(self, instance):
-        self.instances[instance['id']] = instance
-
-    def unfilter_instance(self, instance):
-        self.remove_instance(instance)
-        self.apply_ruleset()
+                     'filtered'), instance['id'])
 
     def prepare_instance_filter(self, instance):
-        self.add_instance(instance)
-        self.apply_ruleset()
+        self.instances[instance['id']] = instance
+        self.add_filters_for_instance(instance)
+        self.iptables.apply()
 
-    def apply_ruleset(self):
-        current_filter, _ = self.execute('sudo iptables-save -t filter')
-        current_lines = current_filter.split('\n')
-        new_filter = self.modify_rules(current_lines, 4)
-        self.execute('sudo iptables-restore',
-                     process_input='\n'.join(new_filter))
-        if(FLAGS.use_ipv6):
-            current_filter, _ = self.execute('sudo ip6tables-save -t filter')
-            current_lines = current_filter.split('\n')
-            new_filter = self.modify_rules(current_lines, 6)
-            self.execute('sudo ip6tables-restore',
-                         process_input='\n'.join(new_filter))
+    def add_filters_for_instance(self, instance):
+        chain_name = self._instance_chain_name(instance)
 
-    def modify_rules(self, current_lines, ip_version=4):
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_address = self._ip_for_instance(instance)
+        self.iptables.ipv4['filter'].add_rule('local',
+                                              '-d %s -j $%s' %
+                                              (ipv4_address, chain_name))
+
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+            ipv6_address = self._ip_for_instance_v6(instance)
+            self.iptables.ipv6['filter'].add_rule('local',
+                                                  '-d %s -j $%s' %
+                                                  (ipv6_address,
+                                                   chain_name))
+
+        ipv4_rules, ipv6_rules = self.instance_rules(instance)
+
+        for rule in ipv4_rules:
+            self.iptables.ipv4['filter'].add_rule(chain_name, rule)
+
+        if FLAGS.use_ipv6:
+            for rule in ipv6_rules:
+                self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def remove_filters_for_instance(self, instance):
+        chain_name = self._instance_chain_name(instance)
+
+        self.iptables.ipv4['filter'].remove_chain(chain_name)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].remove_chain(chain_name)
+
+    def instance_rules(self, instance):
         ctxt = context.get_admin_context()
-        # Remove any trace of nova rules.
-        new_filter = filter(lambda l: 'nova-' not in l, current_lines)
 
-        seen_chains = False
-        for rules_index in range(len(new_filter)):
-            if not seen_chains:
-                if new_filter[rules_index].startswith(':'):
-                    seen_chains = True
-            elif seen_chains == 1:
-                if not new_filter[rules_index].startswith(':'):
-                    break
+        ipv4_rules = []
+        ipv6_rules = []
 
-        our_chains = [':nova-fallback - [0:0]']
-        our_rules = ['-A nova-fallback -j DROP']
+        # Always drop invalid packets
+        ipv4_rules += ['-m state --state ' 'INVALID -j DROP']
+        ipv6_rules += ['-m state --state ' 'INVALID -j DROP']
 
-        our_chains += [':nova-local - [0:0]']
-        our_rules += ['-A FORWARD -j nova-local']
-        our_rules += ['-A OUTPUT -j nova-local']
+        # Allow established connections
+        ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
+        ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
 
-        security_groups = {}
-        # Add our chains
-        # First, we add instance chains and rules
-        for instance_id in self.instances:
-            instance = self.instances[instance_id]
-            chain_name = self._instance_chain_name(instance)
-            if(ip_version == 4):
-                ip_address = self._ip_for_instance(instance)
-            elif(ip_version == 6):
-                ip_address = self._ip_for_instance_v6(instance)
+        dhcp_server = self._dhcp_server_for_instance(instance)
+        ipv4_rules += ['-s %s -p udp --sport 67 --dport 68 '
+                       '-j ACCEPT' % (dhcp_server,)]
 
-            our_chains += [':%s - [0:0]' % chain_name]
+        #Allow project network traffic
+        if FLAGS.allow_project_net_traffic:
+            cidr = self._project_cidr_for_instance(instance)
+            ipv4_rules += ['-s %s -j ACCEPT' % (cidr,)]
 
-            # Jump to the per-instance chain
-            our_rules += ['-A nova-local -d %s -j %s' % (ip_address,
-                                                         chain_name)]
+        # We wrap these in FLAGS.use_ipv6 because they might cause
+        # a DB lookup. The other ones are just list operations, so
+        # they're not worth the clutter.
+        if FLAGS.use_ipv6:
+            # Allow RA responses
+            ra_server = self._ra_server_for_instance(instance)
+            if ra_server:
+                ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (ra_server,)]
 
-            # Always drop invalid packets
-            our_rules += ['-A %s -m state --state '
-                          'INVALID -j DROP' % (chain_name,)]
+            #Allow project network traffic
+            if FLAGS.allow_project_net_traffic:
+                cidrv6 = self._project_cidrv6_for_instance(instance)
+                ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
 
-            # Allow established connections
-            our_rules += ['-A %s -m state --state '
-                          'ESTABLISHED,RELATED -j ACCEPT' % (chain_name,)]
-
-            # Jump to each security group chain in turn
-            for security_group in \
-                            db.security_group_get_by_instance(ctxt,
-                                                              instance['id']):
-                security_groups[security_group['id']] = security_group
-
-                sg_chain_name = self._security_group_chain_name(
-                                                          security_group['id'])
-
-                our_rules += ['-A %s -j %s' % (chain_name, sg_chain_name)]
-
-            if(ip_version == 4):
-                # Allow DHCP responses
-                dhcp_server = self._dhcp_server_for_instance(instance)
-                our_rules += ['-A %s -s %s -p udp --sport 67 --dport 68 '
-                                    '-j ACCEPT ' % (chain_name, dhcp_server)]
-                #Allow project network traffic
-                if (FLAGS.allow_project_net_traffic):
-                    cidr = self._project_cidr_for_instance(instance)
-                    our_rules += ['-A %s -s %s -j ACCEPT' % (chain_name, cidr)]
-            elif(ip_version == 6):
-                # Allow RA responses
-                ra_server = self._ra_server_for_instance(instance)
-                if ra_server:
-                    our_rules += ['-A %s -s %s -p icmpv6 -j ACCEPT' %
-                                  (chain_name, ra_server + "/128")]
-                #Allow project network traffic
-                if (FLAGS.allow_project_net_traffic):
-                    cidrv6 = self._project_cidrv6_for_instance(instance)
-                    our_rules += ['-A %s -s %s -j ACCEPT' %
-                                        (chain_name, cidrv6)]
-
-            # If nothing matches, jump to the fallback chain
-            our_rules += ['-A %s -j nova-fallback' % (chain_name,)]
+        security_groups = db.security_group_get_by_instance(ctxt,
+                                                            instance['id'])
 
         # then, security group chains and rules
-        for security_group_id in security_groups:
-            chain_name = self._security_group_chain_name(security_group_id)
-            our_chains += [':%s - [0:0]' % chain_name]
-
-            rules = \
-              db.security_group_rule_get_by_security_group(ctxt,
-                                                          security_group_id)
+        for security_group in security_groups:
+            rules = db.security_group_rule_get_by_security_group(ctxt,
+                                                          security_group['id'])
 
             for rule in rules:
                 logging.info('%r', rule)
@@ -1350,14 +1709,16 @@ class IptablesFirewallDriver(FirewallDriver):
                     continue
 
                 version = _get_ip_version(rule.cidr)
-                if version != ip_version:
-                    continue
+                if version == 4:
+                    rules = ipv4_rules
+                else:
+                    rules = ipv6_rules
 
                 protocol = rule.protocol
                 if version == 6 and rule.protocol == 'icmp':
                     protocol = 'icmpv6'
 
-                args = ['-A', chain_name, '-p', protocol, '-s', rule.cidr]
+                args = ['-p', protocol, '-s', rule.cidr]
 
                 if rule.protocol in ['udp', 'tcp']:
                     if rule.from_port == rule.to_port:
@@ -1378,32 +1739,39 @@ class IptablesFirewallDriver(FirewallDriver):
                             icmp_type_arg += '/%s' % icmp_code
 
                     if icmp_type_arg:
-                        if(ip_version == 4):
+                        if version == 4:
                             args += ['-m', 'icmp', '--icmp-type',
                                      icmp_type_arg]
-                        elif(ip_version == 6):
+                        elif version == 6:
                             args += ['-m', 'icmp6', '--icmpv6-type',
                                      icmp_type_arg]
 
                 args += ['-j ACCEPT']
-                our_rules += [' '.join(args)]
+                rules += [' '.join(args)]
 
-        new_filter[rules_index:rules_index] = our_rules
-        new_filter[rules_index:rules_index] = our_chains
-        logging.info('new_filter: %s', '\n'.join(new_filter))
-        return new_filter
+        ipv4_rules += ['-j $sg-fallback']
+        ipv6_rules += ['-j $sg-fallback']
+
+        return ipv4_rules, ipv6_rules
 
     def refresh_security_group_members(self, security_group):
         pass
 
     def refresh_security_group_rules(self, security_group):
-        self.apply_ruleset()
+        # We use the semaphore to make sure noone applies the rule set
+        # after we've yanked the existing rules but before we've put in
+        # the new ones.
+        with self.iptables.semaphore:
+            for instance in self.instances.values():
+                self.remove_filters_for_instance(instance)
+                self.add_filters_for_instance(instance)
+        self.iptables.apply()
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)
 
     def _instance_chain_name(self, instance):
-        return 'nova-inst-%s' % (instance['id'],)
+        return 'inst-%s' % (instance['id'],)
 
     def _ip_for_instance(self, instance):
         return db.instance_get_fixed_address(context.get_admin_context(),

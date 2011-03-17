@@ -80,13 +80,32 @@ class API(base.Base):
                         topic,
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
+    def _check_injected_file_quota(self, context, injected_files):
+        """
+        Enforce quota limits on injected files
+
+        Raises a QuotaError if any limit is exceeded
+        """
+        if injected_files is None:
+            return
+        limit = quota.allowed_injected_files(context)
+        if len(injected_files) > limit:
+            raise quota.QuotaError(code="OnsetFileLimitExceeded")
+        path_limit = quota.allowed_injected_file_path_bytes(context)
+        content_limit = quota.allowed_injected_file_content_bytes(context)
+        for path, content in injected_files:
+            if len(path) > path_limit:
+                raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            if len(content) > content_limit:
+                raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
+
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=[],
-               onset_files=None):
+               injected_files=None):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
@@ -124,11 +143,18 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
+        self._check_injected_file_quota(context, injected_files)
+
         image = self.image_service.show(context, image_id)
+
+        os_type = None
+        if 'properties' in image and 'os_type' in image['properties']:
+            os_type = image['properties']['os_type']
+
         if kernel_id is None:
-            kernel_id = image.get('kernel_id', None)
+            kernel_id = image['properties'].get('kernel_id', None)
         if ramdisk_id is None:
-            ramdisk_id = image.get('ramdisk_id', None)
+            ramdisk_id = image['properties'].get('ramdisk_id', None)
         # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
@@ -165,6 +191,7 @@ class API(base.Base):
             'image_id': image_id,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'state': 0,
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
@@ -180,7 +207,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
-            'availability_zone': availability_zone}
+            'availability_zone': availability_zone,
+            'os_type': os_type}
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -218,7 +246,7 @@ class API(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
                                "availability_zone": availability_zone,
-                               "onset_files": onset_files}})
+                               "injected_files": injected_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -498,9 +526,10 @@ class API(base.Base):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def set_admin_password(self, context, instance_id):
+    def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message('set_admin_password', context, instance_id)
+        self._cast_compute_message('set_admin_password', context, instance_id,
+                                    password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""

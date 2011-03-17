@@ -79,20 +79,14 @@ class LimiterTest(test.TestCase):
         Test offset key works with a blank offset.
         """
         req = Request.blank('/?offset=')
-        self.assertEqual(limited(self.tiny, req), self.tiny)
-        self.assertEqual(limited(self.small, req), self.small)
-        self.assertEqual(limited(self.medium, req), self.medium)
-        self.assertEqual(limited(self.large, req), self.large[:1000])
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
 
     def test_limiter_offset_bad(self):
         """
         Test offset key works with a BAD offset.
         """
         req = Request.blank(u'/?offset=\u0020aa')
-        self.assertEqual(limited(self.tiny, req), self.tiny)
-        self.assertEqual(limited(self.small, req), self.small)
-        self.assertEqual(limited(self.medium, req), self.medium)
-        self.assertEqual(limited(self.large, req), self.large[:1000])
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
 
     def test_limiter_nothing(self):
         """
@@ -166,18 +160,12 @@ class LimiterTest(test.TestCase):
         """
         Test a negative limit.
         """
-        def _limit_large():
-            limited(self.large, req, max_limit=2000)
-
         req = Request.blank('/?limit=-3000')
-        self.assertRaises(webob.exc.HTTPBadRequest, _limit_large)
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
 
     def test_limiter_negative_offset(self):
         """
         Test a negative offset.
         """
-        def _limit_large():
-            limited(self.large, req, max_limit=2000)
-
         req = Request.blank('/?offset=-30')
-        self.assertRaises(webob.exc.HTTPBadRequest, _limit_large)
+        self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
