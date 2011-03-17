@@ -548,6 +548,7 @@ class ServersTest(test.TestCase):
 
     def test_resized_server_has_correct_status(self):
         req = self.webreq('/1', 'GET', dict(resize=dict(flavorId=3)))
+
         def fake_migration_get(*args):
             return {}
 
@@ -556,7 +557,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         body = json.loads(res.body)
         self.assertEqual(body['server']['status'], 'resize-confirm')
-        
 
     def test_confirm_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
