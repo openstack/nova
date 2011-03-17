@@ -993,20 +993,20 @@ class LibvirtConnection(object):
         cpu_info = dict()
 
         arch_nodes = xml.xpathEval('//cpu/arch')
-        if len(arch_nodes):
+        if arch_nodes:
             cpu_info['arch'] = arch_nodes[0].getContent()
 
         model_nodes = xml.xpathEval('//cpu/model')
-        if len(model_nodes):
+        if model_nodes:
             cpu_info['model'] = model_nodes[0].getContent()
 
         vendor_nodes = xml.xpathEval('//cpu/vendor')
-        if len(vendor_nodes):
+        if vendor_nodes:
             cpu_info['vendor'] = vendor_nodes[0].getContent()
 
         topology_nodes = xml.xpathEval('//cpu/topology')
         topology = dict()
-        if len(topology_nodes):
+        if topology_nodes:
             topology_node = topology_nodes[0].get_properties()
             while topology_node != None:
                 name = topology_node.get_name()
