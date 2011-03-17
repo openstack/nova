@@ -50,10 +50,6 @@ class API(object):
     """API for interacting with the scheduler."""
 
     @classmethod
-    def _is_current_zone(cls, zone):
-        return True
-
-    @classmethod
     def get_zone_list(cls, context):
         """Return a list of zones assoicated with this zone."""
         items = _call_scheduler('get_zone_list', context)
