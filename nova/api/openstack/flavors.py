@@ -36,7 +36,7 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """Return all flavors in brief."""
-        return dict(flavors=[dict(id=flavor['id'], name=flavor['name'])
+        return dict(flavors=[dict(id=flavor['flavorid'], name=flavor['name'])
                              for flavor in self.detail(req)['flavors']])
 
     def detail(self, req):
@@ -48,6 +48,7 @@ class Controller(wsgi.Controller):
         """Return data about the given flavor id."""
         ctxt = req.environ['nova.context']
         values = db.instance_type_get_by_flavor_id(ctxt, id)
+        values['id'] = values['flavorid']
         return dict(flavor=values)
         raise faults.Fault(exc.HTTPNotFound())
 
