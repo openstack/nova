@@ -154,6 +154,45 @@ def _get_ip_version(cidr):
         return int(net.version())
 
 
+def _get_network_info(instance):
+    admin_context = context.get_admin_context()
+
+    ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
+                                                   instance['id'])
+
+    networks = db.network_get_all_by_instance(admin_context,
+                                              instance['id'])
+    network_info = []
+
+    def ip_dict(ip):
+        return {
+            "ip": ip.address,
+            "netmask": network["netmask"],
+            "enabled": "1"}
+
+    def ip6_dict(ip6):
+        return  {
+            "ip": ip6.addressV6,
+            "netmask": ip6.netmaskV6,
+            "gateway": ip6.gatewayV6,
+            "enabled": "1"}
+
+    for network in networks:
+        network_ips = [ip for ip in ip_addresses
+                       if ip.network_id == network.id]
+
+        mapping = {
+            'label': network['label'],
+            'gateway': network['gateway'],
+            'mac': instance.mac_address,
+            'dns': [network['dns']],
+            'ips': [ip_dict(ip) for ip in network_ips],
+            'ip6s': [ip6_dict(ip) for ip in network_ips]}
+
+    network_info.append((network, mapping))
+    return network_info
+
+
 class LibvirtConnection(object):
 
     def __init__(self, read_only):
@@ -742,43 +781,10 @@ class LibvirtConnection(object):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
 
-        ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
-                                                       instance['id'])
-
-        networks = db.network_get_all_by_instance(admin_context,
-                                                  instance['id'])
-
         #TODO(ilyaalekseyev) remove network_info creation code
         # when multinics will be completed
         if network_info is None:
-            network_info = []
-
-            def ip_dict(ip):
-                return {
-                    "ip": ip.address,
-                    "netmask": network["netmask"],
-                    "enabled": "1"}
-
-            def ip6_dict(ip6):
-                return  {
-                    "ip": ip6.addressV6,
-                    "netmask": ip6.netmaskV6,
-                    "gateway": ip6.gatewayV6,
-                    "enabled": "1"}
-
-            for network in networks:
-                network_ips = [ip for ip in ip_addresses
-                               if ip.network_id == network.id]
-
-                mapping = {
-                    'label': network['label'],
-                    'gateway': network['gateway'],
-                    'mac': instance.mac_address,
-                    'dns': [network['dns']],
-                    'ips': [ip_dict(ip) for ip in network_ips],
-                    'ip6s': [ip6_dict(ip) for ip in network_ips]}
-
-                network_info.append((network, mapping))
+            network_info = _get_network_info(instance)
 
         nics = []
         for (network, mapping) in network_info:
