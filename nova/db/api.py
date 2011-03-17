@@ -104,6 +104,11 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
+def service_get_all_compute_by_host(context, host):
+    """Get all compute services for a given host."""
+    return IMPL.service_get_all_compute_by_host(context, host)
+
+
 def service_get_all_compute_sorted(context):
     """Get all compute services sorted by instance count.
 
@@ -148,6 +153,29 @@ def service_update(context, service_id, values):
 
     """
     return IMPL.service_update(context, service_id, values)
+
+
+###################
+
+
+def compute_node_get(context, compute_id, session=None):
+    """Get an computeNode or raise if it does not exist."""
+    return IMPL.compute_node_get(context, compute_id)
+
+
+def compute_node_create(context, values):
+    """Create a computeNode from the values dictionary."""
+    return IMPL.compute_node_create(context, values)
+
+
+def compute_node_update(context, compute_id, values):
+    """Set the given properties on an computeNode and update it.
+
+    Raises NotFound if computeNode does not exist.
+
+    """
+
+    return IMPL.compute_node_update(context, compute_id, values)
 
 
 ###################
@@ -257,6 +285,11 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
+def floating_ip_update(context, address, values):
+    """Update a floating ip by address or raise if it doesn't exist."""
+    return IMPL.floating_ip_update(context, address, values)
+
+
 ####################
 
 def migration_update(context, id, values):
@@ -318,6 +351,11 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
 def fixed_ip_get_all(context):
     """Get all defined fixed ips."""
     return IMPL.fixed_ip_get_all(context)
+
+
+def fixed_ip_get_all_by_host(context, host):
+    """Get all defined fixed ips used by a host."""
+    return IMPL.fixed_ip_get_all_by_host(context, host)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -439,6 +477,27 @@ def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance."""
     return IMPL.instance_add_security_group(context, instance_id,
                                             security_group_id)
+
+
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    """Get instances.vcpus by host and project."""
+    return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
+
+
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    """Get amount of memory by host and project."""
+    return IMPL.instance_get_memory_sum_by_host_and_project(context,
+                                                            hostname,
+                                                            proj_id)
+
+
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    """Get total amount of disk by host and project."""
+    return IMPL.instance_get_disk_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
 
 
 def instance_action_create(context, values):
@@ -763,6 +822,11 @@ def volume_get_all(context):
 def volume_get_all_by_host(context, host):
     """Get all volumes belonging to a host."""
     return IMPL.volume_get_all_by_host(context, host)
+
+
+def volume_get_all_by_instance(context, instance_id):
+    """Get all volumes belonging to a instance."""
+    return IMPL.volume_get_all_by_instance(context, instance_id)
 
 
 def volume_get_all_by_project(context, project_id):

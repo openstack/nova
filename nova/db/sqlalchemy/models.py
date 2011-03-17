@@ -113,6 +113,41 @@ class Service(BASE, NovaBase):
     availability_zone = Column(String(255), default='nova')
 
 
+class ComputeNode(BASE, NovaBase):
+    """Represents a running compute service on a host."""
+
+    __tablename__ = 'compute_nodes'
+    id = Column(Integer, primary_key=True)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=True)
+    service = relationship(Service,
+                           backref=backref('compute_node'),
+                           foreign_keys=service_id,
+                           primaryjoin='and_('
+                                'ComputeNode.service_id == Service.id,'
+                                'ComputeNode.deleted == False)')
+
+    vcpus = Column(Integer, nullable=True)
+    memory_mb = Column(Integer, nullable=True)
+    local_gb = Column(Integer, nullable=True)
+    vcpus_used = Column(Integer, nullable=True)
+    memory_mb_used = Column(Integer, nullable=True)
+    local_gb_used = Column(Integer, nullable=True)
+    hypervisor_type = Column(Text, nullable=True)
+    hypervisor_version = Column(Integer, nullable=True)
+
+    # Note(masumotok): Expected Strings example:
+    #
+    # '{"arch":"x86_64",
+    #   "model":"Nehalem",
+    #   "topology":{"sockets":1, "threads":2, "cores":3},
+    #   "features":["tdtscp", "xtpr"]}'
+    #
+    # Points are "json translatable" and it must have all dictionary keys
+    # above, since it is copied from <cpu> tag of getCapabilities()
+    # (See libvirt.virtConnection).
+    cpu_info = Column(Text, nullable=True)
+
+
 class Certificate(BASE, NovaBase):
     """Represents a an x509 certificate"""
     __tablename__ = 'certificates'
@@ -126,7 +161,7 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
-    onset_files = []
+    injected_files = []
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -191,6 +226,9 @@ class Instance(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    # To remember on which host a instance booted.
+    # An instance may have moved to another host by live migraiton.
+    launched_on = Column(Text)
     locked = Column(Boolean)
 
     os_type = Column(String(255))

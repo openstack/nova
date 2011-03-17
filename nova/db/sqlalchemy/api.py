@@ -119,6 +119,11 @@ def service_destroy(context, service_id):
         service_ref = service_get(context, service_id, session=session)
         service_ref.delete(session=session)
 
+        if service_ref.topic == 'compute' and \
+            len(service_ref.compute_node) != 0:
+            for c in service_ref.compute_node:
+                c.delete(session=session)
+
 
 @require_admin_context
 def service_get(context, service_id, session=None):
@@ -126,6 +131,7 @@ def service_get(context, service_id, session=None):
         session = get_session()
 
     result = session.query(models.Service).\
+                     options(joinedload('compute_node')).\
                      filter_by(id=service_id).\
                      filter_by(deleted=can_read_deleted(context)).\
                      first()
@@ -173,6 +179,24 @@ def service_get_all_by_host(context, host):
                    filter_by(deleted=False).\
                    filter_by(host=host).\
                    all()
+
+
+@require_admin_context
+def service_get_all_compute_by_host(context, host):
+    topic = 'compute'
+    session = get_session()
+    result = session.query(models.Service).\
+                  options(joinedload('compute_node')).\
+                  filter_by(deleted=False).\
+                  filter_by(host=host).\
+                  filter_by(topic=topic).\
+                  all()
+
+    if not result:
+        raise exception.NotFound(_("%s does not exist or is not "
+                                   "a compute node.") % host)
+
+    return result
 
 
 @require_admin_context
@@ -280,6 +304,42 @@ def service_update(context, service_id, values):
         service_ref = service_get(context, service_id, session=session)
         service_ref.update(values)
         service_ref.save(session=session)
+
+
+###################
+
+
+@require_admin_context
+def compute_node_get(context, compute_id, session=None):
+    if not session:
+        session = get_session()
+
+    result = session.query(models.ComputeNode).\
+                     filter_by(id=compute_id).\
+                     filter_by(deleted=can_read_deleted(context)).\
+                     first()
+
+    if not result:
+        raise exception.NotFound(_('No computeNode for id %s') % compute_id)
+
+    return result
+
+
+@require_admin_context
+def compute_node_create(context, values):
+    compute_node_ref = models.ComputeNode()
+    compute_node_ref.update(values)
+    compute_node_ref.save()
+    return compute_node_ref
+
+
+@require_admin_context
+def compute_node_update(context, compute_id, values):
+    session = get_session()
+    with session.begin():
+        compute_ref = compute_node_get(context, compute_id, session=session)
+        compute_ref.update(values)
+        compute_ref.save(session=session)
 
 
 ###################
@@ -506,6 +566,16 @@ def floating_ip_get_by_address(context, address, session=None):
     return result
 
 
+@require_context
+def floating_ip_update(context, address, values):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = floating_ip_get_by_address(context, address, session)
+        for (key, value) in values.iteritems():
+            floating_ip_ref[key] = value
+        floating_ip_ref.save(session=session)
+
+
 ###################
 
 
@@ -602,6 +672,22 @@ def fixed_ip_get_all(context, session=None):
     return result
 
 
+@require_admin_context
+def fixed_ip_get_all_by_host(context, host=None):
+    session = get_session()
+
+    result = session.query(models.FixedIp).\
+                    join(models.FixedIp.instance).\
+                    filter_by(state=1).\
+                    filter_by(host=host).\
+                    all()
+
+    if not result:
+        raise exception.NotFound(_('No fixed ips for this host defined'))
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:
@@ -676,6 +762,15 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
+    metadata = values.get('metadata')
+    metadata_refs = []
+    if metadata:
+        for metadata_item in metadata:
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref.update(metadata_item)
+            metadata_refs.append(metadata_ref)
+    values['metadata'] = metadata_refs
+
     instance_ref = models.Instance()
     instance_ref.update(values)
 
@@ -904,6 +999,45 @@ def instance_add_security_group(context, instance_id, security_group_id):
                                                 session=session)
         instance_ref.security_groups += [security_group_ref]
         instance_ref.save(session=session)
+
+
+@require_context
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.vcpus))
+    if not result:
+        return 0
+    return result
+
+
+@require_context
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.memory_mb))
+    if not result:
+        return 0
+    return result
+
+
+@require_context
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    session = get_session()
+    result = session.query(models.Instance).\
+                      filter_by(host=hostname).\
+                      filter_by(project_id=proj_id).\
+                      filter_by(deleted=False).\
+                      value(func.sum(models.Instance.local_gb))
+    if not result:
+        return 0
+    return result
 
 
 @require_context
@@ -1528,6 +1662,18 @@ def volume_get_all_by_host(context, host):
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+@require_admin_context
+def volume_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.Volume).\
+                     filter_by(instance_id=instance_id).\
+                     filter_by(deleted=False).\
+                     all()
+    if not result:
+        raise exception.NotFound(_('No volume for instance %s') % instance_id)
+    return result
 
 
 @require_context

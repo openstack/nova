@@ -136,8 +136,7 @@ class VMHelper(HelperBase):
             'VCPUs_at_startup': vcpus,
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
-            'xenstore_data': {}
-            }
+            'xenstore_data': {}}
 
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode
@@ -234,7 +233,8 @@ class VMHelper(HelperBase):
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
-    def create_vif(cls, session, vm_ref, network_ref, mac_address, dev):
+    def create_vif(cls, session, vm_ref, network_ref, mac_address,
+                   dev, rxtx_cap=0):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
         vif_rec = {}
@@ -244,8 +244,9 @@ class VMHelper(HelperBase):
         vif_rec['MAC'] = mac_address
         vif_rec['MTU'] = '1500'
         vif_rec['other_config'] = {}
-        vif_rec['qos_algorithm_type'] = ''
-        vif_rec['qos_algorithm_params'] = {}
+        vif_rec['qos_algorithm_type'] = "ratelimit" if rxtx_cap else ''
+        vif_rec['qos_algorithm_params'] = \
+                {"kbps": str(rxtx_cap * 1024)} if rxtx_cap else {}
         LOG.debug(_('Creating VIF for VM %(vm_ref)s,'
                 ' network %(network_ref)s.') % locals())
         vif_ref = session.call_xenapi('VIF.create', vif_rec)
