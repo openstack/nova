@@ -35,6 +35,7 @@ import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
 from nova.api.openstack import ratelimiting
+from nova.api.openstack import versions
 from nova.auth.manager import User, Project
 from nova.image import glance
 from nova.image import local
@@ -80,7 +81,7 @@ def wsgi_app(inner_application=None):
               ratelimiting.RateLimitingMiddleware(inner_application)))
     mapper['/v1.0'] = api
     mapper['/v1.1'] = api
-    mapper['/'] = openstack.FaultWrapper(openstack.Versions())
+    mapper['/'] = openstack.FaultWrapper(versions.Versions())
     return mapper
 
 
