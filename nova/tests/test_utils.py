@@ -62,7 +62,8 @@ exit 1
                                                           'always get passed '
                                                           'correctly')
             runs = int(runs.strip())
-            self.assertEquals(runs, 10, 'Ran %d times instead of 10.' % (runs,))
+            self.assertEquals(runs, 10,
+                              'Ran %d times instead of 10.' % (runs,))
         finally:
             os.unlink(tmpfilename)
             os.unlink(tmpfilename2)
@@ -94,6 +95,7 @@ grep foo
         finally:
             os.unlink(tmpfilename)
             os.unlink(tmpfilename2)
+
 
 class GetFromPathTestCase(test.TestCase):
     def test_tolerates_nones(self):
