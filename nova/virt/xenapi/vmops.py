@@ -67,7 +67,7 @@ class VMOps(object):
         self._start(instance, vm_ref)
 
     def finish_resize(self, instance, disk_info):
-        vdi_uuid = self._vmops.link_disks(instance, disk_info['base_copy'],
+        vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
         vm_ref = self._create_vm(instance, vdi_uuid)
         self.resize_instance(instance, vdi_uuid)
