@@ -1017,9 +1017,9 @@ class LibvirtConnection(object):
             tkeys = topology.keys()
             if list(set(tkeys)) != list(set(keys)):
                 ks = ', '.join(keys)
-                raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
-                                          "must have %(ks)s") % locals())
-
+                raise exception.Invalid(_("Invalid xml: topology"
+                                          "(%(topology)s) must have "
+                                          "%(ks)s") % locals())
 
         feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
