@@ -62,6 +62,17 @@ class VMOps(object):
                 vm_refs.append(vm_rec["name_label"])
         return vm_refs
 
+    def revert_resize(self, instance):
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+        self._start(instance, vm_ref)
+
+    def finish_resize(self, instance, disk_info):
+        vdi_uuid = self._vmops.link_disks(instance, disk_info['base_copy'],
+                disk_info['cow'])
+        vm_ref = self._create_vm(instance, vdi_uuid)
+        self.resize_instance(instance, vdi_uuid)
+        self._spawn(instance, vm_ref)
+
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
         if not vm_ref:
@@ -307,7 +318,8 @@ class VMOps(object):
         template_vdi_uuids = template_vm_ref = None
         try:
             # transfer the base copy
-            template_vm_ref, template_vdi_uuids = selimage._get_snapshot(instance)
+            template_vm_ref, template_vdi_uuids = \
+                    self.image._get_snapshot(instance)
             base_copy_uuid = template_vdi_uuids['image']
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
@@ -370,8 +382,8 @@ class VMOps(object):
         #The new disk size must be in bytes
 
         new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
-        LOG.debug(_("Resizing VDI %s for instance %s. Expanding to %sGB") % (vdi_uuid,
-                instance.name, instance.local_gb))
+        LOG.debug(_("Resizpng VDI %s for instance %s. Expanding to %sGB") %
+                (vdi_uuid, instance.name, instance.local_gb))
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
         LOG.debug(_("Resize instance %s complete") % (instance.name))
@@ -451,8 +463,8 @@ class VMOps(object):
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
             instance_name = instance.name
-            LOG.warn(_("VM %(instance_name)s already halted, skipping shutdown...") %
-                     locals())
+            LOG.warn(_("VM %(instance_name)s already halted,"
+                    "skipping shutdown...") % locals())
             return
 
         instance_id = instance.id

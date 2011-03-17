@@ -164,13 +164,13 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
+    def revert_resize(self, instance):
+        """Reverts a resize, powering back on the instance"""
+        self._vmops.revert_resize(instance)
+
     def finish_resize(self, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
-        vdi_uuid = self._vmops.link_disks(instance, disk_info['base_copy'],
-                disk_info['cow'])
-        vm_ref = self._vmops._create_vm(instance, vdi_uuid)
-        self._vmops.resize_instance(instance, vdi_uuid)
-        self._vmops._spawn(instance, vm_ref)
+        self._vmops.finish_resize(instance, disk_info)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """

@@ -463,7 +463,7 @@ class ComputeManager(manager.Manager):
                 vcpus=instance_type['vcpus'],
                 local_gb=instance_type['local_gb']))
 
-        self.driver._start(instance_ref)
+        self.driver.revert_resize(instance_ref)
         self.db.migration_update(context, migration_id,
                 {'status': 'reverted'})
 
@@ -514,8 +514,6 @@ class ComputeManager(manager.Manager):
         self.db.migration_update(context, migration_id,
                 {'status': 'post-migrating', })
 
-        
-
         service = self.db.service_get_by_host_and_topic(context,
                 migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
@@ -536,7 +534,6 @@ class ComputeManager(manager.Manager):
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get(context,
                 migration_ref['instance_id'])
-        
         #TODO(mdietz): apply the rest of the instance_type attributes going
         #after they're supported
         instance_type = self.db.instance_type_get_by_flavor_id(context,
