@@ -220,6 +220,11 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         injected_files = []
+
+        # NOTE(dprince): handle case where 'personality: null' is in JSON req
+        if not personality:
+            return injected_files
+
         for item in personality:
             try:
                 path = item['path']

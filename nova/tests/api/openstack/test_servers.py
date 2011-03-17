@@ -943,11 +943,13 @@ class TestServerInstanceCreation(test.TestCase):
         server['name'] = 'new-server-test'
         server['imageId'] = 1
         server['flavorId'] = 1
-        if personality_files is not None:
+        if personality_files:
             personalities = []
             for path, contents in personality_files:
                 personalities.append({'path': path, 'contents': contents})
             server['personality'] = personalities
+        else:
+            server['personality'] = None
         return {'server': server}
 
     def _get_create_request_json(self, body_dict):
@@ -976,7 +978,7 @@ class TestServerInstanceCreation(test.TestCase):
             for item in metadata.iteritems():
                 body_parts.append('<meta key="%s">%s</meta>' % item)
             body_parts.append('</metadata>')
-        if 'personality' in server:
+        if 'personality' in server and server['personality'] is not None:
             personalities = server['personality']
             body_parts.append('<personality>')
             for file in personalities:
@@ -1092,6 +1094,13 @@ class TestServerInstanceCreation(test.TestCase):
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(injected_files, None)
+
+    def test_create_instance_with_null_personality(self):
+        personality = None
+        request, response, injected_files = \
+            self._create_instance_with_personality_json(personality)
+        self.assertEquals(response.status_int, 200)
+        self.assertEquals(injected_files, [])
 
     def test_create_instance_with_three_personalities(self):
         files = [
