@@ -137,7 +137,11 @@ class AuthMiddleware(wsgi.Middleware):
         req - wsgi.Request object
         """
         ctxt = context.get_admin_context()
-        user = self.auth.get_user_from_access_key(key)
+
+        try:
+            user = self.auth.get_user_from_access_key(key)
+        except exception.NotFound:
+            user = None
 
         if user and user.name == username:
             token_hash = hashlib.sha1('%s%s%f' % (username, key,

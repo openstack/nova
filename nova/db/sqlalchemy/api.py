@@ -672,6 +672,22 @@ def fixed_ip_get_all(context, session=None):
     return result
 
 
+@require_admin_context
+def fixed_ip_get_all_by_host(context, host=None):
+    session = get_session()
+
+    result = session.query(models.FixedIp).\
+                    join(models.FixedIp.instance).\
+                    filter_by(state=1).\
+                    filter_by(host=host).\
+                    all()
+
+    if not result:
+        raise exception.NotFound(_('No fixed ips for this host defined'))
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:
