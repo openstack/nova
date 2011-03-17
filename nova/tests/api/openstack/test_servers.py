@@ -948,8 +948,6 @@ class TestServerInstanceCreation(test.TestCase):
             for path, contents in personality_files:
                 personalities.append({'path': path, 'contents': contents})
             server['personality'] = personalities
-        else:
-            server['personality'] = None
         return {'server': server}
 
     def _get_create_request_json(self, body_dict):
@@ -1097,10 +1095,12 @@ class TestServerInstanceCreation(test.TestCase):
 
     def test_create_instance_with_null_personality(self):
         personality = None
-        request, response, injected_files = \
-            self._create_instance_with_personality_json(personality)
+        body_dict = self._create_personality_request_dict(personality)
+        body_dict['server']['personality'] = None
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
         self.assertEquals(response.status_int, 200)
-        self.assertEquals(injected_files, [])
 
     def test_create_instance_with_three_personalities(self):
         files = [
