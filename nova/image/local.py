@@ -53,13 +53,13 @@ class LocalImageService(service.BaseImageService):
         images = []
         for image_dir in os.listdir(self._path):
             try:
-                images.append(int(image_dir, 16))
+                unhexed_image_id = int(image_dir, 16)
             except ValueError:
                 LOG.error(
                     _("%s is not in correct directory naming format"\
                        % image_dir))
-            except:
-                raise
+            else:
+                images.append(unhexed_image_id)
         return images
 
     def index(self, context):
