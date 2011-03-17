@@ -1126,6 +1126,15 @@ class TestServerInstanceCreation(test.TestCase):
         self.assertEquals(response.status_int, 400)
         self.assertEquals(injected_files, None)
 
+    def test_create_instance_with_null_personality(self):
+        personality = None
+        body_dict = self._create_personality_request_dict(personality)
+        body_dict['server']['personality'] = None
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 200)
+
     def test_create_instance_with_three_personalities(self):
         files = [
             ('/etc/sudoers', 'ALL ALL=NOPASSWD: ALL\n'),
