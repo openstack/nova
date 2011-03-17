@@ -976,7 +976,7 @@ class TestServerInstanceCreation(test.TestCase):
             for item in metadata.iteritems():
                 body_parts.append('<meta key="%s">%s</meta>' % item)
             body_parts.append('</metadata>')
-        if 'personality' in server and server['personality'] is not None:
+        if 'personality' in server:
             personalities = server['personality']
             body_parts.append('<personality>')
             for file in personalities:
