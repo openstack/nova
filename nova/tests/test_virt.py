@@ -259,8 +259,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         check = [
         (lambda t: t.find('.').get('type'), 'lxc'),
-        (lambda t: t.find('./os/type').text, 'exe')
-        ]
+        (lambda t: t.find('./os/type').text, 'exe')]
 
         for i, (check, expected_result) in enumerate(check):
             self.assertEqual(check(tree),
