@@ -490,6 +490,9 @@ class LibvirtConnection(object):
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
+        elif FLAGS.libvirt_type == 'lxc':
+            # LXC is also special
+            LOG.info(_("Unable to read LXC console"))
         else:
             fpath = console_log
 
