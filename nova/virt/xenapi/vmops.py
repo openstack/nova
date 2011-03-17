@@ -307,7 +307,7 @@ class VMOps(object):
         template_vdi_uuids = template_vm_ref = None
         try:
             # transfer the base copy
-            template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
+            template_vm_ref, template_vdi_uuids = selimage._get_snapshot(instance)
             base_copy_uuid = template_vdi_uuids['image']
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
@@ -368,6 +368,7 @@ class VMOps(object):
         """Resize a running instance by changing it's RAM and disk size """
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
+
         new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
         LOG.debug(_("Resizing VDI %s for instance %s. Expanding to %sGB") % (vdi_uuid,
                 instance.name, instance.local_gb))
