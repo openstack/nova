@@ -19,6 +19,7 @@
 Management class for VM-related functions (spawn, reboot, etc).
 """
 
+import base64
 import json
 import M2Crypto
 import os
@@ -141,19 +142,20 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
-        def _inject_onset_files():
-            onset_files = instance.onset_files
-            if onset_files:
+        def _inject_files():
+            injected_files = instance.injected_files
+            if injected_files:
                 # Check if this is a JSON-encoded string and convert if needed.
-                if isinstance(onset_files, basestring):
+                if isinstance(injected_files, basestring):
                     try:
-                        onset_files = json.loads(onset_files)
+                        injected_files = json.loads(injected_files)
                     except ValueError:
-                        LOG.exception(_("Invalid value for onset_files: '%s'")
-                                % onset_files)
-                        onset_files = []
+                        LOG.exception(
+                            _("Invalid value for injected_files: '%s'")
+                                % injected_files)
+                        injected_files = []
                 # Inject any files, if specified
-                for path, contents in instance.onset_files:
+                for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
         # NOTE(armando): Do we really need to do this in virt?
@@ -169,8 +171,8 @@ class VMOps(object):
                                       instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
-                    _inject_onset_files()
                     timer.stop()
+                    _inject_files()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -405,17 +407,16 @@ class VMOps(object):
             raise RuntimeError(resp_dict['message'])
         return resp_dict['message']
 
-    def inject_file(self, instance, b64_path, b64_contents):
+    def inject_file(self, instance, path, contents):
         """Write a file to the VM instance. The path to which it is to be
-        written and the contents of the file need to be supplied; both should
+        written and the contents of the file need to be supplied; both will
         be base64-encoded to prevent errors with non-ASCII characters being
         transmitted. If the agent does not support file injection, or the user
         has disabled it, a NotImplementedError will be raised.
         """
-        # Files/paths *should* be base64-encoded at this point, but
-        # double-check to make sure.
-        b64_path = utils.ensure_b64_encoding(b64_path)
-        b64_contents = utils.ensure_b64_encoding(b64_contents)
+        # Files/paths must be base64-encoded for transmission to agent
+        b64_path = base64.b64encode(path)
+        b64_contents = base64.b64encode(contents)
 
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
