@@ -115,7 +115,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
         _unlink_device(device, nbd)
 
 
-def setup_container(image, container_dir=None, partition=None, nbd=False):
+def setup_container(image, container_dir=None, partition=None):
     """Setup the LXC container
 
     It will mount the loopback image to the container directory in order
