@@ -263,9 +263,9 @@ class LibvirtConnTestCase(test.TestCase):
         ]
 
         for i, (check, expected_result) in enumerate(check):
-                 self.assertEqual(check(tree),
-                                  expected_result,
-                                  '%s failed common check %d' % (xml, i))
+            self.assertEqual(check(tree),
+                             expected_result,
+                             '%s failed common check %d' % (xml, i))
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
