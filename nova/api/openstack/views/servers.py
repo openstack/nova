@@ -24,22 +24,6 @@ from nova.api.openstack.views import images as images_view
 from nova import utils
 
 
-def get_view_builder(req):
-    '''
-    A factory method that returns the correct builder based on the version of
-    the api requested.
-    '''
-    version = common.get_api_version(req)
-    addresses_builder = addresses_view.get_view_builder(req)
-    if version == '1.1':
-        flavor_builder = flavors_view.get_view_builder(req)
-        image_builder = images_view.get_view_builder(req)
-        return ViewBuilder_1_1(addresses_builder, flavor_builder,
-                               image_builder)
-    else:
-        return ViewBuilder_1_0(addresses_builder)
-
-
 class ViewBuilder(object):
     '''
     Models a server response as a python dictionary.
@@ -76,25 +60,20 @@ class ViewBuilder(object):
             power_state.FAILED: 'error'}
         inst_dict = {}
 
-        #mapped_keys = dict(status='state', imageId='image_id',
-        #    flavorId='instance_type', name='display_name', id='id')
-
-        mapped_keys = dict(status='state', name='display_name', id='id')
-
-        for k, v in mapped_keys.iteritems():
-            inst_dict[k] = inst[v]
-
-        inst_dict['status'] = power_mapping[inst_dict['status']]
+        inst_dict['id'] = int(inst['id'])
+        inst_dict['name'] = inst['display_name']
+        inst_dict['status'] = power_mapping[inst.get('state')]
         inst_dict['addresses'] = self.addresses_builder.build(inst)
 
         # Return the metadata as a dictionary
         metadata = {}
-        for item in inst['metadata']:
-            metadata[item['key']] = item['value']
+        if 'metadata' in inst:
+            for item in inst['metadata']:
+                metadata[item['key']] = item['value']
         inst_dict['metadata'] = metadata
 
         inst_dict['hostId'] = ''
-        if inst['host']:
+        if inst.get('host'):
             inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
 
         self._build_image(inst_dict, inst)
@@ -109,24 +88,30 @@ class ViewBuilder(object):
         raise NotImplementedError()
 
 
-class ViewBuilder_1_0(ViewBuilder):
+class ViewBuilderV10(ViewBuilder):
     def _build_image(self, response, inst):
-        response["imageId"] = inst["image_id"]
+        if inst.get('image_id') != None:
+            response['imageId'] = inst['image_id']
 
     def _build_flavor(self, response, inst):
-        response["flavorId"] = inst["instance_type"]
+        if inst.get('instance_type') != None:
+            response['flavorId'] = inst['instance_type']
 
 
-class ViewBuilder_1_1(ViewBuilder):
+class ViewBuilderV11(ViewBuilder):
     def __init__(self, addresses_builder, flavor_builder, image_builder):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
 
     def _build_image(self, response, inst):
+        if inst.get('image_id') == None:
+            return
         image_id = inst["image_id"]
         response["imageRef"] = self.image_builder.generate_href(image_id)
 
     def _build_flavor(self, response, inst):
+        if inst.get('instance_type') == None:
+            return
         flavor_id = inst["instance_type"]
         response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)

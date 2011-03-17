@@ -71,9 +71,14 @@ class APIRouter(wsgi.Router):
         return cls()
 
     def __init__(self):
+        self.server_members = {}
         mapper = routes.Mapper()
+        self._setup_routes(mapper)
+        super(APIRouter, self).__init__(mapper)
 
-        server_members = {'action': 'POST'}
+    def _setup_routes(self, mapper):
+        server_members = self.server_members
+        server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
 
@@ -98,10 +103,6 @@ class APIRouter(wsgi.Router):
                             controller=accounts.Controller(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("server", "servers", controller=servers.Controller(),
-                        collection={'detail': 'GET'},
-                        member=server_members)
-
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
                         parent_resource=dict(member_name='server',
@@ -120,7 +121,23 @@ class APIRouter(wsgi.Router):
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
 
-        super(APIRouter, self).__init__(mapper)
+
+class APIRouterV10(APIRouter):
+    def _setup_routes(self, mapper):
+        APIRouter._setup_routes(self, mapper)
+        mapper.resource("server", "servers",
+                        controller=servers.ControllerV10(),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
+
+
+class APIRouterV11(APIRouter):
+    def _setup_routes(self, mapper):
+        APIRouter._setup_routes(self, mapper)
+        mapper.resource("server", "servers",
+                        controller=servers.ControllerV11(),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
 
 
 class Versions(wsgi.Application):

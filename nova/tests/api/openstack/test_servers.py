@@ -158,7 +158,7 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_with_addresses(self):
@@ -169,7 +169,7 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
         self.assertEqual(len(addresses["public"]), len(public))
@@ -177,7 +177,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(addresses["private"]), 1)
         self.assertEqual(addresses["private"][0], private)
 
-    def test_get_server_by_id_with_addresses_v1_1(self):
+    def test_get_server_by_id_with_addresses_v11(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
@@ -186,7 +186,7 @@ class ServersTest(test.TestCase):
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
         addresses = res_dict['server']['addresses']
         self.assertEqual(len(addresses["public"]), len(public))
@@ -273,13 +273,13 @@ class ServersTest(test.TestCase):
             "get_image_id_from_image_hash", image_id_from_hash)
 
         body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2,
+            name='server_test', imageId=3, flavorId=2,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = webob.Request.blank('/v1.0/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
-        req.headers["Content-Type"] = "application/json"
+        req.headers["content-type"] = "application/json"
 
         res = req.get_response(fakes.wsgi_app())
 
@@ -287,8 +287,67 @@ class ServersTest(test.TestCase):
         self.assertEqual('serv', server['adminPass'][:4])
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
-        self.assertEqual('1', server['id'])
+        self.assertEqual(1, server['id'])
+        self.assertEqual(2, server['flavorId'])
+        self.assertEqual(3, server['imageId'])
+        self.assertEqual(res.status_int, 200)
 
+    def test_create_instance_v11(self):
+        def instance_create(context, inst):
+            return {'id': '1', 'display_name': 'server_test'}
+
+        def server_update(context, id, params):
+            return instance_create(context, id)
+
+        def fake_method(*args, **kwargs):
+            pass
+
+        def project_get_network(context, user_id):
+            return dict(id='1', host='localhost')
+
+        def queue_get_for(context, *args):
+            return 'network_topic'
+
+        def kernel_ramdisk_mapping(*args, **kwargs):
+            return (1, 1)
+
+        def image_id_from_hash(*args, **kwargs):
+            return 2
+
+        self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
+        self.stubs.Set(nova.db.api, 'instance_create', instance_create)
+        self.stubs.Set(nova.rpc, 'cast', fake_method)
+        self.stubs.Set(nova.rpc, 'call', fake_method)
+        self.stubs.Set(nova.db.api, 'instance_update',
+            server_update)
+        self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
+        self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
+            fake_method)
+        self.stubs.Set(nova.api.openstack.servers.Controller,
+            "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
+        self.stubs.Set(nova.api.openstack.common,
+            "get_image_id_from_image_hash", image_id_from_hash)
+
+        imageRef = 'http://localhost/v1.1/images/2'
+        flavorRef = 'http://localhost/v1.1/flavors/3'
+        body = dict(server=dict(
+            name='server_test', imageRef=imageRef, flavorRef=flavorRef,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual('serv', server['adminPass'][:4])
+        self.assertEqual(16, len(server['adminPass']))
+        self.assertEqual('server_test', server['name'])
+        self.assertEqual(1, server['id'])
+        self.assertEqual(flavorRef, server['flavorRef'])
+        self.assertEqual(imageRef, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_update_no_body(self):

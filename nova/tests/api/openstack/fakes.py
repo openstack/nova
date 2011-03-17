@@ -76,14 +76,18 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_application=None):
-    if not inner_application:
-        inner_application = openstack.APIRouter()
+def wsgi_app(inner_app10=None, inner_app11=None):
+    if not inner_app10:
+        inner_app10 = openstack.APIRouterV10()
+    if not inner_app11:
+        inner_app11 = openstack.APIRouterV11()
     mapper = urlmap.URLMap()
-    api = openstack.FaultWrapper(auth.AuthMiddleware(
-              ratelimiting.RateLimitingMiddleware(inner_application)))
-    mapper['/v1.0'] = api
-    mapper['/v1.1'] = api
+    api10 = openstack.FaultWrapper(auth.AuthMiddleware(
+              ratelimiting.RateLimitingMiddleware(inner_app10)))
+    api11 = openstack.FaultWrapper(auth.AuthMiddleware(
+              ratelimiting.RateLimitingMiddleware(inner_app11)))
+    mapper['/v1.0'] = api10
+    mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(openstack.Versions())
     return mapper
 
