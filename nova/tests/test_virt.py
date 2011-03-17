@@ -367,14 +367,14 @@ class LibvirtConnTestCase(test.TestCase):
             xml = conn.to_xml(instance_ref, rescue)
             tree = xml_to_tree(xml)
             for i, (check, expected_result) in enumerate(checks):
-                        self.assertEqual(check(tree),
-                                        expected_result,
-                                        '%s failed check %d' % (xml, i))
+                self.assertEqual(check(tree),
+                                 expected_result,
+                                 '%s failed check %d' % (xml, i))
 
             for i, (check, expected_result) in enumerate(common_checks):
-                   self.assertEqual(check(tree),
-                                    expected_result,
-                                    '%s failed common check %d' % (xml, i))
+                self.assertEqual(check(tree),
+                                 expected_result,
+                                 '%s failed common check %d' % (xml, i))
 
         # This test is supposed to make sure we don't
         # override a specifically set uri

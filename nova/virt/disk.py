@@ -121,7 +121,7 @@ def setup_container(image, container_dir=None, partition=None):
     It will mount the loopback image to the container directory in order
     to create the root filesystem for the container
     """
-    nbd=False
+    nbd = False
     device = _link_device(image, nbd)
     err = utils.execute('sudo', 'mount', device, container_dir)
     if err:
@@ -132,7 +132,7 @@ def setup_container(image, container_dir=None, partition=None):
 
 def destroy_container(target, instance):
     """Destroy the container once it terminates
-    
+ 
     It will umount the container that is mounted, try to find the loopback
     device associated with the container and delete it.
     """
