@@ -54,7 +54,8 @@ class GlanceImageService(service.BaseImageService):
         """
         Calls out to Glance for a list of detailed image information
         """
-        return self.client.get_images_detailed()
+        for image in self.client.get_images_detailed():
+            yield self._convert_timestamps_to_datetimes(image)
 
     def show(self, context, image_id):
         """

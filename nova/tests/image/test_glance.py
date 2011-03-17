@@ -12,7 +12,7 @@ class StubGlanceClient(object):
         return self.images[id]
 
     def get_images_detailed(self):
-        return self.images
+        return self.images.itervalues()
 
 class TestGlance(unittest.TestCase):
 
@@ -25,8 +25,8 @@ class TestGlance(unittest.TestCase):
         self.assertEqual(self.service.show({}, 'xyz'), "image")
 
     def test_detail_passes_through_to_client(self):
-        self.client.images = "these are the images"
-        self.assertEqual(self.service.detail({}), self.client.images)
+        self.client.images = {1: "an image"}
+        self.assertEqual(list(self.service.detail({})), ["an image"])
 
     def test_show_makes_create_datetimes(self):
         create_time = dt.datetime.utcnow()
@@ -66,3 +66,24 @@ class TestGlance(unittest.TestCase):
         }}
         actual = self.service.show({}, '747')
         self.assertEqual(actual['deleted_at'], None)
+
+    def test_detail_handles_timestamps(self):
+        now = dt.datetime.utcnow()
+        image1 = {
+            'id': 1,
+            'name': 'image 1',
+            'created_at': now.isoformat(),
+            'updated_at': now.isoformat(),
+            'deleted_at': None,
+        }
+        image2 = {
+            'id': 2,
+            'name': 'image 2',
+            'deleted_at': now.isoformat(),
+        }
+        self.client.images = {1: image1, 2: image2}
+        i1, i2 = self.service.detail({})
+        self.assertEqual(i1['created_at'], now)
+        self.assertEqual(i1['updated_at'], now)
+        self.assertEqual(i1['deleted_at'], None)
+        self.assertEqual(i2['deleted_at'], now)
