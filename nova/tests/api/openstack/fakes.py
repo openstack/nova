@@ -234,52 +234,57 @@ class FakeAuthDatabase(object):
 
 
 class FakeAuthManager(object):
-    auth_data = {}
+    #NOTE(justinsb): Accessing static variables through instances is FUBAR
+    #NOTE(justinsb): This should also be private!
+    auth_data = []
     projects = {}
 
     @classmethod
     def clear_fakes(cls):
-        cls.auth_data = {}
+        cls.auth_data = []
         cls.projects = {}
 
     @classmethod
     def reset_fake_data(cls):
-        cls.auth_data = dict(acc1=User('guy1', 'guy1', 'acc1',
-                                       'fortytwo!', False))
+        u1 = User('id1', 'guy1', 'acc1', 'secret1', False)
+        cls.auth_data = [u1]
         cls.projects = dict(testacct=Project('testacct',
                                              'testacct',
-                                             'guy1',
+                                             'id1',
                                              'test',
                                               []))
 
-    def add_user(self, key, user):
-        FakeAuthManager.auth_data[key] = user
+    def add_user(self, user):
+        FakeAuthManager.auth_data.append(user)
 
     def get_users(self):
-        return FakeAuthManager.auth_data.values()
+        return FakeAuthManager.auth_data
 
     def get_user(self, uid):
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.id == uid:
-                return v
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                return user
+        return None
+
+    def get_user_from_access_key(self, key):
+        for user in FakeAuthManager.auth_data:
+            if user.access == key:
+                return user
         return None
 
     def delete_user(self, uid):
-        for k, v in FakeAuthManager.auth_data.items():
-            if v.id == uid:
-                del FakeAuthManager.auth_data[k]
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                FakeAuthManager.auth_data.remove(user)
         return None
 
     def create_user(self, name, access=None, secret=None, admin=False):
         u = User(name, name, access, secret, admin)
-        FakeAuthManager.auth_data[access] = u
+        FakeAuthManager.auth_data.append(u)
         return u
 
     def modify_user(self, user_id, access=None, secret=None, admin=None):
-        user = None
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.id == user_id:
-                user = v
+        user = self.get_user(user_id)
         if user:
             user.access = access
             user.secret = secret
@@ -325,12 +330,6 @@ class FakeAuthManager(object):
             return [p for p in FakeAuthManager.projects.values()
                     if (user.id in p.member_ids) or
                        (user.id == p.project_manager_id)]
-
-    def get_user_from_access_key(self, key):
-        try:
-            return FakeAuthManager.auth_data[key]
-        except KeyError:
-            raise exc.NotFound
 
 
 class FakeRateLimiter(object):
