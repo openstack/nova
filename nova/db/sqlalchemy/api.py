@@ -672,6 +672,22 @@ def fixed_ip_get_all(context, session=None):
     return result
 
 
+@require_admin_context
+def fixed_ip_get_all_by_host(context, host=None):
+    session = get_session()
+
+    result = session.query(models.FixedIp).\
+                    join(models.FixedIp.instance).\
+                    filter_by(state=1).\
+                    filter_by(host=host).\
+                    all()
+
+    if not result:
+        raise exception.NotFound(_('No fixed ips for this host defined'))
+
+    return result
+
+
 @require_context
 def fixed_ip_get_by_address(context, address, session=None):
     if not session:
@@ -746,6 +762,15 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
+    metadata = values.get('metadata')
+    metadata_refs = []
+    if metadata:
+        for metadata_item in metadata:
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref.update(metadata_item)
+            metadata_refs.append(metadata_ref)
+    values['metadata'] = metadata_refs
+
     instance_ref = models.Instance()
     instance_ref.update(values)
 
