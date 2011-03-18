@@ -2204,7 +2204,7 @@ def migration_get(context, id, session=None):
                      filter_by(id=id).first()
     if not result:
         raise exception.NotFound(_("No migration found with id %s")
-                % migration_id)
+                % id)
     return result
 
 
@@ -2216,7 +2216,7 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(status=status).first()
     if not result:
         raise exception.NotFound(_("No migration found with instance id %s")
-                % migration_id)
+                % id)
     return result
 
 
@@ -2427,6 +2427,7 @@ def zone_create(context, values):
 
 @require_admin_context
 def zone_update(context, zone_id, values):
+    session = get_session()
     zone = session.query(models.Zone).filter_by(id=zone_id).first()
     if not zone:
         raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())

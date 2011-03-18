@@ -55,7 +55,6 @@ def upgrade(migrate_engine):
     try:
         instance_types.create()
     except Exception:
-        logging.info(repr(table))
         logging.exception('Exception while creating instance_types table')
         raise
 
@@ -76,7 +75,6 @@ def upgrade(migrate_engine):
                         'local_gb': values["local_gb"],
                         'flavorid': values["flavorid"]})
     except Exception:
-        logging.info(repr(table))
         logging.exception('Exception while seeding instance_types table')
         raise
 
