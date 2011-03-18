@@ -19,11 +19,9 @@ import json
 import stubout
 import webob
 
-import nova.api
-import nova.api.openstack.auth
-from nova import context
 from nova import flags
 from nova import test
+from nova.api.openstack import accounts
 from nova.auth.manager import User
 from nova.tests.api.openstack import fakes
 
@@ -44,9 +42,9 @@ class AccountsTest(test.TestCase):
     def setUp(self):
         super(AccountsTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.openstack.accounts.Controller, '__init__',
+        self.stubs.Set(accounts.Controller, '__init__',
                        fake_init)
-        self.stubs.Set(nova.api.openstack.accounts.Controller, '_check_admin',
+        self.stubs.Set(accounts.Controller, '_check_admin',
                        fake_admin_check)
         fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthDatabase.data = {}
@@ -57,10 +55,10 @@ class AccountsTest(test.TestCase):
         self.allow_admin = FLAGS.allow_admin_api
         FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
-        joeuser = User('guy1', 'guy1', 'acc1', 'fortytwo!', False)
-        superuser = User('guy2', 'guy2', 'acc2', 'swordfish', True)
-        fakemgr.add_user(joeuser.access, joeuser)
-        fakemgr.add_user(superuser.access, superuser)
+        joeuser = User('id1', 'guy1', 'acc1', 'secret1', False)
+        superuser = User('id2', 'guy2', 'acc2', 'secret2', True)
+        fakemgr.add_user(joeuser)
+        fakemgr.add_user(superuser)
         fakemgr.create_project('test1', joeuser)
         fakemgr.create_project('test2', superuser)
 
@@ -76,7 +74,7 @@ class AccountsTest(test.TestCase):
 
         self.assertEqual(res_dict['account']['id'], 'test1')
         self.assertEqual(res_dict['account']['name'], 'test1')
-        self.assertEqual(res_dict['account']['manager'], 'guy1')
+        self.assertEqual(res_dict['account']['manager'], 'id1')
         self.assertEqual(res.status_int, 200)
 
     def test_account_delete(self):
@@ -88,7 +86,7 @@ class AccountsTest(test.TestCase):
 
     def test_account_create(self):
         body = dict(account=dict(description='test account',
-                              manager='guy1'))
+                                 manager='id1'))
         req = webob.Request.blank('/v1.0/accounts/newacct')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
@@ -101,14 +99,14 @@ class AccountsTest(test.TestCase):
         self.assertEqual(res_dict['account']['id'], 'newacct')
         self.assertEqual(res_dict['account']['name'], 'newacct')
         self.assertEqual(res_dict['account']['description'], 'test account')
-        self.assertEqual(res_dict['account']['manager'], 'guy1')
+        self.assertEqual(res_dict['account']['manager'], 'id1')
         self.assertTrue('newacct' in
                         fakes.FakeAuthManager.projects)
         self.assertEqual(len(fakes.FakeAuthManager.projects.values()), 3)
 
     def test_account_update(self):
         body = dict(account=dict(description='test account',
-                              manager='guy2'))
+                                 manager='id2'))
         req = webob.Request.blank('/v1.0/accounts/test1')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
@@ -121,5 +119,5 @@ class AccountsTest(test.TestCase):
         self.assertEqual(res_dict['account']['id'], 'test1')
         self.assertEqual(res_dict['account']['name'], 'test1')
         self.assertEqual(res_dict['account']['description'], 'test account')
-        self.assertEqual(res_dict['account']['manager'], 'guy2')
+        self.assertEqual(res_dict['account']['manager'], 'id2')
         self.assertEqual(len(fakes.FakeAuthManager.projects.values()), 2)

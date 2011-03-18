@@ -275,6 +275,8 @@ class LdapDriver(object):
             attr.append((self.ldap.MOD_REPLACE, 'description', description))
         dn = self.__project_to_dn(project_id)
         self.conn.modify_s(dn, attr)
+        if not self.is_in_project(manager_uid, project_id):
+            self.add_to_project(manager_uid, project_id)
 
     @sanitize
     def add_to_project(self, uid, project_id):
@@ -632,6 +634,6 @@ class LdapDriver(object):
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
-    def __init__(self):  # pylint: disable-msg=W0231
+    def __init__(self):  # pylint: disable=W0231
         __import__('nova.auth.fakeldap')
         self.ldap = sys.modules['nova.auth.fakeldap']
