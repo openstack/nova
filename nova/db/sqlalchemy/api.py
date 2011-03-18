@@ -2337,7 +2337,7 @@ def instance_type_create(_context, values):
 
 
 @require_context
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """
     Returns a dict describing all instance_types with name as key.
     """
@@ -2392,7 +2392,7 @@ def instance_type_destroy(context, name):
     session = get_session()
     instance_type_ref = session.query(models.InstanceTypes).\
                                       filter_by(name=name)
-    records = instance_type_ref.update(dict(deleted=1))
+    records = instance_type_ref.update(dict(deleted=True))
     if records == 0:
         raise exception.NotFound
     else:
