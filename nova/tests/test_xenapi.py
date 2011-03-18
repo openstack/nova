@@ -470,6 +470,14 @@ class XenAPIVMTestCase(test.TestCase):
         # guest agent is detected
         self.assertFalse(self._tee_executed)
 
+    def test_spawn_with_network_qos(self):
+        self._create_instance()
+        for vif_ref in xenapi_fake.get_all('VIF'):
+            vif_rec = xenapi_fake.get_record('VIF', vif_ref)
+            self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
+            self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
+                              str(4 * 1024))
+
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
         self.manager.delete_project(self.project)

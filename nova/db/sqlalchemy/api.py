@@ -762,6 +762,15 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
+    metadata = values.get('metadata')
+    metadata_refs = []
+    if metadata:
+        for metadata_item in metadata:
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref.update(metadata_item)
+            metadata_refs.append(metadata_ref)
+    values['metadata'] = metadata_refs
+
     instance_ref = models.Instance()
     instance_ref.update(values)
 
