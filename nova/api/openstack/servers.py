@@ -33,6 +33,7 @@ from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
+from nova.scheduler import api as scheduler_api
 
 
 LOG = logging.getLogger('server')
@@ -125,6 +126,7 @@ class Controller(wsgi.Controller):
         res = [entity_maker(inst)['server'] for inst in limited_list]
         return dict(servers=res)
 
+    @scheduler_api.redirect_handler
     def show(self, req, id):
         """ Returns server details by server id """
         try:

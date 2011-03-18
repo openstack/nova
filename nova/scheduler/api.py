@@ -105,22 +105,25 @@ def _issue_novaclient_command(nova, zone, collection, method_name, \
                                                         item_id):
     """Use novaclient to issue command to a single child zone.
        One of these will be run in parallel for each child zone."""
-    item = None
+    result = None
     try:
         manager = getattr(nova, collection)
         if isinstance(item_id, int) or item_id.isdigit():
-            item = manager.get(int(item_id))
+            result = manager.get(int(item_id))
         else:
-            item = manager.find(name=item_id)
+            result = manager.find(name=item_id)
     except novaclient.NotFound:
         url = zone.api_url
         LOG.debug(_("%(collection)s '%(item_id)s' not found on '%(url)s'" %
                                                 locals()))
         return
 
-    LOG.debug("***CALLING CHILD ZONE")
-    result = getattr(item, method_name)()
-    LOG.debug("***CHILD ZONE GAVE %s", result)
+    if method_name.lower() not in ['get', 'find']:
+        LOG.debug("***CALLING CHILD ZONE")
+        m = getattr(item, method_name)
+        LOG.debug("***METHOD ATTR %s" % m)
+        result = getattr(item, method_name)()
+        LOG.debug("***CHILD ZONE GAVE %s", result)
     return result
 
 
@@ -132,6 +135,14 @@ def wrap_novaclient_function(f, collection, method_name, item_id):
         
     return inner
 
+
+class RedirectResult(exception.Error):
+    """Used to the HTTP API know that these results are pre-cooked
+    and they can be returned to the caller directly."""
+    def __init__(self, results):
+        self.results = results
+        super(RedirectResult, self).__init__(
+               message=_("Uncaught Zone redirection exception"))
 
 class reroute_compute(object):
     """Decorator used to indicate that the method should
@@ -161,7 +172,7 @@ class reroute_compute(object):
                             wrap_novaclient_function(_issue_novaclient_command,
                                    collection, self.method_name, item_id))
                 LOG.debug("***REROUTE: %s" % result)
-                return self.unmarshall_result(result)
+                raise RedirectResult(self.unmarshall_result(result))
         return wrapped_f
 
     def get_collection_context_and_id(self, args):
@@ -170,4 +181,14 @@ class reroute_compute(object):
         return ("servers", args[1], args[2])
 
     def unmarshall_result(self, result):
-        return result        
+        return [server.__dict__ for server in result]
+
+
+def redirect_handler(f):
+    def new_f(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except RedirectResult, e:
+            LOG.debug("***CAUGHT REROUTE: %s" % e.results)
+            return e.results
+    return new_f
