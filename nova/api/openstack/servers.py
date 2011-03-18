@@ -137,6 +137,7 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
+    @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
         try:
@@ -258,6 +259,7 @@ class Controller(wsgi.Controller):
         # if the original error is okay, just reraise it
         raise error
 
+    @scheduler_api.redirect_handler
     def update(self, req, id):
         """ Updates the server name or password """
         if len(req.body) == 0:
@@ -283,6 +285,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
 
+    @scheduler_api.redirect_handler
     def action(self, req, id):
         """Multi-purpose method used to reboot, rebuild, or
         resize a server"""
@@ -348,6 +351,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def lock(self, req, id):
         """
         lock the instance with id
@@ -363,6 +367,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def unlock(self, req, id):
         """
         unlock the instance with id
@@ -378,6 +383,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def get_lock(self, req, id):
         """
         return the boolean state of (instance with id)'s lock
@@ -392,6 +398,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def reset_network(self, req, id):
         """
         Reset networking on an instance (admin only).
@@ -406,6 +413,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def inject_network_info(self, req, id):
         """
         Inject network info for an instance (admin only).
@@ -420,6 +428,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
@@ -431,6 +440,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
@@ -442,6 +452,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def suspend(self, req, id):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
@@ -453,6 +464,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def resume(self, req, id):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
@@ -464,6 +476,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def rescue(self, req, id):
         """Permit users to rescue the server."""
         context = req.environ["nova.context"]
@@ -475,6 +488,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def unrescue(self, req, id):
         """Permit users to unrescue the server."""
         context = req.environ["nova.context"]
@@ -486,6 +500,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
         """ Returns a url to an instance's ajaxterm console. """
         try:
@@ -495,6 +510,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
         ctxt = req.environ["nova.context"]
