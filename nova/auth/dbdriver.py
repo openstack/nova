@@ -162,6 +162,8 @@ class DbDriver(object):
             values['description'] = description
 
         db.project_update(context.get_admin_context(), project_id, values)
+        if not self.is_in_project(manager_uid, project_id):
+            self.add_to_project(manager_uid, project_id)
 
     def add_to_project(self, uid, project_id):
         """Add user to project"""
