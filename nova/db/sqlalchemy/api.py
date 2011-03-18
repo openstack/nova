@@ -2353,7 +2353,7 @@ def instance_type_get_all(context, inactive=False):
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
-                        filter_by(deleted=inactive).\
+                        filter_by(deleted=False).\
                         order_by("name").\
                         all()
     if inst_types:
