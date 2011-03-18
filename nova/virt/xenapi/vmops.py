@@ -734,7 +734,7 @@ class VMOps(object):
         """
         logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
-        # make sure we have a vm opaque ref (raises otherwise)
+        # this function raises if vm_ref is not a vm_opaque_ref
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         for (network, info) in network_info:
@@ -754,7 +754,7 @@ class VMOps(object):
         """Creates vifs for an instance"""
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
 
-        # make sure we have a vm opaque ref (raises otherwise)
+        # this function raises if vm_ref is not a vm_opaque_ref
         self._session.get_xenapi().VM.get_record(vm_ref)
 
         device = 0
