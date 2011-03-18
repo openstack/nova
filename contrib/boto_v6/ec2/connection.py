@@ -4,8 +4,10 @@ Created on 2010/12/20
 @author: Nachi Ueno <ueno.nachi@lab.ntt.co.jp>
 '''
 import boto
+import base64
 import boto.ec2
 from boto_v6.ec2.instance import  ReservationV6
+from boto.ec2.securitygroup import SecurityGroup
 
 
 class EC2ConnectionV6(boto.ec2.EC2Connection):
@@ -101,7 +103,7 @@ class EC2ConnectionV6(boto.ec2.EC2Connection):
                                  with the Image.
 
         :rtype: Reservation
-        :return: The :class:`boto.ec2.instance.Reservation`
+        :return: The :class:`boto.ec2.instance.ReservationV6`
                  associated with the request for machines
         """
         params = {'ImageId': image_id,
