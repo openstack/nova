@@ -699,8 +699,8 @@ class VMHelper(HelperBase):
                     try:
                         out, err = utils.execute('sudo', 'mount',
                                                  '-t', 'ext2,ext3',
-                                                 '"%s"' % dev_path,
-                                                 '"%s"' % tmpdir)
+                                                 '%s' % dev_path,
+                                                 '%s' % tmpdir)
                     except exception.ProcessExecutionError as e:
                         err = str(e)
                     if err:
