@@ -99,6 +99,7 @@ def child_zone_helper(zone_list, func):
 def _issue_novaclient_command(nova, zone, method_name, instance_id):
     server = None
     try:
+        manager = getattr(nova, "servers")
         if isinstance(instance_id, int) or instance_id.isdigit():
             server = manager.get(int(instance_id))
         else:
