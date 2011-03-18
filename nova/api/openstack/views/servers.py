@@ -39,12 +39,16 @@ class ViewBuilder(object):
         Rackspace-like attributes for return
         """
         if is_detail:
-            return self._build_detail(inst)
+            server = self._build_detail(inst)
         else:
-            return self._build_simple(inst)
+            server = self._build_simple(inst)
+
+        self._build_extra(server, inst)
+        
+        return dict(server=server)
 
     def _build_simple(self, inst):
-            return dict(server=dict(id=inst['id'], name=inst['display_name']))
+            return dict(id=inst['id'], name=inst['display_name'])
 
     def _build_detail(self, inst):
         power_mapping = {
@@ -79,13 +83,16 @@ class ViewBuilder(object):
         self._build_image(inst_dict, inst)
         self._build_flavor(inst_dict, inst)
 
-        return dict(server=inst_dict)
+        return inst_dict
 
     def _build_image(self, response, inst):
         raise NotImplementedError()
 
     def _build_flavor(self, response, inst):
         raise NotImplementedError()
+
+    def _build_extra(self, response, inst):
+        pass
 
 
 class ViewBuilderV10(ViewBuilder):
@@ -99,19 +106,50 @@ class ViewBuilderV10(ViewBuilder):
 
 
 class ViewBuilderV11(ViewBuilder):
-    def __init__(self, addresses_builder, flavor_builder, image_builder):
+    def __init__(self, addresses_builder, flavor_builder, image_builder,
+                 base_url):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
+        self.base_url = base_url
 
     def _build_image(self, response, inst):
-        if inst.get('image_id') == None:
+        image_id = inst.get("image_id", None)
+        if image_id == None:
             return
-        image_id = inst["image_id"]
         response["imageRef"] = self.image_builder.generate_href(image_id)
 
     def _build_flavor(self, response, inst):
-        if inst.get('instance_type') == None:
+        flavor_id = inst.get("instance_type", None)
+        if flavor_id == None:
             return
-        flavor_id = inst["instance_type"]
         response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
+
+    def _build_extra(self, response, inst):
+        self._build_links(response, inst)
+
+    def _build_links(self, response, inst):
+        href = self.generate_href(inst["id"])
+
+        links = [
+            {
+                "rel": "self",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": href,
+            },
+        ]
+
+        response["links"] = links
+
+    def generate_href(self, server_id):
+        """Create an url that refers to a specific server id."""
+        return "%s/servers/%s" % (self.base_url, server_id)

@@ -47,11 +47,15 @@ class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
-        'application/xml': {
+        "application/xml": {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
                            "status", "progress", "adminPass", "flavorRef",
-                           "imageRef"]}}}
+                           "imageRef"],
+                "link": ["rel", "type", "href"],
+            },
+        },
+    }
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -513,6 +517,7 @@ class Controller(wsgi.Controller):
 
         return kernel_id, ramdisk_id
 
+
 class ControllerV10(Controller):
     def _image_id_from_req_data(self, data):
         return data['server']['imageId']
@@ -546,7 +551,7 @@ class ControllerV11(Controller):
             base_url)
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
         return nova.api.openstack.views.servers.ViewBuilderV11(
-            addresses_builder, flavor_builder, image_builder)
+            addresses_builder, flavor_builder, image_builder, base_url)
 
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV11(req)
