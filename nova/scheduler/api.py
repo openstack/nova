@@ -17,13 +17,13 @@
 Handles all requests relating to schedulers.
 """
 
+import novaclient
+
 from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
-
-import novaclient.client as client
 
 from eventlet import greenpool
 
@@ -80,7 +80,7 @@ class API(object):
 
 
 def _wrap_method(function, self):
-    """Wrap method to supply 'self'."""
+    """Wrap method to supply self."""
     def _wrap(*args, **kwargs):
         return function(self, *args, **kwargs)
     return _wrap
@@ -89,8 +89,7 @@ def _wrap_method(function, self):
 def _process(func, zone):
     """Worker stub for green thread pool. Give the worker
     an authenticated nova client and zone info."""
-    nova = client.OpenStackClient(zone.username, zone.password,
-                                        zone.api_url)
+    nova = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
     nova.authenticate()
     return func(nova, zone)
 
@@ -134,8 +133,7 @@ def wrap_novaclient_function(f, collection, method_name, item_id):
 class reroute_compute(object):
     """Decorator used to indicate that the method should
        delegate the call the child zones if the db query
-       can't find anything.
-    """
+       can't find anything."""
     def __init__(self, method_name):
         self.method_name = method_name
 
