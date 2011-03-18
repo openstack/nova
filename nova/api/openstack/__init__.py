@@ -113,8 +113,6 @@ class APIRouter(wsgi.Router):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("image", "images", controller=images.Controller(),
-                        collection={'detail': 'GET'})
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
         mapper.resource("shared_ip_group", "shared_ip_groups",
@@ -130,6 +128,10 @@ class APIRouterV10(APIRouter):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("image", "images",
+                        controller=images.Controller_v1_0(),
+                        collection={'detail': 'GET'})
+
 
 class APIRouterV11(APIRouter):
     def _setup_routes(self, mapper):
@@ -138,6 +140,11 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
+
+        mapper.resource("image", "images",
+                        controller=images.Controller_v1_1(),
+                        collection={'detail': 'GET'})
+
 
 
 class Versions(wsgi.Application):

@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,92 +17,19 @@ from webob import exc
 
 from nova import compute
 from nova import flags
+from nova import log
 from nova import utils
 from nova import wsgi
-import nova.api.openstack
-from nova.api.openstack import common
-from nova.api.openstack import faults
-import nova.image.service
-
-
-FLAGS = flags.FLAGS
-
-
-def _translate_keys(item):
-    """
-    Maps key names to Rackspace-like attributes for return
-    also pares down attributes to those we want
-    item is a dict
-
-    Note: should be removed when the set of keys expected by the api
-    and the set of keys returned by the image service are equivalent
-
-    """
-    # TODO(tr3buchet): this map is specific to s3 object store,
-    # replace with a list of keys for _filter_keys later
-    mapped_keys = {'status': 'imageState',
-                   'id': 'imageId',
-                   'name': 'imageLocation'}
-
-    mapped_item = {}
-    # TODO(tr3buchet):
-    # this chunk of code works with s3 and the local image service/glance
-    # when we switch to glance/local image service it can be replaced with
-    # a call to _filter_keys, and mapped_keys can be changed to a list
-    try:
-        for k, v in mapped_keys.iteritems():
-            # map s3 fields
-            mapped_item[k] = item[v]
-    except KeyError:
-        # return only the fields api expects
-        mapped_item = _filter_keys(item, mapped_keys.keys())
-
-    return mapped_item
-
-
-def _translate_status(item):
-    """
-    Translates status of image to match current Rackspace api bindings
-    item is a dict
-
-    Note: should be removed when the set of statuses expected by the api
-    and the set of statuses returned by the image service are equivalent
-
-    """
-    status_mapping = {
-        'pending': 'queued',
-        'decrypting': 'preparing',
-        'untarring': 'saving',
-        'available': 'active'}
-    try:
-        item['status'] = status_mapping[item['status']]
-    except KeyError:
-        # TODO(sirp): Performing translation of status (if necessary) here for
-        # now. Perhaps this should really be done in EC2 API and
-        # S3ImageService
-        pass
-
-    return item
-
-
-def _filter_keys(item, keys):
-    """
-    Filters all model attributes except for keys
-    item is a dict
-
-    """
-    return dict((k, v) for k, v in item.iteritems() if k in keys)
-
-
-def _convert_image_id_to_hash(image):
-    if 'imageId' in image:
-        # Convert EC2-style ID (i-blah) to Rackspace-style (int)
-        image_id = abs(hash(image['imageId']))
-        image['imageId'] = image_id
-        image['id'] = image_id
+from nova.api.openstack.views import images as images_view
 
 
 class Controller(wsgi.Controller):
+    """
+    Base `wsgi.Controller` for retrieving and displaying images in the
+    OpenStack API. Version-inspecific code goes here.
+    """
+
+    _builder = images_view.Builder_v1_0()
 
     _serialization_metadata = {
         'application/xml': {
@@ -112,55 +37,96 @@ class Controller(wsgi.Controller):
                 "image": ["id", "name", "updated", "created", "status",
                           "serverId", "progress"]}}}
 
-    def __init__(self):
-        self._service = utils.import_object(FLAGS.image_service)
+    def __init__(self, image_service=None, compute_service=None):
+        """
+        Initialize new `ImageController`.
+
+        @param compute_service: `nova.compute.api:API`
+        @param image_service: `nova.image.service:BaseImageService`
+        """
+        _default_service = utils.import_object(flags.FLAGS.image_service)
+
+        self.__compute = compute_service or compute.API()
+        self.__image = image_service or _default_service
+        self.__log = log.getLogger(self.__class__.__name__)
 
     def index(self, req):
-        """Return all public images in brief"""
-        items = self._service.index(req.environ['nova.context'])
-        items = common.limited(items, req)
-        items = [_filter_keys(item, ('id', 'name')) for item in items]
-        return dict(images=items)
+        """
+        Return an index listing of images available to the request.
+
+        @param req: `webob.Request` object
+        """
+        context = req.environ['nova.context']
+        images = self.__image.index(context)
+        build = self._builder.build
+        return dict(images=[build(req, image, False) for image in images])
 
     def detail(self, req):
-        """Return all public images in detail"""
-        try:
-            items = self._service.detail(req.environ['nova.context'])
-        except NotImplementedError:
-            items = self._service.index(req.environ['nova.context'])
-        for image in items:
-            _convert_image_id_to_hash(image)
+        """
+        Return a detailed index listing of images available to the request.
 
-        items = common.limited(items, req)
-        items = [_translate_keys(item) for item in items]
-        items = [_translate_status(item) for item in items]
-        return dict(images=items)
+        @param req: `webob.Request` object.
+        """
+        context = req.environ['nova.context']
+        images = self.__image.detail(context)
+        build = self._builder.build
+        return dict(images=[build(req, image, True) for image in images])
 
-    def show(self, req, id):
-        """Return data about the given image id"""
-        image_id = common.get_image_id_from_image_hash(self._service,
-                    req.environ['nova.context'], id)
+    def show(self, req, image_id):
+        """
+        Return detailed information about a specific image.
 
-        image = self._service.show(req.environ['nova.context'], image_id)
-        _convert_image_id_to_hash(image)
-        return dict(image=image)
+        @param req: `webob.Request` object
+        @param image_id: Image identifier (integer)
+        """
+        context = req.environ['nova.context']
+        image = self.__image.show(context, image_id)
+        return self._builder.build(req, image, True)
 
-    def delete(self, req, id):
-        # Only public images are supported for now.
-        raise faults.Fault(exc.HTTPNotFound())
+    def delete(self, req, image_id):
+        """
+        Delete an image, if allowed.
+
+        @param req: `webob.Request` object
+        @param image_id: Image identifier (integer)
+        """
+        context = req.environ['nova.context']
+        self.__image.delete(context, image_id)
+        return exc.HTTPNoContent()
 
     def create(self, req):
+        """
+        Snapshot a server instance and save the image.
+
+        @param req: `webob.Request` object
+        """
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
-        instance_id = env["image"]["serverId"]
-        name = env["image"]["name"]
+        body = req.body
+        content_type = req.get_content_type()
+        image = self._deserialize(body, content_type)
 
-        image_meta = compute.API().snapshot(
-            context, instance_id, name)
+        if not image:
+            raise exc.HTTPBadRequest()
 
-        return dict(image=image_meta)
+        try:
+            server_id = image["serverId"]
+            image_name = image["name"]
+        except KeyError:
+            raise exc.HTTPBadRequest()
 
-    def update(self, req, id):
-        # Users may not modify public images, and that's all that
-        # we support for now.
-        raise faults.Fault(exc.HTTPNotFound())
+        image = self.__compute.snapshot(context, server_id, image_name)
+        return self._builder.build(req, image, True)
+
+
+class Controller_v1_0(Controller):
+    """
+    Version 1.0 specific controller logic.
+    """
+    _builder = images_view.Builder_v1_0()
+
+
+class Controller_v1_1(Controller):
+    """
+    Version 1.1 specific controller logic.
+    """
+    _builder = images_view.Builder_v1_1()

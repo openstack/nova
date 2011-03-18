@@ -42,8 +42,9 @@ FLAGS = flags.FLAGS
 
 
 class BaseImageServiceTests(object):
-
-    """Tasks to test for all image services"""
+    """
+    Tasks to test for all image services.
+    """
 
     def test_create(self):
 
@@ -173,10 +174,9 @@ class GlanceImageServiceTest(test.TestCase,
 
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
-
-    """Test of the OpenStack API /images application controller"""
-
-    # Registered images at start of each test.
+    """
+    Test of the OpenStack API /images application controller w/Glance.
+    """
 
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
@@ -198,7 +198,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
          'deleted': False,
          'is_public': True,
          'status': 'available',
-         'image_type': 'ramdisk'}]
+         'image_type': 'ramdisk'},
+    ]
 
     def setUp(self):
         super(ImageControllerWithGlanceServiceTest, self).setUp()
@@ -219,36 +220,132 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
     def test_get_image_index(self):
-        req = webob.Request.blank('/v1.0/images')
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        request = webob.Request.blank('/v1.0/images')
+        response = request.get_response(fakes.wsgi_app())
 
-        fixture_index = [dict(id=f['id'], name=f['name']) for f
-                         in self.IMAGE_FIXTURES]
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
 
-        for image in res_dict['images']:
-            self.assertEquals(1, fixture_index.count(image),
-                              "image %s not in fixture index!" % str(image))
+        for image in self.IMAGE_FIXTURES:
+            test_image = {
+                "id": image["id"],
+                "name": image["name"],
+            }
+            self.assertTrue(test_image in response_list)
+
+        self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
+
+    def test_get_image_index_v1_1(self):
+        request = webob.Request.blank('/v1.1/images')
+        response = request.get_response(fakes.wsgi_app())
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+
+        for image in self.IMAGE_FIXTURES:
+            href = "http://localhost/v1.1/images/%s" % image["id"]
+            test_image = {
+                "id": image["id"],
+                "name": image["name"],
+                "links": [{
+                    "rel": "self",
+                    "href": "http://localhost/v1.1/images/%s" % image["id"],
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": href,
+                }],
+            }
+            print test_image
+            print
+            print response_list
+            self.assertTrue(test_image in response_list)
+
+        self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
 
     def test_get_image_details(self):
-        req = webob.Request.blank('/v1.0/images/detail')
-        res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        request = webob.Request.blank('/v1.0/images/detail')
+        response = request.get_response(fakes.wsgi_app())
 
-        def _is_equivalent_subset(x, y):
-            if set(x) <= set(y):
-                for k, v in x.iteritems():
-                    if x[k] != y[k]:
-                        if x[k] == 'active' and y[k] == 'available':
-                            continue
-                        return False
-                return True
-            return False
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
 
-        for image in res_dict['images']:
-            for image_fixture in self.IMAGE_FIXTURES:
-                if _is_equivalent_subset(image, image_fixture):
-                    break
-            else:
-                self.assertEquals(1, 2, "image %s not in fixtures!" %
-                                                            str(image))
+        for image in self.IMAGE_FIXTURES:
+            test_image = {
+                "id": image["id"],
+                "name": image["name"],
+                "updated": image["updated_at"],
+                "created": image["created_at"],
+                "status": image["status"],
+            }
+            self.assertTrue(test_image in response_list)
+
+        self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
+
+    def test_get_image_details_v1_1(self):
+        request = webob.Request.blank('/v1.1/images/detail')
+        response = request.get_response(fakes.wsgi_app())
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+
+        for image in self.IMAGE_FIXTURES:
+            href = "http://localhost/v1.1/images/%s" % image["id"]
+            test_image = {
+                "id": image["id"],
+                "name": image["name"],
+                "updated": image["updated_at"],
+                "created": image["created_at"],
+                "status": image["status"],
+                "links": [{
+                    "rel": "self",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": href,
+                }],
+            }
+            self.assertTrue(test_image in response_list)
+
+        self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
+
+    def test_get_image_create_empty(self):
+        request = webob.Request.blank('/v1.1/images')
+        request.method = "POST"
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_get_image_create_bad_no_name(self):
+        request = webob.Request.blank('/v1.1/images')
+        request.method = "POST"
+        request.content_type = "application/json"
+        request.body = json.dumps({
+            "serverId": 1,
+        })
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_get_image_create_bad_no_id(self):
+        request = webob.Request.blank('/v1.1/images')
+        request.method = "POST"
+        request.content_type = "application/json"
+        request.body = json.dumps({
+            "name" : "Snapshot Test",
+        })
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+
