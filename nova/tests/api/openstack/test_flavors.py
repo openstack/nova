@@ -30,7 +30,7 @@ class FlavorsTest(test.TestCase):
     def setUp(self):
         super(FlavorsTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

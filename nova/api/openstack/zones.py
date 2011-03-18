@@ -71,9 +71,9 @@ class Controller(wsgi.Controller):
         items = api.API.get_zone_capabilities(req.environ['nova.context'])
 
         zone = dict(name=FLAGS.zone_name)
-        caps = FLAGS.zone_capabilities.split(';')
+        caps = FLAGS.zone_capabilities
         for cap in caps:
-            key_values = cap.split(':')
+            key_values = cap.split('=')
             zone[key_values[0]] = key_values[1]
         for item, (min_value, max_value) in items.iteritems():
             zone[item] = "%s,%s" % (min_value, max_value)
@@ -92,13 +92,13 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         zone = db.zone_create(context, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
     def update(self, req, id):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
         zone = db.zone_update(context, zone_id, env["zone"])
         return dict(zone=_scrub_zone(zone))

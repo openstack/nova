@@ -25,7 +25,7 @@ def limited(items, request, max_limit=1000):
     Return a slice of items according to requested offset and limit.
 
     @param items: A sliceable entity
-    @param request: `webob.Request` possibly containing 'offset' and 'limit'
+    @param request: `wsgi.Request` possibly containing 'offset' and 'limit'
                     GET variables. 'offset' is where to start in the list,
                     and 'limit' is the maximum number of items to return. If
                     'limit' is not specified, 0, or > max_limit, we default
@@ -36,15 +36,18 @@ def limited(items, request, max_limit=1000):
     try:
         offset = int(request.GET.get('offset', 0))
     except ValueError:
-        offset = 0
+        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
 
     try:
         limit = int(request.GET.get('limit', max_limit))
     except ValueError:
-        limit = max_limit
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
 
-    if offset < 0 or limit < 0:
-        raise webob.exc.HTTPBadRequest()
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if offset < 0:
+        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit

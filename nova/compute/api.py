@@ -34,6 +34,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.scheduler import api as scheduler_api
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -80,13 +81,32 @@ class API(base.Base):
                         topic,
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
+    def _check_injected_file_quota(self, context, injected_files):
+        """
+        Enforce quota limits on injected files
+
+        Raises a QuotaError if any limit is exceeded
+        """
+        if injected_files is None:
+            return
+        limit = quota.allowed_injected_files(context)
+        if len(injected_files) > limit:
+            raise quota.QuotaError(code="OnsetFileLimitExceeded")
+        path_limit = quota.allowed_injected_file_path_bytes(context)
+        content_limit = quota.allowed_injected_file_content_bytes(context)
+        for path, content in injected_files:
+            if len(path) > path_limit:
+                raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            if len(content) > content_limit:
+                raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
+
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata=[],
-               onset_files=None):
+               injected_files=None):
         """Create the number of instances requested if quota and
         other arguments check out ok."""
 
@@ -124,11 +144,18 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
+        self._check_injected_file_quota(context, injected_files)
+
         image = self.image_service.show(context, image_id)
+
+        os_type = None
+        if 'properties' in image and 'os_type' in image['properties']:
+            os_type = image['properties']['os_type']
+
         if kernel_id is None:
-            kernel_id = image.get('kernel_id', None)
+            kernel_id = image['properties'].get('kernel_id', None)
         if ramdisk_id is None:
-            ramdisk_id = image.get('ramdisk_id', None)
+            ramdisk_id = image['properties'].get('ramdisk_id', None)
         # FIXME(sirp): is there a way we can remove null_kernel?
         # No kernel and ramdisk for raw images
         if kernel_id == str(FLAGS.null_kernel):
@@ -165,6 +192,7 @@ class API(base.Base):
             'image_id': image_id,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
+            'state': 0,
             'state_description': 'scheduling',
             'user_id': context.user_id,
             'project_id': context.project_id,
@@ -180,7 +208,8 @@ class API(base.Base):
             'key_data': key_data,
             'locked': False,
             'metadata': metadata,
-            'availability_zone': availability_zone}
+            'availability_zone': availability_zone,
+            'os_type': os_type}
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -218,7 +247,7 @@ class API(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
                                "availability_zone": availability_zone,
-                               "onset_files": onset_files}})
+                               "injected_files": injected_files}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -314,6 +343,7 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
+    #@scheduler_api.reroute_if_not_found("delete")
     def delete(self, context, instance_id):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
@@ -343,8 +373,17 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given ID."""
+        LOG.debug("*** COMPUTE.API::GET")
         rv = self.db.instance_get(context, instance_id)
+        LOG.debug("*** COMPUTE.API::GET OUT CLEAN")
         return dict(rv.iteritems())
+
+    @scheduler_api.reroute_if_not_found("get")
+    def routing_get(self, context, instance_id):
+        """Use this method instead of get() if this is the only
+           operation you intend to to. It will route to novaclient.get
+           if the instance is not found."""
+        return self.get(context, instance_id)
 
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
@@ -463,14 +502,17 @@ class API(base.Base):
                      "args": {"topic": FLAGS.compute_topic,
                               "instance_id": instance_id, }},)
 
+    #@scheduler_api.reroute_if_not_found("pause")
     def pause(self, context, instance_id):
         """Pause the given instance."""
         self._cast_compute_message('pause_instance', context, instance_id)
 
+    #@scheduler_api.reroute_if_not_found("unpause")
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
+    #@scheduler_api.reroute_if_not_found("diagnostics")
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
         return self._call_compute_message(
@@ -482,25 +524,30 @@ class API(base.Base):
         """Retrieve actions for the given instance."""
         return self.db.instance_get_actions(context, instance_id)
 
+    #@scheduler_api.reroute_if_not_found("suspend")
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
         self._cast_compute_message('suspend_instance', context, instance_id)
 
+    #@scheduler_api.reroute_if_not_found("resume")
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
         self._cast_compute_message('resume_instance', context, instance_id)
 
+    #@scheduler_api.reroute_if_not_found("rescue")
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         self._cast_compute_message('rescue_instance', context, instance_id)
 
+    #@scheduler_api.reroute_if_not_found("unrescue")
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
 
-    def set_admin_password(self, context, instance_id):
+    def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message('set_admin_password', context, instance_id)
+        self._cast_compute_message('set_admin_password', context, instance_id,
+                                    password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""

@@ -92,6 +92,9 @@ class Service(object):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
+        if 'nova-compute' == self.binary:
+            self.manager.update_available_resource(ctxt)
+
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
         conn3 = rpc.Connection.instance(new=True)

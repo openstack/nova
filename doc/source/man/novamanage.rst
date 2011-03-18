@@ -173,7 +173,10 @@ Nova Floating IPs
 ``nova-manage floating create <host> <ip_range>``
 
     Creates floating IP addresses for the named host by the given range.
-	floating delete <ip_range>	Deletes floating IP addresses in the range given.
+
+``nova-manage floating delete <ip_range>``
+
+    Deletes floating IP addresses in the range given.
 
 ``nova-manage floating list``
 
@@ -193,7 +196,7 @@ Nova Flavor
 ``nova-manage flavor create <name> <memory> <vCPU> <local_storage> <flavorID> <(optional) swap> <(optional) RXTX Quota> <(optional) RXTX Cap>``
 
     creates a flavor with the following positional arguments:
-     * memory (expressed in megabytes) 
+     * memory (expressed in megabytes)
      * vcpu(s) (integer)
      * local storage (expressed in gigabytes)
      * flavorid (unique integer)
@@ -209,12 +212,33 @@ Nova Flavor
 
     Purges the flavor with the name <name>. This removes this flavor from the database.
 
-
 Nova Instance_type
 ~~~~~~~~~~~~~~~~~~
 
 The instance_type command is provided as an alias for the flavor command. All the same subcommands and arguments from nova-manage flavor can be used.
 
+Nova Images
+~~~~~~~~~~~
+
+``nova-manage image image_register <path> <owner>``
+
+    Registers an image with the image service.
+
+``nova-manage image kernel_register <path> <owner>``
+
+    Registers a kernel with the image service.
+
+``nova-manage image ramdisk_register <path> <owner>``
+
+    Registers a ramdisk with the image service.
+
+``nova-manage image all_register <image_path> <kernel_path> <ramdisk_path> <owner>``
+
+    Registers an image kernel and ramdisk with the image service.
+
+``nova-manage image convert <directory>``
+
+    Converts all images in directory from the old (Bexar) format to the new format.
 
 FILES
 ========

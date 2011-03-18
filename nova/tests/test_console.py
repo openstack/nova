@@ -57,7 +57,7 @@ class ConsoleTestCase(test.TestCase):
         inst = {}
         #inst['host'] = self.host
         #inst['name'] = 'instance-1234'
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id

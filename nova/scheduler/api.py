@@ -86,27 +86,66 @@ def _wrap_method(function, self):
     return _wrap
 
 
-def _process(self, zone):
+def _process(func, zone):
     """Worker stub for green thread pool"""
     nova = client.OpenStackClient(zone.username, zone.password,
                                         zone.api_url)
     nova.authenticate()
-    return self.process(nova, zone)
+    return func(nova, zone)
 
 
-class ChildZoneHelper(object):
-    """Delegate a call to a set of Child Zones and wait for their
-       responses. Could be used for Zone Redirect or by the Scheduler
-       plug-ins to query the children."""
+def child_zone_helper(zone_list, func):
+    green_pool = greenpool.GreenPool()
+    return [result for result in green_pool.imap(
+                    _wrap_method(_process, func), zone_list)]
 
-    def start(self, zone_list):
-        """Spawn a green thread for each child zone, calling the
-        derived classes process() method as the worker. Returns
-        a list of HTTP Responses. 1 per child."""
-        self.green_pool = greenpool.GreenPool()
-        return [result for result in self.green_pool.imap(
-                        _wrap_method(_process, self), zone_list)]
- 
-    def process(self, client, zone):
-        """Worker Method. Derived class must override."""
-        pass
+
+def _issue_novaclient_command(nova, zone, method_name, instance_id):
+    server = None
+    try:
+        if isinstance(instance_id, int) or instance_id.isdigit():
+            server = manager.get(int(instance_id))
+        else:
+            server = manager.find(name=instance_id)
+    except novaclient.NotFound:
+        url = zone.api_url
+        LOG.debug(_("Instance %(instance_id)s not found on '%(url)s'" %
+                                                locals()))
+        return
+
+    return getattr(server, method_name)()
+
+
+def wrap_novaclient_function(f, method_name, instance_id):
+    def inner(nova, zone):
+        return f(nova, zone, method_name, instance_id)
+        
+    return inner
+
+
+class reroute_if_not_found(object):
+    """Decorator used to indicate that the method should
+       delegate the call the child zones if the db query
+       can't find anything.
+    """
+    def __init__(self, method_name):
+        self.method_name = method_name
+
+    def __call__(self, f):
+        def wrapped_f(*args, **kwargs):
+            LOG.debug("***REROUTE-3: %s / %s" % (args, kwargs))
+            context = args[1]
+            instance_id = args[2]
+            try:
+                return f(*args, **kwargs)
+            except exception.InstanceNotFound, e:
+                LOG.debug(_("Instance %(instance_id)s not found "
+                                    "locally: '%(e)s'" % locals()))
+
+                zones = db.zone_get_all(context)
+                result = child_zone_helper(zones,
+                            wrap_novaclient_function(_issue_novaclient_command,
+                                   self.method_name, instance_id))
+                LOG.debug("***REROUTE: %s" % result)
+                return result
+        return wrapped_f

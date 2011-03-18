@@ -321,6 +321,8 @@ DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
 DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
               "Top-level directory for maintaining nova's state")
+DEFINE_string('lock_path', os.path.join(os.path.dirname(__file__), '../'),
+              "Directory for lock files")
 DEFINE_string('logdir', None, 'output to a per-service log file in named '
                               'directory')
 
@@ -346,7 +348,7 @@ DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
 # The service to use for image search and retrieval
-DEFINE_string('image_service', 'nova.image.s3.S3ImageService',
+DEFINE_string('image_service', 'nova.image.local.LocalImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),
@@ -356,5 +358,6 @@ DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
 DEFINE_string('zone_name', 'nova', 'name of this zone')
-DEFINE_string('zone_capabilities', 'hypervisor:xenserver;os:linux',
-              'Key/Value tags which represent capabilities of this zone')
+DEFINE_list('zone_capabilities',
+                ['hypervisor=xenserver;kvm', 'os=linux;windows'],
+                'Key/Multi-value list representng capabilities of this zone')
