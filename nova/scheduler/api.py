@@ -118,7 +118,10 @@ def _issue_novaclient_command(nova, zone, collection, method_name, \
                                                 locals()))
         return
 
-    return getattr(item, method_name)()
+    LOG.debug("***CALLING CHILD ZONE")
+    result = getattr(item, method_name)()
+    LOG.debug("***CHILD ZONE GAVE %s", result)
+    return result
 
 
 def wrap_novaclient_function(f, collection, method_name, item_id):

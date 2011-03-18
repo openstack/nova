@@ -130,7 +130,7 @@ class Controller(wsgi.Controller):
         try:
             LOG.debug(_("***SHOW"))
             instance = self.compute_api.routing_get(req.environ['nova.context'], id)
-            LOG.debug(_("***SHOW"))
+            LOG.debug(_("***SHOW OUT %s" % instance))
             return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
