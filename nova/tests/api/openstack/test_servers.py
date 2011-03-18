@@ -24,6 +24,7 @@ from xml.dom import minidom
 import stubout
 import webob
 
+from nova import context
 from nova import db
 from nova import flags
 from nova import test
@@ -81,7 +82,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
-        "image_id": 10,
+        "image_id": "10",
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
@@ -94,7 +95,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "local_gb": 0,
         "hostname": "",
         "host": None,
-        "instance_type": "",
+        "instance_type": "1",
         "user_data": "",
         "reservation_id": "",
         "mac_address": "",
@@ -178,6 +179,25 @@ class ServersTest(test.TestCase):
         self.assertEqual(addresses["public"][0], public[0])
         self.assertEqual(len(addresses["private"]), 1)
         self.assertEqual(addresses["private"][0], private)
+
+    def test_get_server_by_id_with_addresses_v1_1(self):
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], '1')
+        self.assertEqual(res_dict['server']['name'], 'server1')
+        addresses = res_dict['server']['addresses']
+        self.assertEqual(len(addresses["public"]), len(public))
+        self.assertEqual(addresses["public"][0],
+            {"version": 4, "addr": public[0]})
+        self.assertEqual(len(addresses["private"]), 1)
+        self.assertEqual(addresses["private"][0],
+            {"version": 4, "addr": private})
 
     def test_get_server_list(self):
         req = webob.Request.blank('/v1.0/servers')
@@ -339,19 +359,32 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status, '404 Not Found')
 
-    def test_get_all_server_details(self):
+    def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
-        i = 0
-        for s in res_dict['servers']:
+        for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], 10)
+            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['flavorId'], '1')
             self.assertEqual(s['metadata']['seq'], i)
-            i += 1
+
+    def test_get_all_server_details_v1_1(self):
+        req = webob.Request.blank('/v1.1/servers/detail')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['hostId'], '')
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
+            self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
+            self.assertEqual(s['metadata']['seq'], i)
 
     def test_get_all_server_details_with_host(self):
         '''
@@ -1092,6 +1125,15 @@ class TestServerInstanceCreation(test.TestCase):
             self._create_instance_with_personality_json(personality)
         self.assertEquals(response.status_int, 400)
         self.assertEquals(injected_files, None)
+
+    def test_create_instance_with_null_personality(self):
+        personality = None
+        body_dict = self._create_personality_request_dict(personality)
+        body_dict['server']['personality'] = None
+        request = self._get_create_request_json(body_dict)
+        compute_api, response = \
+            self._run_create_instance_with_mock_compute_api(request)
+        self.assertEquals(response.status_int, 200)
 
     def test_create_instance_with_three_personalities(self):
         files = [

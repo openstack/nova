@@ -79,6 +79,7 @@ def wsgi_app(inner_application=None):
     api = openstack.FaultWrapper(auth.AuthMiddleware(
               ratelimiting.RateLimitingMiddleware(inner_application)))
     mapper['/v1.0'] = api
+    mapper['/v1.1'] = api
     mapper['/'] = openstack.FaultWrapper(openstack.Versions())
     return mapper
 

@@ -275,6 +275,8 @@ class LdapDriver(object):
             attr.append((self.ldap.MOD_REPLACE, 'description', description))
         dn = self.__project_to_dn(project_id)
         self.conn.modify_s(dn, attr)
+        if not self.is_in_project(manager_uid, project_id):
+            self.add_to_project(manager_uid, project_id)
 
     @sanitize
     def add_to_project(self, uid, project_id):

@@ -579,8 +579,10 @@ class VmCommands(object):
         ctxt = context.get_admin_context()
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
 
-        if FLAGS.connection_type != 'libvirt':
-            msg = _('Only KVM is supported for now. Sorry!')
+        if (FLAGS.connection_type != 'libvirt' or
+           (FLAGS.connection_type == 'libvirt' and
+            FLAGS.libvirt_type not in ['kvm', 'qemu'])):
+            msg = _('Only KVM and QEmu are supported for now. Sorry!')
             raise exception.Error(msg)
 
         if (FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
