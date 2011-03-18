@@ -212,7 +212,7 @@ class S3APITestCase(test.TestCase):
         # pylint: disable=E1101
         self.listening_port = reactor.listenTCP(0, self.site,
                                                 interface='127.0.0.1')
-        # pylint: enable-msg=E1101
+        # pylint: enable=E1101
         self.tcp_port = self.listening_port.getHost().port
 
         if not boto.config.has_section('Boto'):

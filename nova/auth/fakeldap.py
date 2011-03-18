@@ -277,7 +277,7 @@ class FakeLDAP(object):
                 attrs = dict([(k, v) for k, v in attrs.iteritems()
                               if not fields or k in fields])
                 objects.append((key[len(self.__prefix):], attrs))
-            # pylint: enable-msg=E1103
+            # pylint: enable=E1103
         if objects == []:
             raise NO_SUCH_OBJECT()
         return objects
