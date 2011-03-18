@@ -343,7 +343,7 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
-    @scheduler_api.reroute("delete")
+    @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
