@@ -16,12 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import commands
 import os
 import random
 import sys
 import time
-import unittest
+import tempfile
+import shutil
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -48,10 +48,18 @@ TEST_GROUP = '%s_group' % TEST_PREFIX
 
 class ImageTests(base.UserSmokeTestCase):
     def test_001_can_bundle_image(self):
-        self.assertTrue(self.bundle_image(FLAGS.bundle_image))
+        self.data['tempdir'] = tempfile.mkdtemp()
+        self.assertTrue(self.bundle_image(FLAGS.bundle_image,
+                                          self.data['tempdir']))
 
     def test_002_can_upload_image(self):
-        self.assertTrue(self.upload_image(TEST_BUCKET, FLAGS.bundle_image))
+        try:
+            self.assertTrue(self.upload_image(TEST_BUCKET,
+                                              FLAGS.bundle_image,
+                                              self.data['tempdir']))
+        finally:
+            if os.path.exists(self.data['tempdir']):
+                shutil.rmtree(self.data['tempdir'])
 
     def test_003_can_register_image(self):
         image_id = self.conn.register_image('%s/%s.manifest.xml' %
@@ -191,7 +199,7 @@ class VolumeTests(base.UserSmokeTestCase):
         self.assertEqual(volume.size, 1)
         self.data['volume'] = volume
         # Give network time to find volume.
-        time.sleep(10)
+        time.sleep(5)
 
     def test_002_can_attach_volume(self):
         volume = self.data['volume']
@@ -204,6 +212,8 @@ class VolumeTests(base.UserSmokeTestCase):
         else:
             self.fail('cannot attach volume with state %s' % volume.status)
 
+        # Give volume some time to be ready.
+        time.sleep(5)
         volume.attach(self.data['instance'].id, self.device)
 
         # wait
@@ -218,7 +228,7 @@ class VolumeTests(base.UserSmokeTestCase):
         self.assertTrue(volume.status.startswith('in-use'))
 
         # Give instance time to recognize volume.
-        time.sleep(10)
+        time.sleep(5)
 
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_dns_name
@@ -284,11 +294,3 @@ class VolumeTests(base.UserSmokeTestCase):
     def test_999_tearDown(self):
         self.conn.terminate_instances([self.data['instance'].id])
         self.conn.delete_key_pair(TEST_KEY)
-
-
-if __name__ == "__main__":
-    suites = {'image': unittest.makeSuite(ImageTests),
-              'instance': unittest.makeSuite(InstanceTests),
-              'volume': unittest.makeSuite(VolumeTests)
-              }
-    sys.exit(not base.run_tests(suites))

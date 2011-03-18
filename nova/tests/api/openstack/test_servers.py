@@ -1134,5 +1134,3 @@ class TestServerInstanceCreation(test.TestCase):
         self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
 
 
-if __name__ == "__main__":
-    unittest.main()

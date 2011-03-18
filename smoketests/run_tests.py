@@ -66,9 +66,6 @@ from nose import config
 from nose import core
 from nose import result
 
-from nova import log as logging
-from nova.tests import fake_flags
-
 
 class _AnsiColorizer(object):
     """
@@ -281,17 +278,13 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
-    logging.setup()
-    # If any argument looks like a test name but doesn't have "nova.tests" in
-    # front of it, automatically add that so we don't have to type as much
-    argv = []
-    for x in sys.argv:
-        if x.startswith('test_'):
-            argv.append('nova.tests.%s' % x)
-        else:
-            argv.append(x)
+    if not os.getenv('EC2_ACCESS_KEY'):
+        print _('Missing EC2 environment variables. Please ' \
+                'source the appropriate novarc file before ' \
+                'running this test.')
+        sys.exit(1)
 
-    testdir = os.path.abspath(os.path.join("nova", "tests"))
+    testdir = os.path.abspath("./")
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,
@@ -301,4 +294,4 @@ if __name__ == '__main__':
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c)
-    sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
+    sys.exit(not core.run(config=c, testRunner=runner, argv=sys.argv))
