@@ -146,7 +146,6 @@ class APIRouterV11(APIRouter):
                         collection={'detail': 'GET'})
 
 
-
 class Versions(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):

@@ -56,17 +56,6 @@ class Controller(wsgi.Controller):
         self.__compute = compute_service or compute.API()
         self.__image = image_service or _default_service
 
-    def get_builder(self, request):
-        """
-        Property to get the ViewBuilder class we need to use.
-        """
-        version = common.get_api_version(request)
-        base_url = request.application_url
-        try:
-            return self._builder_dispatch[version](base_url)
-        except KeyError:
-            raise exc.HTTPNotFound()
-
     def index(self, req):
         """
         Return an index listing of images available to the request.
@@ -76,7 +65,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         images = self.__image.index(context)
         build = self.get_builder(req).build
-        return dict(images=[build(req, image, False) for image in images])
+        return dict(images=[build(image, False) for image in images])
 
     def detail(self, req):
         """
@@ -87,7 +76,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         images = self.__image.detail(context)
         build = self.get_builder(req).build
-        return dict(images=[build(req, image, True) for image in images])
+        return dict(images=[build(image, True) for image in images])
 
     def show(self, req, image_id):
         """
@@ -98,7 +87,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         image = self.__image.show(context, image_id)
-        return self.get_builder(req).build(req, image, True)
+        return self.get_builder().build(req, image, True)
 
     def delete(self, req, image_id):
         """
@@ -132,18 +121,30 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest()
 
         image = self.__compute.snapshot(context, server_id, image_name)
-        return self.get_builder(req).build(req, image, True)
+        return self.get_builder(req).build(image, True)
 
 
 class ControllerV10(Controller):
     """
     Version 1.0 specific controller logic.
     """
-    pass
+
+    def get_builder(self, request):
+        """
+        Property to get the ViewBuilder class we need to use.
+        """
+        base_url = request.application_url
+        return images_view.ViewBuilderV10(base_url)
 
 
 class ControllerV11(Controller):
     """
     Version 1.1 specific controller logic.
     """
-    pass
+
+    def get_builder(self, request):
+        """
+        Property to get the ViewBuilder class we need to use.
+        """
+        base_url = request.application_url
+        return images_view.ViewBuilderV11(base_url)

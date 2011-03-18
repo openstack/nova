@@ -66,8 +66,8 @@ class ViewBuilderV11(ViewBuilder):
         """
         Return a standardized image structure for display by the API.
         """
-        image = ViewBuilder.build(self, request, image_obj, detail)
-        href = self.generate_url(image_obj["id"])
+        image = ViewBuilder.build(self, image_obj, detail)
+        href = self.generate_href(image_obj["id"])
 
         image["links"] = [{
             "rel": "self",
