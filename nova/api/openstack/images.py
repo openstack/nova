@@ -143,6 +143,7 @@ class Controller(wsgi.Controller):
 
         image = self._service.show(req.environ['nova.context'], image_id)
         _convert_image_id_to_hash(image)
+        self._format_image_dates(image)
         return dict(image=image)
 
     def delete(self, req, id):
@@ -164,3 +165,8 @@ class Controller(wsgi.Controller):
         # Users may not modify public images, and that's all that
         # we support for now.
         raise faults.Fault(exc.HTTPNotFound())
+
+    def _format_image_dates(self, image):
+        for attr in ['created_at', 'updated_at', 'deleted_at']:
+            if image[attr] is not None:
+                image[attr] = image[attr].strftime('%Y-%m-%dT%H:%M:%SZ')

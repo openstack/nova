@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import datetime
 import json
 import random
@@ -151,22 +152,23 @@ def stub_out_glance(stubs, initial_fixtures=None):
                     for f in self.fixtures]
 
         def fake_get_images_detailed(self):
-            return self.fixtures
+            return copy.deepcopy(self.fixtures)
 
         def fake_get_image_meta(self, image_id):
-            for f in self.fixtures:
-                if f['id'] == image_id:
-                    return f
+            image = self._find_image(image_id)
+            if image:
+                return copy.deepcopy(image)
             raise glance_exc.NotFound
 
         def fake_add_image(self, image_meta, data=None):
+            image_meta = copy.deepcopy(image_meta)
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_meta['id'] = id
             self.fixtures.append(image_meta)
             return image_meta
 
         def fake_update_image(self, image_id, image_meta, data=None):
-            f = self.fake_get_image_meta(image_id)
+            f = self._find_image(image_id)
             if not f:
                 raise glance_exc.NotFound
 
@@ -174,7 +176,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
             return f
 
         def fake_delete_image(self, image_id):
-            f = self.fake_get_image_meta(image_id)
+            f = self._find_image(image_id)
             if not f:
                 raise glance_exc.NotFound
 
@@ -182,6 +184,12 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         ##def fake_delete_all(self):
         ##    self.fixtures = []
+
+        def _find_image(self, image_id):
+            for f in self.fixtures:
+                if f['id'] == image_id:
+                    return f
+            return None
 
     GlanceClient = glance_client.Client
     fake = FakeGlanceClient(initial_fixtures)

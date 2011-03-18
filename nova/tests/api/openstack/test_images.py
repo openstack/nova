@@ -21,7 +21,7 @@ and as a WSGI layer
 """
 
 import json
-import datetime
+import datetime as dt
 import shutil
 import tempfile
 
@@ -177,13 +177,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     """Test of the OpenStack API /images application controller"""
 
     # Registered images at start of each test.
-
+    now = dt.datetime.utcnow()
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
          'imageId': '23g2ogk23k4hhkk4k42l',
          'name': 'public image #1',
-         'created_at': datetime.datetime.utcnow().isoformat(),
-         'updated_at': datetime.datetime.utcnow().isoformat(),
+         'created_at': now.isoformat(),
+         'updated_at': now.isoformat(),
          'deleted_at': None,
          'deleted': False,
          'is_public': True,
@@ -192,8 +192,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {'id': 'slkduhfas73kkaskgdas',
          'imageId': 'slkduhfas73kkaskgdas',
          'name': 'public image #2',
-         'created_at': datetime.datetime.utcnow().isoformat(),
-         'updated_at': datetime.datetime.utcnow().isoformat(),
+         'created_at': now.isoformat(),
+         'updated_at': now.isoformat(),
          'deleted_at': None,
          'deleted': False,
          'is_public': True,
@@ -235,20 +235,20 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
-        def _is_equivalent_subset(x, y):
-            if set(x) <= set(y):
-                for k, v in x.iteritems():
-                    if x[k] != y[k]:
-                        if x[k] == 'active' and y[k] == 'available':
-                            continue
-                        return False
-                return True
-            return False
+        for image in self.IMAGE_FIXTURES:
+            expected = {
+                'id': abs(hash(image['imageId'])),
+                'name': image['name'],
+                'status': 'active',
+            }
+            self.assertTrue(expected in res_dict['images'])
 
-        for image in res_dict['images']:
-            for image_fixture in self.IMAGE_FIXTURES:
-                if _is_equivalent_subset(image, image_fixture):
-                    break
-            else:
-                self.assertEquals(1, 2, "image %s not in fixtures!" %
-                                                            str(image))
+    def test_show_image(self):
+        expected = self.IMAGE_FIXTURES[0]
+        id = abs(hash(expected['id']))
+        expected_time = self.now.strftime('%Y-%m-%dT%H:%M:%SZ')
+        req = webob.Request.blank('/v1.0/images/%s' % id)
+        res = req.get_response(fakes.wsgi_app())
+        actual = json.loads(res.body)['image']
+        self.assertEqual(expected_time, actual['created_at'])
+        self.assertEqual(expected_time, actual['updated_at'])
