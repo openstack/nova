@@ -44,7 +44,7 @@ class ViewBuilder(object):
             server = self._build_simple(inst)
 
         self._build_extra(server, inst)
-        
+
         return dict(server=server)
 
     def _build_simple(self, inst):

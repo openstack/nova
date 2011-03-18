@@ -241,7 +241,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
-        for i,s in enumerate(res_dict['servers']):
+        for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s.get('imageId', None), None)
@@ -264,7 +264,6 @@ class ServersTest(test.TestCase):
         ]
 
         self.assertEqual(s['links'], expected_links)
-
 
     def test_get_servers_with_limit(self):
         req = webob.Request.blank('/v1.0/servers?limit=3')
