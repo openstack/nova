@@ -28,6 +28,10 @@ import novaclient.client as client
 from eventlet import greenpool
 
 FLAGS = flags.FLAGS
+flags.DEFINE_bool('enable_zone_routing',
+    False,
+    'When True, routing to child zones will occur.')
+
 LOG = logging.getLogger('nova.scheduler.api')
 
 
@@ -83,7 +87,8 @@ def _wrap_method(function, self):
 
 
 def _process(func, zone):
-    """Worker stub for green thread pool"""
+    """Worker stub for green thread pool. Give the worker
+    an authenticated nova client and zone info."""
     nova = client.OpenStackClient(zone.username, zone.password,
                                         zone.api_url)
     nova.authenticate()
@@ -91,36 +96,42 @@ def _process(func, zone):
 
 
 def child_zone_helper(zone_list, func):
+    """Fire off a command to each zone in the list."""
     green_pool = greenpool.GreenPool()
     return [result for result in green_pool.imap(
                     _wrap_method(_process, func), zone_list)]
 
 
-def _issue_novaclient_command(nova, zone, method_name, instance_id):
-    server = None
+def _issue_novaclient_command(nova, zone, collection, method_name, \
+                                                        item_id):
+    """Use novaclient to issue command to a single child zone.
+       One of these will be run in parallel for each child zone."""
+    item = None
     try:
-        manager = getattr(nova, "servers")
-        if isinstance(instance_id, int) or instance_id.isdigit():
-            server = manager.get(int(instance_id))
+        manager = getattr(nova, collection)
+        if isinstance(item_id, int) or item_id.isdigit():
+            item = manager.get(int(item_id))
         else:
-            server = manager.find(name=instance_id)
+            item = manager.find(name=item_id)
     except novaclient.NotFound:
         url = zone.api_url
-        LOG.debug(_("Instance %(instance_id)s not found on '%(url)s'" %
+        LOG.debug(_("%(collection)s '%(item_id)s' not found on '%(url)s'" %
                                                 locals()))
         return
 
-    return getattr(server, method_name)()
+    return getattr(item, method_name)()
 
 
-def wrap_novaclient_function(f, method_name, instance_id):
+def wrap_novaclient_function(f, collection, method_name, item_id):
+    """Appends collection, method_name and item_id to the incoming
+    (nova, zone) call from child_zone_helper."""
     def inner(nova, zone):
-        return f(nova, zone, method_name, instance_id)
+        return f(nova, zone, collection, method_name, item_id)
         
     return inner
 
 
-class reroute_if_not_found(object):
+class reroute_compute(object):
     """Decorator used to indicate that the method should
        delegate the call the child zones if the db query
        can't find anything.
@@ -130,19 +141,32 @@ class reroute_if_not_found(object):
 
     def __call__(self, f):
         def wrapped_f(*args, **kwargs):
-            LOG.debug("***REROUTE-3: %s / %s" % (args, kwargs))
-            context = args[1]
-            instance_id = args[2]
+            collection, context, item_id = \
+                            self.get_collection_context_and_id()
             try:
                 return f(*args, **kwargs)
             except exception.InstanceNotFound, e:
-                LOG.debug(_("Instance %(instance_id)s not found "
+                LOG.debug(_("Instance %(item_id)s not found "
                                     "locally: '%(e)s'" % locals()))
 
+                if not FLAGS.enable_zone_routing:
+                    raise
+                    
                 zones = db.zone_get_all(context)
+                if not zones:
+                    raise
+
                 result = child_zone_helper(zones,
                             wrap_novaclient_function(_issue_novaclient_command,
-                                   self.method_name, instance_id))
+                                   collection, self.method_name, item_id))
                 LOG.debug("***REROUTE: %s" % result)
-                return result
+                return self.unmarshall_result(result)
         return wrapped_f
+
+    def get_collection_context_and_id(self, args):
+        """Returns a tuple of (novaclient collection name, security
+           context and resource id. Derived class should override this."""
+        return ("servers", args[1], args[2])
+
+    def unmarshall_result(self, result):
+        return result        
