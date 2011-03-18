@@ -192,7 +192,9 @@ class VirtualMachine(ManagedObject):
         ds_do.ManagedObjectReference = [kwargs.get("ds").obj]
         self.set("datastore", ds_do)
         self.set("summary.guest.toolsStatus", kwargs.get("toolsstatus",
-                                                       "toolsOk"))
+                                "toolsOk"))
+        self.set("summary.guest.toolsRunningStatus", kwargs.get(
+                                "toolsrunningstate", "guestToolsRunning"))
         self.set("runtime.powerState", kwargs.get("powerstate", "poweredOn"))
         self.set("config.files.vmPathName", kwargs.get("vmPathName"))
         self.set("summary.config.numCpu", kwargs.get("numCpu", 1))

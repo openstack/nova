@@ -482,27 +482,32 @@ class VMWareVMOps(object):
         if vm_ref is None:
             raise exception.NotFound(_("instance - %s not present") %
                                      instance.name)
-        lst_properties = ["summary.guest.toolsStatus", "runtime.powerState"]
+        lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
+                          "summary.guest.toolsRunningStatus"]
         props = self._session._call_method(vim_util, "get_object_properties",
                            None, vm_ref, "VirtualMachine",
                            lst_properties)
+        pwr_state = None
+        tools_status = None
+        tools_running_status = False
         for elem in props:
-            pwr_state = None
-            tools_status = None
             for prop in elem.propSet:
                 if prop.name == "runtime.powerState":
                     pwr_state = prop.val
                 elif prop.name == "summary.guest.toolsStatus":
                     tools_status = prop.val
+                elif prop.name == "summary.guest.toolsRunningStatus":
+                    tools_running_status = prop.val
 
         # Raise an exception if the VM is not powered On.
         if pwr_state not in ["poweredOn"]:
             raise exception.Invalid(_("instance - %s not poweredOn. So can't "
                             "be rebooted.") % instance.name)
 
-        # If vmware tools are installed in the VM, then do a guest reboot.
-        # Otherwise do a hard reset.
-        if tools_status not in ['toolsNotInstalled', 'toolsNotRunning']:
+        # If latest vmware tools are installed in the VM, and that the tools
+        # are running, then only do a guest reboot. Otherwise do a hard reset.
+        if (tools_status == "toolsOk" and
+                tools_running_status == "guestToolsRunning"):
             LOG.debug(_("Rebooting guest OS of VM %s") % instance.name)
             self._session._call_method(self._session._get_vim(), "RebootGuest",
                                        vm_ref)

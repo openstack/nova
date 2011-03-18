@@ -27,16 +27,49 @@ import urllib
 import urllib2
 import urlparse
 
+from eventlet import event
+from eventlet import greenthread
+
+from glance import client
+
 from nova import flags
 from nova import log as logging
 
-FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.virt.vmwareapi.read_write_util")
 
-READ_CHUNKSIZE = 2 * 1024 * 1024
+FLAGS = flags.FLAGS
 
 USER_AGENT = "OpenStack-ESX-Adapter"
 
-LOG = logging.getLogger("nova.virt.vmwareapi.read_write_util")
+try:
+    READ_CHUNKSIZE = client.BaseClient.CHUNKSIZE
+except:
+    READ_CHUNKSIZE = 65536
+
+
+class GlanceFileRead(object):
+    """Glance file read handler class."""
+
+    def __init__(self, glance_read_iter):
+        self.glance_read_iter = glance_read_iter
+        self.iter = self.get_next()
+
+    def read(self, chunk_size):
+        """Read an item from the queue. The chunk size is ignored for the
+        Client ImageBodyIterator uses its own CHUNKSIZE."""
+        try:
+            return self.iter.next()
+        except StopIteration:
+            return ""
+
+    def get_next(self):
+        """Get the next item from the image iterator."""
+        for data in self.glance_read_iter:
+            yield data
+
+    def close(self):
+        """A dummy close just to maintain consistency."""
+        pass
 
 
 class VMwareHTTPFile(object):
@@ -77,7 +110,7 @@ class VMwareHTTPFile(object):
         """Write data to the file."""
         raise NotImplementedError
 
-    def read(self, chunk_size=READ_CHUNKSIZE):
+    def read(self, chunk_size):
         """Read a chunk of data."""
         raise NotImplementedError
 
@@ -137,9 +170,12 @@ class VmWareHTTPReadFile(VMwareHTTPFile):
         conn = urllib2.urlopen(request)
         VMwareHTTPFile.__init__(self, conn)
 
-    def read(self, chunk_size=READ_CHUNKSIZE):
+    def read(self, chunk_size):
         """Read a chunk of data."""
-        return self.file_handle.read(chunk_size)
+        # We are ignoring the chunk size passed for we want the pipe to hold
+        # data items of the chunk-size that Glance Client uses for read
+        # while writing.
+        return self.file_handle.read(READ_CHUNKSIZE)
 
     def get_size(self):
         """Get size of the file to be read."""

@@ -45,7 +45,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         super(VMWareAPIVMTestCase, self).setUp()
         self.flags(vmwareapi_host_ip='test_url',
                    vmwareapi_host_username='test_username',
-                   vmware_host_password='test_pass')
+                   vmwareapi_host_password='test_pass')
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('fake', 'fake', 'fake',
                                              admin=True)

@@ -348,7 +348,7 @@ class VMWareAPISession(object):
                 action["error"] = error_info
                 LOG.warn(_("Task [%(task_name)s] %(task_ref)s "
                           "status: error %(error_info)s") % locals())
-                done.send_exception(Exception(error_info))
+                done.send_exception(exception.Error(error_info))
             db.instance_action_create(context.get_admin_context(), action)
         except Exception, excep:
             LOG.warn(_("In vmwareapi:_poll_task, Got this error %s") % excep)
