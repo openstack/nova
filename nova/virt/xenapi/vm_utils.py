@@ -469,8 +469,8 @@ class VMHelper(HelperBase):
         #from this point we have a VDI on Xen host
         #if anything goes wrong, we need to remember its uuid
         try:
-            vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
             filename = None
+            vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
             with_vdi_attached_here(session, vdi_ref, False,
                                    lambda dev:
                                    _stream_disk(dev, image_type,

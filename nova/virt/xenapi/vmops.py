@@ -136,30 +136,29 @@ class VMOps(object):
                 ramdisk = VMHelper.fetch_image(self._session,
                     instance.id, instance.ramdisk_id, user, project,
                     ImageType.RAMDISK)
-
             use_pv_kernel = VMHelper.determine_is_pv(self._session,
                 instance.id, vdi_ref, disk_image_type, instance.os_type)
-
             vm_ref = VMHelper.create_vm(self._session, instance,
                                         kernel, ramdisk, use_pv_kernel)
-        except self.XenAPI.Failure as vm_create_error:
-            # if the spawn process fails here it will be necessary to
-            # clean up kernel and ramdisk (only files in dom0)
+        except (self.XenAPI.Failure, OSError, IOError) as vm_create_error:
+            #collect resources to clean up
+            #_handle_spawn_error will remove unused resources
             LOG.exception(_("instance %s: Failed to spawn - " +
                             "Unable to create VM"),
                           instance.id, exc_info=sys.exc_info())
-
             last_arg = None
             resources = {}
+
             if len(vm_create_error.args) > 0:
                 last_arg = vm_create_error.args[len(vm_create_error.args) - 1]
             if isinstance(last_arg, dict):
                 resources = last_arg
+            else:
+                vm_create_error.args = vm_create_error.args + (resources,)
             if ImageType.KERNEL not in resources and kernel:
                 resources[ImageType.KERNEL] = (None, kernel)
             if ImageType.RAMDISK not in resources and ramdisk:
                 resources[ImageType.RAMDISK] = (None, ramdisk)
-            vm_create_error.args = vm_create_error.args + (resources,)
             raise vm_create_error
 
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
@@ -224,16 +223,15 @@ class VMOps(object):
 
     def _handle_spawn_error(self, vdi_uuid, disk_image_type, spawn_error):
         resources = {}
-        if vdi_uuid:
-            resources[disk_image_type] = (vdi_uuid,)
+        files_to_remove = {}
         #extract resource dictionary from spawn error
         if len(spawn_error.args) > 0:
             last_arg = spawn_error.args[len(spawn_error.args) - 1]
-            if isinstance(last_arg, dict):
-                for item in last_arg:
-                    resources[item] = last_arg[item]
-        LOG.debug(_("resources to remove:%s"), resources)
-        files_to_remove = {}
+            resources = last_arg
+        if vdi_uuid:
+            resources[disk_image_type] = (vdi_uuid,)
+        LOG.debug(_("Resources to remove:%s"), resources)
+
         for vdi_type in resources:
             items_to_remove = resources[vdi_type]
             vdi_to_remove = items_to_remove[0]
@@ -243,14 +241,14 @@ class VMOps(object):
                             vdi_to_remove)
                     LOG.debug(_('Removing VDI %(vdi_ref)s' +
                                 '(uuid:%(vdi_to_remove)s)'), locals())
+                    VMHelper.destroy_vdi(self._session, vdi_ref)
                 except self.XenAPI.Failure:
                     #vdi already deleted
                     LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
-                    continue
-                VMHelper.destroy_vdi(self._session, vdi_ref)
             if len(items_to_remove) > 1:
                 # there is also a file to remove
                 files_to_remove[vdi_type] = items_to_remove[1]
+
         if len(files_to_remove) > 0:
             LOG.debug(_("Removing kernel/ramdisk files from dom0"))
             self._destroy_kernel_ramdisk_plugin_call(
