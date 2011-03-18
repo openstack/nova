@@ -142,7 +142,7 @@ class reroute_compute(object):
     def __call__(self, f):
         def wrapped_f(*args, **kwargs):
             collection, context, item_id = \
-                            self.get_collection_context_and_id()
+                            self.get_collection_context_and_id(args)
             try:
                 return f(*args, **kwargs)
             except exception.InstanceNotFound, e:
