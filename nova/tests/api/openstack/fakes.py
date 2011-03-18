@@ -240,7 +240,8 @@ class FakeAuthManager(object):
 
     @classmethod
     def reset_fake_data(cls):
-        cls.auth_data = dict(u1=User('id1', 'guy1', 'acc1', 'secret1', False))
+        u1 = User('id1', 'guy1', 'acc1', 'secret1', False)
+        cls.auth_data = [u1]
         cls.projects = dict(testacct=Project('testacct',
                                              'testacct',
                                              'id1',
