@@ -125,7 +125,7 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
-        # pylint: disable-msg=E1103
+        # pylint: disable=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
 

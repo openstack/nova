@@ -22,7 +22,7 @@ Nova authentication management
 
 import os
 import shutil
-import string  # pylint: disable-msg=W0402
+import string  # pylint: disable=W0402
 import tempfile
 import uuid
 import zipfile
