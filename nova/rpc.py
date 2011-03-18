@@ -311,7 +311,7 @@ def _pack_context(msg, context):
 
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
-    LOG.debug(_("Making asynchronous call..."))
+    LOG.debug(_("Making asynchronous call on %s ..."), topic)
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug(_("MSG_ID is %s") % (msg_id))
@@ -352,7 +352,7 @@ def call(context, topic, msg):
 
 def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
-    LOG.debug(_("Making asynchronous cast..."))
+    LOG.debug(_("Making asynchronous cast on %s..."), topic)
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
