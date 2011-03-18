@@ -181,7 +181,13 @@ class reroute_compute(object):
         return ("servers", args[1], args[2])
 
     def unmarshall_result(self, result):
-        return [server.__dict__ for server in result]
+        server = result[0].__dict__
+
+        for k in server.keys():
+            if k[0] == '_' or k == 'manager':
+                del server[k]
+
+        return dict(server=server)
 
 
 def redirect_handler(f):
