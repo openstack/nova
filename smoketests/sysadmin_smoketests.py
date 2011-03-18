@@ -285,9 +285,8 @@ class VolumeTests(base.UserSmokeTestCase):
         self.conn.terminate_instances([self.data['instance'].id])
         self.conn.delete_key_pair(TEST_KEY)
 
-
 if __name__ == "__main__":
-    suites = {
+    suites = {'image': unittest.makeSuite(ImageTests),
               'instance': unittest.makeSuite(InstanceTests),
-              }
+              'volume': unittest.makeSuite(VolumeTests)}
     sys.exit(base.run_tests(suites))
