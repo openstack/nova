@@ -60,12 +60,23 @@ import os
 import unittest
 import sys
 
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
+
 gettext.install('nova', unicode=1)
 
 from nose import config
 from nose import core
 from nose import result
 
+from smoketests import flags
+FLAGS = flags.FLAGS
 
 class _AnsiColorizer(object):
     """
@@ -284,6 +295,7 @@ if __name__ == '__main__':
                 'running this test.')
         sys.exit(1)
 
+    argv = FLAGS(sys.argv)
     testdir = os.path.abspath("./")
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
@@ -294,4 +306,4 @@ if __name__ == '__main__':
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
                             config=c)
-    sys.exit(not core.run(config=c, testRunner=runner, argv=sys.argv))
+    sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
