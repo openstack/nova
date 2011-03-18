@@ -34,7 +34,7 @@ from nova import utils
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
-from nova.api.openstack import ratelimiting
+from nova.api.openstack import limits
 from nova.auth.manager import User, Project
 from nova.image import glance
 from nova.image import local
@@ -77,7 +77,7 @@ def wsgi_app(inner_application=None):
         inner_application = openstack.APIRouter()
     mapper = urlmap.URLMap()
     api = openstack.FaultWrapper(auth.AuthMiddleware(
-              ratelimiting.RateLimitingMiddleware(inner_application)))
+              limits.RateLimitingMiddleware(inner_application)))
     mapper['/v1.0'] = api
     mapper['/v1.1'] = api
     mapper['/'] = openstack.FaultWrapper(openstack.Versions())
@@ -116,13 +116,13 @@ def stub_out_auth(stubs):
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(ratelimiting.RateLimitingMiddleware, self).__init__(app)
+        super(limits.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 
