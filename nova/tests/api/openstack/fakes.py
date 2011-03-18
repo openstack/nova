@@ -255,21 +255,21 @@ class FakeAuthManager(object):
         return FakeAuthManager.auth_data
 
     def get_user(self, uid):
-        for u in FakeAuthManager.auth_data:
-            if u.id == uid:
-                return u
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                return user
         return None
 
     def get_user_from_access_key(self, key):
-        for u in FakeAuthManager.auth_data:
-            if u.access == key:
-                return u
+        for user in FakeAuthManager.auth_data:
+            if user.access == key:
+                return user
         return None
 
     def delete_user(self, uid):
-        for u in FakeAuthManager.auth_data:
-            if u.id == uid:
-                FakeAuthManager.auth_data.remove(u)
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                FakeAuthManager.auth_data.remove(user)
         return None
 
     def create_user(self, name, access=None, secret=None, admin=False):
@@ -278,10 +278,7 @@ class FakeAuthManager(object):
         return u
 
     def modify_user(self, user_id, access=None, secret=None, admin=None):
-        user = None
-        for u in FakeAuthManager.auth_data:
-            if u.id == user_id:
-                user = u
+        user = self.get_user(user_id)
         if user:
             user.access = access
             user.secret = secret
