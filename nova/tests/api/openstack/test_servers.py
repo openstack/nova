@@ -239,6 +239,13 @@ class ServersTest(test.TestCase):
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['id'] for s in servers], [1, 2])
 
+    def test_get_servers_with_marker(self):
+        req = webob.Request.blank('/v1.1/servers?marker=2')
+        res = req.get_response(fakes.wsgi_app())
+        print 'body:', res.body
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [2, 3, 4])
+
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):

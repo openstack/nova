@@ -55,6 +55,34 @@ def limited(items, request, max_limit=1000):
     return items[offset:range_end]
 
 
+def limited_by_marker(items, request, max_limit=1000):
+    ''' Return a slice of items according to requested marker and limit. '''
+
+    marker = request.GET.get('marker')
+
+    try:
+        limit = int(request.GET.get('limit', max_limit))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    limit = min(max_limit, limit or max_limit)
+    start_index = 0
+    if marker != None:
+        found_it = False
+        for i, item in enumerate(items):
+            if str(item['id']) == marker:
+                start_index = i
+                found_it = True
+                break
+        if not found_it:
+            raise webob.exc.HTTPBadRequest(_('marker not found'))
+    range_end = start_index + limit
+    return items[start_index:range_end]
+
+
 def get_image_id_from_image_hash(image_service, context, image_hash):
     """Given an Image ID Hash, return an objectstore Image ID.
 
