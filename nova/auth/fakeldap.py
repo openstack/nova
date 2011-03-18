@@ -90,12 +90,12 @@ MOD_DELETE = 1
 MOD_REPLACE = 2
 
 
-class NO_SUCH_OBJECT(Exception):  # pylint: disable-msg=C0103
+class NO_SUCH_OBJECT(Exception):  # pylint: disable=C0103
     """Duplicate exception class from real LDAP module."""
     pass
 
 
-class OBJECT_CLASS_VIOLATION(Exception):  # pylint: disable-msg=C0103
+class OBJECT_CLASS_VIOLATION(Exception):  # pylint: disable=C0103
     """Duplicate exception class from real LDAP module."""
     pass
 
@@ -268,7 +268,7 @@ class FakeLDAP(object):
             # get the attributes from the store
             attrs = store.hgetall(key)
             # turn the values from the store into lists
-            # pylint: disable-msg=E1103
+            # pylint: disable=E1103
             attrs = dict([(k, _from_json(v))
                           for k, v in attrs.iteritems()])
             # filter the objects by query
@@ -283,6 +283,6 @@ class FakeLDAP(object):
         return objects
 
     @property
-    def __prefix(self):  # pylint: disable-msg=R0201
+    def __prefix(self):  # pylint: disable=R0201
         """Get the prefix to use for all keys."""
         return 'ldap:'
