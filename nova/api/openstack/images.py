@@ -17,9 +17,9 @@ from webob import exc
 
 from nova import compute
 from nova import flags
-from nova import log
 from nova import utils
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack.views import images as images_view
 
 
@@ -39,6 +39,11 @@ class Controller(wsgi.Controller):
         },
     }
 
+    _builder_dispatch = {
+        "1.0": images_view.ViewBuilderV10,
+        "1.1": images_view.ViewBuilderV11,
+    }
+
     def __init__(self, image_service=None, compute_service=None):
         """
         Initialize new `ImageController`.
@@ -50,7 +55,17 @@ class Controller(wsgi.Controller):
 
         self.__compute = compute_service or compute.API()
         self.__image = image_service or _default_service
-        self.__log = log.getLogger(self.__class__.__name__)
+
+    def get_builder(self, request):
+        """
+        Property to get the ViewBuilder class we need to use.
+        """
+        version = common.get_api_version(request)
+        base_url = request.application_url
+        try:
+            return self._builder_dispatch[version](base_url)
+        except KeyError:
+            raise exc.HTTPNotFound()
 
     def index(self, req):
         """
@@ -60,7 +75,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         images = self.__image.index(context)
-        build = self._builder.build
+        build = self.get_builder(req).build
         return dict(images=[build(req, image, False) for image in images])
 
     def detail(self, req):
@@ -71,7 +86,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         images = self.__image.detail(context)
-        build = self._builder.build
+        build = self.get_builder(req).build
         return dict(images=[build(req, image, True) for image in images])
 
     def show(self, req, image_id):
@@ -83,7 +98,7 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         image = self.__image.show(context, image_id)
-        return self._builder.build(req, image, True)
+        return self.get_builder(req).build(req, image, True)
 
     def delete(self, req, image_id):
         """
@@ -117,18 +132,18 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest()
 
         image = self.__compute.snapshot(context, server_id, image_name)
-        return self._builder.build(req, image, True)
+        return self.get_builder(req).build(req, image, True)
 
 
 class ControllerV10(Controller):
     """
     Version 1.0 specific controller logic.
     """
-    _builder = images_view.ViewBuilderV10()
+    pass
 
 
 class ControllerV11(Controller):
     """
     Version 1.1 specific controller logic.
     """
-    _builder = images_view.ViewBuilderV11()
+    pass

@@ -22,7 +22,19 @@ class ViewBuilder(object):
     information about images.
     """
 
-    def build(self, request, image_obj, detail=False):
+    def __init__(self, base_url):
+        """
+        Initialize new `ViewBuilder`.
+        """
+        self._url = base_url
+
+    def generate_href(self, image_id):
+        """
+        Return an href string pointing to this object.
+        """
+        return "%s/images/%s" % (self._url, image_id)
+
+    def build(self, image_obj, detail=False):
         """
         Return a standardized image structure for display by the API.
         """
@@ -50,12 +62,12 @@ class ViewBuilderV11(ViewBuilder):
     OpenStack API v1.1 Image Builder
     """
 
-    def build(self, request, image_obj, detail=False):
+    def build(self, image_obj, detail=False):
         """
         Return a standardized image structure for display by the API.
         """
         image = ViewBuilder.build(self, request, image_obj, detail)
-        href = "%s/images/%s" % (request.application_url, image_obj["id"])
+        href = self.generate_url(image_obj["id"])
 
         image["links"] = [{
             "rel": "self",
