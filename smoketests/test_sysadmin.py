@@ -265,10 +265,10 @@ class VolumeTests(base.UserSmokeTestCase):
         ip = self.data['instance'].private_dns_name
         conn = self.connect_ssh(ip, TEST_KEY)
         stdin, stdout, stderr = conn.exec_command(
-            "blockdev --getsize64 %s"  % self.device)
+            "blockdev --getsize64 %s" % self.device)
         out = stdout.read().strip()
         conn.close()
-        expected_size = 1024*1024*1024
+        expected_size = 1024 * 1024 * 1024
         self.assertEquals('%s' % (expected_size,), out,
                           'Volume is not the right size: %s %s. Expected: %s' %
                           (out, stderr.read(), expected_size))

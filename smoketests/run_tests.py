@@ -78,6 +78,7 @@ from nose import result
 from smoketests import flags
 FLAGS = flags.FLAGS
 
+
 class _AnsiColorizer(object):
     """
     A colorizer is an object that loosely wraps around a stream, allowing

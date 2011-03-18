@@ -190,4 +190,3 @@ class UserSmokeTestCase(SmokeTestCase):
         global TEST_DATA
         self.conn = self.connection_for_env()
         self.data = TEST_DATA
-
