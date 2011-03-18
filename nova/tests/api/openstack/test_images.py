@@ -262,9 +262,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     "href": href,
                 }],
             }
-            print test_image
-            print
-            print response_list
             self.assertTrue(test_image in response_list)
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
@@ -321,31 +318,3 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             self.assertTrue(test_image in response_list)
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
-
-    def test_get_image_create_empty(self):
-        request = webob.Request.blank('/v1.1/images')
-        request.method = "POST"
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_get_image_create_bad_no_name(self):
-        request = webob.Request.blank('/v1.1/images')
-        request.method = "POST"
-        request.content_type = "application/json"
-        request.body = json.dumps({
-            "serverId": 1,
-        })
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-    def test_get_image_create_bad_no_id(self):
-        request = webob.Request.blank('/v1.1/images')
-        request.method = "POST"
-        request.content_type = "application/json"
-        request.body = json.dumps({
-            "name" : "Snapshot Test",
-        })
-        response = request.get_response(fakes.wsgi_app())
-        self.assertEqual(400, response.status_int)
-
-

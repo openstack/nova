@@ -16,7 +16,7 @@
 #    under the License.
 
 
-class Builder(object):
+class ViewBuilder(object):
     """
     Base class for generating responses to OpenStack API requests for
     information about images.
@@ -41,11 +41,11 @@ class Builder(object):
         return image
 
 
-class Builder_v1_0(Builder):
+class ViewBuilderV10(ViewBuilder):
     pass
 
 
-class Builder_v1_1(Builder):
+class ViewBuilderV11(ViewBuilder):
     """
     OpenStack API v1.1 Image Builder
     """
@@ -54,7 +54,7 @@ class Builder_v1_1(Builder):
         """
         Return a standardized image structure for display by the API.
         """
-        image = Builder.build(self, request, image_obj, detail)
+        image = ViewBuilder.build(self, request, image_obj, detail)
         href = "%s/images/%s" % (request.application_url, image_obj["id"])
 
         image["links"] = [{

@@ -129,7 +129,7 @@ class APIRouterV10(APIRouter):
                         member=self.server_members)
 
         mapper.resource("image", "images",
-                        controller=images.Controller_v1_0(),
+                        controller=images.ControllerV10(),
                         collection={'detail': 'GET'})
 
 
@@ -142,7 +142,7 @@ class APIRouterV11(APIRouter):
                         member=self.server_members)
 
         mapper.resource("image", "images",
-                        controller=images.Controller_v1_1(),
+                        controller=images.ControllerV11(),
                         collection={'detail': 'GET'})
 
 

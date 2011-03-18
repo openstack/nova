@@ -29,13 +29,15 @@ class Controller(wsgi.Controller):
     OpenStack API. Version-inspecific code goes here.
     """
 
-    _builder = images_view.Builder_v1_0()
-
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
                 "image": ["id", "name", "updated", "created", "status",
-                          "serverId", "progress"]}}}
+                          "serverId", "progress"],
+                "link": ["rel", "type", "href"],
+            },
+        },
+    }
 
     def __init__(self, image_service=None, compute_service=None):
         """
@@ -109,8 +111,8 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest()
 
         try:
-            server_id = image["serverId"]
-            image_name = image["name"]
+            server_id = image["image"]["serverId"]
+            image_name = image["image"]["name"]
         except KeyError:
             raise exc.HTTPBadRequest()
 
@@ -118,15 +120,15 @@ class Controller(wsgi.Controller):
         return self._builder.build(req, image, True)
 
 
-class Controller_v1_0(Controller):
+class ControllerV10(Controller):
     """
     Version 1.0 specific controller logic.
     """
-    _builder = images_view.Builder_v1_0()
+    _builder = images_view.ViewBuilderV10()
 
 
-class Controller_v1_1(Controller):
+class ControllerV11(Controller):
     """
     Version 1.1 specific controller logic.
     """
-    _builder = images_view.Builder_v1_1()
+    _builder = images_view.ViewBuilderV11()
