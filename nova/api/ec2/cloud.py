@@ -302,6 +302,18 @@ class CloudController(object):
                 'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
 
+    def import_public_key(self, context, key_name, public_key,
+                         fingerprint=None):
+        LOG.audit(_("Import key %s"), key_name, context=context)
+        key = {}
+        key['user_id'] = context.user_id
+        key['name'] = key_name
+        key['public_key'] = public_key
+        if fingerprint:
+            key['fingerprint'] = fingerprint
+        db.key_pair_create(context, key)
+        return True
+
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:

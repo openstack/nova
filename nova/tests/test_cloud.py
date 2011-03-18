@@ -279,6 +279,22 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(filter(lambda k: k['keyName'] == 'test1', keys))
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
+    def test_import_public_key(self):
+        result = self.cloud.import_public_key(self.context,
+                                          'testimportkey', 'mytestpubkey', 'mytestfprint')
+        self.assertTrue(result)
+        keydata = db.key_pair_get(self.context,
+                                    self.context.user.id,
+                                    'testimportkey')
+        print "PUBLIC_KEY:"
+        file = open('/tmp/blah', 'w')
+        file.write(keydata['public_key'])
+        file.close()
+        print keydata['public_key']
+        self.assertEqual('mytestpubkey', keydata['public_key'])
+        self.assertEqual('mytestfprint', keydata['fingerprint'])
+        self.assertTrue(1)
+
     def test_delete_key_pair(self):
         self._create_key('test')
         self.cloud.delete_key_pair(self.context, 'test')
