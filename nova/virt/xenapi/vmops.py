@@ -818,8 +818,12 @@ class VMOps(object):
         Creates vifs for an instance
 
         """
-        vm_ref = self._get_vm_opaque_ref(instance.id)
+        vm_ref = self._get_vm_opaque_ref(instance['id'])
+        admin_context = context.get_admin_context()
+        flavor = db.instance_type_get_by_name(admin_context,
+                                              instance.instance_type)
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
+        rxtx_cap = flavor['rxtx_cap']
         if networks is None:
             networks = db.network_get_all_by_instance(admin_context,
                                                       instance['id'])
@@ -840,7 +844,8 @@ class VMOps(object):
                     device = "0"
 
                 VMHelper.create_vif(self._session, vm_ref, network_ref,
-                                    instance.mac_address, device)
+                                    instance.mac_address, device,
+                                    rxtx_cap=rxtx_cap)
 
     def reset_network(self, instance):
         """
