@@ -1270,8 +1270,9 @@ def auth_token_destroy(context, token_id):
 
 
 @require_admin_context
-def auth_token_get(context, token_hash):
-    session = get_session()
+def auth_token_get(context, token_hash, session=None):
+    if session is None:
+        session = get_session()
     tk = session.query(models.AuthToken).\
                   filter_by(token_hash=token_hash).\
                   filter_by(deleted=can_read_deleted(context)).\
@@ -1279,6 +1280,15 @@ def auth_token_get(context, token_hash):
     if not tk:
         raise exception.NotFound(_('Token %s does not exist') % token_hash)
     return tk
+
+
+@require_admin_context
+def auth_token_update(context, token_hash, values):
+    session = get_session()
+    with session.begin():
+        token_ref = auth_token_get(context, token_hash, session=session)
+        token_ref.update(values)
+        token_ref.save(session=session)
 
 
 @require_admin_context

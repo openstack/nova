@@ -26,6 +26,7 @@ import nova.api.openstack.auth
 import nova.auth.manager
 from nova import auth
 from nova import context
+from nova import db
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -126,6 +127,33 @@ class Test(test.TestCase):
     def test_bad_token(self):
         req = webob.Request.blank('/v1.0/')
         req.headers['X-Auth-Token'] = 'baconbaconbacon'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+
+class TestFunctional(test.TestCase):
+    def test_token_lp718999(self):
+        ctx = context.get_admin_context()
+        tok = db.auth_token_create(ctx, dict(
+                token_hash='bacon',
+                cdn_management_url='',
+                server_management_url='',
+                storage_url='',
+                user_id='ham',
+                ))
+
+        db.auth_token_update(ctx, tok.token_hash, dict(
+                created_at=datetime.datetime(2000, 1, 1, 12, 0, 0),
+                ))
+
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-Token'] = 'bacon'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+    def test_token_doesnotexist(self):
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-Token'] = 'ham'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 

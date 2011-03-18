@@ -26,6 +26,7 @@ import webob.dec
 from nova import auth
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import manager
 from nova import utils
@@ -103,11 +104,14 @@ class AuthMiddleware(wsgi.Middleware):
         2 days ago.
         """
         ctxt = context.get_admin_context()
-        token = self.db.auth_token_get(ctxt, token_hash)
+        try:
+            token = self.db.auth_token_get(ctxt, token_hash)
+        except exception.NotFound:
+            return None
         if token:
             delta = datetime.datetime.now() - token.created_at
             if delta.days >= 2:
-                self.db.auth_token_destroy(ctxt, token.id)
+                self.db.auth_token_destroy(ctxt, token.token_hash)
             else:
                 return self.auth.get_user(token.user_id)
         return None
