@@ -46,7 +46,7 @@ class Error(Exception):
 
 
 class ApiError(Error):
-    def __init__(self, message='Unknown', code='Unknown'):
+    def __init__(self, message='Unknown', code='ApiError'):
         self.message = message
         self.code = code
         super(ApiError, self).__init__('%s: %s' % (code, message))
