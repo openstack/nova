@@ -41,7 +41,7 @@ class SessionOverLoadException(VimException):
 
 
 class VimAttributeError(VimException):
-    """VI Attribute Error."""
+    """VIM Attribute Error."""
     pass
 
 

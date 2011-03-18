@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-Classes for making VMware VI SOAP calls.
+Classes that facilitate SOAP calls for VMware VI API.
 """
 
 import httplib
