@@ -612,3 +612,18 @@ class API(base.Base):
         instance = self.get(context, instance_id)
         self.network_api.associate_floating_ip(context, address,
                                                instance['fixed_ip'])
+
+    def get_instance_metadata(self, context, instance_id):
+        """Get all metadata associated with an instance."""
+        rv = self.db.get_instance_metadata(context, instance_id)
+        return dict(rv.iteritems())
+
+    def delete_instance_metadata(self, context, instance_id, key):
+        """Delete the given metadata item"""
+        self.db.delete_instance_metadata(context, instance_id, key)
+
+    def update_or_create_instance_metadata(self, context, instance_id,
+                                            metadata):
+        """Updates or creates instance metadata"""
+        self.db.update_or_create_instance_metadata(context, instance_id,
+                                                    metadata)
