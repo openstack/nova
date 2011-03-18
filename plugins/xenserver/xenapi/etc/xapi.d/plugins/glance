@@ -216,8 +216,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
         'x-image-meta-status': 'queued',
         'x-image-meta-disk-format': 'vhd',
         'x-image-meta-container-format': 'ovf',
-        'x-image-meta-property-os-type': os_type
-    }
+        'x-image-meta-property-os-type': os_type}
 
     for header, value in headers.iteritems():
         conn.putheader(header, value)

@@ -39,6 +39,7 @@ import os
 import random
 import string
 import socket
+import sys
 import tempfile
 import time
 import functools
@@ -114,7 +115,13 @@ class ComputeManager(manager.Manager):
         #             and redocument the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
-        self.driver = utils.import_object(compute_driver)
+
+        try:
+            self.driver = utils.import_object(compute_driver)
+        except ImportError:
+            LOG.error("Unable to load the virtualization driver.")
+            sys.exit(1)
+
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         super(ComputeManager, self).__init__(*args, **kwargs)
@@ -221,7 +228,8 @@ class ComputeManager(manager.Manager):
                                     instance_id,
                                     {'launched_at': now})
         except Exception:  # pylint: disable-msg=W0702
-            LOG.exception(_("instance %s: Failed to spawn"), instance_id,
+            LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
+                            "enabled in the BIOS?"), instance_id,
                           context=context)
             self.db.instance_set_state(context,
                                        instance_id,
