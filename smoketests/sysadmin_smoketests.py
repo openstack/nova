@@ -255,12 +255,13 @@ class VolumeTests(base.UserSmokeTestCase):
         ip = self.data['instance'].private_dns_name
         conn = self.connect_ssh(ip, TEST_KEY)
         stdin, stdout, stderr = conn.exec_command(
-            "df -h | grep %s | awk {'print $2'}" % self.device)
-        out = stdout.read()
+            "blockdev --getsize64 %s"  % self.device)
+        out = stdout.read().strip()
         conn.close()
-        if not out.strip() == '1007.9M':
-            self.fail('Volume is not the right size: %s %s' %
-                      (out, stderr.read()))
+        expected_size = 1024*1024*1024
+        self.assertEquals('%s' % (expected_size,), out,
+                          'Volume is not the right size: %s %s. Expected: %s' %
+                          (out, stderr.read(), expected_size))
 
     def test_006_me_can_umount_volume(self):
         ip = self.data['instance'].private_dns_name
