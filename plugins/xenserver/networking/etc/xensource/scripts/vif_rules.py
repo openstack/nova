@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
+# Copyright 2010-2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -31,7 +31,8 @@ import simplejson as json
 
 def main(dom_id, command, only_this_vif=None):
     xsls = execute('/usr/bin/xenstore-ls',
-                   '/local/domain/%s/vm-data/networking' % dom_id, True)
+                   '/local/domain/%s/vm-data/networking' % dom_id,
+                   return_stdout=True)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
@@ -113,8 +114,8 @@ def apply_ebtables_rules(command, params):
     ebtables('-D', 'FORWARD', '-p', '0806', '-o', params['VIF'],
              '--arp-ip-dst', params['IP'],
              '-j', 'ACCEPT')
-    ebtables('-D', 'FORWARD', '-p', '0800', '-o',
-             params['VIF'], '--ip-dst', params['IP'],
+    ebtables('-D', 'FORWARD', '-p', '0800', '-o', params['VIF'],
+             '--ip-dst', params['IP'],
              '-j', 'ACCEPT')
     if command == 'online':
         ebtables('-A', 'FORWARD', '-p', '0806',
