@@ -20,6 +20,7 @@
 
 import boto
 from boto.ec2 import regioninfo
+from boto.exception import EC2ResponseError
 import datetime
 import httplib
 import random
@@ -124,7 +125,7 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
-        # pylint: disable-msg=E1103
+        # pylint: disable=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
 
@@ -174,6 +175,17 @@ class ApiEc2TestCase(test.TestCase):
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertEqual(self.ec2.get_all_instances(), [])
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_terminate_invalid_instance(self):
+        """Attempt to terminate an invalid instance"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        self.assertRaises(EC2ResponseError, self.ec2.terminate_instances,
+                            "i-00000005")
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 

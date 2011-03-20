@@ -156,7 +156,8 @@ class InstanceTests(base.UserSmokeTestCase):
             self.fail('could not ping instance')
 
         if FLAGS.use_ipv6:
-            if not self.wait_for_ping(self.data['instance'].ip_v6, "ping6"):
+            if not self.wait_for_ping(self.data['instance'].dns_name_v6,
+                                      "ping6"):
                 self.fail('could not ping instance v6')
 
     def test_005_can_ssh_to_private_ip(self):
@@ -165,7 +166,7 @@ class InstanceTests(base.UserSmokeTestCase):
             self.fail('could not ssh to instance')
 
         if FLAGS.use_ipv6:
-            if not self.wait_for_ssh(self.data['instance'].ip_v6,
+            if not self.wait_for_ssh(self.data['instance'].dns_name_v6,
                                      TEST_KEY):
                 self.fail('could not ssh to instance v6')
 
