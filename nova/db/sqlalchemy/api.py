@@ -806,6 +806,11 @@ def instance_destroy(context, instance_id):
                 update({'deleted': 1,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
+                filter_by(instance_id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1249,7 +1254,7 @@ def network_get_all(context):
 
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 
 @require_admin_context
