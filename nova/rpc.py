@@ -95,14 +95,14 @@ class Consumer(messaging.Consumer):
                 fl_host = FLAGS.rabbit_host
                 fl_port = FLAGS.rabbit_port
                 fl_intv = FLAGS.rabbit_retry_interval
-                LOG.exception(_("AMQP server on %(fl_host)s:%(fl_port)d is"
+                LOG.error(_("AMQP server on %(fl_host)s:%(fl_port)d is"
                         " unreachable. Trying again in %(fl_intv)d seconds.")
                         % locals())
                 self.failed_connection = True
         if self.failed_connection:
-            LOG.exception(_("Unable to connect to AMQP server "
-                          "after %d tries. Shutting down."),
-                          FLAGS.rabbit_max_retries)
+            LOG.error(_("Unable to connect to AMQP server "
+                        "after %d tries. Shutting down."),
+                      FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
