@@ -53,7 +53,7 @@ class Controller(wsgi.Controller):
         """Return all zones in brief"""
         # Ask the ZoneManager in the Scheduler for most recent data,
         # or fall-back to the database ...
-        items = api.API.get_zone_list(req.environ['nova.context'])
+        items = api.get_zone_list(req.environ['nova.context'])
         if not items:
             items = db.zone_get_all(req.environ['nova.context'])
 
@@ -68,7 +68,7 @@ class Controller(wsgi.Controller):
 
     def info(self, req):
         """Return name and capabilities for this zone."""
-        items = api.API.get_zone_capabilities(req.environ['nova.context'])
+        items = api.get_zone_capabilities(req.environ['nova.context'])
 
         zone = dict(name=FLAGS.zone_name)
         caps = FLAGS.zone_capabilities

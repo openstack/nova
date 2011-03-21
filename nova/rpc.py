@@ -244,7 +244,7 @@ class FanoutPublisher(Publisher):
         self.exchange = "%s_fanout" % topic
         self.queue = "%s_fanout" % topic
         self.durable = False
-        LOG.info(_("Writing to '%(exchange)s' fanout exchange"),
+        LOG.info(_("Creating '%(exchange)s' fanout exchange"),
                             dict(exchange=self.exchange))
         super(FanoutPublisher, self).__init__(connection=connection)
 
