@@ -132,7 +132,7 @@ class Test(test.TestCase):
 
 
 class TestFunctional(test.TestCase):
-    def test_token_lp718999(self):
+    def test_token_expiry(self):
         ctx = context.get_admin_context()
         tok = db.auth_token_create(ctx, dict(
                 token_hash='bacon',
