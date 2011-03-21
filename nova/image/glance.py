@@ -18,7 +18,7 @@
 
 from __future__ import absolute_import
 
-import datetime as dt
+import datetime
 
 from glance.common import exception as glance_exception
 
@@ -73,7 +73,7 @@ class GlanceImageService(service.BaseImageService):
         Returns image with known timestamp fields converted to datetime objects
         """
         for attr in ['created_at', 'updated_at', 'deleted_at']:
-            if attr in image and image[attr] is not None:
+            if image.get(attr) is not None:
                 image[attr] = self._parse_glance_iso8601_timestamp(image[attr])
         return image
 
@@ -81,7 +81,7 @@ class GlanceImageService(service.BaseImageService):
         """
         Parse a subset of iso8601 timestamps into datetime objects
         """
-        return dt.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f")
+        return datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f")
 
     def show_by_name(self, context, name):
         """

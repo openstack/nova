@@ -21,7 +21,7 @@ and as a WSGI layer
 """
 
 import json
-import datetime as dt
+import datetime
 import shutil
 import tempfile
 
@@ -177,7 +177,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     """Test of the OpenStack API /images application controller"""
 
     # Registered images at start of each test.
-    now = dt.datetime.utcnow()
+    now = datetime.datetime.utcnow()
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
          'imageId': '23g2ogk23k4hhkk4k42l',

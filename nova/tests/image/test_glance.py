@@ -58,12 +58,12 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.service = glance.GlanceImageService(self.client)
 
     def test_show_passes_through_to_client(self):
-        self.client.images = {'xyz': "image"}
-        self.assertEqual(self.service.show({}, 'xyz'), "image")
+        self.client.images = {'xyz': {'foo': 'bar'}}
+        self.assertEqual(self.service.show({}, 'xyz'), {'foo': 'bar'})
 
     def test_detail_passes_through_to_client(self):
-        self.client.images = {1: "an image"}
-        self.assertEqual(list(self.service.detail({})), ["an image"])
+        self.client.images = {1: {'foo': 'bar'}}
+        self.assertEqual(list(self.service.detail({})), [{'foo': 'bar'}])
 
     def test_show_makes_create_datetimes(self):
         create_time = dt.datetime.utcnow()

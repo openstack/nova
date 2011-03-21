@@ -168,5 +168,5 @@ class Controller(wsgi.Controller):
 
     def _format_image_dates(self, image):
         for attr in ['created_at', 'updated_at', 'deleted_at']:
-            if image[attr] is not None:
+            if image.get(attr) is not None:
                 image[attr] = image[attr].strftime('%Y-%m-%dT%H:%M:%SZ')
