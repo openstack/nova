@@ -190,8 +190,6 @@ class ResponseExtensionTest(unittest.TestCase):
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_networking(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         self.context = context.get_admin_context()
 
