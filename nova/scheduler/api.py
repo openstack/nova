@@ -149,7 +149,7 @@ class reroute_compute(object):
     def __call__(self, f):
         def wrapped_f(*args, **kwargs):
             collection, context, item_id = \
-                            self.get_collection_context_and_id(args)
+                            self.get_collection_context_and_id(args, kwargs)
             try:
                 return f(*args, **kwargs)
             except exception.InstanceNotFound, e:
@@ -170,10 +170,16 @@ class reroute_compute(object):
                 raise RedirectResult(self.unmarshall_result(result))
         return wrapped_f
 
-    def get_collection_context_and_id(self, args):
+    def get_collection_context_and_id(self, args, kwargs):
         """Returns a tuple of (novaclient collection name, security
            context and resource id. Derived class should override this."""
-        return ("servers", args[1], args[2])
+        context = kwargs.get('context', None)
+        instance_id = kwargs.get('instance_id', None)
+        if len(args) > 0 and not context:
+            context = args[1]
+        if len(args) > 1 and not instance_id:
+            context = args[2]
+        return ("servers", context, instance_id)
 
     def unmarshall_result(self, result):
         server = result[0].__dict__
