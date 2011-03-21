@@ -127,7 +127,7 @@ def wrap_novaclient_function(f, collection, method_name, item_id):
     (nova, zone) call from child_zone_helper."""
     def inner(nova, zone):
         return f(nova, zone, collection, method_name, item_id)
-        
+
     return inner
 
 
@@ -138,6 +138,7 @@ class RedirectResult(exception.Error):
         self.results = results
         super(RedirectResult, self).__init__(
                message=_("Uncaught Zone redirection exception"))
+
 
 class reroute_compute(object):
     """Decorator used to indicate that the method should
@@ -158,7 +159,7 @@ class reroute_compute(object):
 
                 if not FLAGS.enable_zone_routing:
                     raise
-                    
+
                 zones = db.zone_get_all(context)
                 if not zones:
                     raise
