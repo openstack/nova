@@ -229,7 +229,7 @@ class ComputeManager(manager.Manager):
                                     {'launched_at': now})
         except Exception:  # pylint: disable=W0702
             LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
-                            "enabled in the BIOS?"), instance_id,
+                            " enabled in the BIOS?"), instance_id,
                                                      context=context)
             self.db.instance_set_state(context,
                                        instance_id,
