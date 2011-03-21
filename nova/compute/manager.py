@@ -221,7 +221,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.db.instance_update(context,
                                     instance_id,
                                     {'launched_at': now})
-        except Exception:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable=W0702
             LOG.exception(_("instance %s: Failed to spawn"), instance_id,
                           context=context)
             self.db.instance_set_state(context,
@@ -693,7 +693,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     volume_id,
                                     instance_id,
                                     mountpoint)
-        except Exception as exc:  # pylint: disable-msg=W0702
+        except Exception as exc:  # pylint: disable=W0702
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
             #             ecxception below.

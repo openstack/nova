@@ -75,7 +75,7 @@ def zone_get_all_db(context):
     ]
 
 
-def zone_caps(method, context, params):
+def zone_capabilities(method, context, params):
     return dict()
 
 
@@ -98,13 +98,13 @@ class ZonesTest(test.TestCase):
         self.stubs.Set(nova.db, 'zone_delete', zone_delete)
 
         self.old_zone_name = FLAGS.zone_name
-        self.old_zone_caps = FLAGS.zone_capabilities
+        self.old_zone_capabilities = FLAGS.zone_capabilities
 
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
         FLAGS.zone_name = self.old_zone_name
-        FLAGS.zone_capabilities = self.old_zone_caps
+        FLAGS.zone_capabilities = self.old_zone_capabilities
         super(ZonesTest, self).tearDown()
 
     def test_get_zone_list_scheduler(self):
@@ -179,7 +179,7 @@ class ZonesTest(test.TestCase):
     def test_zone_info(self):
         FLAGS.zone_name = 'darksecret'
         FLAGS.zone_capabilities = ['cap1=a;b', 'cap2=c;d']
-        self.stubs.Set(api, '_call_scheduler', zone_caps)
+        self.stubs.Set(api, '_call_scheduler', zone_capabilities)
 
         body = dict(zone=dict(username='zeb', password='sneaky'))
         req = webob.Request.blank('/v1.0/zones/info')

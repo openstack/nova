@@ -223,7 +223,7 @@ class Service(object):
                 logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
-        except Exception:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))

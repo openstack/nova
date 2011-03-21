@@ -323,12 +323,12 @@ class NetworkManager(manager.SchedulerDependentManager):
                 self._create_fixed_ips(context, network_ref['id'])
 
     @property
-    def _bottom_reserved_ips(self):  # pylint: disable-msg=R0201
+    def _bottom_reserved_ips(self):  # pylint: disable=R0201
         """Number of reserved ips at the bottom of the range."""
         return 2  # network, gateway
 
     @property
-    def _top_reserved_ips(self):  # pylint: disable-msg=R0201
+    def _top_reserved_ips(self):  # pylint: disable=R0201
         """Number of reserved ips at the top of the range."""
         return 1  # broadcast
 

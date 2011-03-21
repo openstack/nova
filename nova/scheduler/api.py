@@ -50,33 +50,28 @@ def _call_scheduler(method, context, params=None):
     return rpc.call(context, queue, kwargs)
 
 
-class API(object):
-    """API for interacting with the scheduler."""
+def get_zone_list(context):
+    """Return a list of zones assoicated with this zone."""
+    items = _call_scheduler('get_zone_list', context)
+    for item in items:
+        item['api_url'] = item['api_url'].replace('\\/', '/')
+    return items
 
-    @classmethod
-    def get_zone_list(cls, context):
-        """Return a list of zones assoicated with this zone."""
-        items = _call_scheduler('get_zone_list', context)
-        for item in items:
-            item['api_url'] = item['api_url'].replace('\\/', '/')
-        return items
 
-    @classmethod
-    def get_zone_capabilities(cls, context, service=None):
-        """Returns a dict of key, value capabilities for this zone,
-           or for a particular class of services running in this zone."""
-        return _call_scheduler('get_zone_capabilities', context=context,
-                            params=dict(service=service))
+def get_zone_capabilities(context, service=None):
+    """Returns a dict of key, value capabilities for this zone,
+       or for a particular class of services running in this zone."""
+    return _call_scheduler('get_zone_capabilities', context=context,
+                        params=dict(service=service))
 
-    @classmethod
-    def update_service_capabilities(cls, context, service_name, host,
-                                                capabilities):
-        """Send an update to all the scheduler services informing them
-           of the capabilities of this service."""
-        kwargs = dict(method='update_service_capabilities',
-                      args=dict(service_name=service_name, host=host,
-                                capabilities=capabilities))
-        return rpc.fanout_cast(context, 'scheduler', kwargs)
+
+def update_service_capabilities(context, service_name, host, capabilities):
+    """Send an update to all the scheduler services informing them
+       of the capabilities of this service."""
+    kwargs = dict(method='update_service_capabilities',
+                  args=dict(service_name=service_name, host=host,
+                            capabilities=capabilities))
+    return rpc.fanout_cast(context, 'scheduler', kwargs)
 
 
 def _wrap_method(function, self):
