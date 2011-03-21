@@ -280,16 +280,34 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
 
     def test_import_public_key(self):
-        result = self.cloud.import_public_key(self.context,
-                                             'testimportkey',
-                                             'mytestpubkey',
-                                             'mytestfprint')
-        self.assertTrue(result)
+        # test when user provides all values
+        result1 = self.cloud.import_public_key(self.context,
+                                               'testimportkey1',
+                                               'mytestpubkey',
+                                               'mytestfprint')
+        self.assertTrue(result1)
         keydata = db.key_pair_get(self.context,
-                                    self.context.user.id,
-                                    'testimportkey')
+                                  self.context.user.id,
+                                  'testimportkey1')
         self.assertEqual('mytestpubkey', keydata['public_key'])
         self.assertEqual('mytestfprint', keydata['fingerprint'])
+        # test when user omits fingerprint
+        pubkey_path = os.path.join(os.path.dirname(__file__), 'public_key')
+        f = open(pubkey_path + '/dummy.pub', 'r')
+        dummypub = f.readline().rstrip()
+        f.close
+        f = open(pubkey_path + '/dummy.fingerprint', 'r')
+        dummyfprint = f.readline().rstrip()
+        f.close
+        result2 = self.cloud.import_public_key(self.context,
+                                               'testimportkey2',
+                                               dummypub)
+        self.assertTrue(result2)
+        keydata = db.key_pair_get(self.context,
+                                  self.context.user.id,
+                                  'testimportkey2')
+        self.assertEqual(dummypub, keydata['public_key'])
+        self.assertEqual(dummyfprint, keydata['fingerprint'])
 
     def test_delete_key_pair(self):
         self._create_key('test')

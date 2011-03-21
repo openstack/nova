@@ -27,6 +27,8 @@ import datetime
 import IPy
 import os
 import urllib
+import tempfile
+import shutil
 
 from nova import compute
 from nova import context
@@ -309,8 +311,17 @@ class CloudController(object):
         key['user_id'] = context.user_id
         key['name'] = key_name
         key['public_key'] = public_key
-        if fingerprint:
-            key['fingerprint'] = fingerprint
+        if fingerprint is None:
+            tmpdir = tempfile.mkdtemp()
+            pubfile = os.path.join(tmpdir, 'temp.pub')
+            fh = open(pubfile, 'w')
+            fh.write(public_key)
+            fh.close()
+            (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
+                                       '%s' % (pubfile))
+            fingerprint = out.split(' ')[1]
+            shutil.rmtree(tmpdir)
+        key['fingerprint'] = fingerprint
         db.key_pair_create(context, key)
         return True
 
