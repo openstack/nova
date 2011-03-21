@@ -582,7 +582,7 @@ def update_dhcp(context, network_id):
             try:
                 _execute('sudo', 'kill', '-HUP', pid)
                 return
-            except Exception as exc:  # pylint: disable-msg=W0703
+            except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
@@ -626,7 +626,7 @@ interface %s
         if conffile in out:
             try:
                 _execute('sudo', 'kill', pid)
-            except Exception as exc:  # pylint: disable-msg=W0703
+            except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_("killing radvd threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
@@ -713,7 +713,7 @@ def _stop_dnsmasq(network):
     if pid:
         try:
             _execute('sudo', 'kill', '-TERM', pid)
-        except Exception as exc:  # pylint: disable-msg=W0703
+        except Exception as exc:  # pylint: disable=W0703
             LOG.debug(_("Killing dnsmasq threw %s"), exc)
 
 

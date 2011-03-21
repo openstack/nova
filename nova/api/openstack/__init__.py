@@ -33,6 +33,7 @@ from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
+from nova.api.openstack import limits
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
@@ -114,11 +115,16 @@ class APIRouter(wsgi.Router):
 
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
+
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
+
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
+
+        _limits = limits.LimitsController()
+        mapper.resource("limit", "limits", controller=_limits)
 
         super(APIRouter, self).__init__(mapper)
 
@@ -128,8 +134,11 @@ class Versions(wsgi.Application):
     def __call__(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
-                "versions": [
-                    dict(status="CURRENT", id="v1.0")]}
+            "versions": [
+                dict(status="DEPRECATED", id="v1.0"),
+                dict(status="CURRENT", id="v1.1"),
+            ],
+        }
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}

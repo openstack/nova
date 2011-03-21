@@ -34,7 +34,7 @@ from nova import utils
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
-from nova.api.openstack import ratelimiting
+from nova.api.openstack import limits
 from nova.auth.manager import User, Project
 from nova.image import glance
 from nova.image import local
@@ -69,8 +69,6 @@ def fake_auth_init(self, application):
 @webob.dec.wsgify
 def fake_wsgi(self, req):
     req.environ['nova.context'] = context.RequestContext(1, 1)
-    if req.body:
-        req.environ['inst_dict'] = json.loads(req.body)
     return self.application
 
 
@@ -79,16 +77,24 @@ def wsgi_app(inner_application=None):
         inner_application = openstack.APIRouter()
     mapper = urlmap.URLMap()
     api = openstack.FaultWrapper(auth.AuthMiddleware(
-              ratelimiting.RateLimitingMiddleware(inner_application)))
+              limits.RateLimitingMiddleware(inner_application)))
     mapper['/v1.0'] = api
+    mapper['/v1.1'] = api
     mapper['/'] = openstack.FaultWrapper(openstack.Versions())
     return mapper
 
 
-def stub_out_key_pair_funcs(stubs):
+def stub_out_key_pair_funcs(stubs, have_key_pair=True):
     def key_pair(context, user_id):
         return [dict(name='key', public_key='public_key')]
-    stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+
+    def no_key_pair(context, user_id):
+        return []
+
+    if have_key_pair:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
+    else:
+        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_image_service(stubs):
@@ -110,13 +116,13 @@ def stub_out_auth(stubs):
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(ratelimiting.RateLimitingMiddleware, self).__init__(app)
+        super(limits.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 
@@ -228,52 +234,57 @@ class FakeAuthDatabase(object):
 
 
 class FakeAuthManager(object):
-    auth_data = {}
+    #NOTE(justinsb): Accessing static variables through instances is FUBAR
+    #NOTE(justinsb): This should also be private!
+    auth_data = []
     projects = {}
 
     @classmethod
     def clear_fakes(cls):
-        cls.auth_data = {}
+        cls.auth_data = []
         cls.projects = {}
 
     @classmethod
     def reset_fake_data(cls):
-        cls.auth_data = dict(acc1=User('guy1', 'guy1', 'acc1',
-                                       'fortytwo!', False))
+        u1 = User('id1', 'guy1', 'acc1', 'secret1', False)
+        cls.auth_data = [u1]
         cls.projects = dict(testacct=Project('testacct',
                                              'testacct',
-                                             'guy1',
+                                             'id1',
                                              'test',
                                               []))
 
-    def add_user(self, key, user):
-        FakeAuthManager.auth_data[key] = user
+    def add_user(self, user):
+        FakeAuthManager.auth_data.append(user)
 
     def get_users(self):
-        return FakeAuthManager.auth_data.values()
+        return FakeAuthManager.auth_data
 
     def get_user(self, uid):
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.id == uid:
-                return v
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                return user
+        return None
+
+    def get_user_from_access_key(self, key):
+        for user in FakeAuthManager.auth_data:
+            if user.access == key:
+                return user
         return None
 
     def delete_user(self, uid):
-        for k, v in FakeAuthManager.auth_data.items():
-            if v.id == uid:
-                del FakeAuthManager.auth_data[k]
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                FakeAuthManager.auth_data.remove(user)
         return None
 
     def create_user(self, name, access=None, secret=None, admin=False):
         u = User(name, name, access, secret, admin)
-        FakeAuthManager.auth_data[access] = u
+        FakeAuthManager.auth_data.append(u)
         return u
 
     def modify_user(self, user_id, access=None, secret=None, admin=None):
-        user = None
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.id == user_id:
-                user = v
+        user = self.get_user(user_id)
         if user:
             user.access = access
             user.secret = secret
@@ -319,12 +330,6 @@ class FakeAuthManager(object):
             return [p for p in FakeAuthManager.projects.values()
                     if (user.id in p.member_ids) or
                        (user.id == p.project_manager_id)]
-
-    def get_user_from_access_key(self, key):
-        try:
-            return FakeAuthManager.auth_data[key]
-        except KeyError:
-            raise exc.NotFound
 
 
 class FakeRateLimiter(object):
