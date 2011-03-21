@@ -73,7 +73,7 @@ flags.DEFINE_string('flat_interface', None,
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
+flags.DEFINE_integer('num_networks', 1, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', '$my_ip',
                     'Public IP for the cloudpipe VPN servers')
 flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
@@ -322,12 +322,12 @@ class NetworkManager(manager.Manager):
                 self._create_fixed_ips(context, network_ref['id'])
 
     @property
-    def _bottom_reserved_ips(self):  # pylint: disable-msg=R0201
+    def _bottom_reserved_ips(self):  # pylint: disable=R0201
         """Number of reserved ips at the bottom of the range."""
         return 2  # network, gateway
 
     @property
-    def _top_reserved_ips(self):  # pylint: disable-msg=R0201
+    def _top_reserved_ips(self):  # pylint: disable=R0201
         """Number of reserved ips at the top of the range."""
         return 1  # broadcast
 
