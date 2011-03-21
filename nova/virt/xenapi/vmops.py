@@ -609,13 +609,13 @@ class VMOps(object):
             raise RuntimeError(_(
                 "Instance is already in Rescue Mode: %s" % instance.name))
 
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
 
         instance._rescue = True
         self.spawn_rescue(instance)
-        rescue_vm_ref = self._get_vm_opaque_ref(instance)
+        rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
 
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
@@ -638,7 +638,7 @@ class VMOps(object):
             raise exception.NotFound(_(
                 "Instance is not in Rescue Mode: %s" % instance.name))
 
-        original_vm_ref = self._get_vm_opaque_ref(instance)
+        original_vm_ref = VMHelper.lookup(self._session, instance.name)
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
 
         instance._rescue = False
