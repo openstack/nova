@@ -51,7 +51,7 @@ class HyperVTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, instance)
 
         conn = hyperv.get_connection(False)
-        conn._create_vm(instance_ref)  # pylint: disable-msg=W0212
+        conn._create_vm(instance_ref)  # pylint: disable=W0212
         found = [n  for n in conn.list_instances()
                       if n == instance_ref['name']]
         self.assertTrue(len(found) == 1)
