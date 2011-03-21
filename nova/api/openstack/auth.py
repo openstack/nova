@@ -69,6 +69,8 @@ class AuthMiddleware(wsgi.Middleware):
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         req.environ['nova.context'] = context.RequestContext(user, account)
+        version = req.path.split('/')[1].replace('v', '')
+        req.environ['api.version'] = version
         return self.application
 
     def has_authentication(self, req):

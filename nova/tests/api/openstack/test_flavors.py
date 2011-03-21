@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
 import stubout
 import webob
 
@@ -50,3 +51,5 @@ class FlavorsTest(test.TestCase):
         req = webob.Request.blank('/v1.0/flavors/1')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
+        body = json.loads(res.body)
+        self.assertEqual(body['flavor']['id'], 1)
