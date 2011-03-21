@@ -303,9 +303,9 @@ class ExtensionManager(object):
     def _load_extensions(self):
         """
         Load extensions from the configured path. The extension name is
-        constructed from the camel cased module_name + 'Extension'. If your
-        extension module was named widgets.py the extension class within that
-        module should be 'WidgetsExtension'.
+        constructed from the module_name. If your extension module was named
+        widgets.py the extension class within that module should be
+        'Widgets'.
 
         See nova/tests/api/openstack/extensions/foxinsocks.py for an example
         extension implementation.
