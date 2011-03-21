@@ -1118,7 +1118,7 @@ def instance_type_create(context, values):
     return IMPL.instance_type_create(context, values)
 
 
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """Get all instance types"""
     return IMPL.instance_type_get_all(context, inactive)
 
