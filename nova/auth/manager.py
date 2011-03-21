@@ -22,7 +22,7 @@ Nova authentication management
 
 import os
 import shutil
-import string  # pylint: disable-msg=W0402
+import string  # pylint: disable=W0402
 import tempfile
 import uuid
 import zipfile
@@ -96,10 +96,19 @@ class AuthBase(object):
 
 
 class User(AuthBase):
-    """Object representing a user"""
+    """Object representing a user
+
+    The following attributes are defined:
+    :id:       A system identifier for the user.  A string (for LDAP)
+    :name:     The user name, potentially in some more friendly format
+    :access:   The 'username' for EC2 authentication
+    :secret:   The 'password' for EC2 authenticatoin
+    :admin:    ???
+    """
 
     def __init__(self, id, name, access, secret, admin):
         AuthBase.__init__(self)
+        assert isinstance(id, basestring)
         self.id = id
         self.name = name
         self.access = access
