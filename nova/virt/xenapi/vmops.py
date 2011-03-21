@@ -85,6 +85,11 @@ class VMOps(object):
         vdi_uuid = self.create_disk(instance)
         self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
 
+    def spawn_rescue(self, instance):
+        """Break rescue's spawn into separate method for unit tests"""
+        vdi_uuid = self.create_disk(instance)
+        self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
+
     def _spawn_with_disk(self, instance, vdi_uuid):
         """Create VM instance"""
         instance_name = instance.name
@@ -600,7 +605,7 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        str(instance.name) + "-rescue")
         if rescue_vm_ref:
             raise RuntimeError(_(
                 "Instance is already in Rescue Mode: %s" % instance.name))
@@ -610,7 +615,7 @@ class VMOps(object):
         self._acquire_bootlock(vm_ref)
 
         instance._rescue = True
-        self.spawn(instance)
+        self.spawn_rescue(instance)
         rescue_vm_ref = self._get_vm_opaque_ref(instance)
 
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
@@ -628,7 +633,7 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                    instance.name + "-rescue")
+                                    str(instance.name) + "-rescue")
 
         if not rescue_vm_ref:
             raise exception.NotFound(_(
