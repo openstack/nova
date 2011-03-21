@@ -311,10 +311,19 @@ class ServersTest(test.TestCase):
 
         imageRef = 'http://localhost/v1.1/images/2'
         flavorRef = 'http://localhost/v1.1/flavors/3'
-        body = dict(server=dict(
-            name='server_test', imageRef=imageRef, flavorRef=flavorRef,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': imageRef,
+                'flavorRef': flavorRef,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
         req = webob.Request.blank('/v1.1/servers')
         req.method = 'POST'
         req.body = json.dumps(body)

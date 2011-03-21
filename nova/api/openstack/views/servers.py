@@ -67,9 +67,8 @@ class ViewBuilder(object):
 
         # Return the metadata as a dictionary
         metadata = {}
-        if 'metadata' in inst:
-            for item in inst['metadata']:
-                metadata[item['key']] = item['value']
+        for item in inst.get('metadata', []):
+            metadata[item['key']] = item['value']
         inst_dict['metadata'] = metadata
 
         inst_dict['hostId'] = ''
