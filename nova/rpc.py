@@ -62,7 +62,7 @@ class Connection(carrot_connection.BrokerConnection):
                 params['backend_cls'] = fakerabbit.Backend
 
             # NOTE(vish): magic is fun!
-            # pylint: disable-msg=W0142
+            # pylint: disable=W0142
             if new:
                 return cls(**params)
             else:
@@ -114,7 +114,7 @@ class Consumer(messaging.Consumer):
             if self.failed_connection:
                 # NOTE(vish): connection is defined in the parent class, we can
                 #             recreate it as long as we create the backend too
-                # pylint: disable-msg=W0201
+                # pylint: disable=W0201
                 self.connection = Connection.recreate()
                 self.backend = self.connection.create_backend()
                 self.declare()
@@ -125,7 +125,7 @@ class Consumer(messaging.Consumer):
         # NOTE(vish): This is catching all errors because we really don't
         #             want exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
-        except Exception:  # pylint: disable-msg=W0703
+        except Exception:  # pylint: disable=W0703
             if not self.failed_connection:
                 LOG.exception(_("Failed to fetch message from queue"))
                 self.failed_connection = True

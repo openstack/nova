@@ -49,4 +49,4 @@ if __name__ == '__main__':
     twistd.serve(__file__)
 
 if __name__ == '__builtin__':
-    application = handler.get_application()  # pylint: disable-msg=C0103
+    application = handler.get_application()  # pylint: disable=C0103

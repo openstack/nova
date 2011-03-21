@@ -608,7 +608,7 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id)
@@ -1118,7 +1118,7 @@ def instance_type_create(context, values):
     return IMPL.instance_type_create(context, values)
 
 
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """Get all instance types"""
     return IMPL.instance_type_get_all(context, inactive)
 

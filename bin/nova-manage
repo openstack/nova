@@ -874,7 +874,7 @@ class InstanceTypeCommands(object):
             if name == None:
                 inst_types = instance_types.get_all_types()
             elif name == "--all":
-                inst_types = instance_types.get_all_types(1)
+                inst_types = instance_types.get_all_types(True)
             else:
                 inst_types = instance_types.get_instance_type(name)
         except exception.DBError, e:
