@@ -69,13 +69,13 @@ class ResponseExtensionController(wsgi.Controller):
         content_type = req.best_match_content_type()
         # currently response handlers are un-ordered
         for handler in self.handlers:
-            res=handler(res)
+            res = handler(res)
             try:
                 body = res.body
                 headers = res.headers
             except AttributeError:
                 body = self._serialize(res, content_type)
-                headers={"Content-Type": content_type}
+                headers = {"Content-Type": content_type}
             res = webob.Response()
             res.body = body
             res.headers = headers
