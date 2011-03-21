@@ -757,8 +757,7 @@ class VMOps(object):
         # this function raises if vm_ref is not a vm_opaque_ref
         self._session.get_xenapi().VM.get_record(vm_ref)
 
-        device = 0
-        for (network, info) in network_info:
+        for device, (network, info) in enumerate(network_info):
             mac_address = info['mac']
             bridge = network['bridge']
             rxtx_cap = info.pop('rxtx_cap')
@@ -767,7 +766,6 @@ class VMOps(object):
 
             VMHelper.create_vif(self._session, vm_ref, network_ref,
                                 mac_address, device, rxtx_cap)
-            device += 1
 
     def reset_network(self, instance, vm_ref):
         """Creates uuid arg to pass to make_agent_call and calls it."""
