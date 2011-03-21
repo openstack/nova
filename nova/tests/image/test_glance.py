@@ -16,7 +16,7 @@
 #    under the License.
 
 
-import datetime as dt
+import datetime
 import unittest
 
 from nova.image import glance
@@ -66,7 +66,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(list(self.service.detail({})), [{'foo': 'bar'}])
 
     def test_show_makes_create_datetimes(self):
-        create_time = dt.datetime.utcnow()
+        create_time = datetime.datetime.utcnow()
         self.client.images = {'xyz': {
             'id': "id",
             'name': "my awesome image",
@@ -76,7 +76,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(actual['created_at'], create_time)
 
     def test_show_makes_update_datetimes(self):
-        update_time = dt.datetime.utcnow()
+        update_time = datetime.datetime.utcnow()
         self.client.images = {'abc': {
             'id': "id",
             'name': "my okay image",
@@ -86,7 +86,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(actual['updated_at'], update_time)
 
     def test_show_makes_delete_datetimes(self):
-        delete_time = dt.datetime.utcnow()
+        delete_time = datetime.datetime.utcnow()
         self.client.images = {'123': {
             'id': "123",
             'name': "my lame image",
@@ -105,7 +105,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(actual['deleted_at'], None)
 
     def test_detail_handles_timestamps(self):
-        now = dt.datetime.utcnow()
+        now = datetime.datetime.utcnow()
         image1 = {
             'id': 1,
             'name': 'image 1',
@@ -126,7 +126,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(i2['deleted_at'], now)
 
     def test_get_handles_timestamps(self):
-        now = dt.datetime.utcnow()
+        now = datetime.datetime.utcnow()
         self.client.images = {'abcd': {
             'id': 'abcd',
             'name': 'nifty image',
@@ -144,7 +144,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(actual['deleted_at'], None)
 
     def test_create_handles_timestamps(self):
-        now = dt.datetime.utcnow()
+        now = datetime.datetime.utcnow()
         self.client.add_response = {
             'id': 'abcd',
             'name': 'blah',
@@ -166,7 +166,7 @@ class TestGlanceImageServiceDatetimes(unittest.TestCase):
         self.assertEqual(actual['deleted_at'], None)
 
     def test_update_handles_timestamps(self):
-        now = dt.datetime.utcnow()
+        now = datetime.datetime.utcnow()
         self.client.update_response = {
             'id': 'abcd',
             'name': 'blah',
