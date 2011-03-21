@@ -522,8 +522,8 @@ class NetworkCommands(object):
                    [network_size=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
-            raise ValueError('Fixed range in the form of 10.0.0.0/8 is '
-                             'required to create networks.')
+            raise ValueError(_('Fixed range in the form of 10.0.0.0/8 is '
+                             'required to create networks.'))
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
