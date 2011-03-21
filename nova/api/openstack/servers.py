@@ -34,6 +34,7 @@ from nova.api.openstack.views import addresses as addresses_views
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.quota import QuotaError
 import nova.api.openstack
 
 
@@ -133,8 +134,10 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
-        personality = env['server'].get('personality', [])
-        injected_files = self._get_injected_files(personality)
+        personality = env['server'].get('personality')
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
 
         try:
             instances = self.compute_api.create(
@@ -150,7 +153,7 @@ class Controller(wsgi.Controller):
                 metadata=metadata,
                 injected_files=injected_files)
         except QuotaError as error:
-            self._handle_quota_error(error)
+            self._handle_quota_errors(error)
 
         builder = servers_views.get_view_builder(req)
         server = builder.build(instances[0], is_detail=False)
@@ -182,6 +185,7 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         injected_files = []
+
         for item in personality:
             try:
                 path = item['path']
