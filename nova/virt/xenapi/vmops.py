@@ -86,9 +86,8 @@ class VMOps(object):
         self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
 
     def spawn_rescue(self, instance):
-        """Break rescue's spawn into separate method for unit tests"""
-        vdi_uuid = self.create_disk(instance)
-        self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
+        """Spawn a rescue instance"""
+        self.spawn(instance)
 
     def _spawn_with_disk(self, instance, vdi_uuid):
         """Create VM instance"""
