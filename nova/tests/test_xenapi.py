@@ -432,11 +432,8 @@ class XenAPIVMTestCase(test.TestCase):
             # When mounting, create real files under the mountpoint to simulate
             # files in the mounted filesystem
 
-            # RegExp extracts the path of the mountpoint
-            cmd_str = ' '.join(cmd)
-            match = re.match(r'(sudo\s+)?mount[^"]*"[^"]*"\s+"([^"]*)"',
-                             cmd_str)
-            self._tmpdir = match.group(2)
+            # mount point will be the last item of the command list
+            self._tmpdir = cmd[len(cmd) - 1]
             LOG.debug(_('Creating files in %s to simulate guest agent' %
                 self._tmpdir))
             os.makedirs(os.path.join(self._tmpdir, 'usr', 'sbin'))
