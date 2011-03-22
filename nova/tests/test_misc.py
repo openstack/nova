@@ -16,7 +16,6 @@
 
 import errno
 import os
-import random
 import select
 
 from eventlet import greenpool

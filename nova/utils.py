@@ -574,10 +574,12 @@ def synchronized(name, external=False):
     def wrap(f):
         @functools.wraps(f)
         def inner(*args, **kwargs):
-            with _semaphores_semaphore:
-                if name not in _semaphores:
-                    _semaphores[name] = semaphore.Semaphore()
-                sem = _semaphores[name]
+            # NOTE(soren): If we ever go natively threaded, this will be racy.
+            #              See http://stackoverflow.com/questions/5390569/dyn\
+            #              amically-allocating-and-destroying-mutexes
+            if name not in _semaphores:
+                _semaphores[name] = semaphore.Semaphore()
+            sem = _semaphores[name]
             LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
                       '"%(method)s"...' % {"lock": name,
                                            "method": f.__name__}))
@@ -593,8 +595,14 @@ def synchronized(name, external=False):
                     lock = _NoopContextManager()
 
                 with lock:
-                    return f(*args, **kwargs)
+                    retval = f(*args, **kwargs)
 
+            # If no-one else is waiting for it, delete it.
+            # See note about possible raciness above.
+            if not sem.balance < 1:
+                del _semaphores[name]
+
+            return retval
         return inner
     return wrap
 
