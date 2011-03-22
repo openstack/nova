@@ -149,8 +149,10 @@ class reroute_compute(object):
 
     def __call__(self, f):
         def wrapped_f(*args, **kwargs):
+            LOG.debug(_("IN DECORATOR ..."))
             collection, context, item_id = \
                             self.get_collection_context_and_id(args, kwargs)
+            LOG.debug(_("IN DECORATOR 2..."))
             try:
                 # Call the original function ...
                 return f(*args, **kwargs)
@@ -166,6 +168,7 @@ class reroute_compute(object):
                     raise
 
                 # Ask the children to provide an answer ...
+                LOG.debug(_("Asking child zones ..."))
                 result = self._call_child_zones(zones,
                             wrap_novaclient_function(_issue_novaclient_command,
                                    collection, self.method_name, item_id))

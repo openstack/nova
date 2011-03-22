@@ -92,9 +92,10 @@ class Controller(wsgi.Controller):
         """ Returns server details by server id """
         try:
             LOG.debug(_("***SHOW"))
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-            builder = servers_views.get_view_builder(req)
+            instance = self.compute_api.routing_get(
+                req.environ['nova.context'], id)
             LOG.debug(_("***SHOW OUT %s" % instance))
+            builder = servers_views.get_view_builder(req)
             return builder.build(instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
