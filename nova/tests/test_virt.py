@@ -62,7 +62,7 @@ class CacheConcurrencyTestCase(test.TestCase):
         self.stubs.Set(os.path, 'exists', fake_exists)
         self.stubs.Set(utils, 'execute', fake_execute)
 
-    def notest_same_fname_concurrency(self):
+    def test_same_fname_concurrency(self):
         """Ensures that the same fname cache runs at a sequentially"""
         conn = libvirt_conn.LibvirtConnection
         wait1 = eventlet.event.Event()
@@ -77,13 +77,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         eventlet.sleep(0)
         try:
             self.assertFalse(done2.ready())
-            self.assertTrue('fname' in conn._image_sems)
         finally:
             wait1.send()
         done1.wait()
         eventlet.sleep(0)
         self.assertTrue(done2.ready())
-        self.assertFalse('fname' in conn._image_sems)
 
     def test_different_fname_concurrency(self):
         """Ensures that two different fname caches are concurrent"""
