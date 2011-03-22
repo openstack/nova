@@ -80,6 +80,7 @@ class LockTestCase(test.TestCase):
         """We can lock across multiple green threads"""
         saved_sem_num = len(utils._semaphores)
         seen_threads = list()
+
         @utils.synchronized('testlock2', external=False)
         def f(id):
             for x in range(10):
@@ -99,7 +100,8 @@ class LockTestCase(test.TestCase):
         # that the last 9 match the first in each chunk.
         for i in range(10):
             for j in range(9):
-                self.assertEquals(seen_threads[i*10], seen_threads[i*10+1+j])
+                self.assertEquals(seen_threads[i * 10],
+                                  seen_threads[i * 10 + 1 + j])
 
         self.assertEqual(saved_sem_num, len(utils._semaphores),
                          "Semaphore leak detected")
