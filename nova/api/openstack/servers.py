@@ -140,8 +140,10 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
-        personality = env['server'].get('personality', [])
-        injected_files = self._get_injected_files(personality)
+        personality = env['server'].get('personality')
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
 
         flavor_id = self._flavor_id_from_req_data(env)
         try:
@@ -193,6 +195,7 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         injected_files = []
+
         for item in personality:
             try:
                 path = item['path']
