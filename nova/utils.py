@@ -532,7 +532,6 @@ def loads(s):
     return json.loads(s)
 
 
-_semaphores_semaphore = semaphore.Semaphore()
 _semaphores = {}
 
 
