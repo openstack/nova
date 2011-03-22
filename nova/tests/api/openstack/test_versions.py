@@ -21,6 +21,7 @@ import webob
 from nova import context
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.api.openstack import views
 
 
 class VersionsTest(test.TestCase):
@@ -59,3 +60,38 @@ class VersionsTest(test.TestCase):
             },
         ]
         self.assertEqual(versions, expected)
+
+    def test_view_builder(self):
+        base_url = "http://example.org/"
+
+        version_data = {
+            "id": "3.2.1",
+            "status": "CURRENT",
+        }
+
+        expected = {
+            "id": "3.2.1",
+            "status": "CURRENT",
+            "links": [
+                {
+                    "rel": "self",
+                    "href": "http://example.org/3.2.1",
+                },
+            ],
+        }
+
+        builder = views.versions.ViewBuilder(base_url)
+        output = builder.build(version_data)
+
+        self.assertEqual(output, expected)
+
+    def test_generate_href(self):
+        base_url = "http://example.org/app/"
+        version_number = "v1.4.6"
+
+        expected = "http://example.org/app/v1.4.6"
+
+        builder = views.versions.ViewBuilder(base_url)
+        actual = builder.generate_href(version_number)
+
+        self.assertEqual(actual, expected)

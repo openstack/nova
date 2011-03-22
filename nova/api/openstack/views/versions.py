@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
 
 def get_view_builder(req):
     base_url = req.application_url
@@ -54,4 +56,4 @@ class ViewBuilder(object):
 
     def generate_href(self, version_number):
         """Create an url that refers to a specific version_number."""
-        return "%s/%s" % (self.base_url, version_number)
+        return os.path.join(self.base_url, version_number)
