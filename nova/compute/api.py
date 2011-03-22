@@ -489,15 +489,15 @@ class API(base.Base):
     def resize(self, context, instance_id, flavor_id):
         """Resize a running instance."""
         instance = self.db.instance_get(context, instance_id)
-        LOG.debug(_("Resizing instance %(instance_type['name'] to flavor"
-                "%(flavor_id)") % locals())
         current_instance_type = self.db.instance_type_get_by_name(
             context, instance['instance_type'])
 
         new_instance_type = self.db.instance_type_get_by_flavor_id(
                 context, flavor_id)
-        LOG.debug(_("Old instance type %s -> New instance type %s"),
-                (current_instance_type['name'], new_instance_type['name']))
+        current_instance_type_name = current_instance_type['name']
+        new_instance_type_name = new_instance_type['name']
+        LOG.debug(_("Old instance type %(current_instance_type_name)s, "
+                " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
             raise exception.ApiError(_("Requested flavor does not exist"))
 

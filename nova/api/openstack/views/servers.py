@@ -89,8 +89,9 @@ class ViewBuilder(object):
             migration = db.migration_get_by_instance_and_status(ctxt,
                     inst['id'], 'finished')
             inst_dict['status'] = 'resize-confirm'
-        except Exception, e:
-            inst_dict['status'] = power_mapping[inst_dict['status']]
+        except:
+            pass
+
         inst_dict['addresses'] = self.addresses_builder.build(inst)
 
         # Return the metadata as a dictionary

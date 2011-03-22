@@ -36,7 +36,7 @@ from nova.api.openstack.views import addresses as addresses_views
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
-prom nova.quota import QuotaError
+from nova.quota import QuotaError
 import nova.api.openstack
 
 
@@ -44,7 +44,7 @@ LOG = logging.getLogger('server')
 FLAGS = flags.FLAGS
 
 
-plass Controller(wsgi.Controller):
+class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
