@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -92,15 +93,18 @@ def vpn_dict(project, vpn_instance):
           'public_ip': project.vpn_ip,
           'public_port': project.vpn_port}
     if vpn_instance:
-        rv['instance_id'] = vpn_instance['ec2_id']
+        rv['instance_id'] = ec2utils.id_to_ec2_id(vpn_instance['id'])
         rv['created_at'] = utils.isotime(vpn_instance['created_at'])
         address = vpn_instance.get('fixed_ip', None)
         if address:
             rv['internal_ip'] = address['address']
-        if utils.vpn_ping(project.vpn_ip, project.vpn_port):
-            rv['state'] = 'running'
+        if project.vpn_ip and project.vpn_port:
+            if utils.vpn_ping(project.vpn_ip, project.vpn_port):
+                rv['state'] = 'running'
+            else:
+                rv['state'] = 'down'
         else:
-            rv['state'] = 'down'
+            rv['state'] = 'down - invalid project vpn config'
     else:
         rv['state'] = 'pending'
     return rv
@@ -279,7 +283,7 @@ class AdminController(object):
                                          ", ensure it isn't running, and try "
                                          "again in a few minutes")
             instance = self._vpn_for(context, project)
-        return {'instance_id': instance['ec2_id']}
+        return {'instance_id': ec2utils.id_to_ec2_id(instance['id'])}
 
     def describe_vpns(self, context):
         vpns = []
