@@ -1,6 +1,7 @@
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright (c) 2011 Citrix Systems, Inc.
+# Copyright 2011 OpenStack LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -13,6 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 """
 Implements vlans, bridges, and iptables rules using linux utilities.
 """
@@ -77,5 +79,5 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
             #raise an exception if VLAN <> vlan_num
             if pif_vlan != vlan_num:
                 raise Exception(_("PIF %(pif_rec['uuid'])s for network "
-                                  "%(bridge)s has VLAN id %(pif_vlan)d."
+                                  "%(bridge)s has VLAN id %(pif_vlan)d. "
                                   "Expected %(vlan_num)d") % locals())

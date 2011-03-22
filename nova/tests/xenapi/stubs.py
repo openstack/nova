@@ -149,9 +149,6 @@ class FakeSessionForVMTests(fake.SessionBase):
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
 
-    def network_get_all_records_where(self, _1, _2):
-        return self.xenapi.network.get_all_records()
-
     def host_call_plugin(self, _1, _2, _3, _4, _5):
         sr_ref = fake.get_all('SR')[0]
         vdi_ref = fake.create_vdi('', False, sr_ref, False)

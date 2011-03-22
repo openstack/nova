@@ -42,8 +42,13 @@ class NetworkHelper(HelperBase):
 
     @classmethod
     def find_network_with_bridge(cls, session, bridge):
-        """Return the network on which the bridge is attached, if found."""
-        expr = 'field "bridge" = "%s"' % bridge
+        """
+        Return the network on which the bridge is attached, if found.
+        The bridge is defined in the nova db and can be found either in the
+        'bridge' or 'name_label' fields of the XenAPI network record
+        """
+        expr = 'field "name__label" = "%s" or ' \
+               'field "bridge" = "%s"' % (bridge, bridge)
         networks = session.call_xenapi('network.get_all_records_where', expr)
         if len(networks) == 1:
             return networks.keys()[0]

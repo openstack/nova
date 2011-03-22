@@ -81,6 +81,12 @@ def reset():
     create_vm('fake', 'Running', is_a_template=False, is_control_domain=True)
 
 
+def reset_table(table):
+    if not table in _CLASSES:
+        return
+    _db_content[table] = {}
+
+
 def create_host(name_label):
     return _create_object('host', {
         'name_label': name_label,
@@ -224,7 +230,6 @@ def _create_local_pif(host_ref):
 
 
 def _create_object(table, obj):
-    LOG.debug("ENTERING _create_object:%s", obj)
     ref = str(uuid.uuid4())
     obj['uuid'] = str(uuid.uuid4())
     _db_content[table][ref] = obj
@@ -248,7 +253,6 @@ def _create_sr(table, obj):
 
 
 def _create_vlan(pif_ref, vlan_num, network_ref):
-    LOG.debug("ENTERING FAKE CREATE VLAN")
     pif_rec = get_record('PIF', pif_ref)
     vlan_pif_ref = _create_object('PIF', {
         'name-label': 'Fake VLAN PIF',
@@ -348,6 +352,9 @@ class SessionBase(object):
 
     def host_call_plugin(*args):
         return 'herp'
+
+    def network_get_all_records_where(self, _1, filter):
+        return self.xenapi.network.get_all_records()
 
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
