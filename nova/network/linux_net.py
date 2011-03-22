@@ -595,6 +595,7 @@ def update_dhcp(context, network_id):
     _execute(*command, addl_env=env)
 
 
+@utils.synchronized('radvd_start')
 def update_ra(context, network_id):
     network_ref = db.network_get(context, network_id)
 
