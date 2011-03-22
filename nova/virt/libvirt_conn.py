@@ -984,32 +984,44 @@ class LibvirtConnection(object):
 
         xml = self._conn.getCapabilities()
         xml = libxml2.parseDoc(xml)
-        nodes = xml.xpathEval('//cpu')
+        nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
             raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
                                       "but %d\n") % len(nodes)
                                       + xml.serialize())
 
         cpu_info = dict()
-        cpu_info['arch'] = xml.xpathEval('//cpu/arch')[0].getContent()
-        cpu_info['model'] = xml.xpathEval('//cpu/model')[0].getContent()
-        cpu_info['vendor'] = xml.xpathEval('//cpu/vendor')[0].getContent()
 
-        topology_node = xml.xpathEval('//cpu/topology')[0].get_properties()
+        arch_nodes = xml.xpathEval('//host/cpu/arch')
+        if arch_nodes:
+            cpu_info['arch'] = arch_nodes[0].getContent()
+
+        model_nodes = xml.xpathEval('//host/cpu/model')
+        if model_nodes:
+            cpu_info['model'] = model_nodes[0].getContent()
+
+        vendor_nodes = xml.xpathEval('//host/cpu/vendor')
+        if vendor_nodes:
+            cpu_info['vendor'] = vendor_nodes[0].getContent()
+
+        topology_nodes = xml.xpathEval('//host/cpu/topology')
         topology = dict()
-        while topology_node != None:
-            name = topology_node.get_name()
-            topology[name] = topology_node.getContent()
-            topology_node = topology_node.get_next()
+        if topology_nodes:
+            topology_node = topology_nodes[0].get_properties()
+            while topology_node:
+                name = topology_node.get_name()
+                topology[name] = topology_node.getContent()
+                topology_node = topology_node.get_next()
 
-        keys = ['cores', 'sockets', 'threads']
-        tkeys = topology.keys()
-        if list(set(tkeys)) != list(set(keys)):
-            ks = ', '.join(keys)
-            raise exception.Invalid(_("Invalid xml: topology(%(topology)s) "
-                                      "must have %(ks)s") % locals())
+            keys = ['cores', 'sockets', 'threads']
+            tkeys = topology.keys()
+            if set(tkeys) != set(keys):
+                ks = ', '.join(keys)
+                raise exception.Invalid(_("Invalid xml: topology"
+                                          "(%(topology)s) must have "
+                                          "%(ks)s") % locals())
 
-        feature_nodes = xml.xpathEval('//cpu/feature')
+        feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
         for nodes in feature_nodes:
             features.append(nodes.get_properties().getContent())
@@ -1597,6 +1609,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain('sg-fallback')
         self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
+        self.iptables.ipv6['filter'].add_chain('sg-fallback')
+        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
 
     def setup_basic_filtering(self, instance):
         """Use NWFilter from libvirt for this."""

@@ -13,9 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import hashlib
 import json
 import traceback
+from xml.dom import minidom
 
 from webob import exc
 
@@ -27,68 +29,17 @@ from nova import wsgi
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack.views import servers as servers_views
+from nova.api.openstack.views import addresses as addresses_views
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.quota import QuotaError
 import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
-
-
 FLAGS = flags.FLAGS
-
-
-def _translate_detail_keys(inst):
-    """ Coerces into dictionary format, mapping everything to Rackspace-like
-    attributes for return"""
-    power_mapping = {
-        None: 'build',
-        power_state.NOSTATE: 'build',
-        power_state.RUNNING: 'active',
-        power_state.BLOCKED: 'active',
-        power_state.SUSPENDED: 'suspended',
-        power_state.PAUSED: 'paused',
-        power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error',
-        power_state.FAILED: 'error'}
-    inst_dict = {}
-
-    mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='id')
-
-    for k, v in mapped_keys.iteritems():
-        inst_dict[k] = inst[v]
-
-    inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = dict(public=[], private=[])
-
-    # grab single private fixed ip
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    inst_dict['addresses']['private'] = private_ips
-
-    # grab all public floating ips
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    inst_dict['addresses']['public'] = public_ips
-
-    # Return the metadata as a dictionary
-    metadata = {}
-    for item in inst['metadata']:
-        metadata[item['key']] = item['value']
-    inst_dict['metadata'] = metadata
-
-    inst_dict['hostId'] = ''
-    if inst['host']:
-        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-
-    return dict(server=inst_dict)
-
-
-def _translate_keys(inst):
-    """ Coerces into dictionary format, excluding all model attributes
-    save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
 
 class Controller(wsgi.Controller):
@@ -98,36 +49,49 @@ class Controller(wsgi.Controller):
         'application/xml': {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress", "adminPass"]}}}
+                           "status", "progress", "adminPass", "flavorRef",
+                           "imageRef"]}}}
 
     def __init__(self):
         self.compute_api = compute.API()
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
+    def ips(self, req, id):
+        try:
+            instance = self.compute_api.get(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
+        builder = addresses_views.get_view_builder(req)
+        return builder.build(instance)
+
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_translate_keys)
+        return self._items(req, is_detail=False)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_translate_detail_keys)
+        return self._items(req, is_detail=True)
 
-    def _items(self, req, entity_maker):
+    def _items(self, req, is_detail):
         """Returns a list of servers for a given user.
 
-        entity_maker - either _translate_detail_keys or _translate_keys
+        builder - the response model builder
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        res = [entity_maker(inst)['server'] for inst in limited_list]
-        return dict(servers=res)
+        builder = servers_views.get_view_builder(req)
+        servers = [builder.build(inst, is_detail)['server']
+                for inst in limited_list]
+        return dict(servers=servers)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _translate_detail_keys(instance)
+            builder = servers_views.get_view_builder(req)
+            return builder.build(instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -141,15 +105,19 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        env = self._deserialize(req.body, req.get_content_type())
+        env = self._deserialize_create(req)
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         context = req.environ['nova.context']
+
+        key_name = None
+        key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
-        if not key_pairs:
-            raise exception.NotFound(_("No keypairs defined"))
-        key_pair = key_pairs[0]
+        if key_pairs:
+            key_pair = key_pairs[0]
+            key_name = key_pair['name']
+            key_data = key_pair['public_key']
 
         image_id = common.get_image_id_from_image_hash(self._image_service,
             context, env['server']['imageId'])
@@ -166,26 +134,91 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
-        instances = self.compute_api.create(
-            context,
-            instance_types.get_by_flavor_id(env['server']['flavorId']),
-            image_id,
-            kernel_id=kernel_id,
-            ramdisk_id=ramdisk_id,
-            display_name=env['server']['name'],
-            display_description=env['server']['name'],
-            key_name=key_pair['name'],
-            key_data=key_pair['public_key'],
-            metadata=metadata,
-            onset_files=env.get('onset_files', []))
+        personality = env['server'].get('personality')
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
 
-        server = _translate_keys(instances[0])
+        try:
+            instances = self.compute_api.create(
+                context,
+                instance_types.get_by_flavor_id(env['server']['flavorId']),
+                image_id,
+                kernel_id=kernel_id,
+                ramdisk_id=ramdisk_id,
+                display_name=env['server']['name'],
+                display_description=env['server']['name'],
+                key_name=key_name,
+                key_data=key_data,
+                metadata=metadata,
+                injected_files=injected_files)
+        except QuotaError as error:
+            self._handle_quota_errors(error)
+
+        builder = servers_views.get_view_builder(req)
+        server = builder.build(instances[0], is_detail=False)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
         return server
+
+    def _deserialize_create(self, request):
+        """
+        Deserialize a create request
+
+        Overrides normal behavior in the case of xml content
+        """
+        if request.content_type == "application/xml":
+            deserializer = ServerCreateRequestXMLDeserializer()
+            return deserializer.deserialize(request.body)
+        else:
+            return self._deserialize(request.body, request.get_content_type())
+
+    def _get_injected_files(self, personality):
+        """
+        Create a list of injected files from the personality attribute
+
+        At this time, injected_files must be formatted as a list of
+        (file_path, file_content) pairs for compatibility with the
+        underlying compute service.
+        """
+        injected_files = []
+
+        for item in personality:
+            try:
+                path = item['path']
+                contents = item['contents']
+            except KeyError as key:
+                expl = _('Bad personality format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad personality format')
+                raise exc.HTTPBadRequest(explanation=expl)
+            try:
+                contents = base64.b64decode(contents)
+            except TypeError:
+                expl = _('Personality content for %s cannot be decoded') % path
+                raise exc.HTTPBadRequest(explanation=expl)
+            injected_files.append((path, contents))
+        return injected_files
+
+    def _handle_quota_errors(self, error):
+        """
+        Reraise quota errors as api-specific http exceptions
+        """
+        if error.code == "OnsetFileLimitExceeded":
+            expl = _("Personality file limit exceeded")
+            raise exc.HTTPBadRequest(explanation=expl)
+        if error.code == "OnsetFilePathLimitExceeded":
+            expl = _("Personality file path too long")
+            raise exc.HTTPBadRequest(explanation=expl)
+        if error.code == "OnsetFileContentLimitExceeded":
+            expl = _("Personality file content too long")
+            raise exc.HTTPBadRequest(explanation=expl)
+        # if the original error is okay, just reraise it
+        raise error
 
     def update(self, req, id):
         """ Updates the server name or password """
@@ -476,3 +509,79 @@ class Controller(wsgi.Controller):
                 _("Ramdisk not found for image %(image_id)s") % locals())
 
         return kernel_id, ramdisk_id
+
+
+class ServerCreateRequestXMLDeserializer(object):
+    """
+    Deserializer to handle xml-formatted server create requests.
+
+    Handles standard server attributes as well as optional metadata
+    and personality attributes
+    """
+
+    def deserialize(self, string):
+        """Deserialize an xml-formatted server create request"""
+        dom = minidom.parseString(string)
+        server = self._extract_server(dom)
+        return {'server': server}
+
+    def _extract_server(self, node):
+        """Marshal the server attribute of a parsed request"""
+        server = {}
+        server_node = self._find_first_child_named(node, 'server')
+        for attr in ["name", "imageId", "flavorId"]:
+            server[attr] = server_node.getAttribute(attr)
+        metadata = self._extract_metadata(server_node)
+        if metadata is not None:
+            server["metadata"] = metadata
+        personality = self._extract_personality(server_node)
+        if personality is not None:
+            server["personality"] = personality
+        return server
+
+    def _extract_metadata(self, server_node):
+        """Marshal the metadata attribute of a parsed request"""
+        metadata_node = self._find_first_child_named(server_node, "metadata")
+        if metadata_node is None:
+            return None
+        metadata = {}
+        for meta_node in self._find_children_named(metadata_node, "meta"):
+            key = meta_node.getAttribute("key")
+            metadata[key] = self._extract_text(meta_node)
+        return metadata
+
+    def _extract_personality(self, server_node):
+        """Marshal the personality attribute of a parsed request"""
+        personality_node = \
+                self._find_first_child_named(server_node, "personality")
+        if personality_node is None:
+            return None
+        personality = []
+        for file_node in self._find_children_named(personality_node, "file"):
+            item = {}
+            if file_node.hasAttribute("path"):
+                item["path"] = file_node.getAttribute("path")
+            item["contents"] = self._extract_text(file_node)
+            personality.append(item)
+        return personality
+
+    def _find_first_child_named(self, parent, name):
+        """Search a nodes children for the first child with a given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                return node
+        return None
+
+    def _find_children_named(self, parent, name):
+        """Return all of a nodes children who have the given name"""
+        for node in parent.childNodes:
+            if node.nodeName == name:
+                yield node
+
+    def _extract_text(self, node):
+        """Get the text field contained by the given node"""
+        if len(node.childNodes) == 1:
+            child = node.childNodes[0]
+            if child.nodeType == child.TEXT_NODE:
+                return child.nodeValue
+        return ""

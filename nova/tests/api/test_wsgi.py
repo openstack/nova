@@ -80,7 +80,7 @@ class ControllerTest(test.TestCase):
                     "attributes": {
                         "test": ["id"]}}}
 
-            def show(self, req, id):  # pylint: disable-msg=W0622,C0103
+            def show(self, req, id):  # pylint: disable=W0622,C0103
                 return {"test": {"id": id}}
 
         def __init__(self):

@@ -16,12 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import commands
 import os
 import random
 import sys
 import time
-import unittest
+import tempfile
+import shutil
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -34,8 +34,6 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 from smoketests import flags
 from smoketests import base
 
-
-
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bundle_kernel', 'openwrt-x86-vmlinuz',
               'Local kernel file to use for bundling tests')
@@ -46,12 +44,22 @@ TEST_PREFIX = 'test%s' % int(random.random() * 1000000)
 TEST_BUCKET = '%s_bucket' % TEST_PREFIX
 TEST_KEY = '%s_key' % TEST_PREFIX
 TEST_GROUP = '%s_group' % TEST_PREFIX
+
+
 class ImageTests(base.UserSmokeTestCase):
     def test_001_can_bundle_image(self):
-        self.assertTrue(self.bundle_image(FLAGS.bundle_image))
+        self.data['tempdir'] = tempfile.mkdtemp()
+        self.assertTrue(self.bundle_image(FLAGS.bundle_image,
+                                          self.data['tempdir']))
 
     def test_002_can_upload_image(self):
-        self.assertTrue(self.upload_image(TEST_BUCKET, FLAGS.bundle_image))
+        try:
+            self.assertTrue(self.upload_image(TEST_BUCKET,
+                                              FLAGS.bundle_image,
+                                              self.data['tempdir']))
+        finally:
+            if os.path.exists(self.data['tempdir']):
+                shutil.rmtree(self.data['tempdir'])
 
     def test_003_can_register_image(self):
         image_id = self.conn.register_image('%s/%s.manifest.xml' %
@@ -148,7 +156,8 @@ class InstanceTests(base.UserSmokeTestCase):
             self.fail('could not ping instance')
 
         if FLAGS.use_ipv6:
-            if not self.wait_for_ping(self.data['instance'].ip_v6, "ping6"):
+            if not self.wait_for_ping(self.data['instance'].dns_name_v6,
+                                      "ping6"):
                 self.fail('could not ping instance v6')
 
     def test_005_can_ssh_to_private_ip(self):
@@ -157,7 +166,7 @@ class InstanceTests(base.UserSmokeTestCase):
             self.fail('could not ssh to instance')
 
         if FLAGS.use_ipv6:
-            if not self.wait_for_ssh(self.data['instance'].ip_v6,
+            if not self.wait_for_ssh(self.data['instance'].dns_name_v6,
                                      TEST_KEY):
                 self.fail('could not ssh to instance v6')
 
@@ -191,7 +200,7 @@ class VolumeTests(base.UserSmokeTestCase):
         self.assertEqual(volume.size, 1)
         self.data['volume'] = volume
         # Give network time to find volume.
-        time.sleep(10)
+        time.sleep(5)
 
     def test_002_can_attach_volume(self):
         volume = self.data['volume']
@@ -204,6 +213,8 @@ class VolumeTests(base.UserSmokeTestCase):
         else:
             self.fail('cannot attach volume with state %s' % volume.status)
 
+        # Give volume some time to be ready.
+        time.sleep(5)
         volume.attach(self.data['instance'].id, self.device)
 
         # wait
@@ -218,7 +229,7 @@ class VolumeTests(base.UserSmokeTestCase):
         self.assertTrue(volume.status.startswith('in-use'))
 
         # Give instance time to recognize volume.
-        time.sleep(10)
+        time.sleep(5)
 
     def test_003_can_mount_volume(self):
         ip = self.data['instance'].private_dns_name
@@ -255,12 +266,13 @@ class VolumeTests(base.UserSmokeTestCase):
         ip = self.data['instance'].private_dns_name
         conn = self.connect_ssh(ip, TEST_KEY)
         stdin, stdout, stderr = conn.exec_command(
-            "df -h | grep %s | awk {'print $2'}" % self.device)
-        out = stdout.read()
+            "blockdev --getsize64 %s" % self.device)
+        out = stdout.read().strip()
         conn.close()
-        if not out.strip() == '1007.9M':
-            self.fail('Volume is not the right size: %s %s' %
-                      (out, stderr.read()))
+        expected_size = 1024 * 1024 * 1024
+        self.assertEquals('%s' % (expected_size,), out,
+                          'Volume is not the right size: %s %s. Expected: %s' %
+                          (out, stderr.read(), expected_size))
 
     def test_006_me_can_umount_volume(self):
         ip = self.data['instance'].private_dns_name
@@ -283,11 +295,3 @@ class VolumeTests(base.UserSmokeTestCase):
     def test_999_tearDown(self):
         self.conn.terminate_instances([self.data['instance'].id])
         self.conn.delete_key_pair(TEST_KEY)
-
-
-if __name__ == "__main__":
-    suites = {'image': unittest.makeSuite(ImageTests),
-              'instance': unittest.makeSuite(InstanceTests),
-              'volume': unittest.makeSuite(VolumeTests)
-              }
-    sys.exit(base.run_tests(suites))
