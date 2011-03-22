@@ -34,19 +34,18 @@ class ViewBuilder(object):
         self.addresses_builder = addresses_builder
 
     def build(self, inst, is_detail):
-        """
-        Coerces into dictionary format, mapping everything to
-        Rackspace-like attributes for return
-        """
+        ''' Returns a dict that represenst a server '''
         if is_detail:
             return self._build_detail(inst)
         else:
             return self._build_simple(inst)
 
     def _build_simple(self, inst):
-            return dict(server=dict(id=inst['id'], name=inst['display_name']))
+        ''' Returns a simple model of a server '''
+        return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
     def _build_detail(self, inst):
+        ''' Returns a detailed model of a server '''
         power_mapping = {
             None: 'build',
             power_state.NOSTATE: 'build',
@@ -81,36 +80,36 @@ class ViewBuilder(object):
         return dict(server=inst_dict)
 
     def _build_image(self, response, inst):
+        ''' Returns the image sub-resource of a server '''
         raise NotImplementedError()
 
     def _build_flavor(self, response, inst):
+        ''' Returns the flavor sub-resource of a server '''
         raise NotImplementedError()
 
 
 class ViewBuilderV10(ViewBuilder):
+    ''' Models an Openstack API V1.0 server response '''
+
     def _build_image(self, response, inst):
-        if inst.get('image_id') != None:
-            response['imageId'] = inst['image_id']
+        response['imageId'] = inst['image_id']
 
     def _build_flavor(self, response, inst):
-        if inst.get('instance_type') != None:
-            response['flavorId'] = inst['instance_type']
+        response['flavorId'] = inst['instance_type']
 
 
 class ViewBuilderV11(ViewBuilder):
+    ''' Models an Openstack API V1.0 server response '''
+
     def __init__(self, addresses_builder, flavor_builder, image_builder):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
 
     def _build_image(self, response, inst):
-        if inst.get('image_id') == None:
-            return
         image_id = inst["image_id"]
         response["imageRef"] = self.image_builder.generate_href(image_id)
 
     def _build_flavor(self, response, inst):
-        if inst.get('instance_type') == None:
-            return
         flavor_id = inst["instance_type"]
         response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
