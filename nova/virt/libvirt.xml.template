@@ -101,6 +101,8 @@
             <target port='0'/>
         </serial>
 
-        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='0.0.0.0'/>
+#if $getVar('vnc_host_iface', False)
+        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='${vnc_host_iface}'/>
+#end if
     </devices>
 </domain>

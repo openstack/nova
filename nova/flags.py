@@ -287,6 +287,10 @@ DEFINE_string('vnc_console_proxy_url',
               'http://127.0.0.1:6080',
               'location of vnc console proxy, \
                in the form "http://127.0.0.1:6080"')
+DEFINE_string('vnc_host_iface', '0.0.0.0',
+              'the compute host interface on which vnc server should listen')
+DEFINE_bool('vnc_enabled', True,
+            'enable vnc related features')
 DEFINE_bool('verbose', False, 'show debug output')
 DEFINE_boolean('fake_rabbit', False, 'use a fake rabbit')
 DEFINE_bool('fake_network', False,
