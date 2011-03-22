@@ -60,7 +60,7 @@ def project_dict(project):
 
 def host_dict(host, compute_service, instances, volume_service, volumes, now):
     """Convert a host model object to a result dict"""
-    rv = {'hostanme': host, 'instance_count': len(instances),
+    rv = {'hostname': host, 'instance_count': len(instances),
           'volume_count': len(volumes)}
     if compute_service:
         latest = compute_service['updated_at'] or compute_service['created_at']
