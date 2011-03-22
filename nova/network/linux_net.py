@@ -557,6 +557,7 @@ def get_dhcp_hosts(context, network_id):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
+@utils.synchronized('dnsmasq_start')
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
