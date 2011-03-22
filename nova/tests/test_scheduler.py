@@ -1017,6 +1017,7 @@ class ZoneRedirectTest(test.TestCase):
         decorator = FakeRerouteCompute("foo")
         try:
             result = decorator(go_boom)(None, None, 1)
+            self.assertFail(_("Should have thrown exception."))
         except exception.InstanceNotFound, e:
             self.assertEquals(e.message, 'boom message')
 
