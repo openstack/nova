@@ -83,11 +83,11 @@ class VMOps(object):
                 instance.image_id, user, project, disk_image_type)
         return (vdi_uuid, disk_image_type)
 
-    def spawn(self, instance):
+    def spawn(self, instance, network_info=None):
         try:
             vdi_uuid = disk_image_type = None
             (vdi_uuid, disk_image_type) = self.create_disk(instance)
-            self._spawn_with_disk(instance, vdi_uuid=vdi_uuid)
+            self._spawn_with_disk(instance, vdi_uuid, network_info)
         except (self.XenAPI.Failure, OSError, IOError) as spawn_error:
 
             LOG.exception(_("instance %s: Failed to spawn"),
@@ -98,7 +98,7 @@ class VMOps(object):
             #re-throw the error
             raise spawn_error
 
-    def _spawn_with_disk(self, instance, vdi_uuid):
+    def _spawn_with_disk(self, instance, vdi_uuid, network_info=None):
         """Create VM instance"""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -165,8 +165,12 @@ class VMOps(object):
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
         # inject_network_info and create vifs
-        networks = self.inject_network_info(instance)
-        self.create_vifs(instance, networks)
+        # TODO(tr3buchet) - check to make sure we have network info, otherwise
+        # create it now. This goes away once nova-multi-nic hits.
+        if network_info is None:
+            network_info = self._get_network_info(instance)
+        self.create_vifs(vm_ref, network_info)
+        self.inject_network_info(instance, vm_ref, network_info)
 
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
@@ -217,7 +221,7 @@ class VMOps(object):
         timer.f = _wait_for_boot
 
         # call to reset network to configure network from xenstore
-        self.reset_network(instance)
+        self.reset_network(instance, vm_ref)
 
         return timer.start(interval=0.5, now=True)
 
@@ -759,24 +763,17 @@ class VMOps(object):
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
-    def inject_network_info(self, instance):
-        """
-        Generate the network info and make calls to place it into the
-        xenstore and the xenstore param list
-
-        """
-        # TODO(tr3buchet) - remove comment in multi-nic
-        # I've decided to go ahead and consider multiple IPs and networks
-        # at this stage even though they aren't implemented because these will
-        # be needed for multi-nic and there was no sense writing it for single
-        # network/single IP and then having to turn around and re-write it
-        vm_ref = self._get_vm_opaque_ref(instance.id)
-        logging.debug(_("injecting network info to xenstore for vm: |%s|"),
-                        vm_ref)
+    # TODO(tr3buchet) - remove this function after nova multi-nic
+    def _get_network_info(self, instance):
+        """creates network info list for instance"""
         admin_context = context.get_admin_context()
-        IPs = db.fixed_ip_get_all_by_instance(admin_context, instance['id'])
+        IPs = db.fixed_ip_get_all_by_instance(admin_context,
+                                              instance['id'])
         networks = db.network_get_all_by_instance(admin_context,
                                                   instance['id'])
+        flavor = db.instance_type_get_by_name(admin_context,
+                                              instance['instance_type'])
+        network_info = []
         for network in networks:
             network_IPs = [ip for ip in IPs if ip.network_id == network.id]
 
@@ -793,67 +790,64 @@ class VMOps(object):
                     "gateway": ip6.gatewayV6,
                     "enabled": "1"}
 
-            mac_id = instance.mac_address.replace(':', '')
-            location = 'vm-data/networking/%s' % mac_id
-            mapping = {
+            info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
                 'mac': instance.mac_address,
+                'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
                 'ips': [ip_dict(ip) for ip in network_IPs],
                 'ip6s': [ip6_dict(ip) for ip in network_IPs]}
+            network_info.append((network, info))
+        return network_info
 
-            self.write_to_param_xenstore(vm_ref, {location: mapping})
+    def inject_network_info(self, instance, vm_ref, network_info):
+        """
+        Generate the network info and make calls to place it into the
+        xenstore and the xenstore param list
+        """
+        logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
+        # this function raises if vm_ref is not a vm_opaque_ref
+        self._session.get_xenapi().VM.get_record(vm_ref)
+
+        for (network, info) in network_info:
+            location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
+            self.write_to_param_xenstore(vm_ref, {location: info})
             try:
-                self.write_to_xenstore(vm_ref, location, mapping['location'])
+                # TODO(tr3buchet): fix function call after refactor
+                #self.write_to_xenstore(vm_ref, location, info)
+                self._make_plugin_call('xenstore.py', 'write_record', instance,
+                                       location, {'value': json.dumps(info)},
+                                       vm_ref)
             except KeyError:
                 # catch KeyError for domid if instance isn't running
                 pass
 
-        return networks
-
-    def create_vifs(self, instance, networks=None):
-        """
-        Creates vifs for an instance
-
-        """
-        vm_ref = self._get_vm_opaque_ref(instance['id'])
-        admin_context = context.get_admin_context()
-        flavor = db.instance_type_get_by_name(admin_context,
-                                              instance.instance_type)
+    def create_vifs(self, vm_ref, network_info):
+        """Creates vifs for an instance"""
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
-        rxtx_cap = flavor['rxtx_cap']
-        if networks is None:
-            networks = db.network_get_all_by_instance(admin_context,
-                                                      instance['id'])
-        # TODO(tr3buchet) - remove comment in multi-nic
-        # this bit here about creating the vifs will be updated
-        # in multi-nic to handle multiple IPs on the same network
-        # and multiple networks
-        # for now it works as there is only one of each
-        for network in networks:
+
+        # this function raises if vm_ref is not a vm_opaque_ref
+        self._session.get_xenapi().VM.get_record(vm_ref)
+
+        for device, (network, info) in enumerate(network_info):
+            mac_address = info['mac']
             bridge = network['bridge']
+            rxtx_cap = info.pop('rxtx_cap')
             network_ref = \
                 NetworkHelper.find_network_with_bridge(self._session, bridge)
 
-            if network_ref:
-                try:
-                    device = "1" if instance._rescue else "0"
-                except AttributeError:
-                    device = "0"
+            VMHelper.create_vif(self._session, vm_ref, network_ref,
+                                mac_address, device, rxtx_cap)
 
-                VMHelper.create_vif(self._session, vm_ref, network_ref,
-                                    instance.mac_address, device,
-                                    rxtx_cap=rxtx_cap)
-
-    def reset_network(self, instance):
-        """
-        Creates uuid arg to pass to make_agent_call and calls it.
-
-        """
+    def reset_network(self, instance, vm_ref):
+        """Creates uuid arg to pass to make_agent_call and calls it."""
         args = {'id': str(uuid.uuid4())}
-        resp = self._make_agent_call('resetnetwork', instance, '', args)
+        # TODO(tr3buchet): fix function call after refactor
+        #resp = self._make_agent_call('resetnetwork', instance, '', args)
+        resp = self._make_plugin_call('agent', 'resetnetwork', instance, '',
+                                                               args, vm_ref)
 
     def list_from_xenstore(self, vm, path):
         """Runs the xenstore-ls command to get a listing of all records
@@ -894,25 +888,26 @@ class VMOps(object):
         """
         self._make_xenstore_call('delete_record', vm, path)
 
-    def _make_xenstore_call(self, method, vm, path, addl_args={}):
+    def _make_xenstore_call(self, method, vm, path, addl_args=None):
         """Handles calls to the xenstore xenapi plugin."""
         return self._make_plugin_call('xenstore.py', method=method, vm=vm,
                 path=path, addl_args=addl_args)
 
-    def _make_agent_call(self, method, vm, path, addl_args={}):
+    def _make_agent_call(self, method, vm, path, addl_args=None):
         """Abstracts out the interaction with the agent xenapi plugin."""
         return self._make_plugin_call('agent', method=method, vm=vm,
                 path=path, addl_args=addl_args)
 
-    def _make_plugin_call(self, plugin, method, vm, path, addl_args={}):
+    def _make_plugin_call(self, plugin, method, vm, path, addl_args=None,
+                                                          vm_ref=None):
         """Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
         instance_id = vm.id
-        vm_ref = self._get_vm_opaque_ref(vm)
+        vm_ref = vm_ref or self._get_vm_opaque_ref(vm)
         vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
         args = {'dom_id': vm_rec['domid'], 'path': path}
-        args.update(addl_args)
+        args.update(addl_args or {})
         try:
             task = self._session.async_call_plugin(plugin, method, args)
             ret = self._session.wait_for_task(task, instance_id)
