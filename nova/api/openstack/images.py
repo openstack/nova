@@ -193,6 +193,21 @@ def _translate_from_image_service_to_api(image_metadata):
     return api_metadata
 
 
+def _safe_translate(image_metadata):
+    """Translate attributes for OpenStack API, temporary workaround for
+    S3ImageService attribute leakage.
+    """
+    # FIXME(sirp): The S3ImageService appears to be leaking implementation
+    # details, including its internal attribute names, and internal
+    # `status` values. Working around it for now.
+    s3_like_image = ('imageId' in image_metadata)
+    if s3_like_image:
+        translate = _translate_s3_like_images
+    else:
+        translate = _translate_from_image_service_to_api
+    return translate(image_metadata)
+
+
 class Controller(wsgi.Controller):
 
     _serialization_metadata = {
@@ -221,30 +236,18 @@ class Controller(wsgi.Controller):
                 req.environ['nova.context'])
 
         service_image_metas = common.limited(service_image_metas, req)
-
-        # FIXME(sirp): The S3ImageService appears to be leaking implementation
-        # details, including its internal attribute names, and internal
-        # `status` values. Working around it for now.
-        s3_like_image = (service_image_metas and
-                         ('imageId' in service_image_metas[0]))
-        if s3_like_image:
-            translate = _translate_s3_like_images
-        else:
-            translate = _translate_from_image_service_to_api
-
-        api_image_metas = [translate(service_image_meta)
+        api_image_metas = [_safe_translate(service_image_meta)
                            for service_image_meta in service_image_metas]
-
         return dict(images=api_image_metas)
 
     def show(self, req, id):
         """Return data about the given image id"""
         image_id = common.get_image_id_from_image_hash(self._service,
                     req.environ['nova.context'], id)
-
-        image = self._service.show(req.environ['nova.context'], image_id)
-        _convert_image_id_to_hash(image)
-        return dict(image=image)
+        service_image_meta = self._service.show(
+            req.environ['nova.context'], image_id)
+        api_image_meta = _safe_translate(service_image_meta)
+        return dict(image=api_image_meta)
 
     def delete(self, req, id):
         # Only public images are supported for now.
@@ -255,11 +258,10 @@ class Controller(wsgi.Controller):
         env = self._deserialize(req.body, req.get_content_type())
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-
-        image_meta = compute.API().snapshot(
+        service_image_meta = compute.API().snapshot(
             context, instance_id, name)
-
-        return dict(image=image_meta)
+        api_image_meta = _safe_translate(service_image_meta)
+        return dict(image=api_image_meta)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that

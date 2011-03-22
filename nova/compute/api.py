@@ -441,12 +441,14 @@ class API(base.Base):
 
         :retval: A dict containing image metadata
         """
-        data = {'name': name, 'is_public': False, 'instance_id': instance_id}
-        image_meta = self.image_service.create(context, data)
-        params = {'image_id': image_meta['id']}
+        properties = {'instance_id': str(instance_id)}
+        sent_meta = {'name': name, 'is_public': False,
+                     'properties': properties}
+        recv_meta = self.image_service.create(context, sent_meta)
+        params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
-        return image_meta
+        return recv_meta
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
