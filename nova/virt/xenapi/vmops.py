@@ -387,8 +387,8 @@ class VMOps(object):
         #The new disk size must be in bytes
 
         new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
-        LOG.debug(_("Resizing VDI %(vdi_uuid) for instance %(instance.name). "
-                "Expanding to %(instance.local_gb)GB") % locals())
+        LOG.debug(_("Resizing VDI %(vdi_uuid) for instance %(instance.name)s. "
+                "Expanding to %(instance.local_gb)f GB") % locals())
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
         self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
         LOG.debug(_("Resize instance %s complete") % (instance.name))
