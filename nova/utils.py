@@ -621,7 +621,7 @@ def partition_dict(dict_, keys):
 
 
 def map_dict_keys(dict_, key_map):
-    """Return a dictionary in which the dictionaries keys are mapped to 
+    """Return a dictionary in which the dictionaries keys are mapped to
     new keys.
     """
     mapped = {}
