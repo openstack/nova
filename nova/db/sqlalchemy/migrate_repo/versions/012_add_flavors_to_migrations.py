@@ -43,6 +43,7 @@ def upgrade(migrate_engine):
     migrations.create_column(old_flavor_id)
     migrations.create_column(new_flavor_id)
 
+
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
     migrations.drop_column(old_flavor_id)

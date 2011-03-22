@@ -23,6 +23,7 @@ import unittest
 import nova
 from nova import test
 
+
 class LocalizationTestCase(test.TestCase):
     def test_multiple_positional_format_placeholders(self):
         pat = re.compile("\W_\(")
