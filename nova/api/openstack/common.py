@@ -17,6 +17,7 @@
 
 import re
 from nova import exception
+from urlparse import urlparse
 from webob import exc
 import webob.exc
 
@@ -78,7 +79,7 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
 
 
 def get_id_from_href(href):
-    m = re.match(r'http.+/.+/(\d)+$', href)
-    if not m:
+    try:
+        return int(urlparse(href).path.split('/')[-1])
+    except:
         raise exc.HTTPBadRequest(_('could not parse id from href'))
-    return int(m.group(1))
