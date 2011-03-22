@@ -2487,6 +2487,7 @@ def delete_instance_metadata(context, instance_id, key):
     session.query(models.InstanceMetadata).\
         filter_by(instance_id=instance_id).\
         filter_by(key=key).\
+        filter_by(deleted=False).\
         update({'deleted': 1,
                 'deleted_at': datetime.datetime.utcnow(),
                 'updated_at': literal_column('updated_at')})
@@ -2519,6 +2520,7 @@ def update_or_create_instance_metadata(context, instance_id, metadata):
         except:
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
-                            "instance_id": instance_id})
+                            "instance_id": instance_id,
+                            "deleted": 0})
         meta_ref.save(session=session)
     return metadata
