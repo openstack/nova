@@ -1766,12 +1766,15 @@ class IptablesFirewallDriver(FirewallDriver):
     def refresh_security_group_members(self, security_group):
         pass
 
-    @utils.synchronized('iptables', external=True)
     def refresh_security_group_rules(self, security_group):
+        self.do_refresh_security_group_rules(security_group)
+        self.iptables.apply()
+
+    @utils.synchronized('iptables', external=True)
+    def do_refresh_security_group_rules(self, security_group):
         for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
             self.add_filters_for_instance(instance)
-        self.iptables.apply()
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)
