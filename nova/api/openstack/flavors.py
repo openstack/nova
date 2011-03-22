@@ -37,15 +37,15 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """Return all flavors in brief."""
-        items = self._get_flavors(req, False)
+        items = self._get_flavors(req, is_detail=False)
         return dict(flavors=items)
 
     def detail(self, req):
         """Return all flavors in detail."""
-        items = self._get_flavors(req, True)
+        items = self._get_flavors(req, is_detail=True)
         return dict(flavors=items)
 
-    def _get_flavors(self, req, is_detail):
+    def _get_flavors(self, req, is_detail=True):
         """Helper function that returns a list of flavor dicts."""
         ctxt = req.environ['nova.context']
         flavors = db.api.instance_type_get_all(ctxt)
