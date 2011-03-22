@@ -62,7 +62,10 @@ class ServerMetaDataTest(unittest.TestCase):
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        #self.allow_admin = FLAGS.allow_admin_api
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(ServerMetaDataTest, self).tearDown()
 
     def test_index(self):
         self.stubs.Set(nova.db.api, 'get_instance_metadata',
