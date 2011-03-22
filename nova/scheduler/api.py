@@ -84,13 +84,18 @@ def _wrap_method(function, self):
 def _process(func, zone):
     """Worker stub for green thread pool. Give the worker
     an authenticated nova client and zone info."""
+    LOG.debug("*** PROCESS %s/%s" % (func, zone))
     nova = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
     nova.authenticate()
     return func(nova, zone)
 
 
 def child_zone_helper(zone_list, func):
-    """Fire off a command to each zone in the list."""
+    """Fire off a command to each zone in the list.
+    The return is [novaclient return objects] from each child zone.
+    For example, if you are calling server.pause(), the list will
+    be whatever the response from server.pause() is. One entry
+    per child zone called."""
     green_pool = greenpool.GreenPool()
     return [result for result in green_pool.imap(
                     _wrap_method(_process, func), zone_list)]
@@ -103,6 +108,7 @@ def _issue_novaclient_command(nova, zone, collection, method_name, \
     result = None
     try:
         manager = getattr(nova, collection)
+        LOG.debug("***MANAGER %s" % manager)
         if isinstance(item_id, int) or item_id.isdigit():
             result = manager.get(int(item_id))
         else:
@@ -115,9 +121,9 @@ def _issue_novaclient_command(nova, zone, collection, method_name, \
 
     if method_name.lower() not in ['get', 'find']:
         LOG.debug("***CALLING CHILD ZONE")
-        m = getattr(item, method_name)
+        m = getattr(result, method_name)
         LOG.debug("***METHOD ATTR %s" % m)
-        result = getattr(item, method_name)()
+        result = getattr(result, method_name)()
         LOG.debug("***CHILD ZONE GAVE %s", result)
     return result
 
@@ -152,6 +158,7 @@ class reroute_compute(object):
             collection, context, item_id = \
                             self.get_collection_context_and_id(args, kwargs)
             try:
+                # Call the original function ...
                 return f(*args, **kwargs)
             except exception.InstanceNotFound, e:
                 LOG.debug(_("Instance %(item_id)s not found "
@@ -164,32 +171,50 @@ class reroute_compute(object):
                 if not zones:
                     raise
 
+                # Ask the children to provide an answer ...
                 result = child_zone_helper(zones,
                             wrap_novaclient_function(_issue_novaclient_command,
                                    collection, self.method_name, item_id))
                 LOG.debug("***REROUTE: %s" % result)
+                # Scrub the results and raise another exception
+                # so the API layers can bail out gracefully ...
                 raise RedirectResult(self.unmarshall_result(result))
         return wrapped_f
 
     def get_collection_context_and_id(self, args, kwargs):
         """Returns a tuple of (novaclient collection name, security
            context and resource id. Derived class should override this."""
+        LOG.debug("***COLLECT: %s/%s" % (args, kwargs))
         context = kwargs.get('context', None)
         instance_id = kwargs.get('instance_id', None)
         if len(args) > 0 and not context:
             context = args[1]
         if len(args) > 1 and not instance_id:
-            context = args[2]
+            instance_id = args[2]
         return ("servers", context, instance_id)
 
-    def unmarshall_result(self, result):
-        server = result[0].__dict__
+    def unmarshall_result(self, zone_responses):
+        """Result is a list of responses from each child zone.
+        Each decorator derivation is responsible to turning this
+        into a format expected by the calling method. For
+        example, this one is expected to return a single Server
+        dict {'server':{k:v}}. Others may return a list of them, like
+        {'servers':[{k,v}]}"""
+        reduced_response = []
+        for zone_response in zone_responses:
+            if not zone_response:
+                continue
 
-        for k in server.keys():
-            if k[0] == '_' or k == 'manager':
-                del server[k]
+            server = zone_response.__dict__
 
-        return dict(server=server)
+            for k in server.keys():
+                if k[0] == '_' or k == 'manager':
+                    del server[k]
+
+            reduced_response.append(dict(server=server))
+        if reduced_response: 
+            return reduced_response[0]  # first for now.
+        return {}
 
 
 def redirect_handler(f):

@@ -21,6 +21,8 @@ Tests For Scheduler
 
 import datetime
 import mox
+import stubout
+import webob
 
 from mox import IgnoreArg
 from nova import context
@@ -32,6 +34,7 @@ from nova import test
 from nova import rpc
 from nova import utils
 from nova.auth import manager as auth_manager
+from nova.scheduler import api
 from nova.scheduler import manager
 from nova.scheduler import driver
 from nova.compute import power_state
@@ -937,3 +940,70 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
+
+
+class FakeZone(object):
+    def __init__(self, api_url, username, password):
+        self.api_url = api_url
+        self.username = username
+        self.password = password
+
+def zone_get_all(context):
+    return [
+                FakeZone('http://example.com', 'bob', 'xxx'),
+           ]
+
+
+def go_boom(self, context, instance):
+    raise exception.InstanceNotFound("boom message", instance)
+
+
+def fake_openstack_init(self, username, password, api):
+    servers=[]
+
+
+def fake_auth(self):
+    pass
+
+class FakeServer:
+    def foo(self):
+        pass
+
+class FakeManager:
+    def get(self, id):
+        return FakeServer()
+
+class FakeOpenStack:
+
+    def __init__(self, username, api, auth):
+        self.servers = FakeManager()
+
+    def authenticate(self):
+        pass
+
+
+class ZoneRedirectTest(test.TestCase):
+    def setUp(self):
+        super(ZoneRedirectTest, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+
+        self.stubs.Set(api.novaclient, 'OpenStack', FakeOpenStack)
+        self.stubs.Set(db, 'zone_get_all', zone_get_all)
+
+        self.enable_zone_routing = FLAGS.enable_zone_routing
+        FLAGS.enable_zone_routing = True
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        FLAGS.enable_zone_routing = self.enable_zone_routing
+        super(ZoneRedirectTest, self).tearDown()
+
+    def test_trap_found_locally(self):
+        decorator = api.reroute_compute("foo")
+        try:
+            wrapper = decorator(go_boom)
+            result = wrapper(None, None, 1)  # self, context, id
+        except api.RedirectResult, e:
+            pass
+
+
