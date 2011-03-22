@@ -1766,14 +1766,11 @@ class IptablesFirewallDriver(FirewallDriver):
     def refresh_security_group_members(self, security_group):
         pass
 
+    @utils.synchronized('iptables', external=True)
     def refresh_security_group_rules(self, security_group):
-        # We use the semaphore to make sure noone applies the rule set
-        # after we've yanked the existing rules but before we've put in
-        # the new ones.
-        with self.iptables.semaphore:
-            for instance in self.instances.values():
-                self.remove_filters_for_instance(instance)
-                self.add_filters_for_instance(instance)
+        for instance in self.instances.values():
+            self.remove_filters_for_instance(instance)
+            self.add_filters_for_instance(instance)
         self.iptables.apply()
 
     def _security_group_chain_name(self, security_group_id):

@@ -21,8 +21,6 @@ import inspect
 import os
 import calendar
 
-from eventlet import semaphore
-
 from nova import db
 from nova import exception
 from nova import flags
@@ -271,8 +269,6 @@ class IptablesManager(object):
         # the snat chain.
         self.ipv4['nat'].add_chain('floating-snat')
         self.ipv4['nat'].add_rule('snat', '-j $floating-snat')
-
-        self.semaphore = semaphore.Semaphore()
 
     @utils.synchronized('iptables', external=True)
     def apply(self):
