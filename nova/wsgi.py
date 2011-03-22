@@ -355,7 +355,8 @@ class Controller(object):
 
         if type(result) is dict:
             content_type = req.best_match_content_type()
-            body = self._serialize(result, content_type)
+            default_xmlns = self.get_default_xmlns(req)
+            body = self._serialize(result, content_type, default_xmlns)
 
             response = webob.Response()
             response.headers["Content-Type"] = content_type
@@ -365,14 +366,15 @@ class Controller(object):
         else:
             return result
 
-    def _serialize(self, data, content_type):
+    def _serialize(self, data, content_type, default_xmlns):
         """
         Serialize the given dict to the provided content_type.
         Uses self._serialization_metadata if it exists, which is a dict mapping
         MIME types to information needed to serialize to that type.
         """
         _metadata = getattr(type(self), "_serialization_metadata", {})
-        serializer = Serializer(_metadata)
+
+        serializer = Serializer(_metadata, default_xmlns)
         try:
             return serializer.serialize(data, content_type)
         except exception.InvalidContentType:
@@ -388,19 +390,23 @@ class Controller(object):
         serializer = Serializer(_metadata)
         return serializer.deserialize(data, content_type)
 
+    def get_default_xmlns(self, req):
+        return 'http://docs.rackspacecloud.com/servers/api/v1.0'
+
 
 class Serializer(object):
     """
     Serializes and deserializes dictionaries to certain MIME types.
     """
 
-    def __init__(self, metadata=None):
+    def __init__(self, metadata=None, default_xmlns=None):
         """
         Create a serializer based on the given WSGI environment.
         'metadata' is an optional dict mapping MIME types to information
         needed to serialize a dictionary to that type.
         """
         self.metadata = metadata or {}
+        self.default_xmlns = default_xmlns
 
     def _get_serialize_handler(self, content_type):
         handlers = {
@@ -478,14 +484,23 @@ class Serializer(object):
         root_key = data.keys()[0]
         doc = minidom.Document()
         node = self._to_xml_node(doc, metadata, root_key, data[root_key])
-        node.setAttribute('xmlns',
-                          'http://docs.rackspacecloud.com/servers/api/v1.0')
+
+        xmlns = node.getAttribute('xmlns')
+        if not xmlns and self.default_xmlns:
+            node.setAttribute('xmlns', self.default_xmlns)
 
         return node.toprettyxml(indent='    ')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
         result = doc.createElement(nodename)
+
+        # Set the xml namespace if one is specified
+        # TODO(justinsb): We could also use prefixes on the keys
+        xmlns = metadata.get('xmlns', None)
+        if xmlns:
+            result.setAttribute('xmlns', xmlns)
+
         if type(data) is list:
             singular = metadata.get('plurals', {}).get(nodename, None)
             if singular is None:
