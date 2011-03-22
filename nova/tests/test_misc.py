@@ -22,7 +22,8 @@ from eventlet import greenpool
 from eventlet import greenthread
 
 from nova import test
-from nova.utils import parse_mailmap, str_dict_replace, synchronized
+from nova import utils
+from nova.utils import parse_mailmap, str_dict_replace
 
 
 class ProjectTestCase(test.TestCase):
@@ -66,7 +67,7 @@ class ProjectTestCase(test.TestCase):
 
 class LockTestCase(test.TestCase):
     def test_synchronized_wrapped_function_metadata(self):
-        @synchronized('whatever')
+        @utils.synchronized('whatever')
         def foo():
             """Bar"""
             pass
@@ -77,8 +78,9 @@ class LockTestCase(test.TestCase):
 
     def test_synchronized_internally(self):
         """We can lock across multiple green threads"""
+        saved_sem_num = len(utils._semaphores)
         seen_threads = list()
-        @synchronized('testlock', external=False)
+        @utils.synchronized('testlock2', external=False)
         def f(id):
             for x in range(10):
                 seen_threads.append(id)
@@ -99,13 +101,15 @@ class LockTestCase(test.TestCase):
             for j in range(9):
                 self.assertEquals(seen_threads[i*10], seen_threads[i*10+1+j])
 
+        self.assertEqual(saved_sem_num, len(utils._semaphores),
+                         "Semaphore leak detected")
 
     def test_synchronized_externally(self):
         """We can lock across multiple processes"""
         rpipe1, wpipe1 = os.pipe()
         rpipe2, wpipe2 = os.pipe()
 
-        @synchronized('testlock', external=True)
+        @utils.synchronized('testlock1', external=True)
         def f(rpipe, wpipe):
             try:
                 os.write(wpipe, "foo")
