@@ -55,6 +55,9 @@ class Controller(wsgi.Controller):
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
+        if len(body) > 1:
+            expl = _('Request body contains too many items')
+            raise exc.HTTPBadRequest(explanation=expl)
         self.compute_api.update_or_create_instance_metadata(context,
                                                             server_id,
                                                             body)

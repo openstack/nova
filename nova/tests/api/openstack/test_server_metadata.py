@@ -141,6 +141,17 @@ class ServerMetaDataTest(unittest.TestCase):
         res_dict = json.loads(res.body)
         self.assertEqual('value1', res_dict['key1'])
 
+    def test_update_item_too_many_keys(self):
+        self.stubs.Set(nova.db.api, 'update_or_create_instance_metadata',
+                        return_create_instance_metadata)
+        req = webob.Request.blank('/v1.1/servers/1/meta/key1')
+        req.environ['api.version'] = '1.1'
+        req.method = 'PUT'
+        req.body = '{"key1": "value1", "key2": "value2"}'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)
+
     def test_update_item_body_uri_mismatch(self):
         self.stubs.Set(nova.db.api, 'update_or_create_instance_metadata',
                         return_create_instance_metadata)
