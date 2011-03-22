@@ -516,6 +516,7 @@ class Controller(wsgi.Controller):
 
         return kernel_id, ramdisk_id
 
+
 class ControllerV10(Controller):
     def _image_id_from_req_data(self, data):
         return data['server']['imageId']
