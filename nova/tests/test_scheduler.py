@@ -1008,8 +1008,17 @@ class ZoneRedirectTest(test.TestCase):
         decorator = FakeRerouteCompute("foo")
         try:
             result = decorator(go_boom)(None, None, 1)
+            self.assertFail(_("Should have rerouted."))
         except api.RedirectResult, e:
             self.assertEquals(e.results['magic'], 'found me')
+
+    def test_routing_flags(self):
+        FLAGS.enable_zone_routing = False
+        decorator = FakeRerouteCompute("foo")
+        try:
+            result = decorator(go_boom)(None, None, 1)
+        except exception.InstanceNotFound, e:
+            self.assertEquals(e.message, 'boom message')
 
     def test_get_collection_context_and_id(self):
         decorator = api.reroute_compute("foo")
