@@ -143,12 +143,15 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
-def service_get_all(context, disabled=False):
+def service_get_all(context, disabled=None):
     session = get_session()
-    return session.query(models.Service).\
-                   filter_by(deleted=can_read_deleted(context)).\
-                   filter_by(disabled=disabled).\
-                   all()
+    query = session.query(models.Service).\
+                   filter_by(deleted=can_read_deleted(context))
+
+    if disabled is not None:
+        query = query.filter_by(disabled=disabled)
+
+    return query.all()
 
 
 @require_admin_context

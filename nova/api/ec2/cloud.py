@@ -196,7 +196,7 @@ class CloudController(object):
 
     def _describe_availability_zones(self, context, **kwargs):
         ctxt = context.elevated()
-        enabled_services = db.service_get_all(ctxt)
+        enabled_services = db.service_get_all(ctxt, False)
         disabled_services = db.service_get_all(ctxt, True)
         available_zones = []
         for zone in [service.availability_zone for service
@@ -221,7 +221,7 @@ class CloudController(object):
         rv = {'availabilityZoneInfo': [{'zoneName': 'nova',
                                         'zoneState': 'available'}]}
 
-        services = db.service_get_all(context)
+        services = db.service_get_all(context, False)
         now = datetime.datetime.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
