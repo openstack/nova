@@ -179,7 +179,7 @@ class ObjectStoreTestCase(test.TestCase):
 class TestHTTPChannel(http.HTTPChannel):
     """Dummy site required for twisted.web"""
 
-    def checkPersistence(self, _, __):  # pylint: disable-msg=C0103
+    def checkPersistence(self, _, __):  # pylint: disable=C0103
         """Otherwise we end up with an unclean reactor."""
         return False
 
@@ -209,10 +209,10 @@ class S3APITestCase(test.TestCase):
 
         root = S3()
         self.site = TestSite(root)
-        # pylint: disable-msg=E1101
+        # pylint: disable=E1101
         self.listening_port = reactor.listenTCP(0, self.site,
                                                 interface='127.0.0.1')
-        # pylint: enable-msg=E1101
+        # pylint: enable=E1101
         self.tcp_port = self.listening_port.getHost().port
 
         if not boto.config.has_section('Boto'):
@@ -231,11 +231,11 @@ class S3APITestCase(test.TestCase):
 
         self.conn.get_http_connection = get_http_connection
 
-    def _ensure_no_buckets(self, buckets):  # pylint: disable-msg=C0111
+    def _ensure_no_buckets(self, buckets):  # pylint: disable=C0111
         self.assertEquals(len(buckets), 0, "Bucket list was not empty")
         return True
 
-    def _ensure_one_bucket(self, buckets, name):  # pylint: disable-msg=C0111
+    def _ensure_one_bucket(self, buckets, name):  # pylint: disable=C0111
         self.assertEquals(len(buckets), 1,
                           "Bucket list didn't have exactly one element in it")
         self.assertEquals(buckets[0].name, name, "Wrong name")

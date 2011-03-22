@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
 if __name__ == '__builtin__':
     LOG.warn(_('Starting instance monitor'))
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     monitor = monitor.InstanceMonitor()
 
     # This is the parent service that twistd will be looking for when it

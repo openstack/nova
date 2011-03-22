@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -42,3 +42,8 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
     migrations.create_column(old_flavor_id)
     migrations.create_column(new_flavor_id)
+
+def downgrade(migrate_engine):
+    meta.bind = migrate_engine
+    migrations.drop_column(old_flavor_id)
+    migrations.drop_column(new_flavor_id)

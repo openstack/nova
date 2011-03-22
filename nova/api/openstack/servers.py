@@ -31,114 +31,69 @@ from nova import wsgi
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack.views import servers as servers_views
+from nova.api.openstack.views import addresses as addresses_views
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.quota import QuotaError
+prom nova.quota import QuotaError
 import nova.api.openstack
 
 
 LOG = logging.getLogger('server')
-
-
 FLAGS = flags.FLAGS
 
 
-def _translate_detail_keys(inst):
-    """ Coerces into dictionary format, mapping everything to Rackspace-like
-    attributes for return"""
-    power_mapping = {
-        None: 'build',
-        power_state.NOSTATE: 'build',
-        power_state.RUNNING: 'active',
-        power_state.BLOCKED: 'active',
-        power_state.SUSPENDED: 'suspended',
-        power_state.PAUSED: 'paused',
-        power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error',
-        power_state.FAILED: 'error'}
-    inst_dict = {}
-
-    mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='id')
-
-    for k, v in mapped_keys.iteritems():
-        inst_dict[k] = inst[v]
-
-    ctxt = context.get_admin_context()
-    try:
-        migration = db.migration_get_by_instance_and_status(ctxt,
-                inst['id'], 'finished')
-        inst_dict['status'] = 'resize-confirm'
-    except Exception, e:
-        inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = dict(public=[], private=[])
-
-    # grab single private fixed ip
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    inst_dict['addresses']['private'] = private_ips
-
-    # grab all public floating ips
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    inst_dict['addresses']['public'] = public_ips
-
-    # Return the metadata as a dictionary
-    metadata = {}
-    for item in inst['metadata']:
-        metadata[item['key']] = item['value']
-    inst_dict['metadata'] = metadata
-
-    inst_dict['hostId'] = ''
-    if inst['host']:
-        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-
-    return dict(server=inst_dict)
-
-
-def _translate_keys(inst):
-    """ Coerces into dictionary format, excluding all model attributes
-    save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['display_name']))
-
-
-class Controller(wsgi.Controller):
+plass Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress", "adminPass"]}}}
+                           "status", "progress", "adminPass", "flavorRef",
+                           "imageRef"]}}}
 
     def __init__(self):
         self.compute_api = compute.API()
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
+    def ips(self, req, id):
+        try:
+            instance = self.compute_api.get(req.environ['nova.context'], id)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
+        builder = addresses_views.get_view_builder(req)
+        return builder.build(instance)
+
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_translate_keys)
+        return self._items(req, is_detail=False)
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_translate_detail_keys)
+        return self._items(req, is_detail=True)
 
-    def _items(self, req, entity_maker):
+    def _items(self, req, is_detail):
         """Returns a list of servers for a given user.
 
-        entity_maker - either _translate_detail_keys or _translate_keys
+        builder - the response model builder
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        res = [entity_maker(inst)['server'] for inst in limited_list]
-        return dict(servers=res)
+        builder = servers_views.get_view_builder(req)
+        servers = [builder.build(inst, is_detail)['server']
+                for inst in limited_list]
+        return dict(servers=servers)
 
     def show(self, req, id):
         """ Returns server details by server id """
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _translate_detail_keys(instance)
+            builder = servers_views.get_view_builder(req)
+            return builder.build(instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -181,8 +136,10 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
-        personality = env['server'].get('personality', [])
-        injected_files = self._get_injected_files(personality)
+        personality = env['server'].get('personality')
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
 
         try:
             instances = self.compute_api.create(
@@ -200,7 +157,8 @@ class Controller(wsgi.Controller):
         except QuotaError as error:
             self._handle_quota_errors(error)
 
-        server = _translate_keys(instances[0])
+        builder = servers_views.get_view_builder(req)
+        server = builder.build(instances[0], is_detail=False)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
@@ -229,6 +187,7 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         injected_files = []
+
         for item in personality:
             try:
                 path = item['path']
