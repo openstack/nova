@@ -478,6 +478,9 @@ class Serializer(object):
         root_key = data.keys()[0]
         doc = minidom.Document()
         node = self._to_xml_node(doc, metadata, root_key, data[root_key])
+        node.setAttribute('xmlns',
+                          'http://docs.rackspacecloud.com/servers/api/v1.0')
+
         return node.toprettyxml(indent='    ')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
