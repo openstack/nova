@@ -597,3 +597,39 @@ def get_from_path(items, path):
         return results
     else:
         return get_from_path(results, remainder)
+
+
+def flatten_dict(dict_, flattened=None):
+    """Recursively flatten a nested dictionary"""
+    flattened = flattened or {}
+    for key, value in dict_.iteritems():
+        if hasattr(value, 'iteritems'):
+            flatten_dict(value, flattened)
+        else:
+            flattened[key] = value
+    return flattened
+
+
+def partition_dict(dict_, keys):
+    """Return two dicts, one containing only `keys` the other containing
+    everything but `keys`
+    """
+    intersection = {}
+    difference = {}
+    for key, value in dict_.iteritems():
+        if key in keys:
+            intersection[key] = value
+        else:
+            difference[key] = value
+    return intersection, difference
+
+
+def map_dict_keys(dict_, key_map):
+    """Return a dictionary in which the dictionaries keys are mapped to 
+    new keys.
+    """
+    mapped = {}
+    for key, value in dict_.iteritems():
+        mapped_key = key_map[key] if key in key_map else key
+        mapped[mapped_key] = value
+    return mapped

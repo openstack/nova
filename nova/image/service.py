@@ -16,9 +16,68 @@
 #    under the License.
 
 
-class BaseImageService(object):
+from nova import utils
 
-    """Base class for providing image search and retrieval services"""
+
+class BaseImageService(object):
+    """Base class for providing image search and retrieval services
+
+    ImageService exposes two concepts of metadata:
+
+        1. First-class attributes: This is metadata that is common to all
+           ImageService subclasses and is shared across all hypervisors. These
+           attributes are defined by IMAGE_ATTRS.
+
+        2. Properties: This is metdata that is specific to an ImageService,
+           and Image, or a particular hypervisor. Any attribute not present in
+           BASE_IMAGE_ATTRS should be considered an image property.
+
+    This means that ImageServices will return BASE_IMAGE_ATTRS as keys in the
+    metadata dict, all other attributes will be returned as keys in the nested
+    'properties' dict.
+    """
+    BASE_IMAGE_ATTRS = ['id', 'name', 'created_at', 'updated_at',
+                        'deleted_at', 'deleted', 'status', 'is_public']
+
+    # NOTE(sirp): ImageService subclasses may override this to aid translation
+    # between BaseImageService attributes and additional metadata stored by
+    # the ImageService subclass
+    SERVICE_IMAGE_ATTRS = []
+
+    @classmethod
+    def _translate_to_base(cls, metadata):
+        """Return a metadata dictionary that is BaseImageService compliant.
+
+        This is used by subclasses to expose only a metadata dictionary that
+        is the same across ImageService implementations.
+        """
+        return cls.propertify_metadata(metadata, cls.BASE_IMAGE_ATTRS)
+
+    @classmethod
+    def _translate_to_service(cls, metadata):
+        """Return a metadata dictionary that is usable by the ImageService
+        subclass.
+
+        As an example, Glance has additional attributes (like 'location'); the
+        BaseImageService considers these properties, but we need to translate
+        these back to first-class attrs for sending to Glance. This method
+        handles this by allowing you to specify the attributes an ImageService
+        considers first-class.
+        """
+        if not cls.SERVICE_IMAGE_ATTRS:
+            raise NotImplementedError(_("Cannot use this without specifying "
+                                        "SERVICE_IMAGE_ATTRS for subclass"))
+        return cls.propertify_metadata(metadata, cls.SERVICE_IMAGE_ATTRS)
+
+    @staticmethod
+    def propertify_metadata(metadata, keys):
+        """Return a dict with any unrecognized keys placed in the nested
+        'properties' dict.
+        """
+        flattened = utils.flatten_dict(metadata)
+        attributes, properties = utils.partition_dict(flattened, keys)
+        attributes['properties'] = properties
+        return attributes
 
     def index(self, context):
         """

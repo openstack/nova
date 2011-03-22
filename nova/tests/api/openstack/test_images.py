@@ -185,11 +185,10 @@ class GlanceImageServiceTest(test.TestCase,
         super(GlanceImageServiceTest, self).tearDown()
 
     def test_create_with_instance_id(self):
-        """
-        Ensure that a instance_id is stored in Glance as a image property
-        string and then converted back to an instance_id integer attribute.
-        """
-        fixture = {'instance_id': 42, 'name': 'test image'}
+        """Ensure instance_id is persisted as an image-property"""
+        fixture = {'name': 'test image',
+                   'properties': {'instance_id': '42'}}
+
         image_id = self.service.create(self.context, fixture)['id']
 
         expected = {'id': image_id,
@@ -197,9 +196,6 @@ class GlanceImageServiceTest(test.TestCase,
                     'properties': {'instance_id': '42'}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
-        # The ImageService shouldn't leak the fact that the instance_id
-        # happens to be stored as a property in Glance
-        expected = {'id': image_id, 'instance_id': 42, 'name': 'test image'}
         image_meta = self.service.show(self.context, image_id)
         self.assertDictMatch(image_meta, expected)
 

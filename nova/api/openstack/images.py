@@ -119,43 +119,46 @@ def _translate_s3_like_images(image_metadata):
 def _translate_from_image_service_to_api(image_metadata):
     """Translate from ImageService to OpenStack API style attribute names
 
-    This involves 3 steps:
+    This involves 4 steps:
 
-        1. Translating required keys
+        1. Filter out attributes that the OpenStack API doesn't need
 
-        2. Translating optional keys (ex. progress, serverId)
+        2. Translate from base image attributes from names used by
+           BaseImageService to names used by OpenStack API
 
-        3. Formatting values according to API spec (for example dates must
+        3. Add in any image properties
+
+        4. Format values according to API spec (for example dates must
            look like "2010-08-10T12:00:00Z")
     """
     service_metadata = image_metadata.copy()
-    api_metadata = {}
+    properties = service_metadata.pop('properties', {})
 
-    # 1. Translate required keys
-    required_image_service2api = {
-        'id': 'id',
-        'name': 'name',
-        'updated_at': 'updated',
-        'created_at': 'created',
-        'status': 'status'}
-    for service_attr, api_attr in required_image_service2api.items():
-        api_metadata[api_attr] = service_metadata[service_attr]
+    # 1. Filter out unecessary attributes
+    api_keys = ['id', 'name', 'updated_at', 'created_at', 'status']
+    api_metadata = utils.partition_dict(service_metadata, api_keys)[0]
 
-    # 2. Translate optional keys
-    optional_image_service2api = {'instance_id': 'serverId'}
-    for service_attr, api_attr in optional_image_service2api.items():
-        if service_attr in service_metadata:
-            api_metadata[api_attr] = service_metadata[service_attr]
+    # 2. Translate base image attributes
+    api_map = {'updated_at': 'updated', 'created_at': 'created'}
+    api_metadata = utils.map_dict_keys(api_metadata, api_map)
 
-    # 2a. Progress special case
+    # 3. Add in any image properties
+    # 3a. serverId is used for backups and snapshots
+    try:
+        api_metadata['serverId'] = int(properties['instance_id'])
+    except KeyError:
+        pass  # skip if it's not present
+    except ValueError:
+        pass  # skip if it's not an integer
+
+    # 3b. Progress special case
     # TODO(sirp): ImageService doesn't have a notion of progress yet, so for
     # now just fake it
     if service_metadata['status'] == 'saving':
         api_metadata['progress'] = 0
 
-    # 3. Format values
-
-    # 3a. Format Image Status (API requires uppercase)
+    # 4. Format values
+    # 4a. Format Image Status (API requires uppercase)
     status_service2api = {'queued': 'QUEUED',
                           'preparing': 'PREPARING',
                           'saving': 'SAVING',
@@ -163,7 +166,7 @@ def _translate_from_image_service_to_api(image_metadata):
                           'killed': 'FAILED'}
     api_metadata['status'] = status_service2api[api_metadata['status']]
 
-    # 3b. Format timestamps
+    # 4b. Format timestamps
     def _format_timestamp(dt_str):
         """Return a timestamp formatted for OpenStack API
 
