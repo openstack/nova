@@ -15,11 +15,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import re
-from nova import exception
 from urlparse import urlparse
-from webob import exc
-import webob.exc
+
+import webob
+
+from nova import exception
 
 
 def limited(items, request, max_limit=1000):
@@ -79,7 +79,13 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
 
 
 def get_id_from_href(href):
+    """Return the id portion of a url.
+
+    Given: http://www.foo.com/bar/123?q=4
+    Returns: 4
+
+    """
     try:
         return int(urlparse(href).path.split('/')[-1])
     except:
-        raise exc.HTTPBadRequest(_('could not parse id from href'))
+        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))

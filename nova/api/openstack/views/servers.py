@@ -25,27 +25,29 @@ from nova import utils
 
 
 class ViewBuilder(object):
-    '''
-    Models a server response as a python dictionary.
+    """Model a server response as a python dictionary.
+
+    Public methods: build
     Abstract methods: _build_image, _build_flavor
-    '''
+
+    """
 
     def __init__(self, addresses_builder):
         self.addresses_builder = addresses_builder
 
     def build(self, inst, is_detail):
-        ''' Returns a dict that represenst a server '''
+        """Return a dict that represenst a server."""
         if is_detail:
             return self._build_detail(inst)
         else:
             return self._build_simple(inst)
 
     def _build_simple(self, inst):
-        ''' Returns a simple model of a server '''
+        """Return a simple model of a server."""
         return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
     def _build_detail(self, inst):
-        ''' Returns a detailed model of a server '''
+        """Returns a detailed model of a server."""
         power_mapping = {
             None: 'build',
             power_state.NOSTATE: 'build',
@@ -80,16 +82,16 @@ class ViewBuilder(object):
         return dict(server=inst_dict)
 
     def _build_image(self, response, inst):
-        ''' Returns the image sub-resource of a server '''
+        """Return the image sub-resource of a server."""
         raise NotImplementedError()
 
     def _build_flavor(self, response, inst):
-        ''' Returns the flavor sub-resource of a server '''
+        """Return the flavor sub-resource of a server."""
         raise NotImplementedError()
 
 
 class ViewBuilderV10(ViewBuilder):
-    ''' Models an Openstack API V1.0 server response '''
+    """Model an Openstack API V1.0 server response."""
 
     def _build_image(self, response, inst):
         response['imageId'] = inst['image_id']
@@ -99,7 +101,7 @@ class ViewBuilderV10(ViewBuilder):
 
 
 class ViewBuilderV11(ViewBuilder):
-    ''' Models an Openstack API V1.0 server response '''
+    """Model an Openstack API V1.0 server response."""
 
     def __init__(self, addresses_builder, flavor_builder, image_builder):
         ViewBuilder.__init__(self, addresses_builder)

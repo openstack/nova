@@ -131,7 +131,7 @@ class APIRouter(wsgi.Router):
 
 
 class APIRouterV10(APIRouter):
-    ''' Defines routes specific to OpenStack API V1.0 '''
+    """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
         APIRouter._setup_routes(self, mapper)
@@ -142,7 +142,7 @@ class APIRouterV10(APIRouter):
 
 
 class APIRouterV11(APIRouter):
-    ''' Defines routes specific to OpenStack API V1.1 '''
+    """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
         APIRouter._setup_routes(self, mapper)
