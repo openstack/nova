@@ -958,23 +958,23 @@ def go_boom(self, context, instance):
     raise exception.InstanceNotFound("boom message", instance)
 
 
-def fake_openstack_init(self, username, password, api):
-    servers=[]
+class FakeServer(object):
+    def __init__(self):
+        self.name = 'myserver'
+        self.kvm = 'kvm'
+        self.manager = 100
+        self._hidden = True
 
-
-def fake_auth(self):
-    pass
-
-class FakeServer:
     def foo(self):
-        pass
+        return None
 
-class FakeManager:
+
+class FakeManager(object):
     def get(self, id):
         return FakeServer()
 
-class FakeOpenStack:
 
+class FakeOpenStack:
     def __init__(self, username, api, auth):
         self.servers = FakeManager()
 
@@ -987,7 +987,6 @@ class ZoneRedirectTest(test.TestCase):
         super(ZoneRedirectTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
 
-        self.stubs.Set(api.novaclient, 'OpenStack', FakeOpenStack)
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
 
         self.enable_zone_routing = FLAGS.enable_zone_routing
@@ -999,11 +998,12 @@ class ZoneRedirectTest(test.TestCase):
         super(ZoneRedirectTest, self).tearDown()
 
     def test_trap_found_locally(self):
+        self.stubs.Set(api.novaclient, 'OpenStack', FakeOpenStack)
         decorator = api.reroute_compute("foo")
         try:
             wrapper = decorator(go_boom)
             result = wrapper(None, None, 1)  # self, context, id
         except api.RedirectResult, e:
-            pass
+            self.assertTrue(e.results, {})
 
 
