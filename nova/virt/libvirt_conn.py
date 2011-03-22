@@ -48,7 +48,6 @@ from xml.dom import minidom
 
 
 from eventlet import tpool
-from eventlet import semaphore
 
 import IPy
 
@@ -552,13 +551,12 @@ class LibvirtConnection(object):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
 
-            if fname not in LibvirtConnection._image_sems:
-                LibvirtConnection._image_sems[fname] = semaphore.Semaphore()
-            with LibvirtConnection._image_sems[fname]:
+            @utils.synchronized(fname)
+            def call_if_not_exists(base, fn, *args, **kwargs):
                 if not os.path.exists(base):
                     fn(target=base, *args, **kwargs)
-            if not LibvirtConnection._image_sems[fname].locked():
-                del LibvirtConnection._image_sems[fname]
+
+            call_if_not_exists(base, fn, *args, **kwargs)
 
             if cow:
                 utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
