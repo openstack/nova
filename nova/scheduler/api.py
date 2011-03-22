@@ -84,7 +84,6 @@ def _wrap_method(function, self):
 def _process(func, zone):
     """Worker stub for green thread pool. Give the worker
     an authenticated nova client and zone info."""
-    LOG.debug("*** PROCESS %s/%s" % (func, zone))
     nova = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
     nova.authenticate()
     return func(nova, zone)
@@ -108,7 +107,6 @@ def _issue_novaclient_command(nova, zone, collection, method_name, \
     result = None
     try:
         manager = getattr(nova, collection)
-        LOG.debug("***MANAGER %s" % manager)
         if isinstance(item_id, int) or item_id.isdigit():
             result = manager.get(int(item_id))
         else:
@@ -117,14 +115,10 @@ def _issue_novaclient_command(nova, zone, collection, method_name, \
         url = zone.api_url
         LOG.debug(_("%(collection)s '%(item_id)s' not found on '%(url)s'" %
                                                 locals()))
-        return
+        return None
 
     if method_name.lower() not in ['get', 'find']:
-        LOG.debug("***CALLING CHILD ZONE")
-        m = getattr(result, method_name)
-        LOG.debug("***METHOD ATTR %s" % m)
         result = getattr(result, method_name)()
-        LOG.debug("***CHILD ZONE GAVE %s", result)
     return result
 
 
@@ -172,19 +166,22 @@ class reroute_compute(object):
                     raise
 
                 # Ask the children to provide an answer ...
-                result = child_zone_helper(zones,
+                result = self._call_child_zones(zones,
                             wrap_novaclient_function(_issue_novaclient_command,
                                    collection, self.method_name, item_id))
-                LOG.debug("***REROUTE: %s" % result)
                 # Scrub the results and raise another exception
                 # so the API layers can bail out gracefully ...
                 raise RedirectResult(self.unmarshall_result(result))
         return wrapped_f
 
+    def _call_child_zones(self, zones, function):
+        """Ask the child zones to perform this operation.
+        Broken out for testing."""
+        return child_zone_helper(zones, function)
+ 
     def get_collection_context_and_id(self, args, kwargs):
         """Returns a tuple of (novaclient collection name, security
            context and resource id. Derived class should override this."""
-        LOG.debug("***COLLECT: %s/%s" % (args, kwargs))
         context = kwargs.get('context', None)
         instance_id = kwargs.get('instance_id', None)
         if len(args) > 0 and not context:
@@ -222,6 +219,5 @@ def redirect_handler(f):
         try:
             return f(*args, **kwargs)
         except RedirectResult, e:
-            LOG.debug("***CAUGHT REROUTE: %s" % e.results)
             return e.results
     return new_f
