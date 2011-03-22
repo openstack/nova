@@ -41,8 +41,9 @@ import string
 import socket
 import sys
 import tempfile
-import time
 import functools
+
+from eventlet import greenthread
 
 from nova import exception
 from nova import flags
@@ -800,13 +801,16 @@ class ComputeManager(manager.Manager):
 
         return self.driver.update_available_resource(context, self.host)
 
-    def pre_live_migration(self, context, instance_id):
+    def pre_live_migration(self, context, instance_id, time=None):
         """Preparations for live migration at dest host.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
 
         """
+
+        if not time:
+            time = greenthread
 
         # Getting instance info
         instance_ref = self.db.instance_get(context, instance_id)
