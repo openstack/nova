@@ -184,4 +184,4 @@ class GlanceImageService(service.BaseImageService):
         except KeyError:
             return False
 
-        return (str(user_id) == str(context.user_id))
+        return str(user_id) == str(context.user_id)

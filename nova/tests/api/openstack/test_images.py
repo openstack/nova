@@ -308,6 +308,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                       'deleted': False}
 
         fixtures = []
+
         def add_fixture(**kwargs):
             kwargs.update(base_attrs)
             fixtures.append(kwargs)
