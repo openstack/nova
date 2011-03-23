@@ -33,6 +33,7 @@ from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
+from nova.api.openstack import image_metadata
 from nova.api.openstack import limits
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
@@ -150,7 +151,10 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
-
+        mapper.resource("image_meta", "meta",
+                        controller=image_metadata.Controller(),
+                        parent_resource=dict(member_name='image',
+                        collection_name='images'))
 
 class Versions(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
