@@ -71,7 +71,7 @@ class ViewBuilder(object):
 
         # Return the metadata as a dictionary
         metadata = {}
-        if 'metadata' in inst:
+        if 'metadata' in dict(inst):
             for item in inst['metadata']:
                 metadata[item['key']] = item['value']
         inst_dict['metadata'] = metadata
@@ -97,11 +97,11 @@ class ViewBuilder(object):
 
 class ViewBuilderV10(ViewBuilder):
     def _build_image(self, response, inst):
-        if inst.get('image_id') != None:
+        if 'image_id' in dict(inst):
             response['imageId'] = inst['image_id']
 
     def _build_flavor(self, response, inst):
-        if inst.get('instance_type') != None:
+        if 'instance_type' in dict(inst):
             response['flavorId'] = inst['instance_type']
 
 
@@ -114,16 +114,15 @@ class ViewBuilderV11(ViewBuilder):
         self.base_url = base_url
 
     def _build_image(self, response, inst):
-        image_id = inst.get("image_id", None)
-        if image_id == None:
-            return
-        response["imageRef"] = self.image_builder.generate_href(image_id)
+        if "image_id" in dict(inst):
+            image_id = inst.get("image_id")
+            response["imageRef"] = self.image_builder.generate_href(image_id)
 
     def _build_flavor(self, response, inst):
-        flavor_id = inst.get("instance_type", None)
-        if flavor_id == None:
-            return
-        response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
+        if "instance_type" in dict(inst):
+            flavor_id = inst["instance_type"]
+            flavor_ref = self.flavor_builder.generate_href(flavor_id)
+            response["flavorRef"] = flavor_ref
 
     def _build_extra(self, response, inst):
         self._build_links(response, inst)
