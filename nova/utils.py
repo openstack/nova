@@ -317,7 +317,7 @@ def to_global_ipv6(prefix, mac):
         return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
         format()
     except TypeError:
-        raise TypeError(_("Bad mac for to_global_ipv6: %s" % mac))
+        raise TypeError(_("Bad mac for to_global_ipv6: %s") % mac)
 
 
 def to_mac(ipv6_address):
