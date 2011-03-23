@@ -282,58 +282,34 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     @classmethod
     def _make_image_fixtures(cls):
-        """
-        """
-        fixtures = []
-        public_image = {'id': 123,
-                        'name': 'public image',
-                        'is_public': True,
-                        'status': 'active',
-                        'properties': {}}
-        fixtures.append(public_image)
-
-        queued_backup = {'id': 124,
-                         'name': 'queued backup',
-                         'is_public': False,
-                         'status': 'queued',
-                         'properties': {'instance_id': 42, 'user_id': 1}}
-        fixtures.append(queued_backup)
-
-        saving_backup = {'id': 125,
-                         'name': 'saving backup',
-                         'is_public': False,
-                         'status': 'saving',
-                         'properties': {'instance_id': 42, 'user_id': 1}}
-        fixtures.append(saving_backup)
-
-        active_backup = {'id': 126,
-                         'name': 'active backup',
-                         'is_public': False,
-                         'status': 'active',
-                         'properties': {'instance_id': 42, 'user_id': 1}}
-        fixtures.append(active_backup)
-
-        killed_backup = {'id': 127,
-                         'name': 'killed backup',
-                         'is_public': False,
-                         'status': 'killed',
-                         'properties': {'instance_id': 42, 'user_id': 1}}
-        fixtures.append(killed_backup)
-
-        someone_elses_backup = {'id': 127,
-                                'name': 'somone elses backup',
-                                'is_public': False,
-                                'status': 'active',
-                                'properties': {'instance_id': 43, 
-                                               'user_id': 2}}
-        fixtures.append(someone_elses_backup)
-
+        image_id = 123
         base_attrs = {'created_at': cls.NOW_SERVICE_STR,
                       'updated_at': cls.NOW_SERVICE_STR,
                       'deleted_at': None,
                       'deleted': False}
 
-        for fixture in fixtures:
-            fixture.update(base_attrs)
+        fixtures = []
+        def add_fixture(**kwargs):
+            kwargs.update(base_attrs)
+            fixtures.append(kwargs)
+
+        # Public image
+        add_fixture(id=image_id, name='public image', is_public=True,
+                    status='active', properties={})
+        image_id += 1
+
+        # Backup for User 1
+        backup_properties = {'instance_id': '42', 'user_id': '1'}
+        for status in ('queued', 'saving', 'active', 'killed'):
+            add_fixture(id=image_id, name='%s backup' % status,
+                        is_public=False, status=status,
+                        properties=backup_properties)
+            image_id += 1
+
+        # Backup for User 2
+        other_backup_properties = {'instance_id': '43', 'user_id': '2'}
+        add_fixture(id=image_id, name='someone elses backup', is_public=False,
+                    status='active', properties=other_backup_properties)
+        image_id += 1
 
         return fixtures
