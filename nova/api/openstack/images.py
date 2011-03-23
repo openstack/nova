@@ -137,7 +137,7 @@ def _translate_from_image_service_to_api(image_metadata):
 
     # 1. Filter out unecessary attributes
     api_keys = ['id', 'name', 'updated_at', 'created_at', 'status']
-    api_metadata = utils.partition_dict(service_metadata, api_keys)[0]
+    api_metadata = utils.subset_dict(service_metadata, api_keys)
 
     # 2. Translate base image attributes
     api_map = {'updated_at': 'updated', 'created_at': 'created'}
