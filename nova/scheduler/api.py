@@ -55,7 +55,25 @@ def get_zone_list(context):
     items = _call_scheduler('get_zone_list', context)
     for item in items:
         item['api_url'] = item['api_url'].replace('\\/', '/')
+    if not items:
+        items = db.zone_get_all(context)
     return items
+
+
+def zone_get(context, zone_id):
+    return db.zone_get(context, zone_id)
+
+
+def zone_delete(context, zone_id):
+    return db.zone_delete(context, zone_id)
+
+
+def zone_create(context, data):
+    return db.zone_create(context, data)
+
+
+def zone_update(context, zone_id, data):
+    return db.zone_update(context, zone_id, data)
 
 
 def get_zone_capabilities(context, service=None):
@@ -149,10 +167,8 @@ class reroute_compute(object):
 
     def __call__(self, f):
         def wrapped_f(*args, **kwargs):
-            LOG.debug(_("IN DECORATOR ..."))
             collection, context, item_id = \
                             self.get_collection_context_and_id(args, kwargs)
-            LOG.debug(_("IN DECORATOR 2..."))
             try:
                 # Call the original function ...
                 return f(*args, **kwargs)
@@ -181,7 +197,7 @@ class reroute_compute(object):
         """Ask the child zones to perform this operation.
         Broken out for testing."""
         return child_zone_helper(zones, function)
- 
+
     def get_collection_context_and_id(self, args, kwargs):
         """Returns a tuple of (novaclient collection name, security
            context and resource id. Derived class should override this."""
@@ -212,7 +228,7 @@ class reroute_compute(object):
                     del server[k]
 
             reduced_response.append(dict(server=server))
-        if reduced_response: 
+        if reduced_response:
             return reduced_response[0]  # first for now.
         return {}
 

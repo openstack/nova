@@ -34,7 +34,6 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 from nova import exception
 from nova import flags
-from nova import log as logging
 from nova import utils
 
 
@@ -51,9 +50,6 @@ flags.DEFINE_string('volume_name_template', 'volume-%08x',
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
                            sqlalchemy='nova.db.sqlalchemy.api')
-
-
-LOG = logging.getLogger('server')
 
 
 class NoMoreAddresses(exception.Error):

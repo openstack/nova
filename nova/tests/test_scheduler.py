@@ -949,6 +949,7 @@ class FakeZone(object):
         self.username = username
         self.password = password
 
+
 def zone_get_all(context):
     return [
                 FakeZone('http://example.com', 'bob', 'xxx'),
@@ -957,8 +958,8 @@ def zone_get_all(context):
 
 class FakeRerouteCompute(api.reroute_compute):
     def _call_child_zones(self, zones, function):
-        return [ ]
- 
+        return []
+
     def get_collection_context_and_id(self, args, kwargs):
         return ("servers", None, 1)
 
@@ -981,6 +982,7 @@ class FakeResource(object):
 
     def pause(self):
         pass
+
 
 class ZoneRedirectTest(test.TestCase):
     def setUp(self):
@@ -1024,27 +1026,28 @@ class ZoneRedirectTest(test.TestCase):
     def test_get_collection_context_and_id(self):
         decorator = api.reroute_compute("foo")
         self.assertEquals(decorator.get_collection_context_and_id(
-            (None, 10, 20), {}), ("servers", 10, 20))       
+            (None, 10, 20), {}), ("servers", 10, 20))
         self.assertEquals(decorator.get_collection_context_and_id(
-            (None, 11,),  dict(instance_id=21)), ("servers", 11, 21))       
+            (None, 11,),  dict(instance_id=21)), ("servers", 11, 21))
         self.assertEquals(decorator.get_collection_context_and_id(
             (None,), dict(context=12, instance_id=22)), ("servers", 12, 22))
 
     def test_unmarshal_single_server(self):
         decorator = api.reroute_compute("foo")
-        self.assertEquals(decorator.unmarshall_result([]), {}) 
+        self.assertEquals(decorator.unmarshall_result([]), {})
         self.assertEquals(decorator.unmarshall_result(
-                [FakeResource(dict(a=1, b=2)),]), 
-                dict(server=dict(a=1, b=2))) 
+                [FakeResource(dict(a=1, b=2)), ]),
+                dict(server=dict(a=1, b=2)))
         self.assertEquals(decorator.unmarshall_result(
-                [FakeResource(dict(a=1, _b=2)),]), 
-                dict(server=dict(a=1,))) 
+                [FakeResource(dict(a=1, _b=2)), ]),
+                dict(server=dict(a=1,)))
         self.assertEquals(decorator.unmarshall_result(
-                [FakeResource(dict(a=1, manager=2)),]), 
-                dict(server=dict(a=1,)))                
+                [FakeResource(dict(a=1, manager=2)), ]),
+                dict(server=dict(a=1,)))
         self.assertEquals(decorator.unmarshall_result(
-                [FakeResource(dict(_a=1, manager=2)),]), 
-                dict(server={}))                
+                [FakeResource(dict(_a=1, manager=2)), ]),
+                dict(server={}))
+
 
 class FakeServerCollection(object):
     def get(self, instance_id):
@@ -1053,6 +1056,7 @@ class FakeServerCollection(object):
     def find(self, name):
         return FakeResource(dict(a=11, b=22))
 
+
 class FakeEmptyServerCollection(object):
     def get(self, f):
         raise novaclient.NotFound(1)
@@ -1060,9 +1064,11 @@ class FakeEmptyServerCollection(object):
     def find(self, name):
         raise novaclient.NotFound(2)
 
+
 class FakeNovaClient(object):
     def __init__(self, collection):
         self.servers = collection
+
 
 class DynamicNovaClientTest(test.TestCase):
     def test_issue_novaclient_command_found(self):
@@ -1078,17 +1084,17 @@ class DynamicNovaClientTest(test.TestCase):
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeServerCollection()),
                     zone, "servers", "pause", 100), None)
-   
+
     def test_issue_novaclient_command_not_found(self):
         zone = FakeZone('http://example.com', 'bob', 'xxx')
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "get", 100), None)                   
+                    zone, "servers", "get", 100), None)
 
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "find", "name"), None)                   
+                    zone, "servers", "find", "name"), None)
 
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
-                    zone, "servers", "any", "name"), None)                   
+                    zone, "servers", "any", "name"), None)

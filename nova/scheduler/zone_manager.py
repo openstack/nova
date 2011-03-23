@@ -58,8 +58,9 @@ class ZoneState(object):
            child zone."""
         self.last_seen = datetime.now()
         self.attempt = 0
-        self.name = zone_metadata["name"]
-        self.capabilities = zone_metadata["capabilities"]
+        self.name = zone_metadata.get("name", "n/a")
+        self.capabilities = ", ".join(["%s=%s" % (k, v)
+                        for k, v in zone_metadata.iteritems() if k != 'name'])
         self.is_active = True
 
     def to_dict(self):
