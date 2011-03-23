@@ -59,6 +59,8 @@ from nova.scheduler import api
 
 FLAGS = flags.FLAGS
 
+LOG = logging.getLogger('nova.manager')
+
 
 class Manager(base.Base):
     def __init__(self, host=None, db_driver=None):
@@ -83,6 +85,7 @@ class SchedulerDependentManager(Manager):
        should derive from this class. Otherwise they can derive from
        manager.Manager directly. Updates are only sent after
        update_service_capabilities is called with non-None values."""
+
     def __init__(self, host=None, db_driver=None, service_name="undefined"):
         self.last_capabilities = None
         self.service_name = service_name
@@ -95,7 +98,7 @@ class SchedulerDependentManager(Manager):
     def periodic_tasks(self, context=None):
         """Pass data back to the scheduler at a periodic interval"""
         if self.last_capabilities:
-            logging.debug(_("Notifying Schedulers of capabilities ..."))
+            LOG.debug(_("Notifying Schedulers of capabilities ..."))
             api.update_service_capabilities(context, self.service_name,
                                 self.host, self.last_capabilities)
 

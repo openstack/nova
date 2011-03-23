@@ -17,7 +17,6 @@ import common
 
 from nova import db
 from nova import flags
-from nova import log as logging
 from nova import wsgi
 from nova.scheduler import api
 
@@ -73,8 +72,8 @@ class Controller(wsgi.Controller):
         zone = dict(name=FLAGS.zone_name)
         caps = FLAGS.zone_capabilities
         for cap in caps:
-            key_values = cap.split('=')
-            zone[key_values[0]] = key_values[1]
+            key, value = cap.split('=')
+            zone[key] = value
         for item, (min_value, max_value) in items.iteritems():
             zone[item] = "%s,%s" % (min_value, max_value)
         return dict(zone=zone)

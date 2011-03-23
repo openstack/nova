@@ -219,8 +219,8 @@ class FanoutAdapterConsumer(AdapterConsumer):
         self.queue = "%s_fanout_%s" % (topic, unique)
         self.durable = False
         LOG.info(_("Created '%(exchange)s' fanout exchange "
-                                        "with '%(key)s' routing key"),
-                            dict(exchange=self.exchange, key=self.routing_key))
+                   "with '%(key)s' routing key"),
+                dict(exchange=self.exchange, key=self.routing_key))
         super(FanoutAdapterConsumer, self).__init__(connection=connection,
                                     topic=topic, proxy=proxy)
 

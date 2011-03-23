@@ -52,7 +52,7 @@ def get_zone_capabilities(context, service=None):
     """Returns a dict of key, value capabilities for this zone,
        or for a particular class of services running in this zone."""
     return _call_scheduler('get_zone_capabilities', context=context,
-                        params=dict(service=service))
+                          params=dict(service=service))
 
 
 def update_service_capabilities(context, service_name, host, capabilities):
