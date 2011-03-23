@@ -463,7 +463,7 @@ class VMOps(object):
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
-    def _shutdown_rescue(self, vm_ref):
+    def _shutdown_rescue(self, rescue_vm_ref):
         """Shutdown a rescue instance"""
         self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm_ref)
 
@@ -552,7 +552,7 @@ class VMOps(object):
 
         LOG.debug(_("Instance %(instance_id)s VM destroyed") % locals())
 
-    def _destroy_rescue(self, vm_ref):
+    def _destroy_rescue_instance(self, rescue_vm_ref):
         """Destroy a rescue instance"""
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
@@ -671,7 +671,7 @@ class VMOps(object):
         self._destroy_rescue_vbds(rescue_vm_ref)
         self._shutdown_rescue(rescue_vm_ref)
         self._destroy_rescue_vdis(rescue_vm_ref)
-        self._destroy_rescue(rescue_vm_ref)
+        self._destroy_rescue_instance(rescue_vm_ref)
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
 
@@ -709,7 +709,7 @@ class VMOps(object):
             self._destroy_rescue_vbds(rescue_vm_ref)
             self._shutdown_rescue(rescue_vm_ref)
             self._destroy_rescue_vdis(rescue_vm_ref)
-            self._destroy_rescue(rescue_vm_ref)
+            self._destroy_rescue_instance(rescue_vm_ref)
             self._release_bootlock(original_vm_ref)
             self._session.call_xenapi("VM.start", original_vm_ref, False,
                                       False)
