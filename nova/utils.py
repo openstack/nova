@@ -335,6 +335,7 @@ utcnow.override_time = None
 
 
 def is_then_greater(then, seconds):
+    """Return True of 'then' is greater than 'seconds'"""
     if utcnow() - then > datetime.timedelta(seconds=seconds):
         return True
     else:
