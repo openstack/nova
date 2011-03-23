@@ -292,10 +292,10 @@ class XenAPIVMTestCase(test.TestCase):
                 'ips': [{'ip': '10.0.0.3',
                          'netmask':'255.255.255.0',
                          'enabled':'1'}],
-                'ip6s': [{'ip': '',
-                          'netmask': '',
+                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
+                          'netmask': '120',
                           'enabled': '1',
-                          'gateway': ''}],
+                          'gateway': 'fe80::a00:1'}],
                 'mac': 'aa:bb:cc:dd:ee:ff',
                 'dns': ['10.0.0.2'],
                 'gateway': '10.0.0.1'})

@@ -165,7 +165,16 @@ def _free_device(device):
     _DEVICES.append(device)
 
 
-def get_injectables(inst):
+def get_injectables(inst, template=None, template_data=None):
+    #load cheetah.template if necessary
+    if not template:
+        t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
+                       -1)
+        template = t.Template
+    #load template file if necessary
+    if not template_data:
+        template_data = open(FLAGS.injected_network_template).read()
+
     key = str(inst['key_data'])
     net = None
     network_ref = db.network_get_by_instance(context.get_admin_context(),
@@ -173,16 +182,21 @@ def get_injectables(inst):
     if network_ref['injected']:
         admin_context = context.get_admin_context()
         address = db.instance_get_fixed_address(admin_context, inst['id'])
-        ra_server = network_ref['ra_server']
-        if not ra_server:
-            ra_server = "fd00::"
-        with open(FLAGS.injected_network_template) as f:
-            net = f.read() % {'address': address,
-                              'netmask': network_ref['netmask'],
-                              'gateway': network_ref['gateway'],
-                              'broadcast': network_ref['broadcast'],
-                              'dns': network_ref['dns'],
-                              'ra_server': ra_server}
+        address_v6 = None
+        if FLAGS.use_ipv6:
+            address_v6 = db.instance_get_fixed_address_v6(admin_context,
+                                                          inst['id'])
+        interfaces_info = {'address': address,
+                          'netmask': network_ref['netmask'],
+                          'gateway': network_ref['gateway'],
+                          'broadcast': network_ref['broadcast'],
+                          'dns': network_ref['dns'],
+                          'address_v6': address_v6,
+                          'gateway_v6': network_ref['gateway_v6'],
+                          'netmask_v6': network_ref['netmask_v6'],
+                          'use_ipv6': FLAGS.use_ipv6}
+        net = str(template(template_data,
+                        searchList=[interfaces_info]))
 
     return key, net
 

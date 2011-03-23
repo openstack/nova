@@ -634,7 +634,7 @@ interface %s
     command = _ra_cmd(network_ref)
     _execute(*command)
     db.network_update(context, network_id,
-                      {"ra_server":
+                      {"gateway_v6":
                        utils.get_my_linklocal(network_ref['bridge'])})
 
 
