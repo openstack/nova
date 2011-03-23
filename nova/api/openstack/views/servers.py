@@ -18,7 +18,7 @@
 import hashlib
 
 from nova.compute import power_state
-import nova.compute.api
+import nova.compute
 import nova.context
 from nova import db
 from nova.api.openstack import common
@@ -90,7 +90,8 @@ class ViewBuilder(object):
 
         ctxt = nova.context.get_admin_context()
         inst_dict['status'] = power_mapping[inst_dict['status']]
-        if nova.compute.api.has_finished_migration(ctxt, inst['id']):
+        compute_api = nova.compute.API()
+        if compute_api.has_finished_migration(ctxt, inst['id']):
             inst_dict['status'] = 'resize-confirm'
 
         inst_dict['addresses'] = self.addresses_builder.build(inst)

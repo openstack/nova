@@ -257,7 +257,7 @@ class API(base.Base):
         """Retrieves whether or not a finished migration exists for
         an instance"""
         try:
-            db.migration_get_by_instance_and_status(ctxt, inst['id'],
+            db.migration_get_by_instance_and_status(context, instance_id,
                     'finished')
             return True
         except Exception, e:
