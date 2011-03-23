@@ -61,18 +61,10 @@ if __name__ == "__main__":
     app = proxy.WebsocketVNCProxy(FLAGS.vnc_proxy_wwwroot)
 
     if FLAGS.vnc_debug:
-        app = proxy.DebugMiddleware(app.serve)
+        app = proxy.DebugMiddleware(app)
     else:
-        app = auth.NovaAuthMiddleware(app.serve)
+        app = auth.NovaAuthMiddleware(app)
 
-
-    listener = eventlet.listen((FLAGS.vnc_proxy_host, FLAGS.vnc_proxy_port))
- 
- 
-    from eventlet import wsgi
-    wsgi.server(listener, app, max_size=1000)
-
-
-#    server = wsgi.Server()
-#    server.start(app, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
-#    server.wait()
+    server = wsgi.Server()
+    server.start(app, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
+    server.wait()

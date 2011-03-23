@@ -70,7 +70,7 @@ class WebsocketVNCProxy(object):
             t2.wait()
         _handle(environ, start_response)
 
-    def serve(self, environ, start_response):
+    def __call__(self, environ, start_response):
         req = Request(environ)
         if req.path == '/data':
             return self.proxy_connection(environ, start_response)
