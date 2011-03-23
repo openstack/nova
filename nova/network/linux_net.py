@@ -557,6 +557,7 @@ def get_dhcp_hosts(context, network_id):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
+@utils.synchronized('dnsmasq_start')
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
@@ -594,6 +595,7 @@ def update_dhcp(context, network_id):
     _execute(*command, addl_env=env)
 
 
+@utils.synchronized('radvd_start')
 def update_ra(context, network_id):
     network_ref = db.network_get(context, network_id)
 
@@ -633,7 +635,7 @@ interface %s
     command = _ra_cmd(network_ref)
     _execute(*command)
     db.network_update(context, network_id,
-                      {"ra_server":
+                      {"gateway_v6":
                        utils.get_my_linklocal(network_ref['bridge'])})
 
 
