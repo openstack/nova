@@ -806,6 +806,11 @@ def instance_destroy(context, instance_id):
                 update({'deleted': 1,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
+                filter_by(instance_id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1249,7 +1254,7 @@ def network_get_all(context):
 
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 
 @require_admin_context
@@ -2337,7 +2342,7 @@ def instance_type_create(_context, values):
 
 
 @require_context
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """
     Returns a dict describing all instance_types with name as key.
     """
@@ -2348,7 +2353,7 @@ def instance_type_get_all(context, inactive=0):
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
-                        filter_by(deleted=inactive).\
+                        filter_by(deleted=False).\
                         order_by("name").\
                         all()
     if inst_types:
@@ -2392,7 +2397,7 @@ def instance_type_destroy(context, name):
     session = get_session()
     instance_type_ref = session.query(models.InstanceTypes).\
                                       filter_by(name=name)
-    records = instance_type_ref.update(dict(deleted=1))
+    records = instance_type_ref.update(dict(deleted=True))
     if records == 0:
         raise exception.NotFound
     else:

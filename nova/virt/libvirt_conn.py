@@ -49,7 +49,6 @@ from xml.dom import minidom
 from eventlet import greenthread
 from eventlet import tpool
 from eventlet import semaphore
-
 import IPy
 
 from nova import context
@@ -160,6 +159,7 @@ class LibvirtConnection(object):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
+        self.interfaces_xml = open(FLAGS.injected_network_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
@@ -339,7 +339,11 @@ class LibvirtConnection(object):
     def reboot(self, instance):
         self.destroy(instance, False)
         xml = self.to_xml(instance)
+        self.firewall_driver.setup_basic_filtering(instance)
+        self.firewall_driver.prepare_instance_filter(instance)
         self._conn.createXML(xml, 0)
+        self.firewall_driver.apply_instance_filter(instance)
+
         timer = utils.LoopingCall(f=None)
 
         def _wait_for_reboot():
@@ -659,16 +663,23 @@ class LibvirtConnection(object):
         if network_ref['injected']:
             admin_context = context.get_admin_context()
             address = db.instance_get_fixed_address(admin_context, inst['id'])
-            ra_server = network_ref['ra_server']
-            if not ra_server:
-                ra_server = "fd00::"
-            with open(FLAGS.injected_network_template) as f:
-                net = f.read() % {'address': address,
-                                  'netmask': network_ref['netmask'],
-                                  'gateway': network_ref['gateway'],
-                                  'broadcast': network_ref['broadcast'],
-                                  'dns': network_ref['dns'],
-                                  'ra_server': ra_server}
+            address_v6 = None
+            if FLAGS.use_ipv6:
+                address_v6 = db.instance_get_fixed_address_v6(admin_context,
+                                                              inst['id'])
+
+            interfaces_info = {'address': address,
+                               'netmask': network_ref['netmask'],
+                               'gateway': network_ref['gateway'],
+                               'broadcast': network_ref['broadcast'],
+                               'dns': network_ref['dns'],
+                               'address_v6': address_v6,
+                               'gateway_v6': network_ref['gateway_v6'],
+                               'netmask_v6': network_ref['netmask_v6'],
+                               'use_ipv6': FLAGS.use_ipv6}
+
+            net = str(Template(self.interfaces_xml,
+                                searchList=[interfaces_info]))
         if key or net:
             inst_name = inst['name']
             img_id = inst.image_id
@@ -703,7 +714,7 @@ class LibvirtConnection(object):
                                                    instance['id'])
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
-        ra_server = network['ra_server']
+        gateway_v6 = network['gateway_v6']
 
         if FLAGS.allow_project_net_traffic:
             if FLAGS.use_ipv6:
@@ -748,8 +759,8 @@ class LibvirtConnection(object):
                     'local': instance_type['local_gb'],
                     'driver_type': driver_type}
 
-        if ra_server:
-            xml_info['ra_server'] = ra_server + "/128"
+        if gateway_v6:
+            xml_info['gateway_v6'] = gateway_v6 + "/128"
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
@@ -1306,10 +1317,10 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def _ra_server_for_instance(self, instance):
+    def _gateway_v6_for_instance(self, instance):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
-        return network['ra_server']
+        return network['gateway_v6']
 
 
 class NWFilterFirewall(FirewallDriver):
@@ -1525,8 +1536,8 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
         if FLAGS.use_ipv6:
-            ra_server = self._ra_server_for_instance(instance)
-            if ra_server:
+            gateway_v6 = self._gateway_v6_for_instance(instance)
+            if gateway_v6:
                 instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
@@ -1694,9 +1705,9 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            ra_server = self._ra_server_for_instance(instance)
-            if ra_server:
-                ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (ra_server,)]
+            gateway_v6 = self._gateway_v6_for_instance(instance)
+            if gateway_v6:
+                ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (gateway_v6,)]
 
             #Allow project network traffic
             if FLAGS.allow_project_net_traffic:
@@ -1797,10 +1808,10 @@ class IptablesFirewallDriver(FirewallDriver):
                                              instance['id'])
         return network['gateway']
 
-    def _ra_server_for_instance(self, instance):
+    def _gateway_v6_for_instance(self, instance):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
-        return network['ra_server']
+        return network['gateway_v6']
 
     def _project_cidr_for_instance(self, instance):
         network = db.network_get_by_instance(context.get_admin_context(),

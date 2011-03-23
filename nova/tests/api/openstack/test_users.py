@@ -18,11 +18,10 @@ import json
 import stubout
 import webob
 
-import nova.api
-import nova.api.openstack.auth
-from nova import context
 from nova import flags
 from nova import test
+from nova import utils
+from nova.api.openstack import users
 from nova.auth.manager import User, Project
 from nova.tests.api.openstack import fakes
 
@@ -43,14 +42,14 @@ class UsersTest(test.TestCase):
     def setUp(self):
         super(UsersTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(nova.api.openstack.users.Controller, '__init__',
+        self.stubs.Set(users.Controller, '__init__',
                        fake_init)
-        self.stubs.Set(nova.api.openstack.users.Controller, '_check_admin',
+        self.stubs.Set(users.Controller, '_check_admin',
                        fake_admin_check)
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthManager.projects = dict(testacct=Project('testacct',
                                                                'testacct',
-                                                               'guy1',
+                                                               'id1',
                                                                'test',
                                                                []))
         fakes.FakeAuthDatabase.data = {}
@@ -61,10 +60,8 @@ class UsersTest(test.TestCase):
         self.allow_admin = FLAGS.allow_admin_api
         FLAGS.allow_admin_api = True
         fakemgr = fakes.FakeAuthManager()
-        fakemgr.add_user('acc1', User('guy1', 'guy1', 'acc1',
-                                      'fortytwo!', False))
-        fakemgr.add_user('acc2', User('guy2', 'guy2', 'acc2',
-                                      'swordfish', True))
+        fakemgr.add_user(User('id1', 'guy1', 'acc1', 'secret1', False))
+        fakemgr.add_user(User('id2', 'guy2', 'acc2', 'secret2', True))
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -80,28 +77,44 @@ class UsersTest(test.TestCase):
         self.assertEqual(len(res_dict['users']), 2)
 
     def test_get_user_by_id(self):
-        req = webob.Request.blank('/v1.0/users/guy2')
+        req = webob.Request.blank('/v1.0/users/id2')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
-        self.assertEqual(res_dict['user']['id'], 'guy2')
+        self.assertEqual(res_dict['user']['id'], 'id2')
         self.assertEqual(res_dict['user']['name'], 'guy2')
-        self.assertEqual(res_dict['user']['secret'], 'swordfish')
+        self.assertEqual(res_dict['user']['secret'], 'secret2')
         self.assertEqual(res_dict['user']['admin'], True)
         self.assertEqual(res.status_int, 200)
 
     def test_user_delete(self):
-        req = webob.Request.blank('/v1.0/users/guy1')
-        req.method = 'DELETE'
+        # Check the user exists
+        req = webob.Request.blank('/v1.0/users/id1')
         res = req.get_response(fakes.wsgi_app())
-        self.assertTrue('guy1' not in [u.id for u in
-                        fakes.FakeAuthManager.auth_data.values()])
+        res_dict = json.loads(res.body)
+
+        self.assertEqual(res_dict['user']['id'], 'id1')
         self.assertEqual(res.status_int, 200)
 
+        # Delete the user
+        req = webob.Request.blank('/v1.0/users/id1')
+        req.method = 'DELETE'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertTrue('id1' not in [u.id for u in
+                        fakes.FakeAuthManager.auth_data])
+        self.assertEqual(res.status_int, 200)
+
+        # Check the user is not returned (and returns 404)
+        req = webob.Request.blank('/v1.0/users/id1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res.status_int, 404)
+
     def test_user_create(self):
+        secret = utils.generate_password()
         body = dict(user=dict(name='test_guy',
                               access='acc3',
-                              secret='invasionIsInNormandy',
+                              secret=secret,
                               admin=True))
         req = webob.Request.blank('/v1.0/users')
         req.headers["Content-Type"] = "application/json"
@@ -112,20 +125,25 @@ class UsersTest(test.TestCase):
         res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
+
+        # NOTE(justinsb): This is a questionable assertion in general
+        # fake sets id=name, but others might not...
         self.assertEqual(res_dict['user']['id'], 'test_guy')
+
         self.assertEqual(res_dict['user']['name'], 'test_guy')
         self.assertEqual(res_dict['user']['access'], 'acc3')
-        self.assertEqual(res_dict['user']['secret'], 'invasionIsInNormandy')
+        self.assertEqual(res_dict['user']['secret'], secret)
         self.assertEqual(res_dict['user']['admin'], True)
         self.assertTrue('test_guy' in [u.id for u in
-                        fakes.FakeAuthManager.auth_data.values()])
-        self.assertEqual(len(fakes.FakeAuthManager.auth_data.values()), 3)
+                        fakes.FakeAuthManager.auth_data])
+        self.assertEqual(len(fakes.FakeAuthManager.auth_data), 3)
 
     def test_user_update(self):
+        new_secret = utils.generate_password()
         body = dict(user=dict(name='guy2',
                               access='acc2',
-                              secret='invasionIsInNormandy'))
-        req = webob.Request.blank('/v1.0/users/guy2')
+                              secret=new_secret))
+        req = webob.Request.blank('/v1.0/users/id2')
         req.headers["Content-Type"] = "application/json"
         req.method = 'PUT'
         req.body = json.dumps(body)
@@ -134,8 +152,8 @@ class UsersTest(test.TestCase):
         res_dict = json.loads(res.body)
 
         self.assertEqual(res.status_int, 200)
-        self.assertEqual(res_dict['user']['id'], 'guy2')
+        self.assertEqual(res_dict['user']['id'], 'id2')
         self.assertEqual(res_dict['user']['name'], 'guy2')
         self.assertEqual(res_dict['user']['access'], 'acc2')
-        self.assertEqual(res_dict['user']['secret'], 'invasionIsInNormandy')
+        self.assertEqual(res_dict['user']['secret'], new_secret)
         self.assertEqual(res_dict['user']['admin'], True)
