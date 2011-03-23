@@ -785,7 +785,8 @@ class NWFilterTestCase(test.TestCase):
 
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
-                                          'project_id': 'fake'})
+                                          'project_id': 'fake',
+                                          'mac_address': '00:A0:C9:14:C8:29'})
         inst_id = instance_ref['id']
 
         ip = '10.11.12.13'

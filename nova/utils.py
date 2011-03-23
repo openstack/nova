@@ -309,11 +309,15 @@ def  get_my_linklocal(interface):
 
 
 def to_global_ipv6(prefix, mac):
-    mac64 = netaddr.EUI(mac).eui64().words
-    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-    mac64_addr = netaddr.IPAddress(int_addr)
-    maskIP = netaddr.IPNetwork(prefix).ip
-    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+    try:
+        mac64 = netaddr.EUI(mac).eui64().words
+        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+        mac64_addr = netaddr.IPAddress(int_addr)
+        maskIP = netaddr.IPNetwork(prefix).ip
+        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
+        format()
+    except TypeError:
+        raise TypeError(_("Bad mac for to_global_ipv6: %s" % mac))
 
 
 def to_mac(ipv6_address):

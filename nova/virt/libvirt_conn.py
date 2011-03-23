@@ -757,7 +757,7 @@ class LibvirtConnection(object):
         if FLAGS.libvirt_type == 'uml':
             utils.execute('sudo', 'chown', 'root', basepath('disk'))
 
-    def _get_nic_for_xml(self, instance_id, network, mapping):
+    def _get_nic_for_xml(self, network, mapping):
         # Assume that the gateway also acts as the dhcp server.
         dhcp_server = network['gateway']
         gateway_v6 = network['gateway_v6']
@@ -802,8 +802,6 @@ class LibvirtConnection(object):
         return result
 
     def to_xml(self, instance, rescue=False, network_info=None):
-        admin_context = context.get_admin_context()
-
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
 
@@ -814,8 +812,7 @@ class LibvirtConnection(object):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(instance['id'],
-                                              network,
+            nics.append(self._get_nic_for_xml(network,
                                               mapping))
         # FIXME(vish): stick this in db
         instance_type_name = instance['instance_type']
@@ -1392,16 +1389,6 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def _gateway_v6_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['gateway_v6']
-
-    def _all_gateway_v6_for_instance(self, instance):
-        networks = db.network_get_all_by_instance(context.get_admin_context(),
-                                                  instance['id'])
-        return [network['gateway_v6'] for network in networks]
-
 
 class NWFilterFirewall(FirewallDriver):
     """
@@ -1604,6 +1591,8 @@ class NWFilterFirewall(FirewallDriver):
         it makes sure the filters for the security groups as well as
         the base filter are all in place.
         """
+        if not network_info:
+            network_info = _get_network_info(instance)
         if instance['image_id'] == FLAGS.vpn_image_id:
             base_filter = 'nova-vpn'
         else:
@@ -1616,7 +1605,8 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
         if FLAGS.use_ipv6:
-            gateways_v6 = self._all_gateway_v6_for_instance(instance)
+            gateways_v6 = [network['gateway_v6'] for (network, _) in
+                           network_info]
             if gateways_v6:
                 instance_secgroup_filter_children += ['nova-allow-ra-server']
 
@@ -1803,7 +1793,8 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            gateways_v6 = self._all_gateway_v6_for_instance(instance)
+            gateways_v6 = [network['gateway_v6'] for (network, _) in
+                           network_info]
             for gateway_v6 in gateways_v6:
                 ipv6_rules.append(
                         '-s %s/128 -p icmpv6 -j ACCEPT' % (gateway_v6,))
@@ -1896,31 +1887,3 @@ class IptablesFirewallDriver(FirewallDriver):
 
     def _instance_chain_name(self, instance):
         return 'inst-%s' % (instance['id'],)
-
-    def _ip_for_instance(self, instance):
-        return db.instance_get_fixed_address(context.get_admin_context(),
-                                             instance['id'])
-
-    def _ip_for_instance_v6(self, instance):
-        return db.instance_get_fixed_address_v6(context.get_admin_context(),
-                                             instance['id'])
-
-    def _dhcp_server_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['gateway']
-
-    def _gateway_v6_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['gateway_v6']
-
-    def _project_cidr_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['cidr']
-
-    def _project_cidrv6_for_instance(self, instance):
-        network = db.network_get_by_instance(context.get_admin_context(),
-                                             instance['id'])
-        return network['cidr_v6']
