@@ -723,8 +723,9 @@ class VMOps(object):
                 'mac': instance.mac_address,
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
-                'ips': [ip_dict(ip) for ip in network_IPs],
-                'ip6s': [ip6_dict(ip) for ip in network_IPs]}
+                'ips': [ip_dict(ip) for ip in network_IPs]}
+            if network['cidr_v6']:
+                info['ip6s'] = [ip6_dict(ip) for ip in network_IPs]
             network_info.append((network, info))
         return network_info
 
