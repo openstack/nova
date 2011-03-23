@@ -623,7 +623,7 @@ class LibvirtConnection(object):
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
                         network_info=None):
-        if network_info is None:
+        if not network_info:
             network_info = _get_network_info(inst)
 
         # syntactic nicety
@@ -707,15 +707,16 @@ class LibvirtConnection(object):
         nets = []
         ifc_template = open(FLAGS.injected_network_template).read()
         ifc_num = -1
-        for (network_ref, _m) in network_info:
+        admin_context = context.get_admin_context()
+        for (network_ref, _) in network_info:
             ifc_num += 1
-            if network_ref['injected']:
-                admin_context = context.get_admin_context()
+
+            if not 'injected' in network_ref:
+                net_info = {'name': 'eth%d' % ifc_num}
+            else:
                 address = db.instance_get_fixed_address(
                                 admin_context, inst['id'])
-                ra_server = network_ref['ra_server']
-                if not ra_server:
-                    ra_server = "fd00::"
+                ra_server = network_ref.get('ra_server', "fd00::")
                 net_info = {'name': 'eth%d' % ifc_num,
                        'address': address,
                        'netmask': network_ref['netmask'],
@@ -800,7 +801,7 @@ class LibvirtConnection(object):
 
         #TODO(ilyaalekseyev) remove network_info creation code
         # when multinics will be completed
-        if network_info is None:
+        if not network_info:
             network_info = _get_network_info(instance)
 
         nics = []
@@ -809,9 +810,8 @@ class LibvirtConnection(object):
                                               network,
                                               mapping))
         # FIXME(vish): stick this in db
-        instance_type = instance['instance_type']
-        # instance_type = test.INSTANCE_TYPES[instance_type]
-        instance_type = instance_types.get_instance_type(instance_type)
+        instance_type_name = instance['instance_type']
+        instance_type = instance_types.get_instance_type(instance_type_name)
 
         if FLAGS.use_cow_images:
             driver_type = 'qcow2'
@@ -1608,10 +1608,8 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
         if FLAGS.use_ipv6:
-            #ra_server = self._ra_server_for_instance(instance)
             ra_servers = self._all_ra_servers_for_instance(instance)
-            #if ra_server:
-            if len(ra_servers) != 0:
+            if ra_servers:
                 instance_secgroup_filter_children += ['nova-allow-ra-server']
 
         ctxt = context.get_admin_context()
@@ -1729,10 +1727,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         self.iptables.ipv4['filter'].add_chain(chain_name)
 
-        ips_v4 = []
-        for (_n, mapping) in network_info:
-            for ip in mapping['ips']:
-                ips_v4.append(ip['ip'])
+        ips_v4 = [ip['ip'] for (_, mapping) in network_info
+                            for ip in mapping['ips']]
 
         for ipv4_address in ips_v4:
             self.iptables.ipv4['filter'].add_rule('local',
@@ -1741,8 +1737,8 @@ class IptablesFirewallDriver(FirewallDriver):
 
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for ip in mapping['ip6s'] for (_n, mapping)
-                        in network_info]
+            ips_v6 = [ip['ip'] for (_, mapping) in network_info
+                                 for ip in mapping['ip6s']]
 
             for ipv6_address in ips_v6:
                 self.iptables.ipv6['filter'].add_rule('local',
@@ -1785,14 +1781,14 @@ class IptablesFirewallDriver(FirewallDriver):
         dhcp_servers = [network['gateway'] for (network, _m) in network_info]
 
         for dhcp_server in dhcp_servers:
-            ipv4_rules += ['-s %s -p udp --sport 67 --dport 68 '
-                           '-j ACCEPT' % (dhcp_server,)]
+            ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
+                              '-j ACCEPT' % (dhcp_server,))
 
         #Allow project network traffic
         if FLAGS.allow_project_net_traffic:
             cidrs = [network['cidr'] for (network, _m) in network_info]
             for cidr in cidrs:
-                ipv4_rules += ['-s %s -j ACCEPT' % (cidr,)]
+                ipv4_rules.append('-s %s -j ACCEPT' % (cidr,))
 
         # We wrap these in FLAGS.use_ipv6 because they might cause
         # a DB lookup. The other ones are just list operations, so
@@ -1803,7 +1799,8 @@ class IptablesFirewallDriver(FirewallDriver):
                           in network_info]
 
             for ra_server in ra_servers:
-                ipv6_rules += ['-s %s/128 -p icmpv6 -j ACCEPT' % (ra_server,)]
+                ipv6_rules.append('-s %s/128 -p icmpv6 -j ACCEPT'
+                                    % (ra_server,))
 
             #Allow project network traffic
             if FLAGS.allow_project_net_traffic:

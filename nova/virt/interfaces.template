@@ -7,11 +7,15 @@ iface lo inet loopback
 
 #for $ifc in $interfaces
 auto ${ifc.name}
+#if $getVar('ifc.address', None)
 iface ${ifc.name} inet static
         address ${ifc.address}
         netmask ${ifc.netmask}
         broadcast ${ifc.broadcast}
         gateway ${ifc.gateway}
         dns-nameservers ${ifc.dns}
+#else
+iface ${ifc.name} inet dhcp
+#end if
 
 #end for
