@@ -20,15 +20,10 @@
 
 """VNC Console Proxy Server"""
 
-from base64 import b64encode, b64decode
 import eventlet
-from eventlet import wsgi
-from eventlet import websocket
+import gettext
 import os
-import random
 import sys
-import time
-from webob import Request
 
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
@@ -36,168 +31,48 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
+gettext.install('nova', unicode=1)
+
 from nova import flags
 from nova import log as logging
-from nova import rpc
 from nova import utils
+from nova import wsgi
+from nova.vnc import auth
+from nova.vnc import proxy
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vnc_novnc_dir', '/code/noVNC/vnclet/noVNC',
+flags.DEFINE_string('vnc_proxy_wwwroot', '/code/noVNC/vnclet/noVNC',
                      'Full path to noVNC directory')
-flags.DEFINE_boolean('vnc_debug', True,
+flags.DEFINE_boolean('vnc_debug', False,
                      'Enable debugging features, like token bypassing')
 flags.DEFINE_integer('vnc_proxy_port', 7000,
                      'Port that the VNC proxy should bind to')
-flags.DEFINE_string('vnc_proxy_address', '0.0.0.0',
+flags.DEFINE_string('vnc_proxy_host', '0.0.0.0',
                      'Address that the VNC proxy should bind to')
-
-
-class WebsocketVNCProxy(object):
-    """Class to proxy from websocket to vnc server"""
-
-    def sock2ws(self, source, dest):
-        try:
-            while True:
-                d = source.recv(32384)
-                if d == '':
-                    break
-                d = b64encode(d)
-                dest.send(d)
-        except:
-            source.close()
-            dest.close()
-
-    def ws2sock(self, source, dest):
-        try:
-            while True:
-                d = source.wait()
-                if d is None:
-                    break
-                d = b64decode(d)
-                dest.sendall(d)
-        except:
-            source.close()
-            dest.close()
-
-    def proxy_connection(self, environ, start_response):
-        @websocket.WebSocketWSGI
-        def _handle(client):
-            server = eventlet.connect((client.environ['vnc_host'],
-                                       client.environ['vnc_port']))
-            t1 = eventlet.spawn(self.ws2sock, client, server)
-            t2 = eventlet.spawn(self.sock2ws, server, client)
-            t1.wait()
-            t2.wait()
-        _handle(environ, start_response)
-
-    def serve(self, environ, start_response):
-        req = Request(environ)
-        if req.path == '/data':
-            return self.proxy_connection(environ, start_response)
-        else:
-            if req.path == '/':
-                fname = '/vnc_auto.html'
-            else:
-                fname = req.path
-
-            fname = FLAGS.vnc_novnc_dir + fname
-
-            base, ext = os.path.splitext(fname)
-            if ext == '.js':
-                mimetype = 'application/javascript'
-            elif ext == '.css':
-                mimetype = 'text/css'
-            elif ext in ['.svg', '.jpg', '.png', '.gif']:
-                mimetype = 'image'
-            else:
-                mimetype = 'text/html'
-
-            start_response('200 OK', [('content-type', mimetype)])
-            return [open(os.path.join(fname)).read()]
-
-
-class DebugAuthMiddleware(object):
-    """ Debug middleware for testing purposes.  Skips security check
-        and allows host and port of vnc endpoint to be specified in 
-        the url.  
-    """
-
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        req = Request(environ)
-        environ['vnc_host'] = req.params.get('host')
-        environ['vnc_port'] = int(req.params.get('port'))
-        resp = req.get_response(self.app)
-        return resp(environ, start_response)
-
-
-class NovaAuthMiddleware(object):
-    """Implementation of Middleware to Handle Nova Auth"""
-
-    def __init__(self, app):
-        self.app = app
-        self.register_listeners()
-
-    def __call__(self, environ, start_response):
-        req = Request(environ)
-
-        if req.path == '/data':
-            token = req.params.get('token')
-            if not token in self.tokens:
-                start_response('403 Forbidden',
-                                [('content-type', 'text/html')])
-                return 'Not Authorized'
-
-            environ['vnc_host'] = self.tokens[token]['args']['host']
-            environ['vnc_port'] = int(self.tokens[token]['args']['port'])
-
-        resp = req.get_response(self.app)
-        return resp(environ, start_response)
-
-    def register_listeners(self):
-        middleware = self
-        middleware.tokens = {}
-
-        class Callback:
-            def __call__(self, data, message):
-                if data['method'] == 'authorize_vnc_console':
-                    middleware.tokens[data['args']['token']] = \
-                      {'args': data['args'], 'last_activity_at': time.time()}
-
-        def delete_expired_tokens():
-            now = time.time()
-            to_delete = []
-            for k, v in middleware.tokens.items():
-                if now - v['last_activity_at'] > 600:
-                    to_delete.append(k)
-
-            for k in to_delete:
-                del middleware.tokens[k]
-
-        conn = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicConsumer(
-                        connection=conn,
-                        topic=FLAGS.vnc_console_proxy_topic)
-        consumer.register_callback(Callback())
-
-        utils.LoopingCall(consumer.fetch, auto_ack=True,
-                          enable_callbacks=True).start(0.1)
-        utils.LoopingCall(delete_expired_tokens).start(1)
-
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
 
 if __name__ == "__main__":
     utils.default_flagfile()
     FLAGS(sys.argv)
     logging.setup()
 
-    listener = eventlet.listen((FLAGS.vnc_proxy_address, FLAGS.vnc_proxy_port))
-    proxy = WebsocketVNCProxy()
+    app = proxy.WebsocketVNCProxy(FLAGS.vnc_proxy_wwwroot)
 
     if FLAGS.vnc_debug:
-        proxy = DebugAuthMiddleware(proxy.serve)
+        app = proxy.DebugMiddleware(app.serve)
     else:
-        proxy = NovaAuthMiddleware(proxy.serve)
+        app = auth.NovaAuthMiddleware(app.serve)
 
-    wsgi.server(listener, proxy, max_size=1000)
+
+    listener = eventlet.listen((FLAGS.vnc_proxy_host, FLAGS.vnc_proxy_port))
+ 
+ 
+    from eventlet import wsgi
+    wsgi.server(listener, app, max_size=1000)
+
+
+#    server = wsgi.Server()
+#    server.start(app, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
+#    server.wait()

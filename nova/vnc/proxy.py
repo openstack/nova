@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+# pylint: disable-msg=C0103
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+
+"""Eventlet WSGI Services to proxy VNC.  No nova deps."""
+
+from base64 import b64encode, b64decode
+import eventlet
+from eventlet import wsgi
+from eventlet import websocket
+import os
+from webob import Request
+import webob
+
+
+class WebsocketVNCProxy(object):
+    """Class to proxy from websocket to vnc server"""
+
+    def __init__(self, wwwroot):
+        self.wwwroot = wwwroot
+
+    def sock2ws(self, source, dest):
+        try:
+            while True:
+                d = source.recv(32384)
+                if d == '':
+                    break
+                d = b64encode(d)
+                dest.send(d)
+        except:
+            source.close()
+            dest.close()
+
+    def ws2sock(self, source, dest):
+        try:
+            while True:
+                d = source.wait()
+                if d is None:
+                    break
+                d = b64decode(d)
+                dest.sendall(d)
+        except:
+            source.close()
+            dest.close()
+
+    def proxy_connection(self, environ, start_response):
+        @websocket.WebSocketWSGI
+        def _handle(client):
+            server = eventlet.connect((client.environ['vnc_host'],
+                                       client.environ['vnc_port']))
+            t1 = eventlet.spawn(self.ws2sock, client, server)
+            t2 = eventlet.spawn(self.sock2ws, server, client)
+            t1.wait()
+            t2.wait()
+        _handle(environ, start_response)
+
+    def serve(self, environ, start_response):
+        req = Request(environ)
+        if req.path == '/data':
+            return self.proxy_connection(environ, start_response)
+        else:
+            if req.path == '/':
+                fname = '/vnc_auto.html'
+            else:
+                fname = req.path
+
+            fname = self.wwwroot + fname
+
+            base, ext = os.path.splitext(fname)
+            if ext == '.js':
+                mimetype = 'application/javascript'
+            elif ext == '.css':
+                mimetype = 'text/css'
+            elif ext in ['.svg', '.jpg', '.png', '.gif']:
+                mimetype = 'image'
+            else:
+                mimetype = 'text/html'
+
+            start_response('200 OK', [('content-type', mimetype)])
+            return open(os.path.join(fname)).read()
+
+
+class DebugMiddleware(object):
+    """Debug middleware.  Skip auth, get vnc port and host from query string"""
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        req = Request(environ)
+        if req.path == '/data':
+            environ['vnc_host'] = req.params.get('host')
+            environ['vnc_port'] = int(req.params.get('port'))
+        resp = req.get_response(self.app)
+        return resp(environ, start_response)
