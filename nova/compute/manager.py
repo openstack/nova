@@ -52,7 +52,7 @@ from nova import manager
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
-from nova.compute import driver
+from nova.virt import driver
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -441,6 +441,7 @@ class ComputeManager(manager.Manager):
 
         #TODO(mdietz): we may want to split these into separate methods.
         if migration_ref['source_compute'] == FLAGS.host:
+            #NOTE(justinsb): Naughty calling of internal method
             self.driver._start(instance_ref)
             self.db.migration_update(context, migration_id,
                     {'status': 'reverted'})
