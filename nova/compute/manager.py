@@ -138,7 +138,8 @@ class ComputeManager(manager.Manager):
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
         super(ComputeManager, self).periodic_tasks(context)
-        self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
+        if FLAGS.rescue_timeout > 0:
+            self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
