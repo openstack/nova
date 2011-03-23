@@ -60,10 +60,10 @@ from nova import log as logging
 #from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.compute import driver
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
+from nova.virt import driver
 from nova.virt import images
 
 libvirt = None
@@ -135,8 +135,8 @@ def get_connection(read_only):
 def _late_load_cheetah():
     global Template
     if Template is None:
-        t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
-                       -1)
+        t = __import__('Cheetah.Template', globals(), locals(),
+                       ['Template'], -1)
         Template = t.Template
 
 
@@ -238,12 +238,15 @@ class LibvirtConnection(driver.ComputeDriver):
                 for x in self._conn.listDomainsID()]
 
     def _map_to_instance_info(self, domain):
-        # .info() returns a list of:
-        #state: one of the state values (virDomainState)
-        #maxMemory: the maximum memory used by the domain
-        #memory: the current amount of memory used by the domain
-        #nbVirtCPU: the number of virtual CPU
-        #cpuTime: the time used by the domain in nanoseconds
+        """Gets info from a virsh domain object into an InstanceInfo"""
+
+        # domain.info() returns a list of:
+        #    state:       one of the state values (virDomainState)
+        #    maxMemory:   the maximum memory used by the domain
+        #    memory:      the current amount of memory used by the domain
+        #    nbVirtCPU:   the number of virtual CPU
+        #    puTime:      the time used by the domain in nanoseconds
+
         (state, _max_mem, _mem, _num_cpu, _cpu_time) = domain.info()
         name = domain.name()
 
