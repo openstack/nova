@@ -117,7 +117,7 @@ class ComputeManager(manager.Manager):
         #             and redocument the module docstring
         if not compute_driver:
             compute_driver = FLAGS.compute_driver
-        self.driver = utils.check_instance(utils.import_object(
+        self.driver = utils.check_isinstance(utils.import_object(
                                                             compute_driver),
                                            driver.ComputeDriver)
         self.network_manager = utils.import_object(FLAGS.network_manager)
