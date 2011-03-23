@@ -37,8 +37,11 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova import wsgi
+from nova import version
 from nova.vnc import auth
 from nova.vnc import proxy
+
+LOG = logging.getLogger('nova.vnc-proxy')
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('vnc_proxy_wwwroot', '/code/noVNC/vnclet/noVNC',
@@ -58,13 +61,18 @@ if __name__ == "__main__":
     FLAGS(sys.argv)
     logging.setup()
 
+    LOG.audit(_("Starting nova-vnc-proxy node (version %s)"),
+              version.version_string_with_vcs())
+
     app = proxy.WebsocketVNCProxy(FLAGS.vnc_proxy_wwwroot)
 
+    with_logging = auth.LoggingMiddleware(app)
+
     if FLAGS.vnc_debug:
-        app = proxy.DebugMiddleware(app)
+        with_auth = proxy.DebugMiddleware(with_logging)
     else:
-        app = auth.NovaAuthMiddleware(app)
+        with_auth = auth.NovaAuthMiddleware(with_logging)
 
     server = wsgi.Server()
-    server.start(app, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
+    server.start(with_auth, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
     server.wait()

@@ -102,10 +102,9 @@ class DebugMiddleware(object):
     def __init__(self, app):
         self.app = app
 
-    def __call__(self, environ, start_response):
-        req = Request(environ)
+    @webob.dec.wsgify
+    def __call__(self, req):
         if req.path == '/data':
-            environ['vnc_host'] = req.params.get('host')
-            environ['vnc_port'] = int(req.params.get('port'))
-        resp = req.get_response(self.app)
-        return resp(environ, start_response)
+            req.environ['vnc_host'] = req.params.get('host')
+            req.environ['vnc_port'] = int(req.params.get('port'))
+        return req.get_response(self.app)

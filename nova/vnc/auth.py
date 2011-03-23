@@ -27,6 +27,10 @@ from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova import wsgi
+import webob
+
+LOG = logging.getLogger('nova.vnc-proxy')
+FLAGS = flags.FLAGS
 
 
 class NovaAuthMiddleware(object):
@@ -36,9 +40,8 @@ class NovaAuthMiddleware(object):
         self.app = app
         self.register_listeners()
 
-    def __call__(self, environ, start_response):
-        req = Request(environ)
-
+    @webob.dec.wsgify
+    def __call__(self, req):
         if req.path == '/data':
             token = req.params.get('token')
             if not token in self.tokens:
@@ -46,11 +49,10 @@ class NovaAuthMiddleware(object):
                                 [('content-type', 'text/html')])
                 return 'Not Authorized'
 
-            environ['vnc_host'] = self.tokens[token]['args']['host']
-            environ['vnc_port'] = int(self.tokens[token]['args']['port'])
+            req.environ['vnc_host'] = self.tokens[token]['args']['host']
+            req.environ['vnc_port'] = int(self.tokens[token]['args']['port'])
 
-        resp = req.get_response(self.app)
-        return resp(environ, start_response)
+        return req.get_response(self.app)
 
     def register_listeners(self):
         middleware = self
@@ -59,7 +61,9 @@ class NovaAuthMiddleware(object):
         class Callback:
             def __call__(self, data, message):
                 if data['method'] == 'authorize_vnc_console':
-                    middleware.tokens[data['args']['token']] = \
+                    token = data['args']['token']
+                    LOG.info(_("Received Token: %s)"), token)
+                    middleware.tokens[token] = \
                       {'args': data['args'], 'last_activity_at': time.time()}
 
         def delete_expired_tokens():
@@ -81,3 +85,18 @@ class NovaAuthMiddleware(object):
         utils.LoopingCall(consumer.fetch, auto_ack=True,
                           enable_callbacks=True).start(0.1)
         utils.LoopingCall(delete_expired_tokens).start(1)
+
+
+class LoggingMiddleware(object):
+    def __init__(self, app):
+        self.app = app
+
+    @webob.dec.wsgify
+    def __call__(self, req):
+
+        if req.path == '/data':
+            LOG.info(_("Received Websocket Request: %s)"), req.url)
+        else:
+            LOG.info(_("Received Request: %s)"), req.url)
+
+        return req.get_response(self.app)
