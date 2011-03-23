@@ -156,6 +156,7 @@ class APIRouterV11(APIRouter):
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
+
 class Versions(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
