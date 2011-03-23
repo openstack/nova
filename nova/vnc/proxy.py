@@ -48,7 +48,6 @@ class WebsocketVNCProxy(object):
                 if not str(name).startswith('.'):
                     filename = os.path.join(root, name)
                     self.whitelist[filename] = True
-            
 
     def get_whitelist(self):
         return self.whitelist.keys()
@@ -98,7 +97,7 @@ class WebsocketVNCProxy(object):
             else:
                 fname = req.path
 
-            fname = (self.wwwroot + fname).replace('//','/')
+            fname = (self.wwwroot + fname).replace('//', '/')
             if not fname in self.whitelist:
                 start_response('404 Not Found',
                                [('content-type', 'text/html')])
