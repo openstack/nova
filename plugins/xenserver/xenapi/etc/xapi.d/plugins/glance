@@ -191,7 +191,7 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
         os.link(source, link_name)
 
 
-def _upload_tarball(staging_path, image_id, glance_host, glance_port):
+def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
     """
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
@@ -215,7 +215,9 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
         'x-image-meta-is-public': 'True',
         'x-image-meta-status': 'queued',
         'x-image-meta-disk-format': 'vhd',
-        'x-image-meta-container-format': 'ovf'}
+        'x-image-meta-container-format': 'ovf',
+        'x-image-meta-property-os-type': os_type}
+
     for header, value in headers.iteritems():
         conn.putheader(header, value)
     conn.endheaders()
@@ -337,11 +339,13 @@ def upload_vhd(session, args):
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
     sr_path = params["sr_path"]
+    os_type = params["os_type"]
 
     staging_path = _make_staging_area(sr_path)
     try:
         _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
-        _upload_tarball(staging_path, image_id, glance_host, glance_port)
+        _upload_tarball(staging_path, image_id, glance_host, glance_port,
+                        os_type)
     finally:
         _cleanup_staging_area(staging_path)
 

@@ -147,8 +147,6 @@ class CloudController(object):
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
         image_ec2_id = self._image_ec2_id(instance_ref['image_id'], 'machine')
-        k_ec2_id = self._image_ec2_id(instance_ref['kernel_id'], 'kernel')
-        r_ec2_id = self._image_ec2_id(instance_ref['ramdisk_id'], 'ramdisk')
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -167,8 +165,6 @@ class CloudController(object):
                 'instance-type': instance_ref['instance_type'],
                 'local-hostname': hostname,
                 'local-ipv4': address,
-                'kernel-id': k_ec2_id,
-                'ramdisk-id': r_ec2_id,
                 'placement': {'availability-zone': availability_zone},
                 'public-hostname': hostname,
                 'public-ipv4': floating_ip or '',
@@ -176,6 +172,13 @@ class CloudController(object):
                 'reservation-id': instance_ref['reservation_id'],
                 'security-groups': '',
                 'mpi': mpi}}
+
+        for image_type in ['kernel', 'ramdisk']:
+            if '%s_id' % image_type in instance_ref:
+                ec2_id = self._image_ec2_id(instance_ref['%s_id' % image_type],
+                                            image_type)
+                data['meta-data']['%s-id' % image_type] = ec2_id
+
         if False:  # TODO(vish): store ancestor ids
             data['ancestor-ami-ids'] = []
         if False:  # TODO(vish): store product codes
@@ -562,7 +565,7 @@ class CloudController(object):
         if context.is_admin:
             v['status'] = '%s (%s, %s, %s, %s)' % (
                 volume['status'],
-                volume['user_id'],
+                volume['project_id'],
                 volume['host'],
                 instance_data,
                 volume['mountpoint'])
@@ -956,7 +959,7 @@ class CloudController(object):
             raise exception.NotFound(_('Image %s not found') % image_id)
         internal_id = image['id']
         del(image['id'])
-        raise Exception(image)
+
         image['properties']['is_public'] = (operation_type == 'add')
         return self.image_service.update(context, internal_id, image)
 

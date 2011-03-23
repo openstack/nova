@@ -27,13 +27,16 @@ import webob.exc
 from nova import flags
 from nova import log as logging
 from nova import wsgi
+from nova.api.openstack import accounts
 from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
+from nova.api.openstack import limits
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
+from nova.api.openstack import users
 from nova.api.openstack import volumes
 from nova.api.openstack import zones
 
@@ -90,6 +93,13 @@ class APIRouter(wsgi.Router):
             mapper.resource("zone", "zones", controller=zones.Controller(),
                         collection={'detail': 'GET', 'info': 'GET'}),
 
+            mapper.resource("user", "users", controller=users.Controller(),
+                        collection={'detail': 'GET'})
+
+            mapper.resource("account", "accounts",
+                            controller=accounts.Controller(),
+                            collection={'detail': 'GET'})
+
         mapper.resource("server", "servers", controller=servers.Controller(),
                         collection={'detail': 'GET'},
                         member=server_members)
@@ -106,11 +116,16 @@ class APIRouter(wsgi.Router):
 
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
+
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
+
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
+
+        _limits = limits.LimitsController()
+        mapper.resource("limit", "limits", controller=_limits)
 
         #NOTE(justinsb): volumes is not yet part of the official API
         mapper.resource("volume", "volumes",
@@ -125,8 +140,11 @@ class Versions(wsgi.Application):
     def __call__(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
-                "versions": [
-                    dict(status="CURRENT", id="v1.0")]}
+            "versions": [
+                dict(status="DEPRECATED", id="v1.0"),
+                dict(status="CURRENT", id="v1.1"),
+            ],
+        }
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}

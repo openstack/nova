@@ -143,6 +143,10 @@ class VolumeDriver(object):
         """Undiscover volume on a remote host."""
         raise NotImplementedError()
 
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+        raise NotImplementedError()
+
 
 class AOEDriver(VolumeDriver):
     """Implements AOE specific volume commands."""
@@ -198,14 +202,44 @@ class AOEDriver(VolumeDriver):
         self._try_execute('sudo', 'vblade-persist', 'destroy',
                           shelf_id, blade_id)
 
-    def discover_volume(self, _volume):
+    def discover_volume(self, context, _volume):
         """Discover volume on a remote host."""
+        (shelf_id,
+         blade_id) = self.db.volume_get_shelf_and_blade(context,
+                                                        _volume['id'])
         self._execute('sudo', 'aoe-discover')
-        self._execute('sudo', 'aoe-stat', check_exit_code=False)
+        out, err = self._execute('sudo', 'aoe-stat', check_exit_code=False)
+        device_path = 'e%(shelf_id)d.%(blade_id)d' % locals()
+        if out.find(device_path) >= 0:
+            return "/dev/etherd/%s" % device_path
+        else:
+            return
 
     def undiscover_volume(self, _volume):
         """Undiscover volume on a remote host."""
         pass
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+        (shelf_id,
+         blade_id) = self.db.volume_get_shelf_and_blade(context,
+                                                        volume_id)
+        cmd = ('sudo', 'vblade-persist', 'ls', '--no-header')
+        out, _err = self._execute(*cmd)
+        exported = False
+        for line in out.split('\n'):
+            param = line.split(' ')
+            if len(param) == 6 and param[0] == str(shelf_id) \
+                    and param[1] == str(blade_id) and param[-1] == "run":
+                exported = True
+                break
+        if not exported:
+            # Instance will be terminated in this case.
+            desc = _("Cannot confirm exported volume id:%(volume_id)s. "
+                     "vblade process for e%(shelf_id)s.%(blade_id)s "
+                     "isn't running.") % locals()
+            raise exception.ProcessExecutionError(out, _err, cmd=cmd,
+                                                  description=desc)
 
 
 class FakeAOEDriver(AOEDriver):
@@ -284,8 +318,8 @@ class ISCSIDriver(VolumeDriver):
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         self._execute('sudo', 'ietadm', '--op', 'new',
-                      '--tid=%s --params Name=%s' %
-                      (iscsi_target, iscsi_name))
+                      '--tid=%s' % iscsi_target,
+                      '--params', 'Name=%s' % iscsi_name)
         self._execute('sudo', 'ietadm', '--op', 'new',
                       '--tid=%s' % iscsi_target,
                       '--lun=0', '--params',
@@ -402,7 +436,7 @@ class ISCSIDriver(VolumeDriver):
                          (property_key, property_value))
         return self._run_iscsiadm(iscsi_properties, iscsi_command)
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
         iscsi_properties = self._get_iscsi_properties(volume)
 
@@ -461,6 +495,21 @@ class ISCSIDriver(VolumeDriver):
         self._run_iscsiadm(iscsi_properties, "--logout")
         self._run_iscsiadm(iscsi_properties, "--op delete")
 
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+
+        tid = self.db.volume_get_iscsi_target_num(context, volume_id)
+        try:
+            self._execute('sudo', 'ietadm', '--op', 'show',
+                          '--tid=%(tid)d' % locals())
+        except exception.ProcessExecutionError, e:
+            # Instances remount read-only in this case.
+            # /etc/init.d/iscsitarget restart and rebooting nova-volume
+            # is better since ensure_export() works at boot time.
+            logging.error(_("Cannot confirm exported volume "
+                            "id:%(volume_id)s.") % locals())
+            raise
+
 
 class FakeISCSIDriver(ISCSIDriver):
     """Logs calls instead of executing."""
@@ -503,7 +552,7 @@ class RBDDriver(VolumeDriver):
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
-                          'rm', voluname['name'])
+                          'rm', volume['name'])
 
     def local_path(self, volume):
         """Returns the path of the rbd volume."""

@@ -92,6 +92,9 @@ class Service(object):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
+        if 'nova-compute' == self.binary:
+            self.manager.update_available_resource(ctxt)
+
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
         if self.report_interval:
@@ -214,7 +217,7 @@ class Service(object):
                 logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
-        except Exception:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))
