@@ -334,6 +334,13 @@ def utcnow():
 utcnow.override_time = None
 
 
+def is_then_greater(then, seconds):
+    if utcnow() - then > datetime.timedelta(seconds=seconds):
+        return True
+    else:
+        return False
+
+
 def utcnow_ts():
     """Timestamp version of our utcnow function."""
     return time.mktime(utcnow().timetuple())
