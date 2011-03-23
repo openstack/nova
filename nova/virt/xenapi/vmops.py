@@ -497,8 +497,8 @@ class VMOps(object):
         """Destroys all VBDs tied to a rescue VM"""
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
         for vbd_ref in vbd_refs:
-            _vbd_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if _vbd_ref["userdevice"] == "1":
+            vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
+            if vbd_rec["userdevice"] == "1":  # primary VBD is always 1
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
@@ -554,6 +554,10 @@ class VMOps(object):
 
     def _destroy_rescue_instance(self, rescue_vm_ref):
         """Destroy a rescue instance"""
+        self._destroy_rescue_vbds(rescue_vm_ref)
+        self._shutdown_rescue(rescue_vm_ref)
+        self._destroy_rescue_vdis(rescue_vm_ref)
+
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
     def destroy(self, instance):
@@ -668,9 +672,6 @@ class VMOps(object):
         original_vm_ref = self._get_vm_opaque_ref(instance)
         instance._rescue = False
 
-        self._destroy_rescue_vbds(rescue_vm_ref)
-        self._shutdown_rescue(rescue_vm_ref)
-        self._destroy_rescue_vdis(rescue_vm_ref)
         self._destroy_rescue_instance(rescue_vm_ref)
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
@@ -682,7 +683,7 @@ class VMOps(object):
         """
         last_ran = self.poll_rescue_last_ran
         if last_ran:
-            if not utils.is_older_than(last_ran, timeout * 60 * 60):
+            if not utils.is_older_than(last_ran, timeout):
                 # Do not run. Let's bail.
                 return
             else:
@@ -693,23 +694,22 @@ class VMOps(object):
             self.poll_rescue_last_ran = utils.utcnow()
             return
 
-        vms = []
+        rescue_vms = []
         for instance in self.list_instances():
             if instance.endswith("-rescue"):
-                vms.append(dict(name=instance,
-                                vm_ref=VMHelper.lookup(self._session,
-                                                       instance)))
+                rescue_vms.append(dict(name=instance,
+                                  vm_ref=VMHelper.lookup(self._session,
+                                                         instance)))
 
-        for vm in vms:
+        for vm in rescue_vms:
             rescue_name = vm["name"]
             rescue_vm_ref = vm["vm_ref"]
+
+            self._destroy_rescue_instance(rescue_vm_ref)
+
             original_name = vm["name"].split("-rescue", 1)[0]
             original_vm_ref = VMHelper.lookup(self._session, original_name)
 
-            self._destroy_rescue_vbds(rescue_vm_ref)
-            self._shutdown_rescue(rescue_vm_ref)
-            self._destroy_rescue_vdis(rescue_vm_ref)
-            self._destroy_rescue_instance(rescue_vm_ref)
             self._release_bootlock(original_vm_ref)
             self._session.call_xenapi("VM.start", original_vm_ref, False,
                                       False)

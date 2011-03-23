@@ -68,7 +68,7 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
                      "Retry count needed in live_migration."
                      " sleep 1 sec for each count")
 flags.DEFINE_integer("rescue_timeout", 0,
-                     "Automatically unrescue an instance after N hours."
+                     "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
 
 LOG = logging.getLogger('nova.compute.manager')
