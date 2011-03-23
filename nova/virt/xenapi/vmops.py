@@ -682,7 +682,7 @@ class VMOps(object):
         """
         last_ran = self.poll_rescue_last_ran
         if last_ran:
-            if not utils.is_then_greater(last_ran, timeout * 60 * 60):
+            if not utils.is_older_than(last_ran, timeout * 60 * 60):
                 # Do not run. Let's bail.
                 return
             else:
