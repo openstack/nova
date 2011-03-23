@@ -44,18 +44,10 @@ FLAGS = flags.FLAGS
 
 
 class BaseImageServiceTests(object):
-
     """Tasks to test for all image services"""
 
     def test_create(self):
-
-        fixture = {'name': 'test image',
-                   'updated': None,
-                   'created': None,
-                   'status': None,
-                   'instance_id': None,
-                   'progress': None}
-
+        fixture = self._make_fixture('test image')
         num_images = len(self.service.index(self.context))
 
         id = self.service.create(self.context, fixture)['id']
@@ -65,14 +57,7 @@ class BaseImageServiceTests(object):
                           len(self.service.index(self.context)))
 
     def test_create_and_show_non_existing_image(self):
-
-        fixture = {'name': 'test image',
-                   'updated': None,
-                   'created': None,
-                   'status': None,
-                   'instance_id': None,
-                   'progress': None}
-
+        fixture = self._make_fixture('test image')
         num_images = len(self.service.index(self.context))
 
         id = self.service.create(self.context, fixture)['id']
@@ -85,14 +70,7 @@ class BaseImageServiceTests(object):
                           'bad image id')
 
     def test_update(self):
-
-        fixture = {'name': 'test image',
-                   'updated': None,
-                   'created': None,
-                   'status': None,
-                   'instance_id': None,
-                   'progress': None}
-
+        fixture = self._make_fixture('test image')
         id = self.service.create(self.context, fixture)['id']
 
         fixture['status'] = 'in progress'
@@ -102,20 +80,9 @@ class BaseImageServiceTests(object):
         self.assertEquals('in progress', new_image_data['status'])
 
     def test_delete(self):
-
-        fixtures = [
-                    {'name': 'test image 1',
-                     'updated': None,
-                     'created': None,
-                     'status': None,
-                     'instance_id': None,
-                     'progress': None},
-                    {'name': 'test image 2',
-                     'updated': None,
-                     'created': None,
-                     'status': None,
-                     'instance_id': None,
-                     'progress': None}]
+        fixture1 = self._make_fixture('test image 1')
+        fixture2 = self._make_fixture('test image 2')
+        fixtures = [fixture1, fixture2]
 
         num_images = len(self.service.index(self.context))
         self.assertEquals(0, num_images, str(self.service.index(self.context)))
@@ -132,6 +99,24 @@ class BaseImageServiceTests(object):
 
         num_images = len(self.service.index(self.context))
         self.assertEquals(1, num_images)
+
+    def test_index(self):
+        fixture = self._make_fixture('test image')
+        image_id = self.service.create(self.context, fixture)['id']
+        image_metas = self.service.index(self.context)
+        expected = [{'id': 'DONTCARE', 'name': 'test image'}]
+        self.assertDictListMatch(image_metas, expected)
+
+    @staticmethod
+    def _make_fixture(name):
+        fixture = {'name': 'test image',
+                   'updated': None,
+                   'created': None,
+                   'status': None,
+                   'is_public': True,
+                   'instance_id': None,
+                   'progress': None}
+        return fixture
 
 
 class LocalImageServiceTest(test.TestCase,
@@ -187,7 +172,7 @@ class GlanceImageServiceTest(test.TestCase,
         fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(None, None)
+        self.context = context.RequestContext(1, None)
         self.service.delete_all()
         self.sent_to_glance = {}
         fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
@@ -199,13 +184,15 @@ class GlanceImageServiceTest(test.TestCase,
     def test_create_with_instance_id(self):
         """Ensure instance_id is persisted as an image-property"""
         fixture = {'name': 'test image',
-                   'properties': {'instance_id': '42'}}
+                   'is_public': False,
+                   'properties': {'instance_id': '42', 'user_id': '1'}}
 
         image_id = self.service.create(self.context, fixture)['id']
 
         expected = {'id': image_id,
                     'name': 'test image',
-                    'properties': {'instance_id': '42'}}
+                    'is_public': False,
+                    'properties': {'instance_id': '42', 'user_id': '1'}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
         image_meta = self.service.show(self.context, image_id)
@@ -301,37 +288,45 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         public_image = {'id': 123,
                         'name': 'public image',
                         'is_public': True,
-                        'status': 'active'}
+                        'status': 'active',
+                        'properties': {}}
         fixtures.append(public_image)
 
         queued_backup = {'id': 124,
                          'name': 'queued backup',
                          'is_public': False,
                          'status': 'queued',
-                         'instance_id': 42}
+                         'properties': {'instance_id': 42, 'user_id': 1}}
         fixtures.append(queued_backup)
 
         saving_backup = {'id': 125,
                          'name': 'saving backup',
                          'is_public': False,
                          'status': 'saving',
-                         'instance_id': 42,
-                         'progress': 0}
+                         'properties': {'instance_id': 42, 'user_id': 1}}
         fixtures.append(saving_backup)
 
         active_backup = {'id': 126,
                          'name': 'active backup',
                          'is_public': False,
                          'status': 'active',
-                         'instance_id': 42}
+                         'properties': {'instance_id': 42, 'user_id': 1}}
         fixtures.append(active_backup)
 
         killed_backup = {'id': 127,
                          'name': 'killed backup',
                          'is_public': False,
                          'status': 'killed',
-                         'instance_id': 42}
+                         'properties': {'instance_id': 42, 'user_id': 1}}
         fixtures.append(killed_backup)
+
+        someone_elses_backup = {'id': 127,
+                                'name': 'somone elses backup',
+                                'is_public': False,
+                                'status': 'active',
+                                'properties': {'instance_id': 43, 
+                                               'user_id': 2}}
+        fixtures.append(someone_elses_backup)
 
         base_attrs = {'created_at': cls.NOW_SERVICE_STR,
                       'updated_at': cls.NOW_SERVICE_STR,

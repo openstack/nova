@@ -629,3 +629,9 @@ def map_dict_keys(dict_, key_map):
         mapped_key = key_map[key] if key in key_map else key
         mapped[mapped_key] = value
     return mapped
+
+
+def subset_dict(dict_, keys):
+    """Return a dict that only contains a subset of keys"""
+    subset = partition_dict(dict_, keys)[0]
+    return subset

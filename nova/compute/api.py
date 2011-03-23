@@ -447,7 +447,8 @@ class API(base.Base):
 
         :retval: A dict containing image metadata
         """
-        properties = {'instance_id': str(instance_id)}
+        properties = {'instance_id': str(instance_id),
+                      'user_id': str(context.user_id)}
         sent_meta = {'name': name, 'is_public': False,
                      'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
