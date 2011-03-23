@@ -206,7 +206,9 @@ class ServiceWrapper(wsgi.Controller):
         params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
         if type(result) is dict or type(result) is list:
-            return self._serialize(result, req.best_match_content_type())
+            content_type = req.best_match_content_type()
+            default_xmlns = self.get_default_xmlns(req)
+            return self._serialize(result, content_type, default_xmlns)
         else:
             return result
 
