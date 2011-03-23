@@ -73,7 +73,7 @@ class VMOps(object):
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 name = vm_rec["name_label"]
 
-                # TODO(justinsb): Yuk...
+                # TODO(justinsb): This a roundabout way to map the state
                 openstack_format = VMHelper.compile_info(vm_rec)
                 state = openstack_format['state']
 
