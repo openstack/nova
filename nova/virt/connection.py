@@ -24,7 +24,7 @@ import sys
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.compute import driver
+from nova.virt import driver
 from nova.virt import fake
 from nova.virt import libvirt_conn
 from nova.virt import xenapi_conn

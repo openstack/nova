@@ -35,8 +35,8 @@ from nova import exception
 from nova import utils
 
 from nova.auth.manager import AuthManager
-from nova.compute import driver
 from nova.compute import power_state
+from nova.virt import driver
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.vm_utils import ImageType
