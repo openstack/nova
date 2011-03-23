@@ -717,7 +717,7 @@ class LibvirtConnection(object):
 
             if not 'injected' in network_ref:
                 continue
-            
+
             address = mapping['ips'][0]['ip']
             address_v6 = None
             if FLAGS.use_ipv6:
@@ -1924,4 +1924,3 @@ class IptablesFirewallDriver(FirewallDriver):
         network = db.network_get_by_instance(context.get_admin_context(),
                                              instance['id'])
         return network['cidr_v6']
-
