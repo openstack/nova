@@ -785,9 +785,10 @@ class VMOps(object):
 
             def ip6_dict(ip6):
                 return {
-                    "ip": ip6.addressV6,
-                    "netmask": ip6.netmaskV6,
-                    "gateway": ip6.gatewayV6,
+                    "ip": utils.to_global_ipv6(network['cidr_v6'],
+                                               instance['mac_address']),
+                    "netmask": network['netmask_v6'],
+                    "gateway": network['gateway_v6'],
                     "enabled": "1"}
 
             info = {
