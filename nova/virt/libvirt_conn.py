@@ -797,7 +797,7 @@ class LibvirtConnection(object):
         }
 
         if gateway_v6:
-            xml_info['gateway_v6'] = gateway_v6 + "/128"
+            result['gateway_v6'] = gateway_v6 + "/128"
 
         return result
 
