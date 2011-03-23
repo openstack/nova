@@ -78,8 +78,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'ramdisk_id': 3,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'
-                  }
+                  'os_type': 'linux'}
 
     def _create_volume(self, size='0'):
         """Create a volume object."""
@@ -315,8 +314,8 @@ class XenAPIVMTestCase(test.TestCase):
                   'ramdisk_id': ramdisk_id,
                   'instance_type': instance_type,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': os_type
-                  }
+                  'os_type': os_type}
+
         conn = xenapi_conn.get_connection(False)
         instance = db.instance_create(values)
         conn.spawn(instance)
@@ -361,6 +360,14 @@ class XenAPIVMTestCase(test.TestCase):
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
         self.check_vm_params_for_linux_with_external_kernel()
+
+    def test_spawn_with_network_qos(self):
+        self._create_instance()
+        for vif_ref in xenapi_fake.get_all('VIF'):
+            vif_rec = xenapi_fake.get_record('VIF', vif_ref)
+            self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
+            self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
+                              str(4 * 1024))
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()
@@ -440,8 +447,8 @@ class XenAPIMigrateInstance(test.TestCase):
                   'ramdisk_id': None,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'
-                  }
+                  'os_type': 'linux'}
+
         stubs.stub_out_migration_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)

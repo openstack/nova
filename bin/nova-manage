@@ -446,10 +446,15 @@ class FixedIpCommands(object):
     def list(self, host=None):
         """Lists all fixed ips (optionally by host) arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
-            fixed_ips = db.fixed_ip_get_all(ctxt)
-        else:
-            fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+
+        try:
+            if host == None:
+                fixed_ips = db.fixed_ip_get_all(ctxt)
+            else:
+                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
 
         print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (_('network'),
                                                   _('IP address'),
@@ -466,9 +471,9 @@ class FixedIpCommands(object):
                 host = instance['host']
                 mac_address = instance['mac_address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
-                                  fixed_ip['network']['cidr'],
-                                  fixed_ip['address'],
-                                  mac_address, hostname, host)
+                    fixed_ip['network']['cidr'],
+                    fixed_ip['address'],
+                    mac_address, hostname, host)
 
 
 class FloatingIpCommands(object):
@@ -513,11 +518,12 @@ class NetworkCommands(object):
                network_size=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, label='public'):
         """Creates fixed ips for host by range
-        arguments: [fixed_range=FLAG], [num_networks=FLAG],
+        arguments: fixed_range=FLAG, [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
-            fixed_range = FLAGS.fixed_range
+            raise TypeError(_('Fixed range in the form of 10.0.0.0/8 is '
+                              'required to create networks.'))
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
@@ -572,10 +578,12 @@ class VmCommands(object):
         """
 
         ctxt = context.get_admin_context()
-        instance_id = ec2_id_to_id(ec2_id)
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
 
-        if FLAGS.connection_type != 'libvirt':
-            msg = _('Only KVM is supported for now. Sorry!')
+        if (FLAGS.connection_type != 'libvirt' or
+           (FLAGS.connection_type == 'libvirt' and
+            FLAGS.libvirt_type not in ['kvm', 'qemu'])):
+            msg = _('Only KVM and QEmu are supported for now. Sorry!')
             raise exception.Error(msg)
 
         if (FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
@@ -716,6 +724,49 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class InstanceCommands(object):
+    """Class for managing instances."""
+
+    def list(self, host=None, instance=None):
+        """Show a list of all instances"""
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+              "  %-10s %-10s %-10s %-5s" % (
+            _('instance'),
+            _('node'),
+            _('type'),
+            _('state'),
+            _('launched'),
+            _('image'),
+            _('kernel'),
+            _('ramdisk'),
+            _('project'),
+            _('user'),
+            _('zone'),
+            _('index'))
+
+        if host == None:
+            instances = db.instance_get_all(context.get_admin_context())
+        else:
+            instances = db.instance_get_all_by_host(
+                           context.get_admin_context(), host)
+
+        for instance in instances:
+            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+                  "  %-10s %-10s %-10s %-5d" % (
+                instance['hostname'],
+                instance['host'],
+                instance['instance_type'],
+                instance['state_description'],
+                instance['launched_at'],
+                instance['image_id'],
+                instance['kernel_id'],
+                instance['ramdisk_id'],
+                instance['project_id'],
+                instance['user_id'],
+                instance['availability_zone'],
+                instance['launch_index'])
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -824,7 +875,7 @@ class InstanceTypeCommands(object):
             if name == None:
                 inst_types = instance_types.get_all_types()
             elif name == "--all":
-                inst_types = instance_types.get_all_types(1)
+                inst_types = instance_types.get_all_types(True)
             else:
                 inst_types = instance_types.get_instance_type(name)
         except exception.DBError, e:
@@ -1002,7 +1053,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('instance', InstanceCommands)]
 
 
 def lazy_match(name, key_value_tuples):

@@ -22,6 +22,7 @@ from nova import context
 from nova.api.openstack import faults
 from nova.api.openstack import common
 from nova.compute import instance_types
+from nova.api.openstack.views import flavors as flavors_views
 from nova import wsgi
 import nova.api.openstack
 
@@ -47,13 +48,18 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given flavor id."""
         ctxt = req.environ['nova.context']
-        values = db.instance_type_get_by_flavor_id(ctxt, id)
+        flavor = db.api.instance_type_get_by_flavor_id(ctxt, id)
+        values = {
+            "id": flavor["flavorid"],
+            "name": flavor["name"],
+            "ram": flavor["memory_mb"],
+            "disk": flavor["local_gb"],
+        }
         return dict(flavor=values)
-        raise faults.Fault(exc.HTTPNotFound())
 
     def _all_ids(self, req):
         """Return the list of all flavorids."""
         ctxt = req.environ['nova.context']
-        inst_types = db.instance_type_get_all(ctxt)
+        inst_types = db.api.instance_type_get_all(ctxt)
         flavor_ids = [inst_types[i]['flavorid'] for i in inst_types.keys()]
         return sorted(flavor_ids)
