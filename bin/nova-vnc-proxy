@@ -44,14 +44,16 @@ from nova.vnc import proxy
 LOG = logging.getLogger('nova.vnc-proxy')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vnc_proxy_wwwroot', '/code/noVNC/vnclet/noVNC',
+flags.DEFINE_string('vnc_proxy_wwwroot', '/code/noVNC/',
                      'Full path to noVNC directory')
 flags.DEFINE_boolean('vnc_debug', False,
                      'Enable debugging features, like token bypassing')
-flags.DEFINE_integer('vnc_proxy_port', 7000,
+flags.DEFINE_integer('vnc_proxy_port', 6080,
                      'Port that the VNC proxy should bind to')
-flags.DEFINE_string('vnc_proxy_host', '0.0.0.0',
+flags.DEFINE_string('vnc_proxy_iface', '0.0.0.0',
                      'Address that the VNC proxy should bind to')
+flags.DEFINE_integer('vnc_token_ttl', 300,
+                     'How many seconds before deleting tokens')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
@@ -64,7 +66,19 @@ if __name__ == "__main__":
     LOG.audit(_("Starting nova-vnc-proxy node (version %s)"),
               version.version_string_with_vcs())
 
+    if not os.path.exists(FLAGS.vnc_proxy_wwwroot):
+        LOG.info(_("Missing vnc_proxy_wwwroot (version %s)"),
+                    FLAGS.vnc_proxy_wwwroot)
+        LOG.info(_("You need a slightly modified version of noVNC "
+                    "to work with the nova-vnc-proxy"))
+        LOG.info(_("Check out the most recent nova noVNC code here: %s"),
+                    "git://github.com/sleepsonthefloor/noVNC.git")
+        exit(1)
+
     app = proxy.WebsocketVNCProxy(FLAGS.vnc_proxy_wwwroot)
+
+    LOG.audit(_("Allowing access to the following files: %s"),
+              app.get_whitelist())
 
     with_logging = auth.LoggingMiddleware(app)
 
@@ -74,5 +88,5 @@ if __name__ == "__main__":
         with_auth = auth.NovaAuthMiddleware(with_logging)
 
     server = wsgi.Server()
-    server.start(with_auth, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
+    server.start(with_auth, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_iface)
     server.wait()

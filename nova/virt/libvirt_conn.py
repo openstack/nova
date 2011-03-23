@@ -735,7 +735,7 @@ class LibvirtConnection(object):
                     'driver_type': driver_type}
 
         if FLAGS.vnc_enabled:
-            xml_info['vnc_host_iface'] = FLAGS.vnc_host_iface
+            xml_info['vnc_compute_host_iface'] = FLAGS.vnc_compute_host_iface
         if ra_server:
             xml_info['ra_server'] = ra_server + "/128"
         if not rescue:

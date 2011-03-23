@@ -21,13 +21,16 @@
 """Auth Components for VNC Console"""
 
 import time
+import urlparse
+import webob
 from webob import Request
+
 from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova import wsgi
-import webob
+from nova import vnc
 
 LOG = logging.getLogger('nova.vnc-proxy')
 FLAGS = flags.FLAGS
@@ -42,13 +45,19 @@ class NovaAuthMiddleware(object):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        if req.path == '/data':
-            token = req.params.get('token')
-            if not token in self.tokens:
-                start_response('403 Forbidden',
-                                [('content-type', 'text/html')])
-                return 'Not Authorized'
+        token = req.params.get('token')
 
+        if not token:
+            referrer = req.environ.get('HTTP_REFERER')
+            auth_params = urlparse.parse_qs(urlparse.urlparse(referrer).query)
+            if 'token' in auth_params:
+                token = auth_params['token'][0]
+
+        if not token in self.tokens:
+            LOG.audit(_("Unauthorized Access: (%s)"), req.environ)
+            return webob.exc.HTTPForbidden(detail='Unauthorized')
+
+        if req.path == vnc.proxy.WS_ENDPOINT:
             req.environ['vnc_host'] = self.tokens[token]['args']['host']
             req.environ['vnc_port'] = int(self.tokens[token]['args']['port'])
 
@@ -62,7 +71,7 @@ class NovaAuthMiddleware(object):
             def __call__(self, data, message):
                 if data['method'] == 'authorize_vnc_console':
                     token = data['args']['token']
-                    LOG.info(_("Received Token: %s)"), token)
+                    LOG.audit(_("Received Token: %s)"), token)
                     middleware.tokens[token] = \
                       {'args': data['args'], 'last_activity_at': time.time()}
 
@@ -70,10 +79,11 @@ class NovaAuthMiddleware(object):
             now = time.time()
             to_delete = []
             for k, v in middleware.tokens.items():
-                if now - v['last_activity_at'] > 600:
+                if now - v['last_activity_at'] > FLAGS.vnc_token_ttl:
                     to_delete.append(k)
 
             for k in to_delete:
+                LOG.audit(_("Deleting Token: %s)"), k)
                 del middleware.tokens[k]
 
         conn = rpc.Connection.instance(new=True)
@@ -94,9 +104,9 @@ class LoggingMiddleware(object):
     @webob.dec.wsgify
     def __call__(self, req):
 
-        if req.path == '/data':
-            LOG.info(_("Received Websocket Request: %s)"), req.url)
+        if req.path == vnc.proxy.WS_ENDPOINT:
+            LOG.info(_("Received Websocket Request: %s"), req.url)
         else:
-            LOG.info(_("Received Request: %s)"), req.url)
+            LOG.info(_("Received Request: %s"), req.url)
 
         return req.get_response(self.app)

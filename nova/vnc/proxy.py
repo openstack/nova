@@ -28,12 +28,30 @@ import os
 from webob import Request
 import webob
 
+WS_ENDPOINT = '/data'
+
 
 class WebsocketVNCProxy(object):
     """Class to proxy from websocket to vnc server"""
 
     def __init__(self, wwwroot):
         self.wwwroot = wwwroot
+        self.whitelist = {}
+        for root, dirs, files in os.walk(wwwroot):
+            hidden_dirs = []
+            for d in dirs:
+                if d.startswith('.'):
+                    hidden_dirs.append(d)
+            for d in hidden_dirs:
+                dirs.remove(d)
+            for name in files:
+                if not str(name).startswith('.'):
+                    filename = os.path.join(root, name)
+                    self.whitelist[filename] = True
+            
+
+    def get_whitelist(self):
+        return self.whitelist.keys()
 
     def sock2ws(self, source, dest):
         try:
@@ -72,7 +90,7 @@ class WebsocketVNCProxy(object):
 
     def __call__(self, environ, start_response):
         req = Request(environ)
-        if req.path == '/data':
+        if req.path == WS_ENDPOINT:
             return self.proxy_connection(environ, start_response)
         else:
             if req.path == '/':
@@ -80,7 +98,11 @@ class WebsocketVNCProxy(object):
             else:
                 fname = req.path
 
-            fname = self.wwwroot + fname
+            fname = (self.wwwroot + fname).replace('//','/')
+            if not fname in self.whitelist:
+                start_response('404 Not Found',
+                               [('content-type', 'text/html')])
+                return "Not Found"
 
             base, ext = os.path.splitext(fname)
             if ext == '.js':
@@ -104,7 +126,7 @@ class DebugMiddleware(object):
 
     @webob.dec.wsgify
     def __call__(self, req):
-        if req.path == '/data':
+        if req.path == WS_ENDPOINT:
             req.environ['vnc_host'] = req.params.get('host')
             req.environ['vnc_port'] = int(req.params.get('port'))
         return req.get_response(self.app)
