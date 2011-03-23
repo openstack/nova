@@ -22,12 +22,12 @@ from glance.common import exception as glance_exception
 
 from nova import exception
 from nova import flags
-from nova import log
+from nova import log as logging
 from nova import utils
 from nova.image import service
 
 
-LOG = log.getLogger('nova.image.glance')
+LOG = logging.getLogger('nova.image.glance')
 
 FLAGS = flags.FLAGS
 
@@ -52,9 +52,9 @@ class GlanceImageService(service.BaseImageService):
         """
         Calls out to Glance for a list of images available
         """
-        # NOTE(sirp): We need to use get_images_detailed and not get_images
-        # here because we need `is_public` and properties included so we can
-        # filter by user
+        # NOTE(sirp): We need to use `get_images_detailed` and not
+        # `get_images` here because we need `is_public` and `properties`
+        # included so we can filter by user
         filtered = []
         image_metas = self.client.get_images_detailed()
         for image_meta in image_metas:
