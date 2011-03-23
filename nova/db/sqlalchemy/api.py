@@ -2216,7 +2216,7 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(status=status).first()
     if not result:
         raise exception.NotFound(_("No migration found with instance id %s")
-                % id)
+                % instance_id)
     return result
 
 
