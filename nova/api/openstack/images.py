@@ -20,6 +20,7 @@ import datetime
 from webob import exc
 
 from nova import compute
+from nova import exception
 from nova import flags
 from nova import log
 from nova import utils
@@ -238,8 +239,11 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given image id"""
         context = req.environ['nova.context']
-        image_id = common.get_image_id_from_image_hash(
-            self._service, req.environ['nova.context'], id)
+        try:
+            image_id = common.get_image_id_from_image_hash(
+                self._service, context, id)
+        except exception.NotFound:
+            raise faults.Fault(exc.HTTPNotFound())
 
         image_meta = self._service.show(context, image_id)
         api_image_meta = _safe_translate(image_meta)

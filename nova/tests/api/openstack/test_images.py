@@ -277,6 +277,28 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         self.assertDictListMatch(image_metas, expected)
 
+    def test_get_image_found(self):
+        req = webob.Request.blank('/v1.0/images/123')
+        res = req.get_response(fakes.wsgi_app())
+        image_meta = json.loads(res.body)['image']
+        expected = {'id': 123, 'name': 'public image',
+                    'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+                    'status': 'ACTIVE'}
+        self.assertDictMatch(image_meta, expected)
+
+    def test_get_image_non_existent(self):
+        req = webob.Request.blank('/v1.0/images/4242')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_image_not_owned(self):
+        """We should return a 404 if we request an image that doesn't belong
+        to us
+        """
+        req = webob.Request.blank('/v1.0/images/128')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
     @classmethod
     def _make_image_fixtures(cls):
         image_id = 123
