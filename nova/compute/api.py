@@ -253,6 +253,16 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
+    def has_finished_migration(self, context, instance_id):
+        """Retrieves whether or not a finished migration exists for
+        an instance"""
+        try:
+            db.migration_get_by_instance_and_status(ctxt, inst['id'],
+                    'finished')
+            return True
+        except Exception, e:
+            return False
+
     def ensure_default_security_group(self, context):
         """ Create security group for the security context if it
         does not already exist
@@ -499,7 +509,8 @@ class API(base.Base):
         LOG.debug(_("Old instance type %(current_instance_type_name)s, "
                 " new instance type %(new_instance_type_name)s") % locals())
         if not new_instance_type:
-            raise exception.ApiError(_("Requested flavor does not exist"))
+            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
+                    "does not exist") % locals())
 
         if current_instance_type['memory_mb'] >= \
                     new_instance_type['memory_mb']:
