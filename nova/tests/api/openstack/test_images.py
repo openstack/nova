@@ -50,9 +50,9 @@ class BaseImageServiceTests(object):
         fixture = self._make_fixture('test image')
         num_images = len(self.service.index(self.context))
 
-        id = self.service.create(self.context, fixture)['id']
+        image_id = self.service.create(self.context, fixture)['id']
 
-        self.assertNotEquals(None, id)
+        self.assertNotEquals(None, image_id)
         self.assertEquals(num_images + 1,
                           len(self.service.index(self.context)))
 
@@ -60,10 +60,9 @@ class BaseImageServiceTests(object):
         fixture = self._make_fixture('test image')
         num_images = len(self.service.index(self.context))
 
-        id = self.service.create(self.context, fixture)['id']
+        image_id = self.service.create(self.context, fixture)['id']
 
-        self.assertNotEquals(None, id)
-
+        self.assertNotEquals(None, image_id)
         self.assertRaises(exception.NotFound,
                           self.service.show,
                           self.context,
@@ -71,12 +70,12 @@ class BaseImageServiceTests(object):
 
     def test_update(self):
         fixture = self._make_fixture('test image')
-        id = self.service.create(self.context, fixture)['id']
-
+        image_id = self.service.create(self.context, fixture)['id']
         fixture['status'] = 'in progress'
 
-        self.service.update(self.context, id, fixture)
-        new_image_data = self.service.show(self.context, id)
+        self.service.update(self.context, image_id, fixture)
+
+        new_image_data = self.service.show(self.context, image_id)
         self.assertEquals('in progress', new_image_data['status'])
 
     def test_delete(self):
@@ -113,9 +112,7 @@ class BaseImageServiceTests(object):
                    'updated': None,
                    'created': None,
                    'status': None,
-                   'is_public': True,
-                   'instance_id': None,
-                   'progress': None}
+                   'is_public': True}
         return fixture
 
 
