@@ -67,8 +67,8 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.auth import manager
-from nova.compute import driver
 from nova.compute import power_state
+from nova.virt import driver
 from nova.virt import images
 
 wmi = None

@@ -27,8 +27,8 @@ semantics of real hypervisor connections.
 
 from nova import exception
 from nova import utils
-from nova.compute import driver
 from nova.compute import power_state
+from nova.virt import driver
 
 
 def get_connection(_):

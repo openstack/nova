@@ -33,7 +33,10 @@ class InstanceInfo(object):
 
 
 class ComputeDriver(object):
-    """Base class for compute drivers."""
+    """Base class for compute drivers.
+    
+    Lots of documentation is currently on fake.py.
+    """
 
     def init_host(self, host):
         """Adopt existing VM's running here"""

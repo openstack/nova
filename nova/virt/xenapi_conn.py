@@ -69,7 +69,7 @@ from nova import db
 from nova import utils
 from nova import flags
 from nova import log as logging
-from nova.compute import driver
+from nova.virt import driver
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
