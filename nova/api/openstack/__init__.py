@@ -127,8 +127,6 @@ class APIRouter(wsgi.Router):
         _limits = limits.LimitsController()
         mapper.resource("limit", "limits", controller=_limits)
 
-        super(APIRouter, self).__init__(mapper)
-
 
 class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
