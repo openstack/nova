@@ -982,10 +982,14 @@ class LibvirtConnection(object):
         """
 
         # NOTE(justinsb): getVersion moved between libvirt versions
-        method = getattr(self._conn, 'getVersion', None)  # Newer location
+        # Trying to do be compatible with older versions is a lost cause
+        # But ... we can at least give the user a nice message
+        method = getattr(self._conn, 'getVersion', None)
         if method is None:
-            method = getattr(libvirt, 'getVersion')  # Older location
-        return method()
+            raise exception.Error(_("libvirt version is too old"
+                                    " (does not support getVersion)"))
+
+        return self._conn.getVersion()
 
     def get_cpu_info(self):
         """Get cpuinfo information.
