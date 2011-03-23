@@ -174,10 +174,6 @@ def stub_out_glance(stubs, initial_fixtures=None):
             raise glance_exc.NotFound
 
         def fake_add_image(self, image_meta, data=None):
-            if 'id' in image_meta:
-                raise Exception(
-                    _("Cannot set id attribute for Glance image: %s")
-                    % image_meta)
             image_id = ''.join(random.choice(string.letters)
                                for _ in range(20))
             image_meta['id'] = image_id
@@ -199,9 +195,6 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
             self.fixtures.remove(f)
 
-        ##def fake_delete_all(self):
-        ##    self.fixtures = []
-
     GlanceClient = glance_client.Client
     fake = FakeGlanceClient(initial_fixtures)
 
@@ -212,7 +205,6 @@ def stub_out_glance(stubs, initial_fixtures=None):
     stubs.Set(GlanceClient, 'add_image', fake.fake_add_image)
     stubs.Set(GlanceClient, 'update_image', fake.fake_update_image)
     stubs.Set(GlanceClient, 'delete_image', fake.fake_delete_image)
-    #stubs.Set(GlanceClient, 'delete_all', fake.fake_delete_all)
 
 
 class FakeToken(object):
