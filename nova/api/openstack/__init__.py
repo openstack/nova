@@ -134,7 +134,7 @@ class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        APIRouter._setup_routes(self, mapper)
+        super(APIRouterV10, self)._setup_routes(mapper)
         mapper.resource("server", "servers",
                         controller=servers.ControllerV10(),
                         collection={'detail': 'GET'},
@@ -145,7 +145,7 @@ class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
-        APIRouter._setup_routes(self, mapper)
+        super(APIRouterV11, self)._setup_routes(mapper)
         mapper.resource("server", "servers",
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
