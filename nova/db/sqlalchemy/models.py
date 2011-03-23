@@ -456,8 +456,8 @@ class Network(BASE, NovaBase):
     cidr = Column(String(255), unique=True)
     cidr_v6 = Column(String(255), unique=True)
 
-    ra_server = Column(String(255))
-
+    gateway_v6 = Column(String(255))
+    netmask_v6 = Column(String(255))
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -510,9 +510,6 @@ class FixedIp(BASE, NovaBase):
     allocated = Column(Boolean, default=False)
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
-    addressV6 = Column(String(255))
-    netmaskV6 = Column(String(3))
-    gatewayV6 = Column(String(255))
 
 
 class User(BASE, NovaBase):
