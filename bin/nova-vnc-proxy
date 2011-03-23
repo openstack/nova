@@ -44,7 +44,7 @@ from nova.vnc import proxy
 LOG = logging.getLogger('nova.vnc-proxy')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vnc_proxy_wwwroot', '/code/noVNC/',
+flags.DEFINE_string('vnc_proxy_wwwroot', '/var/lib/nova/noVNC/',
                      'Full path to noVNC directory')
 flags.DEFINE_boolean('vnc_debug', False,
                      'Enable debugging features, like token bypassing')
@@ -66,13 +66,15 @@ if __name__ == "__main__":
     LOG.audit(_("Starting nova-vnc-proxy node (version %s)"),
               version.version_string_with_vcs())
 
-    if not os.path.exists(FLAGS.vnc_proxy_wwwroot):
+    if not (os.path.exists(FLAGS.vnc_proxy_wwwroot) and
+            os.path.exists(FLAGS.vnc_proxy_wwwroot + '/vnc_auto.html')):
         LOG.info(_("Missing vnc_proxy_wwwroot (version %s)"),
                     FLAGS.vnc_proxy_wwwroot)
         LOG.info(_("You need a slightly modified version of noVNC "
-                    "to work with the nova-vnc-proxy"))
-        LOG.info(_("Check out the most recent nova noVNC code here: %s"),
-                    "git://github.com/sleepsonthefloor/noVNC.git")
+                   "to work with the nova-vnc-proxy"))
+        LOG.info(_("Check out the most recent nova noVNC code: %s"),
+                   "git://github.com/sleepsonthefloor/noVNC.git")
+        LOG.info(_("And drop it in %s"), FLAGS.vnc_proxy_wwwroot)
         exit(1)
 
     app = proxy.WebsocketVNCProxy(FLAGS.vnc_proxy_wwwroot)
