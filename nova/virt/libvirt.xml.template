@@ -81,8 +81,8 @@
 #if $getVar('nic.extra_params', False)
                 ${nic.extra_params}
 #end if
-#if $getVar('nic.ra_server', False)
-                <parameter name="RASERVER" value="${nic.ra_server}" />
+#if $getVar('nic.gateway_v6', False)
+                <parameter name="RASERVER" value="${gateway_v6}" />
 #end if
             </filterref>
         </interface>

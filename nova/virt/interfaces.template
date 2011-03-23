@@ -7,15 +7,18 @@ iface lo inet loopback
 
 #for $ifc in $interfaces
 auto ${ifc.name}
-#if $getVar('ifc.address', None)
 iface ${ifc.name} inet static
         address ${ifc.address}
         netmask ${ifc.netmask}
         broadcast ${ifc.broadcast}
         gateway ${ifc.gateway}
         dns-nameservers ${ifc.dns}
-#else
-iface ${ifc.name} inet dhcp
+
+#if $use_ipv6
+iface ${ifc.name} inet6 static
+    address ${ifc.address_v6}
+    netmask ${ifc.netmask_v6}
+    gateway ${ifc.gateway_v6}
 #end if
 
 #end for
