@@ -21,6 +21,7 @@ from nova import flags
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import common
+from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
 
 
@@ -87,9 +88,10 @@ class Controller(wsgi.Controller):
         try:
             image = self.__image.show(context, image_id)
         except exception.NotFound:
-            raise webob.exc.HTTPNotFound
+            ex = webob.exc.HTTPNotFound(explanation="Image not found.")
+            raise faults.Fault(ex)
 
-        return self.get_builder(req).build(image, True)
+        return dict(image=self.get_builder(req).build(image, True))
 
     def delete(self, req, id):
         """

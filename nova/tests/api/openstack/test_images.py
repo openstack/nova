@@ -26,6 +26,8 @@ import os
 import shutil
 import tempfile
 
+from xml.dom.minidom import parseString
+
 import stubout
 import webob
 
@@ -255,11 +257,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         expected = self.IMAGE_FIXTURES[0]
         expected_image = {
-            "id": expected["id"],
-            "name": expected["name"],
-            "updated": expected["updated_at"],
-            "created": expected["created_at"],
-            "status": expected["status"],
+            "image": {
+                "id": expected["id"],
+                "name": expected["name"],
+                "updated": expected["updated_at"],
+                "created": expected["created_at"],
+                "status": expected["status"],
+            },
         }
 
         self.assertEqual(expected_image, actual_image)
@@ -274,38 +278,141 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         href = "http://localhost/v1.1/images/%s" % expected["id"]
 
         expected_image = {
-            "id": expected["id"],
-            "name": expected["name"],
-            "updated": expected["updated_at"],
-            "created": expected["created_at"],
-            "status": expected["status"],
-            "links": [{
-                "rel": "self",
-                "href": href,
+            "image": {
+                "id": expected["id"],
+                "name": expected["name"],
+                "updated": expected["updated_at"],
+                "created": expected["created_at"],
+                "status": expected["status"],
+                "links": [{
+                    "rel": "self",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": href,
+                }],
             },
-            {
-                "rel": "bookmark",
-                "type": "application/json",
-                "href": href,
-            },
-            {
-                "rel": "bookmark",
-                "type": "application/xml",
-                "href": href,
-            }],
         }
 
         self.assertEqual(expected_image, actual_image)
 
-    def test_get_image_404(self):
+    def test_get_image_xml(self):
+        request = webob.Request.blank('/v1.0/images/23g2ogk23k4hhkk4k42l')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = parseString(response.body.replace("  ", ""))
+
+        expected = self.IMAGE_FIXTURES[0]
+        expected_image = parseString("""
+            <image id="%(id)s"
+                    name="%(name)s"
+                    updated="%(updated_at)s"
+                    created="%(created_at)s"
+                    status="%(status)s" />
+        """ % (expected))
+
+        self.assertEqual(expected_image.toxml(), actual_image.toxml())
+
+    def test_get_image_v1_1_xml(self):
+        request = webob.Request.blank('/v1.1/images/23g2ogk23k4hhkk4k42l')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = parseString(response.body.replace("  ", ""))
+
+        expected = self.IMAGE_FIXTURES[0]
+        expected["href"] = "http://localhost/v1.1/images/23g2ogk23k4hhkk4k42l"
+        expected_image = parseString("""
+        <image id="%(id)s"
+                name="%(name)s"
+                updated="%(updated_at)s"
+                created="%(created_at)s"
+                status="%(status)s">
+            <links>
+                <link href="%(href)s" rel="self"/>
+                <link href="%(href)s" rel="bookmark" type="application/json" />
+                <link href="%(href)s" rel="bookmark" type="application/xml" />
+            </links>
+        </image>
+        """.replace("  ", "") % (expected))
+
+        self.assertEqual(expected_image.toxml(), actual_image.toxml())
+
+    def test_get_image_404_json(self):
         request = webob.Request.blank('/v1.0/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
-    def test_get_image_v1_1_404(self):
+        expected = {
+            "itemNotFound": {
+                "message": "Image not found.",
+                "code": 404,
+            },
+        }
+
+        actual = json.loads(response.body)
+
+        self.assertEqual(expected, actual)
+
+    def test_get_image_404_xml(self):
+        request = webob.Request.blank('/v1.0/images/NonExistantImage')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
+        expected = parseString("""
+            <itemNotFound code="404">
+                <message>
+                    Image not found.
+                </message>
+            </itemNotFound>
+        """.replace("  ", ""))
+
+        actual = parseString(response.body.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_get_image_404_v1_1_json(self):
         request = webob.Request.blank('/v1.1/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
+
+        expected = {
+            "itemNotFound": {
+                "message": "Image not found.",
+                "code": 404,
+            },
+        }
+
+        actual = json.loads(response.body)
+
+        self.assertEqual(expected, actual)
+
+    def test_get_image_404_v1_1_xml(self):
+        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
+        expected = parseString("""
+            <itemNotFound code="404">
+                <message>
+                    Image not found.
+                </message>
+            </itemNotFound>
+        """.replace("  ", ""))
+
+        actual = parseString(response.body.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
 
     def test_get_image_index_v1_1(self):
         request = webob.Request.blank('/v1.1/images')
@@ -337,6 +444,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             self.assertTrue(test_image in response_list)
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
+
+
 
     def test_get_image_details(self):
         request = webob.Request.blank('/v1.0/images/detail')
