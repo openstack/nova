@@ -79,9 +79,9 @@ def wsgi_app(inner_app10=None, inner_app11=None):
         inner_app11 = openstack.APIRouterV11()
     mapper = urlmap.URLMap()
     api10 = openstack.FaultWrapper(auth.AuthMiddleware(
-              ratelimiting.RateLimitingMiddleware(inner_app10)))
+              limits.RateLimitingMiddleware(inner_app10)))
     api11 = openstack.FaultWrapper(auth.AuthMiddleware(
-              ratelimiting.RateLimitingMiddleware(inner_app11)))
+              limits.RateLimitingMiddleware(inner_app11)))
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(openstack.Versions())

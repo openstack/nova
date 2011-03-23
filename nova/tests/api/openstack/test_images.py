@@ -301,7 +301,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         request = webob.Request.blank('/v1.0/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
-        self.assertEqual("", response.body)
 
     def test_get_image_v1_1_404(self):
         request = webob.Request.blank('/v1.1/images/NonExistantImage')
