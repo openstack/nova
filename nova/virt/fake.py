@@ -100,7 +100,7 @@ class FakeConnection(driver.ComputeDriver):
         return self.instances.keys()
 
     def _map_to_instance_info(self, instance):
-        instance = utils.check_instance(instance, FakeInstance)
+        instance = utils.check_isinstance(instance, FakeInstance)
         info = driver.InstanceInfo(instance.name, instance.state)
         return info
 

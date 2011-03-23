@@ -587,7 +587,7 @@ def get_from_path(items, path):
         return get_from_path(results, remainder)
 
 
-def check_instance(obj, cls):
+def check_isinstance(obj, cls):
     """Checks that obj is of type cls, and lets PyLint infer types"""
     if isinstance(obj, cls):
         return obj

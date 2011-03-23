@@ -74,4 +74,4 @@ def get_connection(read_only=False):
     if conn is None:
         LOG.error(_('Failed to open connection to the hypervisor'))
         sys.exit(1)
-    return utils.check_instance(conn, driver.ComputeDriver)
+    return utils.check_isinstance(conn, driver.ComputeDriver)
