@@ -1219,7 +1219,3 @@ class TestServerInstanceCreation(test.TestCase):
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
         self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
-
-
-if __name__ == "__main__":
-    unittest.main()

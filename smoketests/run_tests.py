@@ -60,14 +60,23 @@ import os
 import unittest
 import sys
 
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
+
+
 gettext.install('nova', unicode=1)
 
 from nose import config
 from nose import core
 from nose import result
 
-from nova import log as logging
-from nova.tests import fake_flags
+from smoketests import flags
+FLAGS = flags.FLAGS
 
 
 class _AnsiColorizer(object):
@@ -281,17 +290,14 @@ class NovaTestRunner(core.TextTestRunner):
 
 
 if __name__ == '__main__':
-    logging.setup()
-    # If any argument looks like a test name but doesn't have "nova.tests" in
-    # front of it, automatically add that so we don't have to type as much
-    argv = []
-    for x in sys.argv:
-        if x.startswith('test_'):
-            argv.append('nova.tests.%s' % x)
-        else:
-            argv.append(x)
+    if not os.getenv('EC2_ACCESS_KEY'):
+        print _('Missing EC2 environment variables. Please ' \
+                'source the appropriate novarc file before ' \
+                'running this test.')
+        sys.exit(1)
 
-    testdir = os.path.abspath(os.path.join("nova", "tests"))
+    argv = FLAGS(sys.argv)
+    testdir = os.path.abspath("./")
     c = config.Config(stream=sys.stdout,
                       env=os.environ,
                       verbosity=3,

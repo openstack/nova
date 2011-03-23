@@ -167,7 +167,7 @@ class S3(ErrorHandlingResource):
     def __init__(self):
         ErrorHandlingResource.__init__(self)
 
-    def getChild(self, name, request):  # pylint: disable-msg=C0103
+    def getChild(self, name, request):  # pylint: disable=C0103
         """Returns either the image or bucket resource"""
         request.context = get_context(request)
         if name == '':
@@ -177,7 +177,7 @@ class S3(ErrorHandlingResource):
         else:
             return BucketResource(name)
 
-    def render_GET(self, request):  # pylint: disable-msg=R0201
+    def render_GET(self, request):  # pylint: disable=R0201
         """Renders the GET request for a list of buckets as XML"""
         LOG.debug(_('List of buckets requested'), context=request.context)
         buckets = [b for b in bucket.Bucket.all()
@@ -355,7 +355,7 @@ class ImagesResource(resource.Resource):
         else:
             return ImageResource(name)
 
-    def render_GET(self, request):  # pylint: disable-msg=R0201
+    def render_GET(self, request):  # pylint: disable=R0201
         """ returns a json listing of all images
             that a user has permissions to see """
 
@@ -384,7 +384,7 @@ class ImagesResource(resource.Resource):
         request.finish()
         return server.NOT_DONE_YET
 
-    def render_PUT(self, request):  # pylint: disable-msg=R0201
+    def render_PUT(self, request):  # pylint: disable=R0201
         """ create a new registered image """
 
         image_id = get_argument(request, 'image_id', u'')
@@ -413,7 +413,7 @@ class ImagesResource(resource.Resource):
         p.start()
         return ''
 
-    def render_POST(self, request):  # pylint: disable-msg=R0201
+    def render_POST(self, request):  # pylint: disable=R0201
         """Update image attributes: public/private"""
 
         # image_id required for all requests
@@ -441,7 +441,7 @@ class ImagesResource(resource.Resource):
             image_object.update_user_editable_fields(clean_args)
         return ''
 
-    def render_DELETE(self, request):  # pylint: disable-msg=R0201
+    def render_DELETE(self, request):  # pylint: disable=R0201
         """Delete a registered image"""
         image_id = get_argument(request, "image_id", u"")
         image_object = image.Image(image_id)
@@ -471,7 +471,7 @@ def get_application():
     application = service.Application("objectstore")
     # Disabled because of lack of proper introspection in Twisted
     # or possibly different versions of twisted?
-    # pylint: disable-msg=E1101
+    # pylint: disable=E1101
     objectStoreService = internet.TCPServer(FLAGS.s3_port, factory,
                                             interface=FLAGS.s3_listen_host)
     objectStoreService.setServiceParent(application)

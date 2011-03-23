@@ -557,6 +557,7 @@ def get_dhcp_hosts(context, network_id):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
+@utils.synchronized('dnsmasq_start')
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
@@ -582,7 +583,7 @@ def update_dhcp(context, network_id):
             try:
                 _execute('sudo', 'kill', '-HUP', pid)
                 return
-            except Exception as exc:  # pylint: disable-msg=W0703
+            except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
@@ -594,6 +595,7 @@ def update_dhcp(context, network_id):
     _execute(*command, addl_env=env)
 
 
+@utils.synchronized('radvd_start')
 def update_ra(context, network_id):
     network_ref = db.network_get(context, network_id)
 
@@ -626,14 +628,14 @@ interface %s
         if conffile in out:
             try:
                 _execute('sudo', 'kill', pid)
-            except Exception as exc:  # pylint: disable-msg=W0703
+            except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_("killing radvd threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
     _execute(*command)
     db.network_update(context, network_id,
-                      {"ra_server":
+                      {"gateway_v6":
                        utils.get_my_linklocal(network_ref['bridge'])})
 
 
@@ -713,7 +715,7 @@ def _stop_dnsmasq(network):
     if pid:
         try:
             _execute('sudo', 'kill', '-TERM', pid)
-        except Exception as exc:  # pylint: disable-msg=W0703
+        except Exception as exc:  # pylint: disable=W0703
             LOG.debug(_("Killing dnsmasq threw %s"), exc)
 
 
