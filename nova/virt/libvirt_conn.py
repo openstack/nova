@@ -1814,7 +1814,7 @@ class IptablesFirewallDriver(FirewallDriver):
                           in network_info]
 
                 for cidrv6 in cidrv6s:
-                    ipv6_rules += ['-s %s -j ACCEPT' % (cidrv6,)]
+                    ipv6_rules.append('-s %s -j ACCEPT' % (cidrv6,))
 
         security_groups = db.security_group_get_by_instance(ctxt,
                                                             instance['id'])
