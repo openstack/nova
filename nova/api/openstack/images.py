@@ -13,9 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from webob import exc
+import webob.exc
 
 from nova import compute
+from nova import exception
 from nova import flags
 from nova import utils
 from nova import wsgi
@@ -39,11 +40,6 @@ class Controller(wsgi.Controller):
         },
     }
 
-    _builder_dispatch = {
-        "1.0": images_view.ViewBuilderV10,
-        "1.1": images_view.ViewBuilderV11,
-    }
-
     def __init__(self, image_service=None, compute_service=None):
         """
         Initialize new `ImageController`.
@@ -60,7 +56,7 @@ class Controller(wsgi.Controller):
         """
         Return an index listing of images available to the request.
 
-        @param req: `webob.Request` object
+        @param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
         images = self.__image.index(context)
@@ -71,31 +67,38 @@ class Controller(wsgi.Controller):
         """
         Return a detailed index listing of images available to the request.
 
-        @param req: `webob.Request` object.
+        @param req: `wsgi.Request` object.
         """
         context = req.environ['nova.context']
         images = self.__image.detail(context)
         build = self.get_builder(req).build
         return dict(images=[build(image, True) for image in images])
 
-    def show(self, req, image_id):
+    def show(self, req, id):
         """
         Return detailed information about a specific image.
 
-        @param req: `webob.Request` object
-        @param image_id: Image identifier (integer)
+        @param req: `wsgi.Request` object
+        @param id: Image identifier (integer)
         """
+        image_id = id
         context = req.environ['nova.context']
-        image = self.__image.show(context, image_id)
-        return self.get_builder().build(req, image, True)
 
-    def delete(self, req, image_id):
+        try:
+            image = self.__image.show(context, image_id)
+        except exception.NotFound:
+            raise webob.exc.HTTPNotFound
+
+        return self.get_builder(req).build(image, True)
+
+    def delete(self, req, id):
         """
         Delete an image, if allowed.
 
-        @param req: `webob.Request` object
-        @param image_id: Image identifier (integer)
+        @param req: `wsgi.Request` object
+        @param id: Image identifier (integer)
         """
+        image_id = id
         context = req.environ['nova.context']
         self.__image.delete(context, image_id)
         return exc.HTTPNoContent()
@@ -104,7 +107,7 @@ class Controller(wsgi.Controller):
         """
         Snapshot a server instance and save the image.
 
-        @param req: `webob.Request` object
+        @param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
         body = req.body

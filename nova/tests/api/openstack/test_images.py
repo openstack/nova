@@ -235,6 +235,67 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
 
+    def test_get_image(self):
+        request = webob.Request.blank('/v1.0/images/23g2ogk23k4hhkk4k42l')
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = json.loads(response.body)
+
+        expected = self.IMAGE_FIXTURES[0]
+        expected_image = {
+            "id": expected["id"],
+            "name": expected["name"],
+            "updated": expected["updated_at"],
+            "created": expected["created_at"],
+            "status": expected["status"],
+        }
+
+        self.assertEqual(expected_image, actual_image)
+
+    def test_get_image_v1_1(self):
+        request = webob.Request.blank('/v1.1/images/23g2ogk23k4hhkk4k42l')
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = json.loads(response.body)
+
+        expected = self.IMAGE_FIXTURES[0]
+        href = "http://localhost/v1.1/images/%s" % expected["id"]
+
+        expected_image = {
+            "id": expected["id"],
+            "name": expected["name"],
+            "updated": expected["updated_at"],
+            "created": expected["created_at"],
+            "status": expected["status"],
+            "links": [{
+                "rel": "self",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": href,
+            }],
+        }
+
+        self.assertEqual(expected_image, actual_image)
+
+    def test_get_image_404(self):
+        request = webob.Request.blank('/v1.0/images/NonExistantImage')
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+        self.assertEqual("", response.body)
+
+    def test_get_image_v1_1_404(self):
+        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
     def test_get_image_index_v1_1(self):
         request = webob.Request.blank('/v1.1/images')
         response = request.get_response(fakes.wsgi_app())
