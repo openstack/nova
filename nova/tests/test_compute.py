@@ -336,13 +336,25 @@ class ComputeTestCase(test.TestCase):
         self.compute.terminate_instance(context, instance_id)
 
     def test_resize_down_fails(self):
-        """Ensure invalid flavors raise"""
+        """Ensure resizing down raises and fails"""
         context = self.context.elevated()
         instance_id = self._create_instance()
 
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id,
                 {'instance_type': 'm1.xlarge'})
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_same_size_fails(self):
+        """Ensure invalid flavors raise"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
 
         self.assertRaises(exception.ApiError, self.compute_api.resize,
                 context, instance_id, 1)

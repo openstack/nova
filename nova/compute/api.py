@@ -260,7 +260,7 @@ class API(base.Base):
             db.migration_get_by_instance_and_status(context, instance_id,
                     'finished')
             return True
-        except Exception, e:
+        except exception.NotFound:
             return False
 
     def ensure_default_security_group(self, context):
@@ -512,10 +512,14 @@ class API(base.Base):
             raise exception.ApiError(_("Requested flavor %(flavor_id)d "
                     "does not exist") % locals())
 
-        if current_instance_type['memory_mb'] >= \
-                    new_instance_type['memory_mb']:
+        current_memory_mb = current_instance_type['memory_mb']
+        new_memory_mb = new_instance_type['memory_mb']
+        if current_memory_mb > new_memory_mb:
             raise exception.ApiError(_("Invalid flavor: cannot downsize"
                     "instances"))
+        if current_memory_mb == new_memory_mb:
+            raise exception.ApiError(_("Invalid flavor: cannot use"
+                    "the same flavor. "))
 
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
