@@ -31,7 +31,7 @@ CRASHED = 0x06
 SUSPENDED = 0x07
 FAILED = 0x08
 
-#TODO(justinsb): Power state really needs to be a proper class,
+# TODO(justinsb): Power state really needs to be a proper class,
 # so that we're not locked into the libvirt status codes and can put mapping
 # logic here rather than spread throughout the code
 _STATE_MAP = {

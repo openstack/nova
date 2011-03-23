@@ -592,5 +592,5 @@ def check_isinstance(obj, cls):
     if isinstance(obj, cls):
         return obj
     raise Exception(_("Expected object of type: %s") % (str(cls)))
-    #TODO(justinsb): Can we make this better??
+    # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack

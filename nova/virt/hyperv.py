@@ -127,7 +127,7 @@ class HyperVConnection(driver.ComputeDriver):
         return vms
 
     def list_instances_detail(self):
-        #TODO(justinsb): This is a terrible implementation (1+N)
+        # TODO(justinsb): This is a terrible implementation (1+N)
         instance_infos = []
         for instance_name in self.list_instances():
             info = self.get_info(instance_name)

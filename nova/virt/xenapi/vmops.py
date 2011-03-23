@@ -73,7 +73,7 @@ class VMOps(object):
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 name = vm_rec["name_label"]
 
-                #TODO(justinsb): Yuk...
+                # TODO(justinsb): Yuk...
                 openstack_format = VMHelper.compile_info(vm_rec)
                 state = openstack_format['state']
 
@@ -932,7 +932,7 @@ class VMOps(object):
         """
         vm_ref = self._get_vm_opaque_ref(instance_or_vm)
         data = self._session.call_xenapi_request('VM.get_xenstore_data',
-                (vm_ref, ))
+                (vm_ref,))
         ret = {}
         if keys is None:
             keys = data.keys()
