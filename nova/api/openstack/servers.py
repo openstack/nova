@@ -256,6 +256,7 @@ class Controller(wsgi.Controller):
         resize a server"""
 
         actions = {
+            'changePassword': self._action_change_password,
             'reboot':        self._action_reboot,
             'resize':        self._action_resize,
             'confirmResize': self._action_confirm_resize,
@@ -268,6 +269,9 @@ class Controller(wsgi.Controller):
             if key in input_dict:
                 return actions[key](input_dict, req, id)
         return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_change_password(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
 
     def _action_confirm_resize(self, input_dict, req, id):
         try:
@@ -554,6 +558,15 @@ class ControllerV11(Controller):
 
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV11(req)
+
+    def _action_change_password(self, input_dict, req, id):
+        context = req.environ['nova.context']
+        if not 'changePassword' in input_dict \
+           or not 'adminPass' in input_dict['changePassword']:
+            return exc.HTTPBadRequest()
+        password = input_dict['changePassword']['adminPass']
+        self.compute_api.set_admin_password(context, id, password)
+        return exc.HTTPAccepted()
 
 
 class ServerCreateRequestXMLDeserializer(object):

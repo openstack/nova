@@ -558,6 +558,52 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
 
+    def test_server_change_password(self):
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
+
+    def test_server_change_password_v1_1(self):
+
+        class MockSetAdminPassword(object):
+
+            def __init__(self):
+                self.called = False
+                self.instance_id = None
+                self.password = None
+
+            def __call__(self, context, instance_id, password):
+                self.called = True
+                self.instance_id = instance_id
+                self.password = password
+
+        mock_method = MockSetAdminPassword()
+        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
+
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertTrue(mock_method.called)
+        self.assertEqual(mock_method.instance_id, '1')
+        self.assertEqual(mock_method.password, '1234pass')
+
+    def test_server_change_password_bad_request_v1_1(self):
+        body = {'changePassword': {'pass': '12345'}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_server_reboot(self):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},
