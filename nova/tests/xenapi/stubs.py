@@ -228,6 +228,9 @@ class FakeSessionForMigrationTests(fake.SessionBase):
     def VDI_get_by_uuid(*args):
         return 'hurr'
 
+    def VDI_resize_online(*args):
+        pass
+
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
         if vm['power_state'] != 'Halted':
@@ -240,7 +243,7 @@ class FakeSessionForMigrationTests(fake.SessionBase):
 
 def stub_out_migration_methods(stubs):
     def fake_get_snapshot(self, instance):
-        return 'foo', 'bar'
+        return 'vm_ref', dict(image='foo', snap='bar')
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
@@ -249,7 +252,7 @@ def stub_out_migration_methods(stubs):
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
-    def fake_shutdown(self, inst, vm, method='clean'):
+    def fake_shutdown(self, inst, vm, hard=True):
         pass
 
     @classmethod
