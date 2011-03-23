@@ -20,7 +20,6 @@ import hashlib
 from nova.compute import power_state
 import nova.compute
 import nova.context
-from nova import db
 from nova.api.openstack import common
 from nova.api.openstack.views import addresses as addresses_view
 from nova.api.openstack.views import flavors as flavors_view
