@@ -221,32 +221,28 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """Return all public images in brief"""
-        items = self._service.index(req.environ['nova.context'])
-        items = common.limited(items, req)
-        items = [_filter_keys(item, ('id', 'name')) for item in items]
-        return dict(images=items)
+        context = req.environ['nova.context']
+        image_metas = self._service.index(context)
+        image_metas = common.limited(image_metas, req)
+        return dict(images=image_metas)
 
     def detail(self, req):
         """Return all public images in detail"""
-        try:
-            service_image_metas = self._service.detail(
-                req.environ['nova.context'])
-        except NotImplementedError:
-            service_image_metas = self._service.index(
-                req.environ['nova.context'])
-
-        service_image_metas = common.limited(service_image_metas, req)
-        api_image_metas = [_safe_translate(service_image_meta)
-                           for service_image_meta in service_image_metas]
+        context = req.environ['nova.context']
+        image_metas = self._service.detail(context)
+        image_metas = common.limited(image_metas, req)
+        api_image_metas = [_safe_translate(image_meta)
+                           for image_meta in image_metas]
         return dict(images=api_image_metas)
 
     def show(self, req, id):
         """Return data about the given image id"""
-        image_id = common.get_image_id_from_image_hash(self._service,
-                    req.environ['nova.context'], id)
-        service_image_meta = self._service.show(
-            req.environ['nova.context'], image_id)
-        api_image_meta = _safe_translate(service_image_meta)
+        context = req.environ['nova.context']
+        image_id = common.get_image_id_from_image_hash(
+            self._service, req.environ['nova.context'], id)
+
+        image_meta = self._service.show(context, image_id)
+        api_image_meta = _safe_translate(image_meta)
         return dict(image=api_image_meta)
 
     def delete(self, req, id):
@@ -258,9 +254,9 @@ class Controller(wsgi.Controller):
         env = self._deserialize(req.body, req.get_content_type())
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-        service_image_meta = compute.API().snapshot(
+        image_meta = compute.API().snapshot(
             context, instance_id, name)
-        api_image_meta = _safe_translate(service_image_meta)
+        api_image_meta = _safe_translate(image_meta)
         return dict(image=api_image_meta)
 
     def update(self, req, id):
