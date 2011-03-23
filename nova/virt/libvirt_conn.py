@@ -981,7 +981,11 @@ class LibvirtConnection(object):
 
         """
 
-        return self._conn.getVersion()
+        # NOTE(justinsb): getVersion moved between libvirt versions
+        method = getattr(self._conn, 'getVersion', None)  # Newer location
+        if method is None:
+            method = getattr(libvirt, 'getVersion')  # Older location
+        return method()
 
     def get_cpu_info(self):
         """Get cpuinfo information.
