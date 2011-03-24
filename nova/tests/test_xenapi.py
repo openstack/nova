@@ -186,6 +186,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_stream_disk(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
         self.stubs.Set(VMOps, 'reset_network', reset_network)
+        stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
                                            glance_stubs.FakeGlance)
         self.conn = xenapi_conn.get_connection(False)
@@ -368,6 +369,17 @@ class XenAPIVMTestCase(test.TestCase):
             self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
             self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
                               str(4 * 1024))
+
+    def test_rescue(self):
+        instance = self._create_instance()
+        conn = xenapi_conn.get_connection(False)
+        conn.rescue(instance, None)
+
+    def test_unrescue(self):
+        instance = self._create_instance()
+        conn = xenapi_conn.get_connection(False)
+        # Ensure that it will not unrescue a non-rescued instance.
+        self.assertRaises(Exception, conn.unrescue, instance, None)
 
     def tearDown(self):
         super(XenAPIVMTestCase, self).tearDown()

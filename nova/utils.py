@@ -341,11 +341,8 @@ utcnow.override_time = None
 
 
 def is_older_than(before, seconds):
-    """Return True if before is older than 'seconds'"""
-    if utcnow() - before > datetime.timedelta(seconds=seconds):
-        return True
-    else:
-        return False
+    """Return True if before is older than seconds"""
+    return utcnow() - before > datetime.timedelta(seconds=seconds)
 
 
 def utcnow_ts():
