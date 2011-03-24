@@ -118,16 +118,15 @@ def child_zone_helper(zone_list, func):
                     _wrap_method(_process, func), zone_list)]
 
 
-def _issue_novaclient_command(nova, zone, collection, method_name, \
-                                                        item_id):
+def _issue_novaclient_command(nova, zone, collection, method_name, item_id):
     """Use novaclient to issue command to a single child zone.
        One of these will be run in parallel for each child zone."""
+    manager = getattr(nova, collection)
     result = None
     try:
-        manager = getattr(nova, collection)
-        if isinstance(item_id, int) or item_id.isdigit():
+        try:
             result = manager.get(int(item_id))
-        else:
+        except ValueError, e:
             result = manager.find(name=item_id)
     except novaclient.NotFound:
         url = zone.api_url
