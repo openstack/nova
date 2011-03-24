@@ -28,6 +28,11 @@ class ViewBuilder(object):
         """
         self._url = base_url
 
+    def _format_dates(self, image):
+        for attr in ['created_at', 'updated_at', 'deleted_at']:
+            if image.get(attr) is not None:
+                image[attr] = image[attr].strftime('%Y-%m-%dT%H:%M:%SZ')
+
     def generate_href(self, image_id):
         """
         Return an href string pointing to this object.
@@ -38,6 +43,8 @@ class ViewBuilder(object):
         """
         Return a standardized image structure for display by the API.
         """
+        self._format_dates(image_obj)
+
         image = {
             "id": image_obj["id"],
             "name": image_obj["name"],

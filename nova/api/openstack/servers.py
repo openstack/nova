@@ -22,6 +22,7 @@ from xml.dom import minidom
 from webob import exc
 
 from nova import compute
+from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging

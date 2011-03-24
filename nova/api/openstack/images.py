@@ -112,9 +112,8 @@ class Controller(wsgi.Controller):
         @param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
-        body = req.body
         content_type = req.get_content_type()
-        image = self._deserialize(body, content_type)
+        image = self._deserialize(req.body, content_type)
 
         if not image:
             raise exc.HTTPBadRequest()

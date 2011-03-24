@@ -191,13 +191,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     """
     Test of the OpenStack API /images application controller w/Glance.
     """
-
+    # Registered images at start of each test.
+    now = datetime.datetime.utcnow()
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
          'imageId': '23g2ogk23k4hhkk4k42l',
          'name': 'public image #1',
-         'created_at': str(datetime.datetime.utcnow()),
-         'updated_at': str(datetime.datetime.utcnow()),
+         'created_at': now.isoformat(),
+         'updated_at': now.isoformat(),
          'deleted_at': None,
          'deleted': False,
          'is_public': True,
@@ -206,8 +207,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {'id': 'slkduhfas73kkaskgdas',
          'imageId': 'slkduhfas73kkaskgdas',
          'name': 'public image #2',
-         'created_at': str(datetime.datetime.utcnow()),
-         'updated_at': str(datetime.datetime.utcnow()),
+         'created_at': now.isoformat(),
+         'updated_at': now.isoformat(),
          'deleted_at': None,
          'deleted': False,
          'is_public': True,
@@ -445,8 +446,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
 
-
-
     def test_get_image_details(self):
         request = webob.Request.blank('/v1.0/images/detail')
         response = request.get_response(fakes.wsgi_app())
@@ -499,3 +498,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             self.assertTrue(test_image in response_list)
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
+
+    def test_show_image(self):
+        expected = self.IMAGE_FIXTURES[0]
+        image_id = abs(hash(expected['id']))
+        expected_time = self.now.strftime('%Y-%m-%dT%H:%M:%SZ')
+        req = webob.Request.blank('/v1.0/images/%s' % id)
+        res = req.get_response(fakes.wsgi_app())
+        actual = json.loads(res.body)['image']
+        self.assertEqual(expected_time, actual['created_at'])
+        self.assertEqual(expected_time, actual['updated_at'])
