@@ -38,6 +38,7 @@ from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
 from nova.api.openstack import volumes
+from nova.api.openstack import volume_attachments
 from nova.api.openstack import zones
 
 
@@ -106,6 +107,11 @@ class APIRouter(wsgi.Router):
 
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
+        mapper.resource("volume_attachment", "volume_attachment",
+                        controller=volume_attachments.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 

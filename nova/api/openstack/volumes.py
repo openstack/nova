@@ -29,52 +29,52 @@ LOG = logging.getLogger("nova.api.volumes")
 FLAGS = flags.FLAGS
 
 
-def _translate_detail_view(context, inst):
+def _translate_detail_view(context, vol):
     """ Maps keys for details view"""
 
-    inst_dict = _translate_summary_view(context, inst)
+    d = _translate_summary_view(context, vol)
 
     # No additional data / lookups at the moment
 
-    return inst_dict
+    return d
 
 
-def _translate_summary_view(context, volume):
+def _translate_summary_view(_context, vol):
     """ Maps keys for summary view"""
-    v = {}
+    d = {}
 
     instance_id = None
     #    instance_data = None
-    attached_to = volume.get('instance')
+    attached_to = vol.get('instance')
     if attached_to:
         instance_id = attached_to['id']
     #        instance_data = '%s[%s]' % (instance_ec2_id,
     #                                    attached_to['host'])
-    v['id'] = volume['id']
-    v['status'] = volume['status']
-    v['size'] = volume['size']
-    v['availabilityZone'] = volume['availability_zone']
-    v['createdAt'] = volume['created_at']
+    d['id'] = vol['id']
+    d['status'] = vol['status']
+    d['size'] = vol['size']
+    d['availabilityZone'] = vol['availability_zone']
+    d['createdAt'] = vol['created_at']
     #    if context.is_admin:
     #        v['status'] = '%s (%s, %s, %s, %s)' % (
-    #            volume['status'],
-    #            volume['user_id'],
-    #            volume['host'],
+    #            vol['status'],
+    #            vol['user_id'],
+    #            vol['host'],
     #            instance_data,
-    #            volume['mountpoint'])
-    if volume['attach_status'] == 'attached':
-        v['attachments'] = [{'attachTime': volume['attach_time'],
+    #            vol['mountpoint'])
+    if vol['attach_status'] == 'attached':
+        d['attachments'] = [{'attachTime': vol['attach_time'],
                              'deleteOnTermination': False,
-                             'mountpoint': volume['mountpoint'],
+                             'mountpoint': vol['mountpoint'],
                              'instanceId': instance_id,
                              'status': 'attached',
-                             'volumeId': volume['id']}]
+                             'volumeId': vol['id']}]
     else:
-        v['attachments'] = [{}]
+        d['attachments'] = [{}]
 
-    v['displayName'] = volume['display_name']
-    v['displayDescription'] = volume['display_description']
-    return v
+    d['displayName'] = vol['display_name']
+    d['displayDescription'] = vol['display_description']
+    return d
 
 
 class Controller(wsgi.Controller):
@@ -102,11 +102,11 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
 
         try:
-            volume = self.volume_api.get(context, id)
+            vol = self.volume_api.get(context, id)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'volume': _translate_detail_view(context, volume)}
+        return {'volume': _translate_detail_view(context, vol)}
 
     def delete(self, req, id):
         """ Delete a volume """
@@ -134,7 +134,7 @@ class Controller(wsgi.Controller):
 
         volumes = self.volume_api.get_all(context)
         limited_list = common.limited(volumes, req)
-        res = [entity_maker(context, inst) for inst in limited_list]
+        res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
 
     def create(self, req):
@@ -148,13 +148,13 @@ class Controller(wsgi.Controller):
         vol = env['volume']
         size = vol['size']
         LOG.audit(_("Create volume of %s GB"), size, context=context)
-        volume = self.volume_api.create(context, size,
-                                        vol.get('display_name'),
-                                        vol.get('display_description'))
+        new_volume = self.volume_api.create(context, size,
+                                            vol.get('display_name'),
+                                            vol.get('display_description'))
 
         # Work around problem that instance is lazy-loaded...
         volume['instance'] = None
 
-        retval = _translate_detail_view(context, volume)
+        retval = _translate_detail_view(context, new_volume)
 
         return {'volume': retval}
