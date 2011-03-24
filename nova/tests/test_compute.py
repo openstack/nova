@@ -90,6 +90,21 @@ class ComputeTestCase(test.TestCase):
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
 
+    def _create_instance_type(self, params={}):
+        """Create a test instance"""
+        context = self.context.elevated()
+        inst = {}
+        inst['name'] = 'm1.small'
+        inst['memory_mb'] = '1024'
+        inst['vcpus'] = '1'
+        inst['local_gb'] = '20'
+        inst['flavorid'] = '1'
+        inst['swap'] = '2048'
+        inst['rxtx_quota'] = 100
+        inst['rxtx_cap'] = 200
+        inst.update(params)
+        return db.instance_type_create(context, inst)['id']
+
     def _create_group(self):
         values = {'name': 'testgroup',
                   'description': 'testgroup',
@@ -307,13 +322,51 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
         context = self.context.elevated()
+
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_id)
+        self.compute.prep_resize(context, instance_id, 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_id, 'pre-migrating')
         self.compute.resize_instance(context, instance_id,
                 migration_ref['id'])
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_invalid_flavor_fails(self):
+        """Ensure invalid flavors raise"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        self.compute.run_instance(self.context, instance_id)
+
+        self.assertRaises(exception.NotFound, self.compute_api.resize,
+                context, instance_id, 200)
+
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_down_fails(self):
+        """Ensure resizing down raises and fails"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id,
+                {'instance_type': 'm1.xlarge'})
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_same_size_fails(self):
+        """Ensure invalid flavors raise"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 1)
+
         self.compute.terminate_instance(context, instance_id)
 
     def test_get_by_flavor_id(self):
@@ -326,10 +379,8 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
-                self.context, instance_id)
+                self.context, instance_id, 1)
         self.compute.terminate_instance(self.context, instance_id)
-        type = instance_types.get_by_flavor_id("1")
-        self.assertEqual(type, 'm1.tiny')
 
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)

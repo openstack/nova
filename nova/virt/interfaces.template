@@ -8,10 +8,16 @@ iface lo inet loopback
 # The primary network interface
 auto eth0
 iface eth0 inet static
-        address %(address)s
-        netmask %(netmask)s
-        broadcast %(broadcast)s
-        gateway %(gateway)s
-        dns-nameservers %(dns)s
+        address ${address}
+        netmask ${netmask}
+        broadcast ${broadcast}
+        gateway ${gateway}
+        dns-nameservers ${dns}
 
+#if $use_ipv6
+iface eth0 inet6 static
+    address ${address_v6}
+    netmask ${netmask_v6}
+    gateway ${gateway_v6}
+#end if
 

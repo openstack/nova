@@ -164,19 +164,17 @@ class XenAPIConnection(object):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
+    def revert_resize(self, instance):
+        """Reverts a resize, powering back on the instance"""
+        self._vmops.revert_resize(instance)
+
     def finish_resize(self, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
-        vdi_uuid = self._vmops.attach_disk(instance, disk_info['base_copy'],
-                disk_info['cow'])
-        self._vmops._spawn_with_disk(instance, vdi_uuid)
+        self._vmops.finish_resize(instance, disk_info)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
-
-    def resize(self, instance, flavor):
-        """Resize a VM instance"""
-        raise NotImplementedError()
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -224,6 +222,10 @@ class XenAPIConnection(object):
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
+
+    def poll_rescued_instances(self, timeout):
+        """Poll for rescued instances"""
+        self._vmops.poll_rescued_instances(timeout)
 
     def reset_network(self, instance):
         """reset networking for specified instance"""
