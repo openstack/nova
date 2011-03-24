@@ -83,8 +83,7 @@ class Test(test.TestCase):
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouter',
-            fakes.FakeRouter)
+        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())
@@ -201,8 +200,7 @@ class TestLimiter(test.TestCase):
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouter',
-            fakes.FakeRouter)
+        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token

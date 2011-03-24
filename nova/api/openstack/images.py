@@ -160,38 +160,31 @@ def _translate_from_image_service_to_api(image_metadata):
 
     # 4. Format values
     # 4a. Format Image Status (API requires uppercase)
-    status_service2api = {'queued': 'QUEUED',
-                          'preparing': 'PREPARING',
-                          'saving': 'SAVING',
-                          'active': 'ACTIVE',
-                          'killed': 'FAILED'}
-    api_metadata['status'] = status_service2api[api_metadata['status']]
+    api_metadata['status'] = _format_status_for_api(api_metadata['status'])
 
     # 4b. Format timestamps
-    def _format_timestamp(dt_str):
-        """Return a timestamp formatted for OpenStack API
-
-        NOTE(sirp):
-
-        ImageService (specifically GlanceImageService) is currently
-        returning timestamps as strings. This should probably be datetime
-        objects. In the mean time, we work around this by using strptime() to
-        create datetime objects.
-        """
-        if dt_str is None:
-            return None
-
-        service_timestamp_fmt = "%Y-%m-%dT%H:%M:%S"
-        api_timestamp_fmt = "%Y-%m-%dT%H:%M:%SZ"
-        dt = datetime.datetime.strptime(dt_str, service_timestamp_fmt)
-        return dt.strftime(api_timestamp_fmt)
-
-    for ts_attr in ('created', 'updated'):
-        if ts_attr in api_metadata:
-            formatted_timestamp = _format_timestamp(api_metadata[ts_attr])
-            api_metadata[ts_attr] = formatted_timestamp
+    for attr in ('created', 'updated'):
+        if attr in api_metadata:
+            api_metadata[attr] = _format_datetime_for_api(
+                api_metadata[attr])
 
     return api_metadata
+
+
+def _format_status_for_api(status):
+    """Return status in a format compliant with OpenStack API"""
+    mapping = {'queued': 'QUEUED',
+               'preparing': 'PREPARING',
+               'saving': 'SAVING',
+               'active': 'ACTIVE',
+               'killed': 'FAILED'}
+    return mapping[status]
+
+
+def _format_datetime_for_api(datetime_):
+    """Stringify datetime objects in a format compliant with OpenStack API"""
+    API_DATETIME_FMT = '%Y-%m-%dT%H:%M:%SZ'
+    return datetime_.strftime(API_DATETIME_FMT)
 
 
 def _safe_translate(image_metadata):

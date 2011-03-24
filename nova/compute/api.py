@@ -253,6 +253,16 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
+    def has_finished_migration(self, context, instance_id):
+        """Retrieves whether or not a finished migration exists for
+        an instance"""
+        try:
+            db.migration_get_by_instance_and_status(context, instance_id,
+                    'finished')
+            return True
+        except exception.NotFound:
+            return False
+
     def ensure_default_security_group(self, context):
         """ Create security group for the security context if it
         does not already exist
@@ -473,6 +483,8 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context, instance_id,
                 migration_ref['dest_compute'], params=params)
+        self.db.migration_update(context, migration_ref['id'],
+                {'status': 'reverted'})
 
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize, deleting the 'old' instance in the
@@ -488,17 +500,41 @@ class API(base.Base):
         self._cast_compute_message('confirm_resize', context, instance_id,
                 migration_ref['source_compute'], params=params)
 
-        self.db.migration_update(context, migration_id,
+        self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
-    def resize(self, context, instance_id, flavor):
+    def resize(self, context, instance_id, flavor_id):
         """Resize a running instance."""
+        instance = self.db.instance_get(context, instance_id)
+        current_instance_type = self.db.instance_type_get_by_name(
+            context, instance['instance_type'])
+
+        new_instance_type = self.db.instance_type_get_by_flavor_id(
+                context, flavor_id)
+        current_instance_type_name = current_instance_type['name']
+        new_instance_type_name = new_instance_type['name']
+        LOG.debug(_("Old instance type %(current_instance_type_name)s, "
+                " new instance type %(new_instance_type_name)s") % locals())
+        if not new_instance_type:
+            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
+                    "does not exist") % locals())
+
+        current_memory_mb = current_instance_type['memory_mb']
+        new_memory_mb = new_instance_type['memory_mb']
+        if current_memory_mb > new_memory_mb:
+            raise exception.ApiError(_("Invalid flavor: cannot downsize"
+                    "instances"))
+        if current_memory_mb == new_memory_mb:
+            raise exception.ApiError(_("Invalid flavor: cannot use"
+                    "the same flavor. "))
+
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_id, }},)
+                              "instance_id": instance_id,
+                              "flavor_id": flavor_id}})
 
     def pause(self, context, instance_id):
         """Pause the given instance."""

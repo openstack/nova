@@ -161,7 +161,6 @@ class GlanceImageServiceTest(test.TestCase,
         2. ImageService -> API - This is needed so we can support multple
            APIs (OpenStack, EC2)
     """
-
     def setUp(self):
         super(GlanceImageServiceTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
@@ -185,14 +184,14 @@ class GlanceImageServiceTest(test.TestCase,
                    'properties': {'instance_id': '42', 'user_id': '1'}}
 
         image_id = self.service.create(self.context, fixture)['id']
+        expected = fixture
+        self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
+        image_meta = self.service.show(self.context, image_id)
         expected = {'id': image_id,
                     'name': 'test image',
                     'is_public': False,
                     'properties': {'instance_id': '42', 'user_id': '1'}}
-        self.assertDictMatch(self.sent_to_glance['metadata'], expected)
-
-        image_meta = self.service.show(self.context, image_id)
         self.assertDictMatch(image_meta, expected)
 
         image_metas = self.service.detail(self.context)
@@ -207,19 +206,15 @@ class GlanceImageServiceTest(test.TestCase,
         fixture = {'name': 'test image'}
         image_id = self.service.create(self.context, fixture)['id']
 
-        expected = {'id': image_id, 'name': 'test image', 'properties': {}}
+        expected = {'name': 'test image', 'properties': {}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
-
     """Test of the OpenStack API /images application controller"""
 
-    # FIXME(sirp): The ImageService and API use two different formats for
-    # timestamps. Ultimately, the ImageService should probably use datetime
-    # objects
-    NOW_SERVICE_STR = "2010-10-11T10:30:22"
-    NOW_API_STR = "2010-10-11T10:30:22Z"
+    NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
+    NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
     def setUp(self):
         super(ImageControllerWithGlanceServiceTest, self).setUp()
@@ -258,20 +253,21 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         image_metas = json.loads(res.body)['images']
 
+        now = self.NOW_API_FORMAT
         expected = [
-            {'id': 123, 'name': 'public image', 'updated': self.NOW_API_STR,
-             'created': self.NOW_API_STR, 'status': 'ACTIVE'},
+            {'id': 123, 'name': 'public image', 'updated': now,
+             'created': now, 'status': 'ACTIVE'},
             {'id': 124, 'name': 'queued backup', 'serverId': 42,
-             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'updated': now, 'created': now,
              'status': 'QUEUED'},
             {'id': 125, 'name': 'saving backup', 'serverId': 42,
-             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'updated': now, 'created': now,
              'status': 'SAVING', 'progress': 0},
             {'id': 126, 'name': 'active backup', 'serverId': 42,
-             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'updated': now, 'created': now,
              'status': 'ACTIVE'},
             {'id': 127, 'name': 'killed backup', 'serverId': 42,
-             'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
+             'updated': now, 'created': now,
              'status': 'FAILED'}
         ]
 
@@ -282,8 +278,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         image_meta = json.loads(res.body)['image']
         expected = {'id': 123, 'name': 'public image',
-                    'updated': self.NOW_API_STR, 'created': self.NOW_API_STR,
-                    'status': 'ACTIVE'}
+                    'updated': self.NOW_API_FORMAT,
+                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE'}
         self.assertDictMatch(image_meta, expected)
 
     def test_get_image_non_existent(self):
@@ -302,8 +298,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     @classmethod
     def _make_image_fixtures(cls):
         image_id = 123
-        base_attrs = {'created_at': cls.NOW_SERVICE_STR,
-                      'updated_at': cls.NOW_SERVICE_STR,
+        base_attrs = {'created_at': cls.NOW_GLANCE_FORMAT,
+                      'updated_at': cls.NOW_GLANCE_FORMAT,
                       'deleted_at': None,
                       'deleted': False}
 

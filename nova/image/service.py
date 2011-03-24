@@ -44,41 +44,6 @@ class BaseImageService(object):
     # the ImageService subclass
     SERVICE_IMAGE_ATTRS = []
 
-    @classmethod
-    def _translate_to_base(cls, metadata):
-        """Return a metadata dictionary that is BaseImageService compliant.
-
-        This is used by subclasses to expose only a metadata dictionary that
-        is the same across ImageService implementations.
-        """
-        return cls.propertify_metadata(metadata, cls.BASE_IMAGE_ATTRS)
-
-    @classmethod
-    def _translate_to_service(cls, metadata):
-        """Return a metadata dictionary that is usable by the ImageService
-        subclass.
-
-        As an example, Glance has additional attributes (like 'location'); the
-        BaseImageService considers these properties, but we need to translate
-        these back to first-class attrs for sending to Glance. This method
-        handles this by allowing you to specify the attributes an ImageService
-        considers first-class.
-        """
-        if not cls.SERVICE_IMAGE_ATTRS:
-            raise NotImplementedError(_("Cannot use this without specifying "
-                                        "SERVICE_IMAGE_ATTRS for subclass"))
-        return cls.propertify_metadata(metadata, cls.SERVICE_IMAGE_ATTRS)
-
-    @staticmethod
-    def propertify_metadata(metadata, keys):
-        """Return a dict with any unrecognized keys placed in the nested
-        'properties' dict.
-        """
-        flattened = utils.flatten_dict(metadata)
-        attributes, properties = utils.partition_dict(flattened, keys)
-        attributes['properties'] = properties
-        return attributes
-
     def index(self, context):
         """
         Returns a sequence of mappings of id and name information about
@@ -99,9 +64,9 @@ class BaseImageService(object):
         :retval: a sequence of mappings with the following signature
                     {'id': opaque id of image,
                      'name': name of image,
-                     'created_at': creation timestamp,
-                     'updated_at': modification timestamp,
-                     'deleted_at': deletion timestamp or None,
+                     'created_at': creation datetime object,
+                     'updated_at': modification datetime object,
+                     'deleted_at': deletion datetime object or None,
                      'deleted': boolean indicating if image has been deleted,
                      'status': string description of image status,
                      'is_public': boolean indicating if image is public
@@ -123,9 +88,9 @@ class BaseImageService(object):
 
             {'id': opaque id of image,
              'name': name of image,
-             'created_at': creation timestamp,
-             'updated_at': modification timestamp,
-             'deleted_at': deletion timestamp or None,
+             'created_at': creation datetime object,
+             'updated_at': modification datetime object,
+             'deleted_at': deletion datetime object or None,
              'deleted': boolean indicating if image has been deleted,
              'status': string description of image status,
              'is_public': boolean indicating if image is public
@@ -147,7 +112,7 @@ class BaseImageService(object):
 
     def create(self, context, metadata, data=None):
         """
-        Store the image metadata and data and return the new image id.
+        Store the image metadata and data and return the new image metadata.
 
         :raises AlreadyExists if the image already exist.
 
@@ -155,7 +120,7 @@ class BaseImageService(object):
         raise NotImplementedError
 
     def update(self, context, image_id, metadata, data=None):
-        """Update the given image with the new metadata and data.
+        """Update the given image metadata and data and return the metadata
 
         :raises NotFound if the image does not exist.
 
@@ -170,3 +135,38 @@ class BaseImageService(object):
 
         """
         raise NotImplementedError
+
+    @classmethod
+    def _translate_to_base(cls, metadata):
+        """Return a metadata dictionary that is BaseImageService compliant.
+
+        This is used by subclasses to expose only a metadata dictionary that
+        is the same across ImageService implementations.
+        """
+        return cls._propertify_metadata(metadata, cls.BASE_IMAGE_ATTRS)
+
+    @classmethod
+    def _translate_to_service(cls, metadata):
+        """Return a metadata dictionary that is usable by the ImageService
+        subclass.
+
+        As an example, Glance has additional attributes (like 'location'); the
+        BaseImageService considers these properties, but we need to translate
+        these back to first-class attrs for sending to Glance. This method
+        handles this by allowing you to specify the attributes an ImageService
+        considers first-class.
+        """
+        if not cls.SERVICE_IMAGE_ATTRS:
+            raise NotImplementedError(_("Cannot use this without specifying "
+                                        "SERVICE_IMAGE_ATTRS for subclass"))
+        return cls._propertify_metadata(metadata, cls.SERVICE_IMAGE_ATTRS)
+
+    @staticmethod
+    def _propertify_metadata(metadata, keys):
+        """Return a dict with any unrecognized keys placed in the nested
+        'properties' dict.
+        """
+        flattened = utils.flatten_dict(metadata)
+        attributes, properties = utils.partition_dict(flattened, keys)
+        attributes['properties'] = properties
+        return attributes
