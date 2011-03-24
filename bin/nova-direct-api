@@ -34,12 +34,14 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import compute
 from nova import flags
 from nova import log as logging
+from nova import network
 from nova import utils
+from nova import volume
 from nova import wsgi
 from nova.api import direct
-from nova.compute import api as compute_api
 
 
 FLAGS = flags.FLAGS
@@ -50,12 +52,15 @@ flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
+
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
     logging.setup()
 
-    direct.register_service('compute', compute_api.API())
+    direct.register_service('compute', compute.API())
+    direct.register_service('volume', volume.API())
+    direct.register_service('network', network.API())
     direct.register_service('reflect', direct.Reflection())
     router = direct.Router()
     with_json = direct.JsonParamsMiddleware(router)
