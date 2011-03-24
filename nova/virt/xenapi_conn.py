@@ -69,6 +69,7 @@ from nova import db
 from nova import utils
 from nova import flags
 from nova import log as logging
+from nova.virt import driver
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
@@ -141,10 +142,11 @@ def get_connection(_):
     return XenAPIConnection(url, username, password)
 
 
-class XenAPIConnection(object):
+class XenAPIConnection(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform"""
 
     def __init__(self, url, user, pw):
+        super(XenAPIConnection, self).__init__()
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
@@ -159,6 +161,9 @@ class XenAPIConnection(object):
     def list_instances(self):
         """List VM instances"""
         return self._vmops.list_instances()
+
+    def list_instances_detail(self):
+        return self._vmops.list_instances_detail()
 
     def spawn(self, instance):
         """Create VM instance"""

@@ -626,3 +626,24 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id)
         db.volume_destroy(c, v_ref['id'])
         db.floating_ip_destroy(c, flo_addr)
+
+    def test_run_kill_vm(self):
+        """Detect when a vm is terminated behind the scenes"""
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        instance_name = instances[0].name
+        self.compute.driver.test_remove_vm(instance_name)
+
+        # Force the compute manager to do its periodic poll
+        error_list = self.compute.periodic_tasks(context.get_admin_context())
+        self.assertFalse(error_list)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("After force-killing instances: %s"), instances)
+        self.assertEqual(len(instances), 0)

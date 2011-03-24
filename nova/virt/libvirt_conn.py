@@ -62,6 +62,7 @@ from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
 from nova.virt import disk
+from nova.virt import driver
 from nova.virt import images
 
 libvirt = None
@@ -133,8 +134,8 @@ def get_connection(read_only):
 def _late_load_cheetah():
     global Template
     if Template is None:
-        t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
-                       -1)
+        t = __import__('Cheetah.Template', globals(), locals(),
+                       ['Template'], -1)
         Template = t.Template
 
 
@@ -153,9 +154,10 @@ def _get_ip_version(cidr):
         return int(net.version())
 
 
-class LibvirtConnection(object):
+class LibvirtConnection(driver.ComputeDriver):
 
     def __init__(self, read_only):
+        super(LibvirtConnection, self).__init__()
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
@@ -234,6 +236,29 @@ class LibvirtConnection(object):
     def list_instances(self):
         return [self._conn.lookupByID(x).name()
                 for x in self._conn.listDomainsID()]
+
+    def _map_to_instance_info(self, domain):
+        """Gets info from a virsh domain object into an InstanceInfo"""
+
+        # domain.info() returns a list of:
+        #    state:       one of the state values (virDomainState)
+        #    maxMemory:   the maximum memory used by the domain
+        #    memory:      the current amount of memory used by the domain
+        #    nbVirtCPU:   the number of virtual CPU
+        #    puTime:      the time used by the domain in nanoseconds
+
+        (state, _max_mem, _mem, _num_cpu, _cpu_time) = domain.info()
+        name = domain.name()
+
+        return driver.InstanceInfo(name, state)
+
+    def list_instances_detail(self):
+        infos = []
+        for domain_id in self._conn.listDomainsID():
+            domain = self._conn.lookupByID(domain_id)
+            info = self._map_to_instance_info(domain)
+            infos.append(info)
+        return infos
 
     def destroy(self, instance, cleanup=True):
         try:
