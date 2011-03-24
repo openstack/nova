@@ -533,6 +533,23 @@ class LibvirtConnection(object):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    @exception.wrap_exception
+    def get_vnc_console(self, instance):
+        def get_vnc_port_for_instance(instance_name):
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            dom = minidom.parseString(xml)
+
+            for graphic in dom.getElementsByTagName('graphics'):
+                if graphic.getAttribute('type') == 'vnc':
+                    return graphic.getAttribute('port')
+
+        port = get_vnc_port_for_instance(instance['name'])
+        token = str(uuid.uuid4())
+        host = instance['host']
+
+        return {'token': token, 'host': host, 'port': port}
+
     _image_sems = {}
 
     @staticmethod
@@ -761,6 +778,10 @@ class LibvirtConnection(object):
 
         if gateway_v6:
             xml_info['gateway_v6'] = gateway_v6 + "/128"
+        if FLAGS.vnc_enabled:
+            xml_info['vnc_compute_host_iface'] = FLAGS.vnc_compute_host_iface
+        if ra_server:
+            xml_info['ra_server'] = ra_server + "/128"
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
