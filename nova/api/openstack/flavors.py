@@ -20,7 +20,7 @@ import webob
 from nova import db
 from nova import exception
 from nova import wsgi
-from nova.api.openstack.views import flavors as flavors_views
+from nova.api.openstack import views
 
 
 class Controller(wsgi.Controller):
@@ -49,7 +49,7 @@ class Controller(wsgi.Controller):
         """Helper function that returns a list of flavor dicts."""
         ctxt = req.environ['nova.context']
         flavors = db.api.instance_type_get_all(ctxt)
-        builder = flavors_views.get_view_builder(req)
+        builder = self._get_view_builder(req)
         items = [builder.build(flavor, is_detail=is_detail)
                  for flavor in flavors.values()]
         return items
@@ -62,6 +62,17 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return webob.exc.HTTPNotFound()
 
-        builder = flavors_views.get_view_builder(req)
+        builder = self._get_view_builder(req)
         values = builder.build(flavor, is_detail=True)
         return dict(flavor=values)
+
+
+class ControllerV10(Controller):
+    def _get_view_builder(self, req):
+        return views.flavors.ViewBuilder()
+
+
+class ControllerV11(Controller):
+    def _get_view_builder(self, req):
+        base_url = req.application_url
+        return views.flavors.ViewBuilderV11(base_url)
