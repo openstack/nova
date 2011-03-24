@@ -426,7 +426,6 @@ class ISCSIDriver(VolumeDriver):
                                    iscsi_properties['target_iqn'],
                                    '-p', iscsi_properties['target_portal'],
                                    iscsi_command)
-
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
