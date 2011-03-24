@@ -1,0 +1,118 @@
+#!/usr/bin/env python
+
+# Copyright 2010 OpenStack LLC.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+"""
+XenAPI Plugin for transfering data between host nodes
+"""
+
+import os
+import os.path
+import pickle
+import shlex
+import shutil
+import subprocess
+
+import XenAPIPlugin
+
+from pluginlib_nova import *
+configure_logging('migration')
+
+
+def move_vhds_into_sr(session, args):
+    """Moves the VHDs from their copied location to the SR"""
+    params = pickle.loads(exists(args, 'params'))
+    instance_id = params['instance_id']
+
+    old_base_copy_uuid = params['old_base_copy_uuid']
+    old_cow_uuid = params['old_cow_uuid']
+
+    new_base_copy_uuid = params['new_base_copy_uuid']
+    new_cow_uuid = params['new_cow_uuid']
+
+    sr_path = params['sr_path']
+    sr_temp_path = "%s/images/" % sr_path
+
+    # Discover the copied VHDs locally, and then set up paths to copy
+    # them to under the SR
+    source_image_path = "%s/instance%d" % ('/images/', instance_id)
+    source_base_copy_path = "%s/%s.vhd" % (source_image_path,
+            old_base_copy_uuid)
+    source_cow_path = "%s/%s.vhd" % (source_image_path, old_cow_uuid)
+
+    temp_vhd_path = "%s/instance%d/" % (sr_temp_path, instance_id)
+    new_base_copy_path = "%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid)
+    new_cow_path = "%s/%s.vhd" % (temp_vhd_path, new_cow_uuid)
+
+    logging.debug('Creating temporary SR path %s' % temp_vhd_path)
+    os.makedirs(temp_vhd_path)
+
+    logging.debug('Moving %s into %s' % (source_base_copy_path, temp_vhd_path))
+    shutil.move(source_base_copy_path, new_base_copy_path)
+
+    logging.debug('Moving %s into %s' % (source_cow_path, temp_vhd_path))
+    shutil.move(source_cow_path, new_cow_path)
+
+    logging.debug('Cleaning up %s' % source_image_path)
+    os.rmdir(source_image_path)
+
+    # Link the COW to the base copy
+    logging.debug('Attaching COW to the base copy %s -> %s' %
+            (new_cow_path, new_base_copy_path))
+    subprocess.call(shlex.split('/usr/sbin/vhd-util modify -n %s -p %s' %
+            (new_cow_path, new_base_copy_path)))
+    logging.debug('Moving VHDs into SR %s' % sr_path)
+    shutil.move("%s/%s.vhd" % (temp_vhd_path, new_base_copy_uuid), sr_path)
+    shutil.move("%s/%s.vhd" % (temp_vhd_path, new_cow_uuid), sr_path)
+
+    logging.debug('Cleaning up temporary SR path %s' % temp_vhd_path)
+    os.rmdir(temp_vhd_path)
+    return ""
+
+
+def transfer_vhd(session, args):
+    """Rsyncs a VHD to an adjacent host"""
+    params = pickle.loads(exists(args, 'params'))
+    instance_id = params['instance_id']
+    host = params['host']
+    vdi_uuid = params['vdi_uuid']
+    sr_path = params['sr_path']
+    vhd_path = "%s.vhd" % vdi_uuid
+
+    source_path = "%s/%s" % (sr_path, vhd_path)
+    dest_path = '%s:%sinstance%d/' % (host, '/images/', instance_id)
+
+    logging.debug("Preparing to transmit %s to %s" % (source_path,
+            dest_path))
+
+    ssh_cmd = '\"ssh -o StrictHostKeyChecking=no\"'
+
+    rsync_args = shlex.split('nohup /usr/bin/rsync -av --progress -e %s %s %s'
+            % (ssh_cmd, source_path, dest_path))
+
+    logging.debug('rsync %s' % (' '.join(rsync_args, )))
+
+    rsync_proc = subprocess.Popen(rsync_args, stdout=subprocess.PIPE)
+    logging.debug('Rsync output: \n %s' % rsync_proc.communicate()[0])
+    logging.debug('Rsync return: %d' % rsync_proc.returncode)
+    if rsync_proc.returncode != 0:
+        raise Exception("Unexpected VHD transfer failure")
+    return ""
+
+
+if __name__ == '__main__':
+    XenAPIPlugin.dispatch({'transfer_vhd': transfer_vhd,
+            'move_vhds_into_sr': move_vhds_into_sr, })

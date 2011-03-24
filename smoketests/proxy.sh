@@ -11,12 +11,19 @@
 mkfifo backpipe1
 mkfifo backpipe2
 
+if nc -h 2>&1 | grep -i openbsd
+then
+	NC_LISTEN="nc -l"
+else
+	NC_LISTEN="nc -l -p"
+fi
+
 # NOTE(vish): proxy metadata on port 80
 while true; do
-    nc -l -p 80 0<backpipe1 | nc 169.254.169.254 80 1>backpipe1
+    $NC_LISTEN 80 0<backpipe1 | nc 169.254.169.254 80 1>backpipe1
 done &
 
 # NOTE(vish): proxy google on port 8080
 while true; do
-    nc -l -p 8080 0<backpipe2 | nc 74.125.19.99 80 1>backpipe2
+    $NC_LISTEN 8080 0<backpipe2 | nc 74.125.19.99 80 1>backpipe2
 done &

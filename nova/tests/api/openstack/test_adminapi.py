@@ -23,7 +23,6 @@ from paste import urlmap
 from nova import flags
 from nova import test
 from nova.api import openstack
-from nova.api.openstack import ratelimiting
 from nova.api.openstack import auth
 from nova.tests.api.openstack import fakes
 
@@ -35,7 +34,7 @@ class AdminAPITest(test.TestCase):
     def setUp(self):
         super(AdminAPITest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
         fakes.stub_out_rate_limiting(self.stubs)

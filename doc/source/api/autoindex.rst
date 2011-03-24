@@ -43,6 +43,9 @@
    nova..db.sqlalchemy.migrate_repo.versions.002_bexar.rst
    nova..db.sqlalchemy.migrate_repo.versions.003_add_label_to_networks.rst
    nova..db.sqlalchemy.migrate_repo.versions.004_add_zone_tables.rst
+   nova..db.sqlalchemy.migrate_repo.versions.005_add_instance_metadata.rst
+   nova..db.sqlalchemy.migrate_repo.versions.006_add_provider_data_to_volumes.rst
+   nova..db.sqlalchemy.migrate_repo.versions.007_add_instance_types.rst
    nova..db.sqlalchemy.migration.rst
    nova..db.sqlalchemy.models.rst
    nova..db.sqlalchemy.session.rst
@@ -101,6 +104,7 @@
    nova..tests.test_console.rst
    nova..tests.test_direct.rst
    nova..tests.test_flags.rst
+   nova..tests.test_instance_types.rst
    nova..tests.test_localization.rst
    nova..tests.test_log.rst
    nova..tests.test_middleware.rst
@@ -110,7 +114,9 @@
    nova..tests.test_rpc.rst
    nova..tests.test_scheduler.rst
    nova..tests.test_service.rst
+   nova..tests.test_test.rst
    nova..tests.test_twistd.rst
+   nova..tests.test_utils.rst
    nova..tests.test_virt.rst
    nova..tests.test_volume.rst
    nova..tests.test_xenapi.rst

@@ -15,6 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from urlparse import urlparse
+
+import webob
+
 from nova import exception
 
 
@@ -23,22 +27,29 @@ def limited(items, request, max_limit=1000):
     Return a slice of items according to requested offset and limit.
 
     @param items: A sliceable entity
-    @param request: `webob.Request` possibly containing 'offset' and 'limit'
+    @param request: `wsgi.Request` possibly containing 'offset' and 'limit'
                     GET variables. 'offset' is where to start in the list,
                     and 'limit' is the maximum number of items to return. If
                     'limit' is not specified, 0, or > max_limit, we default
-                    to max_limit.
+                    to max_limit. Negative values for either offset or limit
+                    will cause exc.HTTPBadRequest() exceptions to be raised.
     @kwarg max_limit: The maximum number of items to return from 'items'
     """
     try:
         offset = int(request.GET.get('offset', 0))
     except ValueError:
-        offset = 0
+        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
 
     try:
         limit = int(request.GET.get('limit', max_limit))
     except ValueError:
-        limit = max_limit
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if offset < 0:
+        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
 
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
@@ -65,3 +76,16 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
         if abs(hash(image_id)) == int(image_hash):
             return image_id
     raise exception.NotFound(image_hash)
+
+
+def get_id_from_href(href):
+    """Return the id portion of a url as an int.
+
+    Given: http://www.foo.com/bar/123?q=4
+    Returns: 123
+
+    """
+    try:
+        return int(urlparse(href).path.split('/')[-1])
+    except:
+        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))

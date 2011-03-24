@@ -266,7 +266,10 @@ class NovaRootLogger(NovaLogger):
 
 
 def handle_exception(type, value, tb):
-    logging.root.critical(str(value), exc_info=(type, value, tb))
+    extra = {}
+    if FLAGS.verbose:
+        extra['exc_info'] = (type, value, tb)
+    logging.root.critical(str(value), **extra)
 
 
 def reset():

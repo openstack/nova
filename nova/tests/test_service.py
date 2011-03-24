@@ -30,6 +30,7 @@ from nova import rpc
 from nova import test
 from nova import service
 from nova import manager
+from nova.compute import manager as compute_manager
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string("fake_manager", "nova.tests.test_service.FakeManager",
@@ -108,20 +109,29 @@ class ServiceTestCase(test.TestCase):
         app = service.Service.create(host=host, binary=binary)
 
         self.mox.StubOutWithMock(rpc,
-                                 'AdapterConsumer',
+                                 'TopicAdapterConsumer',
                                  use_mock_anything=True)
-        rpc.AdapterConsumer(connection=mox.IgnoreArg(),
+        self.mox.StubOutWithMock(rpc,
+                                 'FanoutAdapterConsumer',
+                                 use_mock_anything=True)
+        rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
                             topic=topic,
                             proxy=mox.IsA(service.Service)).AndReturn(
-                                    rpc.AdapterConsumer)
+                                    rpc.TopicAdapterConsumer)
 
-        rpc.AdapterConsumer(connection=mox.IgnoreArg(),
+        rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
                             topic='%s.%s' % (topic, host),
                             proxy=mox.IsA(service.Service)).AndReturn(
-                                    rpc.AdapterConsumer)
+                                    rpc.TopicAdapterConsumer)
 
-        rpc.AdapterConsumer.attach_to_eventlet()
-        rpc.AdapterConsumer.attach_to_eventlet()
+        rpc.FanoutAdapterConsumer(connection=mox.IgnoreArg(),
+                            topic=topic,
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.FanoutAdapterConsumer)
+
+        rpc.TopicAdapterConsumer.attach_to_eventlet()
+        rpc.TopicAdapterConsumer.attach_to_eventlet()
+        rpc.FanoutAdapterConsumer.attach_to_eventlet()
 
         service_create = {'host': host,
                           'binary': binary,
@@ -251,3 +261,44 @@ class ServiceTestCase(test.TestCase):
         serv.report_state()
 
         self.assert_(not serv.model_disconnected)
+
+    def test_compute_can_update_available_resource(self):
+        """Confirm compute updates their record of compute-service table."""
+        host = 'foo'
+        binary = 'nova-compute'
+        topic = 'compute'
+
+        # Any mocks are not working without UnsetStubs() here.
+        self.mox.UnsetStubs()
+        ctxt = context.get_admin_context()
+        service_ref = db.service_create(ctxt, {'host': host,
+                                               'binary': binary,
+                                               'topic': topic})
+        serv = service.Service(host,
+                               binary,
+                               topic,
+                               'nova.compute.manager.ComputeManager')
+
+        # This testcase want to test calling update_available_resource.
+        # No need to call periodic call, then below variable must be set 0.
+        serv.report_interval = 0
+        serv.periodic_interval = 0
+
+        # Creating mocks
+        self.mox.StubOutWithMock(service.rpc.Connection, 'instance')
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
+        self.mox.StubOutWithMock(serv.manager.driver,
+                                 'update_available_resource')
+        serv.manager.driver.update_available_resource(mox.IgnoreArg(), host)
+
+        # Just doing start()-stop(), not confirm new db record is created,
+        # because update_available_resource() works only in
+        # libvirt environment. This testcase confirms
+        # update_available_resource() is called. Otherwise, mox complains.
+        self.mox.ReplayAll()
+        serv.start()
+        serv.stop()
+
+        db.service_destroy(ctxt, service_ref['id'])

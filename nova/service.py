@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -39,6 +40,7 @@ from nova import flags
 from nova import rpc
 from nova import utils
 from nova import version
+from nova import wsgi
 
 
 FLAGS = flags.FLAGS
@@ -48,6 +50,14 @@ flags.DEFINE_integer('report_interval', 10,
 flags.DEFINE_integer('periodic_interval', 60,
                      'seconds between running periodic tasks',
                      lower_bound=1)
+flags.DEFINE_string('ec2_listen', "0.0.0.0",
+                    'IP address for EC2 API to listen')
+flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
+flags.DEFINE_string('osapi_listen', "0.0.0.0",
+                    'IP address for OpenStack API to listen')
+flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
+flags.DEFINE_string('api_paste_config', "api-paste.ini",
+                    'File name for the paste.deploy config for nova-api')
 
 
 class Service(object):
@@ -82,20 +92,29 @@ class Service(object):
         except exception.NotFound:
             self._create_service_ref(ctxt)
 
+        if 'nova-compute' == self.binary:
+            self.manager.update_available_resource(ctxt)
+
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
+        conn3 = rpc.Connection.instance(new=True)
         if self.report_interval:
-            consumer_all = rpc.AdapterConsumer(
+            consumer_all = rpc.TopicAdapterConsumer(
                     connection=conn1,
                     topic=self.topic,
                     proxy=self)
-            consumer_node = rpc.AdapterConsumer(
+            consumer_node = rpc.TopicAdapterConsumer(
                     connection=conn2,
                     topic='%s.%s' % (self.topic, self.host),
+                    proxy=self)
+            fanout = rpc.FanoutAdapterConsumer(
+                    connection=conn3,
+                    topic=self.topic,
                     proxy=self)
 
             self.timers.append(consumer_all.attach_to_eventlet())
             self.timers.append(consumer_node.attach_to_eventlet())
+            self.timers.append(fanout.attach_to_eventlet())
 
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
@@ -204,10 +223,45 @@ class Service(object):
                 logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
-        except Exception:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))
+
+
+class WsgiService(object):
+    """Base class for WSGI based services.
+
+    For each api you define, you must also define these flags:
+    :<api>_listen:            The address on which to listen
+    :<api>_listen_port:       The port on which to listen
+    """
+
+    def __init__(self, conf, apis):
+        self.conf = conf
+        self.apis = apis
+        self.wsgi_app = None
+
+    def start(self):
+        self.wsgi_app = _run_wsgi(self.conf, self.apis)
+
+    def wait(self):
+        self.wsgi_app.wait()
+
+
+class ApiService(WsgiService):
+    """Class for our nova-api service"""
+    @classmethod
+    def create(cls, conf=None):
+        if not conf:
+            conf = wsgi.paste_config_file(FLAGS.api_paste_config)
+            if not conf:
+                message = (_("No paste configuration found for: %s"),
+                           FLAGS.api_paste_config)
+                raise exception.Error(message)
+        api_endpoints = ['ec2', 'osapi']
+        service = cls(conf, api_endpoints)
+        return service
 
 
 def serve(*services):
@@ -239,3 +293,46 @@ def serve(*services):
 def wait():
     while True:
         greenthread.sleep(5)
+
+
+def serve_wsgi(cls, conf=None):
+    try:
+        service = cls.create(conf)
+    except Exception:
+        logging.exception('in WsgiService.create()')
+        raise
+    finally:
+        # After we've loaded up all our dynamic bits, check
+        # whether we should print help
+        flags.DEFINE_flag(flags.HelpFlag())
+        flags.DEFINE_flag(flags.HelpshortFlag())
+        flags.DEFINE_flag(flags.HelpXMLFlag())
+        FLAGS.ParseNewFlags()
+
+    service.start()
+
+    return service
+
+
+def _run_wsgi(paste_config_file, apis):
+    logging.debug(_("Using paste.deploy config at: %s"), paste_config_file)
+    apps = []
+    for api in apis:
+        config = wsgi.load_paste_configuration(paste_config_file, api)
+        if config is None:
+            logging.debug(_("No paste configuration for app: %s"), api)
+            continue
+        logging.debug(_("App Config: %(api)s\n%(config)r") % locals())
+        logging.info(_("Running %s API"), api)
+        app = wsgi.load_paste_app(paste_config_file, api)
+        apps.append((app, getattr(FLAGS, "%s_listen_port" % api),
+                     getattr(FLAGS, "%s_listen" % api)))
+    if len(apps) == 0:
+        logging.error(_("No known API applications configured in %s."),
+                      paste_config_file)
+        return
+
+    server = wsgi.Server()
+    for app in apps:
+        server.start(*app)
+    return server
