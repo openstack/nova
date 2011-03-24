@@ -33,7 +33,6 @@ import unittest
 import mox
 import shutil
 import stubout
-from eventlet import greenpool
 from eventlet import greenthread
 
 from nova import context

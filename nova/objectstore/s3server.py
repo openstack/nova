@@ -68,9 +68,9 @@ class S3Application(wsgi.Router):
         if mapper is None:
             mapper = routes.Mapper()
 
-        mapper.connect('/', controller=RootHandler(self))
-                #controller=lambda *a, **kw: RootHandler(self)(*a, **kw))
-        mapper.connect('/{bucket_name}/{object_name}',
+        mapper.connect('/',
+                controller=lambda *a, **kw: RootHandler(self)(*a, **kw))
+        mapper.connect('/{bucket}/{object_name}',
                 controller=lambda *a, **kw: ObjectHandler(self)(*a, **kw))
         mapper.connect('/{bucket_name}/',
                 controller=lambda *a, **kw: BucketHandler(self)(*a, **kw))
@@ -87,7 +87,6 @@ class BaseRequestHandler(wsgi.Controller):
 
     @webob.dec.wsgify
     def __call__(self, request):
-        logging.debug('GOT HERE')
         method = request.method.lower()
         f = getattr(self, method, self.invalid)
         self.request = request
@@ -109,7 +108,7 @@ class BaseRequestHandler(wsgi.Controller):
     def finish(self, body=''):
         self.response.body = utils.utf8(body)
 
-    def invalid(self, request, **kwargs):
+    def invalid(self, **kwargs):
         pass
 
     def render_xml(self, value):
@@ -181,7 +180,8 @@ class BucketHandler(BaseRequestHandler):
         terse = int(self.get_argument("terse", 0))
         if not path.startswith(self.application.directory) or \
            not os.path.isdir(path):
-            raise webob.exc.HTTPError(404)
+            self.set_status(404)
+            return
         object_names = []
         for root, dirs, files in os.walk(path):
             for file_name in files:
@@ -231,7 +231,8 @@ class BucketHandler(BaseRequestHandler):
             self.application.directory, bucket_name))
         if not path.startswith(self.application.directory) or \
            os.path.exists(path):
-            raise webob.exc.HTTPError(403)
+            self.set_status(403)
+            return
         os.makedirs(path)
         self.finish()
 
@@ -240,9 +241,11 @@ class BucketHandler(BaseRequestHandler):
             self.application.directory, bucket_name))
         if not path.startswith(self.application.directory) or \
            not os.path.isdir(path):
-            raise webob.exc.HTTPError(404)
+            self.set_status(404)
+            return
         if len(os.listdir(path)) > 0:
-            raise webob.exc.HTTPError(403)
+            self.set_status(403)
+            return
         os.rmdir(path)
         self.set_status(204)
         self.finish()
@@ -254,7 +257,8 @@ class ObjectHandler(BaseRequestHandler):
         path = self._object_path(bucket, object_name)
         if not path.startswith(self.application.directory) or \
            not os.path.isfile(path):
-            raise webob.exc.HTTPError(404)
+            self.set_status(404)
+            return
         info = os.stat(path)
         self.set_header("Content-Type", "application/unknown")
         self.set_header("Last-Modified", datetime.datetime.utcfromtimestamp(
@@ -271,16 +275,20 @@ class ObjectHandler(BaseRequestHandler):
             self.application.directory, bucket))
         if not bucket_dir.startswith(self.application.directory) or \
            not os.path.isdir(bucket_dir):
-            raise webob.exc.HTTPError(404)
+            self.set_status(404)
+            return
         path = self._object_path(bucket, object_name)
         if not path.startswith(bucket_dir) or os.path.isdir(path):
-            raise webob.exc.HTTPError(403)
+            self.set_status(403)
+            return
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
             os.makedirs(directory)
         object_file = open(path, "w")
         object_file.write(self.request.body)
         object_file.close()
+        self.set_header('ETag',
+                        '"%s"' % hashlib.md5(self.request.body).hexdigest())
         self.finish()
 
     def delete(self, bucket, object_name):
@@ -288,7 +296,8 @@ class ObjectHandler(BaseRequestHandler):
         path = self._object_path(bucket, object_name)
         if not path.startswith(self.application.directory) or \
            not os.path.isfile(path):
-            raise webob.exc.HTTPError(404)
+            self.set_status(404)
+            return
         os.unlink(path)
         self.set_status(204)
         self.finish()
