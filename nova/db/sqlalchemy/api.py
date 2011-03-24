@@ -2220,8 +2220,8 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(instance_id=instance_id).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.NotFound(_("No migration found with instance id %s")
-                % migration_id)
+        raise exception.NotFound(_("No migration found for instance "
+                "%(instance_id)s with status %(status)s") % locals())
     return result
 
 
@@ -2336,13 +2336,13 @@ def instance_type_create(_context, values):
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()
-    except:
-        raise exception.DBError
+    except Exception, e:
+        raise exception.DBError(e)
     return instance_type_ref
 
 
 @require_context
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """
     Returns a dict describing all instance_types with name as key.
     """
@@ -2353,7 +2353,7 @@ def instance_type_get_all(context, inactive=0):
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
-                        filter_by(deleted=inactive).\
+                        filter_by(deleted=False).\
                         order_by("name").\
                         all()
     if inst_types:
@@ -2397,7 +2397,7 @@ def instance_type_destroy(context, name):
     session = get_session()
     instance_type_ref = session.query(models.InstanceTypes).\
                                       filter_by(name=name)
-    records = instance_type_ref.update(dict(deleted=1))
+    records = instance_type_ref.update(dict(deleted=True))
     if records == 0:
         raise exception.NotFound
     else:

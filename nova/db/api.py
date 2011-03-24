@@ -214,7 +214,7 @@ def certificate_update(context, certificate_id, values):
     Raises NotFound if service does not exist.
 
     """
-    return IMPL.service_update(context, certificate_id, values)
+    return IMPL.certificate_update(context, certificate_id, values)
 
 
 ###################
@@ -1118,7 +1118,7 @@ def instance_type_create(context, values):
     return IMPL.instance_type_create(context, values)
 
 
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """Get all instance types"""
     return IMPL.instance_type_get_all(context, inactive)
 

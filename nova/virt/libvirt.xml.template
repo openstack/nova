@@ -93,8 +93,8 @@
 #if $getVar('extra_params', False)
                 ${extra_params}
 #end if
-#if $getVar('ra_server', False)
-                <parameter name="RASERVER" value="${ra_server}" />
+#if $getVar('gateway_v6', False)
+                <parameter name="RASERVER" value="${gateway_v6}" />
 #end if
             </filterref>
         </interface>

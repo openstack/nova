@@ -21,8 +21,6 @@ import inspect
 import os
 import calendar
 
-from eventlet import semaphore
-
 from nova import db
 from nova import exception
 from nova import flags
@@ -272,37 +270,30 @@ class IptablesManager(object):
         self.ipv4['nat'].add_chain('floating-snat')
         self.ipv4['nat'].add_rule('snat', '-j $floating-snat')
 
-        self.semaphore = semaphore.Semaphore()
-
-    @utils.synchronized('iptables')
+    @utils.synchronized('iptables', external=True)
     def apply(self):
         """Apply the current in-memory set of iptables rules
 
         This will blow away any rules left over from previous runs of the
         same component of Nova, and replace them with our current set of
         rules. This happens atomically, thanks to iptables-restore.
-
-        We wrap the call in a semaphore lock, so that we don't race with
-        ourselves. In the event of a race with another component running
-        an iptables-* command at the same time, we retry up to 5 times.
         """
-        with self.semaphore:
-            s = [('iptables', self.ipv4)]
-            if FLAGS.use_ipv6:
-                s += [('ip6tables', self.ipv6)]
+        s = [('iptables', self.ipv4)]
+        if FLAGS.use_ipv6:
+            s += [('ip6tables', self.ipv6)]
 
-            for cmd, tables in s:
-                for table in tables:
-                    current_table, _ = self.execute('sudo',
-                                                    '%s-save' % (cmd,),
-                                                    '-t', '%s' % (table,),
-                                                    attempts=5)
-                    current_lines = current_table.split('\n')
-                    new_filter = self._modify_rules(current_lines,
-                                                    tables[table])
-                    self.execute('sudo', '%s-restore' % (cmd,),
-                                 process_input='\n'.join(new_filter),
-                                 attempts=5)
+        for cmd, tables in s:
+            for table in tables:
+                current_table, _ = self.execute('sudo',
+                                                '%s-save' % (cmd,),
+                                                '-t', '%s' % (table,),
+                                                attempts=5)
+                current_lines = current_table.split('\n')
+                new_filter = self._modify_rules(current_lines,
+                                                tables[table])
+                self.execute('sudo', '%s-restore' % (cmd,),
+                             process_input='\n'.join(new_filter),
+                             attempts=5)
 
     def _modify_rules(self, current_lines, table, binary=None):
         unwrapped_chains = table.unwrapped_chains
@@ -557,6 +548,7 @@ def get_dhcp_hosts(context, network_id):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
+@utils.synchronized('dnsmasq_start')
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
@@ -594,6 +586,7 @@ def update_dhcp(context, network_id):
     _execute(*command, addl_env=env)
 
 
+@utils.synchronized('radvd_start')
 def update_ra(context, network_id):
     network_ref = db.network_get(context, network_id)
 
@@ -633,7 +626,7 @@ interface %s
     command = _ra_cmd(network_ref)
     _execute(*command)
     db.network_update(context, network_id,
-                      {"ra_server":
+                      {"gateway_v6":
                        utils.get_my_linklocal(network_ref['bridge'])})
 
 

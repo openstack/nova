@@ -21,7 +21,6 @@ import os
 import random
 import sys
 import time
-import unittest
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -74,8 +73,10 @@ class AddressTests(base.UserSmokeTestCase):
         groups = self.conn.get_all_security_groups(['default'])
         for rule in groups[0].rules:
             if (rule.ip_protocol == 'tcp' and
-                rule.from_port <= 22 and rule.to_port >= 22):
+                int(rule.from_port) <= 22 and
+                int(rule.to_port) >= 22):
                 ssh_authorized = True
+                break
         if not ssh_authorized:
             self.conn.authorize_security_group('default',
                                                ip_protocol='tcp',
@@ -137,11 +138,6 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         if not self.wait_for_running(self.data['instance']):
             self.fail('instance failed to start')
         self.data['instance'].update()
-        if not self.wait_for_ping(self.data['instance'].private_dns_name):
-            self.fail('could not ping instance')
-        if not self.wait_for_ssh(self.data['instance'].private_dns_name,
-                                 TEST_KEY):
-            self.fail('could not ssh to instance')
 
     def test_003_can_authorize_security_group_ingress(self):
         self.assertTrue(self.conn.authorize_security_group(TEST_GROUP,
@@ -185,10 +181,3 @@ class SecurityGroupTests(base.UserSmokeTestCase):
         self.assertFalse(TEST_GROUP in [group.name for group in groups])
         self.conn.terminate_instances([self.data['instance'].id])
         self.assertTrue(self.conn.release_address(self.data['public_ip']))
-
-
-if __name__ == "__main__":
-    suites = {'address': unittest.makeSuite(AddressTests),
-              'security_group': unittest.makeSuite(SecurityGroupTests)
-              }
-    sys.exit(base.run_tests(suites))
