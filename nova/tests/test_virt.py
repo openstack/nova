@@ -427,6 +427,15 @@ class LibvirtConnTestCase(test.TestCase):
         def fake_raise(self):
             raise libvirt.libvirtError('ERR')
 
+        class FakeTime(object):
+            def __init__(self):
+                self.counter = 0
+
+            def sleep(self, t):
+                self.counter += t
+
+        fake_timer = FakeTime()
+
         self.create_fake_libvirt_mock(nwfilterLookupByName=fake_raise)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -436,10 +445,14 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_conn.LibvirtConnection(False)
             conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
             conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
-            conn.ensure_filtering_rules_for_instance(instance_ref)
+            conn.ensure_filtering_rules_for_instance(instance_ref,
+                                                     time=fake_timer)
         except exception.Error, e:
             c1 = (0 <= e.message.find('Timeout migrating for'))
         self.assertTrue(c1)
+
+        self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
+                                                 "amount of time")
 
         db.instance_destroy(self.context, instance_ref['id'])
 
