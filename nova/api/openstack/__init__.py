@@ -72,7 +72,7 @@ class APIRouter(wsgi.Router):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
         return cls()
 
-    def __init__(self):
+    def __init__(self, ext_mgr=None):
         self.server_members = {}
         mapper = routes.Mapper()
         self._setup_routes(mapper)
