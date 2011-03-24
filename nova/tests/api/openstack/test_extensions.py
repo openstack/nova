@@ -81,14 +81,14 @@ class StubExtensionManager(object):
 class ExtensionControllerTest(unittest.TestCase):
 
     def test_index(self):
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/extensions")
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
 
     def test_get_by_alias(self):
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/extensions/FOXNSOX")
         response = request.get_response(ext_midware)
@@ -99,7 +99,7 @@ class ResourceExtensionTest(unittest.TestCase):
 
     def test_no_extension_present(self):
         manager = StubExtensionManager(None)
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/blah")
         response = request.get_response(ext_midware)
@@ -109,7 +109,7 @@ class ResourceExtensionTest(unittest.TestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/tweedles")
         response = request.get_response(ext_midware)
@@ -120,7 +120,7 @@ class ResourceExtensionTest(unittest.TestCase):
         res_ext = extensions.ResourceExtension('tweedles',
                                                StubController(response_body))
         manager = StubExtensionManager(res_ext)
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
         request = webob.Request.blank("/tweedles")
         response = request.get_response(ext_midware)
@@ -137,7 +137,7 @@ class ExtensionManagerTest(unittest.TestCase):
                                                     "extensions")
 
     def test_get_resources(self):
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank("/foxnsocks")
         response = request.get_response(ext_midware)
@@ -152,7 +152,7 @@ class ActionExtensionTest(unittest.TestCase):
                                                     "extensions")
 
     def _send_server_action_request(self, url, body):
-        app = openstack.APIRouter()
+        app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
         request = webob.Request.blank(url)
         request.method = 'POST'
