@@ -23,6 +23,8 @@ import sys
 
 from nova import flags
 from nova import log as logging
+from nova import utils
+from nova.virt import driver
 from nova.virt import fake
 from nova.virt import libvirt_conn
 from nova.virt import xenapi_conn
@@ -72,4 +74,4 @@ def get_connection(read_only=False):
     if conn is None:
         LOG.error(_('Failed to open connection to the hypervisor'))
         sys.exit(1)
-    return conn
+    return utils.check_isinstance(conn, driver.ComputeDriver)

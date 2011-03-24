@@ -27,7 +27,9 @@ semantics of real hypervisor connections.
 
 from nova import exception
 from nova import log as logging
+from nova import utils
 from nova.compute import power_state
+from nova.virt import driver
 
 
 LOG = logging.getLogger('nova.compute.disk')
@@ -38,7 +40,14 @@ def get_connection(_):
     return FakeConnection.instance()
 
 
-class FakeConnection(object):
+class FakeInstance(object):
+
+    def __init__(self, name, state):
+        self.name = name
+        self.state = state
+
+
+class FakeConnection(driver.ComputeDriver):
     """
     The interface to this class talks in terms of 'instances' (Amazon EC2 and
     internal Nova terminology), by which we mean 'running virtual machine'
@@ -94,6 +103,17 @@ class FakeConnection(object):
         """
         return self.instances.keys()
 
+    def _map_to_instance_info(self, instance):
+        instance = utils.check_isinstance(instance, FakeInstance)
+        info = driver.InstanceInfo(instance.name, instance.state)
+        return info
+
+    def list_instances_detail(self):
+        info_list = []
+        for instance in self.instances.values():
+            info_list.append(self._map_to_instance_info(instance))
+        return info_list
+
     def spawn(self, instance):
         """
         Create a new instance/VM/domain on the virtualization platform.
@@ -113,9 +133,10 @@ class FakeConnection(object):
         that it was before this call began.
         """
 
-        fake_instance = FakeInstance()
-        self.instances[instance.name] = fake_instance
-        fake_instance._state = power_state.RUNNING
+        name = instance.name
+        state = power_state.RUNNING
+        fake_instance = FakeInstance(name, state)
+        self.instances[name] = fake_instance
 
     def snapshot(self, instance, name):
         """
@@ -278,7 +299,7 @@ class FakeConnection(object):
             raise exception.NotFound(_("Instance %s Not Found")
                                      % instance_name)
         i = self.instances[instance_name]
-        return {'state': i._state,
+        return {'state': i.state,
                 'max_mem': 0,
                 'mem': 0,
                 'num_cpu': 2,
@@ -436,8 +457,6 @@ class FakeConnection(object):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
-
-class FakeInstance(object):
-
-    def __init__(self):
-        self._state = power_state.NOSTATE
+    def test_remove_vm(self, instance_name):
+        """ Removes the named VM, as if it crashed. For testing"""
+        self.instances.pop(instance_name)
