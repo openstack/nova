@@ -665,6 +665,48 @@ def get_from_path(items, path):
         return get_from_path(results, remainder)
 
 
+def flatten_dict(dict_, flattened=None):
+    """Recursively flatten a nested dictionary"""
+    flattened = flattened or {}
+    for key, value in dict_.iteritems():
+        if hasattr(value, 'iteritems'):
+            flatten_dict(value, flattened)
+        else:
+            flattened[key] = value
+    return flattened
+
+
+def partition_dict(dict_, keys):
+    """Return two dicts, one containing only `keys` the other containing
+    everything but `keys`
+    """
+    intersection = {}
+    difference = {}
+    for key, value in dict_.iteritems():
+        if key in keys:
+            intersection[key] = value
+        else:
+            difference[key] = value
+    return intersection, difference
+
+
+def map_dict_keys(dict_, key_map):
+    """Return a dictionary in which the dictionaries keys are mapped to
+    new keys.
+    """
+    mapped = {}
+    for key, value in dict_.iteritems():
+        mapped_key = key_map[key] if key in key_map else key
+        mapped[mapped_key] = value
+    return mapped
+
+
+def subset_dict(dict_, keys):
+    """Return a dict that only contains a subset of keys"""
+    subset = partition_dict(dict_, keys)[0]
+    return subset
+
+
 def check_isinstance(obj, cls):
     """Checks that obj is of type cls, and lets PyLint infer types"""
     if isinstance(obj, cls):

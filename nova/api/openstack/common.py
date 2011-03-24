@@ -24,6 +24,7 @@ from nova import flags
 
 FLAGS = flags.FLAGS
 
+
 def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
     Return a slice of items according to requested offset and limit.
