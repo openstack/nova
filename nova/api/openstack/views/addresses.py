@@ -19,18 +19,6 @@ from nova import utils
 from nova.api.openstack import common
 
 
-def get_view_builder(req):
-    '''
-    A factory method that returns the correct builder based on the version of
-    the api requested.
-    '''
-    version = common.get_api_version(req)
-    if version == '1.1':
-        return ViewBuilder_1_1()
-    else:
-        return ViewBuilder_1_0()
-
-
 class ViewBuilder(object):
     ''' Models a server addresses response as a python dictionary.'''
 
@@ -38,14 +26,14 @@ class ViewBuilder(object):
         raise NotImplementedError()
 
 
-class ViewBuilder_1_0(ViewBuilder):
+class ViewBuilderV10(ViewBuilder):
     def build(self, inst):
         private_ips = utils.get_from_path(inst, 'fixed_ip/address')
         public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
         return dict(public=public_ips, private=private_ips)
 
 
-class ViewBuilder_1_1(ViewBuilder):
+class ViewBuilderV11(ViewBuilder):
     def build(self, inst):
         private_ips = utils.get_from_path(inst, 'fixed_ip/address')
         private_ips = [dict(version=4, addr=a) for a in private_ips]
