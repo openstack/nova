@@ -137,24 +137,7 @@ class Consumer(messaging.Consumer):
         return timer
 
 
-class Publisher(messaging.Publisher):
-    """Publisher base class"""
-    pass
-
-
-class TopicConsumer(Consumer):
-    """Consumes messages on a specific topic"""
-    exchange_type = "topic"
-
-    def __init__(self, connection=None, topic="broadcast"):
-        self.queue = topic
-        self.routing_key = topic
-        self.exchange = FLAGS.control_exchange
-        self.durable = False
-        super(TopicConsumer, self).__init__(connection=connection)
-
-
-class AdapterConsumer(TopicConsumer):
+class AdapterConsumer(Consumer):
     """Calls methods on a proxy object based on method and args"""
     def __init__(self, connection=None, topic="broadcast", proxy=None):
         LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
@@ -207,6 +190,41 @@ class AdapterConsumer(TopicConsumer):
         return
 
 
+class Publisher(messaging.Publisher):
+    """Publisher base class"""
+    pass
+
+
+class TopicAdapterConsumer(AdapterConsumer):
+    """Consumes messages on a specific topic"""
+    exchange_type = "topic"
+
+    def __init__(self, connection=None, topic="broadcast", proxy=None):
+        self.queue = topic
+        self.routing_key = topic
+        self.exchange = FLAGS.control_exchange
+        self.durable = False
+        super(TopicAdapterConsumer, self).__init__(connection=connection,
+                                    topic=topic, proxy=proxy)
+
+
+class FanoutAdapterConsumer(AdapterConsumer):
+    """Consumes messages from a fanout exchange"""
+    exchange_type = "fanout"
+
+    def __init__(self, connection=None, topic="broadcast", proxy=None):
+        self.exchange = "%s_fanout" % topic
+        self.routing_key = topic
+        unique = uuid.uuid4().hex
+        self.queue = "%s_fanout_%s" % (topic, unique)
+        self.durable = False
+        LOG.info(_("Created '%(exchange)s' fanout exchange "
+                   "with '%(key)s' routing key"),
+                dict(exchange=self.exchange, key=self.routing_key))
+        super(FanoutAdapterConsumer, self).__init__(connection=connection,
+                                    topic=topic, proxy=proxy)
+
+
 class TopicPublisher(Publisher):
     """Publishes messages on a specific topic"""
     exchange_type = "topic"
@@ -216,6 +234,19 @@ class TopicPublisher(Publisher):
         self.exchange = FLAGS.control_exchange
         self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
+
+
+class FanoutPublisher(Publisher):
+    """Publishes messages to a fanout exchange."""
+    exchange_type = "fanout"
+
+    def __init__(self, topic, connection=None):
+        self.exchange = "%s_fanout" % topic
+        self.queue = "%s_fanout" % topic
+        self.durable = False
+        LOG.info(_("Creating '%(exchange)s' fanout exchange"),
+                            dict(exchange=self.exchange))
+        super(FanoutPublisher, self).__init__(connection=connection)
 
 
 class DirectConsumer(Consumer):
@@ -356,6 +387,16 @@ def cast(context, topic, msg):
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
+    publisher.send(msg)
+    publisher.close()
+
+
+def fanout_cast(context, topic, msg):
+    """Sends a message on a fanout exchange without waiting for a response"""
+    LOG.debug(_("Making asynchronous fanout cast..."))
+    _pack_context(msg, context)
+    conn = Connection.instance()
+    publisher = FanoutPublisher(topic, connection=conn)
     publisher.send(msg)
     publisher.close()
 

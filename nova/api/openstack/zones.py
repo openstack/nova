@@ -15,9 +15,9 @@
 
 import common
 
+from nova import db
 from nova import flags
 from nova import wsgi
-from nova import db
 from nova.scheduler import api
 
 
@@ -52,7 +52,7 @@ class Controller(wsgi.Controller):
         """Return all zones in brief"""
         # Ask the ZoneManager in the Scheduler for most recent data,
         # or fall-back to the database ...
-        items = api.API().get_zone_list(req.environ['nova.context'])
+        items = api.get_zone_list(req.environ['nova.context'])
         if not items:
             items = db.zone_get_all(req.environ['nova.context'])
 
@@ -67,8 +67,16 @@ class Controller(wsgi.Controller):
 
     def info(self, req):
         """Return name and capabilities for this zone."""
-        return dict(zone=dict(name=FLAGS.zone_name,
-                    capabilities=FLAGS.zone_capabilities))
+        items = api.get_zone_capabilities(req.environ['nova.context'])
+
+        zone = dict(name=FLAGS.zone_name)
+        caps = FLAGS.zone_capabilities
+        for cap in caps:
+            key, value = cap.split('=')
+            zone[key] = value
+        for item, (min_value, max_value) in items.iteritems():
+            zone[item] = "%s,%s" % (min_value, max_value)
+        return dict(zone=zone)
 
     def show(self, req, id):
         """Return data about the given zone id"""
