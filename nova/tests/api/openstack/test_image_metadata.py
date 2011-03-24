@@ -41,7 +41,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'disk_format': None,
         'updated_at': '2011-03-22T17: 40: 15.591556',
         'id': '1',
-        'location': 'file: ///var/lib/glance/images/1',
+        'location': 'file:///var/lib/glance/images/1',
         'is_public': True,
         'deleted_at': None,
         'properties': {
@@ -58,7 +58,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'disk_format': None,
         'updated_at': '2011-03-22T17: 40: 15.591556',
         'id': '2',
-        'location': 'file: ///var/lib/glance/images/2',
+        'location': 'file:///var/lib/glance/images/2',
         'is_public': True,
         'deleted_at': None,
         'properties': {
@@ -66,7 +66,7 @@ class ImageMetaDataTest(unittest.TestCase):
             'key1': 'value1',
             'key2': 'value2'
         },
-        'size': 5882349}
+        'size': 5882349},
         ]
 
     def setUp(self):
