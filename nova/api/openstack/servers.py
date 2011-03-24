@@ -82,7 +82,7 @@ class Controller(wsgi.Controller):
         builder - the response model builder
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
-        limited_list = common.limited(instance_list, req)
+        limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
                 for inst in limited_list]
@@ -551,6 +551,9 @@ class ControllerV10(Controller):
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV10(req)
 
+    def _limit_items(self, items, req):
+        return common.limited(items, req)
+
 
 class ControllerV11(Controller):
     def _image_id_from_req_data(self, data):
@@ -573,6 +576,9 @@ class ControllerV11(Controller):
 
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV11(req)
+
+    def _limit_items(self, items, req):
+        return common.limited_by_marker(items, req)
 
 
 class ServerCreateRequestXMLDeserializer(object):
