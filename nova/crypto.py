@@ -26,6 +26,7 @@ import gettext
 import hashlib
 import os
 import shutil
+import string
 import struct
 import tempfile
 import time
@@ -267,7 +268,7 @@ def _sign_csr(csr_text, ca_folder):
                   './openssl.cnf', '-infiles', inbound)
     out, _err = utils.execute('openssl', 'x509', '-in', outbound,
                               '-serial', '-noout')
-    serial = out.rpartition("=")[2]
+    serial = string.strip(out.rpartition("=")[2])
     os.chdir(start)
     with open(outbound, "r") as crtfile:
         return (serial, crtfile.read())

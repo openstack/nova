@@ -18,19 +18,6 @@
 from nova.api.openstack import common
 
 
-def get_view_builder(req):
-    '''
-    A factory method that returns the correct builder based on the version of
-    the api requested.
-    '''
-    version = common.get_api_version(req)
-    base_url = req.application_url
-    if version == '1.1':
-        return ViewBuilder_1_1(base_url)
-    else:
-        return ViewBuilder_1_0()
-
-
 class ViewBuilder(object):
 
     def build(self, flavor_obj, is_detail=False):
@@ -69,7 +56,7 @@ class ViewBuilder(object):
         pass
 
 
-class ViewBuilder_1_1(ViewBuilder):
+class ViewBuilderV11(ViewBuilder):
     """Openstack API v1.1 flavors view builder."""
 
     def __init__(self, base_url):
@@ -107,11 +94,3 @@ class ViewBuilder_1_1(ViewBuilder):
     def generate_href(self, flavor_id):
         """Create an url that refers to a specific flavor id."""
         return "%s/flavors/%s" % (self.base_url, flavor_id)
-
-
-class ViewBuilder_1_0(ViewBuilder):
-    """
-    Openstack API v1.0 flavors view builder. Currently, there
-    are no 1.0-specific attributes of a flavor.
-    """
-    pass
