@@ -2220,8 +2220,8 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(instance_id=instance_id).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.NotFound(_("No migration found with instance id %s")
-                % instance_id)
+        raise exception.NotFound(_("No migration found for instance "
+                "%(instance_id)s with status %(status)s") % locals())
     return result
 
 
@@ -2336,8 +2336,8 @@ def instance_type_create(_context, values):
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()
-    except:
-        raise exception.DBError
+    except Exception, e:
+        raise exception.DBError(e)
     return instance_type_ref
 
 
