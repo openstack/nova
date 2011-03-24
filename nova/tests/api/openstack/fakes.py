@@ -86,7 +86,7 @@ def wsgi_app(inner_app10=None, inner_app11=None):
               limits.RateLimitingMiddleware(inner_app11)))
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
-    mapper['/'] = openstack.FaultWrapper(openstack.Versions())
+    mapper['/'] = openstack.FaultWrapper(versions.Versions())
     return mapper
 
 

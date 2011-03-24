@@ -148,21 +148,3 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
-
-
-class Versions(wsgi.Application):
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        """Respond to a request for all OpenStack API versions."""
-        response = {
-            "versions": [
-                dict(status="DEPRECATED", id="v1.0"),
-                dict(status="CURRENT", id="v1.1"),
-            ],
-        }
-        metadata = {
-            "application/xml": {
-                "attributes": dict(version=["status", "id"])}}
-
-        content_type = req.best_match_content_type()
-        return wsgi.Serializer(metadata).serialize(response, content_type)
