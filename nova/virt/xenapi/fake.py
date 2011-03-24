@@ -427,7 +427,6 @@ class SessionBase(object):
                 if (field in _db_content[cls][ref]):
                     return _db_content[cls][ref][field]
             else:
-                LOG.debug(_('Raising Failure'))
                 raise Failure(['HANDLE_INVALID', cls, ref])
 
         LOG.debug(_('Raising NotImplemented'))

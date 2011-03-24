@@ -76,7 +76,6 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         db_fakes.stub_out_db_instance_api(self.stubs)
-        #db_fakes.stub_out_db_network_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         self.values = {'id': 1,
@@ -333,7 +332,8 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-        instance_type="m1.large", os_type="linux", check_injection=False):
+                    instance_type="m1.large", os_type="linux",
+                    check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': 1,
                   'project_id': self.project.id,

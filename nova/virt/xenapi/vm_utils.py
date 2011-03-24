@@ -683,65 +683,12 @@ class VMHelper(HelperBase):
         # everything
         mount_required = False
         key, net = disk.get_injectables(instance)
-        if key is not None or net is not None:
-            mount_required = True
+        mount_required = key or net
+        if not mount_required:
+            return
 
-        if mount_required:
-
-            def _mounted_processing(device):
-                """Callback which runs with the image VDI attached"""
-
-                dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
-                tmpdir = tempfile.mkdtemp()
-                try:
-                    # Mount only Linux filesystems, to avoid disturbing
-                    # NTFS images
-                    try:
-                        out, err = utils.execute('sudo', 'mount',
-                                                 '-t', 'ext2,ext3',
-                                                 dev_path, tmpdir)
-                    except exception.ProcessExecutionError as e:
-                        err = str(e)
-                    if err:
-                        LOG.info(_('Failed to mount filesystem (expected for '
-                            'non-linux instances): %s') % err)
-                    else:
-                        try:
-                            # This try block ensures that the umount occurs
-                            xe_guest_agent_filename = os.path.join(
-                                tmpdir, FLAGS.xenapi_agent_path)
-                            if os.path.isfile(xe_guest_agent_filename):
-                                # The presence of the guest agent
-                                # file indicates that this instance can
-                                # reconfigure the network from xenstore data,
-                                # so manipulation of files in /etc is not
-                                # required
-                                LOG.info(_('XenServer tools installed in this '
-                                    'image are capable of network injection.  '
-                                    'Networking files will not be'
-                                    'manipulated'))
-                            else:
-                                xe_daemon_filename = os.path.join(tmpdir,
-                                    'usr', 'sbin', 'xe-daemon')
-                                if os.path.isfile(xe_daemon_filename):
-                                    LOG.info(_('XenServer tools are present '
-                                        'in this image but are not capable '
-                                        'of network injection'))
-                                else:
-                                    LOG.info(_('XenServer tools are not '
-                                        'installed in this image'))
-                                LOG.info(_('Manipulating interface files '
-                                         'directly'))
-                                disk.inject_data_into_fs(tmpdir, key, net,
-                                    utils.execute)
-                        finally:
-                            utils.execute('sudo', 'umount', dev_path)
-                finally:
-                    # remove temporary directory
-                    os.rmdir(tmpdir)
-
-            with_vdi_attached_here(session, vdi_ref, False,
-                _mounted_processing)
+        with_vdi_attached_here(session, vdi_ref, False,
+                               lambda dev: _mounted_processing(dev, key, net))
 
     @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
@@ -1077,3 +1024,65 @@ def _write_partition(virtual_size, dev):
 def get_name_label_for_image(image):
     # TODO(sirp): This should eventually be the URI for the Glance image
     return _('Glance image %s') % image
+
+
+def _mount_filesystem(dev_path, dir):
+    """mounts the device specified by dev_path in dir"""
+    try:
+        out, err = utils.execute('sudo', 'mount',
+                                 '-t', 'ext2,ext3',
+                                 dev_path, dir)
+    except exception.ProcessExecutionError as e:
+        err = str(e)
+    return err
+
+
+def _find_guest_agent(base_dir, agent_rel_path):
+    agent_path = os.path.join(base_dir, agent_rel_path)
+    if os.path.isfile(agent_path):
+        # The presence of the guest agent
+        # file indicates that this instance can
+        # reconfigure the network from xenstore data,
+        # so manipulation of files in /etc is not
+        # required
+        LOG.info(_('XenServer tools installed in this '
+                'image are capable of network injection.  '
+                'Networking files will not be'
+                'manipulated'))
+        return True
+    xe_daemon_filename = os.path.join(base_dir,
+        'usr', 'sbin', 'xe-daemon')
+    if os.path.isfile(xe_daemon_filename):
+        LOG.info(_('XenServer tools are present '
+                'in this image but are not capable '
+                'of network injection'))
+    else:
+        LOG.info(_('XenServer tools are not '
+                'installed in this image'))
+    return False
+
+
+def _mounted_processing(device, key, net):
+    """Callback which runs with the image VDI attached"""
+
+    dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
+    tmpdir = tempfile.mkdtemp()
+    try:
+        # Mount only Linux filesystems, to avoid disturbing NTFS images
+        err = _mount_filesystem(dev_path, tmpdir)
+        if not err:
+            try:
+                # This try block ensures that the umount occurs
+                if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
+                    LOG.info(_('Manipulating interface files '
+                            'directly'))
+                    disk.inject_data_into_fs(tmpdir, key, net,
+                        utils.execute)
+            finally:
+                utils.execute('sudo', 'umount', dev_path)
+        else:
+            LOG.info(_('Failed to mount filesystem (expected for '
+                'non-linux instances): %s') % err)
+    finally:
+        # remove temporary directory
+        os.rmdir(tmpdir)

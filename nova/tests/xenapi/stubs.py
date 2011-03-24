@@ -139,9 +139,9 @@ def stubout_is_vdi_pv(stubs):
 
 
 def stubout_loopingcall_start(stubs):
-    def f_1(self, interval, now=True):
+    def fake_start(self, interval, now=True):
         self.f(*self.args, **self.kw)
-    stubs.Set(utils.LoopingCall, 'start', f_1)
+    stubs.Set(utils.LoopingCall, 'start', fake_start)
 
 
 class FakeSessionForVMTests(fake.SessionBase):

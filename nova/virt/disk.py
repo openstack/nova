@@ -166,12 +166,13 @@ def _free_device(device):
 
 
 def get_injectables(inst, template=None, template_data=None):
-    #load cheetah.template if necessary
+    # Note(salvatore-orlando):
+    # it the caller does not provide template object and data
+    # we will import the Cheetah template module and load the
+    # data from the file specified by injected_network_template flag
     if not template:
-        t = __import__('Cheetah.Template', globals(), locals(), ['Template'],
-                       -1)
+        from Cheetah import Template as t
         template = t.Template
-    #load template file if necessary
     if not template_data:
         template_data = open(FLAGS.injected_network_template).read()
 

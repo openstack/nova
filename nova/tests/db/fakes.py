@@ -99,9 +99,7 @@ def stub_out_db_instance_api(stubs, injected=True):
         return FakeModel(network_fields)
 
     def fake_network_get_all_by_instance(context, instance_id):
-        l = []
-        l.append(FakeModel(network_fields))
-        return l
+        return [FakeModel(network_fields)]
 
     def fake_instance_get_fixed_address(context, instance_id):
         return FakeModel(fixed_ip_fields).address

@@ -33,7 +33,6 @@ _fake_execute_log = []
 
 
 def fake_execute_get_log():
-    global _fake_execute_log
     return _fake_execute_log
 
 
@@ -55,7 +54,7 @@ def fake_execute_default_reply_handler(*ignore_args, **ignore_kwargs):
     return '', ''
 
 
-def fake_execute(*cmd, **kwargs):
+def fake_execute(*cmd_parts, **kwargs):
     """This function stubs out execute, optionally executing
     a preconfigued function to return expected data
     """
@@ -64,8 +63,7 @@ def fake_execute(*cmd, **kwargs):
     process_input = kwargs.get('process_input', None)
     addl_env = kwargs.get('addl_env', None)
     check_exit_code = kwargs.get('check_exit_code', 0)
-    cmd_map = map(str, cmd)
-    cmd_str = ' '.join(cmd_map)
+    cmd_str = ' '.join(str(part) for part in cmd_parts)
 
     LOG.debug(_("Faking execution of cmd (subprocess): %s"), cmd_str)
     _fake_execute_log.append(cmd_str)
@@ -78,13 +76,13 @@ def fake_execute(*cmd, **kwargs):
             LOG.debug(_('Faked command matched %s') % fake_replier[0])
             break
 
-    if isinstance(reply_handler, types.StringTypes):
+    if isinstance(reply_handler, basestring):
         # If the reply handler is a string, return it as stdout
         reply = reply_handler, ''
     else:
         try:
             # Alternative is a function, so call it
-            reply = reply_handler(cmd,
+            reply = reply_handler(cmd_parts,
                                   process_input=process_input,
                                   addl_env=addl_env,
                                   check_exit_code=check_exit_code)
@@ -92,8 +90,10 @@ def fake_execute(*cmd, **kwargs):
             LOG.debug(_('Faked command raised an exception %s' % str(e)))
             raise
 
-    LOG.debug(_("Reply to faked command is stdout='%(0)s' stderr='%(1)s'") %
-        {'0': reply[0], '1': reply[1]})
+    stdout = reply[0]
+    stderr = reply[1]
+    LOG.debug(_("Reply to faked command is stdout='%(stdout)s' "
+                "stderr='%(stderr)s'") % locals())
 
     # Replicate the sleep call in the real function
     greenthread.sleep(0)

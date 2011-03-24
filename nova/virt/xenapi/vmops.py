@@ -169,7 +169,6 @@ class VMOps(object):
 
         def _wait_for_boot():
             try:
-                LOG.debug("ENTERING WAIT FOR BOOT!")
                 state = self.get_info(instance_name)['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
