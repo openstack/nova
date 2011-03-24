@@ -304,7 +304,7 @@ class AdminController(object):
             * Volume (up, down, None)
             * Volume Count
         """
-        services = db.service_get_all(context)
+        services = db.service_get_all(context, False)
         now = datetime.datetime.utcnow()
         hosts = []
         rv = []

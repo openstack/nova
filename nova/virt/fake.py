@@ -260,20 +260,12 @@ class FakeConnection(driver.ComputeDriver):
         pass
 
     def destroy(self, instance):
-        """
-        Destroy (shutdown and delete) the specified instance.
-
-        The given parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name.
-
-        The work will be done asynchronously.  This function returns a
-        task that allows the caller to detect when it is complete.
-        """
         key = instance.name
-        if not key in self.instances:
+        if key in self.instances:
+            del self.instances[key]
+        else:
             LOG.warning("Key '%s' not in instances '%s'" %
                         (key, self.instances))
-        del self.instances[instance.name]
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach the disk at device_path to the instance at mountpoint"""
@@ -352,7 +344,7 @@ class FakeConnection(driver.ComputeDriver):
         Note that this function takes an instance ID, not a
         compute.service.Instance, so that it can be called by compute.monitor.
         """
-        return [0L, 0L, 0L, 0L, null]
+        return [0L, 0L, 0L, 0L, None]
 
     def interface_stats(self, instance_name, iface_id):
         """

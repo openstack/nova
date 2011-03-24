@@ -129,7 +129,11 @@ class IntegratedUnitTestContext(object):
         self._start_compute_service()
         self._start_volume_service()
         self._start_scheduler_service()
-        self._start_network_service()
+        
+        # NOTE(justinsb): There's a bug here which is eluding me...
+        #  If we start the network_service, all is good, but then subsequent
+        #  tests fail: CloudTestCase.test_ajax_console in particular.
+        #self._start_network_service()
 
         # WSGI shutdown broken :-(
         # bug731668

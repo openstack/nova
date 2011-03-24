@@ -15,19 +15,19 @@
 
 import base64
 import hashlib
-import json
 import traceback
-from xml.dom import minidom
 
 from webob import exc
+from xml.dom import minidom
 
 from nova import compute
 from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
+from nova import quota
 from nova import utils
+from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
@@ -36,7 +36,6 @@ import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
-from nova.quota import QuotaError
 import nova.api.openstack
 
 
@@ -156,8 +155,8 @@ class Controller(wsgi.Controller):
                 key_data=key_data,
                 metadata=metadata,
                 injected_files=injected_files)
-        except QuotaError as error:
-            self._handle_quota_errors(error)
+        except quota.QuotaError as error:
+            self._handle_quota_error(error)
 
         inst['instance_type'] = flavor_id
         inst['image_id'] = requested_image_id
@@ -211,7 +210,7 @@ class Controller(wsgi.Controller):
             injected_files.append((path, contents))
         return injected_files
 
-    def _handle_quota_errors(self, error):
+    def _handle_quota_error(self, error):
         """
         Reraise quota errors as api-specific http exceptions
         """
@@ -242,7 +241,7 @@ class Controller(wsgi.Controller):
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
             try:
                 self.compute_api.set_admin_password(ctxt, id)
-            except exception.TimeoutException, e:
+            except exception.TimeoutException:
                 return exc.HTTPRequestTimeout()
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
