@@ -154,7 +154,7 @@ def _get_ip_version(cidr):
 
 
 def _get_network_info(instance):
-    #TODO(ilyaalekseyev) If we will keep this function
+    # TODO(adiantum) If we will keep this function
     # we should cache network_info
     admin_context = context.get_admin_context()
 
@@ -837,7 +837,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
 
-        #TODO(ilyaalekseyev) remove network_info creation code
+        # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
             network_info = _get_network_info(instance)
