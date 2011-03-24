@@ -19,6 +19,7 @@
 Provides common functionality for integrated unit tests
 """
 
+import os
 import random
 import string
 
@@ -255,9 +256,11 @@ class _IntegratedTestBase(test.TestCase):
         super(_IntegratedTestBase, self).tearDown()
 
     def _get_flags(self):
-        """An opportunity to setup flags, before the services are started"""
+        """An opportunity to setup flags, before the services are started
+
+        Warning - this is a bit flaky till the WSGI recycle code lands"""
         f = {}
-        #f['network_driver'] = 'nova.network.fake.FakeNetworkDriver'
+        f['image_service'] = 'nova.image.fake.MockImageService'
         f['fake_network'] = True
         return f
 

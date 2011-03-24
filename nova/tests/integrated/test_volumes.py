@@ -39,7 +39,6 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
     def _get_flags(self):
         f = super(VolumesTest, self)._get_flags()
         f['use_local_volumes'] = False  # Avoids calling local_path
-        f['image_service'] = 'nova.image.fake.MockImageService'
         f['volume_driver'] = 'nova.volume.driver.LoggingVolumeDriver'
         return f
 
