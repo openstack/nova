@@ -229,7 +229,12 @@ class VMWareAPISession(object):
                                 self.vim.get_service_content().sessionManager,
                                 sessionId=[self._session_id])
                     except Exception, excep:
-                        LOG.exception(excep)
+                        # This exception is something we can live with. It is
+                        # just an extra caution on our side. The session may
+                        # have been cleared. We could have made a call to
+                        # SessionIsActive, but that is an overhead because we
+                        # anyway would have to call TerminateSession.
+                        LOG.debug(excep)
                 self._session_id = session.key
                 return
             except Exception, excep:
@@ -243,8 +248,10 @@ class VMWareAPISession(object):
         # ESX host
         try:
             self.vim.Logout(self.vim.get_service_content().sessionManager)
-        except Exception:
-            pass
+        except Exception, excep:
+            # It is just cautionary on our part to do a logout in del just
+            # to ensure that the session is not left active.
+            LOG.debug(excep)
 
     def _is_vim_object(self, module):
         """Check if the module is a VIM Object instance."""
@@ -258,6 +265,7 @@ class VMWareAPISession(object):
         args = list(args)
         retry_count = 0
         exc = None
+        last_fault_list = []
         while True:
             try:
                 if not self._is_vim_object(module):
@@ -279,6 +287,18 @@ class VMWareAPISession(object):
                 # and then proceeding ahead with the call.
                 exc = excep
                 if error_util.FAULT_NOT_AUTHENTICATED in excep.fault_list:
+                    # Because of the idle session returning an empty
+                    # RetrievePropertiesResponse and also the same is returned
+                    # when there is say empty answer to the query for
+                    # VMs on the host ( as in no VMs on the host), we have no
+                    # way to differentiate.
+                    # So if the previous response was also am empty response
+                    # and after creating a new session, we get the same empty
+                    # response, then we are sure of the response being supposed
+                    # to be empty.
+                    if error_util.FAULT_NOT_AUTHENTICATED in last_fault_list:
+                        return []
+                    last_fault_list = excep.fault_list
                     self._create_session()
                 else:
                     # No re-trying for errors for API call has gone through

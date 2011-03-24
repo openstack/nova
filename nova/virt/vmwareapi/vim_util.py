@@ -27,11 +27,12 @@ def build_selection_spec(client_factory, name):
     return sel_spec
 
 
-def build_traversal_spec(client_factory, name, type, path, skip, select_set):
+def build_traversal_spec(client_factory, name, spec_type, path, skip,
+                         select_set):
     """Builds the traversal spec object."""
     traversal_spec = client_factory.create('ns0:TraversalSpec')
     traversal_spec.name = name
-    traversal_spec.type = type
+    traversal_spec.type = spec_type
     traversal_spec.path = path
     traversal_spec.skip = skip
     traversal_spec.selectSet = select_set
@@ -131,7 +132,7 @@ def get_object_properties(vim, collector, mobj, type, properties):
         usecoll = vim.get_service_content().propertyCollector
     property_filter_spec = client_factory.create('ns0:PropertyFilterSpec')
     property_spec = client_factory.create('ns0:PropertySpec')
-    property_spec.all = (properties == None or len(properties) == 0)
+    property_spec.all = (properties is None or len(properties) == 0)
     property_spec.pathSet = properties
     property_spec.type = type
     object_spec = client_factory.create('ns0:ObjectSpec')
@@ -170,10 +171,10 @@ def get_objects(vim, type, properties_to_collect=["name"], all=False):
                                 specSet=[property_filter_spec])
 
 
-def get_prop_spec(client_factory, type, properties):
+def get_prop_spec(client_factory, spec_type, properties):
     """Builds the Property Spec Object."""
     prop_spec = client_factory.create('ns0:PropertySpec')
-    prop_spec.type = type
+    prop_spec.type = spec_type
     prop_spec.pathSet = properties
     return prop_spec
 

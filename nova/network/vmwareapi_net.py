@@ -25,7 +25,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.virt.vmwareapi_conn import VMWareAPISession
-from nova.virt.vmwareapi.network_utils import NetworkHelper
+from nova.virt.vmwareapi import network_utils
 
 LOG = logging.getLogger("nova.network.vmwareapi_net")
 
@@ -50,13 +50,13 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
                                FLAGS.vmwareapi_api_retry_count)
     vlan_interface = FLAGS.vlan_interface
     # Check if the vlan_interface physical network adapter exists on the host
-    if not NetworkHelper.check_if_vlan_interface_exists(session,
+    if not network_utils.check_if_vlan_interface_exists(session,
                                                         vlan_interface):
         raise exception.NotFound(_("There is no physical network adapter with "
                           "the name %s on the ESX host") % vlan_interface)
 
     # Get the vSwitch associated with the Physical Adapter
-    vswitch_associated = NetworkHelper.get_vswitch_for_vlan_interface(
+    vswitch_associated = network_utils.get_vswitch_for_vlan_interface(
                                         session, vlan_interface)
     if vswitch_associated is None:
         raise exception.NotFound(_("There is no virtual switch associated "
@@ -64,16 +64,16 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
             vlan_interface)
     # Check whether bridge already exists and retrieve the the ref of the
     # network whose name_label is "bridge"
-    network_ref = NetworkHelper.get_network_with_the_name(session, bridge)
-    if network_ref == None:
+    network_ref = network_utils.get_network_with_the_name(session, bridge)
+    if network_ref is None:
         # Create a port group on the vSwitch associated with the vlan_interface
         # corresponding physical network adapter on the ESX host
-        NetworkHelper.create_port_group(session, bridge, vswitch_associated,
+        network_utils.create_port_group(session, bridge, vswitch_associated,
                                 vlan_num)
     else:
         # Get the vlan id and vswitch corresponding to the port group
         pg_vlanid, pg_vswitch = \
-            NetworkHelper.get_vlanid_and_vswitch_for_portgroup(session, bridge)
+            network_utils.get_vlanid_and_vswitch_for_portgroup(session, bridge)
 
         # Check if the vsiwtch associated is proper
         if pg_vswitch != vswitch_associated:

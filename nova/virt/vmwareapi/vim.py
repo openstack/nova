@@ -16,7 +16,7 @@
 #    under the License.
 
 """
-Classes that facilitate SOAP calls for VMware VI API.
+Classes for making VMware VI SOAP calls.
 """
 
 import httplib
@@ -80,7 +80,7 @@ class Vim:
         wsdl_url = FLAGS.vmwareapi_wsdl_loc
         if wsdl_url is None:
             raise Exception(_("Must specify vmwareapi_wsdl_loc"))
-        # Use this when VMware fixes their faulty wsdl
+        # TODO(sateesh): Use this when VMware fixes their faulty wsdl
         #wsdl_url = '%s://%s/sdk/vimService.wsdl' % (self._protocol,
         #        self._host_name)
         url = '%s://%s/sdk' % (self._protocol, self._host_name)

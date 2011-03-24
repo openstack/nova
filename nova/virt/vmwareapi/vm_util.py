@@ -126,8 +126,8 @@ def create_network_spec(client_factory, network_name, mac_address):
     return network_spec
 
 
-def get_vmdk_attach_config_spec(client_factory,
-                disksize, file_path, adapter_type="lsiLogic"):
+def get_vmdk_attach_config_spec(client_factory, disksize, file_path,
+                                adapter_type="lsiLogic"):
     """Builds the vmdk attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
@@ -198,8 +198,8 @@ def get_vmdk_create_spec(client_factory, size_in_kb, adapter_type="lsiLogic"):
     return create_vmdk_spec
 
 
-def create_virtual_disk_spec(client_factory,
-                disksize, controller_key, file_path=None):
+def create_virtual_disk_spec(client_factory, disksize, controller_key,
+                             file_path=None):
     """
     Builds spec for the creation of a new/ attaching of an already existing
     Virtual Disk to the VM.
@@ -288,7 +288,7 @@ def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway):
 
 
 def get_add_vswitch_port_group_spec(client_factory, vswitch_name,
-                                           port_group_name, vlan_id):
+                                    port_group_name, vlan_id):
     """Builds the virtual switch port group add spec."""
     vswitch_port_group_spec = client_factory.create('ns0:HostPortGroupSpec')
     vswitch_port_group_spec.name = port_group_name

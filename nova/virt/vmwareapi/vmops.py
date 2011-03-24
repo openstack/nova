@@ -35,7 +35,7 @@ from nova.compute import power_state
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
-from nova.virt.vmwareapi.network_utils import NetworkHelper
+from nova.virt.vmwareapi import network_utils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger("nova.virt.vmwareapi.vmops")
@@ -113,7 +113,7 @@ class VMWareVMOps(object):
 
         def _check_if_network_bridge_exists():
             network_ref = \
-                NetworkHelper.get_network_with_the_name(self._session,
+                network_utils.get_network_with_the_name(self._session,
                                                         net_name)
             if network_ref is None:
                 raise exception.NotFound(_("Network with the name '%s' doesn't"
@@ -590,8 +590,8 @@ class VMWareVMOps(object):
                              "got this exception while deleting"
                              " the VM contents from the disk: %s")
                              % str(excep))
-        except Exception, e:
-            LOG.exception(e)
+        except Exception, exc:
+            LOG.exception(exc)
 
     def pause(self, instance, callback):
         """Pause a VM instance."""

@@ -82,8 +82,8 @@ class GlanceWriteThread(object):
             """Function to do the image data transfer through an update
             and thereon checks if the state is 'active'."""
             self.glance_client.update_image(self.image_id,
-                                     image_meta=self.image_meta,
-                                     image_data=self.input)
+                                            image_meta=self.image_meta,
+                                            image_data=self.input)
             self._running = True
             while self._running:
                 try:

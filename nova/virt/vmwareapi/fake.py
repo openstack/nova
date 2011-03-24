@@ -68,16 +68,16 @@ def cleanup():
         _db_content[c] = {}
 
 
-def _create_object(table, obj):
+def _create_object(table, table_obj):
     """Create an object in the db."""
-    _db_content[table][obj.obj] = obj
+    _db_content[table][table_obj.obj] = table_obj
 
 
-def _get_objects(type):
+def _get_objects(obj_type):
     """Get objects of the type."""
     lst_objs = []
-    for key in _db_content[type]:
-        lst_objs.append(_db_content[type][key])
+    for key in _db_content[obj_type]:
+        lst_objs.append(_db_content[obj_type][key])
     return lst_objs
 
 
@@ -88,19 +88,13 @@ class Prop(object):
         self.name = None
         self.val = None
 
-    def setVal(self, val):
-        self.val = val
-
-    def setName(self, name):
-        self.name = name
-
 
 class ManagedObject(object):
     """Managed Data Object base class."""
 
     def __init__(self, name="ManagedObject", obj_ref=None):
         """Sets the obj property which acts as a reference to the object."""
-        object.__setattr__(self, 'objName', name)
+        super(ManagedObject, self).__setattr__('objName', name)
         if obj_ref is None:
             obj_ref = str(uuid.uuid4())
         object.__setattr__(self, 'obj', obj_ref)
@@ -127,8 +121,8 @@ class ManagedObject(object):
                 prop.val = val
                 return
         elem = Prop()
-        elem.setName(attr)
-        elem.setVal(val)
+        elem.name = attr
+        elem.val = val
         self.propSet.append(elem)
 
     def __getattr__(self, attr):
@@ -143,15 +137,7 @@ class ManagedObject(object):
 
 class DataObject(object):
     """Data object base class."""
-
-    def __init__(self):
-        pass
-
-    def __getattr__(self, attr):
-        return object.__getattribute__(self, attr)
-
-    def __setattr__(self, attr, value):
-        object.__setattr__(self, attr, value)
+    pass
 
 
 class VirtualDisk(DataObject):
@@ -160,30 +146,24 @@ class VirtualDisk(DataObject):
     __class__.__name__ to 'VirtualDisk'. Refer place where __class__.__name__
     is used in the code.
     """
-
-    def __init__(self):
-        DataObject.__init__(self)
+    pass
 
 
 class VirtualDiskFlatVer2BackingInfo(DataObject):
     """VirtualDiskFlatVer2BackingInfo class."""
-
-    def __init__(self):
-        DataObject.__init__(self)
+    pass
 
 
 class VirtualLsiLogicController(DataObject):
     """VirtualLsiLogicController class."""
-
-    def __init__(self):
-        DataObject.__init__(self)
+    pass
 
 
 class VirtualMachine(ManagedObject):
     """Virtual Machine class."""
 
     def __init__(self, **kwargs):
-        ManagedObject.__init__(self, "VirtualMachine")
+        super(VirtualMachine, self).__init__("VirtualMachine")
         self.set("name", kwargs.get("name"))
         self.set("runtime.connectionState",
                  kwargs.get("conn_state", "connected"))
@@ -224,7 +204,7 @@ class VirtualMachine(ManagedObject):
             controller.key = controller_key
 
             self.set("config.hardware.device", [disk, controller])
-        except Exception:
+        except AttributeError:
             # Case of Reconfig of VM to set extra params
             self.set("config.extraConfig", val.extraConfig)
 
@@ -233,7 +213,7 @@ class Network(ManagedObject):
     """Network class."""
 
     def __init__(self):
-        ManagedObject.__init__(self, "Network")
+        super(Network, self).__init__("Network")
         self.set("summary.name", "vmnet0")
 
 
@@ -241,7 +221,7 @@ class ResourcePool(ManagedObject):
     """Resource Pool class."""
 
     def __init__(self):
-        ManagedObject.__init__(self, "ResourcePool")
+        super(ResourcePool, self).__init__("ResourcePool")
         self.set("name", "ResPool")
 
 
@@ -249,7 +229,7 @@ class Datastore(ManagedObject):
     """Datastore class."""
 
     def __init__(self):
-        ManagedObject.__init__(self, "Datastore")
+        super(Datastore, self).__init__("Datastore")
         self.set("summary.type", "VMFS")
         self.set("summary.name", "fake-ds")
 
@@ -258,7 +238,7 @@ class HostNetworkSystem(ManagedObject):
     """HostNetworkSystem class."""
 
     def __init__(self):
-        ManagedObject.__init__(self, "HostNetworkSystem")
+        super(HostNetworkSystem, self).__init__("HostNetworkSystem")
         self.set("name", "networkSystem")
 
         pnic_do = DataObject()
@@ -274,7 +254,7 @@ class HostSystem(ManagedObject):
     """Host System class."""
 
     def __init__(self):
-        ManagedObject.__init__(self, "HostSystem")
+        super(HostSystem, self).__init__("HostSystem")
         self.set("name", "ha-host")
         if _db_content.get("HostNetworkSystem", None) is None:
             create_host_network_system()
@@ -341,7 +321,7 @@ class Datacenter(ManagedObject):
     """Datacenter class."""
 
     def __init__(self):
-        ManagedObject.__init__(self, "Datacenter")
+        super(Datacenter, self).__init__("Datacenter")
         self.set("name", "ha-datacenter")
         self.set("vmFolder", "vm_folder_ref")
         if _db_content.get("Network", None) is None:
@@ -356,7 +336,7 @@ class Task(ManagedObject):
     """Task class."""
 
     def __init__(self, task_name, state="running"):
-        ManagedObject.__init__(self, "Task")
+        super(Task, self).__init__("Task")
         info = DataObject
         info.name = task_name
         info.state = state
@@ -406,7 +386,7 @@ def _add_file(file_path):
 
 def _remove_file(file_path):
     """Removes a file reference from the db."""
-    if _db_content.get("files", None) is None:
+    if _db_content.get("files") is None:
         raise exception.NotFound(_("No files have been added yet"))
     # Check if the remove is for a single file object or for a folder
     if file_path.find(".vmdk") != -1:
@@ -418,10 +398,9 @@ def _remove_file(file_path):
         # Removes the files in the folder and the folder too from the db
         for file in _db_content.get("files"):
             if file.find(file_path) != -1:
-                try:
-                    _db_content.get("files").remove(file)
-                except Exception:
-                    pass
+                lst_files = _db_content.get("files")
+                if lst_files and lst_files.count(file):
+                    lst_files.remove(file)
 
 
 def fake_fetch_image(image, instance, **kwargs):
@@ -456,9 +435,6 @@ def _get_vm_mdo(vm_ref):
 
 class FakeFactory(object):
     """Fake factory class for the suds client."""
-
-    def __init__(self):
-        pass
 
     def create(self, obj_name):
         """Creates a namespace object."""
@@ -661,7 +637,8 @@ class FakeVim(object):
                         for prop in properties:
                             temp_mdo.set(prop, mdo.get(prop))
                         lst_ret_objs.append(temp_mdo)
-            except Exception:
+            except Exception, exc:
+                LOG.exception(exc)
                 continue
         return lst_ret_objs
 

@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Classes to handle image files.
+"""Classes to handle image files
 
 Collection of classes to handle image upload/download to/from Image service
 (like Glance image storage and retrieval service) from/to ESX/ESXi server.
@@ -43,7 +43,7 @@ USER_AGENT = "OpenStack-ESX-Adapter"
 
 try:
     READ_CHUNKSIZE = client.BaseClient.CHUNKSIZE
-except:
+except AttributeError:
     READ_CHUNKSIZE = 65536
 
 
@@ -91,8 +91,8 @@ class VMwareHTTPFile(object):
         """Close the file handle."""
         try:
             self.file_handle.close()
-        except Exception:
-            pass
+        except Exception, exc:
+            LOG.exception(exc)
 
     def __del__(self):
         """Close the file handle on garbage collection."""

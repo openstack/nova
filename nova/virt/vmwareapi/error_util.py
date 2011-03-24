@@ -41,7 +41,7 @@ class SessionOverLoadException(VimException):
 
 
 class VimAttributeError(VimException):
-    """VIM Attribute Error."""
+    """VI Attribute Error."""
     pass
 
 
@@ -57,15 +57,15 @@ class VimFaultException(Exception):
         return str(self.exception_obj)
 
 
-class FaultCheckers:
+class FaultCheckers(object):
     """
     Methods for fault checking of SOAP response. Per Method error handlers
     for which we desire error checking are defined. SOAP faults are
     embedded in the SOAP messages as properties and not as SOAP faults.
     """
 
-    @classmethod
-    def retrieveproperties_fault_checker(self, resp_obj):
+    @staticmethod
+    def retrieveproperties_fault_checker(resp_obj):
         """
         Checks the RetrieveProperties response for errors. Certain faults
         are sent as part of the SOAP body as property of missingSet.
