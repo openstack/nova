@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -60,7 +61,7 @@ def project_dict(project):
 
 def host_dict(host, compute_service, instances, volume_service, volumes, now):
     """Convert a host model object to a result dict"""
-    rv = {'hostanme': host, 'instance_count': len(instances),
+    rv = {'hostname': host, 'instance_count': len(instances),
           'volume_count': len(volumes)}
     if compute_service:
         latest = compute_service['updated_at'] or compute_service['created_at']
@@ -92,15 +93,18 @@ def vpn_dict(project, vpn_instance):
           'public_ip': project.vpn_ip,
           'public_port': project.vpn_port}
     if vpn_instance:
-        rv['instance_id'] = vpn_instance['ec2_id']
+        rv['instance_id'] = ec2utils.id_to_ec2_id(vpn_instance['id'])
         rv['created_at'] = utils.isotime(vpn_instance['created_at'])
         address = vpn_instance.get('fixed_ip', None)
         if address:
             rv['internal_ip'] = address['address']
-        if utils.vpn_ping(project.vpn_ip, project.vpn_port):
-            rv['state'] = 'running'
+        if project.vpn_ip and project.vpn_port:
+            if utils.vpn_ping(project.vpn_ip, project.vpn_port):
+                rv['state'] = 'running'
+            else:
+                rv['state'] = 'down'
         else:
-            rv['state'] = 'down'
+            rv['state'] = 'down - invalid project vpn config'
     else:
         rv['state'] = 'pending'
     return rv
@@ -116,7 +120,8 @@ class AdminController(object):
 
     def describe_instance_types(self, context, **_kwargs):
         """Returns all active instance types data (vcpus, memory, etc.)"""
-        return {'instanceTypeSet': [db.instance_type_get_all(context)]}
+        return {'instanceTypeSet': [instance_dict(v) for v in
+                                   db.instance_type_get_all(context).values()]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
@@ -279,7 +284,7 @@ class AdminController(object):
                                          ", ensure it isn't running, and try "
                                          "again in a few minutes")
             instance = self._vpn_for(context, project)
-        return {'instance_id': instance['ec2_id']}
+        return {'instance_id': ec2utils.id_to_ec2_id(instance['id'])}
 
     def describe_vpns(self, context):
         vpns = []

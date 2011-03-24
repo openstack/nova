@@ -128,14 +128,12 @@ class APIRouter(wsgi.Router):
         _limits = limits.LimitsController()
         mapper.resource("limit", "limits", controller=_limits)
 
-        super(APIRouter, self).__init__(mapper)
-
 
 class APIRouterV10(APIRouter):
-    ''' Defines routes specific to OpenStack API V1.0 '''
+    """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        APIRouter._setup_routes(self, mapper)
+        super(APIRouterV10, self)._setup_routes(mapper)
         mapper.resource("server", "servers",
                         controller=servers.ControllerV10(),
                         collection={'detail': 'GET'},
@@ -143,10 +141,10 @@ class APIRouterV10(APIRouter):
 
 
 class APIRouterV11(APIRouter):
-    ''' Defines routes specific to OpenStack API V1.1 '''
+    """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
-        APIRouter._setup_routes(self, mapper)
+        super(APIRouterV11, self)._setup_routes(mapper)
         mapper.resource("server", "servers",
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
