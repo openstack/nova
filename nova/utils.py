@@ -171,10 +171,6 @@ def execute(*cmd, **kwargs):
                                                 stdout=stdout,
                                                 stderr=stderr,
                                                 cmd=' '.join(cmd))
-            # NOTE(termie): this appears to be necessary to let the subprocess
-            #               call clean something up in between calls, without
-            #               it two execute calls in a row hangs the second one
-            greenthread.sleep(0)
             return result
         except ProcessExecutionError:
             if not attempts:
@@ -183,6 +179,11 @@ def execute(*cmd, **kwargs):
                 LOG.debug(_("%r failed. Retrying."), cmd)
                 if delay_on_retry:
                     greenthread.sleep(random.randint(20, 200) / 100.0)
+        finally:
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
+            greenthread.sleep(0)
 
 
 def ssh_execute(ssh, cmd, process_input=None,
