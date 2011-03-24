@@ -245,6 +245,12 @@ class ServersTest(test.TestCase):
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['id'] for s in servers], [3, 4])
 
+    def test_get_servers_with_limit_and_marker(self):
+        req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [2, 3])
+
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
