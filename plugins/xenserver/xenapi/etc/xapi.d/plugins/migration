@@ -22,6 +22,7 @@ XenAPI Plugin for transfering data between host nodes
 import os
 import os.path
 import pickle
+import shlex
 import shutil
 import subprocess
 
@@ -97,7 +98,7 @@ def transfer_vhd(session, args):
     logging.debug("Preparing to transmit %s to %s" % (source_path,
             dest_path))
 
-    ssh_cmd = 'ssh -o StrictHostKeyChecking=no'
+    ssh_cmd = '\"ssh -o StrictHostKeyChecking=no\"'
 
     rsync_args = shlex.split('nohup /usr/bin/rsync -av --progress -e %s %s %s'
             % (ssh_cmd, source_path, dest_path))
