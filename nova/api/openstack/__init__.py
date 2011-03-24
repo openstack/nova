@@ -74,9 +74,14 @@ class APIRouter(wsgi.Router):
         return cls()
 
     def __init__(self):
+        self.server_members = {}
         mapper = routes.Mapper()
+        self._setup_routes(mapper)
+        super(APIRouter, self).__init__(mapper)
 
-        server_members = {'action': 'POST'}
+    def _setup_routes(self, mapper):
+        server_members = self.server_members
+        server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
 
@@ -101,17 +106,8 @@ class APIRouter(wsgi.Router):
                             controller=accounts.Controller(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("server", "servers", controller=servers.Controller(),
-                        collection={'detail': 'GET'},
-                        member=server_members)
-
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
-
-        mapper.resource("volume_attachment", "volume_attachment",
-                        controller=volume_attachments.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
@@ -138,7 +134,33 @@ class APIRouter(wsgi.Router):
                         controller=volumes.Controller(),
                         collection={'detail': 'GET'})
 
+        mapper.resource("volume_attachment", "volume_attachment",
+                        controller=volume_attachments.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
         super(APIRouter, self).__init__(mapper)
+
+class APIRouterV10(APIRouter):
+    """Define routes specific to OpenStack API V1.0."""
+
+    def _setup_routes(self, mapper):
+        super(APIRouterV10, self)._setup_routes(mapper)
+        mapper.resource("server", "servers",
+                        controller=servers.ControllerV10(),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
+
+
+class APIRouterV11(APIRouter):
+    """Define routes specific to OpenStack API V1.1."""
+
+    def _setup_routes(self, mapper):
+        super(APIRouterV11, self)._setup_routes(mapper)
+        mapper.resource("server", "servers",
+                        controller=servers.ControllerV11(),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
 
 
 class Versions(wsgi.Application):

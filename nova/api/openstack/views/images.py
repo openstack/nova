@@ -18,19 +18,6 @@
 from nova.api.openstack import common
 
 
-def get_view_builder(req):
-    '''
-    A factory method that returns the correct builder based on the version of
-    the api requested.
-    '''
-    version = common.get_api_version(req)
-    base_url = req.application_url
-    if version == '1.1':
-        return ViewBuilder_1_1(base_url)
-    else:
-        return ViewBuilder_1_0()
-
-
 class ViewBuilder(object):
     def __init__(self):
         pass
@@ -39,13 +26,9 @@ class ViewBuilder(object):
         raise NotImplementedError()
 
 
-class ViewBuilder_1_1(ViewBuilder):
+class ViewBuilderV11(ViewBuilder):
     def __init__(self, base_url):
         self.base_url = base_url
 
     def generate_href(self, image_id):
         return "%s/images/%s" % (self.base_url, image_id)
-
-
-class ViewBuilder_1_0(ViewBuilder):
-    pass
