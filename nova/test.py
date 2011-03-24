@@ -24,6 +24,7 @@ and some black magic for inline callbacks.
 
 
 import datetime
+import functools
 import os
 import shutil
 import uuid
@@ -32,6 +33,8 @@ import unittest
 import mox
 import shutil
 import stubout
+from eventlet import greenpool
+from eventlet import greenthread
 
 from nova import context
 from nova import db
@@ -39,6 +42,7 @@ from nova import fakerabbit
 from nova import flags
 from nova import rpc
 from nova import service
+from nova import wsgi
 
 
 FLAGS = flags.FLAGS
@@ -79,6 +83,7 @@ class TestCase(unittest.TestCase):
         self.injected = []
         self._services = []
         self._monkey_patch_attach()
+        self._monkey_patch_wsgi()
         self._original_flags = FLAGS.FlagValuesDict()
 
     def tearDown(self):
@@ -99,7 +104,8 @@ class TestCase(unittest.TestCase):
             self.reset_flags()
 
             # Reset our monkey-patches
-            rpc.Consumer.attach_to_eventlet = self.originalAttach
+            rpc.Consumer.attach_to_eventlet = self.original_attach
+            wsgi.Server.start = self.original_start
 
             # Stop any timers
             for x in self.injected:
@@ -141,15 +147,36 @@ class TestCase(unittest.TestCase):
         return svc
 
     def _monkey_patch_attach(self):
-        self.originalAttach = rpc.Consumer.attach_to_eventlet
+        self.original_attach = rpc.Consumer.attach_to_eventlet
 
-        def _wrapped(innerSelf):
-            rv = self.originalAttach(innerSelf)
+        def _wrapped(inner_self):
+            rv = self.original_attach(inner_self)
             self.injected.append(rv)
             return rv
 
-        _wrapped.func_name = self.originalAttach.func_name
+        _wrapped.func_name = self.original_attach.func_name
         rpc.Consumer.attach_to_eventlet = _wrapped
+
+    def _monkey_patch_wsgi(self):
+        """Allow us to kill servers spawned by wsgi.Server."""
+        # TODO(termie): change these patterns to use functools
+        self.original_start = wsgi.Server.start
+
+        @functools.wraps(self.original_start)
+        def _wrapped_start(inner_self, *args, **kwargs):
+            original_spawn_n = inner_self.pool.spawn_n
+
+            @functools.wraps(original_spawn_n)
+            def _wrapped_spawn_n(*args, **kwargs):
+                rv = greenthread.spawn(*args, **kwargs)
+                self._services.append(rv)
+
+            inner_self.pool.spawn_n = _wrapped_spawn_n
+            self.original_start(inner_self, *args, **kwargs)
+            inner_self.pool.spawn_n = original_spawn_n
+
+        _wrapped_start.func_name = self.original_start.func_name
+        wsgi.Server.start = _wrapped_start
 
     # Useful assertions
     def assertDictMatch(self, d1, d2):
