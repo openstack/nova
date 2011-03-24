@@ -27,7 +27,7 @@ FLAGS = flags.FLAGS
 
 
 class Controller(wsgi.Controller):
-    """ The image metadata API controller for the Openstack API """
+    """The image metadata API controller for the Openstack API"""
 
     def __init__(self):
         self.image_service = utils.import_object(FLAGS.image_service)
@@ -42,7 +42,7 @@ class Controller(wsgi.Controller):
         return metadata
 
     def index(self, req, image_id):
-        """ Returns the list of metadata for a given instance """
+        """Returns the list of metadata for a given instance"""
         context = req.environ['nova.context']
         metadata = self._get_metadata(context, image_id)
         return dict(metadata=metadata)
