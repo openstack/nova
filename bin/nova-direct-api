@@ -53,10 +53,18 @@ flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
 
+# An example of an API that only exposes read-only methods.
 class ReadOnlyCompute(direct.Limited):
     """Read-only Compute API."""
 
     _allowed = ['get', 'get_all', 'get_console_output']
+
+# An example of an API that provides a backwards compatibility layer.
+class VolumeVersionOne(direct.Limited):
+    _allowed = ['create', 'delete', 'update', 'get']
+
+    def create(self, context, size, name):
+        self.proxy.create(context, size, name, description=None)
 
 
 if __name__ == '__main__':
@@ -65,10 +73,11 @@ if __name__ == '__main__':
     logging.setup()
 
     direct.register_service('compute', compute.API())
-    direct.register_service('compute-readonly', ReadOnlyCompute(compute.API()))
     direct.register_service('volume', volume.API())
     direct.register_service('network', network.API())
     direct.register_service('reflect', direct.Reflection())
+    direct.register_service('compute-readonly', ReadOnlyCompute(compute.API()))
+    direct.register_service('volume-v1', VolumeVersionOne(volume.API()))
     router = direct.Router()
     with_json = direct.JsonParamsMiddleware(router)
     with_req = direct.PostParamsMiddleware(with_json)
