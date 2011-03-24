@@ -225,6 +225,10 @@ class Limited(object):
     Additionally where appropriate methods can be added or overwritten, for
     example to provide backwards compatibility.
 
+    The wrapping approach has been chosen so that the wrapped API can maintain
+    its own internal consistency, for example if it calls "self.create" it
+    should get its own create method rather than anything we do here.
+
     """
 
     _allowed = None
