@@ -1,3 +1,5 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -210,10 +212,7 @@ class IptablesManager(object):
     """
     def __init__(self, execute=None):
         if not execute:
-            if FLAGS.fake_network:
-                self.execute = lambda *args, **kwargs: ('', '')
-            else:
-                self.execute = utils.execute
+            self.execute = _execute
         else:
             self.execute = execute
 
@@ -350,9 +349,6 @@ class IptablesManager(object):
         new_filter = filter(_weed_out_duplicates, new_filter)
         new_filter.reverse()
         return new_filter
-
-
-iptables_manager = IptablesManager()
 
 
 def metadata_forward():
@@ -767,3 +763,6 @@ def _ip_bridge_cmd(action, params, device):
     cmd.extend(params)
     cmd.extend(['dev', device])
     return cmd
+
+
+iptables_manager = IptablesManager()

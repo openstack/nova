@@ -17,6 +17,7 @@ import common
 
 from nova import db
 from nova import flags
+from nova import log as logging
 from nova import wsgi
 from nova.scheduler import api
 
@@ -38,7 +39,8 @@ def _exclude_keys(item, keys):
 
 
 def _scrub_zone(zone):
-    return _filter_keys(zone, ('id', 'api_url'))
+    return _exclude_keys(zone, ('username', 'password', 'created_at',
+                    'deleted', 'deleted_at', 'updated_at'))
 
 
 class Controller(wsgi.Controller):
@@ -53,12 +55,8 @@ class Controller(wsgi.Controller):
         # Ask the ZoneManager in the Scheduler for most recent data,
         # or fall-back to the database ...
         items = api.get_zone_list(req.environ['nova.context'])
-        if not items:
-            items = db.zone_get_all(req.environ['nova.context'])
-
         items = common.limited(items, req)
-        items = [_exclude_keys(item, ['username', 'password'])
-                      for item in items]
+        items = [_scrub_zone(item) for item in items]
         return dict(zones=items)
 
     def detail(self, req):
@@ -81,23 +79,23 @@ class Controller(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given zone id"""
         zone_id = int(id)
-        zone = db.zone_get(req.environ['nova.context'], zone_id)
+        zone = api.zone_get(req.environ['nova.context'], zone_id)
         return dict(zone=_scrub_zone(zone))
 
     def delete(self, req, id):
         zone_id = int(id)
-        db.zone_delete(req.environ['nova.context'], zone_id)
+        api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
     def create(self, req):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req.get_content_type())
-        zone = db.zone_create(context, env["zone"])
+        zone = api.zone_create(context, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
     def update(self, req, id):
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
-        zone = db.zone_update(context, zone_id, env["zone"])
+        zone = api.zone_update(context, zone_id, env["zone"])
         return dict(zone=_scrub_zone(zone))

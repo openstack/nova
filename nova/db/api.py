@@ -71,6 +71,7 @@ class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
 
+
 ###################
 
 
