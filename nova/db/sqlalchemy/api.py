@@ -143,12 +143,15 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
-def service_get_all(context, disabled=False):
+def service_get_all(context, disabled=None):
     session = get_session()
-    return session.query(models.Service).\
-                   filter_by(deleted=can_read_deleted(context)).\
-                   filter_by(disabled=disabled).\
-                   all()
+    query = session.query(models.Service).\
+                   filter_by(deleted=can_read_deleted(context))
+
+    if disabled is not None:
+        query = query.filter_by(disabled=disabled)
+
+    return query.all()
 
 
 @require_admin_context
@@ -2209,7 +2212,7 @@ def migration_get(context, id, session=None):
                      filter_by(id=id).first()
     if not result:
         raise exception.NotFound(_("No migration found with id %s")
-                % migration_id)
+                % id)
     return result
 
 
@@ -2432,6 +2435,7 @@ def zone_create(context, values):
 
 @require_admin_context
 def zone_update(context, zone_id, values):
+    session = get_session()
     zone = session.query(models.Zone).filter_by(id=zone_id).first()
     if not zone:
         raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())

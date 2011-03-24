@@ -34,6 +34,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.scheduler import api as scheduler_api
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -352,6 +353,7 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
+    @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
@@ -383,6 +385,13 @@ class API(base.Base):
         """Get a single instance with the given ID."""
         rv = self.db.instance_get(context, instance_id)
         return dict(rv.iteritems())
+
+    @scheduler_api.reroute_compute("get")
+    def routing_get(self, context, instance_id):
+        """Use this method instead of get() if this is the only
+           operation you intend to to. It will route to novaclient.get
+           if the instance is not found."""
+        return self.get(context, instance_id)
 
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
@@ -527,14 +536,17 @@ class API(base.Base):
                               "instance_id": instance_id,
                               "flavor_id": flavor_id}})
 
+    @scheduler_api.reroute_compute("pause")
     def pause(self, context, instance_id):
         """Pause the given instance."""
         self._cast_compute_message('pause_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("unpause")
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
         return self._call_compute_message(
@@ -546,18 +558,22 @@ class API(base.Base):
         """Retrieve actions for the given instance."""
         return self.db.instance_get_actions(context, instance_id)
 
+    @scheduler_api.reroute_compute("suspend")
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
         self._cast_compute_message('suspend_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("resume")
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
         self._cast_compute_message('resume_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         self._cast_compute_message('rescue_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
@@ -573,7 +589,6 @@ class API(base.Base):
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
-        instance = self.get(context, instance_id)
         output = self._call_compute_message('get_ajax_console',
                                             context,
                                             instance_id)

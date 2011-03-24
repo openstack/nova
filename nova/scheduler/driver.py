@@ -49,6 +49,13 @@ class WillNotSchedule(exception.Error):
 class Scheduler(object):
     """The base class that all Scheduler clases should inherit from."""
 
+    def __init__(self):
+        self.zone_manager = None
+
+    def set_zone_manager(self, zone_manager):
+        """Called by the Scheduler Service to supply a ZoneManager."""
+        self.zone_manager = zone_manager
+
     @staticmethod
     def service_is_up(service):
         """Check whether a service is up based on last heartbeat."""

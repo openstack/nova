@@ -71,6 +71,7 @@ class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
 
+
 ###################
 
 
@@ -89,7 +90,7 @@ def service_get_by_host_and_topic(context, host, topic):
     return IMPL.service_get_by_host_and_topic(context, host, topic)
 
 
-def service_get_all(context, disabled=False):
+def service_get_all(context, disabled=None):
     """Get all services."""
     return IMPL.service_get_all(context, disabled)
 
