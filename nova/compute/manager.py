@@ -1001,7 +1001,7 @@ class ComputeManager(manager.Manager):
         vm_instances = dict((vm.name, vm) for vm in vm_instances)
 
         # Keep a list of VMs not in the DB, cross them off as we find them
-        vms_not_found_in_db = [vm.name for vm in vm_instances]
+        vms_not_found_in_db = list(vm_instances.keys())
 
         db_instances = self.db.instance_get_all_by_host(context, self.host)
 

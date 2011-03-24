@@ -51,4 +51,4 @@ def name(code):
 
 
 def valid_states():
-    return _STATE_MAP.values()
+    return _STATE_MAP.keys()

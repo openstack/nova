@@ -255,7 +255,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         infos = []
         for domain_id in self._conn.listDomainsID():
-            domain = self._conn.lookupById(domain_id)
+            domain = self._conn.lookupByID(domain_id)
             info = self._map_to_instance_info(domain)
             infos.append(info)
         return infos

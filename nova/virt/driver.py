@@ -28,13 +28,13 @@ from nova.compute import power_state
 class InstanceInfo(object):
     def __init__(self, name, state):
         self.name = name
-        assert state in power_state.valid_states()
+        assert state in power_state.valid_states(), "Bad state: %s" % state
         self.state = state
 
 
 class ComputeDriver(object):
     """Base class for compute drivers.
-    
+
     Lots of documentation is currently on fake.py.
     """
 
@@ -44,7 +44,7 @@ class ComputeDriver(object):
 
     def get_info(self, instance_name):
         """Get the current status of an instance, by name (not ID!)
-        
+
         Returns a dict containing:
         :state:           the running state, one of the power_state codes
         :max_mem:         (int) the maximum memory in KBytes allowed
@@ -78,7 +78,7 @@ class ComputeDriver(object):
 
     def get_console_pool_info(self, console_type):
         """???
-        
+
         Returns a dict containing:
         :address:          ???
         :username:         ???
@@ -228,4 +228,3 @@ class ComputeDriver(object):
     def inject_network_info(self, instance):
         """inject network info for specified instance"""
         raise NotImplementedError()
-
