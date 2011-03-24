@@ -2467,7 +2467,7 @@ def zone_get_all(context):
 ####################
 
 @require_context
-def get_instance_metadata(context, instance_id):
+def instance_metadata_get(context, instance_id):
     session = get_session()
 
     meta_results = session.query(models.InstanceMetadata).\
@@ -2482,7 +2482,7 @@ def get_instance_metadata(context, instance_id):
 
 
 @require_context
-def delete_instance_metadata(context, instance_id, key):
+def instance_metadata_delete(context, instance_id, key):
     session = get_session()
     session.query(models.InstanceMetadata).\
         filter_by(instance_id=instance_id).\
@@ -2494,7 +2494,7 @@ def delete_instance_metadata(context, instance_id, key):
 
 
 @require_context
-def get_instance_metadata_item(context, instance_id, key):
+def instance_metadata_get_item(context, instance_id, key):
     session = get_session()
 
     meta_result = session.query(models.InstanceMetadata).\
@@ -2510,12 +2510,12 @@ def get_instance_metadata_item(context, instance_id, key):
 
 
 @require_context
-def update_or_create_instance_metadata(context, instance_id, metadata):
+def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
     meta_ref = None
     for key, value in metadata.iteritems():
         try:
-            meta_ref = get_instance_metadata_item(context, instance_id, key,
+            meta_ref = instance_metadata_get_item(context, instance_id, key,
                                                         session)
         except:
             meta_ref = models.InstanceMetadata()

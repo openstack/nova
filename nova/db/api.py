@@ -1176,16 +1176,16 @@ def zone_get_all(context):
 ####################
 
 
-def get_instance_metadata(context, instance_id):
+def instance_metadata_get(context, instance_id):
     """Get all metadata for an instance"""
-    return IMPL.get_instance_metadata(context, instance_id)
+    return IMPL.instance_metadata_get(context, instance_id)
 
 
-def delete_instance_metadata(context, instance_id, key):
+def instance_metadata_delete(context, instance_id, key):
     """Delete the given metadata item"""
-    IMPL.delete_instance_metadata(context, instance_id, key)
+    IMPL.instance_metadata_delete(context, instance_id, key)
 
 
-def update_or_create_instance_metadata(context, instance_id, metadata):
-    """Creates or updates instance metadata"""
-    IMPL.update_or_create_instance_metadata(context, instance_id, metadata)
+def instance_metadata_update_or_create(context, instance_id, metadata):
+    """Create or update instance metadata"""
+    IMPL.instance_metadata_update_or_create(context, instance_id, metadata)

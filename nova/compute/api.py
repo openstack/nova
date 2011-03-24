@@ -651,15 +651,15 @@ class API(base.Base):
 
     def get_instance_metadata(self, context, instance_id):
         """Get all metadata associated with an instance."""
-        rv = self.db.get_instance_metadata(context, instance_id)
+        rv = self.db.instance_metadata_get(context, instance_id)
         return dict(rv.iteritems())
 
     def delete_instance_metadata(self, context, instance_id, key):
         """Delete the given metadata item"""
-        self.db.delete_instance_metadata(context, instance_id, key)
+        self.db.instance_metadata_delete(context, instance_id, key)
 
     def update_or_create_instance_metadata(self, context, instance_id,
                                             metadata):
         """Updates or creates instance metadata"""
-        self.db.update_or_create_instance_metadata(context, instance_id,
+        self.db.instance_metadata_update_or_create(context, instance_id,
                                                     metadata)
