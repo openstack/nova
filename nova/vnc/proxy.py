@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -20,11 +19,13 @@
 
 """Eventlet WSGI Services to proxy VNC.  No nova deps."""
 
-from base64 import b64encode, b64decode
+import base64
+import os
+
 import eventlet
 from eventlet import wsgi
 from eventlet import websocket
-import os
+
 from webob import Request
 import webob
 
@@ -32,7 +33,7 @@ WS_ENDPOINT = '/data'
 
 
 class WebsocketVNCProxy(object):
-    """Class to proxy from websocket to vnc server"""
+    """Class to proxy from websocket to vnc server."""
 
     def __init__(self, wwwroot):
         self.wwwroot = wwwroot
@@ -58,7 +59,7 @@ class WebsocketVNCProxy(object):
                 d = source.recv(32384)
                 if d == '':
                     break
-                d = b64encode(d)
+                d = base64.b64encode(d)
                 dest.send(d)
         except:
             source.close()
@@ -70,7 +71,7 @@ class WebsocketVNCProxy(object):
                 d = source.wait()
                 if d is None:
                     break
-                d = b64decode(d)
+                d = base64.b64decode(d)
                 dest.sendall(d)
         except:
             source.close()
@@ -118,7 +119,7 @@ class WebsocketVNCProxy(object):
 
 
 class DebugMiddleware(object):
-    """Debug middleware.  Skip auth, get vnc port and host from query string"""
+    """Debug middleware.  Skip auth, get vnc connect info from query string."""
 
     def __init__(self, app):
         self.app = app

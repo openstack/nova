@@ -516,6 +516,7 @@ class LibvirtConnection(object):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._conn.lookupByName(instance_name)
             xml = virt_dom.XMLDesc(0)
+            # TODO: use etree instead of minidom
             dom = minidom.parseString(xml)
 
             for graphic in dom.getElementsByTagName('graphics'):
@@ -735,7 +736,7 @@ class LibvirtConnection(object):
                     'driver_type': driver_type}
 
         if FLAGS.vnc_enabled:
-            xml_info['vnc_compute_host_iface'] = FLAGS.vnc_compute_host_iface
+            xml_info['vnc_server_host'] = FLAGS.vnc_server_host
         if ra_server:
             xml_info['ra_server'] = ra_server + "/128"
         if not rescue:

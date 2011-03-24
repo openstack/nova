@@ -559,7 +559,7 @@ class ComputeManager(manager.Manager):
 
     @exception.wrap_exception
     def get_vnc_console(self, context, instance_id):
-        """Return connection information for an vnc console"""
+        """Return connection information for an vnc console."""
         context = context.elevated()
         LOG.debug(_("instance %s: getting vnc console"), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)

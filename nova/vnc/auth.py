@@ -18,11 +18,12 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Auth Components for VNC Console"""
+"""Auth Components for VNC Console."""
 
 import time
 import urlparse
 import webob
+
 from webob import Request
 
 from nova import flags
@@ -32,12 +33,13 @@ from nova import utils
 from nova import wsgi
 from nova import vnc
 
+
 LOG = logging.getLogger('nova.vnc-proxy')
 FLAGS = flags.FLAGS
 
 
 class NovaAuthMiddleware(object):
-    """Implementation of Middleware to Handle Nova Auth"""
+    """Implementation of Middleware to Handle Nova Auth."""
 
     def __init__(self, app):
         self.app = app
@@ -67,13 +69,12 @@ class NovaAuthMiddleware(object):
         middleware = self
         middleware.tokens = {}
 
-        class Callback:
-            def __call__(self, data, message):
-                if data['method'] == 'authorize_vnc_console':
-                    token = data['args']['token']
-                    LOG.audit(_("Received Token: %s)"), token)
-                    middleware.tokens[token] = \
-                      {'args': data['args'], 'last_activity_at': time.time()}
+        def callback(self, data, message):
+            if data['method'] == 'authorize_vnc_console':
+                token = data['args']['token']
+                LOG.audit(_("Received Token: %s)"), token)
+                middleware.tokens[token] = \
+                  {'args': data['args'], 'last_activity_at': time.time()}
 
         def delete_expired_tokens():
             now = time.time()
@@ -90,7 +91,7 @@ class NovaAuthMiddleware(object):
         consumer = rpc.TopicConsumer(
                         connection=conn,
                         topic=FLAGS.vnc_console_proxy_topic)
-        consumer.register_callback(Callback())
+        consumer.register_callback(callback)
 
         utils.LoopingCall(consumer.fetch, auto_ack=True,
                           enable_callbacks=True).start(0.1)
@@ -103,7 +104,6 @@ class LoggingMiddleware(object):
 
     @webob.dec.wsgify
     def __call__(self, req):
-
         if req.path == vnc.proxy.WS_ENDPOINT:
             LOG.info(_("Received Websocket Request: %s"), req.url)
         else:
