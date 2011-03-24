@@ -150,3 +150,60 @@ class TestCase(unittest.TestCase):
 
         _wrapped.func_name = self.originalAttach.func_name
         rpc.Consumer.attach_to_eventlet = _wrapped
+
+    # Useful assertions
+    def assertDictMatch(self, d1, d2):
+        """Assert two dicts are equivalent.
+
+        This is a 'deep' match in the sense that it handles nested
+        dictionaries appropriately.
+
+        NOTE:
+
+            If you don't care (or don't know) a given value, you can specify
+            the string DONTCARE as the value. This will cause that dict-item
+            to be skipped.
+        """
+        def raise_assertion(msg):
+            d1str = str(d1)
+            d2str = str(d2)
+            base_msg = ("Dictionaries do not match. %(msg)s d1: %(d1str)s "
+                        "d2: %(d2str)s" % locals())
+            raise AssertionError(base_msg)
+
+        d1keys = set(d1.keys())
+        d2keys = set(d2.keys())
+        if d1keys != d2keys:
+            d1only = d1keys - d2keys
+            d2only = d2keys - d1keys
+            raise_assertion("Keys in d1 and not d2: %(d1only)s. "
+                            "Keys in d2 and not d1: %(d2only)s" % locals())
+
+        for key in d1keys:
+            d1value = d1[key]
+            d2value = d2[key]
+            if hasattr(d1value, 'keys') and hasattr(d2value, 'keys'):
+                self.assertDictMatch(d1value, d2value)
+            elif 'DONTCARE' in (d1value, d2value):
+                continue
+            elif d1value != d2value:
+                raise_assertion("d1['%(key)s']=%(d1value)s != "
+                                "d2['%(key)s']=%(d2value)s" % locals())
+
+    def assertDictListMatch(self, L1, L2):
+        """Assert a list of dicts are equivalent"""
+        def raise_assertion(msg):
+            L1str = str(L1)
+            L2str = str(L2)
+            base_msg = ("List of dictionaries do not match: %(msg)s "
+                        "L1: %(L1str)s L2: %(L2str)s" % locals())
+            raise AssertionError(base_msg)
+
+        L1count = len(L1)
+        L2count = len(L2)
+        if L1count != L2count:
+            raise_assertion("Length mismatch: len(L1)=%(L1count)d != "
+                            "len(L2)=%(L2count)d" % locals())
+
+        for d1, d2 in zip(L1, L2):
+            self.assertDictMatch(d1, d2)

@@ -397,20 +397,26 @@ class API(base.Base):
                 fixed_ip=None):
         """Get all instances, possibly filtered by one of the
         given parameters. If there is no filter and the context is
-        an admin, it will retreive all instances in the system."""
+        an admin, it will retreive all instances in the system.
+        """
         if reservation_id is not None:
-            return self.db.instance_get_all_by_reservation(context,
-                                                             reservation_id)
+            return self.db.instance_get_all_by_reservation(
+                context, reservation_id)
+
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)
+
         if project_id or not context.is_admin:
             if not context.project:
-                return self.db.instance_get_all_by_user(context,
-                                                        context.user_id)
+                return self.db.instance_get_all_by_user(
+                    context, context.user_id)
+
             if project_id is None:
                 project_id = context.project_id
-            return self.db.instance_get_all_by_project(context,
-            project_id)
+
+            return self.db.instance_get_all_by_project(
+                context, project_id)
+
         return self.db.instance_get_all(context)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
@@ -460,12 +466,15 @@ class API(base.Base):
 
         :retval: A dict containing image metadata
         """
-        data = {'name': name, 'is_public': False}
-        image_meta = self.image_service.create(context, data)
-        params = {'image_id': image_meta['id']}
+        properties = {'instance_id': str(instance_id),
+                      'user_id': str(context.user_id)}
+        sent_meta = {'name': name, 'is_public': False,
+                     'properties': properties}
+        recv_meta = self.image_service.create(context, sent_meta)
+        params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
-        return image_meta
+        return recv_meta
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
