@@ -311,10 +311,19 @@ class ServersTest(test.TestCase):
 
         imageRef = 'http://localhost/v1.1/images/2'
         flavorRef = 'http://localhost/v1.1/flavors/3'
-        body = dict(server=dict(
-            name='server_test', imageRef=imageRef, flavorRef=flavorRef,
-            metadata={'hello': 'world', 'open': 'stack'},
-            personality={}))
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': imageRef,
+                'flavorRef': flavorRef,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
         req = webob.Request.blank('/v1.1/servers')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -569,16 +578,6 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
 
-    def test_server_resize(self):
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-
     def test_delete_server_instance(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'DELETE'
@@ -633,6 +632,18 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_resized_server_has_correct_status(self):
+        req = self.webreq('/1', 'GET', dict(resize=dict(flavorId=3)))
+
+        def fake_migration_get(*args):
+            return {}
+
+        self.stubs.Set(nova.db, 'migration_get_by_instance_and_status',
+                fake_migration_get)
+        res = req.get_response(fakes.wsgi_app())
+        body = json.loads(res.body)
+        self.assertEqual(body['server']['status'], 'resize-confirm')
 
     def test_confirm_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
@@ -988,7 +999,7 @@ class TestServerInstanceCreation(test.TestCase):
 
     def _setup_mock_compute_api_for_personality(self):
 
-        class MockComputeAPI(object):
+        class MockComputeAPI(nova.compute.API):
 
             def __init__(self):
                 self.injected_files = None

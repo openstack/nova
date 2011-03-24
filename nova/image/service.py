@@ -40,9 +40,9 @@ class BaseImageService(object):
         :retval: a sequence of mappings with the following signature
                     {'id': opaque id of image,
                      'name': name of image,
-                     'created_at': creation timestamp,
-                     'updated_at': modification timestamp,
-                     'deleted_at': deletion timestamp or None,
+                     'created_at': creation datetime object,
+                     'updated_at': modification datetime object,
+                     'deleted_at': deletion datetime object or None,
                      'deleted': boolean indicating if image has been deleted,
                      'status': string description of image status,
                      'is_public': boolean indicating if image is public
@@ -64,9 +64,9 @@ class BaseImageService(object):
 
             {'id': opaque id of image,
              'name': name of image,
-             'created_at': creation timestamp,
-             'updated_at': modification timestamp,
-             'deleted_at': deletion timestamp or None,
+             'created_at': creation datetime object,
+             'updated_at': modification datetime object,
+             'deleted_at': deletion datetime object or None,
              'deleted': boolean indicating if image has been deleted,
              'status': string description of image status,
              'is_public': boolean indicating if image is public
@@ -88,7 +88,7 @@ class BaseImageService(object):
 
     def create(self, context, metadata, data=None):
         """
-        Store the image metadata and data and return the new image id.
+        Store the image metadata and data and return the new image metadata.
 
         :raises AlreadyExists if the image already exist.
 
@@ -96,7 +96,7 @@ class BaseImageService(object):
         raise NotImplementedError
 
     def update(self, context, image_id, metadata, data=None):
-        """Update the given image with the new metadata and data.
+        """Update the given image metadata and data and return the metadata
 
         :raises NotFound if the image does not exist.
 
