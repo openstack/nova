@@ -33,11 +33,9 @@ from boto.s3 import connection as s3
 from nova import context
 from nova import exception
 from nova import flags
-from nova import objectstore
 from nova import wsgi
 from nova import test
 from nova.auth import manager
-#from nova.exception import NotEmpty, NotFound
 from nova.objectstore import s3server
 
 
