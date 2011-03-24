@@ -482,3 +482,6 @@ class HyperVConnection(driver.ComputeDriver):
         if vm is None:
             raise exception.NotFound('Cannot detach volume from missing %s '
                     % instance_name)
+
+    def poll_rescued_instances(self, timeout):
+        pass

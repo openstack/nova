@@ -335,6 +335,14 @@ def utcnow():
 utcnow.override_time = None
 
 
+def is_older_than(before, seconds):
+    """Return True if before is older than 'seconds'"""
+    if utcnow() - before > datetime.timedelta(seconds=seconds):
+        return True
+    else:
+        return False
+
+
 def utcnow_ts():
     """Timestamp version of our utcnow function."""
     return time.mktime(utcnow().timetuple())
