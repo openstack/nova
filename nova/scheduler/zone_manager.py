@@ -58,8 +58,9 @@ class ZoneState(object):
            child zone."""
         self.last_seen = datetime.now()
         self.attempt = 0
-        self.name = zone_metadata["name"]
-        self.capabilities = zone_metadata["capabilities"]
+        self.name = zone_metadata.get("name", "n/a")
+        self.capabilities = ", ".join(["%s=%s" % (k, v)
+                        for k, v in zone_metadata.iteritems() if k != 'name'])
         self.is_active = True
 
     def to_dict(self):
@@ -104,7 +105,7 @@ class ZoneManager(object):
     """Keeps the zone states updated."""
     def __init__(self):
         self.last_zone_db_check = datetime.min
-        self.zone_states = {}
+        self.zone_states = {}  # { <zone_id> : ZoneState }
         self.service_states = {}  # { <service> : { <host> : { cap k : v }}}
         self.green_pool = greenpool.GreenPool()
 
