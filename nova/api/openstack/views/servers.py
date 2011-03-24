@@ -16,6 +16,7 @@
 #    under the License.
 
 import hashlib
+import os
 
 from nova.compute import power_state
 import nova.compute
@@ -164,4 +165,4 @@ class ViewBuilderV11(ViewBuilder):
 
     def generate_href(self, server_id):
         """Create an url that refers to a specific server id."""
-        return "%s/servers/%s" % (self.base_url, server_id)
+        return os.path.join(self.base_url, "servers", str(server_id))
