@@ -116,7 +116,7 @@ flags.DEFINE_string('xenapi_agent_path',
                     'usr/sbin/xe-update-networking',
                     'Specifies the path in which the xenapi guest agent'
                     '  should be located. If the agent is present,'
-                    '  network configuration if not injected into the image'
+                    '  network configuration is not injected into the image'
                     '  Used only if connection_type=xenapi.'
                     '  and xenapi_inject_image=True')
 

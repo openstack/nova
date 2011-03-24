@@ -681,7 +681,36 @@ class LibvirtConnection(driver.ComputeDriver):
         if not inst['kernel_id']:
             target_partition = "1"
 
-        key, net = disk.get_injectables(inst, Template, self.interfaces_xml)
+        key = str(inst['key_data'])
+        net = None
+
+        nets = []
+        ifc_template = open(FLAGS.injected_network_template).read()
+        ifc_num = -1
+        admin_context = context.get_admin_context()
+        for (network_ref, mapping) in network_info:
+            ifc_num += 1
+
+            if not 'injected' in network_ref:
+                continue
+
+            address = mapping['ips'][0]['ip']
+            address_v6 = None
+            if FLAGS.use_ipv6:
+                address_v6 = mapping['ip6s'][0]['ip']
+            net_info = {'name': 'eth%d' % ifc_num,
+                   'address': address,
+                   'netmask': network_ref['netmask'],
+                   'gateway': network_ref['gateway'],
+                   'broadcast': network_ref['broadcast'],
+                   'dns': network_ref['dns'],
+                   'address_v6': address_v6,
+                   'gateway_v6': network_ref['gateway_v6'],
+                   'netmask_v6': network_ref['netmask_v6'],
+                   'use_ipv6': FLAGS.use_ipv6}
+            nets.append(net_info)
+
+        net = str(Template(ifc_template, searchList=[{'interfaces': nets}]))
 
         if key or net:
             inst_name = inst['name']

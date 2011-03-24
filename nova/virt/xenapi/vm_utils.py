@@ -674,7 +674,7 @@ class VMHelper(HelperBase):
                 return None
 
     @classmethod
-    def preconfigure_instance(cls, session, instance, vdi_ref):
+    def preconfigure_instance(cls, session, instance, vdi_ref, network_info):
         """Makes alterations to the image before launching as part of spawn.
         """
 
@@ -682,11 +682,11 @@ class VMHelper(HelperBase):
         # if at all, so determine whether it's required first, and then do
         # everything
         mount_required = False
-        key, net = disk.get_injectables(instance)
+        key, net = _prepare_injectables(instance, network_info)
         mount_required = key or net
         if not mount_required:
             return
-
+        
         with_vdi_attached_here(session, vdi_ref, False,
                                lambda dev: _mounted_processing(dev, key, net))
 
@@ -1038,6 +1038,10 @@ def _mount_filesystem(dev_path, dir):
 
 
 def _find_guest_agent(base_dir, agent_rel_path):
+    """
+    tries to locate a guest agent at the path 
+    specificed by agent_rel_path
+    """
     agent_path = os.path.join(base_dir, agent_rel_path)
     if os.path.isfile(agent_path):
         # The presence of the guest agent
@@ -1086,3 +1090,42 @@ def _mounted_processing(device, key, net):
     finally:
         # remove temporary directory
         os.rmdir(tmpdir)
+
+
+def _prepare_injectables(inst, networks_info):
+    """
+    prepares the ssh key and the network configuration file to be 
+    injected into the disk image
+    """
+    #do the import here - Cheetah.Template will be loaded
+    #only if injection is performed
+    from Cheetah import Template as t
+    template = t.Template
+    template_data = open(FLAGS.injected_network_template).read()
+
+    key = str(inst['key_data'])
+    net = None
+    #fetch info only for the 1st network
+    if len(networks_info) > 0:
+        network_info = networks_info[0][1]
+    if network_info:
+        #remap data in network_info onto keys for template 
+        ip_v4 = ip_v6 = None
+        if len(network_info['ips']) > 0:
+            ip_v4 = network_info['ips'][0]
+        if len(network_info['ip6s']) > 0:
+            ip_v6 = network_info['ip6s'][0]
+        if len(network_info['dns']) > 0:
+            dns = network_info['dns'][0]
+        interfaces_info = {'address': ip_v4 and ip_v4['ip'] or '',
+                           'netmask': ip_v4 and ip_v4['netmask'] or '',
+                           'gateway': network_info['gateway'],
+                           'broadcast': network_info['broadcast'],
+                           'dns': dns,
+                           'address_v6': ip_v6 and ip_v6['ip'] or '',
+                           'netmask_v6': ip_v6 and ip_v6['netmask'] or '',
+                           'gateway_v6': ip_v6 and ip_v6['gateway'] or '',
+                           'use_ipv6': FLAGS.use_ipv6}
+        net = str(template(template_data,
+                        searchList=[interfaces_info]))
+    return key, net

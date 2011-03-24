@@ -165,43 +165,6 @@ def _free_device(device):
     _DEVICES.append(device)
 
 
-def get_injectables(inst, template=None, template_data=None):
-    # Note(salvatore-orlando):
-    # it the caller does not provide template object and data
-    # we will import the Cheetah template module and load the
-    # data from the file specified by injected_network_template flag
-    if not template:
-        from Cheetah import Template as t
-        template = t.Template
-    if not template_data:
-        template_data = open(FLAGS.injected_network_template).read()
-
-    key = str(inst['key_data'])
-    net = None
-    network_ref = db.network_get_by_instance(context.get_admin_context(),
-                                             inst['id'])
-    if network_ref['injected']:
-        admin_context = context.get_admin_context()
-        address = db.instance_get_fixed_address(admin_context, inst['id'])
-        address_v6 = None
-        if FLAGS.use_ipv6:
-            address_v6 = db.instance_get_fixed_address_v6(admin_context,
-                                                          inst['id'])
-        interfaces_info = {'address': address,
-                          'netmask': network_ref['netmask'],
-                          'gateway': network_ref['gateway'],
-                          'broadcast': network_ref['broadcast'],
-                          'dns': network_ref['dns'],
-                          'address_v6': address_v6,
-                          'gateway_v6': network_ref['gateway_v6'],
-                          'netmask_v6': network_ref['netmask_v6'],
-                          'use_ipv6': FLAGS.use_ipv6}
-        net = str(template(template_data,
-                        searchList=[interfaces_info]))
-
-    return key, net
-
-
 def inject_data_into_fs(fs, key, net, execute):
     """Injects data into a filesystem already mounted by the caller.
     Virt connections can call this directly if they mount their fs

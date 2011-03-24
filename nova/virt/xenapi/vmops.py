@@ -161,14 +161,16 @@ class VMOps(object):
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
-        # Alter the image before VM start for, e.g. network injection
-        if FLAGS.xenapi_inject_image:
-            VMHelper.preconfigure_instance(self._session, instance, vdi_ref)
-
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
+            
+        # Alter the image before VM start for, e.g. network injection
+        if FLAGS.xenapi_inject_image:
+            VMHelper.preconfigure_instance(self._session, instance, 
+                                           vdi_ref, network_info)
+            
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, vm_ref, network_info)
         return vm_ref
