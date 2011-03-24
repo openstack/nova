@@ -48,7 +48,7 @@ from xml.dom import minidom
 
 from eventlet import greenthread
 from eventlet import tpool
-from eventlet import semaphore
+
 import IPy
 
 from nova import context
@@ -556,13 +556,12 @@ class LibvirtConnection(object):
                 os.mkdir(base_dir)
             base = os.path.join(base_dir, fname)
 
-            if fname not in LibvirtConnection._image_sems:
-                LibvirtConnection._image_sems[fname] = semaphore.Semaphore()
-            with LibvirtConnection._image_sems[fname]:
+            @utils.synchronized(fname)
+            def call_if_not_exists(base, fn, *args, **kwargs):
                 if not os.path.exists(base):
                     fn(target=base, *args, **kwargs)
-            if not LibvirtConnection._image_sems[fname].locked():
-                del LibvirtConnection._image_sems[fname]
+
+            call_if_not_exists(base, fn, *args, **kwargs)
 
             if cow:
                 utils.execute('qemu-img', 'create', '-f', 'qcow2', '-o',
@@ -1780,14 +1779,14 @@ class IptablesFirewallDriver(FirewallDriver):
         pass
 
     def refresh_security_group_rules(self, security_group):
-        # We use the semaphore to make sure noone applies the rule set
-        # after we've yanked the existing rules but before we've put in
-        # the new ones.
-        with self.iptables.semaphore:
-            for instance in self.instances.values():
-                self.remove_filters_for_instance(instance)
-                self.add_filters_for_instance(instance)
+        self.do_refresh_security_group_rules(security_group)
         self.iptables.apply()
+
+    @utils.synchronized('iptables', external=True)
+    def do_refresh_security_group_rules(self, security_group):
+        for instance in self.instances.values():
+            self.remove_filters_for_instance(instance)
+            self.add_filters_for_instance(instance)
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)
