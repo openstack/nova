@@ -73,7 +73,7 @@ class GlanceImageService(service.BaseImageService):
         Returns image with known timestamp fields converted to datetime objects
         """
         for attr in ['created_at', 'updated_at', 'deleted_at']:
-            if image.get(attr) is not None:
+            if image.get(attr):
                 image[attr] = self._parse_glance_iso8601_timestamp(image[attr])
         return image
 

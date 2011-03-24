@@ -171,10 +171,6 @@ def execute(*cmd, **kwargs):
                                                 stdout=stdout,
                                                 stderr=stderr,
                                                 cmd=' '.join(cmd))
-            # NOTE(termie): this appears to be necessary to let the subprocess
-            #               call clean something up in between calls, without
-            #               it two execute calls in a row hangs the second one
-            greenthread.sleep(0)
             return result
         except ProcessExecutionError:
             if not attempts:
@@ -183,6 +179,11 @@ def execute(*cmd, **kwargs):
                 LOG.debug(_("%r failed. Retrying."), cmd)
                 if delay_on_retry:
                     greenthread.sleep(random.randint(20, 200) / 100.0)
+        finally:
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
+            greenthread.sleep(0)
 
 
 def ssh_execute(ssh, cmd, process_input=None,
@@ -310,11 +311,15 @@ def  get_my_linklocal(interface):
 
 
 def to_global_ipv6(prefix, mac):
-    mac64 = netaddr.EUI(mac).eui64().words
-    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-    mac64_addr = netaddr.IPAddress(int_addr)
-    maskIP = netaddr.IPNetwork(prefix).ip
-    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+    try:
+        mac64 = netaddr.EUI(mac).eui64().words
+        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+        mac64_addr = netaddr.IPAddress(int_addr)
+        maskIP = netaddr.IPNetwork(prefix).ip
+        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
+                                                                    format()
+    except TypeError:
+        raise TypeError(_("Bad mac for to_global_ipv6: %s") % mac)
 
 
 def to_mac(ipv6_address):
@@ -336,11 +341,8 @@ utcnow.override_time = None
 
 
 def is_older_than(before, seconds):
-    """Return True if before is older than 'seconds'"""
-    if utcnow() - before > datetime.timedelta(seconds=seconds):
-        return True
-    else:
-        return False
+    """Return True if before is older than seconds"""
+    return utcnow() - before > datetime.timedelta(seconds=seconds)
 
 
 def utcnow_ts():
