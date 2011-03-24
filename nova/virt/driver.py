@@ -120,6 +120,10 @@ class ComputeDriver(object):
     def finish_resize(self, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
         raise NotImplementedError()
+    
+    def revert_resize(self, instance):
+        """Reverts a resize, powering back on the instance"""
+        raise NotImplementedError()
 
     def pause(self, instance, callback):
         """Pause VM instance"""
