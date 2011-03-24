@@ -528,7 +528,7 @@ class VMOps(object):
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
         for vbd_ref in vbd_refs:
             vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if vbd_rec["userdevice"] == "1":  # primary VBD is always 1
+            if vbd_rec.get("userdevice", None) == "1":  # VBD is always 1
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
@@ -712,17 +712,17 @@ class VMOps(object):
               in rescue mode for >= the provided timeout
         """
         last_ran = self.poll_rescue_last_ran
-        if last_ran:
-            if not utils.is_older_than(last_ran, timeout):
-                # Do not run. Let's bail.
-                return
-            else:
-                # Update the time tracker and proceed.
-                self.poll_rescue_last_ran = utils.utcnow()
-        else:
+        if not last_ran:
             # We need a base time to start tracking.
             self.poll_rescue_last_ran = utils.utcnow()
             return
+
+        if not utils.is_older_than(last_ran, timeout):
+            # Do not run. Let's bail.
+            return
+
+        # Update the time tracker and proceed.
+        self.poll_rescue_last_ran = utils.utcnow()
 
         rescue_vms = []
         for instance in self.list_instances():
