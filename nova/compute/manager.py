@@ -121,8 +121,8 @@ class ComputeManager(manager.Manager):
 
         try:
             self.driver = utils.import_object(compute_driver)
-        except ImportError:
-            LOG.error("Unable to load the virtualization driver.")
+        except ImportError as e:
+            LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
