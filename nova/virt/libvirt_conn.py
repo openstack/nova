@@ -42,7 +42,6 @@ import shutil
 import sys
 import random
 import subprocess
-import time
 import uuid
 from xml.dom import minidom
 
@@ -1148,7 +1147,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return
 
-    def ensure_filtering_rules_for_instance(self, instance_ref):
+    def ensure_filtering_rules_for_instance(self, instance_ref,
+                                            time=None):
         """Setting up filtering rules and waiting for its completion.
 
         To migrate an instance, filtering rules to hypervisors
@@ -1171,6 +1171,9 @@ class LibvirtConnection(driver.ComputeDriver):
         :params instance_ref: nova.db.sqlalchemy.models.Instance object
 
         """
+
+        if not time:
+            time = greenthread
 
         # If any instances never launch at destination host,
         # basic-filtering must be set here.
