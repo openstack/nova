@@ -803,7 +803,8 @@ class NWFilterTestCase(test.TestCase):
                                             'instance_id': instance_ref['id']})
 
         def _ensure_all_called():
-            instance_filter = 'nova-instance-%s' % instance_ref['name']
+            instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
+                                                       '00A0C914C829')
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',

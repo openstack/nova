@@ -189,8 +189,10 @@ def _get_network_info(instance):
             'gateway': network['gateway'],
             'mac': instance.mac_address,
             'dns': [network['dns']],
-            'ips': [ip_dict(ip) for ip in network_ips],
-            'ip6s': [ip6_dict(ip) for ip in network_ips]}
+            'ips': [ip_dict(ip) for ip in network_ips]}
+
+        if FLAGS.use_ipv6:
+            mapping['ip6s'] = [ip6_dict(ip) for ip in network_ips]
 
         network_info.append((network, mapping))
     return network_info
@@ -632,6 +634,8 @@ class LibvirtConnection(object):
         if not network_info:
             network_info = _get_network_info(inst)
 
+        if not suffix:
+            suffix = ''
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
@@ -1484,6 +1488,9 @@ class NWFilterFirewall(FirewallDriver):
         """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
         logging.info('called setup_basic_filtering in nwfilter')
 
+        if not network_info:
+            network_info = _get_network_info(instance)
+
         if self.handle_security_groups:
             # No point in setting up a filter set that we'll be overriding
             # anyway.
@@ -1492,9 +1499,11 @@ class NWFilterFirewall(FirewallDriver):
         logging.info('ensuring static filters')
         self._ensure_static_filters()
 
-        instance_filter_name = self._instance_filter_name(instance)
-        self._define_filter(self._filter_container(instance_filter_name,
-                                                   ['nova-base']))
+        for (network, mapping) in network_info:
+            nic_id = mapping['mac'].replace(':', '')
+            instance_filter_name = self._instance_filter_name(instance, nic_id)
+            self._define_filter(self._filter_container(instance_filter_name,
+                                                       ['nova-base']))
 
     def _ensure_static_filters(self):
         if self.static_filters_configured:
@@ -1598,38 +1607,47 @@ class NWFilterFirewall(FirewallDriver):
         else:
             base_filter = 'nova-base'
 
-        instance_filter_name = self._instance_filter_name(instance)
-        instance_secgroup_filter_name = '%s-secgroup' % (instance_filter_name,)
-        instance_filter_children = [base_filter, instance_secgroup_filter_name]
+        ctxt = context.get_admin_context()
+
+        instance_secgroup_filter_name = \
+            '%s-secgroup' % (self._instance_filter_name(instance))
+            #% (instance_filter_name,)
+
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
-        if FLAGS.use_ipv6:
-            gateways_v6 = [network['gateway_v6'] for (network, _) in
-                           network_info]
-            if gateways_v6:
-                instance_secgroup_filter_children += ['nova-allow-ra-server']
 
-        ctxt = context.get_admin_context()
-
-        if FLAGS.allow_project_net_traffic:
-            instance_filter_children += ['nova-project']
-            if FLAGS.use_ipv6:
-                instance_filter_children += ['nova-project-v6']
-
-        for security_group in db.security_group_get_by_instance(ctxt,
-                                                               instance['id']):
+        for security_group in \
+                db.security_group_get_by_instance(ctxt, instance['id']):
 
             self.refresh_security_group_rules(security_group['id'])
 
             instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                         security_group['id'])]
+                                                    security_group['id'])]
 
-        self._define_filter(
+            self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
 
-        self._define_filter(
+        for (network, mapping) in network_info:
+            nic_id = mapping['mac'].replace(':', '')
+            instance_filter_name = self._instance_filter_name(instance, nic_id)
+            instance_filter_children = \
+                [base_filter, instance_secgroup_filter_name]
+
+            if FLAGS.use_ipv6:
+                gateway_v6 = network['gateway_v6']
+
+                if gateway_v6:
+                    instance_secgroup_filter_children += \
+                        ['nova-allow-ra-server']
+
+            if FLAGS.allow_project_net_traffic:
+                instance_filter_children += ['nova-project']
+                if FLAGS.use_ipv6:
+                    instance_filter_children += ['nova-project-v6']
+
+            self._define_filter(
                     self._filter_container(instance_filter_name,
                                            instance_filter_children))
 
@@ -1677,8 +1695,11 @@ class NWFilterFirewall(FirewallDriver):
             xml += "chain='ipv4'>%s</filter>" % rule_xml
         return xml
 
-    def _instance_filter_name(self, instance):
-        return 'nova-instance-%s' % instance['name']
+    def _instance_filter_name(self, instance, nic_id=None):
+        if not nic_id:
+            return 'nova-instance-%s' % (instance['name'])
+        
+        return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
 
 class IptablesFirewallDriver(FirewallDriver):
