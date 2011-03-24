@@ -128,6 +128,7 @@ class IntegratedUnitTestContext(object):
         self._start_compute_service()
         self._start_volume_service()
         self._start_scheduler_service()
+        self._start_network_service()
 
         # WSGI shutdown broken :-(
         # bug731668
@@ -139,6 +140,12 @@ class IntegratedUnitTestContext(object):
         compute_service.start()
         self.services.append(compute_service)
         return compute_service
+
+    def _start_network_service(self):
+        network_service = service.Service.create(binary='nova-network')
+        network_service.start()
+        self.services.append(network_service)
+        return network_service
 
     def _start_volume_service(self):
         volume_service = service.Service.create(binary='nova-volume')
@@ -236,7 +243,8 @@ class _IntegratedTestBase(test.TestCase):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        self._setup_flags()
+        f = self._get_flags()
+        self.flags(**f)
 
         context = IntegratedUnitTestContext.startup()
         self.user = context.test_user
@@ -246,9 +254,12 @@ class _IntegratedTestBase(test.TestCase):
         IntegratedUnitTestContext.shutdown()
         super(_IntegratedTestBase, self).tearDown()
 
-    def _setup_flags(self):
+    def _get_flags(self):
         """An opportunity to setup flags, before the services are started"""
-        pass
+        f = {}
+        #f['network_driver'] = 'nova.network.fake.FakeNetworkDriver'
+        f['fake_network'] = True
+        return f
 
     def _build_minimal_create_server_request(self):
         server = {}

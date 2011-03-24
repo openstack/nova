@@ -19,7 +19,6 @@ import unittest
 import time
 
 from nova import flags
-from nova import test
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
@@ -37,10 +36,12 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         super(VolumesTest, self).setUp()
         driver.LoggingVolumeDriver.clear_logs()
 
-    def _setup_flags(self):
-        self.flags(image_service='nova.image.fake.MockImageService',
-                   volume_driver='nova.volume.driver.LoggingVolumeDriver')
-        self.flags(use_local_volumes=False)  # Avoids calling local_path
+    def _get_flags(self):
+        f = super(VolumesTest, self)._get_flags()
+        f['use_local_volumes'] = False  # Avoids calling local_path
+        f['image_service'] = 'nova.image.fake.MockImageService'
+        f['volume_driver'] = 'nova.volume.driver.LoggingVolumeDriver'
+        return f
 
     def test_get_volumes(self):
         """Simple check that listing volumes works"""

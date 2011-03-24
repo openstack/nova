@@ -19,7 +19,6 @@ import time
 import unittest
 
 from nova import flags
-from nova import test
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
@@ -32,8 +31,10 @@ FLAGS.verbose = True
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
-    def _setup_flags(self):
-        self.flags(image_service='nova.image.fake.MockImageService')
+    def _get_flags(self):
+        f = super(ServersTest, self)._get_flags()
+        f['image_service'] = 'nova.image.fake.MockImageService'
+        return f
 
     def test_get_servers(self):
         """Simple check that listing servers works."""

@@ -26,7 +26,11 @@ semantics of real hypervisor connections.
 """
 
 from nova import exception
+from nova import log as logging
 from nova.compute import power_state
+
+
+LOG = logging.getLogger('nova.compute.disk')
 
 
 def get_connection(_):
@@ -244,6 +248,10 @@ class FakeConnection(object):
         The work will be done asynchronously.  This function returns a
         task that allows the caller to detect when it is complete.
         """
+        key = instance.name
+        if not key in self.instances:
+            LOG.warning("Key '%s' not in instances '%s'" %
+                        (key, self.instances))
         del self.instances[instance.name]
 
     def attach_volume(self, instance_name, device_path, mountpoint):

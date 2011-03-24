@@ -18,7 +18,6 @@
 import unittest
 
 from nova import flags
-from nova import test
 from nova.log import logging
 from nova.tests.integrated import integrated_helpers
 from nova.tests.integrated.api import client
