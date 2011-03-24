@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 Openstack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -14,21 +14,3 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-from nova.api.openstack import common
-
-
-class ViewBuilder(object):
-    def __init__(self):
-        pass
-
-    def build(self, flavor_obj):
-        raise NotImplementedError()
-
-
-class ViewBuilderV11(ViewBuilder):
-    def __init__(self, base_url):
-        self.base_url = base_url
-
-    def generate_href(self, flavor_id):
-        return "%s/flavors/%s" % (self.base_url, flavor_id)
