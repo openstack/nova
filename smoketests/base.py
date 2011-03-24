@@ -32,7 +32,6 @@ SUITE_NAMES = '[image, instance, volume]'
 FLAGS = flags.FLAGS
 flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
 flags.DEFINE_integer('ssh_tries', 3, 'Numer of times to try ssh')
-boto_v6 = None
 
 
 class SmokeTestCase(unittest.TestCase):
@@ -183,6 +182,9 @@ class SmokeTestCase(unittest.TestCase):
 
 
 TEST_DATA = {}
+if FLAGS.use_ipv6:
+    global boto_v6
+    boto_v6 = __import__('boto_v6')
 
 
 class UserSmokeTestCase(SmokeTestCase):

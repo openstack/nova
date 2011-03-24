@@ -215,7 +215,7 @@ def certificate_update(context, certificate_id, values):
     Raises NotFound if service does not exist.
 
     """
-    return IMPL.service_update(context, certificate_id, values)
+    return IMPL.certificate_update(context, certificate_id, values)
 
 
 ###################

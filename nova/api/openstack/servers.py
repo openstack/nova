@@ -22,6 +22,7 @@ from xml.dom import minidom
 from webob import exc
 
 from nova import compute
+from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -29,8 +30,9 @@ from nova import wsgi
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
-from nova.api.openstack.views import servers as servers_views
-from nova.api.openstack.views import addresses as addresses_views
+import nova.api.openstack.views.addresses
+import nova.api.openstack.views.flavors
+import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -64,7 +66,7 @@ class Controller(wsgi.Controller):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        builder = addresses_views.get_view_builder(req)
+        builder = self._get_addresses_view_builder(req)
         return builder.build(instance)
 
     def index(self, req):
@@ -82,7 +84,7 @@ class Controller(wsgi.Controller):
         """
         instance_list = self.compute_api.get_all(req.environ['nova.context'])
         limited_list = common.limited(instance_list, req)
-        builder = servers_views.get_view_builder(req)
+        builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
                 for inst in limited_list]
         return dict(servers=servers)
@@ -93,7 +95,7 @@ class Controller(wsgi.Controller):
         try:
             instance = self.compute_api.routing_get(
                 req.environ['nova.context'], id)
-            builder = servers_views.get_view_builder(req)
+            builder = self._get_view_builder(req)
             return builder.build(instance, is_detail=True)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
@@ -123,8 +125,9 @@ class Controller(wsgi.Controller):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
+        requested_image_id = self._image_id_from_req_data(env)
         image_id = common.get_image_id_from_image_hash(self._image_service,
-            context, env['server']['imageId'])
+            context, requested_image_id)
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
 
@@ -143,10 +146,11 @@ class Controller(wsgi.Controller):
         if personality:
             injected_files = self._get_injected_files(personality)
 
+        flavor_id = self._flavor_id_from_req_data(env)
         try:
-            instances = self.compute_api.create(
+            (inst,) = self.compute_api.create(
                 context,
-                instance_types.get_by_flavor_id(env['server']['flavorId']),
+                instance_types.get_by_flavor_id(flavor_id),
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
@@ -159,8 +163,11 @@ class Controller(wsgi.Controller):
         except QuotaError as error:
             self._handle_quota_errors(error)
 
-        builder = servers_views.get_view_builder(req)
-        server = builder.build(instances[0], is_detail=False)
+        inst['instance_type'] = flavor_id
+        inst['image_id'] = requested_image_id
+
+        builder = self._get_view_builder(req)
+        server = builder.build(inst, is_detail=True)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
@@ -528,6 +535,45 @@ class Controller(wsgi.Controller):
                 _("Ramdisk not found for image %(image_id)s") % locals())
 
         return kernel_id, ramdisk_id
+
+
+class ControllerV10(Controller):
+    def _image_id_from_req_data(self, data):
+        return data['server']['imageId']
+
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorId']
+
+    def _get_view_builder(self, req):
+        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV10()
+        return nova.api.openstack.views.servers.ViewBuilderV10(
+            addresses_builder)
+
+    def _get_addresses_view_builder(self, req):
+        return nova.api.openstack.views.addresses.ViewBuilderV10(req)
+
+
+class ControllerV11(Controller):
+    def _image_id_from_req_data(self, data):
+        href = data['server']['imageRef']
+        return common.get_id_from_href(href)
+
+    def _flavor_id_from_req_data(self, data):
+        href = data['server']['flavorRef']
+        return common.get_id_from_href(href)
+
+    def _get_view_builder(self, req):
+        base_url = req.application_url
+        flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
+            base_url)
+        image_builder = nova.api.openstack.views.images.ViewBuilderV11(
+            base_url)
+        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
+        return nova.api.openstack.views.servers.ViewBuilderV11(
+            addresses_builder, flavor_builder, image_builder)
+
+    def _get_addresses_view_builder(self, req):
+        return nova.api.openstack.views.addresses.ViewBuilderV11(req)
 
 
 class ServerCreateRequestXMLDeserializer(object):
