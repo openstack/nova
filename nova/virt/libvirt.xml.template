@@ -102,7 +102,7 @@
         </serial>
 
 #if $getVar('vnc_compute_host_iface', False)
-        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='${vnc_host_iface}'/>
+        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='${vnc_compute_host_iface}'/>
 #end if
     </devices>
 </domain>
