@@ -193,6 +193,10 @@ class ResponseExtensionTest(unittest.TestCase):
         fakes.stub_out_auth(self.stubs)
         self.context = context.get_admin_context()
 
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(ResponseExtensionTest, self).tearDown()
+
     def test_get_resources_with_stub_mgr(self):
 
         test_resp = "Gooey goo for chewy chewing!"
@@ -204,13 +208,14 @@ class ResponseExtensionTest(unittest.TestCase):
             return data
 
         resp_ext = extensions.ResponseExtension('GET',
-                                                '/v1.0/flavors/:(id)',
+                                                '/v1.1/flavors/:(id)',
                                                 _resp_handler)
 
         manager = StubExtensionManager(None, None, resp_ext)
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/v1.0/flavors/1")
+        request = webob.Request.blank("/v1.1/flavors/1")
+        request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
@@ -222,10 +227,10 @@ class ResponseExtensionTest(unittest.TestCase):
 
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/v1.0/flavors/1")
+        request = webob.Request.blank("/v1.1/flavors/1")
+        request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
-        print response_data
         self.assertEqual(test_resp, response_data['flavor']['googoose'])
         self.assertEqual("Pig Bands!", response_data['big_bands'])
