@@ -65,8 +65,11 @@ flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
 flags.DEFINE_integer('live_migration_retry_count', 30,
-                    ("Retry count needed in live_migration."
-                     " sleep 1 sec for each count"))
+                     "Retry count needed in live_migration."
+                     " sleep 1 sec for each count")
+flags.DEFINE_integer("rescue_timeout", 0,
+                     "Automatically unrescue an instance after N seconds."
+                     " Set to 0 to disable.")
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -118,8 +121,8 @@ class ComputeManager(manager.Manager):
 
         try:
             self.driver = utils.import_object(compute_driver)
-        except ImportError:
-            LOG.error("Unable to load the virtualization driver.")
+        except ImportError as e:
+            LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
@@ -131,6 +134,12 @@ class ComputeManager(manager.Manager):
            standalone service.
         """
         self.driver.init_host(host=self.host)
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        super(ComputeManager, self).periodic_tasks(context)
+        if FLAGS.rescue_timeout > 0:
+            self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
