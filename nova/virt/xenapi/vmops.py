@@ -63,6 +63,17 @@ class VMOps(object):
                 vm_refs.append(vm_rec["name_label"])
         return vm_refs
 
+    def revert_resize(self, instance):
+        vm_ref = VMHelper.lookup(self._session, instance.name)
+        self._start(instance, vm_ref)
+
+    def finish_resize(self, instance, disk_info):
+        vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
+                disk_info['cow'])
+        vm_ref = self._create_vm(instance, vdi_uuid)
+        self.resize_instance(instance, vdi_uuid)
+        self._spawn(instance, vm_ref)
+
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
         if not vm_ref:
@@ -73,7 +84,7 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def create_disk(self, instance):
+    def _create_disk(self, instance):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
@@ -82,10 +93,11 @@ class VMOps(object):
         return vdi_uuid
 
     def spawn(self, instance, network_info=None):
-        vdi_uuid = self.create_disk(instance)
-        self._spawn_with_disk(instance, vdi_uuid, network_info)
+        vdi_uuid = self._create_disk(instance)
+        vm_ref = self._create_vm(instance, vdi_uuid, network_info)
+        self._spawn(instance, vm_ref)
 
-    def _spawn_with_disk(self, instance, vdi_uuid, network_info=None):
+    def _create_vm(self, instance, vdi_uuid, network_info=None):
         """Create VM instance"""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -128,16 +140,19 @@ class VMOps(object):
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
-        # inject_network_info and create vifs
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, vm_ref, network_info)
+        return vm_ref
 
+    def _spawn(self, instance, vm_ref):
+        """Spawn a new instance"""
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
+        instance_name = instance.name
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
@@ -310,7 +325,7 @@ class VMOps(object):
         try:
             # transfer the base copy
             template_vm_ref, template_vdi_uuids = self._get_snapshot(instance)
-            base_copy_uuid = template_vdi_uuids[1]
+            base_copy_uuid = template_vdi_uuids['image']
             vdi_ref, vm_vdi_rec = \
                     VMHelper.get_vdi_for_vm_safely(self._session, vm_ref)
             cow_uuid = vm_vdi_rec['uuid']
@@ -325,7 +340,7 @@ class VMOps(object):
             self._session.wait_for_task(task, instance.id)
 
             # Now power down the instance and transfer the COW VHD
-            self._shutdown(instance, vm_ref, method='clean')
+            self._shutdown(instance, vm_ref, hard=False)
 
             params = {'host': dest,
                       'vdi_uuid': cow_uuid,
@@ -345,7 +360,7 @@ class VMOps(object):
         # sensible so we don't need to blindly pass around dictionaries
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
 
-    def attach_disk(self, instance, base_copy_uuid, cow_uuid):
+    def link_disks(self, instance, base_copy_uuid, cow_uuid):
         """Links the base copy VHD to the COW via the XAPI plugin"""
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
@@ -366,9 +381,19 @@ class VMOps(object):
 
         return new_cow_uuid
 
-    def resize(self, instance, flavor):
+    def resize_instance(self, instance, vdi_uuid):
         """Resize a running instance by changing it's RAM and disk size """
-        raise NotImplementedError()
+        #TODO(mdietz): this will need to be adjusted for swap later
+        #The new disk size must be in bytes
+
+        new_disk_size = str(instance.local_gb * 1024 * 1024 * 1024)
+        instance_name = instance.name
+        instance_local_gb = instance.local_gb
+        LOG.debug(_("Resizing VDI %(vdi_uuid)s for instance %(instance_name)s."
+                " Expanding to %(instance_local_gb)d GB") % locals())
+        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+        self._session.call_xenapi('VDI.resize_online', vdi_ref, new_disk_size)
+        LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -443,8 +468,9 @@ class VMOps(object):
         """Shutdown an instance"""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
-            LOG.warn(_("VM %(vm)s already halted, skipping shutdown...") %
-                     locals())
+            instance_name = instance.name
+            LOG.warn(_("VM %(instance_name)s already halted,"
+                    "skipping shutdown...") % locals())
             return
 
         instance_id = instance.id

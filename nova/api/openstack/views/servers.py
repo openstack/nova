@@ -16,7 +16,10 @@
 #    under the License.
 
 import hashlib
+
 from nova.compute import power_state
+import nova.compute
+import nova.context
 from nova.api.openstack import common
 from nova.api.openstack.views import addresses as addresses_view
 from nova.api.openstack.views import flavors as flavors_view
@@ -59,12 +62,17 @@ class ViewBuilder(object):
             power_state.SHUTOFF: 'active',
             power_state.CRASHED: 'error',
             power_state.FAILED: 'error'}
-        inst_dict = {}
 
-        inst_dict['id'] = int(inst['id'])
-        inst_dict['name'] = inst['display_name']
-        inst_dict['status'] = power_mapping[inst.get('state')]
-        inst_dict['addresses'] = self.addresses_builder.build(inst)
+        inst_dict = {
+            'id': int(inst['id']),
+            'name': inst['display_name'],
+            'addresses': self.addresses_builder.build(inst),
+            'status': power_mapping[inst.get('state')]}
+
+        ctxt = nova.context.get_admin_context()
+        compute_api = nova.compute.API()
+        if compute_api.has_finished_migration(ctxt, inst['id']):
+            inst_dict['status'] = 'resize-confirm'
 
         # Return the metadata as a dictionary
         metadata = {}
