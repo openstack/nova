@@ -82,6 +82,38 @@ class S3Application(wsgi.Router):
 
 
 class BaseRequestHandler(wsgi.Controller):
+    """Base class emulating Tornado's web framework pattern in WSGI.
+
+    This is a direct port of Tornado's implementation, so some key decisions
+    about how the code interacts have already been chosen.
+
+    The two most common ways of designing web frameworks can be
+    classified as async object-oriented and sync functional.
+
+    Tornado's is on the OO side because a response is built up in and using
+    the shared state of an object and one of the object's methods will
+    eventually trigger the "finishing" of the response asynchronously.
+
+    Most WSGI stuff is in the functional side, we pass a request object to
+    every call down a chain and the eventual return value will be a response.
+
+    Part of the function of the routing code in S3Application as well as the
+    code in BaseRequestHandler's __call__ method is to merge those two styles
+    together enough that the Tornado code can work without extensive
+    modifications.
+
+    To do that it needs to give the Tornado-style code clean objects that it
+    can modify the state of for each request that is processed, so we use a
+    very simple factory lambda to create new state for each request, that's
+    the stuff in the router, and when we let the Tornado code modify that
+    object to handle the request, then we return the response it generated.
+    This wouldn't work the same if Tornado was being more async'y and doing
+    other callbacks throughout the process, but since Tornado is being
+    relatively simple here we can be satisfied that the response will be
+    complete by the end of the get/post method.
+
+    """
+
     def __init__(self, application):
         self.application = application
 
