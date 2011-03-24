@@ -31,11 +31,6 @@ FLAGS.verbose = True
 
 
 class ServersTest(integrated_helpers._IntegratedTestBase):
-    def _get_flags(self):
-        f = super(ServersTest, self)._get_flags()
-        f['image_service'] = 'nova.image.fake.MockImageService'
-        return f
-
     def test_get_servers(self):
         """Simple check that listing servers works."""
         servers = self.api.get_servers()
