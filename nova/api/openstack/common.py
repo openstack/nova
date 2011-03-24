@@ -20,9 +20,11 @@ from urlparse import urlparse
 import webob
 
 from nova import exception
+from nova import flags
 
+FLAGS = flags.FLAGS
 
-def limited(items, request, max_limit=1000):
+def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
     Return a slice of items according to requested offset and limit.
 
@@ -56,10 +58,13 @@ def limited(items, request, max_limit=1000):
     return items[offset:range_end]
 
 
-def limited_by_marker(items, request, max_limit=1000):
-    ''' Return a slice of items according to requested marker and limit. '''
+def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
+    """Return a slice of items according to the requested marker and limit."""
 
-    marker = request.GET.get('marker')
+    try:
+        marker = int(request.GET.get('marker', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
 
     try:
         limit = int(request.GET.get('limit', max_limit))
@@ -69,17 +74,16 @@ def limited_by_marker(items, request, max_limit=1000):
     if limit < 0:
         raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
 
-    limit = min(max_limit, limit or max_limit)
+    limit = min(max_limit, limit)
     start_index = 0
-    if marker != None:
-        found_it = False
+    if marker:
+        start_index = -1
         for i, item in enumerate(items):
-            if str(item['id']) == marker:
-                start_index = i
-                found_it = True
+            if item['id'] == marker:
+                start_index = i + 1
                 break
-        if not found_it:
-            raise webob.exc.HTTPBadRequest(_('marker not found'))
+        if start_index < 0:
+            raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
     range_end = start_index + limit
     return items[start_index:range_end]
 
