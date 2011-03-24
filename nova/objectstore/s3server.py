@@ -1,5 +1,8 @@
-#!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# Copyright 2010 OpenStack LLC.
 # Copyright 2009 Facebook
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -38,56 +41,92 @@ import os
 import os.path
 import urllib
 
-from tornado import escape
-from tornado import httpserver
-from tornado import ioloop
-from tornado import web
+import routes
+import webob
 
-def start(port, root_directory="/tmp/s3", bucket_depth=0):
-    """Starts the mock S3 server on the given port at the given path."""
-    application = S3Application(root_directory, bucket_depth)
-    http_server = httpserver.HTTPServer(application)
-    http_server.listen(port)
-    ioloop.IOLoop.instance().start()
+from nova import flags
+from nova import log as logging
+from nova import utils
+from nova import wsgi
 
 
-class S3Application(web.Application):
+FLAGS = flags.FLAGS
+flags.DEFINE_string('buckets_path', '$state_path/buckets',
+                    'path to s3 buckets')
+
+
+class S3Application(wsgi.Router):
     """Implementation of an S3-like storage server based on local files.
 
     If bucket depth is given, we break files up into multiple directories
     to prevent hitting file system limits for number of files in each
     directories. 1 means one level of directories, 2 means 2, etc.
+
     """
-    def __init__(self, root_directory, bucket_depth=0):
-        web.Application.__init__(self, [
-            (r"/", RootHandler),
-            (r"/([^/]+)/(.+)", ObjectHandler),
-            (r"/([^/]+)/", BucketHandler),
-        ])
+
+    def __init__(self, root_directory, bucket_depth=0, mapper=None):
+        if mapper is None:
+            mapper = routes.Mapper()
+
+        mapper.connect('/', controller=RootHandler(self))
+                #controller=lambda *a, **kw: RootHandler(self)(*a, **kw))
+        mapper.connect('/{bucket_name}/{object_name}',
+                controller=lambda *a, **kw: ObjectHandler(self)(*a, **kw))
+        mapper.connect('/{bucket_name}/',
+                controller=lambda *a, **kw: BucketHandler(self)(*a, **kw))
         self.directory = os.path.abspath(root_directory)
         if not os.path.exists(self.directory):
             os.makedirs(self.directory)
         self.bucket_depth = bucket_depth
+        super(S3Application, self).__init__(mapper)
 
 
-class BaseRequestHandler(web.RequestHandler):
-    SUPPORTED_METHODS = ("PUT", "GET", "DELETE")
+class BaseRequestHandler(wsgi.Controller):
+    def __init__(self, application):
+        self.application = application
+
+    @webob.dec.wsgify
+    def __call__(self, request):
+        logging.debug('GOT HERE')
+        method = request.method.lower()
+        f = getattr(self, method, self.invalid)
+        self.request = request
+        self.response = webob.Response()
+        params = request.environ['wsgiorg.routing_args'][1]
+        del params['controller']
+        f(**params)
+        return self.response
+
+    def get_argument(self, arg, default):
+        return self.request.str_params.get(arg, default)
+
+    def set_header(self, header, value):
+        self.response.headers[header] = value
+
+    def set_status(self, status_code):
+        self.response.status = status_code
+
+    def finish(self, body=''):
+        self.response.body = utils.utf8(body)
+
+    def invalid(self, request, **kwargs):
+        pass
 
     def render_xml(self, value):
         assert isinstance(value, dict) and len(value) == 1
         self.set_header("Content-Type", "application/xml; charset=UTF-8")
         name = value.keys()[0]
         parts = []
-        parts.append('<' + escape.utf8(name) +
+        parts.append('<' + utils.utf8(name) +
                      ' xmlns="http://doc.s3.amazonaws.com/2006-03-01">')
         self._render_parts(value.values()[0], parts)
-        parts.append('</' + escape.utf8(name) + '>')
+        parts.append('</' + utils.utf8(name) + '>')
         self.finish('<?xml version="1.0" encoding="UTF-8"?>\n' +
                     ''.join(parts))
 
     def _render_parts(self, value, parts=[]):
         if isinstance(value, basestring):
-            parts.append(escape.xhtml_escape(value))
+            parts.append(utils.xhtml_escape(value))
         elif isinstance(value, int) or isinstance(value, long):
             parts.append(str(value))
         elif isinstance(value, datetime.datetime):
@@ -97,9 +136,9 @@ class BaseRequestHandler(web.RequestHandler):
                 if not isinstance(subvalue, list):
                     subvalue = [subvalue]
                 for subsubvalue in subvalue:
-                    parts.append('<' + escape.utf8(name) + '>')
+                    parts.append('<' + utils.utf8(name) + '>')
                     self._render_parts(subsubvalue, parts)
-                    parts.append('</' + escape.utf8(name) + '>')
+                    parts.append('</' + utils.utf8(name) + '>')
         else:
             raise Exception("Unknown S3 value type %r", value)
 
@@ -142,7 +181,7 @@ class BucketHandler(BaseRequestHandler):
         terse = int(self.get_argument("terse", 0))
         if not path.startswith(self.application.directory) or \
            not os.path.isdir(path):
-            raise web.HTTPError(404)
+            raise webob.exc.HTTPError(404)
         object_names = []
         for root, dirs, files in os.walk(path):
             for file_name in files:
@@ -192,7 +231,7 @@ class BucketHandler(BaseRequestHandler):
             self.application.directory, bucket_name))
         if not path.startswith(self.application.directory) or \
            os.path.exists(path):
-            raise web.HTTPError(403)
+            raise webob.exc.HTTPError(403)
         os.makedirs(path)
         self.finish()
 
@@ -201,9 +240,9 @@ class BucketHandler(BaseRequestHandler):
             self.application.directory, bucket_name))
         if not path.startswith(self.application.directory) or \
            not os.path.isdir(path):
-            raise web.HTTPError(404)
+            raise webob.exc.HTTPError(404)
         if len(os.listdir(path)) > 0:
-            raise web.HTTPError(403)
+            raise webob.exc.HTTPError(403)
         os.rmdir(path)
         self.set_status(204)
         self.finish()
@@ -215,7 +254,7 @@ class ObjectHandler(BaseRequestHandler):
         path = self._object_path(bucket, object_name)
         if not path.startswith(self.application.directory) or \
            not os.path.isfile(path):
-            raise web.HTTPError(404)
+            raise webob.exc.HTTPError(404)
         info = os.stat(path)
         self.set_header("Content-Type", "application/unknown")
         self.set_header("Last-Modified", datetime.datetime.utcfromtimestamp(
@@ -232,10 +271,10 @@ class ObjectHandler(BaseRequestHandler):
             self.application.directory, bucket))
         if not bucket_dir.startswith(self.application.directory) or \
            not os.path.isdir(bucket_dir):
-            raise web.HTTPError(404)
+            raise webob.exc.HTTPError(404)
         path = self._object_path(bucket, object_name)
         if not path.startswith(bucket_dir) or os.path.isdir(path):
-            raise web.HTTPError(403)
+            raise webob.exc.HTTPError(403)
         directory = os.path.dirname(path)
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -249,7 +288,7 @@ class ObjectHandler(BaseRequestHandler):
         path = self._object_path(bucket, object_name)
         if not path.startswith(self.application.directory) or \
            not os.path.isfile(path):
-            raise web.HTTPError(404)
+            raise webob.exc.HTTPError(404)
         os.unlink(path)
         self.set_status(204)
         self.finish()
