@@ -54,12 +54,19 @@ flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
 # An example of an API that only exposes read-only methods.
+# In this case we're just limiting which methods are exposed.
 class ReadOnlyCompute(direct.Limited):
     """Read-only Compute API."""
 
     _allowed = ['get', 'get_all', 'get_console_output']
 
+
 # An example of an API that provides a backwards compatibility layer.
+# In this case we're overwriting the implementation to ensure
+# compatibility with an older version. In reality we would want the
+# "description=None" to be part of the actual API so that code
+# like this isn't even necessary, but this example shows what one can
+# do if that isn't the situation.
 class VolumeVersionOne(direct.Limited):
     _allowed = ['create', 'delete', 'update', 'get']
 
@@ -76,8 +83,12 @@ if __name__ == '__main__':
     direct.register_service('volume', volume.API())
     direct.register_service('network', network.API())
     direct.register_service('reflect', direct.Reflection())
-    direct.register_service('compute-readonly', ReadOnlyCompute(compute.API()))
-    direct.register_service('volume-v1', VolumeVersionOne(volume.API()))
+
+    # Here is how we could expose the code in the examples above.
+    #direct.register_service('compute-readonly',
+    #                        ReadOnlyCompute(compute.API()))
+    #direct.register_service('volume-v1', VolumeVersionOne(volume.API()))
+
     router = direct.Router()
     with_json = direct.JsonParamsMiddleware(router)
     with_req = direct.PostParamsMiddleware(with_json)
