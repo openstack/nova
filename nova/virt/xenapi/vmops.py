@@ -37,6 +37,7 @@ from nova import flags
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
+from nova.virt import driver
 from nova.virt.xenapi.network_utils import NetworkHelper
 from nova.virt.xenapi.vm_utils import VMHelper
 from nova.virt.xenapi.vm_utils import ImageType
@@ -53,16 +54,35 @@ class VMOps(object):
     def __init__(self, session):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
+        self.poll_rescue_last_ran = None
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
         """List VM instances"""
+        # TODO(justinsb): Should we just always use the details method?
+        #  Seems to be the same number of API calls..
         vm_refs = []
         for vm_ref in self._session.get_xenapi().VM.get_all():
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
             if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
                 vm_refs.append(vm_rec["name_label"])
         return vm_refs
+
+    def list_instances_detail(self):
+        """List VM instances, returning InstanceInfo objects"""
+        instance_infos = []
+        for vm_ref in self._session.get_xenapi().VM.get_all():
+            vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
+            if not vm_rec["is_a_template"] and not vm_rec["is_control_domain"]:
+                name = vm_rec["name_label"]
+
+                # TODO(justinsb): This a roundabout way to map the state
+                openstack_format = VMHelper.compile_info(vm_rec)
+                state = openstack_format['state']
+
+                instance_info = driver.InstanceInfo(name, state)
+                instance_infos.append(instance_info)
+        return instance_infos
 
     def revert_resize(self, instance):
         vm_ref = VMHelper.lookup(self._session, instance.name)
@@ -484,6 +504,10 @@ class VMOps(object):
         except self.XenAPI.Failure, exc:
             LOG.exception(exc)
 
+    def _shutdown_rescue(self, rescue_vm_ref):
+        """Shutdown a rescue instance"""
+        self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm_ref)
+
     def _destroy_vdis(self, instance, vm_ref):
         """Destroys all VDIs associated with a VM"""
         instance_id = instance.id
@@ -500,6 +524,24 @@ class VMOps(object):
                 self._session.wait_for_task(task, instance.id)
             except self.XenAPI.Failure, exc:
                 LOG.exception(exc)
+
+    def _destroy_rescue_vdis(self, rescue_vm_ref):
+        """Destroys all VDIs associated with a rescued VM"""
+        vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
+        for vdi_ref in vdi_refs:
+            try:
+                self._session.call_xenapi("Async.VDI.destroy", vdi_ref)
+            except self.XenAPI.Failure:
+                continue
+
+    def _destroy_rescue_vbds(self, rescue_vm_ref):
+        """Destroys all VBDs tied to a rescue VM"""
+        vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
+        for vbd_ref in vbd_refs:
+            vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
+            if vbd_rec["userdevice"] == "1":  # primary VBD is always 1
+                VMHelper.unplug_vbd(self._session, vbd_ref)
+                VMHelper.destroy_vbd(self._session, vbd_ref)
 
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
         """
@@ -550,6 +592,14 @@ class VMOps(object):
             LOG.exception(exc)
 
         LOG.debug(_("Instance %(instance_id)s VM destroyed") % locals())
+
+    def _destroy_rescue_instance(self, rescue_vm_ref):
+        """Destroy a rescue instance"""
+        self._destroy_rescue_vbds(rescue_vm_ref)
+        self._shutdown_rescue(rescue_vm_ref)
+        self._destroy_rescue_vdis(rescue_vm_ref)
+
+        self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
     def destroy(self, instance):
         """
@@ -654,40 +704,56 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                    instance.name + "-rescue")
+                                        instance.name + "-rescue")
 
         if not rescue_vm_ref:
             raise exception.NotFound(_(
                 "Instance is not in Rescue Mode: %s" % instance.name))
 
         original_vm_ref = self._get_vm_opaque_ref(instance)
-        vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
-
         instance._rescue = False
 
-        for vbd_ref in vbd_refs:
-            _vbd_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if _vbd_ref["userdevice"] == "1":
-                VMHelper.unplug_vbd(self._session, vbd_ref)
-                VMHelper.destroy_vbd(self._session, vbd_ref)
-
-        task1 = self._session.call_xenapi("Async.VM.hard_shutdown",
-                                          rescue_vm_ref)
-        self._session.wait_for_task(task1, instance.id)
-
-        vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
-        for vdi_ref in vdi_refs:
-            try:
-                task = self._session.call_xenapi('Async.VDI.destroy', vdi_ref)
-                self._session.wait_for_task(task, instance.id)
-            except self.XenAPI.Failure:
-                continue
-
-        task2 = self._session.call_xenapi('Async.VM.destroy', rescue_vm_ref)
-        self._session.wait_for_task(task2, instance.id)
-
+        self._destroy_rescue_instance(rescue_vm_ref)
         self._release_bootlock(original_vm_ref)
         self._start(instance, original_vm_ref)
+
+    def poll_rescued_instances(self, timeout):
+        """Look for expirable rescued instances
+            - forcibly exit rescue mode for any instances that have been
+              in rescue mode for >= the provided timeout
+        """
+        last_ran = self.poll_rescue_last_ran
+        if last_ran:
+            if not utils.is_older_than(last_ran, timeout):
+                # Do not run. Let's bail.
+                return
+            else:
+                # Update the time tracker and proceed.
+                self.poll_rescue_last_ran = utils.utcnow()
+        else:
+            # We need a base time to start tracking.
+            self.poll_rescue_last_ran = utils.utcnow()
+            return
+
+        rescue_vms = []
+        for instance in self.list_instances():
+            if instance.endswith("-rescue"):
+                rescue_vms.append(dict(name=instance,
+                                  vm_ref=VMHelper.lookup(self._session,
+                                                         instance)))
+
+        for vm in rescue_vms:
+            rescue_name = vm["name"]
+            rescue_vm_ref = vm["vm_ref"]
+
+            self._destroy_rescue_instance(rescue_vm_ref)
+
+            original_name = vm["name"].split("-rescue", 1)[0]
+            original_vm_ref = VMHelper.lookup(self._session, original_name)
+
+            self._release_bootlock(original_vm_ref)
+            self._session.call_xenapi("VM.start", original_vm_ref, False,
+                                      False)
 
     def get_info(self, instance):
         """Return data about VM instance"""
@@ -939,7 +1005,7 @@ class VMOps(object):
         """
         vm_ref = self._get_vm_opaque_ref(instance_or_vm)
         data = self._session.call_xenapi_request('VM.get_xenstore_data',
-                (vm_ref, ))
+                (vm_ref,))
         ret = {}
         if keys is None:
             keys = data.keys()

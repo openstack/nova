@@ -15,7 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.exc
+from urlparse import urlparse
+
+import webob
 
 from nova import exception
 
@@ -76,5 +78,14 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
     raise exception.NotFound(image_hash)
 
 
-def get_api_version(req):
-    return req.environ.get('api.version')
+def get_id_from_href(href):
+    """Return the id portion of a url as an int.
+
+    Given: http://www.foo.com/bar/123?q=4
+    Returns: 123
+
+    """
+    try:
+        return int(urlparse(href).path.split('/')[-1])
+    except:
+        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))

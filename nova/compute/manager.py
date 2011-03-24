@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -51,6 +52,7 @@ from nova import manager
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
+from nova.virt import driver
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -65,8 +67,11 @@ flags.DEFINE_string('console_host', socket.gethostname(),
                     'Console proxy host to use to connect to instances on'
                     'this host.')
 flags.DEFINE_integer('live_migration_retry_count', 30,
-                    ("Retry count needed in live_migration."
-                     " sleep 1 sec for each count"))
+                     "Retry count needed in live_migration."
+                     " sleep 1 sec for each count")
+flags.DEFINE_integer("rescue_timeout", 0,
+                     "Automatically unrescue an instance after N seconds."
+                     " Set to 0 to disable.")
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -117,9 +122,11 @@ class ComputeManager(manager.Manager):
             compute_driver = FLAGS.compute_driver
 
         try:
-            self.driver = utils.import_object(compute_driver)
-        except ImportError:
-            LOG.error("Unable to load the virtualization driver.")
+            self.driver = utils.check_isinstance(
+                                        utils.import_object(compute_driver),
+                                        driver.ComputeDriver)
+        except ImportError as e:
+            LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
@@ -131,6 +138,12 @@ class ComputeManager(manager.Manager):
            standalone service.
         """
         self.driver.init_host(host=self.host)
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        super(ComputeManager, self).periodic_tasks(context)
+        if FLAGS.rescue_timeout > 0:
+            self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
 
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
@@ -1007,3 +1020,59 @@ class ComputeManager(manager.Manager):
 
         for volume in instance_ref['volumes']:
             self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
+
+    def periodic_tasks(self, context=None):
+        """Tasks to be run at a periodic interval."""
+        error_list = super(ComputeManager, self).periodic_tasks(context)
+        if error_list is None:
+            error_list = []
+
+        try:
+            self._poll_instance_states(context)
+        except Exception as ex:
+            LOG.warning(_("Error during instance poll: %s"),
+                        unicode(ex))
+            error_list.append(ex)
+        return error_list
+
+    def _poll_instance_states(self, context):
+        vm_instances = self.driver.list_instances_detail()
+        vm_instances = dict((vm.name, vm) for vm in vm_instances)
+
+        # Keep a list of VMs not in the DB, cross them off as we find them
+        vms_not_found_in_db = list(vm_instances.keys())
+
+        db_instances = self.db.instance_get_all_by_host(context, self.host)
+
+        for db_instance in db_instances:
+            name = db_instance['name']
+            vm_instance = vm_instances.get(name)
+            if vm_instance is None:
+                LOG.info(_("Found instance '%(name)s' in DB but no VM. "
+                           "Setting state to shutoff.") % locals())
+                vm_state = power_state.SHUTOFF
+            else:
+                vm_state = vm_instance.state
+                vms_not_found_in_db.remove(name)
+
+            db_state = db_instance['state']
+            if vm_state != db_state:
+                LOG.info(_("DB/VM state mismatch. Changing state from "
+                           "'%(db_state)s' to '%(vm_state)s'") % locals())
+                self.db.instance_set_state(context,
+                                           db_instance['id'],
+                                           vm_state)
+
+            if vm_state == power_state.SHUTOFF:
+                # TODO(soren): This is what the compute manager does when you
+                # terminate an instance. At some point I figure we'll have a
+                # "terminated" state and some sort of cleanup job that runs
+                # occasionally, cleaning them out.
+                self.db.instance_destroy(context, db_instance['id'])
+
+        # Are there VMs not in the DB?
+        for vm_not_found_in_db in vms_not_found_in_db:
+            name = vm_not_found_in_db
+            # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
+            LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
+                        % locals())

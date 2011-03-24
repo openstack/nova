@@ -335,6 +335,14 @@ def utcnow():
 utcnow.override_time = None
 
 
+def is_older_than(before, seconds):
+    """Return True if before is older than 'seconds'"""
+    if utcnow() - before > datetime.timedelta(seconds=seconds):
+        return True
+    else:
+        return False
+
+
 def utcnow_ts():
     """Timestamp version of our utcnow function."""
     return time.mktime(utcnow().timetuple())
@@ -653,3 +661,12 @@ def get_from_path(items, path):
         return results
     else:
         return get_from_path(results, remainder)
+
+
+def check_isinstance(obj, cls):
+    """Checks that obj is of type cls, and lets PyLint infer types"""
+    if isinstance(obj, cls):
+        return obj
+    raise Exception(_("Expected object of type: %s") % (str(cls)))
+    # TODO(justinsb): Can we make this better??
+    return cls()  # Ugly PyLint hack
