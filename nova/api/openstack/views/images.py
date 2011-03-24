@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os.path
+
 
 class ViewBuilder(object):
     """
@@ -37,7 +39,7 @@ class ViewBuilder(object):
         """
         Return an href string pointing to this object.
         """
-        return "%s/images/%s" % (self._url, image_id)
+        return os.path.join(self._url, "images", str(image_id))
 
     def build(self, image_obj, detail=False):
         """

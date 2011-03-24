@@ -50,8 +50,8 @@ class Controller(wsgi.Controller):
         """
         _default_service = utils.import_object(flags.FLAGS.image_service)
 
-        self.__compute = compute_service or compute.API()
-        self.__image = image_service or _default_service
+        self._compute_service = compute_service or compute.API()
+        self._image_service = image_service or _default_service
 
     def index(self, req):
         """
@@ -60,7 +60,7 @@ class Controller(wsgi.Controller):
         @param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
-        images = self.__image.index(context)
+        images = self._image_service.index(context)
         build = self.get_builder(req).build
         return dict(images=[build(image, False) for image in images])
 
@@ -71,7 +71,7 @@ class Controller(wsgi.Controller):
         @param req: `wsgi.Request` object.
         """
         context = req.environ['nova.context']
-        images = self.__image.detail(context)
+        images = self._image_service.detail(context)
         build = self.get_builder(req).build
         return dict(images=[build(image, True) for image in images])
 
@@ -86,7 +86,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
 
         try:
-            image = self.__image.show(context, image_id)
+            image = self._image_service.show(context, image_id)
         except exception.NotFound:
             ex = webob.exc.HTTPNotFound(explanation="Image not found.")
             raise faults.Fault(ex)
@@ -102,8 +102,8 @@ class Controller(wsgi.Controller):
         """
         image_id = id
         context = req.environ['nova.context']
-        self.__image.delete(context, image_id)
-        return exc.HTTPNoContent()
+        self._image_service.delete(context, image_id)
+        return webob.exc.HTTPNoContent()
 
     def create(self, req):
         """
@@ -116,16 +116,20 @@ class Controller(wsgi.Controller):
         image = self._deserialize(req.body, content_type)
 
         if not image:
-            raise exc.HTTPBadRequest()
+            raise webob.exc.HTTPBadRequest()
 
         try:
             server_id = image["image"]["serverId"]
             image_name = image["image"]["name"]
         except KeyError:
-            raise exc.HTTPBadRequest()
+            raise webob.exc.HTTPBadRequest()
 
-        image = self.__compute.snapshot(context, server_id, image_name)
+        image = self._compute_service.snapshot(context, server_id, image_name)
         return self.get_builder(req).build(image, True)
+
+    def get_builder(self, request):
+        """Indicates that you must use a Controller subclass."""
+        raise NotImplementedError
 
 
 class ControllerV10(Controller):
