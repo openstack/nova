@@ -16,3 +16,6 @@ nova/vcsversion.py
 *.DS_Store
 .project
 .pydevproject
+clean.sqlite
+run_tests.log
+tests.sqlite

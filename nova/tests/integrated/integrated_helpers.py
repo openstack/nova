@@ -73,6 +73,28 @@ class TestUser(object):
                                                         self.secret,
                                                         self.auth_url)
 
+    def get_unused_server_name(self):
+        servers = self.openstack_api.get_servers()
+        server_names = [server['name'] for server in servers]
+        return generate_new_element(server_names, 'server')
+
+    def get_invalid_image(self):
+        images = self.openstack_api.get_images()
+        image_ids = [image['id'] for image in images]
+        return generate_new_element(image_ids, '', numeric=True)
+
+    def get_valid_image(self, create=False):
+        images = self.openstack_api.get_images()
+        if create and not images:
+            # TODO(justinsb): No way to create an image through API???
+            #created_image = self.openstack_api.post_image(image)
+            #images.append(created_image)
+            raise exception.Error("No way to create an image through API??")
+
+        if images:
+            return images[0]
+        return None
+
 
 class IntegratedUnitTestContext(object):
     __INSTANCE = None
