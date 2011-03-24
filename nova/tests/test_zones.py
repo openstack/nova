@@ -96,7 +96,7 @@ class ZoneManagerTestCase(test.TestCase):
         zm.update_service_capabilities("svc10", "host1", dict(a=99, b=99))
         caps = zm.get_zone_capabilities(self, None)
         self.assertEquals(caps, dict(svc1_a=(2, 20), svc1_b=(3, 30),
-                                        svc10_a=(99, 99), svc10_b=(99, 99)))
+                                     svc10_a=(99, 99), svc10_b=(99, 99)))
 
         zm.update_service_capabilities("svc1", "host3", dict(c=5))
         caps = zm.get_zone_capabilities(self, None)

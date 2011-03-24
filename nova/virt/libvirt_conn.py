@@ -1008,7 +1008,18 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
 
-        return self._conn.getVersion()
+        # NOTE(justinsb): getVersion moved between libvirt versions
+        # Trying to do be compatible with older versions is a lost cause
+        # But ... we can at least give the user a nice message
+        method = getattr(self._conn, 'getVersion', None)
+        if method is None:
+            raise exception.Error(_("libvirt version is too old"
+                                    " (does not support getVersion)"))
+            # NOTE(justinsb): If we wanted to get the version, we could:
+            # method = getattr(libvirt, 'getVersion', None)
+            # NOTE(justinsb): This would then rely on a proper version check
+
+        return method()
 
     def get_cpu_info(self):
         """Get cpuinfo information.
