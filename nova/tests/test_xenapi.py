@@ -553,6 +553,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'image_id': 1,
                   'kernel_id': None,
                   'ramdisk_id': None,
+                  'local_gb': 5,
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
