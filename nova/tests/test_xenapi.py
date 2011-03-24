@@ -558,6 +558,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
+        fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,
