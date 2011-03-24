@@ -58,7 +58,7 @@ def generate_new_element(items, prefix, numeric=False):
             candidate = prefix + generate_random_alphanumeric(8)
         if not candidate in items:
             return candidate
-        print "Random collision on %s" % candidate
+        LOG.debug("Random collision on %s" % candidate)
 
 
 class TestUser(object):
@@ -125,10 +125,25 @@ class IntegratedUnitTestContext(object):
         self._configure_project(self.project_name, self.test_user)
 
     def _start_services(self):
+        self._start_volume_service()
+        self._start_scheduler_service()
+
         # WSGI shutdown broken :-(
         # bug731668
         if not self.api_service:
             self._start_api_service()
+
+    def _start_volume_service(self):
+        volume_service = service.Service.create(binary='nova-volume')
+        volume_service.start()
+        self.services.append(volume_service)
+        return volume_service
+
+    def _start_scheduler_service(self):
+        scheduler_service = service.Service.create(binary='nova-scheduler')
+        scheduler_service.start()
+        self.services.append(scheduler_service)
+        return scheduler_service
 
     def cleanup(self):
         for service in self.services:

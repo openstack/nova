@@ -141,7 +141,7 @@ class Controller(wsgi.Controller):
         """Creates a new volume"""
         context = req.environ['nova.context']
 
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
@@ -153,7 +153,7 @@ class Controller(wsgi.Controller):
                                             vol.get('display_description'))
 
         # Work around problem that instance is lazy-loaded...
-        volume['instance'] = None
+        new_volume['instance'] = None
 
         retval = _translate_detail_view(context, new_volume)
 

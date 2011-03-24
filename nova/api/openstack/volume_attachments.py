@@ -97,7 +97,7 @@ class Controller(wsgi.Controller):
         """ Attach a volume to an instance """
         context = req.environ['nova.context']
 
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         if not env:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 

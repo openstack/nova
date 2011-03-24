@@ -90,6 +90,7 @@ class TestOpenStackClient(object):
         LOG.info(_("Doing %(method)s on %(relative_url)s") % locals())
         if body:
             LOG.info(_("Body: %s") % body)
+            headers.setdefault('Content-Type', 'application/json')
 
         conn.request(method, relative_url, body, headers)
         response = conn.getresponse()
@@ -208,3 +209,17 @@ class TestOpenStackClient(object):
 
     def delete_flavor(self, flavor_id):
         return self.api_delete('/flavors/%s' % flavor_id)
+
+    def get_volume(self, volume_id):
+        return self.api_get('/volumes/%s' % volume_id)['volume']
+
+    def get_volumes(self, detail=True):
+        rel_url = '/volumes/detail' if detail else '/volumes'
+        return self.api_get(rel_url)['volumes']
+
+    def post_volume(self, volume):
+        return self.api_post('/volumes', volume)['volume']
+
+    def delete_volume(self, volume_id):
+        return self.api_delete('/volumes/%s' % volume_id)
+
