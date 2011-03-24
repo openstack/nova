@@ -211,6 +211,42 @@ class ServiceWrapper(wsgi.Controller):
             return result
 
 
+class Limited(object):
+    __notdoc = """Limit the available methods on a given object.
+
+    (Not a docstring so that the docstring can be conditionally overriden.)
+
+    Useful when defining a public API that only exposes a subset of an
+    internal API.
+
+    Expected usage of this class is to define a subclass that lists the allowed
+    methods in the 'allowed' variable.
+
+    Additionally where appropriate methods can be added or overwritten, for
+    example to provide backwards compatibility.
+
+    """
+
+    _allowed = None
+
+    def __init__(self, proxy):
+        self._proxy = proxy
+        if not self.__doc__:
+            self.__doc__ = proxy.__doc__
+        if not self._allowed:
+            self._allowed = []
+
+    def __getattr__(self, key):
+        """Only return methods that are named in self._allowed."""
+        if key not in self._allowed:
+            raise AttributeError()
+        return getattr(self._proxy, key)
+
+    def __dir__(self):
+        """Only return methods that are named in self._allowed."""
+        return [x for x in dir(self._proxy) if x in self._allowed]
+
+
 class Proxy(object):
     """Pretend a Direct API endpoint is an object."""
     def __init__(self, app, prefix=None):

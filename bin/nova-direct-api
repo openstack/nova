@@ -53,12 +53,19 @@ flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
 
+class ReadOnlyCompute(direct.Limited):
+    """Read-only Compute API."""
+
+    _allowed = ['get', 'get_all', 'get_console_output']
+
+
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
     logging.setup()
 
     direct.register_service('compute', compute.API())
+    direct.register_service('compute-readonly', ReadOnlyCompute(compute.API()))
     direct.register_service('volume', volume.API())
     direct.register_service('network', network.API())
     direct.register_service('reflect', direct.Reflection())
