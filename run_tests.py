@@ -60,6 +60,8 @@ import os
 import unittest
 import sys
 
+gettext.install('nova', unicode=1)
+
 from nose import config
 from nose import core
 from nose import result

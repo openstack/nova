@@ -33,4 +33,4 @@ class Base(object):
     def __init__(self, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver
-        self.db = utils.import_object(db_driver)  # pylint: disable-msg=C0103
+        self.db = utils.import_object(db_driver)  # pylint: disable=C0103

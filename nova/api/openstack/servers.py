@@ -22,6 +22,7 @@ from xml.dom import minidom
 from webob import exc
 
 from nova import compute
+from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -136,8 +137,10 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
-        personality = env['server'].get('personality', [])
-        injected_files = self._get_injected_files(personality)
+        personality = env['server'].get('personality')
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
 
         flavor_id = self._flavor_id_from_req_data(env)
         try:
@@ -189,6 +192,7 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         injected_files = []
+
         for item in personality:
             try:
                 path = item['path']
@@ -512,6 +516,7 @@ class Controller(wsgi.Controller):
                 _("Ramdisk not found for image %(image_id)s") % locals())
 
         return kernel_id, ramdisk_id
+
 
 class ControllerV10(Controller):
     def _image_id_from_req_data(self, data):
