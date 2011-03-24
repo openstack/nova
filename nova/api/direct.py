@@ -38,6 +38,7 @@ import routes
 import webob
 
 from nova import context
+from nova import exception
 from nova import flags
 from nova import utils
 from nova import wsgi
@@ -205,10 +206,12 @@ class ServiceWrapper(wsgi.Controller):
         # NOTE(vish): make sure we have no unicode keys for py2.6.
         params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
-        if type(result) is dict or type(result) is list:
-            return self._serialize(result, req.best_match_content_type())
-        else:
+        if result is None or type(result) is str or type(result) is unicode:
             return result
+        try:
+            return self._serialize(result, req.best_match_content_type())
+        except:
+            raise exception.Error("returned non-serializable type: %s" % result)
 
 
 class Limited(object):

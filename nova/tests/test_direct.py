@@ -33,6 +33,9 @@ from nova.api import direct
 from nova.tests import test_cloud
 
 
+class ArbitraryObject(object):
+    pass
+
 class FakeService(object):
     def echo(self, context, data):
         return {'data': data}
@@ -40,6 +43,9 @@ class FakeService(object):
     def context(self, context):
         return {'user': context.user_id,
                 'project': context.project_id}
+
+    def invalid_return(self, context):
+        return ArbitraryObject()
 
 
 class DirectTestCase(test.TestCase):
@@ -85,6 +91,12 @@ class DirectTestCase(test.TestCase):
         self.assertEqual(resp.status_int, 200)
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
+
+    def test_invalid(self):
+        req = webob.Request.blank('/fake/invalid_return')
+        req.environ['openstack.context'] = self.context
+        req.method = 'POST'
+        self.assertRaises(exception.Error, req.get_response, self.router)
 
     def test_proxy(self):
         proxy = direct.Proxy(self.router)
