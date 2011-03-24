@@ -762,6 +762,15 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
+    metadata = values.get('metadata')
+    metadata_refs = []
+    if metadata:
+        for metadata_item in metadata:
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref.update(metadata_item)
+            metadata_refs.append(metadata_ref)
+    values['metadata'] = metadata_refs
+
     instance_ref = models.Instance()
     instance_ref.update(values)
 
@@ -793,6 +802,11 @@ def instance_destroy(context, instance_id):
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
                 filter_by(instance_id=instance_id).\
                 update({'deleted': 1,
                         'deleted_at': datetime.datetime.utcnow(),
@@ -1240,7 +1254,7 @@ def network_get_all(context):
 
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 
 @require_admin_context
@@ -2206,8 +2220,8 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(instance_id=instance_id).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.NotFound(_("No migration found with instance id %s")
-                % migration_id)
+        raise exception.NotFound(_("No migration found for instance "
+                "%(instance_id)s with status %(status)s") % locals())
     return result
 
 
@@ -2322,13 +2336,13 @@ def instance_type_create(_context, values):
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()
-    except:
-        raise exception.DBError
+    except Exception, e:
+        raise exception.DBError(e)
     return instance_type_ref
 
 
 @require_context
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """
     Returns a dict describing all instance_types with name as key.
     """
@@ -2339,7 +2353,7 @@ def instance_type_get_all(context, inactive=0):
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
-                        filter_by(deleted=inactive).\
+                        filter_by(deleted=False).\
                         order_by("name").\
                         all()
     if inst_types:
@@ -2383,7 +2397,7 @@ def instance_type_destroy(context, name):
     session = get_session()
     instance_type_ref = session.query(models.InstanceTypes).\
                                       filter_by(name=name)
-    records = instance_type_ref.update(dict(deleted=1))
+    records = instance_type_ref.update(dict(deleted=True))
     if records == 0:
         raise exception.NotFound
     else:

@@ -18,6 +18,8 @@
 
 from __future__ import absolute_import
 
+import datetime
+
 from glance.common import exception as glance_exception
 
 from nova import exception
@@ -37,8 +39,11 @@ GlanceClient = utils.import_class('glance.client.Client')
 class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
-    def __init__(self):
-        self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
+    def __init__(self, client=None):
+        if client is None:
+            self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
+        else:
+            self.client = client
 
     def index(self, context):
         """
@@ -50,7 +55,8 @@ class GlanceImageService(service.BaseImageService):
         """
         Calls out to Glance for a list of detailed image information
         """
-        return self.client.get_images_detailed()
+        return [self._convert_timestamps_to_datetimes(image)
+                for image in self.client.get_images_detailed()]
 
     def show(self, context, image_id):
         """
@@ -60,7 +66,22 @@ class GlanceImageService(service.BaseImageService):
             image = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
             raise exception.NotFound
+        return self._convert_timestamps_to_datetimes(image)
+
+    def _convert_timestamps_to_datetimes(self, image):
+        """
+        Returns image with known timestamp fields converted to datetime objects
+        """
+        for attr in ['created_at', 'updated_at', 'deleted_at']:
+            if image.get(attr):
+                image[attr] = self._parse_glance_iso8601_timestamp(image[attr])
         return image
+
+    def _parse_glance_iso8601_timestamp(self, timestamp):
+        """
+        Parse a subset of iso8601 timestamps into datetime objects
+        """
+        return datetime.datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f")
 
     def show_by_name(self, context, name):
         """
@@ -88,7 +109,7 @@ class GlanceImageService(service.BaseImageService):
             raise exception.NotFound
         for chunk in image_chunks:
             data.write(chunk)
-        return metadata
+        return self._convert_timestamps_to_datetimes(metadata)
 
     def create(self, context, metadata, data=None):
         """
@@ -97,7 +118,8 @@ class GlanceImageService(service.BaseImageService):
         :raises AlreadyExists if the image already exist.
 
         """
-        return self.client.add_image(metadata, data)
+        return self._convert_timestamps_to_datetimes(
+            self.client.add_image(metadata, data))
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data.
@@ -106,10 +128,10 @@ class GlanceImageService(service.BaseImageService):
 
         """
         try:
-            result = self.client.update_image(image_id, metadata, data)
+            metadata = self.client.update_image(image_id, metadata, data)
         except glance_exception.NotFound:
             raise exception.NotFound
-        return result
+        return self._convert_timestamps_to_datetimes(metadata)
 
     def delete(self, context, image_id):
         """

@@ -61,3 +61,42 @@ class Fault(webob.exc.HTTPException):
         content_type = req.best_match_content_type()
         self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
         return self.wrapped_exc
+
+
+class OverLimitFault(webob.exc.HTTPException):
+    """
+    Rate-limited request response.
+    """
+
+    _serialization_metadata = {
+        "application/xml": {
+            "attributes": {
+                "overLimitFault": "code",
+            },
+        },
+    }
+
+    def __init__(self, message, details, retry_time):
+        """
+        Initialize new `OverLimitFault` with relevant information.
+        """
+        self.wrapped_exc = webob.exc.HTTPForbidden()
+        self.content = {
+            "overLimitFault": {
+                "code": self.wrapped_exc.status_int,
+                "message": message,
+                "details": details,
+            },
+        }
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, request):
+        """
+        Return the wrapped exception with a serialized body conforming to our
+        error format.
+        """
+        serializer = wsgi.Serializer(self._serialization_metadata)
+        content_type = request.best_match_content_type()
+        content = serializer.serialize(self.content, content_type)
+        self.wrapped_exc.body = content
+        return self.wrapped_exc

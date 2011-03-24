@@ -33,6 +33,7 @@ from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
+from nova.api.openstack import limits
 from nova.api.openstack import servers
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
@@ -71,9 +72,14 @@ class APIRouter(wsgi.Router):
         return cls()
 
     def __init__(self):
+        self.server_members = {}
         mapper = routes.Mapper()
+        self._setup_routes(mapper)
+        super(APIRouter, self).__init__(mapper)
 
-        server_members = {'action': 'POST'}
+    def _setup_routes(self, mapper):
+        server_members = self.server_members
+        server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
             LOG.debug(_("Including admin operations in API."))
 
@@ -98,10 +104,6 @@ class APIRouter(wsgi.Router):
                             controller=accounts.Controller(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("server", "servers", controller=servers.Controller(),
-                        collection={'detail': 'GET'},
-                        member=server_members)
-
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),
                         parent_resource=dict(member_name='server',
@@ -114,13 +116,38 @@ class APIRouter(wsgi.Router):
 
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
+
         mapper.resource("flavor", "flavors", controller=flavors.Controller(),
                         collection={'detail': 'GET'})
+
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
 
-        super(APIRouter, self).__init__(mapper)
+        _limits = limits.LimitsController()
+        mapper.resource("limit", "limits", controller=_limits)
+
+
+class APIRouterV10(APIRouter):
+    """Define routes specific to OpenStack API V1.0."""
+
+    def _setup_routes(self, mapper):
+        super(APIRouterV10, self)._setup_routes(mapper)
+        mapper.resource("server", "servers",
+                        controller=servers.ControllerV10(),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
+
+
+class APIRouterV11(APIRouter):
+    """Define routes specific to OpenStack API V1.1."""
+
+    def _setup_routes(self, mapper):
+        super(APIRouterV11, self)._setup_routes(mapper)
+        mapper.resource("server", "servers",
+                        controller=servers.ControllerV11(),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
 
 
 class Versions(wsgi.Application):
@@ -128,8 +155,11 @@ class Versions(wsgi.Application):
     def __call__(self, req):
         """Respond to a request for all OpenStack API versions."""
         response = {
-                "versions": [
-                    dict(status="CURRENT", id="v1.0")]}
+            "versions": [
+                dict(status="DEPRECATED", id="v1.0"),
+                dict(status="CURRENT", id="v1.1"),
+            ],
+        }
         metadata = {
             "application/xml": {
                 "attributes": dict(version=["status", "id"])}}

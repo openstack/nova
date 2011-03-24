@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import datetime
 import json
 import random
@@ -34,7 +35,7 @@ from nova import utils
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
-from nova.api.openstack import ratelimiting
+from nova.api.openstack import limits
 from nova.auth.manager import User, Project
 from nova.image import glance
 from nova.image import local
@@ -72,13 +73,18 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app(inner_application=None):
-    if not inner_application:
-        inner_application = openstack.APIRouter()
+def wsgi_app(inner_app10=None, inner_app11=None):
+    if not inner_app10:
+        inner_app10 = openstack.APIRouterV10()
+    if not inner_app11:
+        inner_app11 = openstack.APIRouterV11()
     mapper = urlmap.URLMap()
-    api = openstack.FaultWrapper(auth.AuthMiddleware(
-              ratelimiting.RateLimitingMiddleware(inner_application)))
-    mapper['/v1.0'] = api
+    api10 = openstack.FaultWrapper(auth.AuthMiddleware(
+              limits.RateLimitingMiddleware(inner_app10)))
+    api11 = openstack.FaultWrapper(auth.AuthMiddleware(
+              limits.RateLimitingMiddleware(inner_app11)))
+    mapper['/v1.0'] = api10
+    mapper['/v1.1'] = api11
     mapper['/'] = openstack.FaultWrapper(openstack.Versions())
     return mapper
 
@@ -115,13 +121,13 @@ def stub_out_auth(stubs):
 
 def stub_out_rate_limiting(stubs):
     def fake_rate_init(self, app):
-        super(ratelimiting.RateLimitingMiddleware, self).__init__(app)
+        super(limits.RateLimitingMiddleware, self).__init__(app)
         self.application = app
 
-    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
         '__init__', fake_rate_init)
 
-    stubs.Set(nova.api.openstack.ratelimiting.RateLimitingMiddleware,
+    stubs.Set(nova.api.openstack.limits.RateLimitingMiddleware,
         '__call__', fake_wsgi)
 
 
@@ -149,22 +155,23 @@ def stub_out_glance(stubs, initial_fixtures=None):
                     for f in self.fixtures]
 
         def fake_get_images_detailed(self):
-            return self.fixtures
+            return copy.deepcopy(self.fixtures)
 
         def fake_get_image_meta(self, image_id):
-            for f in self.fixtures:
-                if f['id'] == image_id:
-                    return f
+            image = self._find_image(image_id)
+            if image:
+                return copy.deepcopy(image)
             raise glance_exc.NotFound
 
         def fake_add_image(self, image_meta, data=None):
+            image_meta = copy.deepcopy(image_meta)
             id = ''.join(random.choice(string.letters) for _ in range(20))
             image_meta['id'] = id
             self.fixtures.append(image_meta)
             return image_meta
 
         def fake_update_image(self, image_id, image_meta, data=None):
-            f = self.fake_get_image_meta(image_id)
+            f = self._find_image(image_id)
             if not f:
                 raise glance_exc.NotFound
 
@@ -172,7 +179,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
             return f
 
         def fake_delete_image(self, image_id):
-            f = self.fake_get_image_meta(image_id)
+            f = self._find_image(image_id)
             if not f:
                 raise glance_exc.NotFound
 
@@ -180,6 +187,12 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         ##def fake_delete_all(self):
         ##    self.fixtures = []
+
+        def _find_image(self, image_id):
+            for f in self.fixtures:
+                if f['id'] == image_id:
+                    return f
+            return None
 
     GlanceClient = glance_client.Client
     fake = FakeGlanceClient(initial_fixtures)
@@ -233,52 +246,57 @@ class FakeAuthDatabase(object):
 
 
 class FakeAuthManager(object):
-    auth_data = {}
+    #NOTE(justinsb): Accessing static variables through instances is FUBAR
+    #NOTE(justinsb): This should also be private!
+    auth_data = []
     projects = {}
 
     @classmethod
     def clear_fakes(cls):
-        cls.auth_data = {}
+        cls.auth_data = []
         cls.projects = {}
 
     @classmethod
     def reset_fake_data(cls):
-        cls.auth_data = dict(acc1=User('guy1', 'guy1', 'acc1',
-                                       'fortytwo!', False))
+        u1 = User('id1', 'guy1', 'acc1', 'secret1', False)
+        cls.auth_data = [u1]
         cls.projects = dict(testacct=Project('testacct',
                                              'testacct',
-                                             'guy1',
+                                             'id1',
                                              'test',
                                               []))
 
-    def add_user(self, key, user):
-        FakeAuthManager.auth_data[key] = user
+    def add_user(self, user):
+        FakeAuthManager.auth_data.append(user)
 
     def get_users(self):
-        return FakeAuthManager.auth_data.values()
+        return FakeAuthManager.auth_data
 
     def get_user(self, uid):
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.id == uid:
-                return v
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                return user
+        return None
+
+    def get_user_from_access_key(self, key):
+        for user in FakeAuthManager.auth_data:
+            if user.access == key:
+                return user
         return None
 
     def delete_user(self, uid):
-        for k, v in FakeAuthManager.auth_data.items():
-            if v.id == uid:
-                del FakeAuthManager.auth_data[k]
+        for user in FakeAuthManager.auth_data:
+            if user.id == uid:
+                FakeAuthManager.auth_data.remove(user)
         return None
 
     def create_user(self, name, access=None, secret=None, admin=False):
         u = User(name, name, access, secret, admin)
-        FakeAuthManager.auth_data[access] = u
+        FakeAuthManager.auth_data.append(u)
         return u
 
     def modify_user(self, user_id, access=None, secret=None, admin=None):
-        user = None
-        for k, v in FakeAuthManager.auth_data.iteritems():
-            if v.id == user_id:
-                user = v
+        user = self.get_user(user_id)
         if user:
             user.access = access
             user.secret = secret
@@ -324,12 +342,6 @@ class FakeAuthManager(object):
             return [p for p in FakeAuthManager.projects.values()
                     if (user.id in p.member_ids) or
                        (user.id == p.project_manager_id)]
-
-    def get_user_from_access_key(self, key):
-        try:
-            return FakeAuthManager.auth_data[key]
-        except KeyError:
-            raise exc.NotFound
 
 
 class FakeRateLimiter(object):
