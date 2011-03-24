@@ -223,6 +223,10 @@ class XenAPIConnection(object):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
 
+    def poll_rescued_instances(self, timeout):
+        """Poll for rescued instances"""
+        self._vmops.poll_rescued_instances(timeout)
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         self._vmops.reset_network(instance)
