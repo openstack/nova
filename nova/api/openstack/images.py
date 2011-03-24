@@ -62,7 +62,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         images = self._image_service.index(context)
         build = self.get_builder(req).build
-        return dict(images=[build(image, False) for image in images])
+        return dict(images=[build(image, detail=False) for image in images])
 
     def detail(self, req):
         """
@@ -73,7 +73,7 @@ class Controller(wsgi.Controller):
         context = req.environ['nova.context']
         images = self._image_service.detail(context)
         build = self.get_builder(req).build
-        return dict(images=[build(image, True) for image in images])
+        return dict(images=[build(image, detail=True) for image in images])
 
     def show(self, req, id):
         """
@@ -88,10 +88,10 @@ class Controller(wsgi.Controller):
         try:
             image = self._image_service.show(context, image_id)
         except exception.NotFound:
-            ex = webob.exc.HTTPNotFound(explanation="Image not found.")
+            ex = webob.exc.HTTPNotFound(explanation=_("Image not found."))
             raise faults.Fault(ex)
 
-        return dict(image=self.get_builder(req).build(image, True))
+        return dict(image=self.get_builder(req).build(image, detail=True))
 
     def delete(self, req, id):
         """
@@ -125,7 +125,7 @@ class Controller(wsgi.Controller):
             raise webob.exc.HTTPBadRequest()
 
         image = self._compute_service.snapshot(context, server_id, image_name)
-        return self.get_builder(req).build(image, True)
+        return self.get_builder(req).build(image, detail=True)
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
