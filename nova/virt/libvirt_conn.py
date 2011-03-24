@@ -417,6 +417,10 @@ class LibvirtConnection(object):
         self.reboot(instance)
 
     @exception.wrap_exception
+    def poll_rescued_instances(self, timeout):
+        pass
+
+    @exception.wrap_exception
     def spawn(self, instance):
         xml = self.to_xml(instance)
         db.instance_set_state(context.get_admin_context(),
