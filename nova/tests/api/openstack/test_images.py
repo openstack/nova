@@ -20,6 +20,7 @@ Tests of the new image services, both as a service layer,
 and as a WSGI layer
 """
 
+import copy
 import json
 import datetime
 import os
@@ -193,6 +194,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     """
     # Registered images at start of each test.
     now = datetime.datetime.utcnow()
+    formated_date = now.strftime('%Y-%m-%dT%H:%M:%SZ')
     IMAGE_FIXTURES = [
         {'id': '23g2ogk23k4hhkk4k42l',
          'imageId': '23g2ogk23k4hhkk4k42l',
@@ -256,13 +258,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         actual_image = json.loads(response.body)
 
-        expected = self.IMAGE_FIXTURES[0]
+        expected = copy.copy(self.IMAGE_FIXTURES[0])
         expected_image = {
             "image": {
                 "id": expected["id"],
                 "name": expected["name"],
-                "updated": expected["updated_at"],
-                "created": expected["created_at"],
+                "updated": self.formated_date,
+                "created": self.formated_date,
                 "status": expected["status"],
             },
         }
@@ -275,15 +277,15 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         actual_image = json.loads(response.body)
 
-        expected = self.IMAGE_FIXTURES[0]
+        expected = copy.copy(self.IMAGE_FIXTURES[0])
         href = "http://localhost/v1.1/images/%s" % expected["id"]
 
         expected_image = {
             "image": {
                 "id": expected["id"],
                 "name": expected["name"],
-                "updated": expected["updated_at"],
-                "created": expected["created_at"],
+                "updated": self.formated_date,
+                "created": self.formated_date,
                 "status": expected["status"],
                 "links": [{
                     "rel": "self",
@@ -311,7 +313,9 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         actual_image = parseString(response.body.replace("  ", ""))
 
-        expected = self.IMAGE_FIXTURES[0]
+        expected = copy.copy(self.IMAGE_FIXTURES[0])
+        expected["updated_at"] = self.formated_date
+        expected["created_at"] = self.formated_date
         expected_image = parseString("""
             <image id="%(id)s"
                     name="%(name)s"
@@ -329,8 +333,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         actual_image = parseString(response.body.replace("  ", ""))
 
-        expected = self.IMAGE_FIXTURES[0]
+        expected = copy.copy(self.IMAGE_FIXTURES[0])
         expected["href"] = "http://localhost/v1.1/images/23g2ogk23k4hhkk4k42l"
+        expected["updated_at"] = self.formated_date
+        expected["created_at"] = self.formated_date
         expected_image = parseString("""
         <image id="%(id)s"
                 name="%(name)s"
@@ -457,8 +463,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             test_image = {
                 "id": image["id"],
                 "name": image["name"],
-                "updated": image["updated_at"],
-                "created": image["created_at"],
+                "updated": self.formated_date,
+                "created": self.formated_date,
                 "status": image["status"],
             }
             self.assertTrue(test_image in response_list)
@@ -477,8 +483,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             test_image = {
                 "id": image["id"],
                 "name": image["name"],
-                "updated": image["updated_at"],
-                "created": image["created_at"],
+                "updated": self.formated_date,
+                "created": self.formated_date,
                 "status": image["status"],
                 "links": [{
                     "rel": "self",
@@ -498,13 +504,3 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             self.assertTrue(test_image in response_list)
 
         self.assertEqual(len(response_list), len(self.IMAGE_FIXTURES))
-
-    def test_show_image(self):
-        expected = self.IMAGE_FIXTURES[0]
-        image_id = abs(hash(expected['id']))
-        expected_time = self.now.strftime('%Y-%m-%dT%H:%M:%SZ')
-        req = webob.Request.blank('/v1.0/images/%s' % id)
-        res = req.get_response(fakes.wsgi_app())
-        actual = json.loads(res.body)['image']
-        self.assertEqual(expected_time, actual['created_at'])
-        self.assertEqual(expected_time, actual['updated_at'])
