@@ -30,17 +30,7 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
-class LoginTest(test.TestCase):
-    def setUp(self):
-        super(LoginTest, self).setUp()
-        context = integrated_helpers.IntegratedUnitTestContext.startup()
-        self.user = context.test_user
-        self.api = self.user.openstack_api
-
-    def tearDown(self):
-        integrated_helpers.IntegratedUnitTestContext.shutdown()
-        super(LoginTest, self).tearDown()
-
+class LoginTest(integrated_helpers._IntegratedTestBase):
     def test_login(self):
         """Simple check - we list flavors - so we know we're logged in"""
         flavors = self.api.get_flavors()

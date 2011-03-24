@@ -31,19 +31,9 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
-class ServersTest(test.TestCase):
-    def setUp(self):
-        super(ServersTest, self).setUp()
-
+class ServersTest(integrated_helpers._IntegratedTestBase):
+    def _setup_flags(self):
         self.flags(image_service='nova.image.fake.MockImageService')
-
-        context = integrated_helpers.IntegratedUnitTestContext.startup()
-        self.user = context.test_user
-        self.api = self.user.openstack_api
-
-    def tearDown(self):
-        integrated_helpers.IntegratedUnitTestContext.shutdown()
-        super(ServersTest, self).tearDown()
 
     def test_get_servers(self):
         """Simple check that listing servers works."""
@@ -144,29 +134,6 @@ class ServersTest(test.TestCase):
 
         # Should be gone
         self.assertFalse(found_server)
-
-    def _build_minimal_create_server_request(self):
-        server = {}
-
-        image = self.user.get_valid_image(create=True)
-        image_id = image['id']
-
-        #TODO(justinsb): This is FUBAR
-        image_id = abs(hash(image_id))
-
-        # We now have a valid imageId
-        server['imageId'] = image_id
-
-        # Set a valid flavorId
-        flavor = self.api.get_flavors()[0]
-        LOG.debug("Using flavor: %s" % flavor)
-        server['flavorId'] = flavor['id']
-
-        # Set a valid server name
-        server_name = self.user.get_unused_server_name()
-        server['name'] = server_name
-
-        return server
 
 # TODO(justinsb): Enable this unit test when the metadata bug is fixed
 #    def test_create_server_with_metadata(self):

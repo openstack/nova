@@ -35,27 +35,29 @@ FLAGS = flags.FLAGS
 def _translate_detail_view(context, volume):
     """ Maps keys for details view"""
 
-    v = _translate_summary_view(context, volume)
+    d = _translate_summary_view(context, volume)
 
     # No additional data / lookups at the moment
 
-    return v
+    return d
 
 
-def _translate_summary_view(context, volume):
+def _translate_summary_view(context, vol):
     """ Maps keys for summary view"""
-    v = {}
+    d = {}
 
-    volume_id = volume['id']
-    
+    volume_id = vol['id']
+
     # NOTE(justinsb): We use the volume id as the id of the attachment object
-    v['id'] = volume_id
-    
-    v['volumeId'] = volume_id
-    v['serverId'] = volume['instance_id']
-    v['device'] = volume['mountpoint']
+    d['id'] = volume_id
 
-    return v
+    d['volumeId'] = volume_id
+    if vol.get('instance_id'):
+        d['serverId'] = vol['instance_id']
+    if vol.get('mountpoint'):
+        d['device'] = vol['mountpoint']
+
+    return d
 
 
 class Controller(wsgi.Controller):
@@ -82,16 +84,22 @@ class Controller(wsgi.Controller):
         return self._items(req, server_id,
                            entity_maker=_translate_summary_view)
 
-    def show(self, req, id):
+    def show(self, req, server_id, id):
         """Return data about the given volume"""
         context = req.environ['nova.context']
 
+        volume_id = id
         try:
-            vol = self.volume_api.get(context, id)
+            vol = self.volume_api.get(context, volume_id)
         except exception.NotFound:
+            LOG.debug("volume_id not found")
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'volume': _translate_detail_view(context, vol)}
+        if str(vol['instance_id']) != server_id:
+            LOG.debug("instance_id != server_id")
+            return faults.Fault(exc.HTTPNotFound())
+
+        return {'volumeAttachment': _translate_detail_view(context, vol)}
 
     def create(self, req, server_id):
         """ Attach a volume to an instance """
@@ -109,15 +117,29 @@ class Controller(wsgi.Controller):
                 " at %(device)s") % locals()
         LOG.audit(msg, context=context)
 
-        self.compute_api.attach_volume(context,
-                                       instance_id=instance_id,
-                                       volume_id=volume_id,
-                                       device=device)
-        vol = self.volume_api.get(context, volume_id)
+        try:
+            self.compute_api.attach_volume(context,
+                                           instance_id=instance_id,
+                                           volume_id=volume_id,
+                                           device=device)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
 
-        retval = _translate_detail_view(context, vol)
+        # The attach is async
+        attachment = {}
+        attachment['id'] = volume_id
+        attachment['volumeId'] = volume_id
 
-        return {'volumeAttachment': retval}
+        # NOTE(justinsb): And now, we have a problem...
+        # The attach is async, so there's a window in which we don't see
+        #  the attachment (until the attachment completes).  We could also
+        #  get problems with concurrent requests.  I think we need an
+        #  attachment state, and to write to the DB here, but that's a bigger
+        #  change.
+        # For now, we'll probably have to rely on libraries being smart
+
+        # TODO: How do I return "accepted" here??
+        return {'volumeAttachment': attachment}
 
     def update(self, _req, _server_id, _id):
         """ Update a volume attachment.  We don't currently support this."""
@@ -130,10 +152,15 @@ class Controller(wsgi.Controller):
         volume_id = id
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
 
-        vol = self.volume_api.get(context, volume_id)
-        if vol['instance_id'] != server_id:
+        try:
+            vol = self.volume_api.get(context, volume_id)
+        except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
-    
+
+        if str(vol['instance_id']) != server_id:
+            LOG.debug("instance_id != server_id")
+            return faults.Fault(exc.HTTPNotFound())
+
         self.compute_api.detach_volume(context,
                                        volume_id=volume_id)
 

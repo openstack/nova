@@ -125,6 +125,7 @@ class IntegratedUnitTestContext(object):
         self._configure_project(self.project_name, self.test_user)
 
     def _start_services(self):
+        self._start_compute_service()
         self._start_volume_service()
         self._start_scheduler_service()
 
@@ -132,6 +133,12 @@ class IntegratedUnitTestContext(object):
         # bug731668
         if not self.api_service:
             self._start_api_service()
+
+    def _start_compute_service(self):
+        compute_service = service.Service.create(binary='nova-compute')
+        compute_service.start()
+        self.services.append(compute_service)
+        return compute_service
 
     def _start_volume_service(self):
         volume_service = service.Service.create(binary='nova-volume')
@@ -223,3 +230,45 @@ class IntegratedUnitTestContext(object):
         # WSGI shutdown broken :-(
         # bug731668
         #IntegratedUnitTestContext.__INSTANCE = None
+
+
+class _IntegratedTestBase(test.TestCase):
+    def setUp(self):
+        super(_IntegratedTestBase, self).setUp()
+
+        self._setup_flags()
+
+        context = IntegratedUnitTestContext.startup()
+        self.user = context.test_user
+        self.api = self.user.openstack_api
+
+    def tearDown(self):
+        IntegratedUnitTestContext.shutdown()
+        super(_IntegratedTestBase, self).tearDown()
+
+    def _setup_flags(self):
+        """An opportunity to setup flags, before the services are started"""
+        pass
+
+    def _build_minimal_create_server_request(self):
+        server = {}
+
+        image = self.user.get_valid_image(create=True)
+        image_id = image['id']
+
+        #TODO(justinsb): This is FUBAR
+        image_id = abs(hash(image_id))
+
+        # We now have a valid imageId
+        server['imageId'] = image_id
+
+        # Set a valid flavorId
+        flavor = self.api.get_flavors()[0]
+        LOG.debug("Using flavor: %s" % flavor)
+        server['flavorId'] = flavor['id']
+
+        # Set a valid server name
+        server_name = self.user.get_unused_server_name()
+        server['name'] = server_name
+
+        return server

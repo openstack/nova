@@ -223,3 +223,18 @@ class TestOpenStackClient(object):
     def delete_volume(self, volume_id):
         return self.api_delete('/volumes/%s' % volume_id)
 
+    def get_server_volume(self, server_id, attachment_id):
+        return self.api_get('/servers/%s/volume_attachments/%s' %
+                            (server_id, attachment_id))['volumeAttachment']
+    
+    def get_server_volumes(self, server_id):
+        return self.api_get('/servers/%s/volume_attachments' %
+                            (server_id))['volumeAttachments']
+
+    def post_server_volume(self, server_id, volume_attachment):
+        return self.api_post('/servers/%s/volume_attachments' %
+                        (server_id), volume_attachment)['volumeAttachment']
+
+    def delete_server_volume(self, server_id, attachment_id):
+        return self.api_delete('/servers/%s/volume_attachments/%s' %
+                            (server_id, attachment_id))

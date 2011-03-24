@@ -135,7 +135,7 @@ class VolumeDriver(object):
         """Removes an export for a logical volume."""
         raise NotImplementedError()
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
         raise NotImplementedError()
 
@@ -574,6 +574,8 @@ class RBDDriver(VolumeDriver):
 
     def discover_volume(self, volume):
         """Discover volume on a remote host"""
+        #NOTE(justinsb): This is messed up... discover_volume takes 3 args
+        # but then that would break local_path
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def undiscover_volume(self, volume):
@@ -622,7 +624,7 @@ class SheepdogDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
         return "sheepdog:%s" % volume['name']
 
@@ -656,7 +658,7 @@ class LoggingVolumeDriver(VolumeDriver):
     def remove_export(self, context, volume):
         self.log_action('remove_export', volume)
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         self.log_action('discover_volume', volume)
 
     def undiscover_volume(self, volume):
@@ -666,6 +668,10 @@ class LoggingVolumeDriver(VolumeDriver):
         self.log_action('check_for_export', volume_id)
 
     _LOGS = []
+
+    @staticmethod
+    def clear_logs():
+        LoggingVolumeDriver._LOGS = []
 
     @staticmethod
     def log_action(action, parameters):

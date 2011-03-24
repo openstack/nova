@@ -134,7 +134,7 @@ class APIRouter(wsgi.Router):
                         controller=volumes.Controller(),
                         collection={'detail': 'GET'})
 
-        mapper.resource("volume_attachment", "volume_attachment",
+        mapper.resource("volume_attachment", "volume_attachments",
                         controller=volume_attachments.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
