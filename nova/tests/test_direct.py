@@ -36,6 +36,7 @@ from nova.tests import test_cloud
 class ArbitraryObject(object):
     pass
 
+
 class FakeService(object):
     def echo(self, context, data):
         return {'data': data}

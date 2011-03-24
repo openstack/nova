@@ -608,7 +608,9 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            self.volume_api.update(context, volume_id=volume_id, fields=changes)
+            self.volume_api.update(context,
+                                   volume_id=volume_id,
+                                   fields=changes)
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):

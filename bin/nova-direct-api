@@ -52,7 +52,6 @@ flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
-
 # An example of an API that only exposes read-only methods.
 # In this case we're just limiting which methods are exposed.
 class ReadOnlyCompute(direct.Limited):

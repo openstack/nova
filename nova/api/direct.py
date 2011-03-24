@@ -211,7 +211,8 @@ class ServiceWrapper(wsgi.Controller):
         try:
             return self._serialize(result, req.best_match_content_type())
         except:
-            raise exception.Error("returned non-serializable type: %s" % result)
+            raise exception.Error("returned non-serializable type: %s"
+                                  % result)
 
 
 class Limited(object):
