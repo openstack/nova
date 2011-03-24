@@ -636,6 +636,7 @@ class LibvirtConnection(object):
 
         if not suffix:
             suffix = ''
+
         # syntactic nicety
         def basepath(fname='', suffix=suffix):
             return os.path.join(FLAGS.instances_path,
@@ -1698,7 +1699,6 @@ class NWFilterFirewall(FirewallDriver):
     def _instance_filter_name(self, instance, nic_id=None):
         if not nic_id:
             return 'nova-instance-%s' % (instance['name'])
-        
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
 
