@@ -141,6 +141,7 @@ class APIRouter(wsgi.Router):
 
         super(APIRouter, self).__init__(mapper)
 
+
 class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 

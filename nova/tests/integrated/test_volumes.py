@@ -159,8 +159,8 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
 
         # Template attach request
         device = '/dev/sdc'
-        attach_req = { 'device': device }
-        post_req = { 'volumeAttachment': attach_req }
+        attach_req = {'device': device}
+        post_req = {'volumeAttachment': attach_req}
 
         # Try to attach to a non-existent volume; should fail
         attach_req['volumeId'] = 3405691582

@@ -62,17 +62,17 @@ def _translate_summary_view(context, vol):
 
 class Controller(wsgi.Controller):
     """ The volume attachment API controller for the Openstack API
-    
+
     A child resource of the server.  Note that we use the volume id
     as the ID of the attachment (though this is not guaranteed externally)"""
 
     _serialization_metadata = {
         'application/xml': {
             'attributes': {
-                'volumeAttachment': [ 'id',
-                                      'serverId',
-                                      'volumeId',
-                                      'device' ]}}}
+                'volumeAttachment': ['id',
+                                     'serverId',
+                                     'volumeId',
+                                     'device']}}}
 
     def __init__(self):
         self.compute_api = compute.API()

@@ -226,7 +226,7 @@ class TestOpenStackClient(object):
     def get_server_volume(self, server_id, attachment_id):
         return self.api_get('/servers/%s/volume_attachments/%s' %
                             (server_id, attachment_id))['volumeAttachment']
-    
+
     def get_server_volumes(self, server_id):
         return self.api_get('/servers/%s/volume_attachments' %
                             (server_id))['volumeAttachments']
