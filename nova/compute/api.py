@@ -636,7 +636,7 @@ class API(base.Base):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
-        self.volume_api.check_attach(context, volume_id)
+        self.volume_api.check_attach(context, volume_id=volume_id)
         instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
@@ -650,7 +650,7 @@ class API(base.Base):
         instance = self.db.volume_get_instance(context.elevated(), volume_id)
         if not instance:
             raise exception.ApiError(_("Volume isn't attached to anything!"))
-        self.volume_api.check_detach(context, volume_id)
+        self.volume_api.check_detach(context, volume_id=volume_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -661,5 +661,6 @@ class API(base.Base):
 
     def associate_floating_ip(self, context, instance_id, address):
         instance = self.get(context, instance_id)
-        self.network_api.associate_floating_ip(context, address,
-                                               instance['fixed_ip'])
+        self.network_api.associate_floating_ip(context,
+                                               floating_ip=address,
+                                               fixed_ip=instance['fixed_ip'])

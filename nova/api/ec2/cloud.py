@@ -541,7 +541,7 @@ class CloudController(object):
             volumes = []
             for ec2_id in volume_id:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                volume = self.volume_api.get(context, internal_id)
+                volume = self.volume_api.get(context, volume_id=internal_id)
                 volumes.append(volume)
         else:
             volumes = self.volume_api.get_all(context)
@@ -585,9 +585,11 @@ class CloudController(object):
 
     def create_volume(self, context, size, **kwargs):
         LOG.audit(_("Create volume of %s GB"), size, context=context)
-        volume = self.volume_api.create(context, size,
-                                        kwargs.get('display_name'),
-                                        kwargs.get('display_description'))
+        volume = self.volume_api.create(
+                context,
+                size=size,
+                name=kwargs.get('display_name'),
+                description=kwargs.get('display_description'))
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
@@ -606,7 +608,9 @@ class CloudController(object):
             if field in kwargs:
                 changes[field] = kwargs[field]
         if changes:
-            self.volume_api.update(context, volume_id, kwargs)
+            self.volume_api.update(context,
+                                   volume_id=volume_id,
+                                   fields=changes)
         return True
 
     def attach_volume(self, context, volume_id, instance_id, device, **kwargs):
@@ -619,7 +623,7 @@ class CloudController(object):
                                        instance_id=instance_id,
                                        volume_id=volume_id,
                                        device=device)
-        volume = self.volume_api.get(context, volume_id)
+        volume = self.volume_api.get(context, volume_id=volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
                 'instanceId': ec2utils.id_to_ec2_id(instance_id),
@@ -630,7 +634,7 @@ class CloudController(object):
     def detach_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
-        volume = self.volume_api.get(context, volume_id)
+        volume = self.volume_api.get(context, volume_id=volume_id)
         instance = self.compute_api.detach_volume(context, volume_id=volume_id)
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
@@ -768,7 +772,7 @@ class CloudController(object):
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
-        self.network_api.release_floating_ip(context, public_ip)
+        self.network_api.release_floating_ip(context, address=public_ip)
         return {'releaseResponse': ["Address released."]}
 
     def associate_address(self, context, instance_id, public_ip, **kwargs):
@@ -782,7 +786,7 @@ class CloudController(object):
 
     def disassociate_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Disassociate address %s"), public_ip, context=context)
-        self.network_api.disassociate_floating_ip(context, public_ip)
+        self.network_api.disassociate_floating_ip(context, address=public_ip)
         return {'disassociateResponse': ["Address disassociated."]}
 
     def run_instances(self, context, **kwargs):
