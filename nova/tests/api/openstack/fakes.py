@@ -184,15 +184,19 @@ def stub_out_glance(stubs, initial_fixtures=None):
                                for _ in range(20))
             image_meta['id'] = image_id
             self.fixtures.append(image_meta)
-            return image_meta
+            return copy.deepcopy(image_meta)
 
         def fake_update_image(self, image_id, image_meta, data=None):
+            for attr in ('created_at', 'updated_at', 'deleted_at', 'deleted'):
+                if attr in image_meta:
+                    del image_meta[attr]
+
             f = self._find_image(image_id)
             if not f:
                 raise glance_exc.NotFound
 
             f.update(image_meta)
-            return f
+            return copy.deepcopy(f)
 
         def fake_delete_image(self, image_id):
             f = self._find_image(image_id)
