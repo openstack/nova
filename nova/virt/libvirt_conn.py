@@ -762,11 +762,12 @@ class LibvirtConnection(driver.ComputeDriver):
                    'dns': network_ref['dns'],
                    'address_v6': address_v6,
                    'gateway_v6': network_ref['gateway_v6'],
-                   'netmask_v6': network_ref['netmask_v6'],
-                   'use_ipv6': FLAGS.use_ipv6}
+                   'netmask_v6': network_ref['netmask_v6']}
             nets.append(net_info)
 
-        net = str(Template(ifc_template, searchList=[{'interfaces': nets}]))
+        net = str(Template(ifc_template,
+                           searchList=[{'interfaces': nets,
+                                        'use_ipv6': FLAGS.use_ipv6}]))
 
         if key or net:
             inst_name = inst['name']
