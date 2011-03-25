@@ -991,8 +991,8 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dest, 'mklabel', 'msdos')
-    execute('parted', '--script', dest, 'mkpart', 'primary',
+    execute('sudo', 'parted', '--script', dest, 'mklabel', 'msdos')
+    execute('sudo', 'parted', '--script', dest, 'mkpart', 'primary',
             '%ds' % primary_first,
             '%ds' % primary_last)
 

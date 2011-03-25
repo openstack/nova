@@ -24,6 +24,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.image import service
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -63,8 +64,12 @@ class LocalImageService(service.BaseImageService):
         return images
 
     def index(self, context):
-        return [dict(image_id=i['id'], name=i.get('name'))
-                for i in self.detail(context)]
+        filtered = []
+        image_metas = self.detail(context)
+        for image_meta in image_metas:
+            meta = utils.subset_dict(image_meta, ('id', 'name'))
+            filtered.append(meta)
+        return filtered
 
     def detail(self, context):
         images = []

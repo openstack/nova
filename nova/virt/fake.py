@@ -344,7 +344,7 @@ class FakeConnection(driver.ComputeDriver):
         Note that this function takes an instance ID, not a
         compute.service.Instance, so that it can be called by compute.monitor.
         """
-        return [0L, 0L, 0L, 0L, null]
+        return [0L, 0L, 0L, 0L, None]
 
     def interface_stats(self, instance_name, iface_id):
         """
