@@ -26,6 +26,7 @@ import webob
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import test
 import nova.api.openstack
@@ -1260,3 +1261,59 @@ class TestServerInstanceCreation(test.TestCase):
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
         self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
+
+
+class TestGetKernelRamdiskFromImage(test.TestCase):
+    """
+    If we're building from an AMI-style image, we need to be able to fetch the
+    kernel and ramdisk associated with the machine image. This information is
+    stored with the image metadata and return via the ImageService.
+
+    These tests ensure that we parse the metadata return the ImageService
+    correctly and that we handle failure modes appropriately.
+    """
+
+    def test_status_not_active(self):
+        """We should only allow fetching of kernel and ramdisk information if
+        we have a 'fully-formed' image, aka 'active'
+        """
+        image_meta = {'id': 1, 'status': 'queued'}
+        self.assertRaises(exception.Invalid, self._get_k_r, image_meta)
+
+    def test_not_ami(self):
+        """Anything other than ami should return no kernel and no ramdisk"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'vhd'}}
+        kernel_id, ramdisk_id = self._get_k_r(image_meta)
+        self.assertEqual(kernel_id, None)
+        self.assertEqual(ramdisk_id, None)
+
+    def test_ami_no_kernel(self):
+        """If an ami is missing a kernel it should raise NotFound"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'ami', 'ramdisk_id': 1}}
+        self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
+
+    def test_ami_no_ramdisk(self):
+        """If an ami is missing a ramdisk it should raise NotFound"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'ami', 'kernel_id': 1}}
+        self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
+
+    def test_ami_kernel_ramdisk_present(self):
+        """Return IDs if both kernel and ramdisk are present"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'ami', 'kernel_id': 1,
+                                     'ramdisk_id': 2}}
+        kernel_id, ramdisk_id = self._get_k_r(image_meta)
+        self.assertEqual(kernel_id, 1)
+        self.assertEqual(ramdisk_id, 2)
+
+    @staticmethod
+    def _get_k_r(image_meta):
+        """Rebinding function to a shorter name for convenience"""
+        kernel_id, ramdisk_id = \
+            servers.Controller._do_get_kernel_ramdisk_from_image(image_meta)
+        return kernel_id, ramdisk_id
+
+
