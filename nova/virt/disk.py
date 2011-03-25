@@ -140,7 +140,7 @@ def destroy_container(target, instance):
         container_dir = '%s/rootfs' % target
         utils.execute('sudo', 'umount', container_dir)
     finally:
-        out, err = utils('sudo', 'losetup', '-a')
+        out, err = utils.execute('sudo', 'losetup', '-a')
         for loop in out.splitlines():
             if instance['name'] in loop:
                 device = loop.split(loop, ':')
