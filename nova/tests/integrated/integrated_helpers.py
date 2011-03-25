@@ -75,8 +75,6 @@ class TestUser(object):
 
 
 class IntegratedUnitTestContext(object):
-    __INSTANCE = None
-
     def __init__(self):
         self.auth_manager = manager.AuthManager()
 
@@ -92,7 +90,6 @@ class IntegratedUnitTestContext(object):
 
     def setup(self):
         self._start_services()
-
         self._create_test_user()
 
     def _create_test_user(self):
@@ -109,14 +106,6 @@ class IntegratedUnitTestContext(object):
             self._start_api_service()
 
     def cleanup(self):
-        for service in self.services:
-            service.kill()
-        self.services = []
-        # TODO(justinsb): Shutdown WSGI & anything else we startup
-        # bug731668
-        # WSGI shutdown broken :-(
-        # self.wsgi_server.terminate()
-        # self.wsgi_server = None
         self.test_user = None
 
     def _create_unittest_user(self):
@@ -150,39 +139,8 @@ class IntegratedUnitTestContext(object):
         if not api_service:
             raise Exception("API Service was None")
 
-        # WSGI shutdown broken :-(
-        #self.services.append(volume_service)
         self.api_service = api_service
 
         self.auth_url = 'http://localhost:8774/v1.0'
 
         return api_service
-
-    # WSGI shutdown broken :-(
-    # bug731668
-    #@staticmethod
-    #def get():
-    #    if not IntegratedUnitTestContext.__INSTANCE:
-    #        IntegratedUnitTestContext.startup()
-    #        #raise Error("Must call IntegratedUnitTestContext::startup")
-    #    return IntegratedUnitTestContext.__INSTANCE
-
-    @staticmethod
-    def startup():
-        # Because WSGI shutdown is broken at the moment, we have to recycle
-        # bug731668
-        if IntegratedUnitTestContext.__INSTANCE:
-            #raise Error("Multiple calls to IntegratedUnitTestContext.startup")
-            IntegratedUnitTestContext.__INSTANCE.setup()
-        else:
-            IntegratedUnitTestContext.__INSTANCE = IntegratedUnitTestContext()
-        return IntegratedUnitTestContext.__INSTANCE
-
-    @staticmethod
-    def shutdown():
-        if not IntegratedUnitTestContext.__INSTANCE:
-            raise Error("Must call IntegratedUnitTestContext::startup")
-        IntegratedUnitTestContext.__INSTANCE.cleanup()
-        # WSGI shutdown broken :-(
-        # bug731668
-        #IntegratedUnitTestContext.__INSTANCE = None

@@ -835,7 +835,8 @@ class NWFilterTestCase(test.TestCase):
 
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
-                                          'project_id': 'fake'})
+                                          'project_id': 'fake',
+                                          'mac_address': '00:A0:C9:14:C8:29'})
         inst_id = instance_ref['id']
 
         ip = '10.11.12.13'
@@ -852,7 +853,8 @@ class NWFilterTestCase(test.TestCase):
                                             'instance_id': instance_ref['id']})
 
         def _ensure_all_called():
-            instance_filter = 'nova-instance-%s' % instance_ref['name']
+            instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
+                                                       '00A0C914C829')
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',

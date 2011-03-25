@@ -111,7 +111,7 @@ def checks_instance_lock(function):
     return decorated_function
 
 
-class ComputeManager(manager.Manager):
+class ComputeManager(manager.SchedulerDependentManager):
 
     """Manages the running instances from creation to destruction."""
 
@@ -132,7 +132,8 @@ class ComputeManager(manager.Manager):
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
-        super(ComputeManager, self).__init__(*args, **kwargs)
+        super(ComputeManager, self).__init__(service_name="compute",
+                                             *args, **kwargs)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a

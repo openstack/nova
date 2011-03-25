@@ -21,6 +21,9 @@ Tests For Scheduler
 
 import datetime
 import mox
+import novaclient.exceptions
+import stubout
+import webob
 
 from mox import IgnoreArg
 from nova import context
@@ -32,6 +35,7 @@ from nova import test
 from nova import rpc
 from nova import utils
 from nova.auth import manager as auth_manager
+from nova.scheduler import api
 from nova.scheduler import manager
 from nova.scheduler import driver
 from nova.compute import power_state
@@ -937,3 +941,160 @@ class SimpleDriverTestCase(test.TestCase):
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
+
+
+class FakeZone(object):
+    def __init__(self, api_url, username, password):
+        self.api_url = api_url
+        self.username = username
+        self.password = password
+
+
+def zone_get_all(context):
+    return [
+                FakeZone('http://example.com', 'bob', 'xxx'),
+           ]
+
+
+class FakeRerouteCompute(api.reroute_compute):
+    def _call_child_zones(self, zones, function):
+        return []
+
+    def get_collection_context_and_id(self, args, kwargs):
+        return ("servers", None, 1)
+
+    def unmarshall_result(self, zone_responses):
+        return dict(magic="found me")
+
+
+def go_boom(self, context, instance):
+    raise exception.InstanceNotFound("boom message", instance)
+
+
+def found_instance(self, context, instance):
+    return dict(name='myserver')
+
+
+class FakeResource(object):
+    def __init__(self, attribute_dict):
+        for k, v in attribute_dict.iteritems():
+            setattr(self, k, v)
+
+    def pause(self):
+        pass
+
+
+class ZoneRedirectTest(test.TestCase):
+    def setUp(self):
+        super(ZoneRedirectTest, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+
+        self.stubs.Set(db, 'zone_get_all', zone_get_all)
+
+        self.enable_zone_routing = FLAGS.enable_zone_routing
+        FLAGS.enable_zone_routing = True
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        FLAGS.enable_zone_routing = self.enable_zone_routing
+        super(ZoneRedirectTest, self).tearDown()
+
+    def test_trap_found_locally(self):
+        decorator = FakeRerouteCompute("foo")
+        try:
+            result = decorator(found_instance)(None, None, 1)
+        except api.RedirectResult, e:
+            self.fail(_("Successful database hit should succeed"))
+
+    def test_trap_not_found_locally(self):
+        decorator = FakeRerouteCompute("foo")
+        try:
+            result = decorator(go_boom)(None, None, 1)
+            self.assertFail(_("Should have rerouted."))
+        except api.RedirectResult, e:
+            self.assertEquals(e.results['magic'], 'found me')
+
+    def test_routing_flags(self):
+        FLAGS.enable_zone_routing = False
+        decorator = FakeRerouteCompute("foo")
+        try:
+            result = decorator(go_boom)(None, None, 1)
+            self.assertFail(_("Should have thrown exception."))
+        except exception.InstanceNotFound, e:
+            self.assertEquals(e.message, 'boom message')
+
+    def test_get_collection_context_and_id(self):
+        decorator = api.reroute_compute("foo")
+        self.assertEquals(decorator.get_collection_context_and_id(
+            (None, 10, 20), {}), ("servers", 10, 20))
+        self.assertEquals(decorator.get_collection_context_and_id(
+            (None, 11,),  dict(instance_id=21)), ("servers", 11, 21))
+        self.assertEquals(decorator.get_collection_context_and_id(
+            (None,), dict(context=12, instance_id=22)), ("servers", 12, 22))
+
+    def test_unmarshal_single_server(self):
+        decorator = api.reroute_compute("foo")
+        self.assertEquals(decorator.unmarshall_result([]), {})
+        self.assertEquals(decorator.unmarshall_result(
+                [FakeResource(dict(a=1, b=2)), ]),
+                dict(server=dict(a=1, b=2)))
+        self.assertEquals(decorator.unmarshall_result(
+                [FakeResource(dict(a=1, _b=2)), ]),
+                dict(server=dict(a=1,)))
+        self.assertEquals(decorator.unmarshall_result(
+                [FakeResource(dict(a=1, manager=2)), ]),
+                dict(server=dict(a=1,)))
+        self.assertEquals(decorator.unmarshall_result(
+                [FakeResource(dict(_a=1, manager=2)), ]),
+                dict(server={}))
+
+
+class FakeServerCollection(object):
+    def get(self, instance_id):
+        return FakeResource(dict(a=10, b=20))
+
+    def find(self, name):
+        return FakeResource(dict(a=11, b=22))
+
+
+class FakeEmptyServerCollection(object):
+    def get(self, f):
+        raise novaclient.NotFound(1)
+
+    def find(self, name):
+        raise novaclient.NotFound(2)
+
+
+class FakeNovaClient(object):
+    def __init__(self, collection):
+        self.servers = collection
+
+
+class DynamicNovaClientTest(test.TestCase):
+    def test_issue_novaclient_command_found(self):
+        zone = FakeZone('http://example.com', 'bob', 'xxx')
+        self.assertEquals(api._issue_novaclient_command(
+                    FakeNovaClient(FakeServerCollection()),
+                    zone, "servers", "get", 100).a, 10)
+
+        self.assertEquals(api._issue_novaclient_command(
+                    FakeNovaClient(FakeServerCollection()),
+                    zone, "servers", "find", "name").b, 22)
+
+        self.assertEquals(api._issue_novaclient_command(
+                    FakeNovaClient(FakeServerCollection()),
+                    zone, "servers", "pause", 100), None)
+
+    def test_issue_novaclient_command_not_found(self):
+        zone = FakeZone('http://example.com', 'bob', 'xxx')
+        self.assertEquals(api._issue_novaclient_command(
+                    FakeNovaClient(FakeEmptyServerCollection()),
+                    zone, "servers", "get", 100), None)
+
+        self.assertEquals(api._issue_novaclient_command(
+                    FakeNovaClient(FakeEmptyServerCollection()),
+                    zone, "servers", "find", "name"), None)
+
+        self.assertEquals(api._issue_novaclient_command(
+                    FakeNovaClient(FakeEmptyServerCollection()),
+                    zone, "servers", "any", "name"), None)

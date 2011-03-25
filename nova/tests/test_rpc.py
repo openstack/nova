@@ -36,7 +36,7 @@ class RpcTestCase(test.TestCase):
         super(RpcTestCase, self).setUp()
         self.conn = rpc.Connection.instance(True)
         self.receiver = TestReceiver()
-        self.consumer = rpc.AdapterConsumer(connection=self.conn,
+        self.consumer = rpc.TopicAdapterConsumer(connection=self.conn,
                                             topic='test',
                                             proxy=self.receiver)
         self.consumer.attach_to_eventlet()
@@ -97,7 +97,7 @@ class RpcTestCase(test.TestCase):
 
         nested = Nested()
         conn = rpc.Connection.instance(True)
-        consumer = rpc.AdapterConsumer(connection=conn,
+        consumer = rpc.TopicAdapterConsumer(connection=conn,
                                        topic='nested',
                                        proxy=nested)
         consumer.attach_to_eventlet()
