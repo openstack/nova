@@ -798,8 +798,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
                 if FLAGS.libvirt_type == 'lxc':
                     disk.setup_container(basepath('disk'),
-                                        container_dir=container_dir,
-                                        partition=target_partition)
+                                        container_dir=container_dir)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %(inst_name)s: ignoring error injecting'

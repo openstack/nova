@@ -115,13 +115,13 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
         _unlink_device(device, nbd)
 
 
-def setup_container(image, container_dir=None, partition=None):
+def setup_container(image, container_dir=None):
     """Setup the LXC container
 
     It will mount the loopback image to the container directory in order
     to create the root filesystem for the container
     """
-    nbd = False
+    nbd = "False"
     device = _link_device(image, nbd)
     err = utils.execute('sudo', 'mount', device, container_dir)
     if err:
