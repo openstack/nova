@@ -65,6 +65,8 @@ flags.DEFINE_string('dns_server', None,
 flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
                     'dmz range that should be accepted')
 
+flags.DEFINE_string('dnsmasq_config_file',"",
+                    'Override the default dnsmasq settings with those in this file')
 
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
@@ -672,7 +674,7 @@ def _dnsmasq_cmd(net):
     cmd = ['sudo', '-E', 'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
-           '--conf-file=',
+           ' --conf-file=%s' %FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            '--listen-address=%s' % net['gateway'],
