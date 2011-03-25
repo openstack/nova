@@ -108,9 +108,7 @@ def stub_out_db_instance_api(stubs, injected=True):
         return FakeModel(fixed_ip_fields).address
 
     def fake_fixed_ip_get_all_by_instance(context, instance_id):
-        l = []
-        l.append(FakeModel(fixed_ip_fields))
-        return l
+        return [FakeModel(fixed_ip_fields)]
 
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
