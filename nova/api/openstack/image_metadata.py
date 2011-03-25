@@ -36,9 +36,7 @@ class Controller(wsgi.Controller):
     def _get_metadata(self, context, image_id, image=None):
         if not image:
             image = self.image_service.show(context, image_id)
-        metadata = {}
-        if 'properties' in image:
-            metadata = image['properties']
+        metadata = image.get('properties', {})
         return metadata
 
     def index(self, req, image_id):
