@@ -118,9 +118,6 @@ class APIRouter(wsgi.Router):
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
 
-        mapper.resource("flavor", "flavors", controller=flavors.Controller(),
-                        collection={'detail': 'GET'})
-
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
@@ -139,6 +136,10 @@ class APIRouterV10(APIRouter):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.ControllerV10(),
+                        collection={'detail': 'GET'})
+
 
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
@@ -153,3 +154,7 @@ class APIRouterV11(APIRouter):
                         controller=server_metadata.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.ControllerV11(),
+                        collection={'detail': 'GET'})
