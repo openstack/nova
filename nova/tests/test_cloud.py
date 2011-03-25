@@ -81,7 +81,12 @@ class CloudTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
+        def fake_detail(meh, context):
+            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type':'machine'}}]
+
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
@@ -223,6 +228,11 @@ class CloudTestCase(test.TestCase):
         db.instance_destroy(self.context, inst2['id'])
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
+
+    def test_describe_images(self):
+        result = self.cloud.describe_images(self.context)
+        result = result['imagesSet'][0]
+        self.assertEqual(result['imageId'], 'ami-00000001')
 
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
