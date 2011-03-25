@@ -1370,7 +1370,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                  FLAGS.live_migration_bandwidth)
 
         except Exception:
-            recover_method(ctxt, instance_ref)
+            recover_method(ctxt, instance_ref, None, dest)
             raise
 
         # Waiting for completion of live_migration.

@@ -1003,7 +1003,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None):
+    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
@@ -1011,6 +1011,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param host:
             DB column value is updated by this hostname.
             if none, the host instance currently running is selected.
+        :param dest: destination host
 
         """
 
@@ -1024,7 +1025,21 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  'host': host})
 
         for volume in instance_ref['volumes']:
-            self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
+            volume_id = volume['id']
+            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
+            if dest:
+                topic = self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest)
+                rpc.call(ctxt, topic,
+                         {"method": "restore_volume_state",
+                          "args": {'volume_id': volume_id}})
+
+    def restore_volume_state(self, context, volume_id):
+        """Restore volume state on migration failure.
+
+        :param context: security context
+        :param volume_id: nova.db.sqlalchemy.models.Volume.id
+        """
+        self.volume_manager.remove_compute_volume(context, volume_id)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
