@@ -33,12 +33,12 @@ FLAGS.verbose = True
 class LoginTest(test.TestCase):
     def setUp(self):
         super(LoginTest, self).setUp()
-        context = integrated_helpers.IntegratedUnitTestContext.startup()
-        self.user = context.test_user
+        self.context = integrated_helpers.IntegratedUnitTestContext()
+        self.user = self.context.test_user
         self.api = self.user.openstack_api
 
     def tearDown(self):
-        integrated_helpers.IntegratedUnitTestContext.shutdown()
+        self.context.cleanup()
         super(LoginTest, self).tearDown()
 
     def test_login(self):

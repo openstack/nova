@@ -298,10 +298,14 @@ DEFINE_string('ec2_dmz_host', '$my_ip', 'internal ip of api server')
 DEFINE_integer('ec2_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_scheme', 'http', 'prefix for ec2')
 DEFINE_string('ec2_path', '/services/Cloud', 'suffix for ec2')
+DEFINE_string('osapi_extensions_path', '/var/lib/nova/extensions',
+               'default directory for nova extensions')
 DEFINE_string('osapi_host', '$my_ip', 'ip of api server')
 DEFINE_string('osapi_scheme', 'http', 'prefix for openstack')
 DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
 DEFINE_string('osapi_path', '/v1.0/', 'suffix for openstack')
+DEFINE_integer('osapi_max_limit', 1000,
+               'max number of items returned in a collection response')
 
 DEFINE_string('default_project', 'openstack', 'default project for openstack')
 DEFINE_string('default_image', 'ami-11111',
@@ -358,5 +362,6 @@ DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
 DEFINE_string('zone_name', 'nova', 'name of this zone')
-DEFINE_string('zone_capabilities', 'kypervisor:xenserver;os:linux',
-              'Key/Value tags which represent capabilities of this zone')
+DEFINE_list('zone_capabilities',
+                ['hypervisor=xenserver;kvm', 'os=linux;windows'],
+                 'Key/Multi-value list representng capabilities of this zone')

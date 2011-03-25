@@ -144,6 +144,21 @@ def stub_out_compute_api_snapshot(stubs):
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
+def stub_out_glance_add_image(stubs, sent_to_glance):
+    """
+    We return the metadata sent to glance by modifying the sent_to_glance dict
+    in place.
+    """
+    orig_add_image = glance_client.Client.add_image
+
+    def fake_add_image(context, metadata, data=None):
+        sent_to_glance['metadata'] = metadata
+        sent_to_glance['data'] = data
+        return orig_add_image(metadata, data)
+
+    stubs.Set(glance_client.Client, 'add_image', fake_add_image)
+
+
 def stub_out_glance(stubs, initial_fixtures=None):
 
     class FakeGlanceClient:
@@ -166,8 +181,9 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         def fake_add_image(self, image_meta, data=None):
             image_meta = copy.deepcopy(image_meta)
-            id = ''.join(random.choice(string.letters) for _ in range(20))
-            image_meta['id'] = id
+            image_id = ''.join(random.choice(string.letters)
+                               for _ in range(20))
+            image_meta['id'] = image_id
             self.fixtures.append(image_meta)
             return image_meta
 
@@ -186,9 +202,6 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
             self.fixtures.remove(f)
 
-        ##def fake_delete_all(self):
-        ##    self.fixtures = []
-
         def _find_image(self, image_id):
             for f in self.fixtures:
                 if f['id'] == image_id:
@@ -205,10 +218,10 @@ def stub_out_glance(stubs, initial_fixtures=None):
     stubs.Set(GlanceClient, 'add_image', fake.fake_add_image)
     stubs.Set(GlanceClient, 'update_image', fake.fake_update_image)
     stubs.Set(GlanceClient, 'delete_image', fake.fake_delete_image)
-    #stubs.Set(GlanceClient, 'delete_all', fake.fake_delete_all)
 
 
 class FakeToken(object):
+    # FIXME(sirp): let's not use id here
     id = 0
 
     def __init__(self, **kwargs):

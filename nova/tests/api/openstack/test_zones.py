@@ -75,6 +75,10 @@ def zone_get_all_db(context):
     ]
 
 
+def zone_capabilities(method, context, params):
+    return dict()
+
+
 class ZonesTest(test.TestCase):
     def setUp(self):
         super(ZonesTest, self).setUp()
@@ -93,13 +97,18 @@ class ZonesTest(test.TestCase):
         self.stubs.Set(nova.db, 'zone_create', zone_create)
         self.stubs.Set(nova.db, 'zone_delete', zone_delete)
 
+        self.old_zone_name = FLAGS.zone_name
+        self.old_zone_capabilities = FLAGS.zone_capabilities
+
     def tearDown(self):
         self.stubs.UnsetAll()
         FLAGS.allow_admin_api = self.allow_admin
+        FLAGS.zone_name = self.old_zone_name
+        FLAGS.zone_capabilities = self.old_zone_capabilities
         super(ZonesTest, self).tearDown()
 
     def test_get_zone_list_scheduler(self):
-        self.stubs.Set(api.API, '_call_scheduler', zone_get_all_scheduler)
+        self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
         req = webob.Request.blank('/v1.0/zones')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -108,8 +117,7 @@ class ZonesTest(test.TestCase):
         self.assertEqual(len(res_dict['zones']), 2)
 
     def test_get_zone_list_db(self):
-        self.stubs.Set(api.API, '_call_scheduler',
-                                zone_get_all_scheduler_empty)
+        self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler_empty)
         self.stubs.Set(nova.db, 'zone_get_all', zone_get_all_db)
         req = webob.Request.blank('/v1.0/zones')
         req.headers["Content-Type"] = "application/json"
@@ -167,3 +175,18 @@ class ZonesTest(test.TestCase):
         self.assertEqual(res_dict['zone']['id'], 1)
         self.assertEqual(res_dict['zone']['api_url'], 'http://example.com')
         self.assertFalse('username' in res_dict['zone'])
+
+    def test_zone_info(self):
+        FLAGS.zone_name = 'darksecret'
+        FLAGS.zone_capabilities = ['cap1=a;b', 'cap2=c;d']
+        self.stubs.Set(api, '_call_scheduler', zone_capabilities)
+
+        body = dict(zone=dict(username='zeb', password='sneaky'))
+        req = webob.Request.blank('/v1.0/zones/info')
+
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res_dict['zone']['name'], 'darksecret')
+        self.assertEqual(res_dict['zone']['cap1'], 'a;b')
+        self.assertEqual(res_dict['zone']['cap2'], 'c;d')

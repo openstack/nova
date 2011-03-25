@@ -61,10 +61,13 @@ class RequestLogging(wsgi.Middleware):
         return rv
 
     def log_request_completion(self, response, request, start):
-        controller = request.environ.get('ec2.controller', None)
-        if controller:
-            controller = controller.__class__.__name__
-        action = request.environ.get('ec2.action', None)
+        apireq = request.environ.get('ec2.request', None)
+        if apireq:
+            controller = apireq.controller
+            action = apireq.action
+        else:
+            controller = None
+            action = None
         ctxt = request.environ.get('ec2.context', None)
         delta = utils.utcnow() - start
         seconds = delta.seconds
@@ -75,7 +78,7 @@ class RequestLogging(wsgi.Middleware):
             microseconds,
             request.remote_addr,
             request.method,
-            request.path_info,
+            "%s%s" % (request.script_name, request.path_info),
             controller,
             action,
             response.status_int,
