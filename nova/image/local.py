@@ -20,14 +20,18 @@ import os.path
 import random
 import shutil
 
-from nova import flags
 from nova import exception
+from nova import flags
+from nova import log as logging
 from nova.image import service
+from nova import utils
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', '$state_path/images',
                     'path to decrypted images')
+
+LOG = logging.getLogger('nova.image.local')
 
 
 class LocalImageService(service.BaseImageService):
@@ -47,11 +51,25 @@ class LocalImageService(service.BaseImageService):
 
     def _ids(self):
         """The list of all image ids."""
-        return [int(i, 16) for i in os.listdir(self._path)]
+        images = []
+        for image_dir in os.listdir(self._path):
+            try:
+                unhexed_image_id = int(image_dir, 16)
+            except ValueError:
+                LOG.error(
+                    _("%s is not in correct directory naming format"\
+                       % image_dir))
+            else:
+                images.append(unhexed_image_id)
+        return images
 
     def index(self, context):
-        return [dict(image_id=i['id'], name=i.get('name'))
-                for i in self.detail(context)]
+        filtered = []
+        image_metas = self.detail(context)
+        for image_meta in image_metas:
+            meta = utils.subset_dict(image_meta, ('id', 'name'))
+            filtered.append(meta)
+        return filtered
 
     def detail(self, context):
         images = []

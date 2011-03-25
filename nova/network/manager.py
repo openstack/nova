@@ -73,7 +73,7 @@ flags.DEFINE_string('flat_interface', None,
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_integer('num_networks', 1000, 'Number of networks to support')
+flags.DEFINE_integer('num_networks', 1, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', '$my_ip',
                     'Public IP for the cloudpipe VPN servers')
 flags.DEFINE_integer('vpn_start', 1000, 'First Vpn port for private networks')
@@ -105,7 +105,7 @@ class AddressAlreadyAllocated(exception.Error):
     pass
 
 
-class NetworkManager(manager.Manager):
+class NetworkManager(manager.SchedulerDependentManager):
     """Implements common network manager functionality.
 
     This class must be subclassed to support specific topologies.
@@ -116,7 +116,8 @@ class NetworkManager(manager.Manager):
         if not network_driver:
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
-        super(NetworkManager, self).__init__(*args, **kwargs)
+        super(NetworkManager, self).__init__(service_name='network',
+                                                *args, **kwargs)
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
@@ -167,7 +168,7 @@ class NetworkManager(manager.Manager):
         #             with a network, or a cluster of computes with a network
         #             and use that network here with a method like
         #             network_get_by_compute_host
-        network_ref = self.db.network_get_by_bridge(context,
+        network_ref = self.db.network_get_by_bridge(context.elevated(),
                                                     FLAGS.flat_network_bridge)
         address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                   network_ref['id'],
@@ -292,9 +293,11 @@ class NetworkManager(manager.Manager):
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
         significant_bits_v6 = 64
+        network_size_v6 = 1 << 64
         count = 1
         for index in range(num_networks):
             start = index * network_size
+            start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
@@ -313,8 +316,12 @@ class NetworkManager(manager.Manager):
             count += 1
 
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (fixed_net_v6[0], significant_bits_v6)
+                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                                     significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
+                project_net_v6 = IPy.IP(cidr_v6)
+                net['gateway_v6'] = str(project_net_v6[1])
+                net['netmask_v6'] = str(project_net_v6.prefixlen())
 
             network_ref = self.db.network_create_safe(context, net)
 

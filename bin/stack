@@ -59,11 +59,21 @@ USAGE = """usage: stack [options] <controller> <method> [arg1=value arg2=value]
 
 def format_help(d):
     """Format help text, keys are labels and values are descriptions."""
+    MAX_INDENT = 30
     indent = max([len(k) for k in d])
+    if indent > MAX_INDENT:
+        indent = MAX_INDENT - 6
+
     out = []
     for k, v in d.iteritems():
-        t = textwrap.TextWrapper(initial_indent='   %s   ' % k.ljust(indent),
-                                 subsequent_indent=' ' * (indent + 6))
+        if (len(k) + 6) > MAX_INDENT:
+            out.extend(['   %s' % k])
+            initial_indent = ' ' * (indent + 6)
+        else:
+            initial_indent = '   %s   ' % k.ljust(indent)
+        subsequent_indent = ' ' * (indent + 6)
+        t = textwrap.TextWrapper(initial_indent=initial_indent,
+                                 subsequent_indent=subsequent_indent)
         out.extend(t.wrap(v))
     return out
 

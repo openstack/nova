@@ -185,6 +185,25 @@ class FakeSessionForVMTests(fake.SessionBase):
         pass
 
 
+def stub_out_vm_methods(stubs):
+    def fake_shutdown(self, inst, vm, method="clean"):
+        pass
+
+    def fake_acquire_bootlock(self, vm):
+        pass
+
+    def fake_release_bootlock(self, vm):
+        pass
+
+    def fake_spawn_rescue(self, inst):
+        pass
+
+    stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
+    stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
+    stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
+    stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
+
+
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
     def __init__(self, uri):
@@ -228,6 +247,9 @@ class FakeSessionForMigrationTests(fake.SessionBase):
     def VDI_get_by_uuid(*args):
         return 'hurr'
 
+    def VDI_resize_online(*args):
+        pass
+
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
         if vm['power_state'] != 'Halted':
@@ -240,7 +262,7 @@ class FakeSessionForMigrationTests(fake.SessionBase):
 
 def stub_out_migration_methods(stubs):
     def fake_get_snapshot(self, instance):
-        return 'foo', 'bar'
+        return 'vm_ref', dict(image='foo', snap='bar')
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
@@ -249,7 +271,7 @@ def stub_out_migration_methods(stubs):
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
-    def fake_shutdown(self, inst, vm, method='clean'):
+    def fake_shutdown(self, inst, vm, hard=True):
         pass
 
     @classmethod

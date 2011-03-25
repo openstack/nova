@@ -234,11 +234,11 @@ class VMHelper(HelperBase):
 
     @classmethod
     def create_vif(cls, session, vm_ref, network_ref, mac_address,
-                   dev="0", rxtx_cap=0):
+                   dev, rxtx_cap=0):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
         vif_rec = {}
-        vif_rec['device'] = dev
+        vif_rec['device'] = str(dev)
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = mac_address
@@ -991,8 +991,8 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dest, 'mklabel', 'msdos')
-    execute('parted', '--script', dest, 'mkpart', 'primary',
+    execute('sudo', 'parted', '--script', dest, 'mklabel', 'msdos')
+    execute('sudo', 'parted', '--script', dest, 'mkpart', 'primary',
             '%ds' % primary_first,
             '%ds' % primary_last)
 

@@ -356,8 +356,8 @@ class ISCSITestCase(DriverTestCase):
         tid = db.volume_get_iscsi_target_num(self.context, volume_id_list[0])
         self.mox.StubOutWithMock(self.volume.driver, '_execute')
         self.volume.driver._execute("sudo", "ietadm", "--op", "show",
-                                    "--tid=%(tid)d" % locals()
-                                 ).AndRaise(exception.ProcessExecutionError())
+                                    "--tid=%(tid)d" % locals()).AndRaise(
+                                            exception.ProcessExecutionError())
 
         self.mox.ReplayAll()
         self.assertRaises(exception.ProcessExecutionError,
