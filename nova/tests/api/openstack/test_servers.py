@@ -1315,5 +1315,3 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
         kernel_id, ramdisk_id = \
             servers.Controller._do_get_kernel_ramdisk_from_image(image_meta)
         return kernel_id, ramdisk_id
-
-
