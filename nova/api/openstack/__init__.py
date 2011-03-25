@@ -128,16 +128,6 @@ class APIRouter(wsgi.Router):
         _limits = limits.LimitsController()
         mapper.resource("limit", "limits", controller=_limits)
 
-        #NOTE(justinsb): volumes is not yet part of the official API
-        mapper.resource("volume", "volumes",
-                        controller=volumes.Controller(),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("volume_attachment", "volume_attachments",
-                        controller=volume_attachments.Controller(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
-
         super(APIRouter, self).__init__(mapper)
 
 

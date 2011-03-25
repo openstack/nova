@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 OpenStack LLC.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,12 +17,14 @@
 #    under the License.
 
 import imp
+import inspect
 import os
 import sys
 import routes
 import webob.dec
 import webob.exc
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import wsgi
@@ -32,6 +35,63 @@ LOG = logging.getLogger('extensions')
 
 
 FLAGS = flags.FLAGS
+
+
+class ExtensionDescriptor(object):
+    """This is the base class that defines the contract for extensions"""
+
+    def get_name(self):
+        """The name of the extension
+
+        e.g. 'Fox In Socks' """
+        raise NotImplementedError()
+
+    def get_alias(self):
+        """The alias for the extension
+
+        e.g. 'FOXNSOX'"""
+        raise NotImplementedError()
+
+    def get_description(self):
+        """Friendly description for the extension
+
+        e.g. 'The Fox In Socks Extension'"""
+        raise NotImplementedError()
+
+    def get_namespace(self):
+        """The XML namespace for the extension
+
+        e.g. 'http://www.fox.in.socks/api/ext/pie/v1.0'"""
+        raise NotImplementedError()
+
+    def get_updated(self):
+        """The timestamp when the extension was last updated
+
+        e.g. '2011-01-22T13:25:27-06:00'"""
+        #NOTE(justinsb): Huh? Isn't this defined by the namespace?
+        raise NotImplementedError()
+
+    def get_resources(self):
+        """List of extensions.ResourceExtension extension objects
+
+        Resources define new nouns, and are accessible through URLs"""
+        resources = []
+        return resources
+
+    def get_actions(self):
+        """List of extensions.ActionExtension extension objects
+
+        Actions are verbs callable from the API"""
+        actions = []
+        return actions
+
+    def get_response_extensions(self):
+        """List of extensions.ResponseExtension extension objects
+
+        Response extensions are used to insert information into existing
+        response data"""
+        response_exts = []
+        return response_exts
 
 
 class ActionExtensionController(wsgi.Controller):
@@ -109,13 +169,10 @@ class ExtensionController(wsgi.Controller):
         return self._translate(ext)
 
     def delete(self, req, id):
-        raise faults.Fault(exc.HTTPNotFound())
+        raise faults.Fault(webob.exc.HTTPNotFound())
 
     def create(self, req):
-        raise faults.Fault(exc.HTTPNotFound())
-
-    def delete(self, req, id):
-        raise faults.Fault(exc.HTTPNotFound())
+        raise faults.Fault(webob.exc.HTTPNotFound())
 
 
 class ExtensionMiddleware(wsgi.Middleware):
@@ -235,16 +292,19 @@ class ExtensionMiddleware(wsgi.Middleware):
 class ExtensionManager(object):
     """
     Load extensions from the configured extension path.
-    See nova/tests/api/openstack/extensions/foxinsocks.py for an example
-    extension implementation.
+
+    See nova/tests/api/openstack/extensions/foxinsocks/extension.py for an
+    example extension implementation.
     """
 
     def __init__(self, path):
         LOG.audit(_('Initializing extension manager.'))
 
+        self.super_verbose = False
+
         self.path = path
         self.extensions = {}
-        self._load_extensions()
+        self._load_all_extensions()
 
     def get_resources(self):
         """
@@ -300,7 +360,7 @@ class ExtensionManager(object):
         except AttributeError as ex:
             LOG.exception(_("Exception loading extension: %s"), unicode(ex))
 
-    def _load_extensions(self):
+    def _load_all_extensions(self):
         """
         Load extensions from the configured path. The extension name is
         constructed from the module_name. If your extension module was named
@@ -310,23 +370,74 @@ class ExtensionManager(object):
         See nova/tests/api/openstack/extensions/foxinsocks.py for an example
         extension implementation.
         """
-        if not os.path.exists(self.path):
+        self._load_extensions_under_path(self.path)
+
+        incubator_path = os.path.join(os.path.dirname(__file__), "incubator")
+        self._load_extensions_under_path(incubator_path)
+
+    def _load_extensions_under_path(self, path):
+        if not os.path.isdir(path):
+            LOG.warning(_('Extensions directory not found: %s') % path)
             return
 
-        for f in os.listdir(self.path):
-            LOG.audit(_('Loading extension file: %s'), f)
+        LOG.debug(_('Looking for extensions in: %s') % path)
+
+        for child in os.listdir(path):
+            child_path = os.path.join(path, child)
+            if not os.path.isdir(child_path):
+                continue
+            self._load_extension(child_path)
+
+    def _load_extension(self, path):
+        if not os.path.isdir(path):
+            return
+
+        for f in os.listdir(path):
             mod_name, file_ext = os.path.splitext(os.path.split(f)[-1])
-            ext_path = os.path.join(self.path, f)
-            if file_ext.lower() == '.py':
-                mod = imp.load_source(mod_name, ext_path)
-                ext_name = mod_name[0].upper() + mod_name[1:]
+            if file_ext.startswith('_'):
+                continue
+            if file_ext.lower() != '.py':
+                continue
+
+            ext_path = os.path.join(path, f)
+            if self.super_verbose:
+                LOG.debug(_('Checking extension file: %s'), ext_path)
+
+            mod = imp.load_source(mod_name, ext_path)
+            for _name, cls in inspect.getmembers(mod):
                 try:
-                    new_ext = getattr(mod, ext_name)()
-                    self._check_extension(new_ext)
-                    self.extensions[new_ext.get_alias()] = new_ext
+                    if not inspect.isclass(cls):
+                        continue
+
+                    #NOTE(justinsb): It seems that python modules aren't great
+                    #  If you have two identically named modules, the classes
+                    #  from both are mixed in.  So name your extension based
+                    #  on the alias, not 'extension.py'!
+                    #TODO(justinsb): Any way to work around this?
+
+                    if self.super_verbose:
+                        LOG.debug(_('Checking class: %s'), cls)
+
+                    if not ExtensionDescriptor in cls.__bases__:
+                        if self.super_verbose:
+                            LOG.debug(_('Not a ExtensionDescriptor: %s'), cls)
+                        continue
+
+                    obj = cls()
+                    self._add_extension(obj)
                 except AttributeError as ex:
                     LOG.exception(_("Exception loading extension: %s"),
-                                   unicode(ex))
+                                  unicode(ex))
+
+    def _add_extension(self, ext):
+        alias = ext.get_alias()
+        LOG.audit(_('Loaded extension: %s'), alias)
+
+        self._check_extension(ext)
+
+        if alias in self.extensions:
+            raise exception.Error("Found duplicate extension: %s" % alias)
+        self.extensions[alias] = ext
 
 
 class ResponseExtension(object):
