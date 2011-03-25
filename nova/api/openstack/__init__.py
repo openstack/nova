@@ -33,6 +33,7 @@ from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
+from nova.api.openstack import image_metadata
 from nova.api.openstack import limits
 from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
@@ -150,6 +151,12 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
+
+        mapper.resource("image_meta", "meta",
+                        controller=image_metadata.Controller(),
+                        parent_resource=dict(member_name='image',
+                        collection_name='images'))
+
         mapper.resource("server_meta", "meta",
                         controller=server_metadata.Controller(),
                         parent_resource=dict(member_name='server',
