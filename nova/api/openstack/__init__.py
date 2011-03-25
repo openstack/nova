@@ -36,6 +36,7 @@ from nova.api.openstack import images
 from nova.api.openstack import image_metadata
 from nova.api.openstack import limits
 from nova.api.openstack import servers
+from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
 from nova.api.openstack import zones
@@ -149,10 +150,16 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
+
         mapper.resource("image_meta", "meta",
                         controller=image_metadata.Controller(),
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
+
+        mapper.resource("server_meta", "meta",
+                        controller=server_metadata.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
 
 
 class Versions(wsgi.Application):
