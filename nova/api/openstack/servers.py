@@ -502,33 +502,41 @@ class Controller(wsgi.Controller):
         return dict(actions=actions)
 
     def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """Retrevies kernel and ramdisk IDs from Glance
-
-        Only 'machine' (ami) type use kernel and ramdisk outside of the
-        image.
+        """Fetch an image from the ImageService, then if present, return the
+        associated kernel and ramdisk image IDs.
         """
-        # FIXME(sirp): Since we're retrieving the kernel_id from an
-        # image_property, this means only Glance is supported.
-        # The BaseImageService needs to expose a consistent way of accessing
-        # kernel_id and ramdisk_id
-        image = self._image_service.show(req.environ['nova.context'], image_id)
+        context = req.environ['nova.context']
+        image_meta = self._image_service.show(context, image_id)
+        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
+        # new method doesn't need a request obj or an ImageService stub
+        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
+            image_meta)
+        return kernel_id, ramdisk_id
 
-        if image['status'] != 'active':
+    @staticmethod
+    def  _do_get_kernel_ramdisk_from_image(image_meta):
+        """Given an ImageService image_meta, return kernel and ramdisk image
+        ids if present.
+
+        This is only valid for `ami` style images.
+        """
+        image_id = image_meta['id']
+        if image_meta['status'] != 'active':
             raise exception.Invalid(
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image['disk_format'] != 'ami':
+        if image_meta['properties']['disk_format'] != 'ami':
             return None, None
 
         try:
-            kernel_id = image['properties']['kernel_id']
+            kernel_id = image_meta['properties']['kernel_id']
         except KeyError:
             raise exception.NotFound(
                 _("Kernel not found for image %(image_id)s") % locals())
 
         try:
-            ramdisk_id = image['properties']['ramdisk_id']
+            ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
             raise exception.NotFound(
                 _("Ramdisk not found for image %(image_id)s") % locals())
