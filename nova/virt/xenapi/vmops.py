@@ -118,6 +118,10 @@ class VMOps(object):
         vm_ref = self._create_vm(instance, vdi_uuid, network_info)
         self._spawn(instance, vm_ref)
 
+    def spawn_rescue(self, instance):
+        """Spawn a rescue instance"""
+        self.spawn(instance)
+
     def _create_vm(self, instance, vdi_uuid, network_info=None):
         """Create VM instance"""
         instance_name = instance.name
@@ -165,12 +169,12 @@ class VMOps(object):
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
-            
+
         # Alter the image before VM start for, e.g. network injection
         if FLAGS.xenapi_inject_image:
-            VMHelper.preconfigure_instance(self._session, instance, 
+            VMHelper.preconfigure_instance(self._session, instance,
                                            vdi_ref, network_info)
-            
+
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, vm_ref, network_info)
         return vm_ref
@@ -541,7 +545,7 @@ class VMOps(object):
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
         for vbd_ref in vbd_refs:
             vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if vbd_rec["userdevice"] == "1":  # primary VBD is always 1
+            if vbd_rec.get("userdevice", None) == "1":  # VBD is always 1
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
@@ -678,18 +682,17 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        "%s-rescue" % instance.name)
         if rescue_vm_ref:
             raise RuntimeError(_(
                 "Instance is already in Rescue Mode: %s" % instance.name))
 
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
-
         instance._rescue = True
-        self.spawn(instance)
-        rescue_vm_ref = self._get_vm_opaque_ref(instance)
+        self.spawn_rescue(instance)
+        rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
 
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
@@ -706,13 +709,13 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        "%s-rescue" % instance.name)
 
         if not rescue_vm_ref:
             raise exception.NotFound(_(
                 "Instance is not in Rescue Mode: %s" % instance.name))
 
-        original_vm_ref = self._get_vm_opaque_ref(instance)
+        original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False
 
         self._destroy_rescue_instance(rescue_vm_ref)
@@ -725,24 +728,24 @@ class VMOps(object):
               in rescue mode for >= the provided timeout
         """
         last_ran = self.poll_rescue_last_ran
-        if last_ran:
-            if not utils.is_older_than(last_ran, timeout):
-                # Do not run. Let's bail.
-                return
-            else:
-                # Update the time tracker and proceed.
-                self.poll_rescue_last_ran = utils.utcnow()
-        else:
+        if not last_ran:
             # We need a base time to start tracking.
             self.poll_rescue_last_ran = utils.utcnow()
             return
+
+        if not utils.is_older_than(last_ran, timeout):
+            # Do not run. Let's bail.
+            return
+
+        # Update the time tracker and proceed.
+        self.poll_rescue_last_ran = utils.utcnow()
 
         rescue_vms = []
         for instance in self.list_instances():
             if instance.endswith("-rescue"):
                 rescue_vms.append(dict(name=instance,
-                                  vm_ref=VMHelper.lookup(self._session,
-                                                         instance)))
+                                       vm_ref=VMHelper.lookup(self._session,
+                                                              instance)))
 
         for vm in rescue_vms:
             rescue_name = vm["name"]
