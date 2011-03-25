@@ -23,8 +23,6 @@ from nova import db
 from nova import test
 from nova import utils
 
-from nova import log as LOG
-
 
 def stub_out_db_instance_api(stubs, injected=True):
     """ Stubs out the db API for creating Instances """
@@ -87,6 +85,11 @@ def stub_out_db_instance_api(stubs, injected=True):
         'vlan': 111,
         'injected': False}
 
+    fixed_ip_fields = {
+        'address': '10.0.0.3',
+        'address_v6': 'fe80::a00:3',
+        'network_id': 'fake_flat'}
+
     class FakeModel(object):
         """ Stubs out for model """
         def __init__(self, values):
@@ -113,18 +116,34 @@ def stub_out_db_instance_api(stubs, injected=True):
             return FakeModel(vlan_network_fields)
         else:
             return FakeModel(flat_network_fields)
+        return FakeModel(network_fields)
 
     def fake_network_get_all_by_instance(context, instance_id):
-        l = []
         #even instance numbers are on vlan networks
         if instance_id % 2 == 0:
-            l.append(FakeModel(vlan_network_fields))
+            return [FakeModel(vlan_network_fields)]
         else:
-            l.append(FakeModel(flat_network_fields))
-        return l
+            return [FakeModel(flat_network_fields)]
+
+    def fake_instance_get_fixed_address(context, instance_id):
+        return FakeModel(fixed_ip_fields).address
+
+    def fake_instance_get_fixed_address_v6(context, instance_id):
+        return FakeModel(fixed_ip_fields).address
+
+    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+        return [FakeModel(fixed_ip_fields)]
 
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
     stubs.Set(db, 'network_get_all_by_instance',
               fake_network_get_all_by_instance)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'instance_get_fixed_address',
+        fake_instance_get_fixed_address)
+    stubs.Set(db, 'instance_get_fixed_address_v6',
+        fake_instance_get_fixed_address_v6)
+    stubs.Set(db, 'network_get_all_by_instance',
+        fake_network_get_all_by_instance)
+    stubs.Set(db, 'fixed_ip_get_all_by_instance',
+        fake_fixed_ip_get_all_by_instance)

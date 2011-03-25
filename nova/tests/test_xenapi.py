@@ -19,11 +19,15 @@ Test suite for XenAPI
 """
 
 import functools
+import os
+import re
 import stubout
+import ast
 
 from nova import db
 from nova import context
 from nova import flags
+from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
@@ -40,7 +44,7 @@ from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests import fake_utils
 
-from nova import log as LOG
+LOG = logging.getLogger('nova.tests.test_xenapi')
 
 FLAGS = flags.FLAGS
 
@@ -95,7 +99,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         vol['availability_zone'] = FLAGS.storage_availability_zone
         vol['status'] = "creating"
         vol['attach_status'] = "detached"
-        return db.volume_create(context.get_admin_context(), vol)
+        return db.volume_create(self.context, vol)
 
     def test_create_iscsi_storage(self):
         """ This shows how to test helper classes' methods """
@@ -251,7 +255,6 @@ class XenAPIVMTestCase(test.TestCase):
 
         # Get Nova record for VM
         vm_info = conn.get_info(instance_id)
-
         # Get XenAPI record for VM
         vms = [rec for ref, rec
                in xenapi_fake.get_all_records('VM').iteritems()
@@ -260,7 +263,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.vm_info = vm_info
         self.vm = vm
 
-    def check_vm_record(self, conn):
+    def check_vm_record(self, conn, check_injection=False):
         # Check that m1.large above turned into the right thing.
         instance_type = db.instance_type_get_by_name(conn, 'm1.large')
         mem_kib = long(instance_type['memory_mb']) << 10
@@ -279,6 +282,25 @@ class XenAPIVMTestCase(test.TestCase):
 
         # Check that the VM is running according to XenAPI.
         self.assertEquals(self.vm['power_state'], 'Running')
+
+        if check_injection:
+            xenstore_data = self.vm['xenstore_data']
+            key = 'vm-data/networking/aabbccddeeff'
+            xenstore_value = xenstore_data[key]
+            tcpip_data = ast.literal_eval(xenstore_value)
+            self.assertEquals(tcpip_data, {
+                'label': 'fake_flat_network',
+                'broadcast': '10.0.0.255',
+                'ips': [{'ip': '10.0.0.3',
+                         'netmask':'255.255.255.0',
+                         'enabled':'1'}],
+                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
+                          'netmask': '120',
+                          'enabled': '1',
+                          'gateway': 'fe80::a00:1'}],
+                'mac': 'aa:bb:cc:dd:ee:ff',
+                'dns': ['10.0.0.2'],
+                'gateway': '10.0.0.1'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
@@ -313,7 +335,8 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-        instance_type="m1.large", os_type="linux", instance_id=1):
+                    instance_type="m1.large", os_type="linux",
+                    instance_id=1, check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
                   'project_id': self.project.id,
@@ -327,7 +350,7 @@ class XenAPIVMTestCase(test.TestCase):
         instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
         self.create_vm_record(self.conn, os_type, instance_id)
-        self.check_vm_record(self.conn)
+        self.check_vm_record(self.conn, check_injection)
 
     def test_spawn_not_enough_memory(self):
         FLAGS.xenapi_image_service = 'glance'
@@ -368,6 +391,85 @@ class XenAPIVMTestCase(test.TestCase):
                          glance_stubs.FakeGlance.IMAGE_RAMDISK)
         self.check_vm_params_for_linux_with_external_kernel()
 
+    def test_spawn_netinject_file(self):
+        FLAGS.xenapi_image_service = 'glance'
+        db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
+
+        self._tee_executed = False
+
+        def _tee_handler(cmd, **kwargs):
+            input = kwargs.get('process_input', None)
+            self.assertNotEqual(input, None)
+            config = [line.strip() for line in input.split("\n")]
+            # Find the start of eth0 configuration and check it
+            index = config.index('auto eth0')
+            self.assertEquals(config[index + 1:index + 8], [
+                'iface eth0 inet static',
+                'address 10.0.0.3',
+                'netmask 255.255.255.0',
+                'broadcast 10.0.0.255',
+                'gateway 10.0.0.1',
+                'dns-nameservers 10.0.0.2',
+                ''])
+            self._tee_executed = True
+            return '', ''
+
+        fake_utils.fake_execute_set_repliers([
+            # Capture the sudo tee .../etc/network/interfaces command
+            (r'(sudo\s+)?tee.*interfaces', _tee_handler),
+        ])
+        FLAGS.xenapi_image_service = 'glance'
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
+                         glance_stubs.FakeGlance.IMAGE_KERNEL,
+                         glance_stubs.FakeGlance.IMAGE_RAMDISK,
+                         check_injection=True)
+        self.assertTrue(self._tee_executed)
+
+    def test_spawn_netinject_xenstore(self):
+        FLAGS.xenapi_image_service = 'glance'
+        db_fakes.stub_out_db_instance_api(self.stubs, injected=True)
+
+        self._tee_executed = False
+
+        def _mount_handler(cmd, *ignore_args, **ignore_kwargs):
+            # When mounting, create real files under the mountpoint to simulate
+            # files in the mounted filesystem
+
+            # mount point will be the last item of the command list
+            self._tmpdir = cmd[len(cmd) - 1]
+            LOG.debug(_('Creating files in %s to simulate guest agent' %
+                self._tmpdir))
+            os.makedirs(os.path.join(self._tmpdir, 'usr', 'sbin'))
+            # Touch the file using open
+            open(os.path.join(self._tmpdir, 'usr', 'sbin',
+                'xe-update-networking'), 'w').close()
+            return '', ''
+
+        def _umount_handler(cmd, *ignore_args, **ignore_kwargs):
+            # Umount would normall make files in the m,ounted filesystem
+            # disappear, so do that here
+            LOG.debug(_('Removing simulated guest agent files in %s' %
+                self._tmpdir))
+            os.remove(os.path.join(self._tmpdir, 'usr', 'sbin',
+                'xe-update-networking'))
+            os.rmdir(os.path.join(self._tmpdir, 'usr', 'sbin'))
+            os.rmdir(os.path.join(self._tmpdir, 'usr'))
+            return '', ''
+
+        def _tee_handler(cmd, *ignore_args, **ignore_kwargs):
+            self._tee_executed = True
+            return '', ''
+
+        fake_utils.fake_execute_set_repliers([
+            (r'(sudo\s+)?mount', _mount_handler),
+            (r'(sudo\s+)?umount', _umount_handler),
+            (r'(sudo\s+)?tee.*interfaces', _tee_handler)])
+        self._test_spawn(1, 2, 3, check_injection=True)
+
+        # tee must not run in this case, where an injection-capable
+        # guest agent is detected
+        self.assertFalse(self._tee_executed)
+
     def test_spawn_vlanmanager(self):
         self.flags(xenapi_image_service='glance',
                    network_manager='nova.network.manager.VlanManager',
@@ -399,6 +501,7 @@ class XenAPIVMTestCase(test.TestCase):
                               str(4 * 1024))
 
     def test_rescue(self):
+        self.flags(xenapi_inject_image=False)
         instance = self._create_instance()
         conn = xenapi_conn.get_connection(False)
         conn.rescue(instance, None)
@@ -492,6 +595,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
+        fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs,

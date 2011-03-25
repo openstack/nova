@@ -168,6 +168,12 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vbd_rec['vm_name_label'] = vm_name_label
 
 
+def after_VM_create(vm_ref, vm_rec):
+    """Create read-only fields in the VM record."""
+    if 'is_control_domain' not in vm_rec:
+        vm_rec['is_control_domain'] = False
+
+
 def create_pbd(config, host_ref, sr_ref, attached):
     return _create_object('PBD', {
         'device-config': config,
@@ -340,6 +346,10 @@ class SessionBase(object):
             return
         db_ref['xenstore_data'][key] = None
 
+    def network_get_all_records_where(self, _1, _2):
+        # TODO (salvatore-orlando):filter table on _2
+        return _db_content['network']
+
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
         db_ref = _db_content['VM'][vm_ref]
         if not 'xenstore_data' in db_ref:
@@ -439,7 +449,6 @@ class SessionBase(object):
     def _getter(self, name, params):
         self._check_session(params)
         (cls, func) = name.split('.')
-
         if func == 'get_all':
             self._check_arg_count(params, 1)
             return get_all(cls)
@@ -462,10 +471,11 @@ class SessionBase(object):
         if len(params) == 2:
             field = func[len('get_'):]
             ref = params[1]
-
-            if (ref in _db_content[cls] and
-                field in _db_content[cls][ref]):
-                return _db_content[cls][ref][field]
+            if (ref in _db_content[cls]):
+                if (field in _db_content[cls][ref]):
+                    return _db_content[cls][ref][field]
+            else:
+                raise Failure(['HANDLE_INVALID', cls, ref])
 
         LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
@@ -543,7 +553,7 @@ class SessionBase(object):
     def _check_session(self, params):
         if (self._session is None or
             self._session not in _db_content['session']):
-            raise Failure(['HANDLE_INVALID', 'session', self._session])
+                raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
             LOG.debug(_('Raising NotImplemented'))
             raise NotImplementedError('Call to XenAPI without using .xenapi')
