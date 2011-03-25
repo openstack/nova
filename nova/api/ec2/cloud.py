@@ -537,6 +537,7 @@ class CloudController(object):
                                                  instance_id=instance_id)
 
     def get_vnc_console(self, context, instance_id, **kwargs):
+        """Returns vnc browser url to the dashboard."""
         ec2_id = instance_id
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         return self.compute_api.get_vnc_console(context,

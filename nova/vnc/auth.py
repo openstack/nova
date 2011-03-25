@@ -69,7 +69,7 @@ class NovaAuthMiddleware(object):
         middleware = self
         middleware.tokens = {}
 
-        class Proxy():
+        class TopicProxy():
             @staticmethod
             def authorize_vnc_console(context, **kwargs):
                 data = kwargs
@@ -92,7 +92,7 @@ class NovaAuthMiddleware(object):
         conn = rpc.Connection.instance(new=True)
         consumer = rpc.TopicAdapterConsumer(
                        connection=conn,
-                       proxy=Proxy,
+                       proxy=TopicProxy,
                        topic=FLAGS.vnc_console_proxy_topic)
 
         utils.LoopingCall(consumer.fetch,

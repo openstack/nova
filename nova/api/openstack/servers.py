@@ -482,6 +482,16 @@ class Controller(wsgi.Controller):
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
+    def get_vnc_console(self, req, id):
+        """ Returns a url to an instance's ajaxterm console. """
+        try:
+            self.compute_api.get_vnc_console(req.environ['nova.context'],
+                int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
+    @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
         ctxt = req.environ["nova.context"]
