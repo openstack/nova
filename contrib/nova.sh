@@ -17,10 +17,10 @@ if [ ! -n "$HOST_IP" ]; then
     HOST_IP=`LC_ALL=C ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
+USE_MYSQL=${USE_MYSQL:-0}
 INTERFACE=${INTERFACE:-eth0}
 FLOATING_RANGE=${FLOATING_RANGE:-10.6.0.0/27}
 FIXED_RANGE=${FIXED_RANGE:-10.0.0.0/24}
-USE_LDAP=${USE_E_MYSQL:-0}
 MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
 USE_LDAP=${USE_LDAP:-0}
