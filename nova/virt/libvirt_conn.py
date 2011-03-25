@@ -1053,7 +1053,8 @@ class LibvirtConnection(driver.ComputeDriver):
         total = 0
         for dom_id in self._conn.listDomainsID():
             dom = self._conn.lookupByID(dom_id)
-            total += len(dom.vcpus()[1])
+            if dom is None:
+                total += len(dom.vcpus()[1])
         return total
 
     def get_memory_mb_used(self):
