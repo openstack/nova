@@ -14,15 +14,21 @@
 #    under the License.
 
 import webob.exc
+import datetime
 
 from nova import compute
 from nova import exception
 from nova import flags
+from nova import log
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
+
+
+LOG = log.getLogger('nova.api.openstack.images')
+FLAGS = flags.FLAGS
 
 
 class Controller(wsgi.Controller):
@@ -61,8 +67,9 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         images = self._image_service.index(context)
-        build = self.get_builder(req).build
-        return dict(images=[build(image, detail=False) for image in images])
+        images = common.limited(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=False) for image in images])
 
     def detail(self, req):
         """
@@ -72,8 +79,9 @@ class Controller(wsgi.Controller):
         """
         context = req.environ['nova.context']
         images = self._image_service.detail(context)
-        build = self.get_builder(req).build
-        return dict(images=[build(image, detail=True) for image in images])
+        images = common.limited(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=True) for image in images])
 
     def show(self, req, id):
         """
@@ -82,14 +90,19 @@ class Controller(wsgi.Controller):
         @param req: `wsgi.Request` object
         @param id: Image identifier (integer)
         """
-        image_id = id
         context = req.environ['nova.context']
+
+        try:
+            image_id = int(id)
+        except ValueError:
+            explanation = _("Image not found.")
+            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
 
         try:
             image = self._image_service.show(context, image_id)
         except exception.NotFound:
-            ex = webob.exc.HTTPNotFound(explanation=_("Image not found."))
-            raise faults.Fault(ex)
+            explanation = _("Image '%d' not found.") % (image_id)
+            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 
