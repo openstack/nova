@@ -294,6 +294,36 @@ class ServersTest(test.TestCase):
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['id'] for s in servers], [1, 2])
 
+    def test_get_servers_with_bad_limit(self):
+        req = webob.Request.blank('/v1.0/servers?limit=asdf&offset=1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find('limit param') > -1)
+
+    def test_get_servers_with_bad_offset(self):
+        req = webob.Request.blank('/v1.0/servers?limit=2&offset=asdf')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find('offset param') > -1)
+
+    def test_get_servers_with_marker(self):
+        req = webob.Request.blank('/v1.1/servers?marker=2')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [3, 4])
+
+    def test_get_servers_with_limit_and_marker(self):
+        req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [2, 3])
+
+    def test_get_servers_with_bad_marker(self):
+        req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find('marker param') > -1)
+
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):

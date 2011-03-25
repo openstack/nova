@@ -20,9 +20,12 @@ from urlparse import urlparse
 import webob
 
 from nova import exception
+from nova import flags
+
+FLAGS = flags.FLAGS
 
 
-def limited(items, request, max_limit=1000):
+def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
     Return a slice of items according to requested offset and limit.
 
@@ -54,6 +57,36 @@ def limited(items, request, max_limit=1000):
     limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
     return items[offset:range_end]
+
+
+def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
+    """Return a slice of items according to the requested marker and limit."""
+
+    try:
+        marker = int(request.GET.get('marker', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', max_limit))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    limit = min(max_limit, limit)
+    start_index = 0
+    if marker:
+        start_index = -1
+        for i, item in enumerate(items):
+            if item['id'] == marker:
+                start_index = i + 1
+                break
+        if start_index < 0:
+            raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
+    range_end = start_index + limit
+    return items[start_index:range_end]
 
 
 def get_image_id_from_image_hash(image_service, context, image_hash):

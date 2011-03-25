@@ -5,19 +5,20 @@
 auto lo
 iface lo inet loopback
 
-# The primary network interface
-auto eth0
-iface eth0 inet static
-        address ${address}
-        netmask ${netmask}
-        broadcast ${broadcast}
-        gateway ${gateway}
-        dns-nameservers ${dns}
+#for $ifc in $interfaces
+auto ${ifc.name}
+iface ${ifc.name} inet static
+        address ${ifc.address}
+        netmask ${ifc.netmask}
+        broadcast ${ifc.broadcast}
+        gateway ${ifc.gateway}
+        dns-nameservers ${ifc.dns}
 
 #if $use_ipv6
-iface eth0 inet6 static
-    address ${address_v6}
-    netmask ${netmask_v6}
-    gateway ${gateway_v6}
+iface ${ifc.name} inet6 static
+    address ${ifc.address_v6}
+    netmask ${ifc.netmask_v6}
+    gateway ${ifc.gateway_v6}
 #end if
 
+#end for

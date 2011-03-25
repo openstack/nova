@@ -35,6 +35,7 @@ from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import limits
 from nova.api.openstack import servers
+from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
 from nova.api.openstack import zones
@@ -71,7 +72,7 @@ class APIRouter(wsgi.Router):
         """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one"""
         return cls()
 
-    def __init__(self):
+    def __init__(self, ext_mgr=None):
         self.server_members = {}
         mapper = routes.Mapper()
         self._setup_routes(mapper)
@@ -117,9 +118,6 @@ class APIRouter(wsgi.Router):
         mapper.resource("image", "images", controller=images.Controller(),
                         collection={'detail': 'GET'})
 
-        mapper.resource("flavor", "flavors", controller=flavors.Controller(),
-                        collection={'detail': 'GET'})
-
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
                         controller=shared_ip_groups.Controller())
@@ -138,6 +136,10 @@ class APIRouterV10(APIRouter):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.ControllerV10(),
+                        collection={'detail': 'GET'})
+
 
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
@@ -148,6 +150,14 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
+        mapper.resource("server_meta", "meta",
+                        controller=server_metadata.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.ControllerV11(),
+                        collection={'detail': 'GET'})
 
 
 class Versions(wsgi.Application):
