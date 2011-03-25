@@ -19,6 +19,8 @@
 import datetime
 import unittest
 
+from nova import context
+from nova import test
 from nova.image import glance
 
 
@@ -29,14 +31,14 @@ class StubGlanceClient(object):
         self.add_response = add_response
         self.update_response = update_response
 
-    def get_image_meta(self, id):
-        return self.images[id]
+    def get_image_meta(self, image_id):
+        return self.images[image_id]
 
     def get_images_detailed(self):
         return self.images.itervalues()
 
-    def get_image(self, id):
-        return self.images[id], []
+    def get_image(self, image_id):
+        return self.images[image_id], []
 
     def add_image(self, metadata, data):
         return self.add_response
@@ -46,143 +48,144 @@ class StubGlanceClient(object):
 
 
 class NullWriter(object):
+    """Used to test ImageService.get which takes a writer object"""
 
     def write(self, *arg, **kwargs):
         pass
 
 
-class TestGlanceImageServiceDatetimes(unittest.TestCase):
+class BaseGlanceTest(unittest.TestCase):
+    NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
+    NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22)
 
     def setUp(self):
+        # FIXME(sirp): we can probably use stubs library here rather than
+        # dependency injection
         self.client = StubGlanceClient(None)
         self.service = glance.GlanceImageService(self.client)
+        self.context = context.RequestContext(None, None)
 
+    def assertDateTimesFilled(self, image_meta):
+        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['deleted_at'], self.NOW_DATETIME)
+
+    def assertDateTimesEmpty(self, image_meta):
+        self.assertEqual(image_meta['updated_at'], None)
+        self.assertEqual(image_meta['deleted_at'], None)
+
+
+class TestGlanceImageServiceProperties(BaseGlanceTest):
     def test_show_passes_through_to_client(self):
-        self.client.images = {'xyz': {'foo': 'bar'}}
-        self.assertEqual(self.service.show({}, 'xyz'), {'foo': 'bar'})
+        """Ensure attributes which aren't BASE_IMAGE_ATTRS are stored in the
+        properties dict
+        """
+        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        image_meta = self.service.show(self.context, 'image1')
+
+        expected = {'name': 'image1', 'is_public': True,
+                    'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}
+        self.assertEqual(image_meta, expected)
 
     def test_detail_passes_through_to_client(self):
-        self.client.images = {1: {'foo': 'bar'}}
-        self.assertEqual(list(self.service.detail({})), [{'foo': 'bar'}])
+        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+                               'foo': 'bar',
+                               'properties': {'prop1': 'propvalue1'}}}
+        self.client.images = fixtures
+        image_meta = self.service.detail(self.context)
+        expected = [{'name': 'image1', 'is_public': True,
+                    'properties': {'prop1': 'propvalue1', 'foo': 'bar'}}]
+        self.assertEqual(image_meta, expected)
 
-    def test_show_makes_create_datetimes(self):
-        create_time = datetime.datetime.utcnow()
-        self.client.images = {'xyz': {
-            'id': "id",
-            'name': "my awesome image",
-            'created_at': create_time.isoformat(),
-        }}
-        actual = self.service.show({}, 'xyz')
-        self.assertEqual(actual['created_at'], create_time)
 
-    def test_show_makes_update_datetimes(self):
-        update_time = datetime.datetime.utcnow()
-        self.client.images = {'abc': {
-            'id': "id",
-            'name': "my okay image",
-            'updated_at': update_time.isoformat(),
-        }}
-        actual = self.service.show({}, 'abc')
-        self.assertEqual(actual['updated_at'], update_time)
+class TestGetterDateTimeNoneTests(BaseGlanceTest):
 
-    def test_show_makes_delete_datetimes(self):
-        delete_time = datetime.datetime.utcnow()
-        self.client.images = {'123': {
-            'id': "123",
-            'name': "my lame image",
-            'deleted_at': delete_time.isoformat(),
-        }}
-        actual = self.service.show({}, '123')
-        self.assertEqual(actual['deleted_at'], delete_time)
+    def test_show_handles_none_datetimes(self):
+        self.client.images = self._make_none_datetime_fixtures()
+        image_meta = self.service.show(self.context, 'image1')
+        self.assertDateTimesEmpty(image_meta)
 
-    def test_show_handles_deleted_at_none(self):
-        self.client.images = {'747': {
-            'id': "747",
-            'name': "not deleted",
-            'deleted_at': None,
-        }}
-        actual = self.service.show({}, '747')
-        self.assertEqual(actual['deleted_at'], None)
+    def test_detail_handles_none_datetimes(self):
+        self.client.images = self._make_none_datetime_fixtures()
+        image_meta = self.service.detail(self.context)[0]
+        self.assertDateTimesEmpty(image_meta)
 
-    def test_detail_handles_timestamps(self):
-        now = datetime.datetime.utcnow()
-        image1 = {
-            'id': 1,
-            'name': 'image 1',
-            'created_at': now.isoformat(),
-            'updated_at': now.isoformat(),
-            'deleted_at': None,
-        }
-        image2 = {
-            'id': 2,
-            'name': 'image 2',
-            'deleted_at': now.isoformat(),
-        }
-        self.client.images = {1: image1, 2: image2}
-        i1, i2 = self.service.detail({})
-        self.assertEqual(i1['created_at'], now)
-        self.assertEqual(i1['updated_at'], now)
-        self.assertEqual(i1['deleted_at'], None)
-        self.assertEqual(i2['deleted_at'], now)
+    def test_get_handles_none_datetimes(self):
+        self.client.images = self._make_none_datetime_fixtures()
+        writer = NullWriter()
+        image_meta = self.service.get(self.context, 'image1', writer)
+        self.assertDateTimesEmpty(image_meta)
 
-    def test_get_handles_timestamps(self):
-        now = datetime.datetime.utcnow()
-        self.client.images = {'abcd': {
-            'id': 'abcd',
-            'name': 'nifty image',
-            'created_at': now.isoformat(),
-            'updated_at': now.isoformat(),
-            'deleted_at': now.isoformat(),
-        }}
-        actual = self.service.get({}, 'abcd', NullWriter())
-        for attr in ('created_at', 'updated_at', 'deleted_at'):
-            self.assertEqual(actual[attr], now)
+    def test_show_makes_datetimes(self):
+        self.client.images = self._make_datetime_fixtures()
+        image_meta = self.service.show(self.context, 'image1')
+        self.assertDateTimesFilled(image_meta)
 
-    def test_get_handles_deleted_at_none(self):
-        self.client.images = {'abcd': {'deleted_at': None}}
-        actual = self.service.get({}, 'abcd', NullWriter())
-        self.assertEqual(actual['deleted_at'], None)
+    def test_detail_makes_datetimes(self):
+        self.client.images = self._make_datetime_fixtures()
+        image_meta = self.service.detail(self.context)[0]
+        self.assertDateTimesFilled(image_meta)
 
-    def test_create_handles_timestamps(self):
-        now = datetime.datetime.utcnow()
-        self.client.add_response = {
-            'id': 'abcd',
-            'name': 'blah',
-            'created_at': now.isoformat(),
-            'updated_at': now.isoformat(),
-            'deleted_at': now.isoformat(),
-        }
-        actual = self.service.create({}, {})
-        for attr in ('created_at', 'updated_at', 'deleted_at'):
-            self.assertEqual(actual[attr], now)
+    def test_get_makes_datetimes(self):
+        self.client.images = self._make_datetime_fixtures()
+        writer = NullWriter()
+        image_meta = self.service.get(self.context, 'image1', writer)
+        self.assertDateTimesFilled(image_meta)
 
-    def test_create_handles_deleted_at_none(self):
-        self.client.add_response = {
-            'id': 'abcd',
-            'name': 'blah',
-            'deleted_at': None,
-        }
-        actual = self.service.create({}, {})
-        self.assertEqual(actual['deleted_at'], None)
+    def _make_datetime_fixtures(self):
+        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+                               'created_at': self.NOW_GLANCE_FORMAT,
+                               'updated_at': self.NOW_GLANCE_FORMAT,
+                               'deleted_at': self.NOW_GLANCE_FORMAT}}
+        return fixtures
 
-    def test_update_handles_timestamps(self):
-        now = datetime.datetime.utcnow()
-        self.client.update_response = {
-            'id': 'abcd',
-            'name': 'blah',
-            'created_at': now.isoformat(),
-            'updated_at': now.isoformat(),
-            'deleted_at': now.isoformat(),
-        }
-        actual = self.service.update({}, 'dummy_id', {})
-        for attr in ('created_at', 'updated_at', 'deleted_at'):
-            self.assertEqual(actual[attr], now)
+    def _make_none_datetime_fixtures(self):
+        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+                               'updated_at': None,
+                               'deleted_at': None}}
+        return fixtures
 
-    def test_create_handles_deleted_at_none(self):
-        self.client.update_response = {
-            'id': 'abcd',
-            'name': 'blah',
-            'deleted_at': None,
-        }
-        actual = self.service.update({}, 'dummy_id', {})
-        self.assertEqual(actual['deleted_at'], None)
+
+class TestMutatorDateTimeTests(BaseGlanceTest):
+    """Tests create(), update()"""
+
+    def test_create_handles_datetimes(self):
+        self.client.add_response = self._make_datetime_fixture()
+        image_meta = self.service.create(self.context, {})
+        self.assertDateTimesFilled(image_meta)
+
+    def test_create_handles_none_datetimes(self):
+        self.client.add_response = self._make_none_datetime_fixture()
+        dummy_meta = {}
+        image_meta = self.service.create(self.context, dummy_meta)
+        self.assertDateTimesEmpty(image_meta)
+
+    def test_update_handles_datetimes(self):
+        self.client.update_response = self._make_datetime_fixture()
+        dummy_id = 'dummy_id'
+        dummy_meta = {}
+        image_meta = self.service.update(self.context, 'dummy_id', dummy_meta)
+        self.assertDateTimesFilled(image_meta)
+
+    def test_update_handles_none_datetimes(self):
+        self.client.update_response = self._make_none_datetime_fixture()
+        dummy_id = 'dummy_id'
+        dummy_meta = {}
+        image_meta = self.service.update(self.context, 'dummy_id', dummy_meta)
+        self.assertDateTimesEmpty(image_meta)
+
+    def _make_datetime_fixture(self):
+        fixture = {'id': 'image1', 'name': 'image1', 'is_public': True,
+                   'created_at': self.NOW_GLANCE_FORMAT,
+                   'updated_at': self.NOW_GLANCE_FORMAT,
+                   'deleted_at': self.NOW_GLANCE_FORMAT}
+        return fixture
+
+    def _make_none_datetime_fixture(self):
+        fixture = {'id': 'image1', 'name': 'image1', 'is_public': True,
+                   'updated_at': None,
+                   'deleted_at': None}
+        return fixture
