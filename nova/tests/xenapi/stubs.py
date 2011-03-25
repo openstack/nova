@@ -21,6 +21,7 @@ from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
+from nova import utils
 
 
 def stubout_instance_snapshot(stubs):
@@ -137,13 +138,16 @@ def stubout_is_vdi_pv(stubs):
     stubs.Set(vm_utils, '_is_vdi_pv', f)
 
 
+def stubout_loopingcall_start(stubs):
+    def fake_start(self, interval, now=True):
+        self.f(*self.args, **self.kw)
+    stubs.Set(utils.LoopingCall, 'start', fake_start)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
-
-    def network_get_all_records_where(self, _1, _2):
-        return self.xenapi.network.get_all_records()
 
     def host_call_plugin(self, _1, _2, _3, _4, _5):
         sr_ref = fake.get_all('SR')[0]
@@ -196,7 +200,7 @@ def stub_out_vm_methods(stubs):
         pass
 
     def fake_spawn_rescue(self, inst):
-        pass
+        inst._rescue = False
 
     stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
