@@ -41,10 +41,11 @@ flags.DEFINE_string('scheduler_driver',
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
     def __init__(self, scheduler_driver=None, *args, **kwargs):
+        self.zone_manager = zone_manager.ZoneManager()
         if not scheduler_driver:
             scheduler_driver = FLAGS.scheduler_driver
         self.driver = utils.import_object(scheduler_driver)
-        self.zone_manager = zone_manager.ZoneManager()
+        self.driver.set_zone_manager(self.zone_manager)
         super(SchedulerManager, self).__init__(*args, **kwargs)
 
     def __getattr__(self, key):
@@ -58,6 +59,17 @@ class SchedulerManager(manager.Manager):
     def get_zone_list(self, context=None):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
+
+    def get_zone_capabilities(self, context=None, service=None):
+        """Get the normalized set of capabilites for this zone,
+           or for a particular service."""
+        return self.zone_manager.get_zone_capabilities(context, service)
+
+    def update_service_capabilities(self, context=None, service_name=None,
+                                                host=None, capabilities={}):
+        """Process a capability update from a service node."""
+        self.zone_manager.update_service_capabilities(service_name,
+                            host, capabilities)
 
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.

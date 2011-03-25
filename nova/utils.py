@@ -41,6 +41,7 @@ from xml.sax import saxutils
 
 from eventlet import event
 from eventlet import greenthread
+from eventlet import semaphore
 from eventlet.green import subprocess
 None
 from nova import exception
@@ -170,10 +171,6 @@ def execute(*cmd, **kwargs):
                                                 stdout=stdout,
                                                 stderr=stderr,
                                                 cmd=' '.join(cmd))
-            # NOTE(termie): this appears to be necessary to let the subprocess
-            #               call clean something up in between calls, without
-            #               it two execute calls in a row hangs the second one
-            greenthread.sleep(0)
             return result
         except ProcessExecutionError:
             if not attempts:
@@ -182,6 +179,11 @@ def execute(*cmd, **kwargs):
                 LOG.debug(_("%r failed. Retrying."), cmd)
                 if delay_on_retry:
                     greenthread.sleep(random.randint(20, 200) / 100.0)
+        finally:
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
+            greenthread.sleep(0)
 
 
 def ssh_execute(ssh, cmd, process_input=None,
@@ -309,11 +311,15 @@ def  get_my_linklocal(interface):
 
 
 def to_global_ipv6(prefix, mac):
-    mac64 = netaddr.EUI(mac).eui64().words
-    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-    mac64_addr = netaddr.IPAddress(int_addr)
-    maskIP = netaddr.IPNetwork(prefix).ip
-    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+    try:
+        mac64 = netaddr.EUI(mac).eui64().words
+        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+        mac64_addr = netaddr.IPAddress(int_addr)
+        maskIP = netaddr.IPNetwork(prefix).ip
+        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
+                                                                    format()
+    except TypeError:
+        raise TypeError(_("Bad mac for to_global_ipv6: %s") % mac)
 
 
 def to_mac(ipv6_address):
@@ -332,6 +338,11 @@ def utcnow():
 
 
 utcnow.override_time = None
+
+
+def is_older_than(before, seconds):
+    """Return True if before is older than seconds"""
+    return utcnow() - before > datetime.timedelta(seconds=seconds)
 
 
 def utcnow_ts():
@@ -531,17 +542,76 @@ def loads(s):
     return json.loads(s)
 
 
-def synchronized(name):
+_semaphores = {}
+
+
+class _NoopContextManager(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+def synchronized(name, external=False):
+    """Synchronization decorator
+
+    Decorating a method like so:
+    @synchronized('mylock')
+    def foo(self, *args):
+       ...
+
+    ensures that only one thread will execute the bar method at a time.
+
+    Different methods can share the same lock:
+    @synchronized('mylock')
+    def foo(self, *args):
+       ...
+
+    @synchronized('mylock')
+    def bar(self, *args):
+       ...
+
+    This way only one of either foo or bar can be executing at a time.
+
+    The external keyword argument denotes whether this lock should work across
+    multiple processes. This means that if two different workers both run a
+    a method decorated with @synchronized('mylock', external=True), only one
+    of them will execute at a time.
+    """
+
     def wrap(f):
         @functools.wraps(f)
         def inner(*args, **kwargs):
-            LOG.debug(_("Attempting to grab %(lock)s for method "
-                        "%(method)s..." % {"lock": name,
+            # NOTE(soren): If we ever go natively threaded, this will be racy.
+            #              See http://stackoverflow.com/questions/5390569/dyn\
+            #              amically-allocating-and-destroying-mutexes
+            if name not in _semaphores:
+                _semaphores[name] = semaphore.Semaphore()
+            sem = _semaphores[name]
+            LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
+                      '"%(method)s"...' % {"lock": name,
                                            "method": f.__name__}))
-            lock = lockfile.FileLock(os.path.join(FLAGS.lock_path,
-                                                  'nova-%s.lock' % name))
-            with lock:
-                return f(*args, **kwargs)
+            with sem:
+                if external:
+                    LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
+                                'method "%(method)s"...' %
+                                {"lock": name, "method": f.__name__}))
+                    lock_file_path = os.path.join(FLAGS.lock_path,
+                                                  'nova-%s.lock' % name)
+                    lock = lockfile.FileLock(lock_file_path)
+                else:
+                    lock = _NoopContextManager()
+
+                with lock:
+                    retval = f(*args, **kwargs)
+
+            # If no-one else is waiting for it, delete it.
+            # See note about possible raciness above.
+            if not sem.balance < 1:
+                del _semaphores[name]
+
+            return retval
         return inner
     return wrap
 
@@ -593,3 +663,54 @@ def get_from_path(items, path):
         return results
     else:
         return get_from_path(results, remainder)
+
+
+def flatten_dict(dict_, flattened=None):
+    """Recursively flatten a nested dictionary"""
+    flattened = flattened or {}
+    for key, value in dict_.iteritems():
+        if hasattr(value, 'iteritems'):
+            flatten_dict(value, flattened)
+        else:
+            flattened[key] = value
+    return flattened
+
+
+def partition_dict(dict_, keys):
+    """Return two dicts, one containing only `keys` the other containing
+    everything but `keys`
+    """
+    intersection = {}
+    difference = {}
+    for key, value in dict_.iteritems():
+        if key in keys:
+            intersection[key] = value
+        else:
+            difference[key] = value
+    return intersection, difference
+
+
+def map_dict_keys(dict_, key_map):
+    """Return a dictionary in which the dictionaries keys are mapped to
+    new keys.
+    """
+    mapped = {}
+    for key, value in dict_.iteritems():
+        mapped_key = key_map[key] if key in key_map else key
+        mapped[mapped_key] = value
+    return mapped
+
+
+def subset_dict(dict_, keys):
+    """Return a dict that only contains a subset of keys"""
+    subset = partition_dict(dict_, keys)[0]
+    return subset
+
+
+def check_isinstance(obj, cls):
+    """Checks that obj is of type cls, and lets PyLint infer types"""
+    if isinstance(obj, cls):
+        return obj
+    raise Exception(_("Expected object of type: %s") % (str(cls)))
+    # TODO(justinsb): Can we make this better??
+    return cls()  # Ugly PyLint hack

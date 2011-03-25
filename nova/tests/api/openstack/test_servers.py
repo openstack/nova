@@ -26,6 +26,7 @@ import webob
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import flags
 from nova import test
 import nova.api.openstack
@@ -238,6 +239,36 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         servers = json.loads(res.body)['servers']
         self.assertEqual([s['id'] for s in servers], [1, 2])
+
+    def test_get_servers_with_bad_limit(self):
+        req = webob.Request.blank('/v1.0/servers?limit=asdf&offset=1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find('limit param') > -1)
+
+    def test_get_servers_with_bad_offset(self):
+        req = webob.Request.blank('/v1.0/servers?limit=2&offset=asdf')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find('offset param') > -1)
+
+    def test_get_servers_with_marker(self):
+        req = webob.Request.blank('/v1.1/servers?marker=2')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [3, 4])
+
+    def test_get_servers_with_limit_and_marker(self):
+        req = webob.Request.blank('/v1.1/servers?limit=2&marker=1')
+        res = req.get_response(fakes.wsgi_app())
+        servers = json.loads(res.body)['servers']
+        self.assertEqual([s['id'] for s in servers], [2, 3])
+
+    def test_get_servers_with_bad_marker(self):
+        req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+        self.assertTrue(res.body.find('marker param') > -1)
 
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
@@ -624,16 +655,6 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
 
-    def test_server_resize(self):
-        body = dict(server=dict(
-            name='server_test', imageId=2, flavorId=2, metadata={},
-            personality={}))
-        req = webob.Request.blank('/v1.0/servers/1/action')
-        req.method = 'POST'
-        req.content_type = 'application/json'
-        req.body = json.dumps(body)
-        res = req.get_response(fakes.wsgi_app())
-
     def test_delete_server_instance(self):
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'DELETE'
@@ -688,6 +709,18 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_resized_server_has_correct_status(self):
+        req = self.webreq('/1', 'GET', dict(resize=dict(flavorId=3)))
+
+        def fake_migration_get(*args):
+            return {}
+
+        self.stubs.Set(nova.db, 'migration_get_by_instance_and_status',
+                fake_migration_get)
+        res = req.get_response(fakes.wsgi_app())
+        body = json.loads(res.body)
+        self.assertEqual(body['server']['status'], 'resize-confirm')
 
     def test_confirm_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
@@ -1043,7 +1076,7 @@ class TestServerInstanceCreation(test.TestCase):
 
     def _setup_mock_compute_api_for_personality(self):
 
-        class MockComputeAPI(object):
+        class MockComputeAPI(nova.compute.API):
 
             def __init__(self):
                 self.injected_files = None
@@ -1274,3 +1307,57 @@ class TestServerInstanceCreation(test.TestCase):
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
         self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
+
+
+class TestGetKernelRamdiskFromImage(test.TestCase):
+    """
+    If we're building from an AMI-style image, we need to be able to fetch the
+    kernel and ramdisk associated with the machine image. This information is
+    stored with the image metadata and return via the ImageService.
+
+    These tests ensure that we parse the metadata return the ImageService
+    correctly and that we handle failure modes appropriately.
+    """
+
+    def test_status_not_active(self):
+        """We should only allow fetching of kernel and ramdisk information if
+        we have a 'fully-formed' image, aka 'active'
+        """
+        image_meta = {'id': 1, 'status': 'queued'}
+        self.assertRaises(exception.Invalid, self._get_k_r, image_meta)
+
+    def test_not_ami(self):
+        """Anything other than ami should return no kernel and no ramdisk"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'vhd'}}
+        kernel_id, ramdisk_id = self._get_k_r(image_meta)
+        self.assertEqual(kernel_id, None)
+        self.assertEqual(ramdisk_id, None)
+
+    def test_ami_no_kernel(self):
+        """If an ami is missing a kernel it should raise NotFound"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'ami', 'ramdisk_id': 1}}
+        self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
+
+    def test_ami_no_ramdisk(self):
+        """If an ami is missing a ramdisk it should raise NotFound"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'ami', 'kernel_id': 1}}
+        self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
+
+    def test_ami_kernel_ramdisk_present(self):
+        """Return IDs if both kernel and ramdisk are present"""
+        image_meta = {'id': 1, 'status': 'active',
+                      'properties': {'disk_format': 'ami', 'kernel_id': 1,
+                                     'ramdisk_id': 2}}
+        kernel_id, ramdisk_id = self._get_k_r(image_meta)
+        self.assertEqual(kernel_id, 1)
+        self.assertEqual(ramdisk_id, 2)
+
+    @staticmethod
+    def _get_k_r(image_meta):
+        """Rebinding function to a shorter name for convenience"""
+        kernel_id, ramdisk_id = \
+            servers.Controller._do_get_kernel_ramdisk_from_image(image_meta)
+        return kernel_id, ramdisk_id

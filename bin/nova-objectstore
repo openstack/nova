@@ -36,9 +36,10 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 gettext.install('nova', unicode=1)
 
 from nova import flags
+from nova import log as logging
 from nova import utils
-from nova import twistd
-from nova.objectstore import handler
+from nova import wsgi
+from nova.objectstore import s3server
 
 
 FLAGS = flags.FLAGS
@@ -46,7 +47,9 @@ FLAGS = flags.FLAGS
 
 if __name__ == '__main__':
     utils.default_flagfile()
-    twistd.serve(__file__)
-
-if __name__ == '__builtin__':
-    application = handler.get_application()  # pylint: disable=C0103
+    FLAGS(sys.argv)
+    logging.setup()
+    router = s3server.S3Application(FLAGS.buckets_path)
+    server = wsgi.Server()
+    server.start(router, FLAGS.s3_port, host=FLAGS.s3_host)
+    server.wait()

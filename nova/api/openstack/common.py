@@ -15,14 +15,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import re
-from nova import exception
 from urlparse import urlparse
-from webob import exc
-import webob.exc
+
+import webob
+
+from nova import exception
+from nova import flags
+
+FLAGS = flags.FLAGS
 
 
-def limited(items, request, max_limit=1000):
+def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
     Return a slice of items according to requested offset and limit.
 
@@ -56,6 +59,36 @@ def limited(items, request, max_limit=1000):
     return items[offset:range_end]
 
 
+def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
+    """Return a slice of items according to the requested marker and limit."""
+
+    try:
+        marker = int(request.GET.get('marker', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', max_limit))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    limit = min(max_limit, limit)
+    start_index = 0
+    if marker:
+        start_index = -1
+        for i, item in enumerate(items):
+            if item['id'] == marker:
+                start_index = i + 1
+                break
+        if start_index < 0:
+            raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
+    range_end = start_index + limit
+    return items[start_index:range_end]
+
+
 def get_image_id_from_image_hash(image_service, context, image_hash):
     """Given an Image ID Hash, return an objectstore Image ID.
 
@@ -79,7 +112,13 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
 
 
 def get_id_from_href(href):
+    """Return the id portion of a url as an int.
+
+    Given: http://www.foo.com/bar/123?q=4
+    Returns: 123
+
+    """
     try:
         return int(urlparse(href).path.split('/')[-1])
     except:
-        raise exc.HTTPBadRequest(_('could not parse id from href'))
+        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))

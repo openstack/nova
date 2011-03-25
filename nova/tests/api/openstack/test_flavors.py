@@ -19,11 +19,10 @@ import json
 import stubout
 import webob
 
-from nova import test
-import nova.api
+import nova.db.api
 from nova import context
-from nova.api.openstack import flavors
-from nova import db
+from nova import exception
+from nova import test
 from nova.tests.api.openstack import fakes
 
 
@@ -48,6 +47,10 @@ def return_instance_types(context, num=2):
     return instance_types
 
 
+def return_instance_type_not_found(context, flavorid):
+    raise exception.NotFound()
+
+
 class FlavorsTest(test.TestCase):
     def setUp(self):
         super(FlavorsTest, self).setUp()
@@ -67,7 +70,7 @@ class FlavorsTest(test.TestCase):
         self.stubs.UnsetAll()
         super(FlavorsTest, self).tearDown()
 
-    def test_get_flavor_list(self):
+    def test_get_flavor_list_v1_0(self):
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -84,7 +87,7 @@ class FlavorsTest(test.TestCase):
         ]
         self.assertEqual(flavors, expected)
 
-    def test_get_flavor_list_detail(self):
+    def test_get_flavor_list_detail_v1_0(self):
         req = webob.Request.blank('/v1.0/flavors/detail')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -105,7 +108,7 @@ class FlavorsTest(test.TestCase):
         ]
         self.assertEqual(flavors, expected)
 
-    def test_get_flavor_by_id(self):
+    def test_get_flavor_by_id_v1_0(self):
         req = webob.Request.blank('/v1.0/flavors/12')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -116,4 +119,145 @@ class FlavorsTest(test.TestCase):
             "ram": "256",
             "disk": "10",
         }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_by_invalid_id(self):
+        self.stubs.Set(nova.db.api, "instance_type_get_by_flavor_id",
+                       return_instance_type_not_found)
+        req = webob.Request.blank('/v1.0/flavors/asdf')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_flavor_by_id_v1_1(self):
+        req = webob.Request.blank('/v1.1/flavors/12')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)["flavor"]
+        expected = {
+            "id": "12",
+            "name": "flavor 12",
+            "ram": "256",
+            "disk": "10",
+            "links": [
+                {
+                    "rel": "self",
+                    "href": "http://localhost/v1.1/flavors/12",
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": "http://localhost/v1.1/flavors/12",
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": "http://localhost/v1.1/flavors/12",
+                },
+            ],
+        }
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_list_v1_1(self):
+        req = webob.Request.blank('/v1.1/flavors')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)["flavors"]
+        expected = [
+            {
+                "id": "1",
+                "name": "flavor 1",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                ],
+            },
+            {
+                "id": "2",
+                "name": "flavor 2",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                ],
+            },
+        ]
+        self.assertEqual(flavor, expected)
+
+    def test_get_flavor_list_detail_v1_1(self):
+        req = webob.Request.blank('/v1.1/flavors/detail')
+        req.environ['api.version'] = '1.1'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        flavor = json.loads(res.body)["flavors"]
+        expected = [
+            {
+                "id": "1",
+                "name": "flavor 1",
+                "ram": "256",
+                "disk": "10",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
+                        "href": "http://localhost/v1.1/flavors/1",
+                    },
+                ],
+            },
+            {
+                "id": "2",
+                "name": "flavor 2",
+                "ram": "256",
+                "disk": "10",
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/json",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                    {
+                        "rel": "bookmark",
+                        "type": "application/xml",
+                        "href": "http://localhost/v1.1/flavors/2",
+                    },
+                ],
+            },
+        ]
         self.assertEqual(flavor, expected)
