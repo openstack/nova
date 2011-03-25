@@ -20,9 +20,9 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
 import os
-import sys
 import pickle
 import re
+import sys
 import time
 import urllib
 import uuid
@@ -416,8 +416,8 @@ class VMHelper(HelperBase):
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
         vdi_uuid = session.wait_for_task(task, instance_id)
-        #from this point we have a VDI on Xen host
-        #if anything goes wrong, we need to remember its uuid
+        # from this point we have a VDI on Xen host
+        # if anything goes wrong, we need to remember its uuid
         try:
 
             cls.scan_sr(session, instance_id, sr_ref)
@@ -431,7 +431,7 @@ class VMHelper(HelperBase):
                       % locals())
             return vdi_uuid
         except cls.XenAPI.Failure as e:
-            #Looking for XenAPI failures only
+            # Looking for XenAPI failures only
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
             e.args = e.args + ({image_type: (vdi_uuid,)},)
@@ -468,8 +468,8 @@ class VMHelper(HelperBase):
         name_label = get_name_label_for_image(image)
         vdi_ref = cls.create_vdi(session, sr_ref, name_label,
                                  vdi_size, False)
-        #from this point we have a VDI on Xen host
-        #if anything goes wrong, we need to remember its uuid
+        # from this point we have a VDI on Xen host
+        # if anything goes wrong, we need to remember its uuid
         try:
             filename = None
             vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
@@ -478,24 +478,24 @@ class VMHelper(HelperBase):
                                    _stream_disk(dev, image_type,
                                                 virtual_size, image_file))
             if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
-                #we need to invoke a plugin for copying VDI's
-                #content into proper path
+                # we need to invoke a plugin for copying VDI's
+                # content into proper path
                 LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
                 fn = "copy_kernel_vdi"
                 args = {}
                 args['vdi-ref'] = vdi_ref
-                #let the plugin copy the correct number of bytes
+                # let the plugin copy the correct number of bytes
                 args['image-size'] = str(vdi_size)
                 task = session.async_call_plugin('glance', fn, args)
                 filename = session.wait_for_task(task, instance_id)
-                #remove the VDI as it is not needed anymore
+                # remove the VDI as it is not needed anymore
                 session.get_xenapi().VDI.destroy(vdi_ref)
                 LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
                 return filename
             else:
                 return vdi_uuid
         except (cls.XenAPI.Failure, IOError, OSError) as e:
-            #Looking for XenAPI and OS failures
+            # Looking for XenAPI and OS failures
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
             e.args = e.args + ({image_type: (vdi_uuid, filename)},)

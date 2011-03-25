@@ -25,10 +25,16 @@ import webob
 from nova import compute
 from nova import context
 from nova import exception
+from nova import network
 from nova import test
+from nova import volume
 from nova import utils
 from nova.api import direct
 from nova.tests import test_cloud
+
+
+class ArbitraryObject(object):
+    pass
 
 
 class FakeService(object):
@@ -38,6 +44,9 @@ class FakeService(object):
     def context(self, context):
         return {'user': context.user_id,
                 'project': context.project_id}
+
+    def invalid_return(self, context):
+        return ArbitraryObject()
 
 
 class DirectTestCase(test.TestCase):
@@ -84,6 +93,12 @@ class DirectTestCase(test.TestCase):
         resp_parsed = json.loads(resp.body)
         self.assertEqual(resp_parsed['data'], 'foo')
 
+    def test_invalid(self):
+        req = webob.Request.blank('/fake/invalid_return')
+        req.environ['openstack.context'] = self.context
+        req.method = 'POST'
+        self.assertRaises(exception.Error, req.get_response, self.router)
+
     def test_proxy(self):
         proxy = direct.Proxy(self.router)
         rv = proxy.fake.echo(self.context, data='baz')
@@ -93,12 +108,20 @@ class DirectTestCase(test.TestCase):
 class DirectCloudTestCase(test_cloud.CloudTestCase):
     def setUp(self):
         super(DirectCloudTestCase, self).setUp()
-        compute_handle = compute.API(network_api=self.cloud.network_api,
-                                     volume_api=self.cloud.volume_api)
+        compute_handle = compute.API(image_service=self.cloud.image_service)
+        volume_handle = volume.API()
+        network_handle = network.API()
         direct.register_service('compute', compute_handle)
+        direct.register_service('volume', volume_handle)
+        direct.register_service('network', network_handle)
+
         self.router = direct.JsonParamsMiddleware(direct.Router())
         proxy = direct.Proxy(self.router)
         self.cloud.compute_api = proxy.compute
+        self.cloud.volume_api = proxy.volume
+        self.cloud.network_api = proxy.network
+        compute_handle.volume_api = proxy.volume
+        compute_handle.network_api = proxy.network
 
     def tearDown(self):
         super(DirectCloudTestCase, self).tearDown()

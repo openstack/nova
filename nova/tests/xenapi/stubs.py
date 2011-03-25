@@ -212,6 +212,25 @@ class FakeSessionForVMTests(fake.SessionBase):
         pass
 
 
+def stub_out_vm_methods(stubs):
+    def fake_shutdown(self, inst, vm, method="clean"):
+        pass
+
+    def fake_acquire_bootlock(self, vm):
+        pass
+
+    def fake_release_bootlock(self, vm):
+        pass
+
+    def fake_spawn_rescue(self, inst):
+        pass
+
+    stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
+    stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
+    stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
+    stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
+
+
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
     def __init__(self, uri):

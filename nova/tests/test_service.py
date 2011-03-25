@@ -109,20 +109,29 @@ class ServiceTestCase(test.TestCase):
         app = service.Service.create(host=host, binary=binary)
 
         self.mox.StubOutWithMock(rpc,
-                                 'AdapterConsumer',
+                                 'TopicAdapterConsumer',
                                  use_mock_anything=True)
-        rpc.AdapterConsumer(connection=mox.IgnoreArg(),
+        self.mox.StubOutWithMock(rpc,
+                                 'FanoutAdapterConsumer',
+                                 use_mock_anything=True)
+        rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
                             topic=topic,
                             proxy=mox.IsA(service.Service)).AndReturn(
-                                    rpc.AdapterConsumer)
+                                    rpc.TopicAdapterConsumer)
 
-        rpc.AdapterConsumer(connection=mox.IgnoreArg(),
+        rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
                             topic='%s.%s' % (topic, host),
                             proxy=mox.IsA(service.Service)).AndReturn(
-                                    rpc.AdapterConsumer)
+                                    rpc.TopicAdapterConsumer)
 
-        rpc.AdapterConsumer.attach_to_eventlet()
-        rpc.AdapterConsumer.attach_to_eventlet()
+        rpc.FanoutAdapterConsumer(connection=mox.IgnoreArg(),
+                            topic=topic,
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.FanoutAdapterConsumer)
+
+        rpc.TopicAdapterConsumer.attach_to_eventlet()
+        rpc.TopicAdapterConsumer.attach_to_eventlet()
+        rpc.FanoutAdapterConsumer.attach_to_eventlet()
 
         service_create = {'host': host,
                           'binary': binary,
@@ -277,6 +286,7 @@ class ServiceTestCase(test.TestCase):
 
         # Creating mocks
         self.mox.StubOutWithMock(service.rpc.Connection, 'instance')
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
         service.rpc.Connection.instance(new=mox.IgnoreArg())
         service.rpc.Connection.instance(new=mox.IgnoreArg())
         self.mox.StubOutWithMock(serv.manager.driver,

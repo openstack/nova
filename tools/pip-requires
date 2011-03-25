@@ -30,3 +30,4 @@ sqlalchemy-migrate
 netaddr
 sphinx
 glance
+suds==0.4

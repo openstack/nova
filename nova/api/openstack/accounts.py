@@ -14,6 +14,7 @@
 #    under the License.
 
 import common
+import webob.exc
 
 from nova import exception
 from nova import flags
@@ -51,10 +52,10 @@ class Controller(wsgi.Controller):
             raise exception.NotAuthorized(_("Not admin user."))
 
     def index(self, req):
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise faults.Fault(webob.exc.HTTPNotImplemented())
 
     def detail(self, req):
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise faults.Fault(webob.exc.HTTPNotImplemented())
 
     def show(self, req, id):
         """Return data about the given account id"""
@@ -69,7 +70,7 @@ class Controller(wsgi.Controller):
     def create(self, req):
         """We use update with create-or-update semantics
            because the id comes from an external source"""
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise faults.Fault(webob.exc.HTTPNotImplemented())
 
     def update(self, req, id):
         """This is really create or update."""

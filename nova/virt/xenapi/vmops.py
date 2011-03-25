@@ -25,9 +25,10 @@ import M2Crypto
 import os
 import pickle
 import subprocess
+import sys
 import tempfile
 import uuid
-import sys
+
 
 from nova import db
 from nova import context
@@ -109,7 +110,7 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        #if fetch image fails the exception will be handled in spawn
+        # if fetch image fails the exception will be handled in spawn
         vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
                 instance.image_id, user, project, disk_image_type)
         return (vdi_uuid, disk_image_type)
@@ -127,8 +128,12 @@ class VMOps(object):
             LOG.debug(_('Instance %s failed to spawn - performing clean-up'),
                       instance.id)
             self._handle_spawn_error(vdi_uuid, disk_image_type, spawn_error)
-            #re-throw the error
+            # re-throw the error
             raise spawn_error
+
+    def spawn_rescue(self, instance):
+        """Spawn a rescue instance"""
+        self.spawn(instance)
 
     def _create_vm(self, instance, vdi_uuid, network_info=None):
         """Create VM instance"""
@@ -173,16 +178,16 @@ class VMOps(object):
             vm_ref = VMHelper.create_vm(self._session, instance,
                                         kernel, ramdisk, use_pv_kernel)
         except (self.XenAPI.Failure, OSError, IOError) as vm_create_error:
-            #collect resources to clean up
-            #_handle_spawn_error will remove unused resources
+            # collect resources to clean up
+            # _handle_spawn_error will remove unused resources
             LOG.exception(_("instance %s: Failed to spawn - " +
                             "Unable to create VM"),
                           instance.id, exc_info=sys.exc_info())
             last_arg = None
             resources = {}
 
-            if len(vm_create_error.args) > 0:
-                last_arg = vm_create_error.args[len(vm_create_error.args) - 1]
+            if vm_create_error.args:
+                last_arg = vm_create_error.args[-1]
             if isinstance(last_arg, dict):
                 resources = last_arg
             else:
@@ -263,9 +268,9 @@ class VMOps(object):
     def _handle_spawn_error(self, vdi_uuid, disk_image_type, spawn_error):
         resources = {}
         files_to_remove = {}
-        #extract resource dictionary from spawn error
-        if len(spawn_error.args) > 0:
-            last_arg = spawn_error.args[len(spawn_error.args) - 1]
+        # extract resource dictionary from spawn error
+        if spawn_error.args:
+            last_arg = spawn_error.args[-1]
             resources = last_arg
         if vdi_uuid:
             resources[disk_image_type] = (vdi_uuid,)
@@ -274,7 +279,7 @@ class VMOps(object):
         for vdi_type in resources:
             items_to_remove = resources[vdi_type]
             vdi_to_remove = items_to_remove[0]
-            if vdi_to_remove != None:
+            if vdi_to_remove:
                 try:
                     vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                             vdi_to_remove)
@@ -282,13 +287,13 @@ class VMOps(object):
                                 '(uuid:%(vdi_to_remove)s)'), locals())
                     VMHelper.destroy_vdi(self._session, vdi_ref)
                 except self.XenAPI.Failure:
-                    #vdi already deleted
+                    # vdi already deleted
                     LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
             if len(items_to_remove) > 1:
                 # there is also a file to remove
                 files_to_remove[vdi_type] = items_to_remove[1]
 
-        if len(files_to_remove) > 0:
+        if files_to_remove:
             LOG.debug(_("Removing kernel/ramdisk files from dom0"))
             self._destroy_kernel_ramdisk_plugin_call(
                     files_to_remove.get(ImageType.KERNEL, None),
@@ -613,7 +618,7 @@ class VMOps(object):
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
         for vbd_ref in vbd_refs:
             vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if vbd_rec["userdevice"] == "1":  # primary VBD is always 1
+            if vbd_rec.get("userdevice", None) == "1":  # VBD is always 1
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
@@ -754,18 +759,18 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        "%s-rescue" % instance.name)
         if rescue_vm_ref:
             raise RuntimeError(_(
                 "Instance is already in Rescue Mode: %s" % instance.name))
 
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
 
         instance._rescue = True
-        self.spawn(instance)
-        rescue_vm_ref = self._get_vm_opaque_ref(instance)
+        self.spawn_rescue(instance)
+        rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
 
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
@@ -782,13 +787,13 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        "%s-rescue" % instance.name)
 
         if not rescue_vm_ref:
             raise exception.NotFound(_(
                 "Instance is not in Rescue Mode: %s" % instance.name))
 
-        original_vm_ref = self._get_vm_opaque_ref(instance)
+        original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False
 
         self._destroy_rescue_instance(rescue_vm_ref)
@@ -801,24 +806,24 @@ class VMOps(object):
               in rescue mode for >= the provided timeout
         """
         last_ran = self.poll_rescue_last_ran
-        if last_ran:
-            if not utils.is_older_than(last_ran, timeout):
-                # Do not run. Let's bail.
-                return
-            else:
-                # Update the time tracker and proceed.
-                self.poll_rescue_last_ran = utils.utcnow()
-        else:
+        if not last_ran:
             # We need a base time to start tracking.
             self.poll_rescue_last_ran = utils.utcnow()
             return
+
+        if not utils.is_older_than(last_ran, timeout):
+            # Do not run. Let's bail.
+            return
+
+        # Update the time tracker and proceed.
+        self.poll_rescue_last_ran = utils.utcnow()
 
         rescue_vms = []
         for instance in self.list_instances():
             if instance.endswith("-rescue"):
                 rescue_vms.append(dict(name=instance,
-                                  vm_ref=VMHelper.lookup(self._session,
-                                                         instance)))
+                                       vm_ref=VMHelper.lookup(self._session,
+                                                              instance)))
 
         for vm in rescue_vms:
             rescue_name = vm["name"]
