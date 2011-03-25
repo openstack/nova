@@ -91,12 +91,13 @@ class Consumer(messaging.Consumer):
                 super(Consumer, self).__init__(*args, **kwargs)
                 self.failed_connection = False
                 break
-            except:  # Catching all because carrot sucks
+            except Exception as e:  # Catching all because carrot sucks
                 fl_host = FLAGS.rabbit_host
                 fl_port = FLAGS.rabbit_port
                 fl_intv = FLAGS.rabbit_retry_interval
                 LOG.error(_("AMQP server on %(fl_host)s:%(fl_port)d is"
-                        " unreachable. Trying again in %(fl_intv)d seconds.")
+                        " unreachable: %(e)s. Trying again in %(fl_intv)d"
+                        " seconds.")
                         % locals())
                 self.failed_connection = True
         if self.failed_connection:
