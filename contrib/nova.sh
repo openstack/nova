@@ -17,7 +17,10 @@ if [ ! -n "$HOST_IP" ]; then
     HOST_IP=`LC_ALL=C ifconfig  | grep -m 1 'inet addr:'| cut -d: -f2 | awk '{print $1}'`
 fi
 
-USE_MYSQL=${USE_MYSQL:-0}
+INTERFACE=${INTERFACE:-eth0}
+FLOATING_RANGE=${FLOATING_RANGE:-10.6.0.0/27}
+FIXED_RANGE=${FIXED_RANGE:-10.0.0.0/24}
+USE_LDAP=${USE_E_MYSQL:-0}
 MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
 USE_LDAP=${USE_LDAP:-0}
@@ -72,11 +75,14 @@ if [ "$CMD" == "install" ]; then
     sudo modprobe kvm
     sudo /etc/init.d/libvirt-bin restart
     sudo modprobe nbd
-    sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
-    sudo apt-get install -y python-migrate python-eventlet python-gflags python-ipy python-tempita
-    sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
-    sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
-    sudo apt-get install -y python-multiprocessing
+    sudo apt-get install -y python-twisted python-mox python-ipy python-paste
+    sudo apt-get install -y python-migrate python-gflags python-greenlet
+    sudo apt-get install -y python-libvirt python-libxml2 python-routes
+    sudo apt-get install -y python-netaddr python-pastedeploy python-eventlet
+    sudo apt-get install -y python-novaclient python-glance python-cheetah
+    sudo apt-get install -y python-carrot python-tempita python-sqlalchemy
+    sudo apt-get install -y python-suds
+
 
     if [ "$USE_IPV6" == 1 ]; then
         sudo apt-get install -y radvd
@@ -105,7 +111,7 @@ function screen_it {
     screen -S nova -p $1 -X stuff "$2$NL"
 }
 
-if [ "$CMD" == "run" ]; then
+if [ "$CMD" == "run" ] || [ "$CMD" == "run_detached" ]; then
 
   cat >$NOVA_DIR/bin/nova.conf << NOVA_CONF_EOF
 --verbose
@@ -113,6 +119,8 @@ if [ "$CMD" == "run" ]; then
 --dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
 --network_manager=nova.network.manager.$NET_MAN
 --my_ip=$HOST_IP
+--public_interface=$INTERFACE
+--vlan_interface=$INTERFACE
 --sql_connection=$SQL_CONN
 --auth_driver=nova.auth.$AUTH
 --libvirt_type=$LIBVIRT_TYPE
@@ -168,10 +176,13 @@ NOVA_CONF_EOF
     # create a project called 'admin' with project manager of 'admin'
     $NOVA_DIR/bin/nova-manage project create admin admin
     # create a small network
-    $NOVA_DIR/bin/nova-manage network create 10.0.0.0/8 1 32
+    $NOVA_DIR/bin/nova-manage network create $FIXED_RANGE 1 32
 
     # create some floating ips
-    $NOVA_DIR/bin/nova-manage floating create `hostname` 10.6.0.0/27
+    $NOVA_DIR/bin/nova-manage floating create `hostname` $FLOATING_RANGE
+
+    # convert old images
+    $NOVA_DIR/bin/nova-manage image convert $DIR/images
 
     # nova api crashes if we start it with a regular screen command,
     # so send the start command by forcing text into the window.
@@ -187,8 +198,10 @@ NOVA_CONF_EOF
     $NOVA_DIR/bin/nova-manage project zipfile admin admin $NOVA_DIR/nova.zip
     unzip -o $NOVA_DIR/nova.zip -d $NOVA_DIR/
 
-    screen_it test ". $NOVA_DIR/novarc"
-    screen -S nova -x
+    screen_it test "export PATH=$NOVA_DIR/bin:$PATH;. $NOVA_DIR/novarc"
+    if [ "$CMD" != "run_detached" ]; then
+      screen -S nova -x
+    fi
 fi
 
 if [ "$CMD" == "run" ] || [ "$CMD" == "terminate" ]; then
