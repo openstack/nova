@@ -642,7 +642,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')
         res = req.get_response(fakes.wsgi_app())
-        print self.fixtures
         image_meta = json.loads(res.body)['image']
         expected = {'id': 123, 'name': 'public image',
                     'updated': self.NOW_API_FORMAT,
