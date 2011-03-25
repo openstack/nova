@@ -538,7 +538,7 @@ class CloudController(object):
 
     def get_vnc_console(self, context, instance_id, **kwargs):
         ec2_id = instance_id
-        instance_id = ec2_id_to_id(ec2_id)
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
         return self.compute_api.get_vnc_console(context,
                                                 instance_id=instance_id)
 

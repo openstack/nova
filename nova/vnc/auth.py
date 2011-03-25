@@ -69,12 +69,14 @@ class NovaAuthMiddleware(object):
         middleware = self
         middleware.tokens = {}
 
-        def callback(self, data, message):
-            if data['method'] == 'authorize_vnc_console':
-                token = data['args']['token']
+        class Proxy():
+            @staticmethod
+            def authorize_vnc_console(context, **kwargs):
+                data = kwargs
+                token = kwargs['token']
                 LOG.audit(_("Received Token: %s)"), token)
                 middleware.tokens[token] = \
-                  {'args': data['args'], 'last_activity_at': time.time()}
+                  {'args': kwargs, 'last_activity_at': time.time()}
 
         def delete_expired_tokens():
             now = time.time()
@@ -88,12 +90,12 @@ class NovaAuthMiddleware(object):
                 del middleware.tokens[k]
 
         conn = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicConsumer(
-                        connection=conn,
-                        topic=FLAGS.vnc_console_proxy_topic)
-        consumer.register_callback(callback)
+        consumer = rpc.TopicAdapterConsumer(
+                       connection=conn,
+                       proxy=Proxy,
+                       topic=FLAGS.vnc_console_proxy_topic)
 
-        utils.LoopingCall(consumer.fetch, auto_ack=True,
+        utils.LoopingCall(consumer.fetch,
                           enable_callbacks=True).start(0.1)
         utils.LoopingCall(delete_expired_tokens).start(1)
 
