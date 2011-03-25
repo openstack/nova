@@ -19,7 +19,6 @@
 Provides common functionality for integrated unit tests
 """
 
-import os
 import random
 import string
 
@@ -28,7 +27,6 @@ from nova import flags
 from nova import service
 from nova import test  # For the flags
 from nova.auth import manager
-from nova.exception import Error
 from nova.log import logging
 from nova.tests.integrated.api import client
 
@@ -98,24 +96,20 @@ class TestUser(object):
 
 
 class IntegratedUnitTestContext(object):
-    __INSTANCE = None
-
     def __init__(self):
         self.auth_manager = manager.AuthManager()
 
-        self.wsgi_server = None
-        self.wsgi_apps = []
         self.api_service = None
-
         self.services = []
         self.auth_url = None
         self.project_name = None
+
+        self.test_user = None
 
         self.setup()
 
     def setup(self):
         self._start_services()
-
         self._create_test_user()
 
     def _create_test_user(self):
@@ -129,16 +123,13 @@ class IntegratedUnitTestContext(object):
         self._start_compute_service()
         self._start_volume_service()
         self._start_scheduler_service()
-        
+
         # NOTE(justinsb): There's a bug here which is eluding me...
         #  If we start the network_service, all is good, but then subsequent
         #  tests fail: CloudTestCase.test_ajax_console in particular.
         #self._start_network_service()
 
-        # WSGI shutdown broken :-(
-        # bug731668
-        if not self.api_service:
-            self._start_api_service()
+        self._start_api_service()
 
     def _start_compute_service(self):
         compute_service = service.Service.create(binary='nova-compute')
@@ -165,15 +156,10 @@ class IntegratedUnitTestContext(object):
         return scheduler_service
 
     def cleanup(self):
-        for service in self.services:
-            service.kill()
-        self.services = []
-        # TODO(justinsb): Shutdown WSGI & anything else we startup
-        # bug731668
-        # WSGI shutdown broken :-(
-        # self.wsgi_server.terminate()
-        # self.wsgi_server = None
         self.test_user = None
+        for svc in self.services:
+            svc.kill()
+        self.services = []
 
     def _create_unittest_user(self):
         users = self.auth_manager.get_users()
@@ -206,42 +192,13 @@ class IntegratedUnitTestContext(object):
         if not api_service:
             raise Exception("API Service was None")
 
-        # WSGI shutdown broken :-(
-        #self.services.append(volume_service)
+        # NOTE(justinsb): The API service doesn't have a kill method yet,
+        #  so we treat it separately
         self.api_service = api_service
 
         self.auth_url = 'http://localhost:8774/v1.0'
 
         return api_service
-
-    # WSGI shutdown broken :-(
-    # bug731668
-    #@staticmethod
-    #def get():
-    #    if not IntegratedUnitTestContext.__INSTANCE:
-    #        IntegratedUnitTestContext.startup()
-    #        #raise Error("Must call IntegratedUnitTestContext::startup")
-    #    return IntegratedUnitTestContext.__INSTANCE
-
-    @staticmethod
-    def startup():
-        # Because WSGI shutdown is broken at the moment, we have to recycle
-        # bug731668
-        if IntegratedUnitTestContext.__INSTANCE:
-            #raise Error("Multiple calls to IntegratedUnitTestContext.startup")
-            IntegratedUnitTestContext.__INSTANCE.setup()
-        else:
-            IntegratedUnitTestContext.__INSTANCE = IntegratedUnitTestContext()
-        return IntegratedUnitTestContext.__INSTANCE
-
-    @staticmethod
-    def shutdown():
-        if not IntegratedUnitTestContext.__INSTANCE:
-            raise Error("Must call IntegratedUnitTestContext::startup")
-        IntegratedUnitTestContext.__INSTANCE.cleanup()
-        # WSGI shutdown broken :-(
-        # bug731668
-        #IntegratedUnitTestContext.__INSTANCE = None
 
 
 class _IntegratedTestBase(test.TestCase):
@@ -251,12 +208,12 @@ class _IntegratedTestBase(test.TestCase):
         f = self._get_flags()
         self.flags(**f)
 
-        context = IntegratedUnitTestContext.startup()
-        self.user = context.test_user
+        self.context = IntegratedUnitTestContext()
+        self.user = self.context.test_user
         self.api = self.user.openstack_api
 
     def tearDown(self):
-        IntegratedUnitTestContext.shutdown()
+        self.context.cleanup()
         super(_IntegratedTestBase, self).tearDown()
 
     def _get_flags(self):

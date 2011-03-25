@@ -422,18 +422,17 @@ class ISCSIDriver(VolumeDriver):
         return properties
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command):
-        command = ("sudo iscsiadm -m node -T %s -p %s %s" %
-                   (iscsi_properties['target_iqn'],
-                    iscsi_properties['target_portal'],
-                    iscsi_command))
-        (out, err) = self._execute(command)
+        (out, err) = self._execute('sudo', 'iscsiadm', '-m', 'node', '-T',
+                                   iscsi_properties['target_iqn'],
+                                   '-p', iscsi_properties['target_portal'],
+                                   iscsi_command)
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
 
     def _iscsiadm_update(self, iscsi_properties, property_key, property_value):
-        iscsi_command = ("--op update -n %s -v %s" %
-                         (property_key, property_value))
+        iscsi_command = ('--op', 'update', '-n', property_key,
+                         '-v', property_value)
         return self._run_iscsiadm(iscsi_properties, iscsi_command)
 
     def discover_volume(self, context, volume):
@@ -441,7 +440,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            self._run_iscsiadm(iscsi_properties, "--op new")
+            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -493,7 +492,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        self._run_iscsiadm(iscsi_properties, "--op delete")
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""

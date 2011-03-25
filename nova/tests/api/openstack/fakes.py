@@ -35,6 +35,7 @@ from nova import utils
 import nova.api.openstack.auth
 from nova.api import openstack
 from nova.api.openstack import auth
+from nova.api.openstack import versions
 from nova.api.openstack import limits
 from nova.auth.manager import User, Project
 from nova.image import glance
@@ -85,7 +86,7 @@ def wsgi_app(inner_app10=None, inner_app11=None):
               limits.RateLimitingMiddleware(inner_app11)))
     mapper['/v1.0'] = api10
     mapper['/v1.1'] = api11
-    mapper['/'] = openstack.FaultWrapper(openstack.Versions())
+    mapper['/'] = openstack.FaultWrapper(versions.Versions())
     return mapper
 
 
@@ -143,6 +144,21 @@ def stub_out_compute_api_snapshot(stubs):
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
+def stub_out_glance_add_image(stubs, sent_to_glance):
+    """
+    We return the metadata sent to glance by modifying the sent_to_glance dict
+    in place.
+    """
+    orig_add_image = glance_client.Client.add_image
+
+    def fake_add_image(context, metadata, data=None):
+        sent_to_glance['metadata'] = metadata
+        sent_to_glance['data'] = data
+        return orig_add_image(metadata, data)
+
+    stubs.Set(glance_client.Client, 'add_image', fake_add_image)
+
+
 def stub_out_glance(stubs, initial_fixtures=None):
 
     class FakeGlanceClient:
@@ -165,18 +181,23 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         def fake_add_image(self, image_meta, data=None):
             image_meta = copy.deepcopy(image_meta)
-            id = ''.join(random.choice(string.letters) for _ in range(20))
-            image_meta['id'] = id
+            image_id = ''.join(random.choice(string.letters)
+                               for _ in range(20))
+            image_meta['id'] = image_id
             self.fixtures.append(image_meta)
-            return image_meta
+            return copy.deepcopy(image_meta)
 
         def fake_update_image(self, image_id, image_meta, data=None):
+            for attr in ('created_at', 'updated_at', 'deleted_at', 'deleted'):
+                if attr in image_meta:
+                    del image_meta[attr]
+
             f = self._find_image(image_id)
             if not f:
                 raise glance_exc.NotFound
 
             f.update(image_meta)
-            return f
+            return copy.deepcopy(f)
 
         def fake_delete_image(self, image_id):
             f = self._find_image(image_id)
@@ -184,9 +205,6 @@ def stub_out_glance(stubs, initial_fixtures=None):
                 raise glance_exc.NotFound
 
             self.fixtures.remove(f)
-
-        ##def fake_delete_all(self):
-        ##    self.fixtures = []
 
         def _find_image(self, image_id):
             for f in self.fixtures:
@@ -204,10 +222,10 @@ def stub_out_glance(stubs, initial_fixtures=None):
     stubs.Set(GlanceClient, 'add_image', fake.fake_add_image)
     stubs.Set(GlanceClient, 'update_image', fake.fake_update_image)
     stubs.Set(GlanceClient, 'delete_image', fake.fake_delete_image)
-    #stubs.Set(GlanceClient, 'delete_all', fake.fake_delete_all)
 
 
 class FakeToken(object):
+    # FIXME(sirp): let's not use id here
     id = 0
 
     def __init__(self, **kwargs):

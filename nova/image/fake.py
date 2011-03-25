@@ -37,10 +37,9 @@ class MockImageService(service.BaseImageService):
         image = {'id': '123456',
                  'status': 'active',
                  'type': 'machine',
-                 'disk_format': 'ami',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel,
-                               }
+                                'disk_format': 'ami'}
                 }
         self.create(None, image)
         super(MockImageService, self).__init__()

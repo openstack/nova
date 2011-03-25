@@ -33,6 +33,7 @@ from nova import context
 from nova import log as logging
 from nova import exception
 from nova import utils
+from nova import flags
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -43,6 +44,7 @@ from nova.virt.xenapi.vm_utils import ImageType
 
 XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
+FLAGS = flags.FLAGS
 
 
 class VMOps(object):
@@ -53,7 +55,6 @@ class VMOps(object):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
         self.poll_rescue_last_ran = None
-
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
@@ -117,6 +118,10 @@ class VMOps(object):
         vm_ref = self._create_vm(instance, vdi_uuid, network_info)
         self._spawn(instance, vm_ref)
 
+    def spawn_rescue(self, instance):
+        """Spawn a rescue instance"""
+        self.spawn(instance)
+
     def _create_vm(self, instance, vdi_uuid, network_info=None):
         """Create VM instance"""
         instance_name = instance.name
@@ -164,6 +169,12 @@ class VMOps(object):
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
+
+        # Alter the image before VM start for, e.g. network injection
+        if FLAGS.xenapi_inject_image:
+            VMHelper.preconfigure_instance(self._session, instance,
+                                           vdi_ref, network_info)
+
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, vm_ref, network_info)
         return vm_ref
@@ -233,26 +244,17 @@ class VMOps(object):
             obj = None
             try:
                 # check for opaque ref
-                obj = self._session.get_xenapi().VM.get_record(instance_or_vm)
+                obj = self._session.get_xenapi().VM.get_uuid(instance_or_vm)
                 return instance_or_vm
             except self.XenAPI.Failure:
-                # wasn't an opaque ref, must be an instance name
+                # wasn't an opaque ref, can be an instance name
                 instance_name = instance_or_vm
 
         # if instance_or_vm is an int/long it must be instance id
         elif isinstance(instance_or_vm, (int, long)):
             ctx = context.get_admin_context()
-            try:
-                instance_obj = db.instance_get(ctx, instance_or_vm)
-                instance_name = instance_obj.name
-            except exception.NotFound:
-                # The unit tests screw this up, as they use an integer for
-                # the vm name. I'd fix that up, but that's a matter for
-                # another bug report. So for now, just try with the passed
-                # value
-                instance_name = instance_or_vm
-
-        # otherwise instance_or_vm is an instance object
+            instance_obj = db.instance_get(ctx, instance_or_vm)
+            instance_name = instance_obj.name
         else:
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -543,7 +545,7 @@ class VMOps(object):
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
         for vbd_ref in vbd_refs:
             vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
-            if vbd_rec["userdevice"] == "1":  # primary VBD is always 1
+            if vbd_rec.get("userdevice", None) == "1":  # VBD is always 1
                 VMHelper.unplug_vbd(self._session, vbd_ref)
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
@@ -680,18 +682,17 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        "%s-rescue" % instance.name)
         if rescue_vm_ref:
             raise RuntimeError(_(
                 "Instance is already in Rescue Mode: %s" % instance.name))
 
-        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
-
         instance._rescue = True
-        self.spawn(instance)
-        rescue_vm_ref = self._get_vm_opaque_ref(instance)
+        self.spawn_rescue(instance)
+        rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
 
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
@@ -708,13 +709,13 @@ class VMOps(object):
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
-                                        instance.name + "-rescue")
+                                        "%s-rescue" % instance.name)
 
         if not rescue_vm_ref:
             raise exception.NotFound(_(
                 "Instance is not in Rescue Mode: %s" % instance.name))
 
-        original_vm_ref = self._get_vm_opaque_ref(instance)
+        original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False
 
         self._destroy_rescue_instance(rescue_vm_ref)
@@ -727,24 +728,24 @@ class VMOps(object):
               in rescue mode for >= the provided timeout
         """
         last_ran = self.poll_rescue_last_ran
-        if last_ran:
-            if not utils.is_older_than(last_ran, timeout):
-                # Do not run. Let's bail.
-                return
-            else:
-                # Update the time tracker and proceed.
-                self.poll_rescue_last_ran = utils.utcnow()
-        else:
+        if not last_ran:
             # We need a base time to start tracking.
             self.poll_rescue_last_ran = utils.utcnow()
             return
+
+        if not utils.is_older_than(last_ran, timeout):
+            # Do not run. Let's bail.
+            return
+
+        # Update the time tracker and proceed.
+        self.poll_rescue_last_ran = utils.utcnow()
 
         rescue_vms = []
         for instance in self.list_instances():
             if instance.endswith("-rescue"):
                 rescue_vms.append(dict(name=instance,
-                                  vm_ref=VMHelper.lookup(self._session,
-                                                         instance)))
+                                       vm_ref=VMHelper.lookup(self._session,
+                                                              instance)))
 
         for vm in rescue_vms:
             rescue_name = vm["name"]
@@ -812,6 +813,7 @@ class VMOps(object):
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
+                'broadcast': network['broadcast'],
                 'mac': instance.mac_address,
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
