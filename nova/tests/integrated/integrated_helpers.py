@@ -196,7 +196,7 @@ class IntegratedUnitTestContext(object):
         #  so we treat it separately
         self.api_service = api_service
 
-        self.auth_url = 'http://localhost:8774/v1.0'
+        self.auth_url = 'http://localhost:8774/v1.1'
 
         return api_service
 
@@ -229,18 +229,27 @@ class _IntegratedTestBase(test.TestCase):
         server = {}
 
         image = self.user.get_valid_image(create=True)
-        image_id = image['id']
+        LOG.debug("Image: %s" % image)
 
-        #TODO(justinsb): This is FUBAR
-        image_id = abs(hash(image_id))
+        if 'imageRef' in image:
+            image_ref = image['imageRef']
+        else:
+            #NOTE(justinsb): The imageRef code hasn't yet landed
+            LOG.warning("imageRef not yet in images output")
+            image_ref = image['id']
+
+            #TODO(justinsb): This is FUBAR
+            image_ref = abs(hash(image_ref))
+
+            image_ref = 'http://fake.server/%s' % image_ref
 
         # We now have a valid imageId
-        server['imageId'] = image_id
+        server['imageRef'] = image_ref
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[0]
         LOG.debug("Using flavor: %s" % flavor)
-        server['flavorId'] = flavor['id']
+        server['flavorRef'] = 'http://fake.server/%s' % flavor['id']
 
         # Set a valid server name
         server_name = self.user.get_unused_server_name()

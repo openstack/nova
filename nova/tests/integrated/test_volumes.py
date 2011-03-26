@@ -42,6 +42,12 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         f['volume_driver'] = 'nova.volume.driver.LoggingVolumeDriver'
         return f
 
+    def test_get_volumes_summary(self):
+        """Simple check that listing volumes works"""
+        volumes = self.api.get_volumes(False)
+        for volume in volumes:
+            LOG.debug("volume: %s" % volume)
+
     def test_get_volumes(self):
         """Simple check that listing volumes works"""
         volumes = self.api.get_volumes()
