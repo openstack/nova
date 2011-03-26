@@ -26,8 +26,7 @@ import datetime
 import os
 import shutil
 import tempfile
-
-from xml.dom.minidom import parseString
+import xml.dom.minidom as minidom
 
 import stubout
 import webob
@@ -326,10 +325,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
 
-        actual_image = parseString(response.body.replace("  ", ""))
+        actual_image = minidom.parseString(response.body.replace("  ", ""))
 
         expected_now = self.NOW_API_FORMAT
-        expected_image = parseString("""
+        expected_image = minidom.parseString("""
             <image id="123"
                     name="public image"
                     updated="%(expected_now)s"
@@ -344,11 +343,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
 
-        actual_image = parseString(response.body.replace("  ", ""))
+        actual_image = minidom.parseString(response.body.replace("  ", ""))
 
         expected_href = "http://localhost/v1.1/images/123"
         expected_now = self.NOW_API_FORMAT
-        expected_image = parseString("""
+        expected_image = minidom.parseString("""
         <image id="123"
                 name="public image"
                 updated="%(expected_now)s"
@@ -388,7 +387,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
-        expected = parseString("""
+        expected = minidom.parseString("""
             <itemNotFound code="404">
                 <message>
                     Image not found.
@@ -396,7 +395,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             </itemNotFound>
         """.replace("  ", ""))
 
-        actual = parseString(response.body.replace("  ", ""))
+        actual = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
@@ -422,7 +421,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
-        expected = parseString("""
+        expected = minidom.parseString("""
             <itemNotFound code="404">
                 <message>
                     Image not found.
@@ -430,7 +429,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             </itemNotFound>
         """.replace("  ", ""))
 
-        actual = parseString(response.body.replace("  ", ""))
+        actual = minidom.parseString(response.body.replace("  ", ""))
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
