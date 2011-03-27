@@ -124,7 +124,7 @@ def setup_container(image, container_dir=None):
     """
     nbd = "False"
     device = _link_device(image, nbd)
-    err = utils.execute('sudo', 'mount', device, container_dir)
+    out, err = utils.execute('sudo', 'mount', device, container_dir)
     if err:
         raise exception.Error(_('Failed to mount filesystem: %s')
                              % err)
