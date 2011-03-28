@@ -655,20 +655,16 @@ class ServersTest(test.TestCase):
     def test_server_change_password_v1_1(self):
 
         class MockSetAdminPassword(object):
-
             def __init__(self):
-                self.called = False
                 self.instance_id = None
                 self.password = None
 
             def __call__(self, context, instance_id, password):
-                self.called = True
                 self.instance_id = instance_id
                 self.password = password
 
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
-
         body = {'changePassword': {'adminPass': '1234pass'}}
         req = webob.Request.blank('/v1.1/servers/1/action')
         req.method = 'POST'
@@ -676,7 +672,6 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
-        self.assertTrue(mock_method.called)
         self.assertEqual(mock_method.instance_id, '1')
         self.assertEqual(mock_method.password, '1234pass')
 

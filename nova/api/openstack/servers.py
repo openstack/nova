@@ -267,11 +267,11 @@ class Controller(wsgi.Controller):
 
         actions = {
             'changePassword': self._action_change_password,
-            'reboot':        self._action_reboot,
-            'resize':        self._action_resize,
+            'reboot': self._action_reboot,
+            'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
-            'revertResize':  self._action_revert_resize,
-            'rebuild':       self._action_rebuild,
+            'revertResize': self._action_revert_resize,
+            'rebuild': self._action_rebuild,
             }
 
         input_dict = self._deserialize(req.body, req.get_content_type())
@@ -595,8 +595,8 @@ class ControllerV11(Controller):
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
-        if not 'changePassword' in input_dict \
-           or not 'adminPass' in input_dict['changePassword']:
+        if (not 'changePassword' in input_dict 
+            or not 'adminPass' in input_dict['changePassword']):
             return exc.HTTPBadRequest()
         password = input_dict['changePassword']['adminPass']
         self.compute_api.set_admin_password(context, id, password)
