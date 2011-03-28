@@ -1064,12 +1064,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     #We could have a separate task to correct this error.
                     #TODO(justinsb): What happens during a live migration?
                     LOG.info(_("Found instance '%(name)s' in DB but no VM. "
-                               "State=%(db_state), so assuming spawn is in "
+                               "State=%(db_state)s, so assuming spawn is in "
                                "progress.") % locals())
                     vm_state = db_state
                 else:
                     LOG.info(_("Found instance '%(name)s' in DB but no VM. "
-                               "State=%(db_state), so setting state to "
+                               "State=%(db_state)s, so setting state to "
                                "shutoff.") % locals())
                     vm_state = power_state.SHUTOFF
             else:
