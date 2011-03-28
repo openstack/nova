@@ -3,7 +3,7 @@
     <memory>${memory_kb}</memory>
     <os>
 #if $type == 'lxc'
-	#set $disk prefix = ''
+	#set $disk_prefix = ''
 	#set $disk_bus = ''
 		<type>exe</type>
 		<init>/sbin/init</init>
