@@ -41,6 +41,7 @@ from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
 from nova.objectstore import image
+from nova.exception import NotEmpty, NotFound
 
 
 FLAGS = flags.FLAGS
@@ -85,8 +86,12 @@ class CloudTestCase(test.TestCase):
             return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type':'machine'}}]
 
+        def fake_delete(meh, context, id):
+            return None
+
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
+        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
@@ -233,6 +238,16 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_images(self.context)
         result = result['imagesSet'][0]
         self.assertEqual(result['imageId'], 'ami-00000001')
+
+    def test_deregister_image(self):
+        deregister_image = self.cloud.deregister_image
+        """When provided a valid image, should be successful"""
+        result1 = deregister_image(self.context, 'ami-00000001')
+        self.assertEqual(result1['imageId'], 'ami-00000001')
+        """Invalid image should throw an NotFound exception"""
+        self.stubs.UnsetAll()
+        self.assertRaises(NotFound, deregister_image,
+                          self.context, 'ami-bad001')
 
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type

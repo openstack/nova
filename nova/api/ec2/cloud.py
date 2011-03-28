@@ -909,7 +909,11 @@ class CloudController(object):
 
     def deregister_image(self, context, image_id, **kwargs):
         LOG.audit(_("De-registering image %s"), image_id, context=context)
-        image = self._get_image(context, image_id)
+        try:
+            image = self._get_image(context, image_id)
+        except exception.NotFound:
+            raise exception.NotFound(_('Image %s not found') %
+                                             image_id)
         internal_id = image['id']
         self.image_service.delete(context, internal_id)
         return {'imageId': image_id}
