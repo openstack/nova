@@ -17,7 +17,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""VNC Console Proxy Server"""
+"""VNC Console Proxy Server."""
 
 import eventlet
 import gettext
