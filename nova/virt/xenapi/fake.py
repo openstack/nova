@@ -60,7 +60,7 @@ from nova import exception
 from nova import log as logging
 
 
-_CLASSES = ['host', 'network', 'session', 'SR', 'VBD', \
+_CLASSES = ['host', 'network', 'session', 'SR', 'VBD',
             'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
 
 _db_content = {}
@@ -200,19 +200,19 @@ def create_local_srs():
 
 
 def _create_local_sr(host_ref):
-    sr_ref = \
-        _create_object('SR',
-                       {'name_label': 'Local storage',
-                        'type': 'lvm',
-                        'content_type': 'user',
-                        'shared': False,
-                        'physical_size': str(1 << 30),
-                        'physical_utilisation': str(0),
-                        'virtual_allocation': str(0),
-                        'other_config': {'i18n-original-value-name_label': \
-                                         'Local storage',
-                                         'i18n-key': 'local-storage'},
-                        'VDIs': []})
+    sr_ref = _create_object(
+             'SR',
+             {'name_label': 'Local storage',
+              'type': 'lvm',
+              'content_type': 'user',
+              'shared': False,
+              'physical_size': str(1 << 30),
+              'physical_utilisation': str(0),
+              'virtual_allocation': str(0),
+              'other_config': {
+                     'i18n-original-value-name_label': 'Local storage',
+                     'i18n-key': 'local-storage'},
+              'VDIs': []})
     pbd_ref = create_pbd('', host_ref, sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref

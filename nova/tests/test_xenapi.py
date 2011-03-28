@@ -14,9 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Test suite for XenAPI.
-"""
+"""Test suite for XenAPI."""
 
 import functools
 import os
@@ -65,9 +63,7 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
 
 
 class XenAPIVolumeTestCase(test.TestCase):
-    """
-    Unit tests for Volume operations.
-    """
+    """Unit tests for Volume operations."""
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
@@ -172,9 +168,7 @@ def reset_network(*args):
 
 
 class XenAPIVMTestCase(test.TestCase):
-    """
-    Unit tests for VM operations.
-    """
+    """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
         self.manager = manager.AuthManager()
@@ -538,9 +532,7 @@ class XenAPIVMTestCase(test.TestCase):
 
 
 class XenAPIDiffieHellmanTestCase(test.TestCase):
-    """
-    Unit tests for Diffie-Hellman code.
-    """
+    """Unit tests for Diffie-Hellman code."""
     def setUp(self):
         super(XenAPIDiffieHellmanTestCase, self).setUp()
         self.alice = SimpleDH()
@@ -564,9 +556,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
 
 class XenAPIMigrateInstance(test.TestCase):
-    """
-    Unit test for verifying migration-related actions.
-    """
+    """Unit test for verifying migration-related actions."""
 
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
@@ -621,9 +611,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
-    """
-    Unit tests for code that detects the ImageType.
-    """
+    """Unit tests for code that detects the ImageType."""
     def setUp(self):
         super(XenAPIDetermineDiskImageTestCase, self).setUp()
         glance_stubs.stubout_glance_client(self.stubs,
@@ -642,9 +630,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.assertEqual(disk_type, dt)
 
     def test_instance_disk(self):
-        """
-        If a kernel is specified then the image type is DISK (aka machine).
-        """
+        """If a kernel is specified, the image type is DISK (aka machine)."""
         FLAGS.xenapi_image_service = 'objectstore'
         self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_MACHINE
         self.fake_instance.kernel_id = glance_stubs.FakeGlance.IMAGE_KERNEL

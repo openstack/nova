@@ -27,7 +27,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.virt.xenapi_conn import XenAPISession
-from nova.virt.xenapi.network_utils import NetworkHelper
+from nova.virt.xenapi import network_utils
 
 LOG = logging.getLogger("nova.xenapi_net")
 
@@ -44,7 +44,9 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     session = XenAPISession(url, username, password)
     # Check whether bridge already exists
     # Retrieve network whose name_label is "bridge"
-    network_ref = NetworkHelper.find_network_with_name_label(session, bridge)
+    network_ref = network_utils.NetworkHelper.find_network_with_name_label(
+                                                                       session,
+                                                                       bridge)
     if network_ref == None:
         # If bridge does not exists
         # 1 - create network

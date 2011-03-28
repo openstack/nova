@@ -47,14 +47,20 @@ def fake_execute_set_repliers(repliers):
 
 
 def fake_execute_default_reply_handler(*ignore_args, **ignore_kwargs):
-    """A reply handler for commands that haven't been added to the reply
-    list.  Returns empty strings for stdout and stderr."""
+    """A reply handler for commands that haven't been added to the reply list.
+
+    Returns empty strings for stdout and stderr.
+
+    """
     return '', ''
 
 
 def fake_execute(*cmd_parts, **kwargs):
-    """This function stubs out execute, optionally executing
-    a preconfigued function to return expected data."""
+    """This function stubs out execute.
+
+    It optionally executes a preconfigued function to return expected data.
+
+    """
     global _fake_execute_repliers
 
     process_input = kwargs.get('process_input', None)
