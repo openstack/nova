@@ -60,7 +60,7 @@ from nova import exception
 from nova import log as logging
 
 
-_CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
+_CLASSES = ['host', 'network', 'session', 'SR', 'VBD', \
             'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
 
 _db_content = {}

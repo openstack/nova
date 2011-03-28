@@ -668,7 +668,7 @@ class VMOps(object):
         self._wait_with_callback(instance.id, task, callback)
 
     def suspend(self, instance, callback):
-        """Suspend the specified instance"""
+        """Suspend the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.suspend', vm_ref)
         self._wait_with_callback(instance.id, task, callback)
@@ -686,6 +686,7 @@ class VMOps(object):
             - shutdown the instance VM.
             - set 'bootlock' to prevent the instance from starting in rescue.
             - spawn a rescue VM (the vm name-label will be instance-N-rescue).
+
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)

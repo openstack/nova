@@ -287,19 +287,19 @@ class XenAPIVMTestCase(test.TestCase):
             key = 'vm-data/networking/aabbccddeeff'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
-            self.assertEquals(tcpip_data, {
-                'label': 'fake_flat_network',
-                'broadcast': '10.0.0.255',
-                'ips': [{'ip': '10.0.0.3',
-                         'netmask':'255.255.255.0',
-                         'enabled':'1'}],
-                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
-                          'netmask': '120',
-                          'enabled': '1',
-                          'gateway': 'fe80::a00:1'}],
-                'mac': 'aa:bb:cc:dd:ee:ff',
-                'dns': ['10.0.0.2'],
-                'gateway': '10.0.0.1'})
+            self.assertEquals(tcpip_data,
+                              {'label': 'fake_flat_network',
+                               'broadcast': '10.0.0.255',
+                               'ips': [{'ip': '10.0.0.3',
+                                        'netmask':'255.255.255.0',
+                                        'enabled':'1'}],
+                                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
+                                          'netmask': '120',
+                                          'enabled': '1',
+                                          'gateway': 'fe80::a00:1'}],
+                                'mac': 'aa:bb:cc:dd:ee:ff',
+                                'dns': ['10.0.0.2'],
+                                'gateway': '10.0.0.1'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
