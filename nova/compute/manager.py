@@ -1060,7 +1060,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 if db_state == power_state.NOSTATE:
                     #Assume that NOSTATE => spawning
                     #TODO(justinsb): This does mean that if we crash during a
-                    #spawn, the machine will never leave the spawning state.
+                    #spawn, the machine will never leave the spawning state,
+                    #but this is just the way nova is; this function isn't
+                    #trying to correct that problem.
                     #We could have a separate task to correct this error.
                     #TODO(justinsb): What happens during a live migration?
                     LOG.info(_("Found instance '%(name)s' in DB but no VM. "
