@@ -56,7 +56,9 @@ class MockImageService(service.BaseImageService):
     def show(self, context, image_id):
         """Get data about specified image.
 
-        Returns a dict containing image data for the given opaque image id."""
+        Returns a dict containing image data for the given opaque image id.
+
+        """
         image_id = int(image_id)
         image = self.images.get(image_id)
         if image:

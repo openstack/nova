@@ -65,7 +65,9 @@ class Controller(wsgi.Controller):
     """The volume attachment API controller for the Openstack API.
 
     A child resource of the server.  Note that we use the volume id
-    as the ID of the attachment (though this is not guaranteed externally)"""
+    as the ID of the attachment (though this is not guaranteed externally)
+
+    """
 
     _serialization_metadata = {
         'application/xml': {
