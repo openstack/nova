@@ -27,6 +27,7 @@ from nova.volume import driver
 
 LOG = logging.getLogger('nova.tests.integrated')
 
+
 FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
@@ -55,7 +56,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
             LOG.debug("volume: %s" % volume)
 
     def _poll_while(self, volume_id, continue_states, max_retries=5):
-        """ Poll (briefly) while the state is in continue_states"""
+        """Poll (briefly) while the state is in continue_states"""
         retries = 0
         while True:
             try:
@@ -144,7 +145,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
 
         # Create server
         server_req = {'server': self._build_minimal_create_server_request()}
-        # NOTE(justinsb): Create an extra server so that server_id != volume_id
+        #NOTE(justinsb): Create an extra server so that server_id != volume_id
         self.api.post_server(server_req)
         created_server = self.api.post_server(server_req)
         LOG.debug("created_server: %s" % created_server)
@@ -197,7 +198,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         # This is just an implementation detail, but let's check it...
         self.assertEquals(volume_id, attachment_id)
 
-        # NOTE(justinsb): There's an issue with the attach code, in that
+        #NOTE(justinsb): There's an issue with the attach code, in that
         #  it's currently asynchronous and not recorded until the attach
         #  completes.  So the caller must be 'smart', like this...
         attach_done = None

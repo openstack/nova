@@ -85,10 +85,10 @@ class TestUser(object):
     def get_valid_image(self, create=False):
         images = self.openstack_api.get_images()
         if create and not images:
-            # TODO(justinsb): No way to create an image through API???
+            #TODO(justinsb): No way currently to create an image through API
             #created_image = self.openstack_api.post_image(image)
             #images.append(created_image)
-            raise exception.Error("No way to create an image through API??")
+            raise exception.Error("No way to create an image through API")
 
         if images:
             return images[0]
@@ -124,7 +124,7 @@ class IntegratedUnitTestContext(object):
         self._start_volume_service()
         self._start_scheduler_service()
 
-        # NOTE(justinsb): There's a bug here which is eluding me...
+        #NOTE(justinsb): There's a bug here which is eluding me...
         #  If we start the network_service, all is good, but then subsequent
         #  tests fail: CloudTestCase.test_ajax_console in particular.
         #self._start_network_service()
@@ -192,7 +192,7 @@ class IntegratedUnitTestContext(object):
         if not api_service:
             raise Exception("API Service was None")
 
-        # NOTE(justinsb): The API service doesn't have a kill method yet,
+        #NOTE(justinsb): The API service doesn't have a kill method yet,
         #  so we treat it separately
         self.api_service = api_service
 
@@ -217,9 +217,7 @@ class _IntegratedTestBase(test.TestCase):
         super(_IntegratedTestBase, self).tearDown()
 
     def _get_flags(self):
-        """An opportunity to setup flags, before the services are started
-
-        Warning - this is a bit flaky till the WSGI recycle code lands"""
+        """An opportunity to setup flags, before the services are started"""
         f = {}
         f['image_service'] = 'nova.image.fake.MockImageService'
         f['fake_network'] = True

@@ -26,11 +26,12 @@ from nova.api.openstack import faults
 
 LOG = logging.getLogger("nova.api.volumes")
 
+
 FLAGS = flags.FLAGS
 
 
 def _translate_detail_view(context, vol):
-    """ Maps keys for details view"""
+    """Maps keys for details view"""
 
     d = _translate_summary_view(context, vol)
 
@@ -40,7 +41,7 @@ def _translate_detail_view(context, vol):
 
 
 def _translate_summary_view(_context, vol):
-    """ Maps keys for summary view"""
+    """Maps keys for summary view"""
     d = {}
 
     instance_id = None
@@ -78,7 +79,7 @@ def _translate_summary_view(_context, vol):
 
 
 class Controller(wsgi.Controller):
-    """ The Volumes API controller for the OpenStack API """
+    """The Volumes API controller for the OpenStack API"""
 
     _serialization_metadata = {
         'application/xml': {
@@ -109,7 +110,7 @@ class Controller(wsgi.Controller):
         return {'volume': _translate_detail_view(context, vol)}
 
     def delete(self, req, id):
-        """ Delete a volume """
+        """Delete a volume """
         context = req.environ['nova.context']
 
         LOG.audit(_("Delete volume with id: %s"), id, context=context)
@@ -121,11 +122,11 @@ class Controller(wsgi.Controller):
         return exc.HTTPAccepted()
 
     def index(self, req):
-        """ Returns a summary list of volumes"""
+        """Returns a summary list of volumes"""
         return self._items(req, entity_maker=_translate_summary_view)
 
     def detail(self, req):
-        """ Returns a detailed list of volumes """
+        """Returns a detailed list of volumes """
         return self._items(req, entity_maker=_translate_detail_view)
 
     def _items(self, req, entity_maker):

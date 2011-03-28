@@ -26,6 +26,7 @@ from nova import log as logging
 
 LOG = logging.getLogger('common')
 
+
 FLAGS = flags.FLAGS
 
 

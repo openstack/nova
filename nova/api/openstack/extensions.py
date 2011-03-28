@@ -68,7 +68,7 @@ class ExtensionDescriptor(object):
         """The timestamp when the extension was last updated
 
         e.g. '2011-01-22T13:25:27-06:00'"""
-        #NOTE(justinsb): Huh? Isn't this defined by the namespace?
+        #NOTE(justinsb): Not sure of the purpose of this is, vs the XML NS
         raise NotImplementedError()
 
     def get_resources(self):

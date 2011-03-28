@@ -56,7 +56,9 @@ class OpenStackApiNotFoundException(OpenStackApiException):
 
 
 class TestOpenStackClient(object):
-    """ A really basic OpenStack API client that is under our control,
+    """Simple OpenStack API Client.
+    
+    This is a really basic OpenStack API client that is under our control,
     so we can make changes / insert hooks for testing"""
 
     def __init__(self, auth_user, auth_key, auth_uri):

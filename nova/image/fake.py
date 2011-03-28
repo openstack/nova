@@ -24,6 +24,7 @@ from nova.image import service
 
 LOG = logging.getLogger('nova.image.fake')
 
+
 FLAGS = flags.FLAGS
 
 

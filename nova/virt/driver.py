@@ -66,8 +66,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def destroy(self, instance, cleanup=True):
-        """
-        Destroy (shutdown and delete) the specified instance.
+        """Destroy (shutdown and delete) the specified instance.
 
         The given parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name.
@@ -89,12 +88,12 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_console_pool_info(self, console_type):
-        """???
+        """?
 
         Returns a dict containing:
-        :address:          ???
-        :username:         ???
-        :password:         ???
+        :address:          ?
+        :username:         ?
+        :password:         ?
         """
         raise NotImplementedError()
 
@@ -126,7 +125,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def snapshot(self, instance, image_id):
-        """ Create snapshot from a running VM instance """
+        """Create snapshot from a running VM instance """
         raise NotImplementedError()
 
     def finish_resize(self, instance, disk_info):

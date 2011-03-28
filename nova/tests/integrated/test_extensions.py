@@ -24,6 +24,7 @@ from nova.tests.integrated import integrated_helpers
 
 LOG = logging.getLogger('nova.tests.integrated')
 
+
 FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
