@@ -415,9 +415,12 @@ class LibvirtConnection(driver.ComputeDriver):
 
         base = image_service.show(elevated, instance['image_id'])
 
-        metadata = {'type': 'machine',
+        metadata = {'disk_format': base['disk_format'],
+                    'container_format': base['container_format'],
                     'is_public': False,
                     'properties': {'architecture': base['architecture'],
+                                   'type': base['type'],
+                                   'name': '%s.%s' % (base['name'], image_id),
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
