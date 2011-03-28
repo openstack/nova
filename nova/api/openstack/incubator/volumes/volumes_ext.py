@@ -37,8 +37,8 @@ class VolumesExtension(extensions.ExtensionDescriptor):
     def get_resources(self):
         resources = []
 
-        #NOTE(justinsb): No way to provide singular name ('volume')
-        #  Does this matter?
+        # NOTE(justinsb): No way to provide singular name ('volume')
+        # Does this matter?
         res = extensions.ResourceExtension('volumes',
                                            volumes.Controller(),
                                            collection_actions={'detail': 'GET'}

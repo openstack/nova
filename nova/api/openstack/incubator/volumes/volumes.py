@@ -31,7 +31,7 @@ FLAGS = flags.FLAGS
 
 
 def _translate_detail_view(context, vol):
-    """Maps keys for details view"""
+    """Maps keys for details view."""
 
     d = _translate_summary_view(context, vol)
 
@@ -41,7 +41,7 @@ def _translate_detail_view(context, vol):
 
 
 def _translate_summary_view(_context, vol):
-    """Maps keys for summary view"""
+    """Maps keys for summary view."""
     d = {}
 
     instance_id = None
@@ -79,7 +79,7 @@ def _translate_summary_view(_context, vol):
 
 
 class Controller(wsgi.Controller):
-    """The Volumes API controller for the OpenStack API"""
+    """The Volumes API controller for the OpenStack API."""
 
     _serialization_metadata = {
         'application/xml': {
@@ -99,7 +99,7 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__()
 
     def show(self, req, id):
-        """Return data about the given volume"""
+        """Return data about the given volume."""
         context = req.environ['nova.context']
 
         try:
@@ -110,7 +110,7 @@ class Controller(wsgi.Controller):
         return {'volume': _translate_detail_view(context, vol)}
 
     def delete(self, req, id):
-        """Delete a volume """
+        """Delete a volume."""
         context = req.environ['nova.context']
 
         LOG.audit(_("Delete volume with id: %s"), id, context=context)
@@ -122,15 +122,15 @@ class Controller(wsgi.Controller):
         return exc.HTTPAccepted()
 
     def index(self, req):
-        """Returns a summary list of volumes"""
+        """Returns a summary list of volumes."""
         return self._items(req, entity_maker=_translate_summary_view)
 
     def detail(self, req):
-        """Returns a detailed list of volumes """
+        """Returns a detailed list of volumes."""
         return self._items(req, entity_maker=_translate_detail_view)
 
     def _items(self, req, entity_maker):
-        """Returns a list of volumes, transformed through entity_maker"""
+        """Returns a list of volumes, transformed through entity_maker."""
         context = req.environ['nova.context']
 
         volumes = self.volume_api.get_all(context)
@@ -139,7 +139,7 @@ class Controller(wsgi.Controller):
         return {'volumes': res}
 
     def create(self, req):
-        """Creates a new volume"""
+        """Creates a new volume."""
         context = req.environ['nova.context']
 
         env = self._deserialize(req.body, req.get_content_type())

@@ -29,11 +29,11 @@ FLAGS = flags.FLAGS
 
 
 class MockImageService(service.BaseImageService):
-    """Mock (fake) image service for unit testing"""
+    """Mock (fake) image service for unit testing."""
 
     def __init__(self):
         self.images = {}
-        # NOTE(justinsb): The OpenStack API can't upload an image???
+        # NOTE(justinsb): The OpenStack API can't upload an image?
         # So, make sure we've got one..
         image = {'id': '123456',
                  'status': 'active',
@@ -46,17 +46,17 @@ class MockImageService(service.BaseImageService):
         super(MockImageService, self).__init__()
 
     def index(self, context):
-        """Returns list of images"""
+        """Returns list of images."""
         return self.images.values()
 
     def detail(self, context):
-        """Return list of detailed image information"""
+        """Return list of detailed image information."""
         return self.images.values()
 
     def show(self, context, image_id):
-        """
-        Returns a dict containing image data for the given opaque image id.
-        """
+        """Get data about specified image.
+
+        Returns a dict containing image data for the given opaque image id."""
         image_id = int(image_id)
         image = self.images.get(image_id)
         if image:
@@ -66,16 +66,14 @@ class MockImageService(service.BaseImageService):
         raise exception.NotFound
 
     def create(self, context, data):
-        """
-        Store the image data and return the new image id.
+        """Store the image data and return the new image id.
 
-        :raises AlreadyExists if the image already exist.
+        :raises Duplicate if the image already exist.
 
         """
         image_id = int(data['id'])
         if self.images.get(image_id):
-            #TODO(justinsb): Where is this AlreadyExists exception??
-            raise exception.Error("AlreadyExists")
+            raise exception.Duplicate()
 
         self.images[image_id] = data
 
@@ -91,8 +89,7 @@ class MockImageService(service.BaseImageService):
         self.images[image_id] = data
 
     def delete(self, context, image_id):
-        """
-        Delete the given image.
+        """Delete the given image.
 
         :raises NotFound if the image does not exist.
 
@@ -103,7 +100,5 @@ class MockImageService(service.BaseImageService):
             raise exception.NotFound
 
     def delete_all(self):
-        """
-        Clears out all images
-        """
+        """Clears out all images."""
         self.images.clear()

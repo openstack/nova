@@ -34,7 +34,7 @@ FLAGS = flags.FLAGS
 
 
 def _translate_detail_view(context, volume):
-    """Maps keys for details view"""
+    """Maps keys for details view."""
 
     d = _translate_summary_view(context, volume)
 
@@ -44,12 +44,12 @@ def _translate_detail_view(context, volume):
 
 
 def _translate_summary_view(context, vol):
-    """Maps keys for summary view"""
+    """Maps keys for summary view."""
     d = {}
 
     volume_id = vol['id']
 
-    #NOTE(justinsb): We use the volume id as the id of the attachment object
+    # NOTE(justinsb): We use the volume id as the id of the attachment object
     d['id'] = volume_id
 
     d['volumeId'] = volume_id
@@ -62,7 +62,7 @@ def _translate_summary_view(context, vol):
 
 
 class Controller(wsgi.Controller):
-    """The volume attachment API controller for the Openstack API
+    """The volume attachment API controller for the Openstack API.
 
     A child resource of the server.  Note that we use the volume id
     as the ID of the attachment (though this is not guaranteed externally)"""
@@ -81,12 +81,12 @@ class Controller(wsgi.Controller):
         super(Controller, self).__init__()
 
     def index(self, req, server_id):
-        """Returns the list of volume attachments for a given instance """
+        """Returns the list of volume attachments for a given instance."""
         return self._items(req, server_id,
                            entity_maker=_translate_summary_view)
 
     def show(self, req, server_id, id):
-        """Return data about the given volume"""
+        """Return data about the given volume."""
         context = req.environ['nova.context']
 
         volume_id = id
@@ -103,7 +103,7 @@ class Controller(wsgi.Controller):
         return {'volumeAttachment': _translate_detail_view(context, vol)}
 
     def create(self, req, server_id):
-        """Attach a volume to an instance """
+        """Attach a volume to an instance."""
         context = req.environ['nova.context']
 
         env = self._deserialize(req.body, req.get_content_type())
@@ -131,15 +131,15 @@ class Controller(wsgi.Controller):
         attachment['id'] = volume_id
         attachment['volumeId'] = volume_id
 
-        #NOTE(justinsb): And now, we have a problem...
+        # NOTE(justinsb): And now, we have a problem...
         # The attach is async, so there's a window in which we don't see
-        #  the attachment (until the attachment completes).  We could also
-        #  get problems with concurrent requests.  I think we need an
-        #  attachment state, and to write to the DB here, but that's a bigger
-        #  change.
+        # the attachment (until the attachment completes).  We could also
+        # get problems with concurrent requests.  I think we need an
+        # attachment state, and to write to the DB here, but that's a bigger
+        # change.
         # For now, we'll probably have to rely on libraries being smart
 
-        #TODO(justinsb): How do I return "accepted" here?
+        # TODO(justinsb): How do I return "accepted" here?
         return {'volumeAttachment': attachment}
 
     def update(self, _req, _server_id, _id):
@@ -147,7 +147,7 @@ class Controller(wsgi.Controller):
         return faults.Fault(exc.HTTPBadRequest())
 
     def delete(self, req, server_id, id):
-        """Detach a volume from an instance """
+        """Detach a volume from an instance."""
         context = req.environ['nova.context']
 
         volume_id = id
@@ -168,7 +168,7 @@ class Controller(wsgi.Controller):
         return exc.HTTPAccepted()
 
     def _items(self, req, server_id, entity_maker):
-        """Returns a list of attachments, transformed through entity_maker"""
+        """Returns a list of attachments, transformed through entity_maker."""
         context = req.environ['nova.context']
 
         try:
