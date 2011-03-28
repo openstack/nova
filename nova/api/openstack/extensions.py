@@ -324,8 +324,8 @@ class ExtensionManager(object):
                 if not new_ext_class:
                     LOG.warn(_('Did not find expected name '
                                '"%(ext_name)" in %(file)s'),
-                             { 'ext_name': ext_name,
-                             'file': ext_path })
+                             {'ext_name': ext_name,
+                             'file': ext_path})
                     continue
                 new_ext = new_ext_class()
                 self._check_extension(new_ext)
