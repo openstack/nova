@@ -43,8 +43,13 @@ from nova.tests.api.openstack import fakes
 FLAGS = flags.FLAGS
 
 
-class BaseImageServiceTests(object):
+class _BaseImageServiceTests(test.TestCase):
     """Tasks to test for all image services"""
+
+    def __init__(self, *args, **kwargs):
+        super(_BaseImageServiceTests, self).__init__(*args, **kwargs)
+        self.service = None
+        self.context = None
 
     def test_create(self):
         fixture = self._make_fixture('test image')
@@ -116,8 +121,7 @@ class BaseImageServiceTests(object):
         return fixture
 
 
-class LocalImageServiceTest(test.TestCase,
-                            BaseImageServiceTests):
+class LocalImageServiceTest(_BaseImageServiceTests):
 
     """Tests the local image service"""
 
@@ -147,8 +151,7 @@ class LocalImageServiceTest(test.TestCase,
         self.assertEqual(3, len(found_image_ids), len(found_image_ids))
 
 
-class GlanceImageServiceTest(test.TestCase,
-                             BaseImageServiceTests):
+class GlanceImageServiceTest(_BaseImageServiceTests):
 
     """Tests the Glance image service, in particular that metadata translation
     works properly.
