@@ -141,12 +141,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.driver.init_host(host=self.host)
 
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-        super(ComputeManager, self).periodic_tasks(context)
-        if FLAGS.rescue_timeout > 0:
-            self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
-
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
@@ -1028,9 +1022,19 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
+
+
         error_list = super(ComputeManager, self).periodic_tasks(context)
         if error_list is None:
             error_list = []
+
+        try:
+            if FLAGS.rescue_timeout > 0:
+                self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
+        except Exception as ex:
+            LOG.warning(_("Error during poll_rescued_instances: %s"),
+                        unicode(ex))
+            error_list.append(ex)
 
         try:
             self._poll_instance_states(context)
@@ -1038,6 +1042,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.warning(_("Error during instance poll: %s"),
                         unicode(ex))
             error_list.append(ex)
+            
         return error_list
 
     def _poll_instance_states(self, context):
