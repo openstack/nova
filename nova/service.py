@@ -248,6 +248,12 @@ class WsgiService(object):
     def wait(self):
         self.wsgi_app.wait()
 
+    def get_port(self, api):
+        for i in xrange(len(self.apis)):
+            if self.apis[i] == api:
+                return self.wsgi_app.ports[i]
+        return None
+
 
 class ApiService(WsgiService):
     """Class for our nova-api service"""

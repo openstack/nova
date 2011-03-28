@@ -141,6 +141,7 @@ class IntegratedUnitTestContext(object):
 
         self.api_service = api_service
 
-        self.auth_url = 'http://localhost:8774/v1.0'
+        host, port = api_service.get_port('osapi')
+        self.auth_url = 'http://%s:%s/v1.0' % (host, port)
 
         return api_service

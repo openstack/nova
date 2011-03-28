@@ -33,6 +33,7 @@ FLAGS.verbose = True
 class LoginTest(test.TestCase):
     def setUp(self):
         super(LoginTest, self).setUp()
+        self.flags(ec2_listen_port=0, osapi_listen_port=0)
         self.context = integrated_helpers.IntegratedUnitTestContext()
         self.user = self.context.test_user
         self.api = self.user.openstack_api
