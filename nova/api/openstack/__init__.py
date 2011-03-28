@@ -106,11 +106,6 @@ class APIRouter(wsgi.Router):
                             controller=accounts.Controller(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("backup_schedule", "backup_schedule",
-                        controller=backup_schedules.Controller(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
-
         mapper.resource("console", "consoles",
                         controller=consoles.Controller(),
                         parent_resource=dict(member_name='server',
@@ -140,6 +135,11 @@ class APIRouterV10(APIRouter):
         mapper.resource("flavor", "flavors",
                         controller=flavors.ControllerV10(),
                         collection={'detail': 'GET'})
+
+        mapper.resource("backup_schedule", "backup_schedule",
+                        controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
 
 
 class APIRouterV11(APIRouter):
