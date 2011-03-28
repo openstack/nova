@@ -69,21 +69,24 @@
         </disk>
     #end if
 #end if
+
+#for $nic in $nics
         <interface type='bridge'>
-            <source bridge='${bridge_name}'/>
-            <mac address='${mac_address}'/>
+            <source bridge='${nic.bridge_name}'/>
+            <mac address='${nic.mac_address}'/>
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
-            <filterref filter="nova-instance-${name}">
-                <parameter name="IP" value="${ip_address}" />
-                <parameter name="DHCPSERVER" value="${dhcp_server}" />           
-#if $getVar('extra_params', False)
-                ${extra_params}
+            <filterref filter="nova-instance-${name}-${nic.id}">
+                <parameter name="IP" value="${nic.ip_address}" />
+                <parameter name="DHCPSERVER" value="${nic.dhcp_server}" />
+#if $getVar('nic.extra_params', False)
+                ${nic.extra_params}
 #end if
-#if $getVar('ra_server', False)
-                <parameter name="RASERVER" value="${ra_server}" />
+#if $getVar('nic.gateway_v6', False)
+                <parameter name="RASERVER" value="${nic.gateway_v6}" />
 #end if
             </filterref>
         </interface>
+#end for
 
         <!-- The order is significant here.  File must be defined first -->
         <serial type="file">

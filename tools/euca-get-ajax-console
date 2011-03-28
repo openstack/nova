@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -35,7 +35,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 import boto
 import nova
 from boto.ec2.connection import EC2Connection
-from euca2ools import Euca2ool, InstanceValidationError, Util, ConnectionFailed
+from euca2ools import Euca2ool, InstanceValidationError, Util
 
 usage_string = """
 Retrieves a url to an ajax console terminal
@@ -147,7 +147,7 @@ def main():
 
         try:
             euca_conn = euca.make_connection()
-        except ConnectionFailed, e:
+        except Exception, e:
             print e.message
             sys.exit(1)
         try:

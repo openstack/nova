@@ -94,7 +94,7 @@ def init_leases(interface):
     """Get the list of hosts for an interface."""
     ctxt = context.get_admin_context()
     network_ref = db.network_get_by_bridge(ctxt, interface)
-    return linux_net.get_dhcp_hosts(ctxt, network_ref['id'])
+    return linux_net.get_dhcp_leases(ctxt, network_ref['id'])
 
 
 def main():

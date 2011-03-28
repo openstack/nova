@@ -191,7 +191,7 @@ def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
         os.link(source, link_name)
 
 
-def _upload_tarball(staging_path, image_id, glance_host, glance_port):
+def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
     """
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
@@ -201,13 +201,23 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port):
     # to request
     conn.putrequest('PUT', '/images/%s' % image_id)
 
-    # TODO(sirp): make `store` configurable
+    # NOTE(sirp): There is some confusion around OVF. Here's a summary of
+    # where we currently stand:
+    #   1. OVF as a container format is misnamed. We really should be using
+    #      OVA since that is the name for the container format; OVF is the
+    #      standard applied to the manifest file contained within.
+    #   2. We're currently uploading a vanilla tarball. In order to be OVF/OVA
+    #      compliant, we'll need to embed a minimal OVF manifest as the first
+    #      file.
     headers = {
         'content-type': 'application/octet-stream',
         'transfer-encoding': 'chunked',
-        'x-image-meta-is_public': 'True',
+        'x-image-meta-is-public': 'True',
         'x-image-meta-status': 'queued',
-        'x-image-meta-type': 'vhd'}
+        'x-image-meta-disk-format': 'vhd',
+        'x-image-meta-container-format': 'ovf',
+        'x-image-meta-property-os-type': os_type}
+
     for header, value in headers.iteritems():
         conn.putheader(header, value)
     conn.endheaders()
@@ -329,11 +339,13 @@ def upload_vhd(session, args):
     glance_host = params["glance_host"]
     glance_port = params["glance_port"]
     sr_path = params["sr_path"]
+    os_type = params["os_type"]
 
     staging_path = _make_staging_area(sr_path)
     try:
         _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
-        _upload_tarball(staging_path, image_id, glance_host, glance_port)
+        _upload_tarball(staging_path, image_id, glance_host, glance_port,
+                        os_type)
     finally:
         _cleanup_staging_area(staging_path)
 

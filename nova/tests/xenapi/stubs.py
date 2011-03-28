@@ -20,6 +20,8 @@ from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
+from nova.virt.xenapi import vmops
+from nova import utils
 
 
 def stubout_instance_snapshot(stubs):
@@ -136,13 +138,16 @@ def stubout_is_vdi_pv(stubs):
     stubs.Set(vm_utils, '_is_vdi_pv', f)
 
 
+def stubout_loopingcall_start(stubs):
+    def fake_start(self, interval, now=True):
+        self.f(*self.args, **self.kw)
+    stubs.Set(utils.LoopingCall, 'start', fake_start)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
-
-    def network_get_all_records_where(self, _1, _2):
-        return self.xenapi.network.get_all_records()
 
     def host_call_plugin(self, _1, _2, _3, _4, _5):
         sr_ref = fake.get_all('SR')[0]
@@ -184,6 +189,25 @@ class FakeSessionForVMTests(fake.SessionBase):
         pass
 
 
+def stub_out_vm_methods(stubs):
+    def fake_shutdown(self, inst, vm, method="clean"):
+        pass
+
+    def fake_acquire_bootlock(self, vm):
+        pass
+
+    def fake_release_bootlock(self, vm):
+        pass
+
+    def fake_spawn_rescue(self, inst):
+        inst._rescue = False
+
+    stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
+    stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
+    stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
+    stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
+
+
 class FakeSessionForVolumeTests(fake.SessionBase):
     """ Stubs out a XenAPISession for Volume tests """
     def __init__(self, uri):
@@ -217,3 +241,63 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 
     def SR_forget(self, _1, ref):
         pass
+
+
+class FakeSessionForMigrationTests(fake.SessionBase):
+    """Stubs out a XenAPISession for Migration tests"""
+    def __init__(self, uri):
+        super(FakeSessionForMigrationTests, self).__init__(uri)
+
+    def VDI_get_by_uuid(*args):
+        return 'hurr'
+
+    def VDI_resize_online(*args):
+        pass
+
+    def VM_start(self, _1, ref, _2, _3):
+        vm = fake.get_record('VM', ref)
+        if vm['power_state'] != 'Halted':
+            raise fake.Failure(['VM_BAD_POWER_STATE', ref, 'Halted',
+                                  vm['power_state']])
+        vm['power_state'] = 'Running'
+        vm['is_a_template'] = False
+        vm['is_control_domain'] = False
+
+
+def stub_out_migration_methods(stubs):
+    def fake_get_snapshot(self, instance):
+        return 'vm_ref', dict(image='foo', snap='bar')
+
+    @classmethod
+    def fake_get_vdi(cls, session, vm_ref):
+        vdi_ref = fake.create_vdi(name_label='derp', read_only=False,
+                             sr_ref='herp', sharable=False)
+        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
+        return vdi_ref, {'uuid': vdi_rec['uuid'], }
+
+    def fake_shutdown(self, inst, vm, hard=True):
+        pass
+
+    @classmethod
+    def fake_sr(cls, session, *args):
+        pass
+
+    @classmethod
+    def fake_get_sr_path(cls, *args):
+        return "fake"
+
+    def fake_destroy(*args, **kwargs):
+        pass
+
+    def fake_reset_network(*args, **kwargs):
+        pass
+
+    stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
+    stubs.Set(vm_utils.VMHelper, 'scan_default_sr', fake_sr)
+    stubs.Set(vm_utils.VMHelper, 'scan_sr', fake_sr)
+    stubs.Set(vmops.VMOps, '_get_snapshot', fake_get_snapshot)
+    stubs.Set(vm_utils.VMHelper, 'get_vdi_for_vm_safely', fake_get_vdi)
+    stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task', lambda x, y, z: None)
+    stubs.Set(vm_utils.VMHelper, 'get_sr_path', fake_get_sr_path)
+    stubs.Set(vmops.VMOps, 'reset_network', fake_reset_network)
+    stubs.Set(vmops.VMOps, '_shutdown', fake_shutdown)

@@ -35,29 +35,22 @@ from nova import log as logging
 from nova import rpc
 from nova import service
 from nova import test
+from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
-from nova.objectstore import image
+from nova.api.ec2 import ec2utils
+from nova.image import local
 
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.cloud')
 
-# Temp dirs for working with image attributes through the cloud controller
-# (stole this from objectstore_unittest.py)
-OSS_TEMPDIR = tempfile.mkdtemp(prefix='test_oss-')
-IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
-os.makedirs(IMAGES_PATH)
 
-
-# TODO(termie): these tests are rather fragile, they should at the lest be
-#               wiping database state after each run
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   images_path=IMAGES_PATH)
+        self.flags(connection_type='fake')
 
         self.conn = rpc.Connection.instance()
 
@@ -68,6 +61,7 @@ class CloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduter = self.start_service('scheduler')
         self.network = self.start_service('network')
+        self.image_service = utils.import_object(FLAGS.image_service)
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
@@ -75,6 +69,12 @@ class CloudTestCase(test.TestCase):
         self.context = context.RequestContext(user=self.user,
                                               project=self.project)
         host = self.network.get_network_host(self.context.elevated())
+
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
         network_ref = db.project_get_network(self.context,
@@ -122,7 +122,7 @@ class CloudTestCase(test.TestCase):
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {'host': self.compute.host})
         fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
-        ec2_id = cloud.id_to_ec2_id(inst['id'])
+        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
@@ -158,12 +158,12 @@ class CloudTestCase(test.TestCase):
         vol2 = db.volume_create(self.context, {})
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
-        volume_id = cloud.id_to_ec2_id(vol2['id'], 'vol-%08x')
+        volume_id = ec2utils.id_to_ec2_id(vol2['id'], 'vol-%08x')
         result = self.cloud.describe_volumes(self.context,
                                              volume_id=[volume_id])
         self.assertEqual(len(result['volumeSet']), 1)
         self.assertEqual(
-                cloud.ec2_id_to_id(result['volumeSet'][0]['volumeId']),
+                ec2utils.ec2_id_to_id(result['volumeSet'][0]['volumeId']),
                 vol2['id'])
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
@@ -188,8 +188,10 @@ class CloudTestCase(test.TestCase):
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_id': 1,
                                                   'host': 'host1'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_id': 1,
                                                   'host': 'host2'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'availability_zone': 'zone1',
@@ -200,7 +202,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         self.assertEqual(len(result['instancesSet']), 2)
-        instance_id = cloud.id_to_ec2_id(inst2['id'])
+        instance_id = ec2utils.id_to_ec2_id(inst2['id'])
         result = self.cloud.describe_instances(self.context,
                                              instance_id=[instance_id])
         result = result['reservationSet'][0]
@@ -215,10 +217,9 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp2['id'])
 
     def test_console_output(self):
-        image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
         max_count = 1
-        kwargs = {'image_id': image_id,
+        kwargs = {'image_id': 'ami-1',
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
@@ -234,8 +235,7 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
 
     def test_ajax_console(self):
-        image_id = FLAGS.default_image
-        kwargs = {'image_id': image_id}
+        kwargs = {'image_id': 'ami-1'}
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
         greenthread.sleep(0.3)
@@ -310,44 +310,9 @@ class CloudTestCase(test.TestCase):
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
 
-    @staticmethod
-    def _fake_set_image_description(ctxt, image_id, description):
-        from nova.objectstore import handler
-
-        class req:
-            pass
-
-        request = req()
-        request.context = ctxt
-        request.args = {'image_id': [image_id],
-                        'description': [description]}
-
-        resource = handler.ImagesResource()
-        resource.render_POST(request)
-
-    def test_user_editable_image_endpoint(self):
-        pathdir = os.path.join(FLAGS.images_path, 'ami-testing')
-        os.mkdir(pathdir)
-        info = {'isPublic': False}
-        with open(os.path.join(pathdir, 'info.json'), 'w') as f:
-            json.dump(info, f)
-        img = image.Image('ami-testing')
-        # self.cloud.set_image_description(self.context, 'ami-testing',
-        #                                  'Foo Img')
-        # NOTE(vish): Above won't work unless we start objectstore or create
-        #             a fake version of api/ec2/images.py conn that can
-        #             call methods directly instead of going through boto.
-        #             for now, just cheat and call the method directly
-        self._fake_set_image_description(self.context, 'ami-testing',
-                                         'Foo Img')
-        self.assertEqual('Foo Img', img.metadata['description'])
-        self._fake_set_image_description(self.context, 'ami-testing', '')
-        self.assertEqual('', img.metadata['description'])
-        shutil.rmtree(pathdir)
-
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
-        ec2_id = cloud.id_to_ec2_id(inst['id'])
+        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.update_instance(self.context, ec2_id,
                                    display_name='c00l 1m4g3')
         inst = db.instance_get(self.context, inst['id'])
@@ -365,7 +330,7 @@ class CloudTestCase(test.TestCase):
     def test_update_of_volume_display_fields(self):
         vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context,
-                                 cloud.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x'),
                                  display_name='c00l v0lum3')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual('c00l v0lum3', vol['display_name'])
@@ -374,7 +339,7 @@ class CloudTestCase(test.TestCase):
     def test_update_of_volume_wont_update_private_fields(self):
         vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context,
-                                 cloud.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x'),
                                  mountpoint='/not/here')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])

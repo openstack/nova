@@ -16,9 +16,33 @@
 #    under the License.
 
 
-class BaseImageService(object):
+from nova import utils
 
-    """Base class for providing image search and retrieval services"""
+
+class BaseImageService(object):
+    """Base class for providing image search and retrieval services
+
+    ImageService exposes two concepts of metadata:
+
+        1. First-class attributes: This is metadata that is common to all
+           ImageService subclasses and is shared across all hypervisors. These
+           attributes are defined by IMAGE_ATTRS.
+
+        2. Properties: This is metdata that is specific to an ImageService,
+           and Image, or a particular hypervisor. Any attribute not present in
+           BASE_IMAGE_ATTRS should be considered an image property.
+
+    This means that ImageServices will return BASE_IMAGE_ATTRS as keys in the
+    metadata dict, all other attributes will be returned as keys in the nested
+    'properties' dict.
+    """
+    BASE_IMAGE_ATTRS = ['id', 'name', 'created_at', 'updated_at',
+                        'deleted_at', 'deleted', 'status', 'is_public']
+
+    # NOTE(sirp): ImageService subclasses may override this to aid translation
+    # between BaseImageService attributes and additional metadata stored by
+    # the ImageService subclass
+    SERVICE_IMAGE_ATTRS = []
 
     def index(self, context):
         """
@@ -40,9 +64,9 @@ class BaseImageService(object):
         :retval: a sequence of mappings with the following signature
                     {'id': opaque id of image,
                      'name': name of image,
-                     'created_at': creation timestamp,
-                     'updated_at': modification timestamp,
-                     'deleted_at': deletion timestamp or None,
+                     'created_at': creation datetime object,
+                     'updated_at': modification datetime object,
+                     'deleted_at': deletion datetime object or None,
                      'deleted': boolean indicating if image has been deleted,
                      'status': string description of image status,
                      'is_public': boolean indicating if image is public
@@ -56,17 +80,17 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def show(self, context, id):
+    def show(self, context, image_id):
         """
-        Returns a dict containing image data for the given opaque image id.
+        Returns a dict containing image metadata for the given opaque image id.
 
         :retval a mapping with the following signature:
 
             {'id': opaque id of image,
              'name': name of image,
-             'created_at': creation timestamp,
-             'updated_at': modification timestamp,
-             'deleted_at': deletion timestamp or None,
+             'created_at': creation datetime object,
+             'updated_at': modification datetime object,
+             'deleted_at': deletion datetime object or None,
              'deleted': boolean indicating if image has been deleted,
              'status': string description of image status,
              'is_public': boolean indicating if image is public
@@ -76,17 +100,27 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def create(self, context, data):
+    def get(self, context, data):
         """
-        Store the image data and return the new image id.
+        Returns a dict containing image metadata and writes image data to data.
+
+        :param data: a file-like object to hold binary image data
+
+        :raises NotFound if the image does not exist
+        """
+        raise NotImplementedError
+
+    def create(self, context, metadata, data=None):
+        """
+        Store the image metadata and data and return the new image metadata.
 
         :raises AlreadyExists if the image already exist.
 
         """
         raise NotImplementedError
 
-    def update(self, context, image_id, data):
-        """Replace the contents of the given image with the new data.
+    def update(self, context, image_id, metadata, data=None):
+        """Update the given image metadata and data and return the metadata
 
         :raises NotFound if the image does not exist.
 
@@ -101,3 +135,38 @@ class BaseImageService(object):
 
         """
         raise NotImplementedError
+
+    @classmethod
+    def _translate_to_base(cls, metadata):
+        """Return a metadata dictionary that is BaseImageService compliant.
+
+        This is used by subclasses to expose only a metadata dictionary that
+        is the same across ImageService implementations.
+        """
+        return cls._propertify_metadata(metadata, cls.BASE_IMAGE_ATTRS)
+
+    @classmethod
+    def _translate_to_service(cls, metadata):
+        """Return a metadata dictionary that is usable by the ImageService
+        subclass.
+
+        As an example, Glance has additional attributes (like 'location'); the
+        BaseImageService considers these properties, but we need to translate
+        these back to first-class attrs for sending to Glance. This method
+        handles this by allowing you to specify the attributes an ImageService
+        considers first-class.
+        """
+        if not cls.SERVICE_IMAGE_ATTRS:
+            raise NotImplementedError(_("Cannot use this without specifying "
+                                        "SERVICE_IMAGE_ATTRS for subclass"))
+        return cls._propertify_metadata(metadata, cls.SERVICE_IMAGE_ATTRS)
+
+    @staticmethod
+    def _propertify_metadata(metadata, keys):
+        """Return a dict with any unrecognized keys placed in the nested
+        'properties' dict.
+        """
+        flattened = utils.flatten_dict(metadata)
+        attributes, properties = utils.partition_dict(flattened, keys)
+        attributes['properties'] = properties
+        return attributes

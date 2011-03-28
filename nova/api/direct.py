@@ -38,6 +38,7 @@ import routes
 import webob
 
 from nova import context
+from nova import exception
 from nova import flags
 from nova import utils
 from nova import wsgi
@@ -187,7 +188,7 @@ class ServiceWrapper(wsgi.Controller):
     def __init__(self, service_handle):
         self.service_handle = service_handle
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         arg_dict = req.environ['wsgiorg.routing_args'][1]
         action = arg_dict['action']
@@ -205,10 +206,53 @@ class ServiceWrapper(wsgi.Controller):
         # NOTE(vish): make sure we have no unicode keys for py2.6.
         params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
-        if type(result) is dict or type(result) is list:
-            return self._serialize(result, req)
-        else:
+        if result is None or type(result) is str or type(result) is unicode:
             return result
+        try:
+            return self._serialize(result, req.best_match_content_type())
+        except:
+            raise exception.Error("returned non-serializable type: %s"
+                                  % result)
+
+
+class Limited(object):
+    __notdoc = """Limit the available methods on a given object.
+
+    (Not a docstring so that the docstring can be conditionally overriden.)
+
+    Useful when defining a public API that only exposes a subset of an
+    internal API.
+
+    Expected usage of this class is to define a subclass that lists the allowed
+    methods in the 'allowed' variable.
+
+    Additionally where appropriate methods can be added or overwritten, for
+    example to provide backwards compatibility.
+
+    The wrapping approach has been chosen so that the wrapped API can maintain
+    its own internal consistency, for example if it calls "self.create" it
+    should get its own create method rather than anything we do here.
+
+    """
+
+    _allowed = None
+
+    def __init__(self, proxy):
+        self._proxy = proxy
+        if not self.__doc__:
+            self.__doc__ = proxy.__doc__
+        if not self._allowed:
+            self._allowed = []
+
+    def __getattr__(self, key):
+        """Only return methods that are named in self._allowed."""
+        if key not in self._allowed:
+            raise AttributeError()
+        return getattr(self._proxy, key)
+
+    def __dir__(self):
+        """Only return methods that are named in self._allowed."""
+        return [x for x in dir(self._proxy) if x in self._allowed]
 
 
 class Proxy(object):
@@ -218,7 +262,7 @@ class Proxy(object):
         self.prefix = prefix
 
     def __do_request(self, path, context, **kwargs):
-        req = webob.Request.blank(path)
+        req = wsgi.Request.blank(path)
         req.method = 'POST'
         req.body = urllib.urlencode({'json': utils.dumps(kwargs)})
         req.environ['openstack.context'] = context

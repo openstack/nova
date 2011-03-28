@@ -62,7 +62,7 @@ class Connection(carrot_connection.BrokerConnection):
                 params['backend_cls'] = fakerabbit.Backend
 
             # NOTE(vish): magic is fun!
-            # pylint: disable-msg=W0142
+            # pylint: disable=W0142
             if new:
                 return cls(**params)
             else:
@@ -114,7 +114,7 @@ class Consumer(messaging.Consumer):
             if self.failed_connection:
                 # NOTE(vish): connection is defined in the parent class, we can
                 #             recreate it as long as we create the backend too
-                # pylint: disable-msg=W0201
+                # pylint: disable=W0201
                 self.connection = Connection.recreate()
                 self.backend = self.connection.create_backend()
                 self.declare()
@@ -123,9 +123,9 @@ class Consumer(messaging.Consumer):
                 LOG.error(_("Reconnected to queue"))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
-        #             exceptions to be logged 10 times a second if some
+        #             want exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
-        except Exception:  # pylint: disable-msg=W0703
+        except Exception:  # pylint: disable=W0703
             if not self.failed_connection:
                 LOG.exception(_("Failed to fetch message from queue"))
                 self.failed_connection = True
@@ -137,24 +137,7 @@ class Consumer(messaging.Consumer):
         return timer
 
 
-class Publisher(messaging.Publisher):
-    """Publisher base class"""
-    pass
-
-
-class TopicConsumer(Consumer):
-    """Consumes messages on a specific topic"""
-    exchange_type = "topic"
-
-    def __init__(self, connection=None, topic="broadcast"):
-        self.queue = topic
-        self.routing_key = topic
-        self.exchange = FLAGS.control_exchange
-        self.durable = False
-        super(TopicConsumer, self).__init__(connection=connection)
-
-
-class AdapterConsumer(TopicConsumer):
+class AdapterConsumer(Consumer):
     """Calls methods on a proxy object based on method and args"""
     def __init__(self, connection=None, topic="broadcast", proxy=None):
         LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
@@ -207,6 +190,41 @@ class AdapterConsumer(TopicConsumer):
         return
 
 
+class Publisher(messaging.Publisher):
+    """Publisher base class"""
+    pass
+
+
+class TopicAdapterConsumer(AdapterConsumer):
+    """Consumes messages on a specific topic"""
+    exchange_type = "topic"
+
+    def __init__(self, connection=None, topic="broadcast", proxy=None):
+        self.queue = topic
+        self.routing_key = topic
+        self.exchange = FLAGS.control_exchange
+        self.durable = False
+        super(TopicAdapterConsumer, self).__init__(connection=connection,
+                                    topic=topic, proxy=proxy)
+
+
+class FanoutAdapterConsumer(AdapterConsumer):
+    """Consumes messages from a fanout exchange"""
+    exchange_type = "fanout"
+
+    def __init__(self, connection=None, topic="broadcast", proxy=None):
+        self.exchange = "%s_fanout" % topic
+        self.routing_key = topic
+        unique = uuid.uuid4().hex
+        self.queue = "%s_fanout_%s" % (topic, unique)
+        self.durable = False
+        LOG.info(_("Created '%(exchange)s' fanout exchange "
+                   "with '%(key)s' routing key"),
+                dict(exchange=self.exchange, key=self.routing_key))
+        super(FanoutAdapterConsumer, self).__init__(connection=connection,
+                                    topic=topic, proxy=proxy)
+
+
 class TopicPublisher(Publisher):
     """Publishes messages on a specific topic"""
     exchange_type = "topic"
@@ -216,6 +234,19 @@ class TopicPublisher(Publisher):
         self.exchange = FLAGS.control_exchange
         self.durable = False
         super(TopicPublisher, self).__init__(connection=connection)
+
+
+class FanoutPublisher(Publisher):
+    """Publishes messages to a fanout exchange."""
+    exchange_type = "fanout"
+
+    def __init__(self, topic, connection=None):
+        self.exchange = "%s_fanout" % topic
+        self.queue = "%s_fanout" % topic
+        self.durable = False
+        LOG.info(_("Creating '%(exchange)s' fanout exchange"),
+                            dict(exchange=self.exchange))
+        super(FanoutPublisher, self).__init__(connection=connection)
 
 
 class DirectConsumer(Consumer):
@@ -311,7 +342,7 @@ def _pack_context(msg, context):
 
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response"""
-    LOG.debug(_("Making asynchronous call..."))
+    LOG.debug(_("Making asynchronous call on %s ..."), topic)
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
     LOG.debug(_("MSG_ID is %s") % (msg_id))
@@ -352,10 +383,20 @@ def call(context, topic, msg):
 
 def cast(context, topic, msg):
     """Sends a message on a topic without waiting for a response"""
-    LOG.debug(_("Making asynchronous cast..."))
+    LOG.debug(_("Making asynchronous cast on %s..."), topic)
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
+    publisher.send(msg)
+    publisher.close()
+
+
+def fanout_cast(context, topic, msg):
+    """Sends a message on a fanout exchange without waiting for a response"""
+    LOG.debug(_("Making asynchronous fanout cast..."))
+    _pack_context(msg, context)
+    conn = Connection.instance()
+    publisher = FanoutPublisher(topic, connection=conn)
     publisher.send(msg)
     publisher.close()
 

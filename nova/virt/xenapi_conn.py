@@ -49,6 +49,12 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
                              address for the nova-volume host
 :target_port:                iSCSI Target Port, 3260 Default
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
+
+**Variable Naming Scheme**
+
+- suffix "_ref" for opaque references
+- suffix "_uuid" for UUIDs
+- suffix "_rec" for record objects
 """
 
 import sys
@@ -63,6 +69,7 @@ from nova import db
 from nova import utils
 from nova import flags
 from nova import log as logging
+from nova.virt import driver
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
@@ -100,8 +107,22 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
+flags.DEFINE_bool('xenapi_inject_image',
+                  True,
+                  'Specifies whether an attempt to inject network/key'
+                  '  data into the disk image should be made.'
+                  '  Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_agent_path',
+                    'usr/sbin/xe-update-networking',
+                    'Specifies the path in which the xenapi guest agent'
+                    '  should be located. If the agent is present,'
+                    '  network configuration is not injected into the image'
+                    '  Used only if connection_type=xenapi.'
+                    '  and xenapi_inject_image=True')
+
 flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
                     'Base path to the storage repository')
+
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -135,10 +156,11 @@ def get_connection(_):
     return XenAPIConnection(url, username, password)
 
 
-class XenAPIConnection(object):
+class XenAPIConnection(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform"""
 
     def __init__(self, url, user, pw):
+        super(XenAPIConnection, self).__init__()
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
@@ -154,9 +176,20 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
+    def list_instances_detail(self):
+        return self._vmops.list_instances_detail()
+
     def spawn(self, instance):
         """Create VM instance"""
         self._vmops.spawn(instance)
+
+    def revert_resize(self, instance):
+        """Reverts a resize, powering back on the instance"""
+        self._vmops.revert_resize(instance)
+
+    def finish_resize(self, instance, disk_info):
+        """Completes a resize, turning on the migrated instance"""
+        self._vmops.finish_resize(instance, disk_info)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
@@ -188,6 +221,11 @@ class XenAPIConnection(object):
         """Unpause paused VM instance"""
         self._vmops.unpause(instance, callback)
 
+    def migrate_disk_and_power_off(self, instance, dest):
+        """Transfers the VHD of a running instance to another host, then shuts
+        off the instance copies over the COW disk"""
+        return self._vmops.migrate_disk_and_power_off(instance, dest)
+
     def suspend(self, instance, callback):
         """suspend the specified instance"""
         self._vmops.suspend(instance, callback)
@@ -203,6 +241,10 @@ class XenAPIConnection(object):
     def unrescue(self, instance, callback):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
+
+    def poll_rescued_instances(self, timeout):
+        """Poll for rescued instances"""
+        self._vmops.poll_rescued_instances(timeout)
 
     def reset_network(self, instance):
         """reset networking for specified instance"""
@@ -228,6 +270,10 @@ class XenAPIConnection(object):
         """Return link to instance's ajax console"""
         return self._vmops.get_ajax_console(instance)
 
+    def get_host_ip_addr(self):
+        xs_url = urlparse.urlparse(FLAGS.xenapi_connection_url)
+        return xs_url.netloc
+
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach volume storage to VM instance"""
         return self._volumeops.attach_volume(instance_name,
@@ -243,6 +289,27 @@ class XenAPIConnection(object):
         return  {'address': xs_url.netloc,
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
+
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
+    def compare_cpu(self, xml):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only libvirt."""
+        return
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only by libvirt."""
+        return
+
+    def unfilter_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
 
 
 class XenAPISession(object):
