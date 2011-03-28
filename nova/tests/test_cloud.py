@@ -35,6 +35,7 @@ from nova import log as logging
 from nova import rpc
 from nova import service
 from nova import test
+from nova import utils
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
@@ -47,20 +48,11 @@ from nova.exception import NotEmpty, NotFound
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.cloud')
 
-# Temp dirs for working with image attributes through the cloud controller
-# (stole this from objectstore_unittest.py)
-OSS_TEMPDIR = tempfile.mkdtemp(prefix='test_oss-')
-IMAGES_PATH = os.path.join(OSS_TEMPDIR, 'images')
-os.makedirs(IMAGES_PATH)
 
-
-# TODO(termie): these tests are rather fragile, they should at the lest be
-#               wiping database state after each run
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake',
-                   images_path=IMAGES_PATH)
+        self.flags(connection_type='fake')
 
         self.conn = rpc.Connection.instance()
 
@@ -71,6 +63,7 @@ class CloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduter = self.start_service('scheduler')
         self.network = self.start_service('network')
+        self.image_service = utils.import_object(FLAGS.image_service)
 
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
@@ -342,41 +335,6 @@ class CloudTestCase(test.TestCase):
                 instance_id = instance['instance_id']
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
-
-    @staticmethod
-    def _fake_set_image_description(ctxt, image_id, description):
-        from nova.objectstore import handler
-
-        class req:
-            pass
-
-        request = req()
-        request.context = ctxt
-        request.args = {'image_id': [image_id],
-                        'description': [description]}
-
-        resource = handler.ImagesResource()
-        resource.render_POST(request)
-
-    def test_user_editable_image_endpoint(self):
-        pathdir = os.path.join(FLAGS.images_path, 'ami-testing')
-        os.mkdir(pathdir)
-        info = {'isPublic': False}
-        with open(os.path.join(pathdir, 'info.json'), 'w') as f:
-            json.dump(info, f)
-        img = image.Image('ami-testing')
-        # self.cloud.set_image_description(self.context, 'ami-testing',
-        #                                  'Foo Img')
-        # NOTE(vish): Above won't work unless we start objectstore or create
-        #             a fake version of api/ec2/images.py conn that can
-        #             call methods directly instead of going through boto.
-        #             for now, just cheat and call the method directly
-        self._fake_set_image_description(self.context, 'ami-testing',
-                                         'Foo Img')
-        self.assertEqual('Foo Img', img.metadata['description'])
-        self._fake_set_image_description(self.context, 'ami-testing', '')
-        self.assertEqual('', img.metadata['description'])
-        shutil.rmtree(pathdir)
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})

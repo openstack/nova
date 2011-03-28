@@ -21,6 +21,7 @@ from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
+from nova import utils
 
 
 def stubout_instance_snapshot(stubs):
@@ -137,13 +138,16 @@ def stubout_is_vdi_pv(stubs):
     stubs.Set(vm_utils, '_is_vdi_pv', f)
 
 
+def stubout_loopingcall_start(stubs):
+    def fake_start(self, interval, now=True):
+        self.f(*self.args, **self.kw)
+    stubs.Set(utils.LoopingCall, 'start', fake_start)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
-
-    def network_get_all_records_where(self, _1, _2):
-        return self.xenapi.network.get_all_records()
 
     def host_call_plugin(self, _1, _2, _3, _4, _5):
         sr_ref = fake.get_all('SR')[0]
@@ -183,6 +187,25 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def VDI_set_name_label(self, session_ref, vdi_ref, name_label):
         pass
+
+
+def stub_out_vm_methods(stubs):
+    def fake_shutdown(self, inst, vm, method="clean"):
+        pass
+
+    def fake_acquire_bootlock(self, vm):
+        pass
+
+    def fake_release_bootlock(self, vm):
+        pass
+
+    def fake_spawn_rescue(self, inst):
+        inst._rescue = False
+
+    stubs.Set(vmops.VMOps, "_shutdown", fake_shutdown)
+    stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)
+    stubs.Set(vmops.VMOps, "_release_bootlock", fake_release_bootlock)
+    stubs.Set(vmops.VMOps, "spawn_rescue", fake_spawn_rescue)
 
 
 class FakeSessionForVolumeTests(fake.SessionBase):
@@ -228,6 +251,9 @@ class FakeSessionForMigrationTests(fake.SessionBase):
     def VDI_get_by_uuid(*args):
         return 'hurr'
 
+    def VDI_resize_online(*args):
+        pass
+
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
         if vm['power_state'] != 'Halted':
@@ -240,7 +266,7 @@ class FakeSessionForMigrationTests(fake.SessionBase):
 
 def stub_out_migration_methods(stubs):
     def fake_get_snapshot(self, instance):
-        return 'foo', 'bar'
+        return 'vm_ref', dict(image='foo', snap='bar')
 
     @classmethod
     def fake_get_vdi(cls, session, vm_ref):
@@ -249,7 +275,7 @@ def stub_out_migration_methods(stubs):
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         return vdi_ref, {'uuid': vdi_rec['uuid'], }
 
-    def fake_shutdown(self, inst, vm, method='clean'):
+    def fake_shutdown(self, inst, vm, hard=True):
         pass
 
     @classmethod

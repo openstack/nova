@@ -29,6 +29,7 @@ import tempfile
 import stubout
 import webob
 
+from glance import client as glance_client
 from nova import context
 from nova import exception
 from nova import flags
@@ -42,79 +43,50 @@ from nova.tests.api.openstack import fakes
 FLAGS = flags.FLAGS
 
 
-class BaseImageServiceTests(object):
-
+class _BaseImageServiceTests(test.TestCase):
     """Tasks to test for all image services"""
 
+    def __init__(self, *args, **kwargs):
+        super(_BaseImageServiceTests, self).__init__(*args, **kwargs)
+        self.service = None
+        self.context = None
+
     def test_create(self):
-
-        fixture = {'name': 'test image',
-                   'updated': None,
-                   'created': None,
-                   'status': None,
-                   'instance_id': None,
-                   'progress': None}
-
+        fixture = self._make_fixture('test image')
         num_images = len(self.service.index(self.context))
 
-        id = self.service.create(self.context, fixture)['id']
+        image_id = self.service.create(self.context, fixture)['id']
 
-        self.assertNotEquals(None, id)
+        self.assertNotEquals(None, image_id)
         self.assertEquals(num_images + 1,
                           len(self.service.index(self.context)))
 
     def test_create_and_show_non_existing_image(self):
-
-        fixture = {'name': 'test image',
-                   'updated': None,
-                   'created': None,
-                   'status': None,
-                   'instance_id': None,
-                   'progress': None}
-
+        fixture = self._make_fixture('test image')
         num_images = len(self.service.index(self.context))
 
-        id = self.service.create(self.context, fixture)['id']
+        image_id = self.service.create(self.context, fixture)['id']
 
-        self.assertNotEquals(None, id)
-
+        self.assertNotEquals(None, image_id)
         self.assertRaises(exception.NotFound,
                           self.service.show,
                           self.context,
                           'bad image id')
 
     def test_update(self):
-
-        fixture = {'name': 'test image',
-                   'updated': None,
-                   'created': None,
-                   'status': None,
-                   'instance_id': None,
-                   'progress': None}
-
-        id = self.service.create(self.context, fixture)['id']
-
+        fixture = self._make_fixture('test image')
+        image_id = self.service.create(self.context, fixture)['id']
         fixture['status'] = 'in progress'
 
-        self.service.update(self.context, id, fixture)
-        new_image_data = self.service.show(self.context, id)
+        self.service.update(self.context, image_id, fixture)
+
+        new_image_data = self.service.show(self.context, image_id)
         self.assertEquals('in progress', new_image_data['status'])
 
     def test_delete(self):
-
-        fixtures = [
-                    {'name': 'test image 1',
-                     'updated': None,
-                     'created': None,
-                     'status': None,
-                     'instance_id': None,
-                     'progress': None},
-                    {'name': 'test image 2',
-                     'updated': None,
-                     'created': None,
-                     'status': None,
-                     'instance_id': None,
-                     'progress': None}]
+        fixture1 = self._make_fixture('test image 1')
+        fixture2 = self._make_fixture('test image 2')
+        fixtures = [fixture1, fixture2]
 
         num_images = len(self.service.index(self.context))
         self.assertEquals(0, num_images, str(self.service.index(self.context)))
@@ -132,9 +104,24 @@ class BaseImageServiceTests(object):
         num_images = len(self.service.index(self.context))
         self.assertEquals(1, num_images)
 
+    def test_index(self):
+        fixture = self._make_fixture('test image')
+        image_id = self.service.create(self.context, fixture)['id']
+        image_metas = self.service.index(self.context)
+        expected = [{'id': 'DONTCARE', 'name': 'test image'}]
+        self.assertDictListMatch(image_metas, expected)
 
-class LocalImageServiceTest(test.TestCase,
-                            BaseImageServiceTests):
+    @staticmethod
+    def _make_fixture(name):
+        fixture = {'name': 'test image',
+                   'updated': None,
+                   'created': None,
+                   'status': None,
+                   'is_public': True}
+        return fixture
+
+
+class LocalImageServiceTest(_BaseImageServiceTests):
 
     """Tests the local image service"""
 
@@ -164,11 +151,19 @@ class LocalImageServiceTest(test.TestCase,
         self.assertEqual(3, len(found_image_ids), len(found_image_ids))
 
 
-class GlanceImageServiceTest(test.TestCase,
-                             BaseImageServiceTests):
+class GlanceImageServiceTest(_BaseImageServiceTests):
 
-    """Tests the local image service"""
+    """Tests the Glance image service, in particular that metadata translation
+    works properly.
 
+    At a high level, the translations involved are:
+
+        1. Glance -> ImageService - This is needed so we can support
+           multple ImageServices (Glance, Local, etc)
+
+        2. ImageService -> API - This is needed so we can support multple
+           APIs (OpenStack, EC2)
+    """
     def setUp(self):
         super(GlanceImageServiceTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
@@ -176,41 +171,53 @@ class GlanceImageServiceTest(test.TestCase,
         fakes.stub_out_compute_api_snapshot(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
         self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(None, None)
+        self.context = context.RequestContext(1, None)
         self.service.delete_all()
+        self.sent_to_glance = {}
+        fakes.stub_out_glance_add_image(self.stubs, self.sent_to_glance)
 
     def tearDown(self):
         self.stubs.UnsetAll()
         super(GlanceImageServiceTest, self).tearDown()
 
+    def test_create_with_instance_id(self):
+        """Ensure instance_id is persisted as an image-property"""
+        fixture = {'name': 'test image',
+                   'is_public': False,
+                   'properties': {'instance_id': '42', 'user_id': '1'}}
+
+        image_id = self.service.create(self.context, fixture)['id']
+        expected = fixture
+        self.assertDictMatch(self.sent_to_glance['metadata'], expected)
+
+        image_meta = self.service.show(self.context, image_id)
+        expected = {'id': image_id,
+                    'name': 'test image',
+                    'is_public': False,
+                    'properties': {'instance_id': '42', 'user_id': '1'}}
+        self.assertDictMatch(image_meta, expected)
+
+        image_metas = self.service.detail(self.context)
+        self.assertDictMatch(image_metas[0], expected)
+
+    def test_create_without_instance_id(self):
+        """
+        Ensure we can create an image without having to specify an
+        instance_id. Public images are an example of an image not tied to an
+        instance.
+        """
+        fixture = {'name': 'test image'}
+        image_id = self.service.create(self.context, fixture)['id']
+
+        expected = {'name': 'test image', 'properties': {}}
+        self.assertDictMatch(self.sent_to_glance['metadata'], expected)
+
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
-
     """Test of the OpenStack API /images application controller"""
 
-    # Registered images at start of each test.
-
-    IMAGE_FIXTURES = [
-        {'id': '23g2ogk23k4hhkk4k42l',
-         'imageId': '23g2ogk23k4hhkk4k42l',
-         'name': 'public image #1',
-         'created_at': str(datetime.datetime.utcnow()),
-         'updated_at': str(datetime.datetime.utcnow()),
-         'deleted_at': None,
-         'deleted': False,
-         'is_public': True,
-         'status': 'available',
-         'image_type': 'kernel'},
-        {'id': 'slkduhfas73kkaskgdas',
-         'imageId': 'slkduhfas73kkaskgdas',
-         'name': 'public image #2',
-         'created_at': str(datetime.datetime.utcnow()),
-         'updated_at': str(datetime.datetime.utcnow()),
-         'deleted_at': None,
-         'deleted': False,
-         'is_public': True,
-         'status': 'available',
-         'image_type': 'ramdisk'}]
+    NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
+    NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
     def setUp(self):
         super(ImageControllerWithGlanceServiceTest, self).setUp()
@@ -223,7 +230,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fakes.stub_out_glance(self.stubs, initial_fixtures=self.IMAGE_FIXTURES)
+        fixtures = self._make_image_fixtures()
+        fakes.stub_out_glance(self.stubs, initial_fixtures=fixtures)
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -233,34 +241,94 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        image_metas = json.loads(res.body)['images']
 
-        fixture_index = [dict(id=f['id'], name=f['name']) for f
-                         in self.IMAGE_FIXTURES]
+        expected = [{'id': 123, 'name': 'public image'},
+                    {'id': 124, 'name': 'queued backup'},
+                    {'id': 125, 'name': 'saving backup'},
+                    {'id': 126, 'name': 'active backup'},
+                    {'id': 127, 'name': 'killed backup'}]
 
-        for image in res_dict['images']:
-            self.assertEquals(1, fixture_index.count(image),
-                              "image %s not in fixture index!" % str(image))
+        self.assertDictListMatch(image_metas, expected)
 
     def test_get_image_details(self):
         req = webob.Request.blank('/v1.0/images/detail')
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
+        image_metas = json.loads(res.body)['images']
 
-        def _is_equivalent_subset(x, y):
-            if set(x) <= set(y):
-                for k, v in x.iteritems():
-                    if x[k] != y[k]:
-                        if x[k] == 'active' and y[k] == 'available':
-                            continue
-                        return False
-                return True
-            return False
+        now = self.NOW_API_FORMAT
+        expected = [
+            {'id': 123, 'name': 'public image', 'updated': now,
+             'created': now, 'status': 'ACTIVE'},
+            {'id': 124, 'name': 'queued backup', 'serverId': 42,
+             'updated': now, 'created': now,
+             'status': 'QUEUED'},
+            {'id': 125, 'name': 'saving backup', 'serverId': 42,
+             'updated': now, 'created': now,
+             'status': 'SAVING', 'progress': 0},
+            {'id': 126, 'name': 'active backup', 'serverId': 42,
+             'updated': now, 'created': now,
+             'status': 'ACTIVE'},
+            {'id': 127, 'name': 'killed backup', 'serverId': 42,
+             'updated': now, 'created': now,
+             'status': 'FAILED'}
+        ]
 
-        for image in res_dict['images']:
-            for image_fixture in self.IMAGE_FIXTURES:
-                if _is_equivalent_subset(image, image_fixture):
-                    break
-            else:
-                self.assertEquals(1, 2, "image %s not in fixtures!" %
-                                                            str(image))
+        self.assertDictListMatch(image_metas, expected)
+
+    def test_get_image_found(self):
+        req = webob.Request.blank('/v1.0/images/123')
+        res = req.get_response(fakes.wsgi_app())
+        image_meta = json.loads(res.body)['image']
+        expected = {'id': 123, 'name': 'public image',
+                    'updated': self.NOW_API_FORMAT,
+                    'created': self.NOW_API_FORMAT, 'status': 'ACTIVE'}
+        self.assertDictMatch(image_meta, expected)
+
+    def test_get_image_non_existent(self):
+        req = webob.Request.blank('/v1.0/images/4242')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    def test_get_image_not_owned(self):
+        """We should return a 404 if we request an image that doesn't belong
+        to us
+        """
+        req = webob.Request.blank('/v1.0/images/128')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
+
+    @classmethod
+    def _make_image_fixtures(cls):
+        image_id = 123
+        base_attrs = {'created_at': cls.NOW_GLANCE_FORMAT,
+                      'updated_at': cls.NOW_GLANCE_FORMAT,
+                      'deleted_at': None,
+                      'deleted': False}
+
+        fixtures = []
+
+        def add_fixture(**kwargs):
+            kwargs.update(base_attrs)
+            fixtures.append(kwargs)
+
+        # Public image
+        add_fixture(id=image_id, name='public image', is_public=True,
+                    status='active', properties={})
+        image_id += 1
+
+        # Backup for User 1
+        backup_properties = {'instance_id': '42', 'user_id': '1'}
+        for status in ('queued', 'saving', 'active', 'killed'):
+            add_fixture(id=image_id, name='%s backup' % status,
+                        is_public=False, status=status,
+                        properties=backup_properties)
+            image_id += 1
+
+        # Backup for User 2
+        other_backup_properties = {'instance_id': '43', 'user_id': '2'}
+        add_fixture(id=image_id, name='someone elses backup', is_public=False,
+                    status='active', properties=other_backup_properties)
+        image_id += 1
+
+        return fixtures
