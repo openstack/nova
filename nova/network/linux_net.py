@@ -1,3 +1,5 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -20,8 +22,6 @@ Implements vlans, bridges, and iptables rules using linux utilities.
 import inspect
 import os
 import calendar
-
-from eventlet import semaphore
 
 from nova import db
 from nova import exception
@@ -212,10 +212,7 @@ class IptablesManager(object):
     """
     def __init__(self, execute=None):
         if not execute:
-            if FLAGS.fake_network:
-                self.execute = lambda *args, **kwargs: ('', '')
-            else:
-                self.execute = utils.execute
+            self.execute = _execute
         else:
             self.execute = execute
 
@@ -272,37 +269,30 @@ class IptablesManager(object):
         self.ipv4['nat'].add_chain('floating-snat')
         self.ipv4['nat'].add_rule('snat', '-j $floating-snat')
 
-        self.semaphore = semaphore.Semaphore()
-
-    @utils.synchronized('iptables')
+    @utils.synchronized('iptables', external=True)
     def apply(self):
         """Apply the current in-memory set of iptables rules
 
         This will blow away any rules left over from previous runs of the
         same component of Nova, and replace them with our current set of
         rules. This happens atomically, thanks to iptables-restore.
-
-        We wrap the call in a semaphore lock, so that we don't race with
-        ourselves. In the event of a race with another component running
-        an iptables-* command at the same time, we retry up to 5 times.
         """
-        with self.semaphore:
-            s = [('iptables', self.ipv4)]
-            if FLAGS.use_ipv6:
-                s += [('ip6tables', self.ipv6)]
+        s = [('iptables', self.ipv4)]
+        if FLAGS.use_ipv6:
+            s += [('ip6tables', self.ipv6)]
 
-            for cmd, tables in s:
-                for table in tables:
-                    current_table, _ = self.execute('sudo',
-                                                    '%s-save' % (cmd,),
-                                                    '-t', '%s' % (table,),
-                                                    attempts=5)
-                    current_lines = current_table.split('\n')
-                    new_filter = self._modify_rules(current_lines,
-                                                    tables[table])
-                    self.execute('sudo', '%s-restore' % (cmd,),
-                                 process_input='\n'.join(new_filter),
-                                 attempts=5)
+        for cmd, tables in s:
+            for table in tables:
+                current_table, _ = self.execute('sudo',
+                                                '%s-save' % (cmd,),
+                                                '-t', '%s' % (table,),
+                                                attempts=5)
+                current_lines = current_table.split('\n')
+                new_filter = self._modify_rules(current_lines,
+                                                tables[table])
+                self.execute('sudo', '%s-restore' % (cmd,),
+                             process_input='\n'.join(new_filter),
+                             attempts=5)
 
     def _modify_rules(self, current_lines, table, binary=None):
         unwrapped_chains = table.unwrapped_chains
@@ -359,9 +349,6 @@ class IptablesManager(object):
         new_filter = filter(_weed_out_duplicates, new_filter)
         new_filter.reverse()
         return new_filter
-
-
-iptables_manager = IptablesManager()
 
 
 def metadata_forward():
@@ -557,6 +544,7 @@ def get_dhcp_hosts(context, network_id):
 # NOTE(ja): Sending a HUP only reloads the hostfile, so any
 #           configuration options (like dchp-range, vlan, ...)
 #           aren't reloaded.
+@utils.synchronized('dnsmasq_start')
 def update_dhcp(context, network_id):
     """(Re)starts a dnsmasq server for a given network
 
@@ -582,7 +570,7 @@ def update_dhcp(context, network_id):
             try:
                 _execute('sudo', 'kill', '-HUP', pid)
                 return
-            except Exception as exc:  # pylint: disable-msg=W0703
+            except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_("Hupping dnsmasq threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching dnsmasq"), pid)
@@ -594,6 +582,7 @@ def update_dhcp(context, network_id):
     _execute(*command, addl_env=env)
 
 
+@utils.synchronized('radvd_start')
 def update_ra(context, network_id):
     network_ref = db.network_get(context, network_id)
 
@@ -626,14 +615,14 @@ interface %s
         if conffile in out:
             try:
                 _execute('sudo', 'kill', pid)
-            except Exception as exc:  # pylint: disable-msg=W0703
+            except Exception as exc:  # pylint: disable=W0703
                 LOG.debug(_("killing radvd threw %s"), exc)
         else:
             LOG.debug(_("Pid %d is stale, relaunching radvd"), pid)
     command = _ra_cmd(network_ref)
     _execute(*command)
     db.network_update(context, network_id,
-                      {"ra_server":
+                      {"gateway_v6":
                        utils.get_my_linklocal(network_ref['bridge'])})
 
 
@@ -713,7 +702,7 @@ def _stop_dnsmasq(network):
     if pid:
         try:
             _execute('sudo', 'kill', '-TERM', pid)
-        except Exception as exc:  # pylint: disable-msg=W0703
+        except Exception as exc:  # pylint: disable=W0703
             LOG.debug(_("Killing dnsmasq threw %s"), exc)
 
 
@@ -774,3 +763,6 @@ def _ip_bridge_cmd(action, params, device):
     cmd.extend(params)
     cmd.extend(['dev', device])
     return cmd
+
+
+iptables_manager = IptablesManager()

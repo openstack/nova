@@ -34,6 +34,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.scheduler import api as scheduler_api
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -253,6 +254,16 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
+    def has_finished_migration(self, context, instance_id):
+        """Retrieves whether or not a finished migration exists for
+        an instance"""
+        try:
+            db.migration_get_by_instance_and_status(context, instance_id,
+                    'finished')
+            return True
+        except exception.NotFound:
+            return False
+
     def ensure_default_security_group(self, context):
         """ Create security group for the security context if it
         does not already exist
@@ -342,6 +353,7 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
+    @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         LOG.debug(_("Going to try to terminate %s"), instance_id)
         try:
@@ -374,24 +386,37 @@ class API(base.Base):
         rv = self.db.instance_get(context, instance_id)
         return dict(rv.iteritems())
 
+    @scheduler_api.reroute_compute("get")
+    def routing_get(self, context, instance_id):
+        """Use this method instead of get() if this is the only
+           operation you intend to to. It will route to novaclient.get
+           if the instance is not found."""
+        return self.get(context, instance_id)
+
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
         """Get all instances, possibly filtered by one of the
         given parameters. If there is no filter and the context is
-        an admin, it will retreive all instances in the system."""
+        an admin, it will retreive all instances in the system.
+        """
         if reservation_id is not None:
-            return self.db.instance_get_all_by_reservation(context,
-                                                             reservation_id)
+            return self.db.instance_get_all_by_reservation(
+                context, reservation_id)
+
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)
+
         if project_id or not context.is_admin:
             if not context.project:
-                return self.db.instance_get_all_by_user(context,
-                                                        context.user_id)
+                return self.db.instance_get_all_by_user(
+                    context, context.user_id)
+
             if project_id is None:
                 project_id = context.project_id
-            return self.db.instance_get_all_by_project(context,
-            project_id)
+
+            return self.db.instance_get_all_by_project(
+                context, project_id)
+
         return self.db.instance_get_all(context)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
@@ -441,12 +466,15 @@ class API(base.Base):
 
         :retval: A dict containing image metadata
         """
-        data = {'name': name, 'is_public': False}
-        image_meta = self.image_service.create(context, data)
-        params = {'image_id': image_meta['id']}
+        properties = {'instance_id': str(instance_id),
+                      'user_id': str(context.user_id)}
+        sent_meta = {'name': name, 'is_public': False,
+                     'properties': properties}
+        recv_meta = self.image_service.create(context, sent_meta)
+        params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
                                    params=params)
-        return image_meta
+        return recv_meta
 
     def reboot(self, context, instance_id):
         """Reboot the given instance."""
@@ -464,6 +492,8 @@ class API(base.Base):
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context, instance_id,
                 migration_ref['dest_compute'], params=params)
+        self.db.migration_update(context, migration_ref['id'],
+                {'status': 'reverted'})
 
     def confirm_resize(self, context, instance_id):
         """Confirms a migration/resize, deleting the 'old' instance in the
@@ -479,26 +509,53 @@ class API(base.Base):
         self._cast_compute_message('confirm_resize', context, instance_id,
                 migration_ref['source_compute'], params=params)
 
-        self.db.migration_update(context, migration_id,
+        self.db.migration_update(context, migration_ref['id'],
                 {'status': 'confirmed'})
         self.db.instance_update(context, instance_id,
                 {'host': migration_ref['dest_compute'], })
 
-    def resize(self, context, instance_id, flavor):
+    def resize(self, context, instance_id, flavor_id):
         """Resize a running instance."""
+        instance = self.db.instance_get(context, instance_id)
+        current_instance_type = self.db.instance_type_get_by_name(
+            context, instance['instance_type'])
+
+        new_instance_type = self.db.instance_type_get_by_flavor_id(
+                context, flavor_id)
+        current_instance_type_name = current_instance_type['name']
+        new_instance_type_name = new_instance_type['name']
+        LOG.debug(_("Old instance type %(current_instance_type_name)s, "
+                " new instance type %(new_instance_type_name)s") % locals())
+        if not new_instance_type:
+            raise exception.ApiError(_("Requested flavor %(flavor_id)d "
+                    "does not exist") % locals())
+
+        current_memory_mb = current_instance_type['memory_mb']
+        new_memory_mb = new_instance_type['memory_mb']
+        if current_memory_mb > new_memory_mb:
+            raise exception.ApiError(_("Invalid flavor: cannot downsize"
+                    "instances"))
+        if current_memory_mb == new_memory_mb:
+            raise exception.ApiError(_("Invalid flavor: cannot use"
+                    "the same flavor. "))
+
         self._cast_scheduler_message(context,
                     {"method": "prep_resize",
                      "args": {"topic": FLAGS.compute_topic,
-                              "instance_id": instance_id, }},)
+                              "instance_id": instance_id,
+                              "flavor_id": flavor_id}})
 
+    @scheduler_api.reroute_compute("pause")
     def pause(self, context, instance_id):
         """Pause the given instance."""
         self._cast_compute_message('pause_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("unpause")
     def unpause(self, context, instance_id):
         """Unpause the given instance."""
         self._cast_compute_message('unpause_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("diagnostics")
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for the given instance."""
         return self._call_compute_message(
@@ -510,18 +567,22 @@ class API(base.Base):
         """Retrieve actions for the given instance."""
         return self.db.instance_get_actions(context, instance_id)
 
+    @scheduler_api.reroute_compute("suspend")
     def suspend(self, context, instance_id):
         """suspend the instance with instance_id"""
         self._cast_compute_message('suspend_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("resume")
     def resume(self, context, instance_id):
         """resume the instance with instance_id"""
         self._cast_compute_message('resume_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("rescue")
     def rescue(self, context, instance_id):
         """Rescue the given instance."""
         self._cast_compute_message('rescue_instance', context, instance_id)
 
+    @scheduler_api.reroute_compute("unrescue")
     def unrescue(self, context, instance_id):
         """Unrescue the given instance."""
         self._cast_compute_message('unrescue_instance', context, instance_id)
@@ -537,7 +598,6 @@ class API(base.Base):
 
     def get_ajax_console(self, context, instance_id):
         """Get a url to an AJAX Console"""
-        instance = self.get(context, instance_id)
         output = self._call_compute_message('get_ajax_console',
                                             context,
                                             instance_id)
@@ -585,7 +645,7 @@ class API(base.Base):
         if not re.match("^/dev/[a-z]d[a-z]+$", device):
             raise exception.ApiError(_("Invalid device specified: %s. "
                                      "Example device: /dev/vdb") % device)
-        self.volume_api.check_attach(context, volume_id)
+        self.volume_api.check_attach(context, volume_id=volume_id)
         instance = self.get(context, instance_id)
         host = instance['host']
         rpc.cast(context,
@@ -599,7 +659,7 @@ class API(base.Base):
         instance = self.db.volume_get_instance(context.elevated(), volume_id)
         if not instance:
             raise exception.ApiError(_("Volume isn't attached to anything!"))
-        self.volume_api.check_detach(context, volume_id)
+        self.volume_api.check_detach(context, volume_id=volume_id)
         host = instance['host']
         rpc.cast(context,
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
@@ -610,5 +670,21 @@ class API(base.Base):
 
     def associate_floating_ip(self, context, instance_id, address):
         instance = self.get(context, instance_id)
-        self.network_api.associate_floating_ip(context, address,
-                                               instance['fixed_ip'])
+        self.network_api.associate_floating_ip(context,
+                                               floating_ip=address,
+                                               fixed_ip=instance['fixed_ip'])
+
+    def get_instance_metadata(self, context, instance_id):
+        """Get all metadata associated with an instance."""
+        rv = self.db.instance_metadata_get(context, instance_id)
+        return dict(rv.iteritems())
+
+    def delete_instance_metadata(self, context, instance_id, key):
+        """Delete the given metadata item"""
+        self.db.instance_metadata_delete(context, instance_id, key)
+
+    def update_or_create_instance_metadata(self, context, instance_id,
+                                            metadata):
+        """Updates or creates instance metadata"""
+        self.db.instance_metadata_update_or_create(context, instance_id,
+                                                    metadata)

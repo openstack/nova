@@ -15,124 +15,95 @@
 
 import base64
 import hashlib
-import json
 import traceback
-from xml.dom import minidom
 
 from webob import exc
+from xml.dom import minidom
 
 from nova import compute
+from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
+from nova import quota
 from nova import utils
+from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
+import nova.api.openstack.views.addresses
+import nova.api.openstack.views.flavors
+import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.api.openstack
+from nova.scheduler import api as scheduler_api
 
 
 LOG = logging.getLogger('server')
-
-
 FLAGS = flags.FLAGS
-
-
-def _translate_detail_keys(inst):
-    """ Coerces into dictionary format, mapping everything to Rackspace-like
-    attributes for return"""
-    power_mapping = {
-        None: 'build',
-        power_state.NOSTATE: 'build',
-        power_state.RUNNING: 'active',
-        power_state.BLOCKED: 'active',
-        power_state.SUSPENDED: 'suspended',
-        power_state.PAUSED: 'paused',
-        power_state.SHUTDOWN: 'active',
-        power_state.SHUTOFF: 'active',
-        power_state.CRASHED: 'error',
-        power_state.FAILED: 'error'}
-    inst_dict = {}
-
-    mapped_keys = dict(status='state', imageId='image_id',
-        flavorId='instance_type', name='display_name', id='id')
-
-    for k, v in mapped_keys.iteritems():
-        inst_dict[k] = inst[v]
-
-    inst_dict['status'] = power_mapping[inst_dict['status']]
-    inst_dict['addresses'] = dict(public=[], private=[])
-
-    # grab single private fixed ip
-    private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-    inst_dict['addresses']['private'] = private_ips
-
-    # grab all public floating ips
-    public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
-    inst_dict['addresses']['public'] = public_ips
-
-    # Return the metadata as a dictionary
-    metadata = {}
-    for item in inst['metadata']:
-        metadata[item['key']] = item['value']
-    inst_dict['metadata'] = metadata
-
-    inst_dict['hostId'] = ''
-    if inst['host']:
-        inst_dict['hostId'] = hashlib.sha224(inst['host']).hexdigest()
-
-    return dict(server=inst_dict)
-
-
-def _translate_keys(inst):
-    """ Coerces into dictionary format, excluding all model attributes
-    save for id and name """
-    return dict(server=dict(id=inst['id'], name=inst['display_name']))
 
 
 class Controller(wsgi.Controller):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
-        'application/xml': {
+        "application/xml": {
             "attributes": {
                 "server": ["id", "imageId", "name", "flavorId", "hostId",
-                           "status", "progress", "adminPass"]}}}
+                           "status", "progress", "adminPass", "flavorRef",
+                           "imageRef"],
+                "link": ["rel", "type", "href"],
+            },
+        },
+    }
 
     def __init__(self):
         self.compute_api = compute.API()
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
-    def index(self, req):
-        """ Returns a list of server names and ids for a given user """
-        return self._items(req, entity_maker=_translate_keys)
-
-    def detail(self, req):
-        """ Returns a list of server details for a given user """
-        return self._items(req, entity_maker=_translate_detail_keys)
-
-    def _items(self, req, entity_maker):
-        """Returns a list of servers for a given user.
-
-        entity_maker - either _translate_detail_keys or _translate_keys
-        """
-        instance_list = self.compute_api.get_all(req.environ['nova.context'])
-        limited_list = common.limited(instance_list, req)
-        res = [entity_maker(inst)['server'] for inst in limited_list]
-        return dict(servers=res)
-
-    def show(self, req, id):
-        """ Returns server details by server id """
+    def ips(self, req, id):
         try:
             instance = self.compute_api.get(req.environ['nova.context'], id)
-            return _translate_detail_keys(instance)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
+        builder = self._get_addresses_view_builder(req)
+        return builder.build(instance)
+
+    def index(self, req):
+        """ Returns a list of server names and ids for a given user """
+        return self._items(req, is_detail=False)
+
+    def detail(self, req):
+        """ Returns a list of server details for a given user """
+        return self._items(req, is_detail=True)
+
+    def _items(self, req, is_detail):
+        """Returns a list of servers for a given user.
+
+        builder - the response model builder
+        """
+        instance_list = self.compute_api.get_all(req.environ['nova.context'])
+        limited_list = self._limit_items(instance_list, req)
+        builder = self._get_view_builder(req)
+        servers = [builder.build(inst, is_detail)['server']
+                for inst in limited_list]
+        return dict(servers=servers)
+
+    @scheduler_api.redirect_handler
+    def show(self, req, id):
+        """ Returns server details by server id """
+        try:
+            instance = self.compute_api.routing_get(
+                req.environ['nova.context'], id)
+            builder = self._get_view_builder(req)
+            return builder.build(instance, is_detail=True)
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+
+    @scheduler_api.redirect_handler
     def delete(self, req, id):
         """ Destroys a server """
         try:
@@ -157,8 +128,9 @@ class Controller(wsgi.Controller):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
+        requested_image_id = self._image_id_from_req_data(env)
         image_id = common.get_image_id_from_image_hash(self._image_service,
-            context, env['server']['imageId'])
+            context, requested_image_id)
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
 
@@ -172,13 +144,16 @@ class Controller(wsgi.Controller):
             for k, v in env['server']['metadata'].items():
                 metadata.append({'key': k, 'value': v})
 
-        personality = env['server'].get('personality', [])
-        injected_files = self._get_injected_files(personality)
+        personality = env['server'].get('personality')
+        injected_files = []
+        if personality:
+            injected_files = self._get_injected_files(personality)
 
+        flavor_id = self._flavor_id_from_req_data(env)
         try:
-            instances = self.compute_api.create(
+            (inst,) = self.compute_api.create(
                 context,
-                instance_types.get_by_flavor_id(env['server']['flavorId']),
+                instance_types.get_by_flavor_id(flavor_id),
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
@@ -188,10 +163,14 @@ class Controller(wsgi.Controller):
                 key_data=key_data,
                 metadata=metadata,
                 injected_files=injected_files)
-        except QuotaError as error:
+        except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        server = _translate_keys(instances[0])
+        inst['instance_type'] = flavor_id
+        inst['image_id'] = requested_image_id
+
+        builder = self._get_view_builder(req)
+        server = builder.build(inst, is_detail=True)
         password = "%s%s" % (server['server']['name'][:4],
                              utils.generate_password(12))
         server['server']['adminPass'] = password
@@ -220,6 +199,7 @@ class Controller(wsgi.Controller):
         underlying compute service.
         """
         injected_files = []
+
         for item in personality:
             try:
                 path = item['path']
@@ -238,7 +218,7 @@ class Controller(wsgi.Controller):
             injected_files.append((path, contents))
         return injected_files
 
-    def _handle_quota_errors(self, error):
+    def _handle_quota_error(self, error):
         """
         Reraise quota errors as api-specific http exceptions
         """
@@ -254,6 +234,7 @@ class Controller(wsgi.Controller):
         # if the original error is okay, just reraise it
         raise error
 
+    @scheduler_api.redirect_handler
     def update(self, req, id):
         """ Updates the server name or password """
         if len(req.body) == 0:
@@ -269,7 +250,7 @@ class Controller(wsgi.Controller):
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
             try:
                 self.compute_api.set_admin_password(ctxt, id)
-            except exception.TimeoutException, e:
+            except exception.TimeoutException:
                 return exc.HTTPRequestTimeout()
         if 'name' in inst_dict['server']:
             update_dict['display_name'] = inst_dict['server']['name']
@@ -279,6 +260,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPNoContent()
 
+    @scheduler_api.redirect_handler
     def action(self, req, id):
         """Multi-purpose method used to reboot, rebuild, or
         resize a server"""
@@ -344,6 +326,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def lock(self, req, id):
         """
         lock the instance with id
@@ -359,6 +342,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def unlock(self, req, id):
         """
         unlock the instance with id
@@ -374,6 +358,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def get_lock(self, req, id):
         """
         return the boolean state of (instance with id)'s lock
@@ -388,6 +373,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def reset_network(self, req, id):
         """
         Reset networking on an instance (admin only).
@@ -402,6 +388,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def inject_network_info(self, req, id):
         """
         Inject network info for an instance (admin only).
@@ -416,6 +403,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def pause(self, req, id):
         """ Permit Admins to Pause the server. """
         ctxt = req.environ['nova.context']
@@ -427,6 +415,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def unpause(self, req, id):
         """ Permit Admins to Unpause the server. """
         ctxt = req.environ['nova.context']
@@ -438,6 +427,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def suspend(self, req, id):
         """permit admins to suspend the server"""
         context = req.environ['nova.context']
@@ -449,6 +439,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def resume(self, req, id):
         """permit admins to resume the server from suspend"""
         context = req.environ['nova.context']
@@ -460,6 +451,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def rescue(self, req, id):
         """Permit users to rescue the server."""
         context = req.environ["nova.context"]
@@ -471,6 +463,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def unrescue(self, req, id):
         """Permit users to unrescue the server."""
         context = req.environ["nova.context"]
@@ -482,6 +475,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
         """ Returns a url to an instance's ajaxterm console. """
         try:
@@ -491,6 +485,7 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
 
+    @scheduler_api.redirect_handler
     def diagnostics(self, req, id):
         """Permit Admins to retrieve server diagnostics."""
         ctxt = req.environ["nova.context"]
@@ -511,38 +506,91 @@ class Controller(wsgi.Controller):
         return dict(actions=actions)
 
     def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """Retrevies kernel and ramdisk IDs from Glance
-
-        Only 'machine' (ami) type use kernel and ramdisk outside of the
-        image.
+        """Fetch an image from the ImageService, then if present, return the
+        associated kernel and ramdisk image IDs.
         """
-        # FIXME(sirp): Since we're retrieving the kernel_id from an
-        # image_property, this means only Glance is supported.
-        # The BaseImageService needs to expose a consistent way of accessing
-        # kernel_id and ramdisk_id
-        image = self._image_service.show(req.environ['nova.context'], image_id)
+        context = req.environ['nova.context']
+        image_meta = self._image_service.show(context, image_id)
+        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
+        # new method doesn't need a request obj or an ImageService stub
+        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
+            image_meta)
+        return kernel_id, ramdisk_id
 
-        if image['status'] != 'active':
+    @staticmethod
+    def  _do_get_kernel_ramdisk_from_image(image_meta):
+        """Given an ImageService image_meta, return kernel and ramdisk image
+        ids if present.
+
+        This is only valid for `ami` style images.
+        """
+        image_id = image_meta['id']
+        if image_meta['status'] != 'active':
             raise exception.Invalid(
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image['disk_format'] != 'ami':
+        if image_meta['properties']['disk_format'] != 'ami':
             return None, None
 
         try:
-            kernel_id = image['properties']['kernel_id']
+            kernel_id = image_meta['properties']['kernel_id']
         except KeyError:
             raise exception.NotFound(
                 _("Kernel not found for image %(image_id)s") % locals())
 
         try:
-            ramdisk_id = image['properties']['ramdisk_id']
+            ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
             raise exception.NotFound(
                 _("Ramdisk not found for image %(image_id)s") % locals())
 
         return kernel_id, ramdisk_id
+
+
+class ControllerV10(Controller):
+    def _image_id_from_req_data(self, data):
+        return data['server']['imageId']
+
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorId']
+
+    def _get_view_builder(self, req):
+        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV10()
+        return nova.api.openstack.views.servers.ViewBuilderV10(
+            addresses_builder)
+
+    def _get_addresses_view_builder(self, req):
+        return nova.api.openstack.views.addresses.ViewBuilderV10(req)
+
+    def _limit_items(self, items, req):
+        return common.limited(items, req)
+
+
+class ControllerV11(Controller):
+    def _image_id_from_req_data(self, data):
+        href = data['server']['imageRef']
+        return common.get_id_from_href(href)
+
+    def _flavor_id_from_req_data(self, data):
+        href = data['server']['flavorRef']
+        return common.get_id_from_href(href)
+
+    def _get_view_builder(self, req):
+        base_url = req.application_url
+        flavor_builder = nova.api.openstack.views.flavors.ViewBuilderV11(
+            base_url)
+        image_builder = nova.api.openstack.views.images.ViewBuilderV11(
+            base_url)
+        addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
+        return nova.api.openstack.views.servers.ViewBuilderV11(
+            addresses_builder, flavor_builder, image_builder, base_url)
+
+    def _get_addresses_view_builder(self, req):
+        return nova.api.openstack.views.addresses.ViewBuilderV11(req)
+
+    def _limit_items(self, items, req):
+        return common.limited_by_marker(items, req)
 
 
 class ServerCreateRequestXMLDeserializer(object):

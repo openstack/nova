@@ -97,18 +97,24 @@ class Service(object):
 
         conn1 = rpc.Connection.instance(new=True)
         conn2 = rpc.Connection.instance(new=True)
+        conn3 = rpc.Connection.instance(new=True)
         if self.report_interval:
-            consumer_all = rpc.AdapterConsumer(
+            consumer_all = rpc.TopicAdapterConsumer(
                     connection=conn1,
                     topic=self.topic,
                     proxy=self)
-            consumer_node = rpc.AdapterConsumer(
+            consumer_node = rpc.TopicAdapterConsumer(
                     connection=conn2,
                     topic='%s.%s' % (self.topic, self.host),
+                    proxy=self)
+            fanout = rpc.FanoutAdapterConsumer(
+                    connection=conn3,
+                    topic=self.topic,
                     proxy=self)
 
             self.timers.append(consumer_all.attach_to_eventlet())
             self.timers.append(consumer_node.attach_to_eventlet())
+            self.timers.append(fanout.attach_to_eventlet())
 
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
@@ -217,7 +223,7 @@ class Service(object):
                 logging.error(_("Recovered model server connection!"))
 
         # TODO(vish): this should probably only catch connection errors
-        except Exception:  # pylint: disable-msg=W0702
+        except Exception:  # pylint: disable=W0702
             if not getattr(self, "model_disconnected", False):
                 self.model_disconnected = True
                 logging.exception(_("model server went away"))

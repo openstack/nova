@@ -31,7 +31,7 @@ from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -61,10 +61,13 @@ class RequestLogging(wsgi.Middleware):
         return rv
 
     def log_request_completion(self, response, request, start):
-        controller = request.environ.get('ec2.controller', None)
-        if controller:
-            controller = controller.__class__.__name__
-        action = request.environ.get('ec2.action', None)
+        apireq = request.environ.get('ec2.request', None)
+        if apireq:
+            controller = apireq.controller
+            action = apireq.action
+        else:
+            controller = None
+            action = None
         ctxt = request.environ.get('ec2.context', None)
         delta = utils.utcnow() - start
         seconds = delta.seconds
@@ -75,7 +78,7 @@ class RequestLogging(wsgi.Middleware):
             microseconds,
             request.remote_addr,
             request.method,
-            request.path_info,
+            "%s%s" % (request.script_name, request.path_info),
             controller,
             action,
             response.status_int,
@@ -319,13 +322,13 @@ class Executor(wsgi.Application):
         except exception.InstanceNotFound as ex:
             LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = cloud.id_to_ec2_id(ex.instance_id)
+            ec2_id = ec2utils.id_to_ec2_id(ex.instance_id)
             message = _('Instance %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.VolumeNotFound as ex:
             LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = cloud.id_to_ec2_id(ex.volume_id, 'vol-%08x')
+            ec2_id = ec2utils.id_to_ec2_id(ex.volume_id, 'vol-%08x')
             message = _('Volume %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:

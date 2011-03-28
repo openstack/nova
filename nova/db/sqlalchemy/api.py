@@ -143,12 +143,15 @@ def service_get(context, service_id, session=None):
 
 
 @require_admin_context
-def service_get_all(context, disabled=False):
+def service_get_all(context, disabled=None):
     session = get_session()
-    return session.query(models.Service).\
-                   filter_by(deleted=can_read_deleted(context)).\
-                   filter_by(disabled=disabled).\
-                   all()
+    query = session.query(models.Service).\
+                   filter_by(deleted=can_read_deleted(context))
+
+    if disabled is not None:
+        query = query.filter_by(disabled=disabled)
+
+    return query.all()
 
 
 @require_admin_context
@@ -762,6 +765,15 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
+    metadata = values.get('metadata')
+    metadata_refs = []
+    if metadata:
+        for metadata_item in metadata:
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref.update(metadata_item)
+            metadata_refs.append(metadata_ref)
+    values['metadata'] = metadata_refs
+
     instance_ref = models.Instance()
     instance_ref.update(values)
 
@@ -793,6 +805,11 @@ def instance_destroy(context, instance_id):
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
                 filter_by(instance_id=instance_id).\
                 update({'deleted': 1,
                         'deleted_at': datetime.datetime.utcnow(),
@@ -1240,7 +1257,7 @@ def network_get_all(context):
 
 # NOTE(vish): pylint complains because of the long method name, but
 #             it fits with the names of the rest of the methods
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 
 
 @require_admin_context
@@ -2195,7 +2212,7 @@ def migration_get(context, id, session=None):
                      filter_by(id=id).first()
     if not result:
         raise exception.NotFound(_("No migration found with id %s")
-                % migration_id)
+                % id)
     return result
 
 
@@ -2206,8 +2223,8 @@ def migration_get_by_instance_and_status(context, instance_id, status):
                      filter_by(instance_id=instance_id).\
                      filter_by(status=status).first()
     if not result:
-        raise exception.NotFound(_("No migration found with instance id %s")
-                % migration_id)
+        raise exception.NotFound(_("No migration found for instance "
+                "%(instance_id)s with status %(status)s") % locals())
     return result
 
 
@@ -2322,13 +2339,13 @@ def instance_type_create(_context, values):
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()
-    except:
-        raise exception.DBError
+    except Exception, e:
+        raise exception.DBError(e)
     return instance_type_ref
 
 
 @require_context
-def instance_type_get_all(context, inactive=0):
+def instance_type_get_all(context, inactive=False):
     """
     Returns a dict describing all instance_types with name as key.
     """
@@ -2339,7 +2356,7 @@ def instance_type_get_all(context, inactive=0):
                         all()
     else:
         inst_types = session.query(models.InstanceTypes).\
-                        filter_by(deleted=inactive).\
+                        filter_by(deleted=False).\
                         order_by("name").\
                         all()
     if inst_types:
@@ -2372,7 +2389,7 @@ def instance_type_get_by_flavor_id(context, id):
                                     filter_by(flavorid=int(id)).\
                                     first()
     if not inst_type:
-        raise exception.NotFound(_("No flavor with name %s") % id)
+        raise exception.NotFound(_("No flavor with flavorid %s") % id)
     else:
         return dict(inst_type)
 
@@ -2383,7 +2400,7 @@ def instance_type_destroy(context, name):
     session = get_session()
     instance_type_ref = session.query(models.InstanceTypes).\
                                       filter_by(name=name)
-    records = instance_type_ref.update(dict(deleted=1))
+    records = instance_type_ref.update(dict(deleted=True))
     if records == 0:
         raise exception.NotFound
     else:
@@ -2418,6 +2435,7 @@ def zone_create(context, values):
 
 @require_admin_context
 def zone_update(context, zone_id, values):
+    session = get_session()
     zone = session.query(models.Zone).filter_by(id=zone_id).first()
     if not zone:
         raise exception.NotFound(_("No zone with id %(zone_id)s") % locals())
@@ -2448,3 +2466,65 @@ def zone_get(context, zone_id):
 def zone_get_all(context):
     session = get_session()
     return session.query(models.Zone).all()
+
+
+####################
+
+@require_context
+def instance_metadata_get(context, instance_id):
+    session = get_session()
+
+    meta_results = session.query(models.InstanceMetadata).\
+                    filter_by(instance_id=instance_id).\
+                    filter_by(deleted=False).\
+                    all()
+
+    meta_dict = {}
+    for i in meta_results:
+        meta_dict[i['key']] = i['value']
+    return meta_dict
+
+
+@require_context
+def instance_metadata_delete(context, instance_id, key):
+    session = get_session()
+    session.query(models.InstanceMetadata).\
+        filter_by(instance_id=instance_id).\
+        filter_by(key=key).\
+        filter_by(deleted=False).\
+        update({'deleted': 1,
+                'deleted_at': datetime.datetime.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def instance_metadata_get_item(context, instance_id, key):
+    session = get_session()
+
+    meta_result = session.query(models.InstanceMetadata).\
+                    filter_by(instance_id=instance_id).\
+                    filter_by(key=key).\
+                    filter_by(deleted=False).\
+                    first()
+
+    if not meta_result:
+        raise exception.NotFound(_('Invalid metadata key for instance %s') %
+                                    instance_id)
+    return meta_result
+
+
+@require_context
+def instance_metadata_update_or_create(context, instance_id, metadata):
+    session = get_session()
+    meta_ref = None
+    for key, value in metadata.iteritems():
+        try:
+            meta_ref = instance_metadata_get_item(context, instance_id, key,
+                                                        session)
+        except:
+            meta_ref = models.InstanceMetadata()
+        meta_ref.update({"key": key, "value": value,
+                            "instance_id": instance_id,
+                            "deleted": 0})
+        meta_ref.save(session=session)
+    return metadata
