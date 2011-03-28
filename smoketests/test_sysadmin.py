@@ -269,6 +269,7 @@ class VolumeTests(base.UserSmokeTestCase):
             "cat /sys/class/block/%s/size" % self.device.rpartition('/')[2])
         out = stdout.read().strip()
         conn.close()
+        # NOTE(vish): 1G bytes / 512 bytes per block
         expected_size = 1024 * 1024 * 1024 / 512
         self.assertEquals('%s' % (expected_size,), out,
                           'Volume is not the right size: %s %s. Expected: %s' %
