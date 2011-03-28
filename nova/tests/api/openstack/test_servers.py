@@ -465,7 +465,10 @@ class ServersTest(test.TestCase):
         self.body = json.dumps(dict(server=inst_dict))
 
         def server_update(context, id, params):
-            filtered_dict = dict(display_name='server_test', admin_pass='bacon')
+            filtered_dict = dict(
+                display_name='server_test',
+                admin_pass='bacon',
+            )
             self.assertEqual(params, filtered_dict)
             return filtered_dict
 

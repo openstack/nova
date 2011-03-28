@@ -253,7 +253,7 @@ class Controller(wsgi.Controller):
             if not isinstance(name, basestring) or name == '':
                 return exc.HTTPBadRequest()
 
-            update_dict['display_name'] = name 
+            update_dict['display_name'] = name
 
         self._parse_update(ctxt, id, inst_dict, update_dict)
 
@@ -580,7 +580,6 @@ class ControllerV10(Controller):
                 self.compute_api.set_admin_password(context, server_id)
             except exception.TimeoutException:
                 return exc.HTTPRequestTimeout()
-
 
 
 class ControllerV11(Controller):
