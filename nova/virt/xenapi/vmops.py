@@ -279,8 +279,7 @@ class VMOps(object):
             "start")
 
     def snapshot(self, instance, image_id):
-        """
-        Create snapshot from a running VM instance
+        """Create snapshot from a running VM instance.
 
         :param instance: instance to be snapshotted
         :param image_id: id of image to upload to
@@ -300,6 +299,7 @@ class VMOps(object):
         3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
             that will bundle the VHDs together and then push the bundle into
             Glance.
+
         """
         template_vm_ref = None
         try:
@@ -332,8 +332,7 @@ class VMOps(object):
             return
 
     def migrate_disk_and_power_off(self, instance, dest):
-        """
-        Copies a VHD from one host machine to another
+        """Copies a VHD from one host machine to another.
 
         :param instance: the instance that owns the VHD in question.
         :param dest: the destination host machine.
@@ -428,13 +427,14 @@ class VMOps(object):
         self._session.wait_for_task(task, instance.id)
 
     def set_admin_password(self, instance, new_pass):
-        """
-        Set the root/admin password on the VM instance. This is done via
-        an agent running on the VM. Communication between nova and the agent
-        is done via writing xenstore records. Since communication is done over
-        the XenAPI RPC calls, we need to encrypt the password. We're using a
-        simple Diffie-Hellman class instead of the more advanced one in
-        M2Crypto for compatibility with the agent code.
+        """Set the root/admin password on the VM instance.
+
+        This is done via an agent running on the VM. Communication between nova
+        and the agent is done via writing xenstore records. Since communication 
+        is done over the XenAPI RPC calls, we need to encrypt the password.
+        We're using a simple Diffie-Hellman class instead of the more advanced
+        one in M2Crypto for compatibility with the agent code.
+
         """
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
@@ -467,12 +467,14 @@ class VMOps(object):
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
-        """
-        Write a file to the VM instance. The path to which it is to be
-        written and the contents of the file need to be supplied; both will
-        be base64-encoded to prevent errors with non-ASCII characters being
-        transmitted. If the agent does not support file injection, or the user
-        has disabled it, a NotImplementedError will be raised.
+        """Write a file to the VM instance. 
+
+        The path to which it is to be written and the contents of the file
+        need to be supplied; both will be base64-encoded to prevent errors
+        with non-ASCII characters being transmitted. If the agent does not
+        support file injection, or the user has disabled it, a 
+        NotImplementedError will be raised.
+
         """
         # Files/paths must be base64-encoded for transmission to agent
         b64_path = base64.b64encode(path)
@@ -556,8 +558,7 @@ class VMOps(object):
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
-        """
-        Three situations can occur:
+        """Three situations can occur:
 
             1. We have neither a ramdisk nor a kernel, in which case we are a
                RAW image and can omit this step
@@ -567,6 +568,7 @@ class VMOps(object):
 
             3. We have both, in which case we safely remove both the kernel
                and the ramdisk.
+
         """
         instance_id = instance.id
         if not instance.kernel_id and not instance.ramdisk_id:
@@ -614,11 +616,11 @@ class VMOps(object):
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
     def destroy(self, instance):
-        """
-        Destroy VM instance
+        """Destroy VM instance.
 
         This is the method exposed by xenapi_conn.destroy(). The rest of the
         destroy_* methods are internal.
+
         """
         instance_id = instance.id
         LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
@@ -627,13 +629,13 @@ class VMOps(object):
 
     def _destroy(self, instance, vm_ref, shutdown=True,
                  destroy_kernel_ramdisk=True):
-        """
-        Destroys VM instance by performing:
+        """Destroys VM instance by performing:
 
             1. A shutdown if requested.
             2. Destroying associated VDIs.
             3. Destroying kernel and ramdisk files (if necessary).
             4. Destroying that actual VM record.
+
         """
         if vm_ref is None:
             LOG.warning(_("VM is not present, skipping destroy..."))
@@ -681,8 +683,8 @@ class VMOps(object):
         self._wait_with_callback(instance.id, task, callback)
 
     def rescue(self, instance, callback):
-        """
-        Rescue the specified instance
+        """Rescue the specified instance.
+
             - shutdown the instance VM.
             - set 'bootlock' to prevent the instance from starting in rescue.
             - spawn a rescue VM (the vm name-label will be instance-N-rescue).
@@ -709,10 +711,12 @@ class VMOps(object):
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
     def unrescue(self, instance, callback):
-        """Unrescue the specified instance
+        """Unrescue the specified instance.
+
             - unplug the instance VM's disk from the rescue VM.
             - teardown the rescue VM.
             - release the bootlock to allow the instance VM to start.
+
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)
@@ -729,10 +733,11 @@ class VMOps(object):
         self._start(instance, original_vm_ref)
 
     def poll_rescued_instances(self, timeout):
-        """
-        Look for expirable rescued instances
+        """Look for expirable rescued instances.
+
             - forcibly exit rescue mode for any instances that have been
               in rescue mode for >= the provided timeout
+
         """
         last_ran = self.poll_rescue_last_ran
         if not last_ran:
