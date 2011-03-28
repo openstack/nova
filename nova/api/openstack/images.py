@@ -32,10 +32,8 @@ FLAGS = flags.FLAGS
 
 
 class Controller(wsgi.Controller):
-    """
-    Base `wsgi.Controller` for retrieving and displaying images in the
-    OpenStack API. Version-inspecific code goes here.
-    """
+    """Base `wsgi.Controller` for retrieving and displaying images in the
+    OpenStack API. Version-inspecific code goes here."""
 
     _serialization_metadata = {
         'application/xml': {
@@ -48,8 +46,7 @@ class Controller(wsgi.Controller):
     }
 
     def __init__(self, image_service=None, compute_service=None):
-        """
-        Initialize new `ImageController`.
+        """Initialize new `ImageController`.
 
         :param compute_service: `nova.compute.api:API`
         :param image_service: `nova.image.service:BaseImageService`
@@ -60,8 +57,7 @@ class Controller(wsgi.Controller):
         self._image_service = image_service or _default_service
 
     def index(self, req):
-        """
-        Return an index listing of images available to the request.
+        """Return an index listing of images available to the request.
 
         :param req: `wsgi.Request` object
         """
@@ -72,8 +68,7 @@ class Controller(wsgi.Controller):
         return dict(images=[builder(image, detail=False) for image in images])
 
     def detail(self, req):
-        """
-        Return a detailed index listing of images available to the request.
+        """Return a detailed index listing of images available to the request.
 
         :param req: `wsgi.Request` object.
         """
@@ -84,8 +79,7 @@ class Controller(wsgi.Controller):
         return dict(images=[builder(image, detail=True) for image in images])
 
     def show(self, req, id):
-        """
-        Return detailed information about a specific image.
+        """Return detailed information about a specific image.
 
         :param req: `wsgi.Request` object
         :param id: Image identifier (integer)
@@ -107,8 +101,7 @@ class Controller(wsgi.Controller):
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def delete(self, req, id):
-        """
-        Delete an image, if allowed.
+        """Delete an image, if allowed.
 
         :param req: `wsgi.Request` object
         :param id: Image identifier (integer)
@@ -119,8 +112,7 @@ class Controller(wsgi.Controller):
         return webob.exc.HTTPNoContent()
 
     def create(self, req):
-        """
-        Snapshot a server instance and save the image.
+        """Snapshot a server instance and save the image.
 
         :param req: `wsgi.Request` object
         """
@@ -146,26 +138,18 @@ class Controller(wsgi.Controller):
 
 
 class ControllerV10(Controller):
-    """
-    Version 1.0 specific controller logic.
-    """
+    """Version 1.0 specific controller logic."""
 
     def get_builder(self, request):
-        """
-        Property to get the ViewBuilder class we need to use.
-        """
+        """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV10(base_url)
 
 
 class ControllerV11(Controller):
-    """
-    Version 1.1 specific controller logic.
-    """
+    """Version 1.1 specific controller logic."""
 
     def get_builder(self, request):
-        """
-        Property to get the ViewBuilder class we need to use.
-        """
+        """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
