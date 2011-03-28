@@ -595,7 +595,7 @@ class ControllerV11(Controller):
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
-        if (not 'changePassword' in input_dict 
+        if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             return exc.HTTPBadRequest()
         password = input_dict['changePassword']['adminPass']
