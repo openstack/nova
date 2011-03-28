@@ -165,6 +165,33 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
+    def test_get_server_by_id_v11(self):
+        req = webob.Request.blank('/v1.1/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server1')
+
+        expected_links = [
+            {
+                "rel": "self",
+                "href": "http://localhost/v1.1/servers/1",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/servers/1",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/servers/1",
+            },
+        ]
+
+        print res_dict['server']
+        self.assertEqual(res_dict['server']['links'], expected_links)
+
     def test_get_server_by_id_with_addresses(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
@@ -187,7 +214,6 @@ class ServersTest(test.TestCase):
         new_return_server = return_server_with_addresses(private, public)
         self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
         req = webob.Request.blank('/v1.1/servers/1')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
@@ -211,6 +237,35 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s.get('imageId', None), None)
             i += 1
+
+    def test_get_server_list_v11(self):
+        req = webob.Request.blank('/v1.1/servers')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], i)
+            self.assertEqual(s['name'], 'server%d' % i)
+            self.assertEqual(s.get('imageId', None), None)
+
+            expected_links = [
+            {
+                "rel": "self",
+                "href": "http://localhost/v1.1/servers/%d" % (i,),
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/servers/%d" % (i,),
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/servers/%d" % (i,),
+            },
+        ]
+
+        self.assertEqual(s['links'], expected_links)
 
     def test_get_servers_with_limit(self):
         req = webob.Request.blank('/v1.0/servers?limit=3')
@@ -428,21 +483,31 @@ class ServersTest(test.TestCase):
         req.get_response(fakes.wsgi_app())
 
     def test_create_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
         req.method = 'POST'
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status, '404 Not Found')
+        self.assertEqual(res.status_int, 501)
 
     def test_delete_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status, '404 Not Found')
+        self.assertEqual(res.status_int, 501)
 
     def test_get_server_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status, '404 Not Found')
+        self.assertEqual(res.status_int, 501)
+
+    def test_get_server_backup_schedule(self):
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
+
+    def test_server_backup_schedule_deprecated_v11(self):
+        req = webob.Request.blank('/v1.1/servers/1/backup_schedule')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
@@ -459,7 +524,6 @@ class ServersTest(test.TestCase):
 
     def test_get_all_server_details_v1_1(self):
         req = webob.Request.blank('/v1.1/servers/detail')
-        req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
