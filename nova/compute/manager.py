@@ -1051,16 +1051,31 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         for db_instance in db_instances:
             name = db_instance['name']
+            db_state = db_instance['state']
             vm_instance = vm_instances.get(name)
+            
             if vm_instance is None:
-                LOG.info(_("Found instance '%(name)s' in DB but no VM. "
-                           "Setting state to shutoff.") % locals())
-                vm_state = power_state.SHUTOFF
+                #NOTE(justinsb): We have to be very careful here, because a
+                #concurrent operation could be in progress (e.g. a spawn)
+                if db_state == power_state.NOSTATE:
+                    #Assume that NOSTATE => spawning
+                    #TODO(justinsb): This does mean that if we crash during a
+                    #spawn, the machine will never leave the spawning state.
+                    #We could have a separate task to correct this error.
+                    #TODO(justinsb): What happens during a live migration?
+                    LOG.info(_("Found instance '%(name)s' in DB but no VM. "
+                               "State=%(db_state), so assuming spawn is in "
+                               "progress.") % locals())
+                    vm_state = db_state
+                else:
+                    LOG.info(_("Found instance '%(name)s' in DB but no VM. "
+                               "State=%(db_state), so setting state to "
+                               "shutoff.") % locals())
+                    vm_state = power_state.SHUTOFF
             else:
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
-            db_state = db_instance['state']
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
