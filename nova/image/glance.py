@@ -220,7 +220,7 @@ def _convert_timestamps_to_datetimes(image_meta):
     Returns image with known timestamp fields converted to datetime objects
     """
     for attr in ['created_at', 'updated_at', 'deleted_at']:
-        if image_meta.get(attr) is not None:
+        if image_meta.get(attr):
             image_meta[attr] = _parse_glance_iso8601_timestamp(
                 image_meta[attr])
     return image_meta
