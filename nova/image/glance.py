@@ -20,8 +20,6 @@ from __future__ import absolute_import
 
 import datetime
 
-import iso8601
-
 from glance.common import exception as glance_exception
 
 from nova import exception
@@ -232,4 +230,5 @@ def _parse_glance_iso8601_timestamp(timestamp):
     """
     Parse a subset of iso8601 timestamps into datetime objects
     """
-    return iso8601.parse_date(timestamp).replace(tzinfo=None)
+    ISO_FMT = "%Y-%m-%dT%H:%M:%S.%f"
+    return datetime.datetime.strptime(timestamp, ISO_FMT)
