@@ -34,7 +34,7 @@ class IsolationTestCase(test.TestCase):
 
     def test_rpc_consumer_isolation(self):
         connection = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicConsumer(connection, topic='compute')
+        consumer = rpc.TopicAdapterConsumer(connection, topic='compute')
         consumer.register_callback(
                 lambda x, y: self.fail('I should never be called'))
         consumer.attach_to_eventlet()

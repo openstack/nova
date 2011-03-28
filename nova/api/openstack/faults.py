@@ -42,7 +42,7 @@ class Fault(webob.exc.HTTPException):
         """Create a Fault for the given webob.exc.exception."""
         self.wrapped_exc = exception
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         """Generate a WSGI response based on the exception passed to ctor."""
         # Replace the body with fault details.
@@ -57,6 +57,46 @@ class Fault(webob.exc.HTTPException):
             fault_data[fault_name]['retryAfter'] = retry
         # 'code' is an attribute on the fault tag itself
         metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
-        serializer = wsgi.Serializer(req.environ, metadata)
-        self.wrapped_exc.body = serializer.to_content_type(fault_data)
+        serializer = wsgi.Serializer(metadata)
+        content_type = req.best_match_content_type()
+        self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
+        return self.wrapped_exc
+
+
+class OverLimitFault(webob.exc.HTTPException):
+    """
+    Rate-limited request response.
+    """
+
+    _serialization_metadata = {
+        "application/xml": {
+            "attributes": {
+                "overLimitFault": "code",
+            },
+        },
+    }
+
+    def __init__(self, message, details, retry_time):
+        """
+        Initialize new `OverLimitFault` with relevant information.
+        """
+        self.wrapped_exc = webob.exc.HTTPForbidden()
+        self.content = {
+            "overLimitFault": {
+                "code": self.wrapped_exc.status_int,
+                "message": message,
+                "details": details,
+            },
+        }
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, request):
+        """
+        Return the wrapped exception with a serialized body conforming to our
+        error format.
+        """
+        serializer = wsgi.Serializer(self._serialization_metadata)
+        content_type = request.best_match_content_type()
+        content = serializer.serialize(self.content, content_type)
+        self.wrapped_exc.body = content
         return self.wrapped_exc

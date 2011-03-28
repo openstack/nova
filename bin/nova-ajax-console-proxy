@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -63,10 +63,16 @@ class AjaxConsoleProxy(object):
 
     def __call__(self, env, start_response):
         try:
-            req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
-                                        env['HTTP_HOST'],
-                                        env['PATH_INFO'],
-                                        env['QUERY_STRING'])
+            if 'QUERY_STRING' in env:
+                req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
+                                            env['HTTP_HOST'],
+                                            env['PATH_INFO'],
+                                            env['QUERY_STRING'])
+            else:
+                req_url = '%s://%s%s' % (env['wsgi.url_scheme'],
+                                         env['HTTP_HOST'],
+                                         env['PATH_INFO'])
+
             if 'HTTP_REFERER' in env:
                 auth_url = env['HTTP_REFERER']
             else:

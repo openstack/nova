@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -36,50 +36,18 @@ gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
+from nova import service
+from nova import utils
 from nova import version
 from nova import wsgi
+
 
 LOG = logging.getLogger('nova.api')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('ec2_listen', "0.0.0.0",
-                    'IP address for EC2 API to listen')
-flags.DEFINE_integer('ec2_listen_port', 8773, 'port for ec2 api to listen')
-flags.DEFINE_string('osapi_listen', "0.0.0.0",
-                    'IP address for OpenStack API to listen')
-flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
-flags.DEFINE_flag(flags.HelpFlag())
-flags.DEFINE_flag(flags.HelpshortFlag())
-flags.DEFINE_flag(flags.HelpXMLFlag())
-
-API_ENDPOINTS = ['ec2', 'osapi']
-
-
-def run_app(paste_config_file):
-    LOG.debug(_("Using paste.deploy config at: %s"), paste_config_file)
-    apps = []
-    for api in API_ENDPOINTS:
-        config = wsgi.load_paste_configuration(paste_config_file, api)
-        if config is None:
-            LOG.debug(_("No paste configuration for app: %s"), api)
-            continue
-        LOG.debug(_("App Config: %(api)s\n%(config)r") % locals())
-        LOG.info(_("Running %s API"), api)
-        app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app, getattr(FLAGS, "%s_listen_port" % api),
-                     getattr(FLAGS, "%s_listen" % api)))
-    if len(apps) == 0:
-        LOG.error(_("No known API applications configured in %s."),
-                  paste_config_file)
-        return
-
-    server = wsgi.Server()
-    for app in apps:
-        server.start(*app)
-    server.wait()
-
 
 if __name__ == '__main__':
+    utils.default_flagfile()
     FLAGS(sys.argv)
     logging.setup()
     LOG.audit(_("Starting nova-api node (version %s)"),
@@ -88,8 +56,6 @@ if __name__ == '__main__':
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
         LOG.debug("%(flag)s : %(flag_get)s" % locals())
-    conf = wsgi.paste_config_file('nova-api.conf')
-    if conf:
-        run_app(conf)
-    else:
-        LOG.error(_("No paste configuration found for: %s"), 'nova-api.conf')
+
+    service = service.serve_wsgi(service.ApiService)
+    service.wait()

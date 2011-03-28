@@ -113,6 +113,41 @@ class Service(BASE, NovaBase):
     availability_zone = Column(String(255), default='nova')
 
 
+class ComputeNode(BASE, NovaBase):
+    """Represents a running compute service on a host."""
+
+    __tablename__ = 'compute_nodes'
+    id = Column(Integer, primary_key=True)
+    service_id = Column(Integer, ForeignKey('services.id'), nullable=True)
+    service = relationship(Service,
+                           backref=backref('compute_node'),
+                           foreign_keys=service_id,
+                           primaryjoin='and_('
+                                'ComputeNode.service_id == Service.id,'
+                                'ComputeNode.deleted == False)')
+
+    vcpus = Column(Integer, nullable=True)
+    memory_mb = Column(Integer, nullable=True)
+    local_gb = Column(Integer, nullable=True)
+    vcpus_used = Column(Integer, nullable=True)
+    memory_mb_used = Column(Integer, nullable=True)
+    local_gb_used = Column(Integer, nullable=True)
+    hypervisor_type = Column(Text, nullable=True)
+    hypervisor_version = Column(Integer, nullable=True)
+
+    # Note(masumotok): Expected Strings example:
+    #
+    # '{"arch":"x86_64",
+    #   "model":"Nehalem",
+    #   "topology":{"sockets":1, "threads":2, "cores":3},
+    #   "features":["tdtscp", "xtpr"]}'
+    #
+    # Points are "json translatable" and it must have all dictionary keys
+    # above, since it is copied from <cpu> tag of getCapabilities()
+    # (See libvirt.virtConnection).
+    cpu_info = Column(Text, nullable=True)
+
+
 class Certificate(BASE, NovaBase):
     """Represents a an x509 certificate"""
     __tablename__ = 'certificates'
@@ -126,11 +161,16 @@ class Certificate(BASE, NovaBase):
 class Instance(BASE, NovaBase):
     """Represents a guest vm."""
     __tablename__ = 'instances'
+    injected_files = []
+
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
     def name(self):
-        return FLAGS.instance_name_template % self.id
+        base_name = FLAGS.instance_name_template % self.id
+        if getattr(self, '_rescue', False):
+            base_name += "-rescue"
+        return base_name
 
     admin_pass = Column(String(255))
     user_id = Column(String(255))
@@ -185,7 +225,12 @@ class Instance(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+    # To remember on which host a instance booted.
+    # An instance may have moved to another host by live migraiton.
+    launched_on = Column(Text)
     locked = Column(Boolean)
+
+    os_type = Column(String(255))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -207,6 +252,20 @@ class InstanceActions(BASE, NovaBase):
 
     action = Column(String(255))
     error = Column(Text)
+
+
+class InstanceTypes(BASE, NovaBase):
+    """Represent possible instance_types or flavor of VM offered"""
+    __tablename__ = "instance_types"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(255), unique=True)
+    memory_mb = Column(Integer)
+    vcpus = Column(Integer)
+    local_gb = Column(Integer)
+    flavorid = Column(Integer, unique=True)
+    swap = Column(Integer, nullable=False, default=0)
+    rxtx_quota = Column(Integer, nullable=False, default=0)
+    rxtx_cap = Column(Integer, nullable=False, default=0)
 
 
 class Volume(BASE, NovaBase):
@@ -369,6 +428,20 @@ class KeyPair(BASE, NovaBase):
     public_key = Column(Text)
 
 
+class Migration(BASE, NovaBase):
+    """Represents a running host-to-host migration."""
+    __tablename__ = 'migrations'
+    id = Column(Integer, primary_key=True, nullable=False)
+    source_compute = Column(String(255))
+    dest_compute = Column(String(255))
+    dest_host = Column(String(255))
+    old_flavor_id = Column(Integer())
+    new_flavor_id = Column(Integer())
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
+    #TODO(_cerberus_): enum
+    status = Column(String(255))
+
+
 class Network(BASE, NovaBase):
     """Represents a network."""
     __tablename__ = 'networks'
@@ -382,8 +455,8 @@ class Network(BASE, NovaBase):
     cidr = Column(String(255), unique=True)
     cidr_v6 = Column(String(255), unique=True)
 
-    ra_server = Column(String(255))
-
+    gateway_v6 = Column(String(255))
+    netmask_v6 = Column(String(255))
     netmask = Column(String(255))
     bridge = Column(String(255))
     gateway = Column(String(255))
@@ -581,12 +654,12 @@ def register_models():
     connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceActions,
+    models = (Service, Instance, InstanceActions, InstanceTypes,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata)
+              InstanceMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

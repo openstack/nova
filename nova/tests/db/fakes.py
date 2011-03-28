@@ -20,12 +20,60 @@
 import time
 
 from nova import db
+from nova import test
 from nova import utils
-from nova.compute import instance_types
 
 
-def stub_out_db_instance_api(stubs):
+def stub_out_db_instance_api(stubs, injected=True):
     """ Stubs out the db API for creating Instances """
+
+    INSTANCE_TYPES = {
+        'm1.tiny': dict(memory_mb=512,
+                        vcpus=1,
+                        local_gb=0,
+                        flavorid=1,
+                        rxtx_cap=1),
+        'm1.small': dict(memory_mb=2048,
+                         vcpus=1,
+                         local_gb=20,
+                         flavorid=2,
+                         rxtx_cap=2),
+        'm1.medium':
+            dict(memory_mb=4096,
+                 vcpus=2,
+                 local_gb=40,
+                 flavorid=3,
+                 rxtx_cap=3),
+        'm1.large': dict(memory_mb=8192,
+                         vcpus=4,
+                         local_gb=80,
+                         flavorid=4,
+                         rxtx_cap=4),
+        'm1.xlarge':
+            dict(memory_mb=16384,
+                 vcpus=8,
+                 local_gb=160,
+                 flavorid=5,
+                 rxtx_cap=5)}
+
+    network_fields = {
+        'id': 'test',
+        'bridge': 'xenbr0',
+        'label': 'test_network',
+        'netmask': '255.255.255.0',
+        'cidr_v6': 'fe80::a00:0/120',
+        'netmask_v6': '120',
+        'gateway': '10.0.0.1',
+        'gateway_v6': 'fe80::a00:1',
+        'broadcast': '10.0.0.255',
+        'dns': '10.0.0.2',
+        'ra_server': None,
+        'injected': injected}
+
+    fixed_ip_fields = {
+        'address': '10.0.0.3',
+        'address_v6': 'fe80::a00:3',
+        'network_id': 'test'}
 
     class FakeModel(object):
         """ Stubs out for model """
@@ -41,35 +89,35 @@ def stub_out_db_instance_api(stubs):
             else:
                 raise NotImplementedError()
 
-    def fake_instance_create(values):
-        """ Stubs out the db.instance_create method """
+    def fake_instance_type_get_all(context, inactive=0):
+        return INSTANCE_TYPES
 
-        type_data = instance_types.INSTANCE_TYPES[values['instance_type']]
-
-        base_options = {
-            'name': values['name'],
-            'id': values['id'],
-            'reservation_id': utils.generate_uid('r'),
-            'image_id': values['image_id'],
-            'kernel_id': values['kernel_id'],
-            'ramdisk_id': values['ramdisk_id'],
-            'state_description': 'scheduling',
-            'user_id': values['user_id'],
-            'project_id': values['project_id'],
-            'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-            'instance_type': values['instance_type'],
-            'memory_mb': type_data['memory_mb'],
-            'mac_address': values['mac_address'],
-            'vcpus': type_data['vcpus'],
-            'local_gb': type_data['local_gb'],
-            }
-        return FakeModel(base_options)
+    def fake_instance_type_get_by_name(context, name):
+        return INSTANCE_TYPES[name]
 
     def fake_network_get_by_instance(context, instance_id):
-        fields = {
-            'bridge': 'xenbr0',
-            }
-        return FakeModel(fields)
+        return FakeModel(network_fields)
 
-    stubs.Set(db, 'instance_create', fake_instance_create)
+    def fake_network_get_all_by_instance(context, instance_id):
+        return [FakeModel(network_fields)]
+
+    def fake_instance_get_fixed_address(context, instance_id):
+        return FakeModel(fixed_ip_fields).address
+
+    def fake_instance_get_fixed_address_v6(context, instance_id):
+        return FakeModel(fixed_ip_fields).address
+
+    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+        return [FakeModel(fixed_ip_fields)]
+
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
+    stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
+    stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'instance_get_fixed_address',
+        fake_instance_get_fixed_address)
+    stubs.Set(db, 'instance_get_fixed_address_v6',
+        fake_instance_get_fixed_address_v6)
+    stubs.Set(db, 'network_get_all_by_instance',
+        fake_network_get_all_by_instance)
+    stubs.Set(db, 'fixed_ip_get_all_by_instance',
+        fake_fixed_ip_get_all_by_instance)

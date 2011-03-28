@@ -15,10 +15,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 from webob import exc
 
 from nova import compute
+from nova import exception
 from nova import flags
+from nova import log
 from nova import utils
 from nova import wsgi
 import nova.api.openstack
@@ -26,6 +30,8 @@ from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.image.service
 
+
+LOG = log.getLogger('nova.api.openstack.images')
 
 FLAGS = flags.FLAGS
 
@@ -84,8 +90,6 @@ def _translate_status(item):
         # S3ImageService
         pass
 
-    return item
-
 
 def _filter_keys(item, keys):
     """
@@ -104,6 +108,100 @@ def _convert_image_id_to_hash(image):
         image['id'] = image_id
 
 
+def _translate_s3_like_images(image_metadata):
+    """Work-around for leaky S3ImageService abstraction"""
+    api_metadata = image_metadata.copy()
+    _convert_image_id_to_hash(api_metadata)
+    api_metadata = _translate_keys(api_metadata)
+    _translate_status(api_metadata)
+    return api_metadata
+
+
+def _translate_from_image_service_to_api(image_metadata):
+    """Translate from ImageService to OpenStack API style attribute names
+
+    This involves 4 steps:
+
+        1. Filter out attributes that the OpenStack API doesn't need
+
+        2. Translate from base image attributes from names used by
+           BaseImageService to names used by OpenStack API
+
+        3. Add in any image properties
+
+        4. Format values according to API spec (for example dates must
+           look like "2010-08-10T12:00:00Z")
+    """
+    service_metadata = image_metadata.copy()
+    properties = service_metadata.pop('properties', {})
+
+    # 1. Filter out unecessary attributes
+    api_keys = ['id', 'name', 'updated_at', 'created_at', 'status']
+    api_metadata = utils.subset_dict(service_metadata, api_keys)
+
+    # 2. Translate base image attributes
+    api_map = {'updated_at': 'updated', 'created_at': 'created'}
+    api_metadata = utils.map_dict_keys(api_metadata, api_map)
+
+    # 3. Add in any image properties
+    # 3a. serverId is used for backups and snapshots
+    try:
+        api_metadata['serverId'] = int(properties['instance_id'])
+    except KeyError:
+        pass  # skip if it's not present
+    except ValueError:
+        pass  # skip if it's not an integer
+
+    # 3b. Progress special case
+    # TODO(sirp): ImageService doesn't have a notion of progress yet, so for
+    # now just fake it
+    if service_metadata['status'] == 'saving':
+        api_metadata['progress'] = 0
+
+    # 4. Format values
+    # 4a. Format Image Status (API requires uppercase)
+    api_metadata['status'] = _format_status_for_api(api_metadata['status'])
+
+    # 4b. Format timestamps
+    for attr in ('created', 'updated'):
+        if attr in api_metadata:
+            api_metadata[attr] = _format_datetime_for_api(
+                api_metadata[attr])
+
+    return api_metadata
+
+
+def _format_status_for_api(status):
+    """Return status in a format compliant with OpenStack API"""
+    mapping = {'queued': 'QUEUED',
+               'preparing': 'PREPARING',
+               'saving': 'SAVING',
+               'active': 'ACTIVE',
+               'killed': 'FAILED'}
+    return mapping[status]
+
+
+def _format_datetime_for_api(datetime_):
+    """Stringify datetime objects in a format compliant with OpenStack API"""
+    API_DATETIME_FMT = '%Y-%m-%dT%H:%M:%SZ'
+    return datetime_.strftime(API_DATETIME_FMT)
+
+
+def _safe_translate(image_metadata):
+    """Translate attributes for OpenStack API, temporary workaround for
+    S3ImageService attribute leakage.
+    """
+    # FIXME(sirp): The S3ImageService appears to be leaking implementation
+    # details, including its internal attribute names, and internal
+    # `status` values. Working around it for now.
+    s3_like_image = ('imageId' in image_metadata)
+    if s3_like_image:
+        translate = _translate_s3_like_images
+    else:
+        translate = _translate_from_image_service_to_api
+    return translate(image_metadata)
+
+
 class Controller(wsgi.Controller):
 
     _serialization_metadata = {
@@ -117,33 +215,32 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """Return all public images in brief"""
-        items = self._service.index(req.environ['nova.context'])
-        items = common.limited(items, req)
-        items = [_filter_keys(item, ('id', 'name')) for item in items]
-        return dict(images=items)
+        context = req.environ['nova.context']
+        image_metas = self._service.index(context)
+        image_metas = common.limited(image_metas, req)
+        return dict(images=image_metas)
 
     def detail(self, req):
         """Return all public images in detail"""
-        try:
-            items = self._service.detail(req.environ['nova.context'])
-        except NotImplementedError:
-            items = self._service.index(req.environ['nova.context'])
-        for image in items:
-            _convert_image_id_to_hash(image)
-
-        items = common.limited(items, req)
-        items = [_translate_keys(item) for item in items]
-        items = [_translate_status(item) for item in items]
-        return dict(images=items)
+        context = req.environ['nova.context']
+        image_metas = self._service.detail(context)
+        image_metas = common.limited(image_metas, req)
+        api_image_metas = [_safe_translate(image_meta)
+                           for image_meta in image_metas]
+        return dict(images=api_image_metas)
 
     def show(self, req, id):
         """Return data about the given image id"""
-        image_id = common.get_image_id_from_image_hash(self._service,
-                    req.environ['nova.context'], id)
+        context = req.environ['nova.context']
+        try:
+            image_id = common.get_image_id_from_image_hash(
+                self._service, context, id)
+        except exception.NotFound:
+            raise faults.Fault(exc.HTTPNotFound())
 
-        image = self._service.show(req.environ['nova.context'], image_id)
-        _convert_image_id_to_hash(image)
-        return dict(image=image)
+        image_meta = self._service.show(context, image_id)
+        api_image_meta = _safe_translate(image_meta)
+        return dict(image=api_image_meta)
 
     def delete(self, req, id):
         # Only public images are supported for now.
@@ -151,14 +248,13 @@ class Controller(wsgi.Controller):
 
     def create(self, req):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
+        env = self._deserialize(req.body, req.get_content_type())
         instance_id = env["image"]["serverId"]
         name = env["image"]["name"]
-
         image_meta = compute.API().snapshot(
             context, instance_id, name)
-
-        return dict(image=image_meta)
+        api_image_meta = _safe_translate(image_meta)
+        return dict(image=api_image_meta)
 
     def update(self, req, id):
         # Users may not modify public images, and that's all that
