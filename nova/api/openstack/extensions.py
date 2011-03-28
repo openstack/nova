@@ -323,10 +323,10 @@ class ExtensionManager(object):
                 try:
                     new_ext_class = getattr(mod, ext_name, None)
                     if not new_ext_class:
-                        LOG.warning(_('Did not find expected name '
-                                      '"%(ext_name)" in %(file)s'),
-                                    { 'ext_name': ext_name,
-                                      'file': ext_path })
+                        LOG.warn(_('Did not find expected name '
+                                   '"%(ext_name)" in %(file)s'),
+                                 { 'ext_name': ext_name,
+                                   'file': ext_path })
                         continue
                     new_ext = new_ext_class()
                     self._check_extension(new_ext)
