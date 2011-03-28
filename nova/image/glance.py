@@ -230,5 +230,13 @@ def _parse_glance_iso8601_timestamp(timestamp):
     """
     Parse a subset of iso8601 timestamps into datetime objects
     """
-    ISO_FMT = "%Y-%m-%dT%H:%M:%S.%f"
-    return datetime.datetime.strptime(timestamp, ISO_FMT)
+    ISO_FORMATS = ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"]
+
+    for iso_format in ISO_FORMATS:
+        try:
+            return datetime.datetime.strptime(timestamp, iso_format)
+        except ValueError:
+            pass
+
+    raise ValueError(_("""%(timestamp)s does not follow any of the \
+signatures: %(ISO_FORMATS)s""") % (locals()))

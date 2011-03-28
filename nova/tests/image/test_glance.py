@@ -55,6 +55,7 @@ class NullWriter(object):
 
 
 class BaseGlanceTest(unittest.TestCase):
+    NOW_GLANCE_OLD_FORMAT = "2010-10-11T10:30:22"
     NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
     NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22)
 
@@ -143,10 +144,14 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
         self.client.images = self._make_datetime_fixtures()
         image_meta = self.service.show(self.context, 'image1')
         self.assertDateTimesFilled(image_meta)
+        image_meta = self.service.show(self.context, 'image2')
+        self.assertDateTimesFilled(image_meta)
 
     def test_detail_makes_datetimes(self):
         self.client.images = self._make_datetime_fixtures()
         image_meta = self.service.detail(self.context)[0]
+        self.assertDateTimesFilled(image_meta)
+        image_meta = self.service.detail(self.context)[1]
         self.assertDateTimesFilled(image_meta)
 
     def test_get_makes_datetimes(self):
@@ -154,12 +159,26 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
         writer = NullWriter()
         image_meta = self.service.get(self.context, 'image1', writer)
         self.assertDateTimesFilled(image_meta)
+        image_meta = self.service.get(self.context, 'image2', writer)
+        self.assertDateTimesFilled(image_meta)
 
     def _make_datetime_fixtures(self):
-        fixtures = {'image1': {'name': 'image1', 'is_public': True,
-                               'created_at': self.NOW_GLANCE_FORMAT,
-                               'updated_at': self.NOW_GLANCE_FORMAT,
-                               'deleted_at': self.NOW_GLANCE_FORMAT}}
+        fixtures = {
+            'image1': {
+                'name': 'image1',
+                'is_public': True,
+                'created_at': self.NOW_GLANCE_FORMAT,
+                'updated_at': self.NOW_GLANCE_FORMAT,
+                'deleted_at': self.NOW_GLANCE_FORMAT,
+            },
+            'image2': {
+                'name': 'image2',
+                'is_public': True,
+                'created_at': self.NOW_GLANCE_OLD_FORMAT,
+                'updated_at': self.NOW_GLANCE_OLD_FORMAT,
+                'deleted_at': self.NOW_GLANCE_OLD_FORMAT,
+            },
+        }
         return fixtures
 
     def _make_none_datetime_fixtures(self):
