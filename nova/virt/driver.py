@@ -125,7 +125,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def snapshot(self, instance, image_id):
-        """Create snapshot from a running VM instance """
+        """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
     def finish_resize(self, instance, disk_info):

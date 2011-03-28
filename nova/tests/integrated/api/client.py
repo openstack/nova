@@ -124,7 +124,7 @@ class TestOpenStackClient(object):
     def api_request(self, relative_uri, check_response_status=None, **kwargs):
         auth_result = self._authenticate()
 
-        #NOTE(justinsb): httplib 'helpfully' converts headers to lower case
+        # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
         base_uri = auth_result['x-server-management-url']
         full_uri = base_uri + relative_uri
 

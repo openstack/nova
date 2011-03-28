@@ -31,13 +31,13 @@ FLAGS.verbose = True
 
 class LoginTest(integrated_helpers._IntegratedTestBase):
     def test_login(self):
-        """Simple check - we list flavors - so we know we're logged in"""
+        """Simple check - we list flavors - so we know we're logged in."""
         flavors = self.api.get_flavors()
         for flavor in flavors:
             LOG.debug(_("flavor: %s") % flavor)
 
     def test_bad_login_password(self):
-        """Test that I get a 401 with a bad username"""
+        """Test that I get a 401 with a bad username."""
         bad_credentials_api = client.TestOpenStackClient(self.user.name,
                                                          "notso_password",
                                                          self.user.auth_url)
@@ -46,7 +46,7 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
                           bad_credentials_api.get_flavors)
 
     def test_bad_login_username(self):
-        """Test that I get a 401 with a bad password"""
+        """Test that I get a 401 with a bad password."""
         bad_credentials_api = client.TestOpenStackClient("notso_username",
                                                          self.user.secret,
                                                          self.user.auth_url)
@@ -55,7 +55,7 @@ class LoginTest(integrated_helpers._IntegratedTestBase):
                           bad_credentials_api.get_flavors)
 
     def test_bad_login_both_bad(self):
-        """Test that I get a 401 with both bad username and bad password"""
+        """Test that I get a 401 with both bad username and bad password."""
         bad_credentials_api = client.TestOpenStackClient("notso_username",
                                                          "notso_password",
                                                          self.user.auth_url)

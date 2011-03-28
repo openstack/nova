@@ -573,7 +573,7 @@ class RBDDriver(VolumeDriver):
 
     def discover_volume(self, volume):
         """Discover volume on a remote host"""
-        #NOTE(justinsb): This is messed up... discover_volume takes 3 args
+        # NOTE(justinsb): This is messed up... discover_volume takes 3 args
         # but then that would break local_path
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 

@@ -37,7 +37,7 @@ class ExtensionsTest(integrated_helpers._IntegratedTestBase):
         return f
 
     def test_get_foxnsocks(self):
-        """Simple check that fox-n-socks works"""
+        """Simple check that fox-n-socks works."""
         response = self.api.api_request('/foxnsocks')
         foxnsocks = response.read()
         LOG.debug("foxnsocks: %s" % foxnsocks)

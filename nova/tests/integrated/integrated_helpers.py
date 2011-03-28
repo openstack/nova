@@ -37,19 +37,19 @@ LOG = logging.getLogger('nova.tests.integrated')
 
 
 def generate_random_alphanumeric(length):
-    """Creates a random alphanumeric string of specified length"""
+    """Creates a random alphanumeric string of specified length."""
     return ''.join(random.choice(string.ascii_uppercase + string.digits)
                    for _x in range(length))
 
 
 def generate_random_numeric(length):
-    """Creates a random numeric string of specified length"""
+    """Creates a random numeric string of specified length."""
     return ''.join(random.choice(string.digits)
                    for _x in range(length))
 
 
 def generate_new_element(items, prefix, numeric=False):
-    """Creates a random string with prefix, that is not in 'items' list"""
+    """Creates a random string with prefix, that is not in 'items' list."""
     while True:
         if numeric:
             candidate = prefix + generate_random_numeric(8)
@@ -85,7 +85,7 @@ class TestUser(object):
     def get_valid_image(self, create=False):
         images = self.openstack_api.get_images()
         if create and not images:
-            #TODO(justinsb): No way currently to create an image through API
+            # TODO(justinsb): No way currently to create an image through API
             #created_image = self.openstack_api.post_image(image)
             #images.append(created_image)
             raise exception.Error("No way to create an image through API")
@@ -154,9 +154,9 @@ class _IntegratedTestBase(test.TestCase):
         # set up services
         self.start_service('compute')
         self.start_service('volume')
-        #NOTE(justinsb): There's a bug here which is eluding me...
-        #  If we start the network_service, all is good, but then subsequent
-        #  tests fail: CloudTestCase.test_ajax_console in particular.
+        # NOTE(justinsb): There's a bug here which is eluding me...
+        # If we start the network_service, all is good, but then subsequent
+        # tests fail: CloudTestCase.test_ajax_console in particular.
         #self.start_service('network')
         self.start_service('scheduler')
 
@@ -182,7 +182,7 @@ class _IntegratedTestBase(test.TestCase):
         super(_IntegratedTestBase, self).tearDown()
 
     def _get_flags(self):
-        """An opportunity to setup flags, before the services are started"""
+        """An opportunity to setup flags, before the services are started."""
         f = {}
         f['image_service'] = 'nova.image.fake.MockImageService'
         f['fake_network'] = True
@@ -197,11 +197,11 @@ class _IntegratedTestBase(test.TestCase):
         if 'imageRef' in image:
             image_ref = image['imageRef']
         else:
-            #NOTE(justinsb): The imageRef code hasn't yet landed
+            # NOTE(justinsb): The imageRef code hasn't yet landed
             LOG.warning("imageRef not yet in images output")
             image_ref = image['id']
 
-            #TODO(justinsb): This is FUBAR
+            # TODO(justinsb): This is FUBAR
             image_ref = abs(hash(image_ref))
 
             image_ref = 'http://fake.server/%s' % image_ref

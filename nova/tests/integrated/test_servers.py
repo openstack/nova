@@ -39,7 +39,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
             LOG.debug("server: %s" % server)
 
     def test_create_and_delete_server(self):
-        """Creates and deletes a server"""
+        """Creates and deletes a server."""
 
         # Create server
 
@@ -50,13 +50,13 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         post = {'server': server}
 
         # Without an imageRef, this throws 500.
-        #TODO(justinsb): Check whatever the spec says should be thrown here
+        # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
         # With an invalid imageRef, this throws 500.
         server['imageRef'] = self.user.get_invalid_image()
-        #TODO(justinsb): Check whatever the spec says should be thrown here
+        # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
@@ -65,7 +65,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         server['imageRef'] = good_server.get('imageRef')
 
         # Without flavorId, this throws 500
-        #TODO(justinsb): Check whatever the spec says should be thrown here
+        # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
@@ -74,7 +74,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         server['flavorId'] = good_server.get('flavorId')
 
         # Without a name, this throws 500
-        #TODO(justinsb): Check whatever the spec says should be thrown here
+        # TODO(justinsb): Check whatever the spec says should be thrown here
         self.assertRaises(client.OpenStackApiException,
                           self.api.post_server, post)
 
@@ -106,7 +106,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
                 break
 
         # It should be available...
-        #TODO(justinsb): Mock doesn't yet do this...
+        # TODO(justinsb): Mock doesn't yet do this...
         #self.assertEqual('available', found_server['status'])
 
         self._delete_server(created_server_id)
@@ -126,7 +126,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
             LOG.debug("Found_server=%s" % found_server)
 
-            #TODO(justinsb): Mock doesn't yet do accurate state changes
+            # TODO(justinsb): Mock doesn't yet do accurate state changes
             #if found_server['status'] != 'deleting':
             #    break
             time.sleep(1)
@@ -134,7 +134,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Should be gone
         self.assertFalse(found_server)
 
-#TODO(justinsb): Enable this unit test when the metadata bug is fixed
+# TODO(justinsb): Enable this unit test when the metadata bug is fixed
 #    def test_create_server_with_metadata(self):
 #        """Creates a server with metadata"""
 #

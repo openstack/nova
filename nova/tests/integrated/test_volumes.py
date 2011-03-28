@@ -44,19 +44,19 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         return f
 
     def test_get_volumes_summary(self):
-        """Simple check that listing volumes works"""
+        """Simple check that listing volumes works."""
         volumes = self.api.get_volumes(False)
         for volume in volumes:
             LOG.debug("volume: %s" % volume)
 
     def test_get_volumes(self):
-        """Simple check that listing volumes works"""
+        """Simple check that listing volumes works."""
         volumes = self.api.get_volumes()
         for volume in volumes:
             LOG.debug("volume: %s" % volume)
 
     def _poll_while(self, volume_id, continue_states, max_retries=5):
-        """Poll (briefly) while the state is in continue_states"""
+        """Poll (briefly) while the state is in continue_states."""
         retries = 0
         while True:
             try:
@@ -80,7 +80,7 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         return found_volume
 
     def test_create_and_delete_volume(self):
-        """Creates and deletes a volume"""
+        """Creates and deletes a volume."""
 
         # Create volume
         created_volume = self.api.post_volume({'volume': {'size': 1}})
@@ -141,11 +141,11 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         self.assertEquals(delete_action['id'], created_volume_id)
 
     def test_attach_and_detach_volume(self):
-        """Creates, attaches, detaches and deletes a volume"""
+        """Creates, attaches, detaches and deletes a volume."""
 
         # Create server
         server_req = {'server': self._build_minimal_create_server_request()}
-        #NOTE(justinsb): Create an extra server so that server_id != volume_id
+        # NOTE(justinsb): Create an extra server so that server_id != volume_id
         self.api.post_server(server_req)
         created_server = self.api.post_server(server_req)
         LOG.debug("created_server: %s" % created_server)
@@ -198,9 +198,9 @@ class VolumesTest(integrated_helpers._IntegratedTestBase):
         # This is just an implementation detail, but let's check it...
         self.assertEquals(volume_id, attachment_id)
 
-        #NOTE(justinsb): There's an issue with the attach code, in that
-        #  it's currently asynchronous and not recorded until the attach
-        #  completes.  So the caller must be 'smart', like this...
+        # NOTE(justinsb): There's an issue with the attach code, in that
+        # it's currently asynchronous and not recorded until the attach
+        # completes.  So the caller must be 'smart', like this...
         attach_done = None
         retries = 0
         while True:
