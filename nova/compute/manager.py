@@ -1053,7 +1053,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             name = db_instance['name']
             db_state = db_instance['state']
             vm_instance = vm_instances.get(name)
-            
+
             if vm_instance is None:
                 #NOTE(justinsb): We have to be very careful here, because a
                 #concurrent operation could be in progress (e.g. a spawn)
