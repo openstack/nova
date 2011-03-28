@@ -57,6 +57,7 @@ class NullWriter(object):
 class BaseGlanceTest(unittest.TestCase):
     NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
     NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22)
+    NOW_ISO_FORMAT = "2010-10-11T10:30:22.000000"
 
     def setUp(self):
         # FIXME(sirp): we can probably use stubs library here rather than
@@ -73,6 +74,10 @@ class BaseGlanceTest(unittest.TestCase):
     def assertDateTimesEmpty(self, image_meta):
         self.assertEqual(image_meta['updated_at'], None)
         self.assertEqual(image_meta['deleted_at'], None)
+
+    def assertDateTimesBlank(self, image_meta):
+        self.assertEqual(image_meta['updated_at'], '')
+        self.assertEqual(image_meta['deleted_at'], '')
 
 
 class TestGlanceImageServiceProperties(BaseGlanceTest):
@@ -108,10 +113,20 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
         image_meta = self.service.show(self.context, 'image1')
         self.assertDateTimesEmpty(image_meta)
 
+    def test_show_handles_blank_datetimes(self):
+        self.client.images = self._make_blank_datetime_fixtures()
+        image_meta = self.service.show(self.context, 'image1')
+        self.assertDateTimesBlank(image_meta)
+
     def test_detail_handles_none_datetimes(self):
         self.client.images = self._make_none_datetime_fixtures()
         image_meta = self.service.detail(self.context)[0]
         self.assertDateTimesEmpty(image_meta)
+
+    def test_detail_handles_blank_datetimes(self):
+        self.client.images = self._make_blank_datetime_fixtures()
+        image_meta = self.service.detail(self.context)[0]
+        self.assertDateTimesBlank(image_meta)
 
     def test_get_handles_none_datetimes(self):
         self.client.images = self._make_none_datetime_fixtures()
@@ -119,8 +134,19 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
         image_meta = self.service.get(self.context, 'image1', writer)
         self.assertDateTimesEmpty(image_meta)
 
+    def test_get_handles_blank_datetimes(self):
+        self.client.images = self._make_blank_datetime_fixtures()
+        writer = NullWriter()
+        image_meta = self.service.get(self.context, 'image1', writer)
+        self.assertDateTimesBlank(image_meta)
+
     def test_show_makes_datetimes(self):
         self.client.images = self._make_datetime_fixtures()
+        image_meta = self.service.show(self.context, 'image1')
+        self.assertDateTimesFilled(image_meta)
+
+    def test_show_makes_datetimes_iso(self):
+        self.client.images = self._make_iso_fixtures()
         image_meta = self.service.show(self.context, 'image1')
         self.assertDateTimesFilled(image_meta)
 
@@ -129,8 +155,19 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
         image_meta = self.service.detail(self.context)[0]
         self.assertDateTimesFilled(image_meta)
 
+    def test_detail_makes_datetimes_iso(self):
+        self.client.images = self._make_iso_fixtures()
+        image_meta = self.service.detail(self.context)[0]
+        self.assertDateTimesFilled(image_meta)
+
     def test_get_makes_datetimes(self):
         self.client.images = self._make_datetime_fixtures()
+        writer = NullWriter()
+        image_meta = self.service.get(self.context, 'image1', writer)
+        self.assertDateTimesFilled(image_meta)
+
+    def test_get_makes_datetimes_iso(self):
+        self.client.images = self._make_iso_fixtures()
         writer = NullWriter()
         image_meta = self.service.get(self.context, 'image1', writer)
         self.assertDateTimesFilled(image_meta)
@@ -142,10 +179,23 @@ class TestGetterDateTimeNoneTests(BaseGlanceTest):
                                'deleted_at': self.NOW_GLANCE_FORMAT}}
         return fixtures
 
+    def _make_iso_fixtures(self):
+        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+                               'created_at': self.NOW_ISO_FORMAT,
+                               'updated_at': self.NOW_ISO_FORMAT,
+                               'deleted_at': self.NOW_ISO_FORMAT}}
+        return fixtures
+
     def _make_none_datetime_fixtures(self):
         fixtures = {'image1': {'name': 'image1', 'is_public': True,
                                'updated_at': None,
                                'deleted_at': None}}
+        return fixtures
+
+    def _make_blank_datetime_fixtures(self):
+        fixtures = {'image1': {'name': 'image1', 'is_public': True,
+                               'updated_at': '',
+                               'deleted_at': ''}}
         return fixtures
 
 

@@ -197,73 +197,6 @@ class GlanceImageServiceTest(test.TestCase,
         image_metas = self.service.detail(self.context)
         self.assertDictMatch(image_metas[0], expected)
 
-    def test_image_valid_date_format(self):
-        """
-        Ensure 'created_at', 'updated_at', and 'deleted_at' can be valid
-        ISO strings.
-        """
-        fixture = {
-            'name': 'test image',
-            'is_public': False,
-            'properties': {
-                'instance_id': '42',
-                'user_id': '1',
-            },
-        }
-
-        valid_dates = ['2010-10-11T10:30:22', '2012-12-21T00:00:00']
-
-        for date in valid_dates:
-            fixture["created_at"] = date
-            fixture["updated_at"] = date
-            fixture["deleted_at"] = date
-            image_id = self.service.create(self.context, fixture)['id']
-            self.assertDictMatch(self.sent_to_glance['metadata'], fixture)
-
-    def test_image_invalid_date_format(self):
-        """
-        Ensure `created_at`, `modified_at` can't be invalid dates.
-        """
-        fixture = {
-            'name': 'test image',
-            'is_public': False,
-            'properties': {
-                'instance_id': '42',
-                'user_id': '1',
-            },
-        }
-
-        invalid_dates = ['Not a date.', 4]
-
-        for date in invalid_dates:
-            fixture["created_at"] = date
-            fixture["updated_at"] = date
-            fixture["deleted_at"] = date
-            self.assertRaises((TypeError, ValueError), self.service.create,
-                self.context, fixture)
-
-    def test_image_blank_date_format(self):
-        """
-        Ensure `created_at`, `modified_at` can be blank dates.
-        """
-        fixture = {
-            'name': 'test image',
-            'is_public': False,
-            'properties': {
-                'instance_id': '42',
-                'user_id': '1',
-            },
-        }
-
-        blank_dates = [None, '']
-
-        for date in blank_dates:
-            fixture["created_at"] = date
-            fixture["updated_at"] = date
-            fixture["deleted_at"] = date
-            image_id = self.service.create(self.context, fixture)['id']
-            self.assertDictMatch(self.sent_to_glance['metadata'], fixture)
-
     def test_create_without_instance_id(self):
         """
         Ensure we can create an image without having to specify an
@@ -301,8 +234,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.stubs.UnsetAll()
         FLAGS.image_service = self.orig_image_service
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
-
-
 
     def test_get_image_index(self):
         req = webob.Request.blank('/v1.0/images')
