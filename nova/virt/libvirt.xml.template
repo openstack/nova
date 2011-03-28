@@ -3,47 +3,45 @@
     <memory>${memory_kb}</memory>
     <os>
 #if $type == 'lxc'
-	#set $disk_prefix = ''
-	#set $disk_bus = ''
-		<type>exe</type>
-		<init>/sbin/init</init>
+    #set $disk_prefix = ''
+    #set $disk_bus = ''
+        <type>exe</type>
+        <init>/sbin/init</init>
+#else if $type == 'uml'
+    #set $disk_prefix = 'ubd'
+    #set $disk_bus = 'uml'
+        <type>uml</type>
+        <kernel>/usr/bin/linux</kernel>
+        <root>/dev/ubda</root>
 #else
-	#if $type == 'uml'
-		#set $disk_prefix = 'ubd'
-		#set $disk_bus = 'uml'
-			<type>uml</type>
-			<kernel>/usr/bin/linux</kernel>
-			<root>/dev/ubda</root>
-	#else
-		#if $type == 'xen'
-			#set $disk_prefix = 'sd'
-			#set $disk_bus = 'scsi'
-				<type>linux</type>
-				<root>/dev/xvda</root>
-		#else
-			#set $disk_prefix = 'vd'
-			#set $disk_bus = 'virtio'
-				<type>hvm</type>
-		#end if
-		#if $getVar('rescue', False)
-			<kernel>${basepath}/kernel.rescue</kernel>
-			<initrd>${basepath}/ramdisk.rescue</initrd>
-		#else
-			#if $getVar('kernel', None)
-				<kernel>${kernel}</kernel>
-				#if $type == 'xen'
-					<cmdline>ro</cmdline>
-				#else
-					<cmdline>root=/dev/vda console=ttyS0</cmdline>
-				#end if
-				#if $getVar('ramdisk', None)
-					<initrd>${ramdisk}</initrd>
-				#end if
-			 #else
-				<boot dev="hd" />
-			 #end if
-		#end if
-	#end if
+    #if $type == 'xen'
+        #set $disk_prefix = 'sd'
+        #set $disk_bus = 'scsi'
+            <type>linux</type>
+            <root>/dev/xvda</root>
+    #else
+        #set $disk_prefix = 'vd'
+        #set $disk_bus = 'virtio'
+            <type>hvm</type>
+    #end if
+    #if $getVar('rescue', False)
+        <kernel>${basepath}/kernel.rescue</kernel>
+        <initrd>${basepath}/ramdisk.rescue</initrd>
+    #else
+        #if $getVar('kernel', None)
+            <kernel>${kernel}</kernel>
+            #if $type == 'xen'
+                <cmdline>ro</cmdline>
+            #else
+                <cmdline>root=/dev/vda console=ttyS0</cmdline>
+            #end if
+            #if $getVar('ramdisk', None)
+                <initrd>${ramdisk}</initrd>
+            #end if
+        #else
+            <boot dev="hd" />
+        #end if
+    #end if
 #end if
     </os>
     <features>
@@ -52,36 +50,36 @@
     <vcpu>${vcpus}</vcpu>
     <devices>
 #if $type == 'lxc'
-	<filesystem type='mount'>
-		<source dir='${basepath}/rootfs'/>
-		<target dir='/'/>
-	</filesystem>
+        <filesystem type='mount'>
+            <source dir='${basepath}/rootfs'/>
+            <target dir='/'/>
+        </filesystem>
 #else
-	#if $getVar('rescue', False)
-		    <disk type='file'>
-			    <driver type='${driver_type}'/>
-				<source file='${basepath}/disk.rescue'/>
-				<target dev='${disk_prefix}a' bus='${disk_bus}'/>
-			</disk>
-			<disk type='file'>
-				<driver type='${driver_type}'/>
-				<source file='${basepath}/disk'/>
-				<target dev='${disk_prefix}b' bus='${disk_bus}'/>
-			</disk>
-	#else
-			<disk type='file'>
-				<driver type='${driver_type}'/>
-				<source file='${basepath}/disk'/>
-				<target dev='${disk_prefix}a' bus='${disk_bus}'/>
-			</disk>
-		#if $getVar('local', False)
-			<disk type='file'>
-				<driver type='${driver_type}'/>
-				<source file='${basepath}/disk.local'/>
-				<target dev='${disk_prefix}b' bus='${disk_bus}'/>
-			</disk>
-		#end if
-#end if
+    #if $getVar('rescue', False)
+        <disk type='file'>
+            <driver type='${driver_type}'/>
+            <source file='${basepath}/disk.rescue'/>
+            <target dev='${disk_prefix}a' bus='${disk_bus}'/>
+        </disk>
+        <disk type='file'>
+            <driver type='${driver_type}'/>
+            <source file='${basepath}/disk'/>
+            <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+        </disk>
+    #else
+        <disk type='file'>
+            <driver type='${driver_type}'/>
+            <source file='${basepath}/disk'/>
+            <target dev='${disk_prefix}a' bus='${disk_bus}'/>
+        </disk>
+        #if $getVar('local', False)
+            <disk type='file'>
+                <driver type='${driver_type}'/>
+                <source file='${basepath}/disk.local'/>
+                <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+            </disk>
+        #end if
+    #end if
 #end if
 
 #for $nic in $nics
@@ -91,7 +89,7 @@
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
             <filterref filter="nova-instance-${name}-${nic.id}">
                 <parameter name="IP" value="${nic.ip_address}" />
-                <parameter name="DHCPSERVER" value="${nic.dhcp_server}" />           
+                <parameter name="DHCPSERVER" value="${nic.dhcp_server}" />
 #if $getVar('nic.extra_params', False)
                 ${nic.extra_params}
 #end if
