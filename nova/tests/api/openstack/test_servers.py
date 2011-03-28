@@ -684,6 +684,33 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_server_change_password_empty_string_v1_1(self):
+        body = {'changePassword': {'adminPass': ''}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_change_password_none_v1_1(self):
+        body = {'changePassword': {'adminPass': None}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_server_change_password_not_a_string_v1_1(self):
+        body = {'changePassword': {'adminPass': 1234}}
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_server_reboot(self):
         body = dict(server=dict(
             name='server_test', imageId=2, flavorId=2, metadata={},

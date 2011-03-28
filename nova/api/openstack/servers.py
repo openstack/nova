@@ -599,6 +599,8 @@ class ControllerV11(Controller):
             or not 'adminPass' in input_dict['changePassword']):
             return exc.HTTPBadRequest()
         password = input_dict['changePassword']['adminPass']
+        if not isinstance(password, basestring) or password == '':
+            return exc.HTTPBadRequest()
         self.compute_api.set_admin_password(context, id, password)
         return exc.HTTPAccepted()
 
