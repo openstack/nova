@@ -59,10 +59,11 @@ class OvsFlow():
     def apply(self, rule):
         self.delete(rule % self.params)
         if self.command == 'online':
-            self.add(rule % params)
+            self.add(rule % self.params)
 
 
 def main(dom_id, command, net, only_this_vif=None):
+    # FIXME(dubs) what to do when only_this_vif is None
     vif_ofport = execute('/usr/bin/ovs-ofctl', 'get', 'Interface',
                          only_this_vif, 'ofport', return_stdout=True)
 
