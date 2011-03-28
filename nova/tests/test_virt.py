@@ -246,7 +246,7 @@ class LibvirtConnTestCase(test.TestCase):
                                  {'allocated':   True,
                                   'instance_id': instance_ref['id']})
 
-        FLAGS.libvirt_type = 'lxc'
+        self.flags(libvirt_type='lxc')
         conn = libvirt_conn.LibvirtConnection(True)
 
         uri = conn.get_uri()
