@@ -138,14 +138,14 @@ def stubout_is_vdi_pv(stubs):
 
 
 def stubout_lookup_image(stubs):
-    """Simulates a failure in lookup image"""
+    """Simulates a failure in lookup image."""
     def f(_1, _2, _3, _4):
         raise Exception("Test Exception raised by fake lookup_image")
     stubs.Set(vm_utils, 'lookup_image', f)
 
 
 def stubout_fetch_image_glance_disk(stubs):
-    """Simulates a failure in fetch image_glance_disk"""
+    """Simulates a failure in fetch image_glance_disk."""
 
     @classmethod
     def f(cls, *args):
@@ -155,7 +155,7 @@ def stubout_fetch_image_glance_disk(stubs):
 
 
 def stubout_create_vm(stubs):
-    """Simulates a failure in create_vm"""
+    """Simulates a failure in create_vm."""
 
     @classmethod
     def f(cls, *args):

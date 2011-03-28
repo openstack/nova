@@ -466,17 +466,23 @@ class VMHelper(HelperBase):
             vdi_size += MBR_SIZE_BYTES
 
         name_label = get_name_label_for_image(image)
-        vdi_ref = cls.create_vdi(session, sr_ref, name_label,
-                                 vdi_size, False)
+        vdi_ref = cls.create_vdi(session,
+                                 sr_ref,
+                                 name_label,
+                                 vdi_size,
+                                 False)
         # from this point we have a VDI on Xen host
         # if anything goes wrong, we need to remember its uuid
         try:
             filename = None
             vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
-            with_vdi_attached_here(session, vdi_ref, False,
-                                   lambda dev:
-                                   _stream_disk(dev, image_type,
-                                                virtual_size, image_file))
+            with_vdi_attached_here(session,
+                                   vdi_ref,
+                                   False,
+                                   lambda dev: _stream_disk(dev,
+                                                            image_type,
+                                                            virtual_size,
+                                                            image_file))
             if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
                 # we need to invoke a plugin for copying VDI's
                 # content into proper path

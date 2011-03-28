@@ -374,6 +374,7 @@ def remove_kernel_ramdisk(session, args):
         os.remove(ramdisk_file)
     return "ok"
 
+
 if __name__ == '__main__':
     XenAPIPlugin.dispatch({'upload_vhd': upload_vhd,
                            'download_vhd': download_vhd,

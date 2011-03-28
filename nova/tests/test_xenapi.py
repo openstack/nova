@@ -343,8 +343,10 @@ class XenAPIVMTestCase(test.TestCase):
                           1, 2, 3, "m1.xlarge")
 
     def test_spawn_fail_cleanup_1(self):
-        """Simulates an error while downloading image
-        Verifies VDI create are properly cleaned up"""
+        """
+        Simulates an error while downloading image
+        Verifies VDI create are properly cleaned up.
+        """
         FLAGS.xenapi_image_service = 'glance'
         stubs.stubout_fetch_image_glance_disk(self.stubs)
         self.assertRaises(xenapi_fake.Failure,
@@ -353,8 +355,10 @@ class XenAPIVMTestCase(test.TestCase):
         self._check_no_unbound_vdi()
 
     def test_spawn_fail_cleanup_2(self):
-        """Simulates an error while creating VM record.
-        Verifies VDI create are properly cleaned up"""
+        """
+        Simulates an error while creating VM record. It
+        verifies that VDI created are properly cleaned up.
+        """
         FLAGS.xenapi_image_service = 'glance'
         stubs.stubout_create_vm(self.stubs)
         self.assertRaises(xenapi_fake.Failure,
@@ -423,18 +427,17 @@ class XenAPIVMTestCase(test.TestCase):
         self.stubs.UnsetAll()
 
     def _create_instance(self):
-        """Creates and spawns a test instance"""
-        values = {
-            'name': 1,
-            'id': 1,
-            'project_id': self.project.id,
-            'user_id': self.user.id,
-            'image_id': 1,
-            'kernel_id': 2,
-            'ramdisk_id': 3,
-            'instance_type': 'm1.large',
-            'mac_address': 'aa:bb:cc:dd:ee:ff',
-            'os_type': 'linux'}
+        """Creates and spawns a test instance."""
+        values = {'name': 1,
+                  'id': 1,
+                  'project_id': self.project.id,
+                  'user_id': self.user.id,
+                  'image_id': 1,
+                  'kernel_id': 2,
+                  'ramdisk_id': 3,
+                  'instance_type': 'm1.large',
+                  'mac_address': 'aa:bb:cc:dd:ee:ff',
+                  'os_type': 'linux'}
         instance = db.instance_create(values)
         self.conn.spawn(instance)
         return instance
