@@ -317,7 +317,7 @@ class ExtensionManager(object):
             LOG.audit(_('Loading extension file: %s'), f)
             mod_name, file_ext = os.path.splitext(os.path.split(f)[-1])
             ext_path = os.path.join(self.path, f)
-            if file_ext.lower() == '.py':
+            if file_ext.lower() == '.py' and not mod_name.startswith('_'):
                 mod = imp.load_source(mod_name, ext_path)
                 ext_name = mod_name[0].upper() + mod_name[1:]
                 try:
