@@ -96,12 +96,10 @@ class TestUser(object):
 
 
 class IntegratedUnitTestContext(object):
-    def __init__(self):
+    def __init__(self, auth_url):
         self.auth_manager = manager.AuthManager()
 
-        self.api_service = None
-        self.services = []
-        self.auth_url = None
+        self.auth_url = auth_url
         self.project_name = None
 
         self.test_user = None
@@ -109,7 +107,6 @@ class IntegratedUnitTestContext(object):
         self.setup()
 
     def setup(self):
-        self._start_services()
         self._create_test_user()
 
     def _create_test_user(self):
@@ -119,47 +116,8 @@ class IntegratedUnitTestContext(object):
         self.project_name = 'openstack'
         self._configure_project(self.project_name, self.test_user)
 
-    def _start_services(self):
-        self._start_compute_service()
-        self._start_volume_service()
-        self._start_scheduler_service()
-
-        #NOTE(justinsb): There's a bug here which is eluding me...
-        #  If we start the network_service, all is good, but then subsequent
-        #  tests fail: CloudTestCase.test_ajax_console in particular.
-        #self._start_network_service()
-
-        self._start_api_service()
-
-    def _start_compute_service(self):
-        compute_service = service.Service.create(binary='nova-compute')
-        compute_service.start()
-        self.services.append(compute_service)
-        return compute_service
-
-    def _start_network_service(self):
-        network_service = service.Service.create(binary='nova-network')
-        network_service.start()
-        self.services.append(network_service)
-        return network_service
-
-    def _start_volume_service(self):
-        volume_service = service.Service.create(binary='nova-volume')
-        volume_service.start()
-        self.services.append(volume_service)
-        return volume_service
-
-    def _start_scheduler_service(self):
-        scheduler_service = service.Service.create(binary='nova-scheduler')
-        scheduler_service.start()
-        self.services.append(scheduler_service)
-        return scheduler_service
-
     def cleanup(self):
         self.test_user = None
-        for svc in self.services:
-            svc.kill()
-        self.services = []
 
     def _create_unittest_user(self):
         users = self.auth_manager.get_users()
@@ -185,21 +143,6 @@ class IntegratedUnitTestContext(object):
         else:
             self.auth_manager.add_to_project(user.name, project_name)
 
-    def _start_api_service(self):
-        api_service = service.ApiService.create()
-        api_service.start()
-
-        if not api_service:
-            raise Exception("API Service was None")
-
-        #NOTE(justinsb): The API service doesn't have a kill method yet,
-        #  so we treat it separately
-        self.api_service = api_service
-
-        self.auth_url = 'http://localhost:8774/v1.1'
-
-        return api_service
-
 
 class _IntegratedTestBase(test.TestCase):
     def setUp(self):
@@ -208,9 +151,31 @@ class _IntegratedTestBase(test.TestCase):
         f = self._get_flags()
         self.flags(**f)
 
-        self.context = IntegratedUnitTestContext()
+        # set up services
+        self.start_service('compute')
+        self.start_service('volume')
+        #NOTE(justinsb): There's a bug here which is eluding me...
+        #  If we start the network_service, all is good, but then subsequent
+        #  tests fail: CloudTestCase.test_ajax_console in particular.
+        #self.start_service('network')
+        self.start_service('scheduler')
+
+        self.auth_url = self._start_api_service()
+
+        self.context = IntegratedUnitTestContext(self.auth_url)
+
         self.user = self.context.test_user
         self.api = self.user.openstack_api
+
+    def _start_api_service(self):
+        api_service = service.ApiService.create()
+        api_service.start()
+
+        if not api_service:
+            raise Exception("API Service was None")
+
+        auth_url = 'http://localhost:8774/v1.1'
+        return auth_url
 
     def tearDown(self):
         self.context.cleanup()
