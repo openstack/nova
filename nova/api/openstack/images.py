@@ -51,8 +51,8 @@ class Controller(wsgi.Controller):
         """
         Initialize new `ImageController`.
 
-        @param compute_service: `nova.compute.api:API`
-        @param image_service: `nova.image.service:BaseImageService`
+        :param compute_service: `nova.compute.api:API`
+        :param image_service: `nova.image.service:BaseImageService`
         """
         _default_service = utils.import_object(flags.FLAGS.image_service)
 
@@ -63,7 +63,7 @@ class Controller(wsgi.Controller):
         """
         Return an index listing of images available to the request.
 
-        @param req: `wsgi.Request` object
+        :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
         images = self._image_service.index(context)
@@ -75,7 +75,7 @@ class Controller(wsgi.Controller):
         """
         Return a detailed index listing of images available to the request.
 
-        @param req: `wsgi.Request` object.
+        :param req: `wsgi.Request` object.
         """
         context = req.environ['nova.context']
         images = self._image_service.detail(context)
@@ -87,8 +87,8 @@ class Controller(wsgi.Controller):
         """
         Return detailed information about a specific image.
 
-        @param req: `wsgi.Request` object
-        @param id: Image identifier (integer)
+        :param req: `wsgi.Request` object
+        :param id: Image identifier (integer)
         """
         context = req.environ['nova.context']
 
@@ -110,8 +110,8 @@ class Controller(wsgi.Controller):
         """
         Delete an image, if allowed.
 
-        @param req: `wsgi.Request` object
-        @param id: Image identifier (integer)
+        :param req: `wsgi.Request` object
+        :param id: Image identifier (integer)
         """
         image_id = id
         context = req.environ['nova.context']
@@ -122,7 +122,7 @@ class Controller(wsgi.Controller):
         """
         Snapshot a server instance and save the image.
 
-        @param req: `wsgi.Request` object
+        :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
         content_type = req.get_content_type()
