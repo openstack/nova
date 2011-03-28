@@ -15,7 +15,7 @@
 #    under the License.
 
 """
-Test suite for XenAPI
+Test suite for XenAPI.
 """
 
 import functools
@@ -66,7 +66,7 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
 
 class XenAPIVolumeTestCase(test.TestCase):
     """
-    Unit tests for Volume operations
+    Unit tests for Volume operations.
     """
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
@@ -76,7 +76,6 @@ class XenAPIVolumeTestCase(test.TestCase):
         FLAGS.xenapi_connection_url = 'test_url'
         FLAGS.xenapi_connection_password = 'test_pass'
         db_fakes.stub_out_db_instance_api(self.stubs)
-        #db_fakes.stub_out_db_network_api(self.stubs)
         stubs.stub_out_get_target(self.stubs)
         xenapi_fake.reset()
         self.values = {'id': 1,
@@ -102,7 +101,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         return db.volume_create(self.context, vol)
 
     def test_create_iscsi_storage(self):
-        """ This shows how to test helper classes' methods """
+        """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         helper = volume_utils.VolumeHelper
@@ -117,7 +116,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_parse_volume_info_raise_exception(self):
-        """ This shows how to test helper classes' methods """
+        """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         helper = volume_utils.VolumeHelper
@@ -131,7 +130,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_attach_volume(self):
-        """ This shows how to test Ops classes' methods """
+        """This shows how to test Ops classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
@@ -150,7 +149,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         check()
 
     def test_attach_volume_raise_exception(self):
-        """ This shows how to test when exceptions are raised """
+        """This shows how to test when exceptions are raised."""
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.get_connection(False)
@@ -174,7 +173,7 @@ def reset_network(*args):
 
 class XenAPIVMTestCase(test.TestCase):
     """
-    Unit tests for VM operations
+    Unit tests for VM operations.
     """
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
@@ -475,21 +474,21 @@ class XenAPIVMTestCase(test.TestCase):
                    network_manager='nova.network.manager.VlanManager',
                    network_driver='nova.network.xenapi_net',
                    vlan_interface='fake0')
-        #reset network table
+        # Reset network table
         xenapi_fake.reset_table('network')
-        #instance id = 2 will use vlan network (see db/fakes.py)
+        # Instance id = 2 will use vlan network (see db/fakes.py)
         fake_instance_id = 2
         network_bk = self.network
-        #ensure we use xenapi_net driver
+        # Ensure we use xenapi_net driver
         self.network = utils.import_object(FLAGS.network_manager)
         self.network.setup_compute_network(None, fake_instance_id)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK,
                          instance_id=fake_instance_id)
-        #TODO(salvatore-orlando): a complete test here would require
-        #a check for making sure the bridge for the VM's VIF is
-        #consistent with bridge specified in nova db
+        # TODO(salvatore-orlando): a complete test here would require
+        # A check for making sure the bridge for the VM's VIF is
+        # consistent with bridge specified in nova db
         self.network = network_bk
 
     def test_spawn_with_network_qos(self):
@@ -521,7 +520,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.stubs.UnsetAll()
 
     def _create_instance(self):
-        """Creates and spawns a test instance"""
+        """Creates and spawns a test instance."""
         stubs.stubout_loopingcall_start(self.stubs)
         values = {
             'id': 1,
@@ -540,7 +539,7 @@ class XenAPIVMTestCase(test.TestCase):
 
 class XenAPIDiffieHellmanTestCase(test.TestCase):
     """
-    Unit tests for Diffie-Hellman code
+    Unit tests for Diffie-Hellman code.
     """
     def setUp(self):
         super(XenAPIDiffieHellmanTestCase, self).setUp()
@@ -566,7 +565,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
 class XenAPIMigrateInstance(test.TestCase):
     """
-    Unit test for verifying migration-related actions
+    Unit test for verifying migration-related actions.
     """
 
     def setUp(self):
@@ -623,7 +622,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
     """
-    Unit tests for code that detects the ImageType
+    Unit tests for code that detects the ImageType.
     """
     def setUp(self):
         super(XenAPIDetermineDiskImageTestCase, self).setUp()
@@ -644,7 +643,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
 
     def test_instance_disk(self):
         """
-        If a kernel is specified then the image type is DISK (aka machine)
+        If a kernel is specified then the image type is DISK (aka machine).
         """
         FLAGS.xenapi_image_service = 'objectstore'
         self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_MACHINE

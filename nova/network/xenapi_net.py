@@ -35,19 +35,19 @@ FLAGS = flags.FLAGS
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
-    """Create a vlan and bridge unless they already exist"""
-    #open xenapi session
+    """Create a vlan and bridge unless they already exist."""
+    # Open xenapi session
     LOG.debug("ENTERING ensure_vlan_bridge in xenapi net")
     url = FLAGS.xenapi_connection_url
     username = FLAGS.xenapi_connection_username
     password = FLAGS.xenapi_connection_password
     session = XenAPISession(url, username, password)
-    #check whether bridge already exists
-    #retrieve network whose name_label is "bridge"
+    # Check whether bridge already exists
+    # Retrieve network whose name_label is "bridge"
     network_ref = NetworkHelper.find_network_with_name_label(session, bridge)
     if network_ref == None:
-        #if bridge does not exists
-        #1 - create network
+        # If bridge does not exists
+        # 1 - create network
         description = "network for nova bridge %s" % bridge
         network_rec = {
                        'name_label': bridge,
@@ -55,28 +55,28 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
                        'other_config': {},
                        }
         network_ref = session.call_xenapi('network.create', network_rec)
-        #2 - find PIF for VLAN
+        # 2 - find PIF for VLAN
         expr = 'field "device" = "%s" and \
                 field "VLAN" = "-1"' % FLAGS.vlan_interface
         pifs = session.call_xenapi('PIF.get_all_records_where', expr)
         pif_ref = None
-        #multiple PIF are ok: we are dealing with a pool
+        # Multiple PIF are ok: we are dealing with a pool
         if len(pifs) == 0:
             raise Exception(
                   _('Found no PIF for device %s') % FLAGS.vlan_interface)
-        #3 - create vlan for network
+        # 3 - create vlan for network
         for pif_ref in pifs.keys():
             session.call_xenapi('VLAN.create', pif_ref,
                                 str(vlan_num), network_ref)
     else:
-        #check VLAN tag is appropriate
+        # Check VLAN tag is appropriate
         network_rec = session.call_xenapi('network.get_record', network_ref)
-        #retrieve PIFs from network
+        # Retrieve PIFs from network
         for pif_ref in network_rec['PIFs']:
-            #retrieve VLAN from PIF
+            # Retrieve VLAN from PIF
             pif_rec = session.call_xenapi('PIF.get_record', pif_ref)
             pif_vlan = int(pif_rec['VLAN'])
-            #raise an exception if VLAN <> vlan_num
+            # Raise an exception if VLAN <> vlan_num
             if pif_vlan != vlan_num:
                 raise Exception(_("PIF %(pif_rec['uuid'])s for network "
                                   "%(bridge)s has VLAN id %(pif_vlan)d. "

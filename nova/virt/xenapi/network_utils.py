@@ -44,7 +44,7 @@ class NetworkHelper(HelperBase):
         """
         Return the network on which the bridge is attached, if found.
         The bridge is defined in the nova db and can be found either in the
-        'bridge' or 'name_label' fields of the XenAPI network record
+        'bridge' or 'name_label' fields of the XenAPI network record.
         """
         expr = 'field "name__label" = "%s" or ' \
                'field "bridge" = "%s"' % (bridge, bridge)

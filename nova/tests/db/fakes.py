@@ -25,7 +25,7 @@ from nova import utils
 
 
 def stub_out_db_instance_api(stubs, injected=True):
-    """ Stubs out the db API for creating Instances """
+    """Stubs out the db API for creating Instances."""
 
     INSTANCE_TYPES = {
         'm1.tiny': dict(memory_mb=512,
@@ -91,7 +91,7 @@ def stub_out_db_instance_api(stubs, injected=True):
         'network_id': 'fake_flat'}
 
     class FakeModel(object):
-        """ Stubs out for model """
+        """Stubs out for model."""
         def __init__(self, values):
             self.values = values
 
@@ -111,7 +111,7 @@ def stub_out_db_instance_api(stubs, injected=True):
         return INSTANCE_TYPES[name]
 
     def fake_network_get_by_instance(context, instance_id):
-        #even instance numbers are on vlan networks
+        # Even instance numbers are on vlan networks
         if instance_id % 2 == 0:
             return FakeModel(vlan_network_fields)
         else:
@@ -119,7 +119,7 @@ def stub_out_db_instance_api(stubs, injected=True):
         return FakeModel(network_fields)
 
     def fake_network_get_all_by_instance(context, instance_id):
-        #even instance numbers are on vlan networks
+        # Even instance numbers are on vlan networks
         if instance_id % 2 == 0:
             return [FakeModel(vlan_network_fields)]
         else:
