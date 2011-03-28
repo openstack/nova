@@ -320,20 +320,16 @@ class ExtensionManager(object):
             if file_ext.lower() == '.py' and not mod_name.startswith('_'):
                 mod = imp.load_source(mod_name, ext_path)
                 ext_name = mod_name[0].upper() + mod_name[1:]
-                try:
-                    new_ext_class = getattr(mod, ext_name, None)
-                    if not new_ext_class:
-                        LOG.warn(_('Did not find expected name '
-                                   '"%(ext_name)" in %(file)s'),
-                                 { 'ext_name': ext_name,
-                                   'file': ext_path })
-                        continue
-                    new_ext = new_ext_class()
-                    self._check_extension(new_ext)
-                    self.extensions[new_ext.get_alias()] = new_ext
-                except AttributeError as ex:
-                    LOG.exception(_("Exception loading extension: %s"),
-                                   unicode(ex))
+                new_ext_class = getattr(mod, ext_name, None)
+                if not new_ext_class:
+                    LOG.warn(_('Did not find expected name '
+                               '"%(ext_name)" in %(file)s'),
+                             { 'ext_name': ext_name,
+                             'file': ext_path })
+                    continue
+                new_ext = new_ext_class()
+                self._check_extension(new_ext)
+                self.extensions[new_ext.get_alias()] = new_ext
 
 
 class ResponseExtension(object):
