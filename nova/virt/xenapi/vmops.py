@@ -35,6 +35,7 @@ from nova import context
 from nova import log as logging
 from nova import exception
 from nova import utils
+from nova import flags
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -45,6 +46,7 @@ from nova.virt.xenapi.vm_utils import ImageType
 
 XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
+FLAGS = flags.FLAGS
 
 
 class VMOps(object):
@@ -55,7 +57,6 @@ class VMOps(object):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
         self.poll_rescue_last_ran = None
-
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
@@ -205,6 +206,12 @@ class VMOps(object):
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
+
+        # Alter the image before VM start for, e.g. network injection
+        if FLAGS.xenapi_inject_image:
+            VMHelper.preconfigure_instance(self._session, instance,
+                                           vdi_ref, network_info)
+
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, vm_ref, network_info)
         return vm_ref
@@ -308,26 +315,17 @@ class VMOps(object):
             obj = None
             try:
                 # check for opaque ref
-                obj = self._session.get_xenapi().VM.get_record(instance_or_vm)
+                obj = self._session.get_xenapi().VM.get_uuid(instance_or_vm)
                 return instance_or_vm
             except self.XenAPI.Failure:
-                # wasn't an opaque ref, must be an instance name
+                # wasn't an opaque ref, can be an instance name
                 instance_name = instance_or_vm
 
         # if instance_or_vm is an int/long it must be instance id
         elif isinstance(instance_or_vm, (int, long)):
             ctx = context.get_admin_context()
-            try:
-                instance_obj = db.instance_get(ctx, instance_or_vm)
-                instance_name = instance_obj.name
-            except exception.NotFound:
-                # The unit tests screw this up, as they use an integer for
-                # the vm name. I'd fix that up, but that's a matter for
-                # another bug report. So for now, just try with the passed
-                # value
-                instance_name = instance_or_vm
-
-        # otherwise instance_or_vm is an instance object
+            instance_obj = db.instance_get(ctx, instance_or_vm)
+            instance_name = instance_obj.name
         else:
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -767,7 +765,6 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
-
         instance._rescue = True
         self.spawn_rescue(instance)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
@@ -891,6 +888,7 @@ class VMOps(object):
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
+                'broadcast': network['broadcast'],
                 'mac': instance.mac_address,
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
