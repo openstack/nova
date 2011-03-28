@@ -246,19 +246,26 @@ class Controller(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            try:
-                self.compute_api.set_admin_password(ctxt, id)
-            except exception.TimeoutException:
-                return exc.HTTPRequestTimeout()
+
         if 'name' in inst_dict['server']:
-            update_dict['display_name'] = inst_dict['server']['name']
+            name = inst_dict['server']['name']
+
+            if not isinstance(name, basestring) or name == '':
+                return exc.HTTPBadRequest()
+
+            update_dict['display_name'] = name 
+
+        self._parse_update(ctxt, id, inst_dict, update_dict)
+
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
         return exc.HTTPNoContent()
+
+    def _parse_update(self, context, id, inst_dict, update_dict):
+        pass
 
     @scheduler_api.redirect_handler
     def action(self, req, id):
@@ -565,6 +572,15 @@ class ControllerV10(Controller):
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
+
+    def _parse_update(self, context, server_id, inst_dict, update_dict):
+        if 'adminPass' in inst_dict['server']:
+            update_dict['admin_pass'] = inst_dict['server']['adminPass']
+            try:
+                self.compute_api.set_admin_password(context, server_id)
+            except exception.TimeoutException:
+                return exc.HTTPRequestTimeout()
+
 
 
 class ControllerV11(Controller):

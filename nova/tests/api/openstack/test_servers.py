@@ -448,39 +448,55 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 422)
 
-    def test_update_bad_params(self):
+    def test_update_bad_name(self):
         """ Confirm that update is filtering params """
-        inst_dict = dict(cat='leopard', name='server_test', adminPass='bacon')
+        inst_dict = dict(name='', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
-
-        def server_update(context, id, params):
-            self.update_called = True
-            filtered_dict = dict(name='server_test', admin_pass='bacon')
-            self.assertEqual(params, filtered_dict)
-
-        self.stubs.Set(nova.db.api, 'instance_update',
-            server_update)
 
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
+        req.content_type = "application/json"
         req.body = self.body
-        req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
-    def test_update_server(self):
+    def test_update_server_v10(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
 
         def server_update(context, id, params):
-            filtered_dict = dict(name='server_test', admin_pass='bacon')
+            filtered_dict = dict(display_name='server_test', admin_pass='bacon')
             self.assertEqual(params, filtered_dict)
+            return filtered_dict
 
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
 
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
+        req.content_type = "application/json"
         req.body = self.body
-        req.get_response(fakes.wsgi_app())
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
+
+    def test_update_server_adminPass_ignored_v11(self):
+        inst_dict = dict(name='server_test', adminPass='bacon')
+        self.body = json.dumps(dict(server=inst_dict))
+
+        def server_update(context, id, params):
+            filtered_dict = dict(display_name='server_test')
+            self.assertEqual(params, filtered_dict)
+            return filtered_dict
+
+        self.stubs.Set(nova.db.api, 'instance_update',
+            server_update)
+
+        req = webob.Request.blank('/v1.1/servers/1')
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        req.body = self.body
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 204)
 
     def test_create_backup_schedules(self):
         req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
