@@ -1055,16 +1055,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             vm_instance = vm_instances.get(name)
 
             if vm_instance is None:
-                #NOTE(justinsb): We have to be very careful here, because a
-                #concurrent operation could be in progress (e.g. a spawn)
+                # NOTE(justinsb): We have to be very careful here, because a
+                # concurrent operation could be in progress (e.g. a spawn)
                 if db_state == power_state.NOSTATE:
-                    #Assume that NOSTATE => spawning
-                    #TODO(justinsb): This does mean that if we crash during a
-                    #spawn, the machine will never leave the spawning state,
-                    #but this is just the way nova is; this function isn't
-                    #trying to correct that problem.
-                    #We could have a separate task to correct this error.
-                    #TODO(justinsb): What happens during a live migration?
+                    # Assume that NOSTATE => spawning
+                    # TODO(justinsb): This does mean that if we crash during a
+                    # spawn, the machine will never leave the spawning state,
+                    # but this is just the way nova is; this function isn't
+                    # trying to correct that problem.
+                    # We could have a separate task to correct this error.
+                    # TODO(justinsb): What happens during a live migration?
                     LOG.info(_("Found instance '%(name)s' in DB but no VM. "
                                "State=%(db_state)s, so assuming spawn is in "
                                "progress.") % locals())
