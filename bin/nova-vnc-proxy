@@ -40,7 +40,9 @@ from nova import version
 from nova.vnc import auth
 from nova.vnc import proxy
 
+
 LOG = logging.getLogger('nova.vnc-proxy')
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('vnc_proxy_wwwroot', '/var/lib/nova/noVNC/',
@@ -56,6 +58,7 @@ flags.DEFINE_integer('vnc_token_ttl', 300,
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
+
 
 if __name__ == "__main__":
     utils.default_flagfile()

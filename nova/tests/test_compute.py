@@ -290,7 +290,7 @@ class ComputeTestCase(test.TestCase):
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_vnc_console(self):
-        """Make sure we can a vnc console for an instance"""
+        """Make sure we can a vnc console for an instance."""
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
 

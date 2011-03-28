@@ -618,7 +618,7 @@ class API(base.Base):
                  {'method': 'authorize_vnc_console',
                   'args': {'token': output['token'],
                            'host': output['host'],
-                  'port': output['port']}})
+                           'port': output['port']}})
 
         return {'url': '%s/vnc_auto.html?token=%s&host=%s&port=%s' % (
                        FLAGS.vnc_console_proxy_url,
