@@ -232,3 +232,7 @@ class ComputeDriver(object):
     def inject_network_info(self, instance):
         """inject network info for specified instance"""
         raise NotImplementedError()
+
+    def poll_rescued_instances(self, timeout):
+        """Poll for rescued instances"""
+        raise NotImplementedError()
