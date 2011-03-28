@@ -2389,7 +2389,7 @@ def instance_type_get_by_flavor_id(context, id):
                                     filter_by(flavorid=int(id)).\
                                     first()
     if not inst_type:
-        raise exception.NotFound(_("No flavor with name %s") % id)
+        raise exception.NotFound(_("No flavor with flavorid %s") % id)
     else:
         return dict(inst_type)
 

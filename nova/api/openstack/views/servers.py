@@ -16,6 +16,7 @@
 #    under the License.
 
 import hashlib
+import os
 
 from nova.compute import power_state
 import nova.compute
@@ -41,9 +42,13 @@ class ViewBuilder(object):
     def build(self, inst, is_detail):
         """Return a dict that represenst a server."""
         if is_detail:
-            return self._build_detail(inst)
+            server = self._build_detail(inst)
         else:
-            return self._build_simple(inst)
+            server = self._build_simple(inst)
+
+        self._build_extra(server, inst)
+
+        return server
 
     def _build_simple(self, inst):
         """Return a simple model of a server."""
@@ -97,29 +102,67 @@ class ViewBuilder(object):
         """Return the flavor sub-resource of a server."""
         raise NotImplementedError()
 
+    def _build_extra(self, response, inst):
+        pass
+
 
 class ViewBuilderV10(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
 
     def _build_image(self, response, inst):
-        response['imageId'] = inst['image_id']
+        if 'image_id' in dict(inst):
+            response['imageId'] = inst['image_id']
 
     def _build_flavor(self, response, inst):
-        response['flavorId'] = inst['instance_type']
+        if 'instance_type' in dict(inst):
+            response['flavorId'] = inst['instance_type']
 
 
 class ViewBuilderV11(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
-
-    def __init__(self, addresses_builder, flavor_builder, image_builder):
+    def __init__(self, addresses_builder, flavor_builder, image_builder,
+                 base_url):
         ViewBuilder.__init__(self, addresses_builder)
         self.flavor_builder = flavor_builder
         self.image_builder = image_builder
+        self.base_url = base_url
 
     def _build_image(self, response, inst):
-        image_id = inst["image_id"]
-        response["imageRef"] = self.image_builder.generate_href(image_id)
+        if "image_id" in dict(inst):
+            image_id = inst.get("image_id")
+            response["imageRef"] = self.image_builder.generate_href(image_id)
 
     def _build_flavor(self, response, inst):
-        flavor_id = inst["instance_type"]
-        response["flavorRef"] = self.flavor_builder.generate_href(flavor_id)
+        if "instance_type" in dict(inst):
+            flavor_id = inst["instance_type"]
+            flavor_ref = self.flavor_builder.generate_href(flavor_id)
+            response["flavorRef"] = flavor_ref
+
+    def _build_extra(self, response, inst):
+        self._build_links(response, inst)
+
+    def _build_links(self, response, inst):
+        href = self.generate_href(inst["id"])
+
+        links = [
+            {
+                "rel": "self",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": href,
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": href,
+            },
+        ]
+
+        response["server"]["links"] = links
+
+    def generate_href(self, server_id):
+        """Create an url that refers to a specific server id."""
+        return os.path.join(self.base_url, "servers", str(server_id))
