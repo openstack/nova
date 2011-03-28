@@ -76,9 +76,7 @@ flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
-flags.DEFINE_string('injected_network_template',
-                    utils.abspath('virt/interfaces.template'),
-                    'Template file for injected network')
+
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -762,11 +760,12 @@ class LibvirtConnection(driver.ComputeDriver):
                    'dns': network_ref['dns'],
                    'address_v6': address_v6,
                    'gateway_v6': network_ref['gateway_v6'],
-                   'netmask_v6': network_ref['netmask_v6'],
-                   'use_ipv6': FLAGS.use_ipv6}
+                   'netmask_v6': network_ref['netmask_v6']}
             nets.append(net_info)
 
-        net = str(Template(ifc_template, searchList=[{'interfaces': nets}]))
+        net = str(Template(ifc_template,
+                           searchList=[{'interfaces': nets,
+                                        'use_ipv6': FLAGS.use_ipv6}]))
 
         if key or net:
             inst_name = inst['name']
