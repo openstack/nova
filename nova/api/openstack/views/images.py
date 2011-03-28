@@ -19,29 +19,21 @@ import os.path
 
 
 class ViewBuilder(object):
-    """
-    Base class for generating responses to OpenStack API requests for
-    information about images.
-    """
+    """Base class for generating responses to OpenStack API requests for
+    information about images."""
 
     def __init__(self, base_url):
-        """
-        Initialize new `ViewBuilder`.
-        """
+        """Initialize new `ViewBuilder`."""
         self._url = base_url
 
     def _format_dates(self, image):
-        """
-        Update all date fields to ensure standardized formatting.
-        """
+        """Update all date fields to ensure standardized formatting."""
         for attr in ['created_at', 'updated_at', 'deleted_at']:
             if image.get(attr) is not None:
                 image[attr] = image[attr].strftime('%Y-%m-%dT%H:%M:%SZ')
 
     def _format_status(self, image):
-        """
-        Update the status field to standardize format.
-        """
+        """Update the status field to standardize format."""
         status_mapping = {
             'pending': 'queued',
             'decrypting': 'preparing',
@@ -56,15 +48,11 @@ class ViewBuilder(object):
             image['status'] = image['status'].upper()
 
     def generate_href(self, image_id):
-        """
-        Return an href string pointing to this object.
-        """
+        """Return an href string pointing to this object."""
         return os.path.join(self._url, "images", str(image_id))
 
     def build(self, image_obj, detail=False):
-        """
-        Return a standardized image structure for display by the API.
-        """
+        """Return a standardized image structure for display by the API."""
         properties = image_obj.get("properties", {})
 
         self._format_dates(image_obj)
@@ -97,18 +85,15 @@ class ViewBuilder(object):
 
 
 class ViewBuilderV10(ViewBuilder):
+    """OpenStack API v1.0 Image Builder"""
     pass
 
 
 class ViewBuilderV11(ViewBuilder):
-    """
-    OpenStack API v1.1 Image Builder
-    """
+    """OpenStack API v1.1 Image Builder"""
 
     def build(self, image_obj, detail=False):
-        """
-        Return a standardized image structure for display by the API.
-        """
+        """Return a standardized image structure for display by the API."""
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
 
