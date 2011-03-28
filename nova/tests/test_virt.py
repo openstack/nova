@@ -258,13 +258,15 @@ class LibvirtConnTestCase(test.TestCase):
         check = [
         (lambda t: t.find('.').get('type'), 'lxc'),
         (lambda t: t.find('./os/type').text, 'exe'),
-        (lambda t: t.find('./devices/filesystem/source').get('dir'), 'rootfs'),
         (lambda t: t.find('./devices/filesystem/target').get('dir'), '/')]
 
         for i, (check, expected_result) in enumerate(check):
             self.assertEqual(check(tree),
                              expected_result,
                              '%s failed common check %d' % (xml, i))
+
+        target = tree.find('./devices/filesystem/source').get('dir')
+        self.assertTrue(len(target) > 0)
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
