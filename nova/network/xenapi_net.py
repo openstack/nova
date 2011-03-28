@@ -49,11 +49,9 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
         # If bridge does not exists
         # 1 - create network
         description = "network for nova bridge %s" % bridge
-        network_rec = {
-                       'name_label': bridge,
+        network_rec = {'name_label': bridge,
                        'name_description': description,
-                       'other_config': {},
-                       }
+                       'other_config': {}}
         network_ref = session.call_xenapi('network.create', network_rec)
         # 2 - find PIF for VLAN
         expr = 'field "device" = "%s" and \
@@ -66,8 +64,10 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
                   _('Found no PIF for device %s') % FLAGS.vlan_interface)
         # 3 - create vlan for network
         for pif_ref in pifs.keys():
-            session.call_xenapi('VLAN.create', pif_ref,
-                                str(vlan_num), network_ref)
+            session.call_xenapi('VLAN.create',
+                                pif_ref,
+                                str(vlan_num),
+                                network_ref)
     else:
         # Check VLAN tag is appropriate
         network_rec = session.call_xenapi('network.get_record', network_ref)
@@ -76,7 +76,7 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
             # Retrieve VLAN from PIF
             pif_rec = session.call_xenapi('PIF.get_record', pif_ref)
             pif_vlan = int(pif_rec['VLAN'])
-            # Raise an exception if VLAN <> vlan_num
+            # Raise an exception if VLAN != vlan_num
             if pif_vlan != vlan_num:
                 raise Exception(_("PIF %(pif_rec['uuid'])s for network "
                                   "%(bridge)s has VLAN id %(pif_vlan)d. "

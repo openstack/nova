@@ -487,7 +487,7 @@ class XenAPIVMTestCase(test.TestCase):
                          glance_stubs.FakeGlance.IMAGE_RAMDISK,
                          instance_id=fake_instance_id)
         # TODO(salvatore-orlando): a complete test here would require
-        # A check for making sure the bridge for the VM's VIF is
+        # a check for making sure the bridge for the VM's VIF is
         # consistent with bridge specified in nova db
         self.network = network_bk
 

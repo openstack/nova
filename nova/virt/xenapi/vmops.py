@@ -338,6 +338,7 @@ class VMOps(object):
         :param instance: the instance that owns the VHD in question.
         :param dest: the destination host machine.
         :param disk_type: values are 'primary' or 'cow'.
+
         """
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
@@ -711,7 +712,6 @@ class VMOps(object):
             - unplug the instance VM's disk from the rescue VM.
             - teardown the rescue VM.
             - release the bootlock to allow the instance VM to start.
-
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
                                         "%s-rescue" % instance.name)

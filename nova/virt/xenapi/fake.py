@@ -78,7 +78,10 @@ def reset():
     for c in _CLASSES:
         _db_content[c] = {}
     create_host('fake')
-    create_vm('fake', 'Running', is_a_template=False, is_control_domain=True)
+    create_vm('fake',
+              'Running',
+              is_a_template=False,
+              is_control_domain=True)
 
 
 def reset_table(table):
@@ -88,26 +91,23 @@ def reset_table(table):
 
 
 def create_host(name_label):
-    return _create_object('host', {
-        'name_label': name_label,
-        })
+    return _create_object('host',
+                          {'name_label': name_label})
 
 
 def create_network(name_label, bridge):
-    return _create_object('network', {
-        'name_label': name_label,
-        'bridge': bridge,
-        })
+    return _create_object('network',
+                          {'name_label': name_label,
+                           'bridge': bridge})
 
 
 def create_vm(name_label, status,
               is_a_template=False, is_control_domain=False):
-    return _create_object('VM', {
-        'name_label': name_label,
-        'power-state': status,
-        'is_a_template': is_a_template,
-        'is_control_domain': is_control_domain,
-        })
+    return _create_object('VM',
+                          {'name_label': name_label,
+                           'power-state': status,
+                           'is_a_template': is_a_template,
+                           'is_control_domain': is_control_domain})
 
 
 def destroy_vm(vm_ref):
@@ -129,27 +129,24 @@ def destroy_vdi(vdi_ref):
 
 
 def create_vdi(name_label, read_only, sr_ref, sharable):
-    return _create_object('VDI', {
-        'name_label': name_label,
-        'read_only': read_only,
-        'SR': sr_ref,
-        'type': '',
-        'name_description': '',
-        'sharable': sharable,
-        'other_config': {},
-        'location': '',
-        'xenstore_data': '',
-        'sm_config': {},
-        'VBDs': {},
-        })
+    return _create_object('VDI',
+                          {'name_label': name_label,
+                           'read_only': read_only,
+                           'SR': sr_ref,
+                           'type': '',
+                           'name_description': '',
+                           'sharable': sharable,
+                           'other_config': {},
+                           'location': '',
+                           'xenstore_data': '',
+                           'sm_config': {},
+                           'VBDs': {}})
 
 
 def create_vbd(vm_ref, vdi_ref):
-    vbd_rec = {
-        'VM': vm_ref,
-        'VDI': vdi_ref,
-        'currently_attached': False,
-        }
+    vbd_rec = {'VM': vm_ref,
+               'VDI': vdi_ref,
+               'currently_attached': False}
     vbd_ref = _create_object('VBD', vbd_rec)
     after_VBD_create(vbd_ref, vbd_rec)
     return vbd_ref
@@ -175,19 +172,17 @@ def after_VM_create(vm_ref, vm_rec):
 
 
 def create_pbd(config, host_ref, sr_ref, attached):
-    return _create_object('PBD', {
-        'device-config': config,
-        'host': host_ref,
-        'SR': sr_ref,
-        'currently-attached': attached,
-        })
+    return _create_object('PBD',
+                          {'device-config': config,
+                           'host': host_ref,
+                           'SR': sr_ref,
+                           'currently-attached': attached})
 
 
 def create_task(name_label):
-    return _create_object('task', {
-        'name_label': name_label,
-        'status': 'pending',
-        })
+    return _create_object('task',
+                          {'name_label': name_label,
+                           'status': 'pending'})
 
 
 def create_local_pifs():
@@ -205,34 +200,32 @@ def create_local_srs():
 
 
 def _create_local_sr(host_ref):
-    sr_ref = _create_object('SR', {
-        'name_label': 'Local storage',
-        'type': 'lvm',
-        'content_type': 'user',
-        'shared': False,
-        'physical_size': str(1 << 30),
-        'physical_utilisation': str(0),
-        'virtual_allocation': str(0),
-        'other_config': {
-            'i18n-original-value-name_label': 'Local storage',
-            'i18n-key': 'local-storage',
-            },
-        'VDIs': []
-        })
+    sr_ref = \
+        _create_object('SR',
+                       {'name_label': 'Local storage',
+                        'type': 'lvm',
+                        'content_type': 'user',
+                        'shared': False,
+                        'physical_size': str(1 << 30),
+                        'physical_utilisation': str(0),
+                        'virtual_allocation': str(0),
+                        'other_config': {'i18n-original-value-name_label': \
+                                         'Local storage',
+                                         'i18n-key': 'local-storage'},
+                        'VDIs': []})
     pbd_ref = create_pbd('', host_ref, sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
 
 
 def _create_local_pif(host_ref):
-    pif_ref = _create_object('PIF', {
-        'name-label': 'Fake PIF',
-        'MAC': '00:11:22:33:44:55',
-        'physical': True,
-        'VLAN': -1,
-        'device': 'fake0',
-        'host_uuid': host_ref,
-        })
+    pif_ref = _create_object('PIF',
+                             {'name-label': 'Fake PIF',
+                              'MAC': '00:11:22:33:44:55',
+                              'physical': True,
+                              'VLAN': -1,
+                              'device': 'fake0',
+                              'host_uuid': host_ref})
 
 
 def _create_object(table, obj):
@@ -260,19 +253,17 @@ def _create_sr(table, obj):
 
 def _create_vlan(pif_ref, vlan_num, network_ref):
     pif_rec = get_record('PIF', pif_ref)
-    vlan_pif_ref = _create_object('PIF', {
-        'name-label': 'Fake VLAN PIF',
-        'MAC': '00:11:22:33:44:55',
-        'physical': True,
-        'VLAN': vlan_num,
-        'device': pif_rec['device'],
-        'host_uuid': pif_rec['host_uuid'],
-        })
-    return _create_object('VLAN', {
-        'tagged-pif': pif_ref,
-        'untagged-pif': vlan_pif_ref,
-        'tag': vlan_num,
-        })
+    vlan_pif_ref = _create_object('PIF',
+                                  {'name-label': 'Fake VLAN PIF',
+                                   'MAC': '00:11:22:33:44:55',
+                                   'physical': True,
+                                   'VLAN': vlan_num,
+                                   'device': pif_rec['device'],
+                                   'host_uuid': pif_rec['host_uuid']})
+    return _create_object('VLAN',
+                          {'tagged-pif': pif_ref,
+                           'untagged-pif': vlan_pif_ref,
+                           'tag': vlan_num})
 
 
 def get_all(table):
@@ -334,7 +325,7 @@ class SessionBase(object):
         rec['device'] = ''
 
     def PIF_get_all_records_where(self, _1, _2):
-        # TODO (salvatore-orlando):filter table on _2
+        # TODO (salvatore-orlando): filter table on _2
         return _db_content['PIF']
 
     def VM_get_xenstore_data(self, _1, vm_ref):
@@ -347,7 +338,7 @@ class SessionBase(object):
         db_ref['xenstore_data'][key] = None
 
     def network_get_all_records_where(self, _1, _2):
-        # TODO (salvatore-orlando):filter table on _2
+        # TODO (salvatore-orlando): filter table on _2
         return _db_content['network']
 
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
@@ -385,10 +376,9 @@ class SessionBase(object):
 
     def _login(self, method, params):
         self._session = str(uuid.uuid4())
-        _db_content['session'][self._session] = {
-            'uuid': str(uuid.uuid4()),
-            'this_host': _db_content['host'].keys()[0],
-            }
+        _db_content['session'][self._session] = \
+                                {'uuid': str(uuid.uuid4()),
+                                 'this_host': _db_content['host'].keys()[0]}
 
     def _logout(self):
         s = self._session
