@@ -372,7 +372,7 @@ class ExtensionManager(object):
 
         for f in os.listdir(path):
             mod_name, file_ext = os.path.splitext(os.path.split(f)[-1])
-            if file_ext.startswith('_'):
+            if mod_name.startswith('_'):
                 continue
             if file_ext.lower() != '.py':
                 continue

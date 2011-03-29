@@ -38,12 +38,15 @@ Supports KVM, QEMU, UML, and XEN.
 
 import multiprocessing
 import os
-import shutil
-import sys
 import random
+import shutil
 import subprocess
+import sys
+import tempfile
+import time
 import uuid
 from xml.dom import minidom
+from xml.etree import ElementTree
 
 from eventlet import greenthread
 from eventlet import tpool
@@ -111,6 +114,8 @@ flags.DEFINE_string('live_migration_flag',
                     'Define live migration behavior.')
 flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
+flags.DEFINE_string('qemu_img', 'qemu-img',
+                    'binary to use for qemu-img commands')
 
 
 def get_connection(read_only):
@@ -397,10 +402,67 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def snapshot(self, instance, image_id):
-        """ Create snapshot from a running VM instance """
-        raise NotImplementedError(
-            _("Instance snapshotting is not supported for libvirt"
-              "at this time"))
+        """Create snapshot from a running VM instance.
+
+        This command only works with qemu 0.14+, the qemu_img flag is
+        provided so that a locally compiled binary of qemu-img can be used
+        to support this command.
+
+        """
+        image_service = utils.import_object(FLAGS.image_service)
+        virt_dom = self._conn.lookupByName(instance['name'])
+        elevated = context.get_admin_context()
+
+        base = image_service.show(elevated, instance['image_id'])
+
+        metadata = {'disk_format': base['disk_format'],
+                    'container_format': base['container_format'],
+                    'is_public': False,
+                    'properties': {'architecture': base['architecture'],
+                                   'type': base['type'],
+                                   'name': '%s.%s' % (base['name'], image_id),
+                                   'kernel_id': instance['kernel_id'],
+                                   'image_location': 'snapshot',
+                                   'image_state': 'available',
+                                   'owner_id': instance['project_id'],
+                                   'ramdisk_id': instance['ramdisk_id'],
+                                   }
+                    }
+
+        # Make the snapshot
+        snapshot_name = uuid.uuid4().hex
+        snapshot_xml = """
+        <domainsnapshot>
+            <name>%s</name>
+        </domainsnapshot>
+        """ % snapshot_name
+        snapshot_ptr = virt_dom.snapshotCreateXML(snapshot_xml, 0)
+
+        # Find the disk
+        xml_desc = virt_dom.XMLDesc(0)
+        domain = ElementTree.fromstring(xml_desc)
+        source = domain.find('devices/disk/source')
+        disk_path = source.get('file')
+
+        # Export the snapshot to a raw image
+        temp_dir = tempfile.mkdtemp()
+        out_path = os.path.join(temp_dir, snapshot_name)
+        qemu_img_cmd = '%s convert -f qcow2 -O raw -s %s %s %s' % (
+                FLAGS.qemu_img,
+                snapshot_name,
+                disk_path,
+                out_path)
+        utils.execute(qemu_img_cmd)
+
+        # Upload that image to the image service
+        with open(out_path) as image_file:
+            image_service.update(elevated,
+                                 image_id,
+                                 metadata,
+                                 image_file)
+
+        # Clean up
+        shutil.rmtree(temp_dir)
 
     @exception.wrap_exception
     def reboot(self, instance):
@@ -760,11 +822,12 @@ class LibvirtConnection(driver.ComputeDriver):
                    'dns': network_ref['dns'],
                    'address_v6': address_v6,
                    'gateway_v6': network_ref['gateway_v6'],
-                   'netmask_v6': network_ref['netmask_v6'],
-                   'use_ipv6': FLAGS.use_ipv6}
+                   'netmask_v6': network_ref['netmask_v6']}
             nets.append(net_info)
 
-        net = str(Template(ifc_template, searchList=[{'interfaces': nets}]))
+        net = str(Template(ifc_template,
+                           searchList=[{'interfaces': nets,
+                                        'use_ipv6': FLAGS.use_ipv6}]))
 
         if key or net:
             inst_name = inst['name']
