@@ -57,6 +57,7 @@ from nova import flags
 from nova import log as logging
 #from nova import test
 from nova import utils
+from nova import vnc
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state

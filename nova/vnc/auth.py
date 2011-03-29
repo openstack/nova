@@ -89,8 +89,9 @@ class VNCNovaAuthMiddleware(object):
             del self.token_cache[k]
 
 
-
 class LoggingMiddleware(object):
+    """Middleware for basic vnc-specific request logging."""
+
     def __init__(self, app):
         self.app = app
 
