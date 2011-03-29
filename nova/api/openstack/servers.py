@@ -250,8 +250,15 @@ class Controller(wsgi.Controller):
         if 'name' in inst_dict['server']:
             name = inst_dict['server']['name']
 
-            if not isinstance(name, basestring) or name == '':
-                return exc.HTTPBadRequest()
+            if not isinstance(name, basestring):
+                msg = _("Server name is not a string or unicode")
+                return exc.HTTPBadRequest(msg)
+
+            name = name.strip()
+
+            if name == '':
+                msg = _("Server name is an empty string")
+                return exc.HTTPBadRequest(msg)
 
             update_dict['display_name'] = name
 

@@ -448,7 +448,31 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 422)
 
-    def test_update_bad_name(self):
+    def test_update_nonstring_name(self):
+        """ Confirm that update is filtering params """
+        inst_dict = dict(name=12, adminPass='bacon')
+        self.body = json.dumps(dict(server=inst_dict))
+
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        req.body = self.body
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_update_whitespace_name(self):
+        """ Confirm that update is filtering params """
+        inst_dict = dict(name='   ', adminPass='bacon')
+        self.body = json.dumps(dict(server=inst_dict))
+
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        req.body = self.body
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_update_null_name(self):
         """ Confirm that update is filtering params """
         inst_dict = dict(name='', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
