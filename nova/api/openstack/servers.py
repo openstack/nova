@@ -154,7 +154,7 @@ class Controller(wsgi.Controller):
         if not 'name' in env['server']:
             msg = _("Server name is not defined")
             return exc.HTTPBadRequest(msg)
-        
+
         name = env['server']['name']
         self._validate_server_name(name)
         name = name.strip()
