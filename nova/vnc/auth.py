@@ -51,7 +51,7 @@ class VNCNovaAuthMiddleware(object):
             return self.token_cache[token]
 
         rval = rpc.call(context.get_admin_context(),
-                        FLAGS.vnc_console_proxy_topic,
+                        FLAGS.vncproxy_topic,
                         {"method": "check_token", "args": {'token': token}})
         if rval:
             self.token_cache[token] = rval
