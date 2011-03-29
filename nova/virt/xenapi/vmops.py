@@ -430,7 +430,7 @@ class VMOps(object):
         """Set the root/admin password on the VM instance.
 
         This is done via an agent running on the VM. Communication between nova
-        and the agent is done via writing xenstore records. Since communication 
+        and the agent is done via writing xenstore records. Since communication
         is done over the XenAPI RPC calls, we need to encrypt the password.
         We're using a simple Diffie-Hellman class instead of the more advanced
         one in M2Crypto for compatibility with the agent code.
@@ -467,12 +467,12 @@ class VMOps(object):
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
-        """Write a file to the VM instance. 
+        """Write a file to the VM instance.
 
         The path to which it is to be written and the contents of the file
         need to be supplied; both will be base64-encoded to prevent errors
         with non-ASCII characters being transmitted. If the agent does not
-        support file injection, or the user has disabled it, a 
+        support file injection, or the user has disabled it, a
         NotImplementedError will be raised.
 
         """
