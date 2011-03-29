@@ -117,7 +117,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
 
 
 def setup_container(image, container_dir=None, nbd=False):
-    """Setup the LXC container
+    """Setup the LXC container.
 
     It will mount the loopback image to the container directory in order
     to create the root filesystem for the container.
@@ -133,7 +133,7 @@ def setup_container(image, container_dir=None, nbd=False):
 
 
 def destroy_container(target, instance, nbd=False):
-    """Destroy the container once it terminates
+    """Destroy the container once it terminates.
 
     It will umount the container that is mounted, try to find the loopback
     device associated with the container and delete it.
