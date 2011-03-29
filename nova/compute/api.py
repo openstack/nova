@@ -620,6 +620,7 @@ class API(base.Base):
                            'host': output['host'],
                            'port': output['port']}})
 
+        # hostignore and portignore are compatability params for noVNC
         return {'url': '%s/vnc_auto.html?token=%s&host=%s&port=%s' % (
                        FLAGS.vncproxy_url,
                        output['token'],
