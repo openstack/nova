@@ -238,5 +238,5 @@ def _parse_glance_iso8601_timestamp(timestamp):
         except ValueError:
             pass
 
-    raise ValueError(_("""%(timestamp)s does not follow any of the \
-signatures: %(ISO_FORMATS)s""") % locals())
+    raise ValueError(_("%(timestamp)s does not follow any of the "
+                       "signatures: %(ISO_FORMATS)s") % locals())
