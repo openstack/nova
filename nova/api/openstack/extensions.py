@@ -41,7 +41,9 @@ class ExtensionDescriptor(object):
     """Base class that defines the contract for extensions.
 
     Note that you don't have to derive from this class to have a valid
-    extension; it is purely a convenience."""
+    extension; it is purely a convenience.
+
+    """
 
     def get_name(self):
         """The name of the extension.
