@@ -342,7 +342,7 @@ class LibvirtConnection(driver.ComputeDriver):
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals())
         if FLAGS.libvirt_type == 'lxc':
-            disk.destroy_container(target, instance)
+            disk.destroy_container(target, instance,nbd=FLAGS.use_cow_images)
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -797,7 +797,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
                 if FLAGS.libvirt_type == 'lxc':
                     disk.setup_container(basepath('disk'),
-                                        container_dir=container_dir)
+                                        container_dir=container_dir,
+                                        nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
