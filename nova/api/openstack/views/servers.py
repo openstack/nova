@@ -72,12 +72,12 @@ class ViewBuilder(object):
             'id': int(inst['id']),
             'name': inst['display_name'],
             'addresses': self.addresses_builder.build(inst),
-            'status': power_mapping[inst.get('state')]}
+            'status': power_mapping[inst.get('state')].upper()}
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
         if compute_api.has_finished_migration(ctxt, inst['id']):
-            inst_dict['status'] = 'resize-confirm'
+            inst_dict['status'] = 'resize-confirm'.upper()
 
         # Return the metadata as a dictionary
         metadata = {}
