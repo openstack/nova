@@ -111,10 +111,6 @@ class APIRouter(wsgi.Router):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("shared_ip_group", "shared_ip_groups",
-                        collection={'detail': 'GET'},
-                        controller=shared_ip_groups.Controller())
-
         _limits = limits.LimitsController()
         mapper.resource("limit", "limits", controller=_limits)
 
@@ -136,6 +132,10 @@ class APIRouterV10(APIRouter):
         mapper.resource("flavor", "flavors",
                         controller=flavors.ControllerV10(),
                         collection={'detail': 'GET'})
+
+        mapper.resource("shared_ip_group", "shared_ip_groups",
+                        collection={'detail': 'GET'},
+                        controller=shared_ip_groups.Controller())
 
         mapper.resource("backup_schedule", "backup_schedule",
                         controller=backup_schedules.Controller(),

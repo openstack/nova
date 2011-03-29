@@ -73,6 +73,8 @@ flags.DEFINE_string('flat_interface', None,
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
+flags.DEFINE_string('vlan_interface', 'eth0',
+                    'network device for vlans')
 flags.DEFINE_integer('num_networks', 1, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', '$my_ip',
                     'Public IP for the cloudpipe VPN servers')
