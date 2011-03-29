@@ -41,8 +41,7 @@ from nova.compute import power_state
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
-from nova.objectstore import image
-from nova.exception import NotEmpty, NotFound
+from nova.exception import NotFound
 
 
 FLAGS = flags.FLAGS
@@ -75,16 +74,7 @@ class CloudTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        def fake_detail(meh, context):
-            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type':'machine'}}]
-
-        def fake_delete(meh, context, id):
-            return None
-
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
-        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
-        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
@@ -228,17 +218,27 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp2['id'])
 
     def test_describe_images(self):
+        def fake_detail(meh, context):
+            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type':'machine'}}]
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
         result = self.cloud.describe_images(self.context)
         result = result['imagesSet'][0]
         self.assertEqual(result['imageId'], 'ami-00000001')
 
     def test_deregister_image(self):
         deregister_image = self.cloud.deregister_image
-        """When provided a valid image, should be successful"""
+        def fake_delete(meh, context, id):
+            return None
+        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
+        # valid image
         result1 = deregister_image(self.context, 'ami-00000001')
         self.assertEqual(result1['imageId'], 'ami-00000001')
-        """Invalid image should throw an NotFound exception"""
+        # invalid image
         self.stubs.UnsetAll()
+        def fake_detail_empty(meh, context):
+            return []
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
         self.assertRaises(NotFound, deregister_image,
                           self.context, 'ami-bad001')
 
