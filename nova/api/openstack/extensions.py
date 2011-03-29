@@ -43,45 +43,59 @@ class ExtensionDescriptor(object):
     def get_name(self):
         """The name of the extension.
 
-        e.g. 'Fox In Socks' """
+        e.g. 'Fox In Socks'
+
+        """
         raise NotImplementedError()
 
     def get_alias(self):
         """The alias for the extension.
 
-        e.g. 'FOXNSOX'"""
+        e.g. 'FOXNSOX'
+
+        """
         raise NotImplementedError()
 
     def get_description(self):
         """Friendly description for the extension.
 
-        e.g. 'The Fox In Socks Extension'"""
+        e.g. 'The Fox In Socks Extension'
+
+        """
         raise NotImplementedError()
 
     def get_namespace(self):
         """The XML namespace for the extension.
 
-        e.g. 'http://www.fox.in.socks/api/ext/pie/v1.0'"""
+        e.g. 'http://www.fox.in.socks/api/ext/pie/v1.0'
+
+        """
         raise NotImplementedError()
 
     def get_updated(self):
         """The timestamp when the extension was last updated.
 
-        e.g. '2011-01-22T13:25:27-06:00'"""
+        e.g. '2011-01-22T13:25:27-06:00'
+
+        """
         # NOTE(justinsb): Not sure of the purpose of this is, vs the XML NS
         raise NotImplementedError()
 
     def get_resources(self):
         """List of extensions.ResourceExtension extension objects.
 
-        Resources define new nouns, and are accessible through URLs"""
+        Resources define new nouns, and are accessible through URLs.
+
+        """
         resources = []
         return resources
 
     def get_actions(self):
         """List of extensions.ActionExtension extension objects.
 
-        Actions are verbs callable from the API"""
+        Actions are verbs callable from the API.
+
+        """
         actions = []
         return actions
 
@@ -89,7 +103,9 @@ class ExtensionDescriptor(object):
         """List of extensions.ResponseExtension extension objects.
 
         Response extensions are used to insert information into existing
-        response data"""
+        response data.
+
+        """
         response_exts = []
         return response_exts
 
@@ -274,6 +290,7 @@ class ExtensionMiddleware(wsgi.Middleware):
 
         Returns the routed WSGI app's response or defers to the extended
         application.
+
         """
         match = req.environ['wsgiorg.routing_args'][1]
         if not match:
@@ -287,6 +304,7 @@ class ExtensionManager(object):
 
     See nova/tests/api/openstack/extensions/foxinsocks/extension.py for an
     example extension implementation.
+
     """
 
     def __init__(self, path):
@@ -347,6 +365,7 @@ class ExtensionManager(object):
 
         See nova/tests/api/openstack/extensions/foxinsocks.py for an example
         extension implementation.
+
         """
         self._load_extensions_under_path(self.path)
 
