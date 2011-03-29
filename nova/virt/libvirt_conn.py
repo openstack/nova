@@ -803,6 +803,7 @@ class LibvirtConnection(driver.ComputeDriver):
         nets = []
         ifc_template = open(FLAGS.injected_network_template).read()
         ifc_num = -1
+        have_injected_networks = False
         admin_context = context.get_admin_context()
         for (network_ref, mapping) in network_info:
             ifc_num += 1
@@ -810,6 +811,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if not 'injected' in network_ref:
                 continue
 
+            have_injected_networks = True
             address = mapping['ips'][0]['ip']
             address_v6 = None
             if FLAGS.use_ipv6:
@@ -825,7 +827,8 @@ class LibvirtConnection(driver.ComputeDriver):
                    'netmask_v6': network_ref['netmask_v6']}
             nets.append(net_info)
 
-        net = str(Template(ifc_template,
+        if have_injected_networks:
+            net = str(Template(ifc_template,
                            searchList=[{'interfaces': nets,
                                         'use_ipv6': FLAGS.use_ipv6}]))
 
