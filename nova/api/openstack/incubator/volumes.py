@@ -339,9 +339,8 @@ class Volumes(extensions.ExtensionDescriptor):
         # NOTE(justinsb): No way to provide singular name ('volume')
         # Does this matter?
         res = extensions.ResourceExtension('volumes',
-                                           VolumeController(),
-                                           collection_actions=
-                                                {'detail': 'GET'}
+                                        VolumeController(),
+                                        collection_actions={'detail': 'GET'}
                                           )
         resources.append(res)
 
