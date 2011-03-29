@@ -28,7 +28,7 @@ class FoxInSocksController(wsgi.Controller):
         return "Try to say this Mr. Knox, sir..."
 
 
-class Foxinsocks(extensions.ExtensionDescriptor):
+class Foxinsocks(object):
 
     def __init__(self):
         pass

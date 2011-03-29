@@ -38,7 +38,10 @@ FLAGS = flags.FLAGS
 
 
 class ExtensionDescriptor(object):
-    """This is the base class that defines the contract for extensions."""
+    """Base class that defines the contract for extensions.
+
+    Note that you don't have to derive from this class to have a valid
+    extension; it is purely a convenience."""
 
     def get_name(self):
         """The name of the extension.
@@ -321,22 +324,37 @@ class ExtensionManager(object):
         resources = []
         resources.append(ResourceExtension('extensions',
                                             ExtensionController(self)))
-        for _alias, ext in self.extensions.iteritems():
-            resources.extend(ext.get_resources())
+        for alias, ext in self.extensions.iteritems():
+            try:
+                resources.extend(ext.get_resources())
+            except AttributeError:
+                # NOTE(dprince): Extension aren't required to have resource
+                # extensions
+                pass
         return resources
 
     def get_actions(self):
         """Returns a list of ActionExtension objects."""
         actions = []
-        for _alias, ext in self.extensions.iteritems():
-            actions.extend(ext.get_actions())
+        for alias, ext in self.extensions.iteritems():
+            try:
+                actions.extend(ext.get_actions())
+            except AttributeError:
+                # NOTE(dprince): Extension aren't required to have action
+                # extensions
+                pass
         return actions
 
     def get_response_extensions(self):
         """Returns a list of ResponseExtension objects."""
         response_exts = []
-        for _alias, ext in self.extensions.iteritems():
-            response_exts.extend(ext.get_response_extensions())
+        for alias, ext in self.extensions.iteritems():
+            try:
+                response_exts.extend(ext.get_response_extensions())
+            except AttributeError:
+                # NOTE(dprince): Extension aren't required to have response
+                # extensions
+                pass
         return response_exts
 
     def _check_extension(self, extension):
@@ -353,78 +371,42 @@ class ExtensionManager(object):
     def _load_all_extensions(self):
         """Load extensions from the configured path.
 
-        An extension consists of a directory of related files, with a class
-        that defines a class that inherits from ExtensionDescriptor.
+        Load extensions from the configured path. The extension name is
+        constructed from the module_name. If your extension module was named
+        widgets.py the extension class within that module should be
+        'Widgets'.
 
-        Because of some oddities involving identically named modules, it's
-        probably best to name your file after the name of your extension,
-        rather than something likely to clash like 'extension.py'.
-
-        The name of your directory should be the same as the alias your
-        extension uses, for everyone's sanity.
+        In addition, extensions are loaded from the 'incubator' directory.
 
         See nova/tests/api/openstack/extensions/foxinsocks.py for an example
         extension implementation.
 
         """
-        self._load_extensions_under_path(self.path)
+        if os.path.exists(self.path):
+            self._load_all_extensions_from_path(self.path)
 
         incubator_path = os.path.join(os.path.dirname(__file__), "incubator")
-        self._load_extensions_under_path(incubator_path)
+        if os.path.exists(incubator_path):
+            self._load_all_extensions_from_path(incubator_path)
 
-    def _load_extensions_under_path(self, path):
-        if not os.path.isdir(path):
-            LOG.warning(_('Extensions directory not found: %s') % path)
-            return
-
-        LOG.debug(_('Looking for extensions in: %s') % path)
-
-        for child in os.listdir(path):
-            child_path = os.path.join(path, child)
-            if not os.path.isdir(child_path):
-                continue
-            self._load_extension(child_path)
-
-    def _load_extension(self, path):
-        if not os.path.isdir(path):
-            return
-
+    def _load_all_extensions_from_path(self, path):
         for f in os.listdir(path):
+            LOG.audit(_('Loading extension file: %s'), f)
             mod_name, file_ext = os.path.splitext(os.path.split(f)[-1])
-            if mod_name.startswith('_'):
-                continue
-            if file_ext.lower() != '.py':
-                continue
-
             ext_path = os.path.join(path, f)
-            if self.super_verbose:
-                LOG.debug(_('Checking extension file: %s'), ext_path)
-
-            mod = imp.load_source(mod_name, ext_path)
-            for _name, cls in inspect.getmembers(mod):
-                try:
-                    if not inspect.isclass(cls):
-                        continue
-
-                    # NOTE(justinsb): It seems that python modules are odd.
-                    # If you have two identically named modules, the classes
-                    # from both are mixed in.  So name your extension based
-                    # on the alias, not 'extension.py'!
-                    # TODO(justinsb): Any way to work around this?
-
-                    if self.super_verbose:
-                        LOG.debug(_('Checking class: %s'), cls)
-
-                    if not ExtensionDescriptor in cls.__bases__:
-                        if self.super_verbose:
-                            LOG.debug(_('Not a ExtensionDescriptor: %s'), cls)
-                        continue
-
-                    obj = cls()
-                    self._add_extension(obj)
-                except AttributeError as ex:
-                    LOG.exception(_("Exception loading extension: %s"),
-                                  unicode(ex))
+            if file_ext.lower() == '.py' and not mod_name.startswith('_'):
+                mod = imp.load_source(mod_name, ext_path)
+                ext_name = mod_name[0].upper() + mod_name[1:]
+                new_ext_class = getattr(mod, ext_name, None)
+                if not new_ext_class:
+                    LOG.warn(_('Did not find expected name '
+                               '"%(ext_name)s" in %(file)s'),
+                             {'ext_name': ext_name,
+                              'file': ext_path})
+                    continue
+                new_ext = new_ext_class()
+                self._check_extension(new_ext)
+                self._add_extension(new_ext)
 
     def _add_extension(self, ext):
         alias = ext.get_alias()

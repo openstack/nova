@@ -17,4 +17,6 @@
 
 """Incubator contains extensions that are shipped with nova.
 
-It can't be called 'extensions' because that causes namespacing problems."""
+It can't be called 'extensions' because that causes namespacing problems.
+
+"""
