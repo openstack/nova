@@ -1136,6 +1136,6 @@ def _prepare_injectables(inst, networks_info):
 
         if have_injected_networks:
             net = str(template(template_data,
-                        searchList=[{'interfaces': interfaces_info,
-                                     'use_ipv6': FLAGS.use_ipv6}]))
+                                searchList=[{'interfaces': interfaces_info,
+                                            'use_ipv6': FLAGS.use_ipv6}]))
     return key, net

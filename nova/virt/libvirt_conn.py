@@ -829,8 +829,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if have_injected_networks:
             net = str(Template(ifc_template,
-                           searchList=[{'interfaces': nets,
-                                        'use_ipv6': FLAGS.use_ipv6}]))
+                               searchList=[{'interfaces': nets,
+                                            'use_ipv6': FLAGS.use_ipv6}]))
 
         if key or net:
             inst_name = inst['name']
