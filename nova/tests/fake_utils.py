@@ -14,8 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""This modules stubs out functions in nova.utils
-"""
+"""This modules stubs out functions in nova.utils."""
 
 import re
 import types
@@ -42,21 +41,25 @@ def fake_execute_clear_log():
 
 
 def fake_execute_set_repliers(repliers):
-    """Allows the client to configure replies to commands"""
+    """Allows the client to configure replies to commands."""
     global _fake_execute_repliers
     _fake_execute_repliers = repliers
 
 
 def fake_execute_default_reply_handler(*ignore_args, **ignore_kwargs):
-    """A reply handler for commands that haven't been added to the reply
-    list.  Returns empty strings for stdout and stderr
+    """A reply handler for commands that haven't been added to the reply list.
+
+    Returns empty strings for stdout and stderr.
+
     """
     return '', ''
 
 
 def fake_execute(*cmd_parts, **kwargs):
-    """This function stubs out execute, optionally executing
-    a preconfigued function to return expected data
+    """This function stubs out execute.
+
+    It optionally executes a preconfigued function to return expected data.
+
     """
     global _fake_execute_repliers
 
