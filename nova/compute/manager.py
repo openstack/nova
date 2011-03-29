@@ -46,6 +46,7 @@ import functools
 
 from eventlet import greenthread
 
+from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -772,6 +773,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.volume_detached(context, volume_id)
         return True
 
+    def remove_volume(self, context, volume_id):
+        """Remove volume on compute host.
+
+        :param context: security context
+        :param volume_id: nova.db.sqlalchemy.models.Volume.id
+        """
+        self.volume_manager.remove_compute_volume(context, volume_id)
+
     @exception.wrap_exception
     def compare_cpu(self, context, cpu_info):
         """Checks the host cpu is compatible to a cpu given by xml.
@@ -1018,22 +1027,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  'state': power_state.RUNNING,
                                  'host': host})
 
+        if dest:
+            # NOTE(noguchimn): We set image_service here
+            #                  not to import an image service object.
+            compute_api = compute.API(image_service=1)
         for volume in instance_ref['volumes']:
             volume_id = volume['id']
             self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
             if dest:
-                topic = self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest)
-                rpc.call(ctxt, topic,
-                         {"method": "restore_volume_state",
-                          "args": {'volume_id': volume_id}})
-
-    def restore_volume_state(self, context, volume_id):
-        """Restore volume state on migration failure.
-
-        :param context: security context
-        :param volume_id: nova.db.sqlalchemy.models.Volume.id
-        """
-        self.volume_manager.remove_compute_volume(context, volume_id)
+                compute_api.remove_volume(ctxt, volume_id, dest)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""

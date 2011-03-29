@@ -668,6 +668,13 @@ class API(base.Base):
                            "volume_id": volume_id}})
         return instance
 
+    def remove_volume(self, context, volume_id, host):
+        """Remove volume on specified compute host."""
+        rpc.call(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "remove_volume",
+                  "args": {'volume_id': volume_id}})
+
     def associate_floating_ip(self, context, instance_id, address):
         instance = self.get(context, instance_id)
         self.network_api.associate_floating_ip(context,
