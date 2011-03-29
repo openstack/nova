@@ -216,6 +216,16 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
+    def test_describe_images(self):
+        def fake_detail(meh, context):
+            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type':'machine'}}]
+
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
+        result = self.cloud.describe_images(self.context)
+        result = result['imagesSet'][0]
+        self.assertEqual(result['imageId'], 'ami-00000001')
+
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1
