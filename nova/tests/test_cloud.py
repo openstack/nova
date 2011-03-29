@@ -217,27 +217,22 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
-    def test_describe_images(self):
-        def fake_detail(meh, context):
-            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type':'machine'}}]
-        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
-        result = self.cloud.describe_images(self.context)
-        result = result['imagesSet'][0]
-        self.assertEqual(result['imageId'], 'ami-00000001')
-
     def test_deregister_image(self):
         deregister_image = self.cloud.deregister_image
+
         def fake_delete(meh, context, id):
             return None
+
         self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
         # valid image
         result = deregister_image(self.context, 'ami-00000001')
         self.assertEqual(result['imageId'], 'ami-00000001')
         # invalid image
         self.stubs.UnsetAll()
+
         def fake_detail_empty(meh, context):
             return []
+
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
         self.assertRaises(NotFound, deregister_image,
                           self.context, 'ami-bad001')
