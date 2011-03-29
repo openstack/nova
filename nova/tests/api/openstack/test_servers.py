@@ -483,21 +483,31 @@ class ServersTest(test.TestCase):
         req.get_response(fakes.wsgi_app())
 
     def test_create_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
         req.method = 'POST'
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status, '404 Not Found')
+        self.assertEqual(res.status_int, 501)
 
     def test_delete_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule/1')
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status, '404 Not Found')
+        self.assertEqual(res.status_int, 501)
 
     def test_get_server_backup_schedules(self):
-        req = webob.Request.blank('/v1.0/servers/1/backup_schedules')
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule')
         res = req.get_response(fakes.wsgi_app())
-        self.assertEqual(res.status, '404 Not Found')
+        self.assertEqual(res.status_int, 501)
+
+    def test_get_server_backup_schedule(self):
+        req = webob.Request.blank('/v1.0/servers/1/backup_schedule/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
+
+    def test_server_backup_schedule_deprecated_v11(self):
+        req = webob.Request.blank('/v1.1/servers/1/backup_schedule')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)
 
     def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
