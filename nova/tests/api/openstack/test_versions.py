@@ -63,6 +63,30 @@ class VersionsTest(test.TestCase):
         ]
         self.assertEqual(versions, expected)
 
+    def test_get_version_list_xml(self):
+        req = webob.Request.blank('/')
+        req.accept = "application/xml"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/xml")
+
+        expected = """<versions>
+            <version id="v1.1" status="CURRENT">
+                <links>
+                    <link href="http://localhost/v1.1" rel="self"/>
+                </links>
+            </version>
+            <version id="v1.0" status="DEPRECATED">
+                <links>
+                    <link href="http://localhost/v1.0" rel="self"/>
+                </links>
+            </version>
+        </versions>""".replace("  ", "").replace("\n", "")
+
+        actual = res.body.replace("  ", "").replace("\n", "")
+
+        self.assertEqual(expected, actual)
+
     def test_view_builder(self):
         base_url = "http://example.org/"
 
