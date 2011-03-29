@@ -237,13 +237,13 @@ class LibvirtConnTestCase(test.TestCase):
         network_ref = db.project_get_network(context.get_admin_context(),
                                              self.project.id)
 
-        fixed_ip = {'address':  self.test_ip,
-                    'network_id':   network_ref['id']}
+        fixed_ip = {'address': self.test_ip,
+                    'network_id': network_ref['id']}
 
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
         db.fixed_ip_update(ctxt, self.test_ip,
-                                 {'allocated':   True,
+                                 {'allocated': True,
                                   'instance_id': instance_ref['id']})
 
         self.flags(libvirt_type='lxc')
