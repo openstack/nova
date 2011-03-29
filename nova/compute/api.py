@@ -614,7 +614,7 @@ class API(base.Base):
         output = self._call_compute_message('get_vnc_console',
                                             context,
                                             instance_id)
-        rpc.cast(context, '%s' % FLAGS.vncproxy_topic,
+        rpc.call(context, '%s' % FLAGS.vncproxy_topic,
                  {'method': 'authorize_vnc_console',
                   'args': {'token': output['token'],
                            'host': output['host'],
