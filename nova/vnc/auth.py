@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright (c) 2010 Openstack, LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,8 +24,10 @@ import webob
 
 from webob import Request
 
+from nova import context
 from nova import flags
 from nova import log as logging
+from nova import manager
 from nova import rpc
 from nova import utils
 from nova import wsgi
@@ -38,12 +38,24 @@ LOG = logging.getLogger('nova.vnc-proxy')
 FLAGS = flags.FLAGS
 
 
-class NovaAuthMiddleware(object):
+class VNCNovaAuthMiddleware(object):
     """Implementation of Middleware to Handle Nova Auth."""
 
     def __init__(self, app):
         self.app = app
-        self.register_listeners()
+        self.token_cache = {}
+        utils.LoopingCall(self._delete_expired_tokens).start(1)
+
+    def get_token_info(self, token):
+        if token in self.token_cache:
+            return self.token_cache[token]
+
+        rval = rpc.call(context.get_admin_context(),
+                        FLAGS.vnc_console_proxy_topic,
+                        {"method": "check_token", "args": {'token': token}})
+        if rval:
+            self.token_cache[token] = rval
+        return rval
 
     @webob.dec.wsgify
     def __call__(self, req):
@@ -55,49 +67,27 @@ class NovaAuthMiddleware(object):
             if 'token' in auth_params:
                 token = auth_params['token'][0]
 
-        if not token in self.tokens:
+        connection_info = self.get_token_info(token)
+        if not connection_info:
             LOG.audit(_("Unauthorized Access: (%s)"), req.environ)
             return webob.exc.HTTPForbidden(detail='Unauthorized')
 
         if req.path == vnc.proxy.WS_ENDPOINT:
-            req.environ['vnc_host'] = self.tokens[token]['args']['host']
-            req.environ['vnc_port'] = int(self.tokens[token]['args']['port'])
+            req.environ['vnc_host'] = connection_info['host']
+            req.environ['vnc_port'] = int(connection_info['port'])
 
         return req.get_response(self.app)
 
-    def register_listeners(self):
-        middleware = self
-        middleware.tokens = {}
+    def _delete_expired_tokens(self):
+        now = time.time()
+        to_delete = []
+        for k, v in self.token_cache.items():
+            if now - v['last_activity_at'] > FLAGS.vnc_token_ttl:
+                to_delete.append(k)
 
-        class TopicProxy():
-            @staticmethod
-            def authorize_vnc_console(context, **kwargs):
-                data = kwargs
-                token = kwargs['token']
-                LOG.audit(_("Received Token: %s)"), token)
-                middleware.tokens[token] = \
-                  {'args': kwargs, 'last_activity_at': time.time()}
+        for k in to_delete:
+            del self.token_cache[k]
 
-        def delete_expired_tokens():
-            now = time.time()
-            to_delete = []
-            for k, v in middleware.tokens.items():
-                if now - v['last_activity_at'] > FLAGS.vnc_token_ttl:
-                    to_delete.append(k)
-
-            for k in to_delete:
-                LOG.audit(_("Deleting Token: %s)"), k)
-                del middleware.tokens[k]
-
-        conn = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicAdapterConsumer(
-                       connection=conn,
-                       proxy=TopicProxy,
-                       topic=FLAGS.vnc_console_proxy_topic)
-
-        utils.LoopingCall(consumer.fetch,
-                          enable_callbacks=True).start(0.1)
-        utils.LoopingCall(delete_expired_tokens).start(1)
 
 
 class LoggingMiddleware(object):
@@ -112,3 +102,34 @@ class LoggingMiddleware(object):
             LOG.info(_("Received Request: %s"), req.url)
 
         return req.get_response(self.app)
+
+
+class VNCProxyAuthManager(manager.Manager):
+    """Manages token based authentication."""
+
+    def __init__(self, scheduler_driver=None, *args, **kwargs):
+        super(VNCProxyAuthManager, self).__init__(*args, **kwargs)
+        self.tokens = {}
+        utils.LoopingCall(self._delete_expired_tokens).start(1)
+
+    def authorize_vnc_console(self, context, token, host, port):
+        self.tokens[token] = {'host': host,
+                              'port': port,
+                              'last_activity_at': time.time()}
+        LOG.audit(_("Received Token: %s, %s)"), token, self.tokens[token])
+
+    def check_token(self, context, token):
+        LOG.audit(_("Checking Token: %s, %s)"), token, (token in self.tokens))
+        if token in self.tokens:
+            return self.tokens[token]
+
+    def _delete_expired_tokens(self):
+        now = time.time()
+        to_delete = []
+        for k, v in self.tokens.items():
+            if now - v['last_activity_at'] > FLAGS.vnc_token_ttl:
+                to_delete.append(k)
+
+        for k in to_delete:
+            LOG.audit(_("Deleting Expired Token: %s)"), k)
+            del self.tokens[k]

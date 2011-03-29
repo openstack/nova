@@ -40,14 +40,14 @@ you can at find git://github.com/sleepsonthefloor/noVNC.git.
 
 .. todo:: add instruction for installing from package
 
-noVNC must be in the location specified by --vnc_proxy_wwwroot, which defaults
+noVNC must be in the location specified by --vncproxy_wwwroot, which defaults
 to /var/lib/nova/noVNC.  nova-vnc-proxy will fail to launch until this code
 is properly installed. 
 
 By default, nova-vnc-proxy binds 0.0.0.0:6080.  This can be configured with:
 
-* --vnc_proxy_port=[port]
-* --vnc_proxy_host=[host]
+* --vncproxy_port=[port]
+* --vncproxy_host=[host]
 
 
 Enabling VNC Consoles in Nova

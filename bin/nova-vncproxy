@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright (c) 2010 Openstack, LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
@@ -34,6 +33,7 @@ gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
+from nova import service
 from nova import utils
 from nova import wsgi
 from nova import version
@@ -45,16 +45,19 @@ LOG = logging.getLogger('nova.vnc-proxy')
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vnc_proxy_wwwroot', '/var/lib/nova/noVNC/',
+flags.DEFINE_string('vncproxy_wwwroot', '/var/lib/nova/noVNC/',
                      'Full path to noVNC directory')
 flags.DEFINE_boolean('vnc_debug', False,
                      'Enable debugging features, like token bypassing')
-flags.DEFINE_integer('vnc_proxy_port', 6080,
+flags.DEFINE_integer('vncproxy_port', 6080,
                      'Port that the VNC proxy should bind to')
-flags.DEFINE_string('vnc_proxy_host', '0.0.0.0',
+flags.DEFINE_string('vncproxy_host', '0.0.0.0',
                      'Address that the VNC proxy should bind to')
 flags.DEFINE_integer('vnc_token_ttl', 300,
                      'How many seconds before deleting tokens')
+flags.DEFINE_string('vncproxy_manager', 'nova.vnc.auth.VNCProxyAuthManager',
+                    'Manager for vncproxy auth')
+
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
@@ -68,18 +71,20 @@ if __name__ == "__main__":
     LOG.audit(_("Starting nova-vnc-proxy node (version %s)"),
               version.version_string_with_vcs())
 
-    if not (os.path.exists(FLAGS.vnc_proxy_wwwroot) and
-            os.path.exists(FLAGS.vnc_proxy_wwwroot + '/vnc_auto.html')):
-        LOG.info(_("Missing vnc_proxy_wwwroot (version %s)"),
-                    FLAGS.vnc_proxy_wwwroot)
+    service.serve()
+
+    if not (os.path.exists(FLAGS.vncproxy_wwwroot) and
+            os.path.exists(FLAGS.vncproxy_wwwroot + '/vnc_auto.html')):
+        LOG.info(_("Missing vncproxy_wwwroot (version %s)"),
+                    FLAGS.vncproxy_wwwroot)
         LOG.info(_("You need a slightly modified version of noVNC "
                    "to work with the nova-vnc-proxy"))
         LOG.info(_("Check out the most recent nova noVNC code: %s"),
                    "git://github.com/sleepsonthefloor/noVNC.git")
-        LOG.info(_("And drop it in %s"), FLAGS.vnc_proxy_wwwroot)
+        LOG.info(_("And drop it in %s"), FLAGS.vncproxy_wwwroot)
         exit(1)
 
-    app = proxy.WebsocketVNCProxy(FLAGS.vnc_proxy_wwwroot)
+    app = proxy.WebsocketVNCProxy(FLAGS.vncproxy_wwwroot)
 
     LOG.audit(_("Allowing access to the following files: %s"),
               app.get_whitelist())
@@ -89,8 +94,8 @@ if __name__ == "__main__":
     if FLAGS.vnc_debug:
         with_auth = proxy.DebugMiddleware(with_logging)
     else:
-        with_auth = auth.NovaAuthMiddleware(with_logging)
+        with_auth = auth.VNCNovaAuthMiddleware(with_logging)
 
     server = wsgi.Server()
-    server.start(with_auth, FLAGS.vnc_proxy_port, host=FLAGS.vnc_proxy_host)
+    server.start(with_auth, FLAGS.vncproxy_port, host=FLAGS.vncproxy_host)
     server.wait()

@@ -281,7 +281,7 @@ DEFINE_string('ajax_console_proxy_url',
                in the form "http://127.0.0.1:8000"')
 DEFINE_string('ajax_console_proxy_port',
                8000, 'port that ajax_console_proxy binds')
-DEFINE_string('vnc_console_proxy_topic', 'vnc_proxy',
+DEFINE_string('vnc_console_proxy_topic', 'vncproxy',
               'the topic vnc proxy nodes listen on')
 DEFINE_string('vnc_console_proxy_url',
               'http://127.0.0.1:6080',
