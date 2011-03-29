@@ -286,7 +286,7 @@ class ComputeTestCase(test.TestCase):
 
         console = self.compute.get_ajax_console(self.context,
                                                 instance_id)
-        self.assert_(console)
+        self.assert_(set(['token', 'host', 'port']).issubset(console.keys()))
         self.compute.terminate_instance(self.context, instance_id)
 
     def test_vnc_console(self):
