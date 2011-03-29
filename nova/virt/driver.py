@@ -77,6 +77,7 @@ class ComputeDriver(object):
         If the instance is not found (for example if networking failed), this
         function should still succeed.  It's probably a good idea to log a
         warning in that case.
+
         """
         raise NotImplementedError()
 
@@ -94,6 +95,7 @@ class ComputeDriver(object):
         :address:          ?
         :username:         ?
         :password:         ?
+
         """
         raise NotImplementedError()
 
