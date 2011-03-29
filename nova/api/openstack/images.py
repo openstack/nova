@@ -13,8 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob.exc
 import datetime
+
+import webob.exc
 
 from nova import compute
 from nova import exception
