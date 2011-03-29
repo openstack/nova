@@ -34,8 +34,10 @@ class VersionsTest(test.TestCase):
 
     def test_get_version_list(self):
         req = webob.Request.blank('/')
+        req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
         versions = json.loads(res.body)["versions"]
         expected = [
             {
