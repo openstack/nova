@@ -44,7 +44,7 @@ class VNCNovaAuthMiddleware(object):
     def __init__(self, app):
         self.app = app
         self.token_cache = {}
-        utils.LoopingCall(self.delete_expired_tokens).start(1)
+        utils.LoopingCall(self.delete_expired_cache_items).start(1)
 
     @webob.dec.wsgify
     def __call__(self, req):
@@ -78,7 +78,7 @@ class VNCNovaAuthMiddleware(object):
             self.token_cache[token] = rval
         return rval
 
-    def delete_expired_tokens(self):
+    def delete_expired_cache_items(self):
         now = time.time()
         to_delete = []
         for k, v in self.token_cache.items():

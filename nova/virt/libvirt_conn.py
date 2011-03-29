@@ -627,8 +627,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return {'token': token, 'host': host, 'port': port}
 
-    _image_sems = {}  # FIXME: why is this here? (anthony)
-
     @staticmethod
     def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
         """Wrapper for a method that creates an image that caches the image.

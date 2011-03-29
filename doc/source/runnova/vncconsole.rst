@@ -36,7 +36,7 @@ Configuring the VNC Proxy
 -------------------------
 nova-vnc-proxy requires a websocket enabled html client to work properly.  At 
 this time, the only tested client is a slightly modified fork of noVNC, which 
-you can at find git://github.com/sleepsonthefloor/noVNC.git.
+you can at find http://github.com/openstack/noVNC.git
 
 .. todo:: add instruction for installing from package
 

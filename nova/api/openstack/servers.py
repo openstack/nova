@@ -486,7 +486,7 @@ class Controller(wsgi.Controller):
         """Returns a url to an instance's ajaxterm console."""
         try:
             self.compute_api.get_vnc_console(req.environ['nova.context'],
-                int(id))
+                                             int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()

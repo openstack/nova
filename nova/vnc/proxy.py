@@ -25,8 +25,8 @@ import eventlet
 from eventlet import wsgi
 from eventlet import websocket
 
-from webob import Request
 import webob
+
 
 WS_ENDPOINT = '/data'
 
@@ -88,7 +88,7 @@ class WebsocketVNCProxy(object):
         _handle(environ, start_response)
 
     def __call__(self, environ, start_response):
-        req = Request(environ)
+        req = webob.Request(environ)
         if req.path == WS_ENDPOINT:
             return self.proxy_connection(environ, start_response)
         else:

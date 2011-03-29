@@ -20,9 +20,7 @@
 
 from nova import flags
 
-
 FLAGS = flags.FLAGS
-
 flags.DEFINE_string('vncproxy_topic', 'vncproxy',
                    'the topic vnc proxy nodes listen on')
 flags.DEFINE_string('vncproxy_url',

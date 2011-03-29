@@ -71,8 +71,6 @@ if __name__ == "__main__":
     LOG.audit(_("Starting nova-vnc-proxy node (version %s)"),
               version.version_string_with_vcs())
 
-    service.serve()
-
     if not (os.path.exists(FLAGS.vncproxy_wwwroot) and
             os.path.exists(FLAGS.vncproxy_wwwroot + '/vnc_auto.html')):
         LOG.info(_("Missing vncproxy_wwwroot (version %s)"),
@@ -95,6 +93,8 @@ if __name__ == "__main__":
         with_auth = proxy.DebugMiddleware(with_logging)
     else:
         with_auth = auth.VNCNovaAuthMiddleware(with_logging)
+
+    service.serve()
 
     server = wsgi.Server()
     server.start(with_auth, FLAGS.vncproxy_port, host=FLAGS.vncproxy_host)
