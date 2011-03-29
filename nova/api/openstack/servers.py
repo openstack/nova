@@ -150,6 +150,15 @@ class Controller(wsgi.Controller):
             injected_files = self._get_injected_files(personality)
 
         flavor_id = self._flavor_id_from_req_data(env)
+
+        if not 'name' in env['server']:
+            msg = _("Server name is not defined")
+            return exc.HTTPBadRequest(msg)
+        
+        name = env['server']['name']
+        self._validate_server_name(name)
+        name = name.strip()
+
         try:
             (inst,) = self.compute_api.create(
                 context,
@@ -157,8 +166,8 @@ class Controller(wsgi.Controller):
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
-                display_name=env['server']['name'],
-                display_description=env['server']['name'],
+                display_name=name,
+                display_description=name,
                 key_name=key_name,
                 key_data=key_data,
                 metadata=metadata,
@@ -249,18 +258,8 @@ class Controller(wsgi.Controller):
 
         if 'name' in inst_dict['server']:
             name = inst_dict['server']['name']
-
-            if not isinstance(name, basestring):
-                msg = _("Server name is not a string or unicode")
-                return exc.HTTPBadRequest(msg)
-
-            name = name.strip()
-
-            if name == '':
-                msg = _("Server name is an empty string")
-                return exc.HTTPBadRequest(msg)
-
-            update_dict['display_name'] = name
+            self._validate_server_name(name)
+            update_dict['display_name'] = name.strip()
 
         self._parse_update(ctxt, id, inst_dict, update_dict)
 
@@ -270,6 +269,15 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPNotFound())
 
         return exc.HTTPNoContent()
+
+    def _validate_server_name(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Server name is not a string or unicode")
+            raise exc.HTTPBadRequest(msg)
+
+        if value.strip() == '':
+            msg = _("Server name is an empty string")
+            raise exc.HTTPBadRequest(msg)
 
     def _parse_update(self, context, id, inst_dict, update_dict):
         pass

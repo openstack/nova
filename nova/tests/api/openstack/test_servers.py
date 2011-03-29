@@ -392,6 +392,74 @@ class ServersTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance_helper()
 
+    def test_create_instance_no_name(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'imageId': 3,
+                'flavorId': 1,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_nonstring_name(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': 12,
+                'imageId': 3,
+                'flavorId': 1,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_whitespace_name(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': '    ',
+                'imageId': 3,
+                'flavorId': 1,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': {},
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
     def test_create_instance_v11(self):
         self._setup_for_create_instance()
 
