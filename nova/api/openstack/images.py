@@ -32,8 +32,7 @@ FLAGS = flags.FLAGS
 
 
 class Controller(wsgi.Controller):
-    """Base `wsgi.Controller` for retrieving and displaying images in the
-    OpenStack API. Version-inspecific code goes here."""
+    """Base `wsgi.Controller` for retrieving/displaying images."""
 
     _serialization_metadata = {
         'application/xml': {

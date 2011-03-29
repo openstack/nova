@@ -19,8 +19,7 @@ import os.path
 
 
 class ViewBuilder(object):
-    """Base class for generating responses to OpenStack API requests for
-    information about images."""
+    """Base class for generating responses to OpenStack API image requests."""
 
     def __init__(self, base_url):
         """Initialize new `ViewBuilder`."""
