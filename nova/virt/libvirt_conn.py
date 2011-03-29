@@ -20,7 +20,7 @@
 """
 A connection to a hypervisor through libvirt.
 
-Supports KVM, QEMU, UML, and XEN.
+Supports KVM, LXC, QEMU, UML, and XEN.
 
 **Related Flags**
 
@@ -86,7 +86,7 @@ flags.DEFINE_string('libvirt_xml_template',
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
-                    'kvm, qemu, uml, xen)')
+                    'kvm, lxc, qemu, uml, xen)')
 flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
@@ -266,6 +266,8 @@ class LibvirtConnection(driver.ComputeDriver):
             uri = FLAGS.libvirt_uri or 'uml:///system'
         elif FLAGS.libvirt_type == 'xen':
             uri = FLAGS.libvirt_uri or 'xen:///'
+        elif FLAGS.libvirt_type == 'lxc':
+            uri = FLAGS.libvirt_uri or 'lxc:///'
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
         return uri
@@ -344,6 +346,8 @@ class LibvirtConnection(driver.ComputeDriver):
         instance_name = instance['name']
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals())
+        if FLAGS.libvirt_type == 'lxc':
+            disk.destroy_container(target, instance, nbd=FLAGS.use_cow_images)
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -625,6 +629,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
+        elif FLAGS.libvirt_type == 'lxc':
+            # LXC is also special
+            LOG.info(_("Unable to read LXC console"))
         else:
             fpath = console_log
 
@@ -738,6 +745,10 @@ class LibvirtConnection(driver.ComputeDriver):
         f.write(libvirt_xml)
         f.close()
 
+        if FLAGS.libvirt_type == 'lxc':
+            container_dir = '%s/rootfs' % basepath(suffix='')
+            utils.execute('mkdir', '-p', container_dir)
+
         # NOTE(vish): No need add the suffix to console.log
         os.close(os.open(basepath('console.log', ''),
                          os.O_CREAT | os.O_WRONLY, 0660))
@@ -797,6 +808,9 @@ class LibvirtConnection(driver.ComputeDriver):
         if not inst['kernel_id']:
             target_partition = "1"
 
+        if FLAGS.libvirt_type == 'lxc':
+            target_partition = None
+
         key = str(inst['key_data'])
         net = None
 
@@ -842,6 +856,11 @@ class LibvirtConnection(driver.ComputeDriver):
                 disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
                                  nbd=FLAGS.use_cow_images)
+
+                if FLAGS.libvirt_type == 'lxc':
+                    disk.setup_container(basepath('disk'),
+                                        container_dir=container_dir,
+                                        nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
