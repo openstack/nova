@@ -232,8 +232,8 @@ class CloudTestCase(test.TestCase):
             return None
         self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
         # valid image
-        result1 = deregister_image(self.context, 'ami-00000001')
-        self.assertEqual(result1['imageId'], 'ami-00000001')
+        result = deregister_image(self.context, 'ami-00000001')
+        self.assertEqual(result['imageId'], 'ami-00000001')
         # invalid image
         self.stubs.UnsetAll()
         def fake_detail_empty(meh, context):
