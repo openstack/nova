@@ -20,7 +20,7 @@
 """
 A connection to a hypervisor through libvirt.
 
-Supports KVM, QEMU, UML, and XEN.
+Supports KVM, LXC, QEMU, UML, and XEN.
 
 **Related Flags**
 
@@ -38,12 +38,15 @@ Supports KVM, QEMU, UML, and XEN.
 
 import multiprocessing
 import os
-import shutil
-import sys
 import random
+import shutil
 import subprocess
+import sys
+import tempfile
+import time
 import uuid
 from xml.dom import minidom
+from xml.etree import ElementTree
 
 from eventlet import greenthread
 from eventlet import tpool
@@ -57,6 +60,7 @@ from nova import flags
 from nova import log as logging
 #from nova import test
 from nova import utils
+from nova import vnc
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -83,7 +87,7 @@ flags.DEFINE_string('libvirt_xml_template',
 flags.DEFINE_string('libvirt_type',
                     'kvm',
                     'Libvirt domain type (valid options are: '
-                    'kvm, qemu, uml, xen)')
+                    'kvm, lxc, qemu, uml, xen)')
 flags.DEFINE_string('libvirt_uri',
                     '',
                     'Override the default libvirt URI (which is dependent'
@@ -111,6 +115,8 @@ flags.DEFINE_string('live_migration_flag',
                     'Define live migration behavior.')
 flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
+flags.DEFINE_string('qemu_img', 'qemu-img',
+                    'binary to use for qemu-img commands')
 
 
 def get_connection(read_only):
@@ -261,6 +267,8 @@ class LibvirtConnection(driver.ComputeDriver):
             uri = FLAGS.libvirt_uri or 'uml:///system'
         elif FLAGS.libvirt_type == 'xen':
             uri = FLAGS.libvirt_uri or 'xen:///'
+        elif FLAGS.libvirt_type == 'lxc':
+            uri = FLAGS.libvirt_uri or 'lxc:///'
         else:
             uri = FLAGS.libvirt_uri or 'qemu:///system'
         return uri
@@ -339,6 +347,8 @@ class LibvirtConnection(driver.ComputeDriver):
         instance_name = instance['name']
         LOG.info(_('instance %(instance_name)s: deleting instance files'
                 ' %(target)s') % locals())
+        if FLAGS.libvirt_type == 'lxc':
+            disk.destroy_container(target, instance, nbd=FLAGS.use_cow_images)
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -397,10 +407,67 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def snapshot(self, instance, image_id):
-        """ Create snapshot from a running VM instance """
-        raise NotImplementedError(
-            _("Instance snapshotting is not supported for libvirt"
-              "at this time"))
+        """Create snapshot from a running VM instance.
+
+        This command only works with qemu 0.14+, the qemu_img flag is
+        provided so that a locally compiled binary of qemu-img can be used
+        to support this command.
+
+        """
+        image_service = utils.import_object(FLAGS.image_service)
+        virt_dom = self._conn.lookupByName(instance['name'])
+        elevated = context.get_admin_context()
+
+        base = image_service.show(elevated, instance['image_id'])
+
+        metadata = {'disk_format': base['disk_format'],
+                    'container_format': base['container_format'],
+                    'is_public': False,
+                    'properties': {'architecture': base['architecture'],
+                                   'type': base['type'],
+                                   'name': '%s.%s' % (base['name'], image_id),
+                                   'kernel_id': instance['kernel_id'],
+                                   'image_location': 'snapshot',
+                                   'image_state': 'available',
+                                   'owner_id': instance['project_id'],
+                                   'ramdisk_id': instance['ramdisk_id'],
+                                   }
+                    }
+
+        # Make the snapshot
+        snapshot_name = uuid.uuid4().hex
+        snapshot_xml = """
+        <domainsnapshot>
+            <name>%s</name>
+        </domainsnapshot>
+        """ % snapshot_name
+        snapshot_ptr = virt_dom.snapshotCreateXML(snapshot_xml, 0)
+
+        # Find the disk
+        xml_desc = virt_dom.XMLDesc(0)
+        domain = ElementTree.fromstring(xml_desc)
+        source = domain.find('devices/disk/source')
+        disk_path = source.get('file')
+
+        # Export the snapshot to a raw image
+        temp_dir = tempfile.mkdtemp()
+        out_path = os.path.join(temp_dir, snapshot_name)
+        qemu_img_cmd = '%s convert -f qcow2 -O raw -s %s %s %s' % (
+                FLAGS.qemu_img,
+                snapshot_name,
+                disk_path,
+                out_path)
+        utils.execute(qemu_img_cmd)
+
+        # Upload that image to the image service
+        with open(out_path) as image_file:
+            image_service.update(elevated,
+                                 image_id,
+                                 metadata,
+                                 image_file)
+
+        # Clean up
+        shutil.rmtree(temp_dir)
 
     @exception.wrap_exception
     def reboot(self, instance):
@@ -563,6 +630,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                          instance['name'])
             data = self._flush_xen_console(virsh_output)
             fpath = self._append_to_file(data, console_log)
+        elif FLAGS.libvirt_type == 'lxc':
+            # LXC is also special
+            LOG.info(_("Unable to read LXC console"))
         else:
             fpath = console_log
 
@@ -606,7 +676,23 @@ class LibvirtConnection(driver.ComputeDriver):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
-    _image_sems = {}
+    @exception.wrap_exception
+    def get_vnc_console(self, instance):
+        def get_vnc_port_for_instance(instance_name):
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            # TODO: use etree instead of minidom
+            dom = minidom.parseString(xml)
+
+            for graphic in dom.getElementsByTagName('graphics'):
+                if graphic.getAttribute('type') == 'vnc':
+                    return graphic.getAttribute('port')
+
+        port = get_vnc_port_for_instance(instance['name'])
+        token = str(uuid.uuid4())
+        host = instance['host']
+
+        return {'token': token, 'host': host, 'port': port}
 
     @staticmethod
     def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
@@ -676,6 +762,10 @@ class LibvirtConnection(driver.ComputeDriver):
         f.write(libvirt_xml)
         f.close()
 
+        if FLAGS.libvirt_type == 'lxc':
+            container_dir = '%s/rootfs' % basepath(suffix='')
+            utils.execute('mkdir', '-p', container_dir)
+
         # NOTE(vish): No need add the suffix to console.log
         os.close(os.open(basepath('console.log', ''),
                          os.O_CREAT | os.O_WRONLY, 0660))
@@ -735,12 +825,16 @@ class LibvirtConnection(driver.ComputeDriver):
         if not inst['kernel_id']:
             target_partition = "1"
 
+        if FLAGS.libvirt_type == 'lxc':
+            target_partition = None
+
         key = str(inst['key_data'])
         net = None
 
         nets = []
         ifc_template = open(FLAGS.injected_network_template).read()
         ifc_num = -1
+        have_injected_networks = False
         admin_context = context.get_admin_context()
         for (network_ref, mapping) in network_info:
             ifc_num += 1
@@ -748,6 +842,7 @@ class LibvirtConnection(driver.ComputeDriver):
             if not 'injected' in network_ref:
                 continue
 
+            have_injected_networks = True
             address = mapping['ips'][0]['ip']
             address_v6 = None
             if FLAGS.use_ipv6:
@@ -763,9 +858,10 @@ class LibvirtConnection(driver.ComputeDriver):
                    'netmask_v6': network_ref['netmask_v6']}
             nets.append(net_info)
 
-        net = str(Template(ifc_template,
-                           searchList=[{'interfaces': nets,
-                                        'use_ipv6': FLAGS.use_ipv6}]))
+        if have_injected_networks:
+            net = str(Template(ifc_template,
+                               searchList=[{'interfaces': nets,
+                                            'use_ipv6': FLAGS.use_ipv6}]))
 
         if key or net:
             inst_name = inst['name']
@@ -780,6 +876,11 @@ class LibvirtConnection(driver.ComputeDriver):
                 disk.inject_data(basepath('disk'), key, net,
                                  partition=target_partition,
                                  nbd=FLAGS.use_cow_images)
+
+                if FLAGS.libvirt_type == 'lxc':
+                    disk.setup_container(basepath('disk'),
+                                        container_dir=container_dir,
+                                        nbd=FLAGS.use_cow_images)
             except Exception as e:
                 # This could be a windows image, or a vmdk format disk
                 LOG.warn(_('instance %(inst_name)s: ignoring error injecting'
@@ -865,6 +966,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     'driver_type': driver_type,
                     'nics': nics}
 
+        if FLAGS.vnc_enabled:
+            xml_info['vncserver_host'] = FLAGS.vncserver_host
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

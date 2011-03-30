@@ -14,9 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Test suite for XenAPI
-"""
+"""Test suite for XenAPI."""
 
 import functools
 import os
@@ -65,9 +63,7 @@ def stub_vm_utils_with_vdi_attached_here(function, should_return=True):
 
 
 class XenAPIVolumeTestCase(test.TestCase):
-    """
-    Unit tests for Volume operations
-    """
+    """Unit tests for Volume operations."""
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
@@ -101,7 +97,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         return db.volume_create(self.context, vol)
 
     def test_create_iscsi_storage(self):
-        """ This shows how to test helper classes' methods """
+        """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         helper = volume_utils.VolumeHelper
@@ -116,7 +112,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_parse_volume_info_raise_exception(self):
-        """ This shows how to test helper classes' methods """
+        """This shows how to test helper classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass')
         helper = volume_utils.VolumeHelper
@@ -130,7 +126,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         db.volume_destroy(context.get_admin_context(), vol['id'])
 
     def test_attach_volume(self):
-        """ This shows how to test Ops classes' methods """
+        """This shows how to test Ops classes' methods."""
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.get_connection(False)
         volume = self._create_volume()
@@ -149,7 +145,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         check()
 
     def test_attach_volume_raise_exception(self):
-        """ This shows how to test when exceptions are raised """
+        """This shows how to test when exceptions are raised."""
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.get_connection(False)
@@ -172,9 +168,7 @@ def reset_network(*args):
 
 
 class XenAPIVMTestCase(test.TestCase):
-    """
-    Unit tests for VM operations
-    """
+    """Unit tests for VM operations."""
     def setUp(self):
         super(XenAPIVMTestCase, self).setUp()
         self.manager = manager.AuthManager()
@@ -188,6 +182,7 @@ class XenAPIVMTestCase(test.TestCase):
                    instance_name_template='%d')
         xenapi_fake.reset()
         xenapi_fake.create_local_srs()
+        xenapi_fake.create_local_pifs()
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', FLAGS.flat_network_bridge)
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -247,12 +242,12 @@ class XenAPIVMTestCase(test.TestCase):
 
         check()
 
-    def create_vm_record(self, conn, os_type):
+    def create_vm_record(self, conn, os_type, instance_id=1):
         instances = conn.list_instances()
-        self.assertEquals(instances, ['1'])
+        self.assertEquals(instances, [str(instance_id)])
 
         # Get Nova record for VM
-        vm_info = conn.get_info(1)
+        vm_info = conn.get_info(instance_id)
         # Get XenAPI record for VM
         vms = [rec for ref, rec
                in xenapi_fake.get_all_records('VM').iteritems()
@@ -286,19 +281,19 @@ class XenAPIVMTestCase(test.TestCase):
             key = 'vm-data/networking/aabbccddeeff'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
-            self.assertEquals(tcpip_data, {
-                'label': 'test_network',
-                'broadcast': '10.0.0.255',
-                'ips': [{'ip': '10.0.0.3',
-                         'netmask':'255.255.255.0',
-                         'enabled':'1'}],
-                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
-                          'netmask': '120',
-                          'enabled': '1',
-                          'gateway': 'fe80::a00:1'}],
-                'mac': 'aa:bb:cc:dd:ee:ff',
-                'dns': ['10.0.0.2'],
-                'gateway': '10.0.0.1'})
+            self.assertEquals(tcpip_data,
+                              {'label': 'fake_flat_network',
+                               'broadcast': '10.0.0.255',
+                               'ips': [{'ip': '10.0.0.3',
+                                        'netmask':'255.255.255.0',
+                                        'enabled':'1'}],
+                                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
+                                          'netmask': '120',
+                                          'enabled': '1',
+                                          'gateway': 'fe80::a00:1'}],
+                                'mac': 'aa:bb:cc:dd:ee:ff',
+                                'dns': ['10.0.0.2'],
+                                'gateway': '10.0.0.1'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
@@ -347,9 +342,9 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
                     instance_type="m1.large", os_type="linux",
-                    check_injection=False):
+                    instance_id=1, check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
-        values = {'id': 1,
+        values = {'id': instance_id,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
                   'image_id': image_id,
@@ -360,7 +355,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'os_type': os_type}
         instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
-        self.create_vm_record(self.conn, os_type)
+        self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
 
     def test_spawn_not_enough_memory(self):
@@ -505,6 +500,28 @@ class XenAPIVMTestCase(test.TestCase):
         # guest agent is detected
         self.assertFalse(self._tee_executed)
 
+    def test_spawn_vlanmanager(self):
+        self.flags(xenapi_image_service='glance',
+                   network_manager='nova.network.manager.VlanManager',
+                   network_driver='nova.network.xenapi_net',
+                   vlan_interface='fake0')
+        # Reset network table
+        xenapi_fake.reset_table('network')
+        # Instance id = 2 will use vlan network (see db/fakes.py)
+        fake_instance_id = 2
+        network_bk = self.network
+        # Ensure we use xenapi_net driver
+        self.network = utils.import_object(FLAGS.network_manager)
+        self.network.setup_compute_network(None, fake_instance_id)
+        self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
+                         glance_stubs.FakeGlance.IMAGE_KERNEL,
+                         glance_stubs.FakeGlance.IMAGE_RAMDISK,
+                         instance_id=fake_instance_id)
+        # TODO(salvatore-orlando): a complete test here would require
+        # a check for making sure the bridge for the VM's VIF is
+        # consistent with bridge specified in nova db
+        self.network = network_bk
+
     def test_spawn_with_network_qos(self):
         self._create_instance()
         for vif_ref in xenapi_fake.get_all('VIF'):
@@ -551,9 +568,7 @@ class XenAPIVMTestCase(test.TestCase):
 
 
 class XenAPIDiffieHellmanTestCase(test.TestCase):
-    """
-    Unit tests for Diffie-Hellman code
-    """
+    """Unit tests for Diffie-Hellman code."""
     def setUp(self):
         super(XenAPIDiffieHellmanTestCase, self).setUp()
         self.alice = SimpleDH()
@@ -577,9 +592,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
 
 class XenAPIMigrateInstance(test.TestCase):
-    """
-    Unit test for verifying migration-related actions
-    """
+    """Unit test for verifying migration-related actions."""
 
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
@@ -634,9 +647,7 @@ class XenAPIMigrateInstance(test.TestCase):
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):
-    """
-    Unit tests for code that detects the ImageType
-    """
+    """Unit tests for code that detects the ImageType."""
     def setUp(self):
         super(XenAPIDetermineDiskImageTestCase, self).setUp()
         glance_stubs.stubout_glance_client(self.stubs,
@@ -655,9 +666,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.assertEqual(disk_type, dt)
 
     def test_instance_disk(self):
-        """
-        If a kernel is specified then the image type is DISK (aka machine)
-        """
+        """If a kernel is specified, the image type is DISK (aka machine)."""
         FLAGS.xenapi_image_service = 'objectstore'
         self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_MACHINE
         self.fake_instance.kernel_id = glance_stubs.FakeGlance.IMAGE_KERNEL
