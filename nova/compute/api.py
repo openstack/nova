@@ -37,8 +37,11 @@ from nova.compute import instance_types
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
-FLAGS = flags.FLAGS
+
 LOG = logging.getLogger('nova.compute.api')
+
+
+FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
 
 
