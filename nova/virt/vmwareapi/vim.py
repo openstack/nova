@@ -21,10 +21,14 @@ Classes for making VMware VI SOAP calls.
 
 import httplib
 
-from suds import WebFault
-from suds.client import Client
-from suds.plugin import MessagePlugin
-from suds.sudsobject import Property
+try:
+    suds = True
+    from suds import WebFault
+    from suds.client import Client
+    from suds.plugin import MessagePlugin
+    from suds.sudsobject import Property
+except ImportError:
+    suds = False
 
 from nova import flags
 from nova.virt.vmwareapi import error_util
@@ -75,6 +79,9 @@ class Vim:
         protocol: http or https
         host    : ESX IPAddress[:port] or ESX Hostname[:port]
         """
+        if not suds:
+            raise Exception(_("Unable to import suds."))
+
         self._protocol = protocol
         self._host_name = host
         wsdl_url = FLAGS.vmwareapi_wsdl_loc
