@@ -315,8 +315,6 @@ class ExtensionManager(object):
     def __init__(self, path):
         LOG.audit(_('Initializing extension manager.'))
 
-        self.super_verbose = False
-
         self.path = path
         self.extensions = {}
         self._load_all_extensions()
