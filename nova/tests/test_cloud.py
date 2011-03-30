@@ -36,12 +36,12 @@ from nova import rpc
 from nova import service
 from nova import test
 from nova import utils
+from nova import exception 
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
-from nova.exception import NotFound
 
 
 FLAGS = flags.FLAGS
@@ -234,7 +234,7 @@ class CloudTestCase(test.TestCase):
             return []
 
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
-        self.assertRaises(NotFound, deregister_image,
+        self.assertRaises(exception.NotFound, deregister_image,
                           self.context, 'ami-bad001')
 
     def test_console_output(self):
