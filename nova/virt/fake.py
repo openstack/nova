@@ -375,6 +375,11 @@ class FakeConnection(driver.ComputeDriver):
                 'host': 'fakeajaxconsole.com',
                 'port': 6969}
 
+    def get_vnc_console(self, instance):
+        return {'token': 'FAKETOKEN',
+                'host': 'fakevncconsole.com',
+                'port': 6969}
+
     def get_console_pool_info(self, console_type):
         return  {'address': '127.0.0.1',
                  'username': 'fakeuser',

@@ -60,6 +60,7 @@ from nova import flags
 from nova import log as logging
 #from nova import test
 from nova import utils
+from nova import vnc
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -675,7 +676,23 @@ class LibvirtConnection(driver.ComputeDriver):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
-    _image_sems = {}
+    @exception.wrap_exception
+    def get_vnc_console(self, instance):
+        def get_vnc_port_for_instance(instance_name):
+            virt_dom = self._conn.lookupByName(instance_name)
+            xml = virt_dom.XMLDesc(0)
+            # TODO: use etree instead of minidom
+            dom = minidom.parseString(xml)
+
+            for graphic in dom.getElementsByTagName('graphics'):
+                if graphic.getAttribute('type') == 'vnc':
+                    return graphic.getAttribute('port')
+
+        port = get_vnc_port_for_instance(instance['name'])
+        token = str(uuid.uuid4())
+        host = instance['host']
+
+        return {'token': token, 'host': host, 'port': port}
 
     @staticmethod
     def _cache_image(fn, target, fname, cow=False, *args, **kwargs):
@@ -949,6 +966,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     'driver_type': driver_type,
                     'nics': nics}
 
+        if FLAGS.vnc_enabled:
+            xml_info['vncserver_host'] = FLAGS.vncserver_host
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"
