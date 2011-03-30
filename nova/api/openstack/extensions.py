@@ -378,7 +378,7 @@ class ExtensionManager(object):
         widgets.py the extension class within that module should be
         'Widgets'.
 
-        In addition, extensions are loaded from the 'incubator' directory.
+        In addition, extensions are loaded from the 'contrib' directory.
 
         See nova/tests/api/openstack/extensions/foxinsocks.py for an example
         extension implementation.
@@ -387,7 +387,7 @@ class ExtensionManager(object):
         if os.path.exists(self.path):
             self._load_all_extensions_from_path(self.path)
 
-        incubator_path = os.path.join(os.path.dirname(__file__), "incubator")
+        incubator_path = os.path.join(os.path.dirname(__file__), "contrib")
         if os.path.exists(incubator_path):
             self._load_all_extensions_from_path(incubator_path)
 
