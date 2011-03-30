@@ -177,7 +177,6 @@ class S3ImageService(service.BaseImageService):
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
         properties['is_public'] = False
-        properties['type'] = image_type
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,
                          'status': 'queued',
