@@ -68,9 +68,8 @@ class API(base.Base):
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
         # Check if the floating ip address is allocated
         if floating_ip['project_id'] is None:
-            raise exception.ApiError(_("Address (%(address)s) is not "
-                                       "allocated") % {'address':
-                                       floating_ip['address']})
+            raise exception.ApiError(_("Address (%s) is not allocated") %
+                                       floating_ip['address'])
         # Check if the floating ip address is allocated to the same project
         if floating_ip['project_id'] != context.project_id:
             LOG.warn(_("Address (%(address)s) is not allocated to your "
