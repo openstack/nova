@@ -36,7 +36,7 @@ from nova import rpc
 from nova import service
 from nova import test
 from nova import utils
-from nova import exception 
+from nova import exception
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
