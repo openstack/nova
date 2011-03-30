@@ -48,10 +48,10 @@ class TestFaults(test.TestCase):
             response = request.get_response(fault)
 
             expected = self._prepare_xml("""
-                <badRequest code="400">
+                <badRequest code="400" xmlns="%s">
                     <message>scram</message>
                 </badRequest>
-            """)
+            """ % common.XML_NS_V10)
             actual = self._prepare_xml(response.body)
 
             self.assertEqual(response.content_type, "application/xml")
@@ -92,11 +92,11 @@ class TestFaults(test.TestCase):
             response = request.get_response(fault)
 
             expected = self._prepare_xml("""
-                <overLimit code="413">
+                <overLimit code="413" xmlns="%s">
                     <message>sorry</message>
                     <retryAfter>4</retryAfter>
                 </overLimit>
-            """)
+            """ % common.XML_NS_V10)
             actual = self._prepare_xml(response.body)
 
             self.assertEqual(expected, actual)
