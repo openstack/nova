@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 import webob.exc
 
 from nova import compute
@@ -22,7 +20,6 @@ from nova import exception
 from nova import flags
 from nova import log
 from nova import utils
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view

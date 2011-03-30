@@ -156,7 +156,8 @@ class ResponseExtensionController(common.OpenstackController):
                 body = res.body
                 headers = res.headers
             except AttributeError:
-                body = self._serialize(res, content_type)
+                default_xmlns = None
+                body = self._serialize(res, content_type, default_xmlns)
                 headers = {"Content-Type": content_type}
             res = webob.Response()
             res.body = body
