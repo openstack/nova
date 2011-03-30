@@ -68,7 +68,7 @@ def key_init(self, arg_dict):
     try:
         resp = _wait_for_agent(self, request_id, arg_dict)
     except TimeoutError, e:
-        raise PluginError("%s" % e)
+        raise PluginError(e)
     return resp
 
 
@@ -89,7 +89,7 @@ def password(self, arg_dict):
     try:
         resp = _wait_for_agent(self, request_id, arg_dict)
     except TimeoutError, e:
-        raise PluginError("%s" % e)
+        raise PluginError(e)
     return resp
 
 
@@ -143,7 +143,7 @@ def inject_file(self, arg_dict):
     try:
         resp = _wait_for_agent(self, request_id, arg_dict)
     except TimeoutError, e:
-        raise PluginError("%s" % e)
+        raise PluginError(e)
     return resp
 
 
@@ -166,7 +166,7 @@ def _agent_has_method(self, method):
         try:
             resp = _wait_for_agent(self, tmp_id, dct)
         except TimeoutError, e:
-            raise PluginError("%s" % e)
+            raise PluginError(e)
         response = json.loads(resp)
         # The agent returns a comma-separated list of methods.
         self._agent_methods = response.split(",")
