@@ -136,8 +136,8 @@ def inject_file(self, arg_dict):
     else:
         # Either the methods don't exist in the agent, or they
         # have been disabled.
-        raise NotImplementedError("NOT IMPLEMENTED: Agent does not support"
-                " file injection.")
+        raise NotImplementedError(_("NOT IMPLEMENTED: Agent does not"
+                " support file injection."))
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
