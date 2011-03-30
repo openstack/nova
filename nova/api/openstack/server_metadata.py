@@ -86,9 +86,7 @@ class Controller(wsgi.Controller):
         self.compute_api.delete_instance_metadata(context, server_id, id)
 
     def _handle_quota_error(self, error):
-        """
-        Reraise quota errors as api-specific http exceptions
-        """
+        """Reraise quota errors as api-specific http exceptions"""
         if error.code == "MetadataLimitExceeded":
             raise exc.HTTPBadRequest(explanation=error.message)
         raise error
