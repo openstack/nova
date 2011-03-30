@@ -29,8 +29,10 @@ import nova.wsgi
 
 FLAGS = flags.FLAGS
 
+
 def return_create_instance_metadata_max(context, server_id, metadata):
     return stub_max_server_metadata()
+
 
 def return_create_instance_metadata(context, server_id, metadata):
     return stub_server_metadata()
@@ -64,6 +66,7 @@ def stub_max_server_metadata():
     for num in range(FLAGS.quota_metadata_items):
         metadata['metadata']['key%i' % num] = "blah"
     return metadata
+
 
 class ServerMetaDataTest(unittest.TestCase):
 
