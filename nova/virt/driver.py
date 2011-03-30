@@ -89,14 +89,6 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_console_pool_info(self, console_type):
-        """Get info about the host on which the VM resides.
-
-        Returns a dict containing:
-        :address:          ?
-        :username:         ?
-        :password:         ?
-
-        """
         raise NotImplementedError()
 
     def get_console_output(self, instance):
