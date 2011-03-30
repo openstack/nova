@@ -43,9 +43,11 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
+
+
+vim = None
 
 LOG = logging.getLogger("nova.virt.vmwareapi_conn")
 
@@ -76,6 +78,13 @@ flags.DEFINE_string('vmwareapi_vlan_interface',
                    'Physical ethernet adapter name for vlan networking')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
+
+
+def get_imported_vim():
+    """Avoid any hard dependencies."""
+    global vim
+    if vim is None:
+        vim = __import__("nova.virt.vmwareapi.vim")
 
 
 class Failure(Exception):
@@ -109,7 +118,7 @@ class VMWareESXConnection(object):
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
         session = VMWareAPISession(host_ip, host_username, host_password,
-                 api_retry_count, scheme=scheme)
+                                   api_retry_count, scheme=scheme)
         self._vmops = VMWareVMOps(session)
 
     def init_host(self, host):
@@ -204,6 +213,7 @@ class VMWareAPISession(object):
         self._session_id = None
         self.vim = None
         self._create_session()
+        get_imported_vim()
 
     def _get_vim_object(self):
         """Create the VIM Object instance."""
