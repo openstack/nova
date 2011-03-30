@@ -177,7 +177,7 @@ class _IntegratedTestBase(test.TestCase):
         self.api_service = api_service
 
         host, port = api_service.get_socket_info('osapi')
-        self.auth_url = 'http://%s:%s/v1.0' % (host, port)
+        self.auth_url = 'http://%s:%s/v1.1' % (host, port)
 
     def tearDown(self):
         self.context.cleanup()
