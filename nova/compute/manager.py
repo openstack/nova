@@ -152,6 +152,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             state = power_state.FAILED
         self.db.instance_set_state(context, instance_id, state)
 
+    def _update_launched_at(self, context, instance_id):
+        """Update the launched_at parameter of the given instance."""
+        data = {'launched_at': datetime.datetime.utcnow()}
+        self.db.instance_update(context, instance_id, data)
+
     def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host
            Currently this is just set in the flags for each compute
@@ -232,10 +237,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self.driver.spawn(instance_ref)
-            now = datetime.datetime.utcnow()
-            self.db.instance_update(context,
-                                    instance_id,
-                                    {'launched_at': now})
+            self._update_launched_at(context, instance_id)
         except Exception:  # pylint: disable=W0702
             LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
                             " enabled in the BIOS?"), instance_id,
@@ -293,6 +295,32 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def rebuild_instance(self, context, instance_id):
+        """Destroy and re-make this instance.
+
+        A 'rebuild' effectively purges all existing data from the system and
+        remakes the VM with given 'metadata' and 'personalities'.
+
+        :param context: `nova.RequestContext` object
+        :param instance_id: Instance identifier (integer)
+        """
+        context = context.elevated()
+
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
+
+        # TODO(blamar): Detach volumes prior to rebuild.
+
+        # NOTE(blamar): The driver interface seems to indicate `destroy` is an
+        #               async call, but the implementations look sync...
+        self.driver.destroy(instance_ref)
+        self.driver.spawn(instance_ref)
+
+        self._update_launched_at(context, instance_id)
+        self._update_state(context, instance_id)
 
     @exception.wrap_exception
     @checks_instance_lock
