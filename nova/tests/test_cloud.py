@@ -36,6 +36,7 @@ from nova import rpc
 from nova import service
 from nova import test
 from nova import utils
+from nova import exception
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
@@ -309,6 +310,19 @@ class CloudTestCase(test.TestCase):
                 instance_id = instance['instance_id']
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
+
+    def test_terminate_instances(self):
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_id': 1,
+                                                  'host': 'host1'})
+        terminate_instances = self.cloud.terminate_instances
+        # valid instance_id
+        result = terminate_instances(self.context, ['i-00000001'])
+        self.assertTrue(result)
+        # non-existing instance_id
+        self.assertRaises(exception.InstanceNotFound, terminate_instances,
+                          self.context, ['i-2'])
+        db.instance_destroy(self.context, inst1['id'])
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
