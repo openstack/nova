@@ -1125,7 +1125,7 @@ def main():
         print _("Possible wrong number of arguments supplied")
         print "%s %s: %s" % (category, action, fn.__doc__)
         raise
-    except:
+    except Exception:
         print _("Command failed, please check log for more info")
         raise
 

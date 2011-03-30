@@ -1108,11 +1108,13 @@ def _prepare_injectables(inst, networks_info):
     if networks_info:
         ifc_num = -1
         interfaces_info = []
+        have_injected_networks = False
         for (network_ref, info) in networks_info:
             ifc_num += 1
             if not network_ref['injected']:
                 continue
 
+            have_injected_networks = True
             ip_v4 = ip_v6 = None
             if 'ips' in info and len(info['ips']) > 0:
                 ip_v4 = info['ips'][0]
@@ -1131,7 +1133,9 @@ def _prepare_injectables(inst, networks_info):
                               'gateway_v6': ip_v6 and ip_v6['gateway'] or '',
                               'use_ipv6': FLAGS.use_ipv6}
             interfaces_info.append(interface_info)
-        net = str(template(template_data,
-                        searchList=[{'interfaces': interfaces_info,
-                                     'use_ipv6': FLAGS.use_ipv6}]))
+
+        if have_injected_networks:
+            net = str(template(template_data,
+                                searchList=[{'interfaces': interfaces_info,
+                                            'use_ipv6': FLAGS.use_ipv6}]))
     return key, net

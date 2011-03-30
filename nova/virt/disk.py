@@ -116,6 +116,41 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
         _unlink_device(device, nbd)
 
 
+def setup_container(image, container_dir=None, nbd=False):
+    """Setup the LXC container.
+
+    It will mount the loopback image to the container directory in order
+    to create the root filesystem for the container.
+
+    LXC does not support qcow2 images yet.
+    """
+    try:
+        device = _link_device(image, nbd)
+        utils.execute('sudo', 'mount', device, container_dir)
+    except Exception, exn:
+        LOG.exception(_('Failed to mount filesystem: %s'), exn)
+        _unlink_device(device, nbd)
+
+
+def destroy_container(target, instance, nbd=False):
+    """Destroy the container once it terminates.
+
+    It will umount the container that is mounted, try to find the loopback
+    device associated with the container and delete it.
+
+    LXC does not support qcow2 images yet.
+    """
+    try:
+        container_dir = '%s/rootfs' % target
+        utils.execute('sudo', 'umount', container_dir)
+    finally:
+        out, err = utils.execute('sudo', 'losetup', '-a')
+        for loop in out.splitlines():
+            if instance['name'] in loop:
+                device = loop.split(loop, ':')
+                _unlink_device(device, nbd)
+
+
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:
