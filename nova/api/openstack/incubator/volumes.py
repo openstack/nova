@@ -49,24 +49,16 @@ def _translate_volume_summary_view(_context, vol):
     d = {}
 
     instance_id = None
-    #    instance_data = None
     attached_to = vol.get('instance')
     if attached_to:
         instance_id = attached_to['id']
-    #        instance_data = '%s[%s]' % (instance_ec2_id,
-    #                                    attached_to['host'])
+
     d['id'] = vol['id']
     d['status'] = vol['status']
     d['size'] = vol['size']
     d['availabilityZone'] = vol['availability_zone']
     d['createdAt'] = vol['created_at']
-    #    if context.is_admin:
-    #        v['status'] = '%s (%s, %s, %s, %s)' % (
-    #            vol['status'],
-    #            vol['user_id'],
-    #            vol['host'],
-    #            instance_data,
-    #            vol['mountpoint'])
+
     if vol['attach_status'] == 'attached':
         d['attachments'] = [{'attachTime': vol['attach_time'],
                              'deleteOnTermination': False,
