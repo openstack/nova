@@ -184,7 +184,7 @@ class _IntegratedTestBase(test.TestCase):
     def _get_flags(self):
         """An opportunity to setup flags, before the services are started."""
         f = {}
-        f['image_service'] = 'nova.image.fake.MockImageService'
+        f['image_service'] = 'nova.image.fake.FakeImageService'
         f['fake_network'] = True
         return f
 

@@ -28,7 +28,7 @@ LOG = logging.getLogger('nova.image.fake')
 FLAGS = flags.FLAGS
 
 
-class MockImageService(service.BaseImageService):
+class FakeImageService(service.BaseImageService):
     """Mock (fake) image service for unit testing."""
 
     def __init__(self):
@@ -43,7 +43,7 @@ class MockImageService(service.BaseImageService):
                                 'disk_format': 'ami'}
                 }
         self.create(None, image)
-        super(MockImageService, self).__init__()
+        super(FakeImageService, self).__init__()
 
     def index(self, context):
         """Returns list of images."""
