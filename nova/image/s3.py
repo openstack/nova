@@ -31,6 +31,7 @@ from xml.etree import ElementTree
 
 import boto.s3.connection
 
+from nova import crypto
 from nova import exception
 from nova import flags
 from nova import utils
@@ -210,7 +211,7 @@ class S3ImageService(service.BaseImageService):
 
             # FIXME(vish): grab key from common service so this can run on
             #              any host.
-            cloud_pk = os.path.join(FLAGS.ca_path, "private/cakey.pem")
+            cloud_pk = crypto.key_path(context.project_id)
 
             decrypted_filename = os.path.join(image_path, 'image.tar.gz')
             self._decrypt_image(encrypted_filename, encrypted_key,
