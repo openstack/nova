@@ -21,6 +21,11 @@ import webob
 
 from nova import exception
 from nova import flags
+from nova import log as logging
+
+
+LOG = logging.getLogger('common')
+
 
 FLAGS = flags.FLAGS
 
@@ -121,4 +126,5 @@ def get_id_from_href(href):
     try:
         return int(urlparse(href).path.split('/')[-1])
     except:
+        LOG.debug(_("Error extracting id from href: %s") % href)
         raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
