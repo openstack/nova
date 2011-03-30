@@ -61,6 +61,7 @@ class Fault(webob.exc.HTTPException):
         serializer = wsgi.Serializer(metadata, default_xmlns)
         content_type = req.best_match_content_type()
         self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
+        self.wrapped_exc.content_type = content_type
         return self.wrapped_exc
 
 
