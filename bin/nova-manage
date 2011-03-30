@@ -1098,8 +1098,8 @@ def main():
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
-        print "Available categories:"
-        for k, _ in CATEGORIES:
+        print _("Available categories:")
+        for k, _v in CATEGORIES:
             print "\t%s" % k
         sys.exit(2)
     category = argv.pop(0)
@@ -1110,7 +1110,7 @@ def main():
     actions = methods_of(command_object)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
-        print "Available actions for %s category:" % category
+        print _("Available actions for %s category:") % category
         for k, _v in actions:
             print "\t%s" % k
         sys.exit(2)
@@ -1122,8 +1122,11 @@ def main():
         fn(*argv)
         sys.exit(0)
     except TypeError:
-        print "Possible wrong number of arguments supplied"
+        print _("Possible wrong number of arguments supplied")
         print "%s %s: %s" % (category, action, fn.__doc__)
+        raise
+    except Exception:
+        print _("Command failed, please check log for more info")
         raise
 
 if __name__ == '__main__':
