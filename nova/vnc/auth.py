@@ -117,11 +117,13 @@ class VNCProxyAuthManager(manager.Manager):
         self.tokens[token] = {'host': host,
                               'port': port,
                               'last_activity_at': time.time()}
-        LOG.audit(_("Received Token: %s, %s)"), token, self.tokens[token])
+        token_dict = self.tokens[token]
+        LOG.audit(_("Received Token: %(token)s, %(token_dict)s)"), locals())
 
     def check_token(self, context, token):
-        LOG.audit(_("Checking Token: %s, %s)"), token, (token in self.tokens))
-        if token in self.tokens:
+        token_valid = token in self.tokens
+        LOG.audit(_("Checking Token: %(token)s, %(token_valid)s)"), locals())
+        if token_valid:
             return self.tokens[token]
 
     def _delete_expired_tokens(self):
