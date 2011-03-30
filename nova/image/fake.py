@@ -16,6 +16,8 @@
 #    under the License.
 """Implementation of an fake image service"""
 
+import datetime
+
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -35,7 +37,11 @@ class FakeImageService(service.BaseImageService):
         self.images = {}
         # NOTE(justinsb): The OpenStack API can't upload an image?
         # So, make sure we've got one..
+        timestamp = datetime.datetime(2011, 01, 01, 01, 02, 03)
         image = {'id': '123456',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
                  'status': 'active',
                  'type': 'machine',
                  'properties': {'kernel_id': FLAGS.null_kernel,
