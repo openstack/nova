@@ -611,9 +611,7 @@ class ControllerV10(Controller):
             return faults.Fault(exc.HTTPBadRequest(msg))
 
         image_id = input_dict['rebuild']['imageId']
-
         self.compute_api.rebuild(context, id, image_id)
-
         return exc.HTTPAccepted()
 
 
@@ -643,7 +641,27 @@ class ControllerV11(Controller):
         return common.limited_by_marker(items, req)
 
     def _action_rebuild(self, input_dict, req, id):
-        return faults.Fault(exc.HTTPNotImplemented())
+        context = req.environ['nova.context']
+        if (not 'rebuild' in input_dict
+            or not 'imageRef' in input_dict['rebuild']):
+            msg = _("No imageRef was specified")
+            return faults.Fault(exc.HTTPBadRequest(msg))
+
+        image_ref = input_dict['rebuild']['imageRef']
+        image_id = common.get_id_from_href(image_ref)
+
+        metadata = []
+        if 'metadata' in input_dict['rebuild']:
+            try:
+                for k, v in input_dict['rebuild']['metadata'].items():
+                    metadata.append({'key': k, 'value': v})
+
+            except Exception:
+                msg = _("Improperly formatted metadata provided")
+                return exc.HTTPBadRequest(msg)
+
+        self.compute_api.rebuild(context, id, image_id, metadata)
+        return exc.HTTPAccepted()
 
 
 class ServerCreateRequestXMLDeserializer(object):
