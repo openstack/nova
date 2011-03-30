@@ -150,6 +150,15 @@ class Controller(wsgi.Controller):
             injected_files = self._get_injected_files(personality)
 
         flavor_id = self._flavor_id_from_req_data(env)
+
+        if not 'name' in env['server']:
+            msg = _("Server name is not defined")
+            return exc.HTTPBadRequest(msg)
+
+        name = env['server']['name']
+        self._validate_server_name(name)
+        name = name.strip()
+
         try:
             (inst,) = self.compute_api.create(
                 context,
@@ -157,8 +166,8 @@ class Controller(wsgi.Controller):
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
-                display_name=env['server']['name'],
-                display_description=env['server']['name'],
+                display_name=name,
+                display_description=name,
                 key_name=key_name,
                 key_data=key_data,
                 metadata=metadata,
@@ -246,19 +255,32 @@ class Controller(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            try:
-                self.compute_api.set_admin_password(ctxt, id)
-            except exception.TimeoutException:
-                return exc.HTTPRequestTimeout()
+
         if 'name' in inst_dict['server']:
-            update_dict['display_name'] = inst_dict['server']['name']
+            name = inst_dict['server']['name']
+            self._validate_server_name(name)
+            update_dict['display_name'] = name.strip()
+
+        self._parse_update(ctxt, id, inst_dict, update_dict)
+
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
         return exc.HTTPNoContent()
+
+    def _validate_server_name(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Server name is not a string or unicode")
+            raise exc.HTTPBadRequest(msg)
+
+        if value.strip() == '':
+            msg = _("Server name is an empty string")
+            raise exc.HTTPBadRequest(msg)
+
+    def _parse_update(self, context, id, inst_dict, update_dict):
+        pass
 
     @scheduler_api.redirect_handler
     def action(self, req, id):
@@ -477,10 +499,20 @@ class Controller(wsgi.Controller):
 
     @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
-        """ Returns a url to an instance's ajaxterm console. """
+        """Returns a url to an instance's ajaxterm console."""
         try:
             self.compute_api.get_ajax_console(req.environ['nova.context'],
                 int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
+    @scheduler_api.redirect_handler
+    def get_vnc_console(self, req, id):
+        """Returns a url to an instance's ajaxterm console."""
+        try:
+            self.compute_api.get_vnc_console(req.environ['nova.context'],
+                                             int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
@@ -565,6 +597,14 @@ class ControllerV10(Controller):
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
+
+    def _parse_update(self, context, server_id, inst_dict, update_dict):
+        if 'adminPass' in inst_dict['server']:
+            update_dict['admin_pass'] = inst_dict['server']['adminPass']
+            try:
+                self.compute_api.set_admin_password(context, server_id)
+            except exception.TimeoutException:
+                return exc.HTTPRequestTimeout()
 
 
 class ControllerV11(Controller):
