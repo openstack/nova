@@ -134,16 +134,6 @@ class Controller(wsgi.Controller):
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
 
-        # Metadata is a list, not a Dictionary, because we allow duplicate keys
-        # (even though JSON can't encode this)
-        # In future, we may not allow duplicate keys.
-        # However, the CloudServers API is not definitive on this front,
-        #  and we want to be compatible.
-        metadata = []
-        if env['server'].get('metadata'):
-            for k, v in env['server']['metadata'].items():
-                metadata.append({'key': k, 'value': v})
-
         personality = env['server'].get('personality')
         injected_files = []
         if personality:
@@ -161,7 +151,7 @@ class Controller(wsgi.Controller):
                 display_description=env['server']['name'],
                 key_name=key_name,
                 key_data=key_data,
-                metadata=metadata,
+                metadata=env['server'].get('metadata', {}),
                 injected_files=injected_files)
         except quota.QuotaError as error:
             self._handle_quota_error(error)

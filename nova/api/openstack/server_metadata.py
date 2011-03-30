@@ -18,6 +18,7 @@
 from webob import exc
 
 from nova import compute
+from nova import quota
 from nova import wsgi
 from nova.api.openstack import faults
 
@@ -43,10 +44,13 @@ class Controller(wsgi.Controller):
 
     def create(self, req, server_id):
         context = req.environ['nova.context']
-        body = self._deserialize(req.body, req.get_content_type())
-        self.compute_api.update_or_create_instance_metadata(context,
-                                                            server_id,
-                                                            body['metadata'])
+        data = self._deserialize(req.body, req.get_content_type())['metadata']
+        try:
+            self.compute_api.update_or_create_instance_metadata(context,
+                                                                server_id,
+                                                                data)
+        except quota.QuotaError as error:
+            self._handle_quota_error(error)
         return req.body
 
     def update(self, req, server_id, id):
@@ -58,9 +62,13 @@ class Controller(wsgi.Controller):
         if len(body) > 1:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
-        self.compute_api.update_or_create_instance_metadata(context,
-                                                            server_id,
-                                                            body)
+        try:
+            self.compute_api.update_or_create_instance_metadata(context,
+                                                                server_id,
+                                                                body)
+        except quota.QuotaError as error:
+            self._handle_quota_error(error)
+
         return req.body
 
     def show(self, req, server_id, id):
@@ -76,3 +84,11 @@ class Controller(wsgi.Controller):
         """ Deletes an existing metadata """
         context = req.environ['nova.context']
         self.compute_api.delete_instance_metadata(context, server_id, id)
+
+    def _handle_quota_error(self, error):
+        """
+        Reraise quota errors as api-specific http exceptions
+        """
+        if error.code == "MetadataLimitExceeded":
+            raise exc.HTTPBadRequest(explanation=error.message)
+        raise error
