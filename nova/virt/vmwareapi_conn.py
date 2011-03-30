@@ -47,8 +47,6 @@ from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
 
 
-vim = None
-
 LOG = logging.getLogger("nova.virt.vmwareapi_conn")
 
 FLAGS = flags.FLAGS
@@ -78,13 +76,6 @@ flags.DEFINE_string('vmwareapi_vlan_interface',
                    'Physical ethernet adapter name for vlan networking')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0
-
-
-def get_imported_vim():
-    """Avoid any hard dependencies."""
-    global vim
-    if vim is None:
-        vim = __import__("nova.virt.vmwareapi.vim")
 
 
 class Failure(Exception):
@@ -213,7 +204,6 @@ class VMWareAPISession(object):
         self._session_id = None
         self.vim = None
         self._create_session()
-        get_imported_vim()
 
     def _get_vim_object(self):
         """Create the VIM Object instance."""
