@@ -828,7 +828,10 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.libvirt_type == 'lxc':
             target_partition = None
 
-        key = str(inst['key_data'])
+        if inst['key_data']:
+            key = str(inst['key_data'])
+        else:
+            key = None
         net = None
 
         nets = []
