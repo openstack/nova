@@ -202,7 +202,7 @@ class VolumeAttachmentController(wsgi.Controller):
                            entity_maker=_translate_attachment_summary_view)
 
     def show(self, req, server_id, id):
-        """Return data about the given volume."""
+        """Return data about the given volume attachment."""
         context = req.environ['nova.context']
 
         volume_id = id
