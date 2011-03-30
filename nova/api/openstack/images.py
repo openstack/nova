@@ -32,7 +32,7 @@ LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """Base `wsgi.Controller` for retrieving/displaying images."""
 
     _serialization_metadata = {
@@ -153,3 +153,6 @@ class ControllerV11(Controller):
         """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11

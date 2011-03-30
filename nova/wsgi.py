@@ -362,7 +362,6 @@ class Controller(object):
             response.headers["Content-Type"] = content_type
             response.body = body
             return response
-
         else:
             return result
 
@@ -391,11 +390,8 @@ class Controller(object):
         return serializer.deserialize(data, content_type)
 
     def get_default_xmlns(self, req):
-        # NOTE(justinsb): This doesn't really belong here..
-        # We'll probably end up moving this into a new OpenstackApiController
-        #  class or something like that, once we know what's going to happen
-        #  with v1.1
-        return 'http://docs.rackspacecloud.com/servers/api/v1.0'
+        """Provide the XML namespace to use if none is otherwise specified."""
+        return None
 
 
 class Serializer(object):

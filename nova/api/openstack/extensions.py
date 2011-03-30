@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
@@ -115,7 +116,7 @@ class ExtensionDescriptor(object):
         return response_exts
 
 
-class ActionExtensionController(wsgi.Controller):
+class ActionExtensionController(common.OpenstackController):
 
     def __init__(self, application):
 
@@ -136,7 +137,7 @@ class ActionExtensionController(wsgi.Controller):
         return res
 
 
-class ResponseExtensionController(wsgi.Controller):
+class ResponseExtensionController(common.OpenstackController):
 
     def __init__(self, application):
         self.application = application
@@ -163,7 +164,7 @@ class ResponseExtensionController(wsgi.Controller):
         return res
 
 
-class ExtensionController(wsgi.Controller):
+class ExtensionController(common.OpenstackController):
 
     def __init__(self, extension_manager):
         self.extension_manager = extension_manager
