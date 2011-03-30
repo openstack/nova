@@ -20,6 +20,7 @@ import webob.dec
 import webob.exc
 
 from nova import test
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
@@ -30,8 +31,11 @@ class TestFaults(test.TestCase):
         f = faults.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
         resp = req.get_response(f)
 
-        first_two_words = resp.body.strip().split()[:2]
-        self.assertEqual(first_two_words, ['<badRequest', 'code="400">'])
+        first_three_words = resp.body.strip().split()[:3]
+        self.assertEqual(first_three_words,
+                         ['<badRequest',
+                          'code="400"',
+                          'xmlns="%s">' % common.XML_NS_V10])
         body_without_spaces = ''.join(resp.body.split())
         self.assertTrue('<message>scram</message>' in body_without_spaces)
 
@@ -41,8 +45,11 @@ class TestFaults(test.TestCase):
                                                   headers={'Retry-After': 4})
         f = faults.Fault(exc)
         resp = req.get_response(f)
-        first_two_words = resp.body.strip().split()[:2]
-        self.assertEqual(first_two_words, ['<overLimit', 'code="413">'])
+        first_three_words = resp.body.strip().split()[:3]
+        self.assertEqual(first_three_words,
+                         ['<overLimit',
+                          'code="413"',
+                          'xmlns="%s">' % common.XML_NS_V10])
         body_sans_spaces = ''.join(resp.body.split())
         self.assertTrue('<message>sorry</message>' in body_sans_spaces)
         self.assertTrue('<retryAfter>4</retryAfter>' in body_sans_spaces)
