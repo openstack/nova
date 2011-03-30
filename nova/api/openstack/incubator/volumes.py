@@ -44,14 +44,9 @@ def _translate_volume_detail_view(context, vol):
     return d
 
 
-def _translate_volume_summary_view(_context, vol):
+def _translate_volume_summary_view(context, vol):
     """Maps keys for volumes summary view."""
     d = {}
-
-    instance_id = None
-    attached_to = vol.get('instance')
-    if attached_to:
-        instance_id = attached_to['id']
 
     d['id'] = vol['id']
     d['status'] = vol['status']
@@ -60,12 +55,7 @@ def _translate_volume_summary_view(_context, vol):
     d['createdAt'] = vol['created_at']
 
     if vol['attach_status'] == 'attached':
-        d['attachments'] = [{'attachTime': vol['attach_time'],
-                             'deleteOnTermination': False,
-                             'mountpoint': vol['mountpoint'],
-                             'instanceId': instance_id,
-                             'status': 'attached',
-                             'volumeId': vol['id']}]
+        d['attachments'] = [_translate_attachment_detail_view(context, vol)]
     else:
         d['attachments'] = [{}]
 
