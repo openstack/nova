@@ -480,6 +480,15 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    def rebuild(self, context, instance_id, image_id, metadata=None):
+        """Rebuild the given instance with the provided metadata."""
+        return
+        # default to an empty list
+        metadata = metadata or []
+        #TODO: validate metadata
+        self._cast_compute_message('rebuild_instance', context,
+                                   instance_id, metadata)
+
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process"""
         context = context.elevated()

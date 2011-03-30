@@ -317,9 +317,6 @@ class Controller(wsgi.Controller):
             return faults.Fault(exc.HTTPBadRequest())
         return exc.HTTPAccepted()
 
-    def _action_rebuild(self, input_dict, req, id):
-        return faults.Fault(exc.HTTPNotImplemented())
-
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
@@ -606,6 +603,19 @@ class ControllerV10(Controller):
             except exception.TimeoutException:
                 return exc.HTTPRequestTimeout()
 
+    def _action_rebuild(self, input_dict, req, id):
+        context = req.environ['nova.context']
+        if (not 'rebuild' in input_dict
+            or not 'imageId' in input_dict['rebuild']):
+            msg = _("No imageId was specified")
+            return faults.Fault(exc.HTTPBadRequest(msg))
+
+        image_id = input_dict['rebuild']['imageId']
+
+        self.compute_api.rebuild(context, id, image_id)
+
+        return exc.HTTPAccepted()
+
 
 class ControllerV11(Controller):
     def _image_id_from_req_data(self, data):
@@ -631,6 +641,9 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def _action_rebuild(self, input_dict, req, id):
+        return faults.Fault(exc.HTTPNotImplemented())
 
 
 class ServerCreateRequestXMLDeserializer(object):
