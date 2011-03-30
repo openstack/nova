@@ -43,6 +43,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.virt.vmwareapi import error_util
+from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
 
