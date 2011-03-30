@@ -26,7 +26,7 @@ A VNC Connection works like so:
 * User connects over an api and gets a url like http://ip:port/?token=xyz
 * User pastes url in browser
 * Browser connects to VNC Proxy though a websocket enabled client like noVNC
-* VNC Proxy authorizes users token, maps the token to a host and port of an 
+* VNC Proxy authorizes users token, maps the token to a host and port of an
   instance's VNC server
 * VNC Proxy initiates connection to VNC server, and continues proxying until
   the session ends
@@ -34,17 +34,17 @@ A VNC Connection works like so:
 
 Configuring the VNC Proxy
 -------------------------
-nova-vnc-proxy requires a websocket enabled html client to work properly.  At 
-this time, the only tested client is a slightly modified fork of noVNC, which 
+nova-vncproxy requires a websocket enabled html client to work properly.  At
+this time, the only tested client is a slightly modified fork of noVNC, which
 you can at find http://github.com/openstack/noVNC.git
 
 .. todo:: add instruction for installing from package
 
 noVNC must be in the location specified by --vncproxy_wwwroot, which defaults
-to /var/lib/nova/noVNC.  nova-vnc-proxy will fail to launch until this code
-is properly installed. 
+to /var/lib/nova/noVNC.  nova-vncproxy will fail to launch until this code
+is properly installed.
 
-By default, nova-vnc-proxy binds 0.0.0.0:6080.  This can be configured with:
+By default, nova-vncproxy binds 0.0.0.0:6080.  This can be configured with:
 
 * --vncproxy_port=[port]
 * --vncproxy_host=[host]
@@ -55,17 +55,17 @@ Enabling VNC Consoles in Nova
 At the moment, VNC support is supported only when using libvirt.  To enable VNC
 Console, configure the following flags:
 
-* --vnc_console_proxy_url=http://[proxy_host]:[proxy_port] - proxy_port 
-  defaults to 6080.  This url must point to nova-vnc-proxy
+* --vnc_console_proxy_url=http://[proxy_host]:[proxy_port] - proxy_port
+  defaults to 6080.  This url must point to nova-vncproxy
 * --vnc_enabled=[True|False] - defaults to True. If this flag is not set your
-  instances will launch without vnc support.  
+  instances will launch without vnc support.
 
 
 Getting an instance's VNC Console
 ---------------------------------
 You can access an instance's VNC Console url in the following methods:
 
-* Using the direct api: 
+* Using the direct api:
   eg: 'stack --user=admin --project=admin compute get_vnc_console instance_id=1'
 * Support for Dashboard, and the Openstack API will be forthcoming
 
