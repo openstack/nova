@@ -939,7 +939,8 @@ class ImageCommands(object):
         """Uploads an image into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
                    [container_format='bare'] [disk_format='raw']
-                   [kernel_id=None] [ramdisk_id=None]"""
+                   [kernel_id=None] [ramdisk_id=None]
+        """
         return self._register(container_format, disk_format, path,
                               owner, name, is_public, architecture,
                               kernel_id, ramdisk_id)
