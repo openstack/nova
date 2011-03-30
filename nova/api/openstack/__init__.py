@@ -33,8 +33,10 @@ from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
+from nova.api.openstack import image_metadata
 from nova.api.openstack import limits
 from nova.api.openstack import servers
+from nova.api.openstack import server_metadata
 from nova.api.openstack import shared_ip_groups
 from nova.api.openstack import users
 from nova.api.openstack import zones
@@ -104,28 +106,15 @@ class APIRouter(wsgi.Router):
                             controller=accounts.Controller(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("backup_schedule", "backup_schedule",
-                        controller=backup_schedules.Controller(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
-
         mapper.resource("console", "consoles",
                         controller=consoles.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("image", "images", controller=images.Controller(),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("flavor", "flavors", controller=flavors.Controller(),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("shared_ip_group", "shared_ip_groups",
-                        collection={'detail': 'GET'},
-                        controller=shared_ip_groups.Controller())
-
         _limits = limits.LimitsController()
         mapper.resource("limit", "limits", controller=_limits)
+
+        super(APIRouter, self).__init__(mapper)
 
 
 class APIRouterV10(APIRouter):
@@ -138,6 +127,23 @@ class APIRouterV10(APIRouter):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("image", "images",
+                        controller=images.ControllerV10(),
+                        collection={'detail': 'GET'})
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.ControllerV10(),
+                        collection={'detail': 'GET'})
+
+        mapper.resource("shared_ip_group", "shared_ip_groups",
+                        collection={'detail': 'GET'},
+                        controller=shared_ip_groups.Controller())
+
+        mapper.resource("backup_schedule", "backup_schedule",
+                        controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
 
 class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
@@ -149,20 +155,20 @@ class APIRouterV11(APIRouter):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("image", "images",
+                        controller=images.ControllerV11(),
+                        collection={'detail': 'GET'})
 
-class Versions(wsgi.Application):
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
-        """Respond to a request for all OpenStack API versions."""
-        response = {
-            "versions": [
-                dict(status="DEPRECATED", id="v1.0"),
-                dict(status="CURRENT", id="v1.1"),
-            ],
-        }
-        metadata = {
-            "application/xml": {
-                "attributes": dict(version=["status", "id"])}}
+        mapper.resource("image_meta", "meta",
+                        controller=image_metadata.Controller(),
+                        parent_resource=dict(member_name='image',
+                        collection_name='images'))
 
-        content_type = req.best_match_content_type()
-        return wsgi.Serializer(metadata).serialize(response, content_type)
+        mapper.resource("server_meta", "meta",
+                        controller=server_metadata.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.ControllerV11(),
+                        collection={'detail': 'GET'})

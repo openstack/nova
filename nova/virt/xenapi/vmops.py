@@ -33,6 +33,7 @@ from nova import context
 from nova import log as logging
 from nova import exception
 from nova import utils
+from nova import flags
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -43,6 +44,7 @@ from nova.virt.xenapi.vm_utils import ImageType
 
 XenAPI = None
 LOG = logging.getLogger("nova.virt.xenapi.vmops")
+FLAGS = flags.FLAGS
 
 
 class VMOps(object):
@@ -53,11 +55,10 @@ class VMOps(object):
         self.XenAPI = session.get_imported_xenapi()
         self._session = session
         self.poll_rescue_last_ran = None
-
         VMHelper.XenAPI = self.XenAPI
 
     def list_instances(self):
-        """List VM instances"""
+        """List VM instances."""
         # TODO(justinsb): Should we just always use the details method?
         #  Seems to be the same number of API calls..
         vm_refs = []
@@ -68,7 +69,7 @@ class VMOps(object):
         return vm_refs
 
     def list_instances_detail(self):
-        """List VM instances, returning InstanceInfo objects"""
+        """List VM instances, returning InstanceInfo objects."""
         instance_infos = []
         for vm_ref in self._session.get_xenapi().VM.get_all():
             vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
@@ -118,11 +119,11 @@ class VMOps(object):
         self._spawn(instance, vm_ref)
 
     def spawn_rescue(self, instance):
-        """Spawn a rescue instance"""
+        """Spawn a rescue instance."""
         self.spawn(instance)
 
     def _create_vm(self, instance, vdi_uuid, network_info=None):
-        """Create VM instance"""
+        """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is not None:
@@ -168,12 +169,18 @@ class VMOps(object):
         # create it now. This goes away once nova-multi-nic hits.
         if network_info is None:
             network_info = self._get_network_info(instance)
+
+        # Alter the image before VM start for, e.g. network injection
+        if FLAGS.xenapi_inject_image:
+            VMHelper.preconfigure_instance(self._session, instance,
+                                           vdi_ref, network_info)
+
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, vm_ref, network_info)
         return vm_ref
 
     def _spawn(self, instance, vm_ref):
-        """Spawn a new instance"""
+        """Spawn a new instance."""
         LOG.debug(_('Starting VM %s...'), vm_ref)
         self._start(instance, vm_ref)
         instance_name = instance.name
@@ -229,7 +236,8 @@ class VMOps(object):
         return timer.start(interval=0.5, now=True)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
-        """Refactored out the common code of many methods that receive either
+        """
+        Refactored out the common code of many methods that receive either
         a vm name or a vm instance, and want a vm instance in return.
         """
         # if instance_or_vm is a string it must be opaque ref or instance name
@@ -237,26 +245,17 @@ class VMOps(object):
             obj = None
             try:
                 # check for opaque ref
-                obj = self._session.get_xenapi().VM.get_record(instance_or_vm)
+                obj = self._session.get_xenapi().VM.get_uuid(instance_or_vm)
                 return instance_or_vm
             except self.XenAPI.Failure:
-                # wasn't an opaque ref, must be an instance name
+                # wasn't an opaque ref, can be an instance name
                 instance_name = instance_or_vm
 
         # if instance_or_vm is an int/long it must be instance id
         elif isinstance(instance_or_vm, (int, long)):
             ctx = context.get_admin_context()
-            try:
-                instance_obj = db.instance_get(ctx, instance_or_vm)
-                instance_name = instance_obj.name
-            except exception.NotFound:
-                # The unit tests screw this up, as they use an integer for
-                # the vm name. I'd fix that up, but that's a matter for
-                # another bug report. So for now, just try with the passed
-                # value
-                instance_name = instance_or_vm
-
-        # otherwise instance_or_vm is an instance object
+            instance_obj = db.instance_get(ctx, instance_or_vm)
+            instance_name = instance_obj.name
         else:
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -266,21 +265,21 @@ class VMOps(object):
         return vm_ref
 
     def _acquire_bootlock(self, vm):
-        """Prevent an instance from booting"""
+        """Prevent an instance from booting."""
         self._session.call_xenapi(
             "VM.set_blocked_operations",
             vm,
             {"start": ""})
 
     def _release_bootlock(self, vm):
-        """Allow an instance to boot"""
+        """Allow an instance to boot."""
         self._session.call_xenapi(
             "VM.remove_from_blocked_operations",
             vm,
             "start")
 
     def snapshot(self, instance, image_id):
-        """Create snapshot from a running VM instance
+        """Create snapshot from a running VM instance.
 
         :param instance: instance to be snapshotted
         :param image_id: id of image to upload to
@@ -300,6 +299,7 @@ class VMOps(object):
         3. Push-to-glance: Once coalesced, we call a plugin on the XenServer
             that will bundle the VHDs together and then push the bundle into
             Glance.
+
         """
         template_vm_ref = None
         try:
@@ -332,11 +332,12 @@ class VMOps(object):
             return
 
     def migrate_disk_and_power_off(self, instance, dest):
-        """Copies a VHD from one host machine to another
+        """Copies a VHD from one host machine to another.
 
-        :param instance: the instance that owns the VHD in question
-        :param dest: the destination host machine
-        :param disk_type: values are 'primary' or 'cow'
+        :param instance: the instance that owns the VHD in question.
+        :param dest: the destination host machine.
+        :param disk_type: values are 'primary' or 'cow'.
+
         """
         vm_ref = VMHelper.lookup(self._session, instance.name)
 
@@ -385,7 +386,7 @@ class VMOps(object):
         return {'base_copy': base_copy_uuid, 'cow': cow_uuid}
 
     def link_disks(self, instance, base_copy_uuid, cow_uuid):
-        """Links the base copy VHD to the COW via the XAPI plugin"""
+        """Links the base copy VHD to the COW via the XAPI plugin."""
         vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
         new_cow_uuid = str(uuid.uuid4())
@@ -406,7 +407,7 @@ class VMOps(object):
         return new_cow_uuid
 
     def resize_instance(self, instance, vdi_uuid):
-        """Resize a running instance by changing it's RAM and disk size """
+        """Resize a running instance by changing it's RAM and disk size."""
         #TODO(mdietz): this will need to be adjusted for swap later
         #The new disk size must be in bytes
 
@@ -420,18 +421,20 @@ class VMOps(object):
         LOG.debug(_("Resize instance %s complete") % (instance.name))
 
     def reboot(self, instance):
-        """Reboot VM instance"""
+        """Reboot VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
         self._session.wait_for_task(task, instance.id)
 
     def set_admin_password(self, instance, new_pass):
-        """Set the root/admin password on the VM instance. This is done via
-        an agent running on the VM. Communication between nova and the agent
-        is done via writing xenstore records. Since communication is done over
-        the XenAPI RPC calls, we need to encrypt the password. We're using a
-        simple Diffie-Hellman class instead of the more advanced one in
-        M2Crypto for compatibility with the agent code.
+        """Set the root/admin password on the VM instance.
+
+        This is done via an agent running on the VM. Communication between nova
+        and the agent is done via writing xenstore records. Since communication
+        is done over the XenAPI RPC calls, we need to encrypt the password.
+        We're using a simple Diffie-Hellman class instead of the more advanced
+        one in M2Crypto for compatibility with the agent code.
+
         """
         # Need to uniquely identify this request.
         transaction_id = str(uuid.uuid4())
@@ -464,11 +467,14 @@ class VMOps(object):
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
-        """Write a file to the VM instance. The path to which it is to be
-        written and the contents of the file need to be supplied; both will
-        be base64-encoded to prevent errors with non-ASCII characters being
-        transmitted. If the agent does not support file injection, or the user
-        has disabled it, a NotImplementedError will be raised.
+        """Write a file to the VM instance.
+
+        The path to which it is to be written and the contents of the file
+        need to be supplied; both will be base64-encoded to prevent errors
+        with non-ASCII characters being transmitted. If the agent does not
+        support file injection, or the user has disabled it, a
+        NotImplementedError will be raised.
+
         """
         # Files/paths must be base64-encoded for transmission to agent
         b64_path = base64.b64encode(path)
@@ -489,7 +495,7 @@ class VMOps(object):
         return resp_dict['message']
 
     def _shutdown(self, instance, vm_ref, hard=True):
-        """Shutdown an instance"""
+        """Shutdown an instance."""
         state = self.get_info(instance['name'])['state']
         if state == power_state.SHUTDOWN:
             instance_name = instance.name
@@ -513,11 +519,11 @@ class VMOps(object):
             LOG.exception(exc)
 
     def _shutdown_rescue(self, rescue_vm_ref):
-        """Shutdown a rescue instance"""
+        """Shutdown a rescue instance."""
         self._session.call_xenapi("Async.VM.hard_shutdown", rescue_vm_ref)
 
     def _destroy_vdis(self, instance, vm_ref):
-        """Destroys all VDIs associated with a VM"""
+        """Destroys all VDIs associated with a VM."""
         instance_id = instance.id
         LOG.debug(_("Destroying VDIs for Instance %(instance_id)s")
                   % locals())
@@ -534,7 +540,7 @@ class VMOps(object):
                 LOG.exception(exc)
 
     def _destroy_rescue_vdis(self, rescue_vm_ref):
-        """Destroys all VDIs associated with a rescued VM"""
+        """Destroys all VDIs associated with a rescued VM."""
         vdi_refs = VMHelper.lookup_vm_vdis(self._session, rescue_vm_ref)
         for vdi_ref in vdi_refs:
             try:
@@ -543,7 +549,7 @@ class VMOps(object):
                 continue
 
     def _destroy_rescue_vbds(self, rescue_vm_ref):
-        """Destroys all VBDs tied to a rescue VM"""
+        """Destroys all VBDs tied to a rescue VM."""
         vbd_refs = self._session.get_xenapi().VM.get_VBDs(rescue_vm_ref)
         for vbd_ref in vbd_refs:
             vbd_rec = self._session.get_xenapi().VBD.get_record(vbd_ref)
@@ -552,8 +558,7 @@ class VMOps(object):
                 VMHelper.destroy_vbd(self._session, vbd_ref)
 
     def _destroy_kernel_ramdisk(self, instance, vm_ref):
-        """
-        Three situations can occur:
+        """Three situations can occur:
 
             1. We have neither a ramdisk nor a kernel, in which case we are a
                RAW image and can omit this step
@@ -563,6 +568,7 @@ class VMOps(object):
 
             3. We have both, in which case we safely remove both the kernel
                and the ramdisk.
+
         """
         instance_id = instance.id
         if not instance.kernel_id and not instance.ramdisk_id:
@@ -591,7 +597,7 @@ class VMOps(object):
         LOG.debug(_("kernel/ramdisk files removed"))
 
     def _destroy_vm(self, instance, vm_ref):
-        """Destroys a VM record"""
+        """Destroys a VM record."""
         instance_id = instance.id
         try:
             task = self._session.call_xenapi('Async.VM.destroy', vm_ref)
@@ -602,7 +608,7 @@ class VMOps(object):
         LOG.debug(_("Instance %(instance_id)s VM destroyed") % locals())
 
     def _destroy_rescue_instance(self, rescue_vm_ref):
-        """Destroy a rescue instance"""
+        """Destroy a rescue instance."""
         self._destroy_rescue_vbds(rescue_vm_ref)
         self._shutdown_rescue(rescue_vm_ref)
         self._destroy_rescue_vdis(rescue_vm_ref)
@@ -610,11 +616,11 @@ class VMOps(object):
         self._session.call_xenapi("Async.VM.destroy", rescue_vm_ref)
 
     def destroy(self, instance):
-        """
-        Destroy VM instance
+        """Destroy VM instance.
 
         This is the method exposed by xenapi_conn.destroy(). The rest of the
         destroy_* methods are internal.
+
         """
         instance_id = instance.id
         LOG.info(_("Destroying VM for Instance %(instance_id)s") % locals())
@@ -623,13 +629,13 @@ class VMOps(object):
 
     def _destroy(self, instance, vm_ref, shutdown=True,
                  destroy_kernel_ramdisk=True):
-        """
-        Destroys VM instance by performing:
+        """Destroys VM instance by performing:
 
-            1. A shutdown if requested
-            2. Destroying associated VDIs
-            3. Destroying kernel and ramdisk files (if necessary)
-            4. Destroying that actual VM record
+            1. A shutdown if requested.
+            2. Destroying associated VDIs.
+            3. Destroying kernel and ramdisk files (if necessary).
+            4. Destroying that actual VM record.
+
         """
         if vm_ref is None:
             LOG.warning(_("VM is not present, skipping destroy..."))
@@ -652,35 +658,36 @@ class VMOps(object):
         callback(ret)
 
     def pause(self, instance, callback):
-        """Pause VM instance"""
+        """Pause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.pause', vm_ref)
         self._wait_with_callback(instance.id, task, callback)
 
     def unpause(self, instance, callback):
-        """Unpause VM instance"""
+        """Unpause VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.unpause', vm_ref)
         self._wait_with_callback(instance.id, task, callback)
 
     def suspend(self, instance, callback):
-        """suspend the specified instance"""
+        """Suspend the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.suspend', vm_ref)
         self._wait_with_callback(instance.id, task, callback)
 
     def resume(self, instance, callback):
-        """resume the specified instance"""
+        """Resume the specified instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.resume', vm_ref, False,
                                          True)
         self._wait_with_callback(instance.id, task, callback)
 
     def rescue(self, instance, callback):
-        """Rescue the specified instance
-            - shutdown the instance VM
-            - set 'bootlock' to prevent the instance from starting in rescue
-            - spawn a rescue VM (the vm name-label will be instance-N-rescue)
+        """Rescue the specified instance.
+
+            - shutdown the instance VM.
+            - set 'bootlock' to prevent the instance from starting in rescue.
+            - spawn a rescue VM (the vm name-label will be instance-N-rescue).
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
@@ -692,7 +699,6 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._shutdown(instance, vm_ref)
         self._acquire_bootlock(vm_ref)
-
         instance._rescue = True
         self.spawn_rescue(instance)
         rescue_vm_ref = VMHelper.lookup(self._session, instance.name)
@@ -705,10 +711,11 @@ class VMOps(object):
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
     def unrescue(self, instance, callback):
-        """Unrescue the specified instance
-            - unplug the instance VM's disk from the rescue VM
-            - teardown the rescue VM
-            - release the bootlock to allow the instance VM to start
+        """Unrescue the specified instance.
+
+            - unplug the instance VM's disk from the rescue VM.
+            - teardown the rescue VM.
+            - release the bootlock to allow the instance VM to start.
 
         """
         rescue_vm_ref = VMHelper.lookup(self._session,
@@ -726,9 +733,11 @@ class VMOps(object):
         self._start(instance, original_vm_ref)
 
     def poll_rescued_instances(self, timeout):
-        """Look for expirable rescued instances
+        """Look for expirable rescued instances.
+
             - forcibly exit rescue mode for any instances that have been
               in rescue mode for >= the provided timeout
+
         """
         last_ran = self.poll_rescue_last_ran
         if not last_ran:
@@ -764,30 +773,30 @@ class VMOps(object):
                                       False)
 
     def get_info(self, instance):
-        """Return data about VM instance"""
+        """Return data about VM instance."""
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
         return VMHelper.compile_info(vm_rec)
 
     def get_diagnostics(self, instance):
-        """Return data about VM diagnostics"""
+        """Return data about VM diagnostics."""
         vm_ref = self._get_vm_opaque_ref(instance)
         vm_rec = self._session.get_xenapi().VM.get_record(vm_ref)
         return VMHelper.compile_diagnostics(self._session, vm_rec)
 
     def get_console_output(self, instance):
-        """Return snapshot of console"""
+        """Return snapshot of console."""
         # TODO: implement this to fix pylint!
         return 'FAKE CONSOLE OUTPUT of instance'
 
     def get_ajax_console(self, instance):
-        """Return link to instance's ajax console"""
+        """Return link to instance's ajax console."""
         # TODO: implement this!
         return 'http://fakeajaxconsole/fake_url'
 
     # TODO(tr3buchet) - remove this function after nova multi-nic
     def _get_network_info(self, instance):
-        """creates network info list for instance"""
+        """Creates network info list for instance."""
         admin_context = context.get_admin_context()
         IPs = db.fixed_ip_get_all_by_instance(admin_context,
                                               instance['id'])
@@ -816,6 +825,7 @@ class VMOps(object):
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
+                'broadcast': network['broadcast'],
                 'mac': instance.mac_address,
                 'rxtx_cap': flavor['rxtx_cap'],
                 'dns': [network['dns']],
@@ -828,7 +838,7 @@ class VMOps(object):
     def inject_network_info(self, instance, vm_ref, network_info):
         """
         Generate the network info and make calls to place it into the
-        xenstore and the xenstore param list
+        xenstore and the xenstore param list.
         """
         logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
@@ -849,7 +859,7 @@ class VMOps(object):
                 pass
 
     def create_vifs(self, vm_ref, network_info):
-        """Creates vifs for an instance"""
+        """Creates vifs for an instance."""
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
 
         # this function raises if vm_ref is not a vm_opaque_ref
@@ -860,8 +870,8 @@ class VMOps(object):
             bridge = network['bridge']
             rxtx_cap = info.pop('rxtx_cap')
             network_ref = \
-                NetworkHelper.find_network_with_bridge(self._session, bridge)
-
+                NetworkHelper.find_network_with_bridge(self._session,
+                                                       bridge)
             VMHelper.create_vif(self._session, vm_ref, network_ref,
                                 mac_address, device, rxtx_cap)
 
@@ -874,7 +884,8 @@ class VMOps(object):
                                                                args, vm_ref)
 
     def list_from_xenstore(self, vm, path):
-        """Runs the xenstore-ls command to get a listing of all records
+        """
+        Runs the xenstore-ls command to get a listing of all records
         from 'path' downward. Returns a dict with the sub-paths as keys,
         and the value stored in those paths as values. If nothing is
         found at that path, returns None.
@@ -883,7 +894,8 @@ class VMOps(object):
         return json.loads(ret)
 
     def read_from_xenstore(self, vm, path):
-        """Returns the value stored in the xenstore record for the given VM
+        """
+        Returns the value stored in the xenstore record for the given VM
         at the specified location. A XenAPIPlugin.PluginError will be raised
         if any error is encountered in the read process.
         """
@@ -899,7 +911,8 @@ class VMOps(object):
         return ret
 
     def write_to_xenstore(self, vm, path, value):
-        """Writes the passed value to the xenstore record for the given VM
+        """
+        Writes the passed value to the xenstore record for the given VM
         at the specified location. A XenAPIPlugin.PluginError will be raised
         if any error is encountered in the write process.
         """
@@ -907,7 +920,8 @@ class VMOps(object):
                 {'value': json.dumps(value)})
 
     def clear_xenstore(self, vm, path):
-        """Deletes the VM's xenstore record for the specified path.
+        """
+        Deletes the VM's xenstore record for the specified path.
         If there is no such record, the request is ignored.
         """
         self._make_xenstore_call('delete_record', vm, path)
@@ -924,7 +938,8 @@ class VMOps(object):
 
     def _make_plugin_call(self, plugin, method, vm, path, addl_args=None,
                                                           vm_ref=None):
-        """Abstracts out the process of calling a method of a xenapi plugin.
+        """
+        Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
         instance_id = vm.id
@@ -954,7 +969,8 @@ class VMOps(object):
         return ret
 
     def add_to_xenstore(self, vm, path, key, value):
-        """Adds the passed key/value pair to the xenstore record for
+        """
+        Adds the passed key/value pair to the xenstore record for
         the given VM at the specified location. A XenAPIPlugin.PluginError
         will be raised if any error is encountered in the write process.
         """
@@ -967,7 +983,8 @@ class VMOps(object):
         self.write_to_xenstore(vm, path, current)
 
     def remove_from_xenstore(self, vm, path, key_or_keys):
-        """Takes either a single key or a list of keys and removes
+        """
+        Takes either a single key or a list of keys and removes
         them from the xenstoreirecord data for the given VM.
         If the key doesn't exist, the request is ignored.
         """
@@ -994,7 +1011,8 @@ class VMOps(object):
     ###### names to distinguish them. (dabo)
     ########################################################################
     def read_partial_from_param_xenstore(self, instance_or_vm, key_prefix):
-        """Returns a dict of all the keys in the xenstore parameter record
+        """
+        Returns a dict of all the keys in the xenstore parameter record
         for the given instance that begin with the key_prefix.
         """
         data = self.read_from_param_xenstore(instance_or_vm)
@@ -1005,7 +1023,8 @@ class VMOps(object):
         return data
 
     def read_from_param_xenstore(self, instance_or_vm, keys=None):
-        """Returns the xenstore parameter record data for the specified VM
+        """
+        Returns the xenstore parameter record data for the specified VM
         instance as a dict. Accepts an optional key or list of keys; if a
         value for 'keys' is passed, the returned dict is filtered to only
         return the values for those keys.
@@ -1027,9 +1046,11 @@ class VMOps(object):
         return ret
 
     def add_to_param_xenstore(self, instance_or_vm, key, val):
-        """Takes a key/value pair and adds it to the xenstore parameter
+        """
+        Takes a key/value pair and adds it to the xenstore parameter
         record for the given vm instance. If the key exists in xenstore,
-        it is overwritten"""
+        it is overwritten
+        """
         vm_ref = self._get_vm_opaque_ref(instance_or_vm)
         self.remove_from_param_xenstore(instance_or_vm, key)
         jsonval = json.dumps(val)
@@ -1037,7 +1058,8 @@ class VMOps(object):
                                           (vm_ref, key, jsonval))
 
     def write_to_param_xenstore(self, instance_or_vm, mapping):
-        """Takes a dict and writes each key/value pair to the xenstore
+        """
+        Takes a dict and writes each key/value pair to the xenstore
         parameter record for the given vm instance. Any existing data for
         those keys is overwritten.
         """
@@ -1045,7 +1067,8 @@ class VMOps(object):
             self.add_to_param_xenstore(instance_or_vm, k, v)
 
     def remove_from_param_xenstore(self, instance_or_vm, key_or_keys):
-        """Takes either a single key or a list of keys and removes
+        """
+        Takes either a single key or a list of keys and removes
         them from the xenstore parameter record data for the given VM.
         If the key doesn't exist, the request is ignored.
         """
@@ -1071,7 +1094,8 @@ def _runproc(cmd):
 
 
 class SimpleDH(object):
-    """This class wraps all the functionality needed to implement
+    """
+    This class wraps all the functionality needed to implement
     basic Diffie-Hellman-Merkle key exchange in Python. It features
     intelligent defaults for the prime and base numbers needed for the
     calculation, while allowing you to supply your own. It requires that
@@ -1080,7 +1104,8 @@ class SimpleDH(object):
     is not available, a RuntimeError will be raised.
     """
     def __init__(self, prime=None, base=None, secret=None):
-        """You can specify the values for prime and base if you wish;
+        """
+        You can specify the values for prime and base if you wish;
         otherwise, reasonable default values will be used.
         """
         if prime is None:

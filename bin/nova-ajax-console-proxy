@@ -115,7 +115,7 @@ class AjaxConsoleProxy(object):
                         {'args': data['args'], 'last_activity': time.time()}
 
         conn = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicConsumer(
+        consumer = rpc.TopicAdapterConsumer(
                         connection=conn,
                         topic=FLAGS.ajax_console_proxy_topic)
         consumer.register_callback(Callback())

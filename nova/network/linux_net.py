@@ -44,13 +44,10 @@ flags.DEFINE_string('dhcpbridge_flagfile',
 flags.DEFINE_string('dhcp_domain',
                     'novalocal',
                     'domain to use for building the hostnames')
-
 flags.DEFINE_string('networks_path', '$state_path/networks',
                     'Location to keep network config files')
 flags.DEFINE_string('public_interface', 'eth0',
                     'Interface for public IP addresses')
-flags.DEFINE_string('vlan_interface', 'eth0',
-                    'network device for vlans')
 flags.DEFINE_string('dhcpbridge', _bin_file('nova-dhcpbridge'),
                         'location of nova-dhcpbridge')
 flags.DEFINE_string('routing_source_ip', '$my_ip',

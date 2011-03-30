@@ -2,7 +2,12 @@
     <name>${name}</name>
     <memory>${memory_kb}</memory>
     <os>
-#if $type == 'uml'
+#if $type == 'lxc'
+    #set $disk_prefix = ''
+    #set $disk_bus = ''
+        <type>exe</type>
+        <init>/sbin/init</init>
+#else if $type == 'uml'
     #set $disk_prefix = 'ubd'
     #set $disk_bus = 'uml'
         <type>uml</type>
@@ -44,7 +49,13 @@
     </features>
     <vcpu>${vcpus}</vcpu>
     <devices>
-#if $getVar('rescue', False)
+#if $type == 'lxc'
+        <filesystem type='mount'>
+            <source dir='${basepath}/rootfs'/>
+            <target dir='/'/>
+        </filesystem>
+#else
+    #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}'/>
             <source file='${basepath}/disk.rescue'/>
@@ -55,18 +66,19 @@
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}b' bus='${disk_bus}'/>
         </disk>
-#else
+    #else
         <disk type='file'>
             <driver type='${driver_type}'/>
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}a' bus='${disk_bus}'/>
         </disk>
-    #if $getVar('local', False)
-        <disk type='file'>
-            <driver type='${driver_type}'/>
-            <source file='${basepath}/disk.local'/>
-            <target dev='${disk_prefix}b' bus='${disk_bus}'/>
-        </disk>
+        #if $getVar('local', False)
+            <disk type='file'>
+                <driver type='${driver_type}'/>
+                <source file='${basepath}/disk.local'/>
+                <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+            </disk>
+        #end if
     #end if
 #end if
 
@@ -87,7 +99,6 @@
             </filterref>
         </interface>
 #end for
-
         <!-- The order is significant here.  File must be defined first -->
         <serial type="file">
             <source path='${basepath}/console.log'/>
