@@ -16,6 +16,7 @@
 #    under the License.
 """Implementation of an fake image service"""
 
+import copy
 import datetime
 
 from nova import exception
@@ -53,11 +54,11 @@ class FakeImageService(service.BaseImageService):
 
     def index(self, context):
         """Returns list of images."""
-        return self.images.values()
+        return copy.deepcopy(self.images.values())
 
     def detail(self, context):
         """Return list of detailed image information."""
-        return self.images.values()
+        return copy.deepcopy(self.images.values())
 
     def show(self, context, image_id):
         """Get data about specified image.
@@ -68,7 +69,7 @@ class FakeImageService(service.BaseImageService):
         image_id = int(image_id)
         image = self.images.get(image_id)
         if image:
-            return image
+            return copy.deepcopy(image)
         LOG.warn("Unable to find image id %s.  Have images: %s",
                  image_id, self.images)
         raise exception.NotFound
@@ -83,7 +84,7 @@ class FakeImageService(service.BaseImageService):
         if self.images.get(image_id):
             raise exception.Duplicate()
 
-        self.images[image_id] = data
+        self.images[image_id] = copy.deepcopy(data)
 
     def update(self, context, image_id, data):
         """Replace the contents of the given image with the new data.
@@ -94,7 +95,7 @@ class FakeImageService(service.BaseImageService):
         image_id = int(image_id)
         if not self.images.get(image_id):
             raise exception.NotFound
-        self.images[image_id] = data
+        self.images[image_id] = copy.deepcopy(data)
 
     def delete(self, context, image_id):
         """Delete the given image.
