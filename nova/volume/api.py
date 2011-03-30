@@ -82,7 +82,8 @@ class API(base.Base):
         self.db.volume_update(context, volume_id, fields)
 
     def get(self, context, volume_id):
-        return self.db.volume_get(context, volume_id)
+        rv = self.db.volume_get(context, volume_id)
+        return dict(rv.iteritems())
 
     def get_all(self, context):
         if context.is_admin:

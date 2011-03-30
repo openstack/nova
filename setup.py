@@ -112,4 +112,5 @@ DistUtilsExtra.auto.setup(name='nova',
                'bin/nova-spoolsentry',
                'bin/stack',
                'bin/nova-volume',
+               'bin/nova-vncproxy',
                'tools/nova-debug'])

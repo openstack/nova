@@ -44,6 +44,14 @@ flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 
 
+class FakeTime(object):
+    def __init__(self):
+        self.counter = 0
+
+    def sleep(self, t):
+        self.counter += t
+
+
 class ComputeTestCase(test.TestCase):
     """Test case for compute"""
     def setUp(self):
@@ -81,6 +89,21 @@ class ComputeTestCase(test.TestCase):
         inst['ami_launch_index'] = 0
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
+
+    def _create_instance_type(self, params={}):
+        """Create a test instance"""
+        context = self.context.elevated()
+        inst = {}
+        inst['name'] = 'm1.small'
+        inst['memory_mb'] = '1024'
+        inst['vcpus'] = '1'
+        inst['local_gb'] = '20'
+        inst['flavorid'] = '1'
+        inst['swap'] = '2048'
+        inst['rxtx_quota'] = 100
+        inst['rxtx_cap'] = 200
+        inst.update(params)
+        return db.instance_type_create(context, inst)['id']
 
     def _create_group(self):
         values = {'name': 'testgroup',
@@ -263,6 +286,16 @@ class ComputeTestCase(test.TestCase):
 
         console = self.compute.get_ajax_console(self.context,
                                                 instance_id)
+        self.assert_(set(['token', 'host', 'port']).issubset(console.keys()))
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_vnc_console(self):
+        """Make sure we can a vnc console for an instance."""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        console = self.compute.get_vnc_console(self.context,
+                                               instance_id)
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
@@ -299,13 +332,51 @@ class ComputeTestCase(test.TestCase):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
         context = self.context.elevated()
+
         self.compute.run_instance(self.context, instance_id)
         db.instance_update(self.context, instance_id, {'host': 'foo'})
-        self.compute.prep_resize(context, instance_id)
+        self.compute.prep_resize(context, instance_id, 1)
         migration_ref = db.migration_get_by_instance_and_status(context,
                 instance_id, 'pre-migrating')
         self.compute.resize_instance(context, instance_id,
                 migration_ref['id'])
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_invalid_flavor_fails(self):
+        """Ensure invalid flavors raise"""
+        instance_id = self._create_instance()
+        context = self.context.elevated()
+        self.compute.run_instance(self.context, instance_id)
+
+        self.assertRaises(exception.NotFound, self.compute_api.resize,
+                context, instance_id, 200)
+
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_down_fails(self):
+        """Ensure resizing down raises and fails"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+        db.instance_update(self.context, instance_id,
+                {'instance_type': 'm1.xlarge'})
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 1)
+
+        self.compute.terminate_instance(context, instance_id)
+
+    def test_resize_same_size_fails(self):
+        """Ensure invalid flavors raise"""
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+
+        self.assertRaises(exception.ApiError, self.compute_api.resize,
+                context, instance_id, 1)
+
         self.compute.terminate_instance(context, instance_id)
 
     def test_get_by_flavor_id(self):
@@ -318,10 +389,8 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
         self.compute.run_instance(self.context, instance_id)
         self.assertRaises(exception.Error, self.compute.prep_resize,
-                self.context, instance_id)
+                self.context, instance_id, 1)
         self.compute.terminate_instance(self.context, instance_id)
-        type = instance_types.get_by_flavor_id("1")
-        self.assertEqual(type, 'm1.tiny')
 
     def _setup_other_managers(self):
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
@@ -342,7 +411,7 @@ class ComputeTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.NotFound,
                           self.compute.pre_live_migration,
-                          c, instance_ref['id'])
+                          c, instance_ref['id'], time=FakeTime())
 
     def test_pre_live_migration_instance_has_volume(self):
         """Confirm setup_compute_volume is called when volume is mounted."""
@@ -395,7 +464,7 @@ class ComputeTestCase(test.TestCase):
         self.compute.driver = drivermock
 
         self.mox.ReplayAll()
-        ret = self.compute.pre_live_migration(c, i_ref['id'])
+        ret = self.compute.pre_live_migration(c, i_ref['id'], time=FakeTime())
         self.assertEqual(ret, None)
 
     def test_pre_live_migration_setup_compute_node_fail(self):
@@ -428,7 +497,7 @@ class ComputeTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.ProcessExecutionError,
                           self.compute.pre_live_migration,
-                          c, i_ref['id'])
+                          c, i_ref['id'], time=FakeTime())
 
     def test_live_migration_works_correctly_with_volume(self):
         """Confirm check_for_export to confirm volume health check."""
@@ -575,3 +644,24 @@ class ComputeTestCase(test.TestCase):
         db.instance_destroy(c, instance_id)
         db.volume_destroy(c, v_ref['id'])
         db.floating_ip_destroy(c, flo_addr)
+
+    def test_run_kill_vm(self):
+        """Detect when a vm is terminated behind the scenes"""
+        instance_id = self._create_instance()
+
+        self.compute.run_instance(self.context, instance_id)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("Running instances: %s"), instances)
+        self.assertEqual(len(instances), 1)
+
+        instance_name = instances[0].name
+        self.compute.driver.test_remove_vm(instance_name)
+
+        # Force the compute manager to do its periodic poll
+        error_list = self.compute.periodic_tasks(context.get_admin_context())
+        self.assertFalse(error_list)
+
+        instances = db.instance_get_all(context.get_admin_context())
+        LOG.info(_("After force-killing instances: %s"), instances)
+        self.assertEqual(len(instances), 0)

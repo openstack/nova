@@ -135,7 +135,7 @@ class VolumeDriver(object):
         """Removes an export for a logical volume."""
         raise NotImplementedError()
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
         raise NotImplementedError()
 
@@ -422,18 +422,17 @@ class ISCSIDriver(VolumeDriver):
         return properties
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command):
-        command = ("sudo iscsiadm -m node -T %s -p %s %s" %
-                   (iscsi_properties['target_iqn'],
-                    iscsi_properties['target_portal'],
-                    iscsi_command))
-        (out, err) = self._execute(command)
+        (out, err) = self._execute('sudo', 'iscsiadm', '-m', 'node', '-T',
+                                   iscsi_properties['target_iqn'],
+                                   '-p', iscsi_properties['target_portal'],
+                                   iscsi_command)
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
 
     def _iscsiadm_update(self, iscsi_properties, property_key, property_value):
-        iscsi_command = ("--op update -n %s -v %s" %
-                         (property_key, property_value))
+        iscsi_command = ('--op', 'update', '-n', property_key,
+                         '-v', property_value)
         return self._run_iscsiadm(iscsi_properties, iscsi_command)
 
     def discover_volume(self, context, volume):
@@ -441,7 +440,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            self._run_iscsiadm(iscsi_properties, "--op new")
+            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -493,7 +492,7 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        self._run_iscsiadm(iscsi_properties, "--op delete")
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
 
     def check_for_export(self, context, volume_id):
         """Make sure volume is exported."""
@@ -574,6 +573,8 @@ class RBDDriver(VolumeDriver):
 
     def discover_volume(self, volume):
         """Discover volume on a remote host"""
+        # NOTE(justinsb): This is messed up... discover_volume takes 3 args
+        # but then that would break local_path
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def undiscover_volume(self, volume):
@@ -622,10 +623,81 @@ class SheepdogDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
         return "sheepdog:%s" % volume['name']
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host"""
         pass
+
+
+class LoggingVolumeDriver(VolumeDriver):
+    """Logs and records calls, for unit tests."""
+
+    def check_for_setup_error(self):
+        pass
+
+    def create_volume(self, volume):
+        self.log_action('create_volume', volume)
+
+    def delete_volume(self, volume):
+        self.log_action('delete_volume', volume)
+
+    def local_path(self, volume):
+        print "local_path not implemented"
+        raise NotImplementedError()
+
+    def ensure_export(self, context, volume):
+        self.log_action('ensure_export', volume)
+
+    def create_export(self, context, volume):
+        self.log_action('create_export', volume)
+
+    def remove_export(self, context, volume):
+        self.log_action('remove_export', volume)
+
+    def discover_volume(self, context, volume):
+        self.log_action('discover_volume', volume)
+
+    def undiscover_volume(self, volume):
+        self.log_action('undiscover_volume', volume)
+
+    def check_for_export(self, context, volume_id):
+        self.log_action('check_for_export', volume_id)
+
+    _LOGS = []
+
+    @staticmethod
+    def clear_logs():
+        LoggingVolumeDriver._LOGS = []
+
+    @staticmethod
+    def log_action(action, parameters):
+        """Logs the command."""
+        LOG.debug(_("LoggingVolumeDriver: %s") % (action))
+        log_dictionary = {}
+        if parameters:
+            log_dictionary = dict(parameters)
+        log_dictionary['action'] = action
+        LOG.debug(_("LoggingVolumeDriver: %s") % (log_dictionary))
+        LoggingVolumeDriver._LOGS.append(log_dictionary)
+
+    @staticmethod
+    def all_logs():
+        return LoggingVolumeDriver._LOGS
+
+    @staticmethod
+    def logs_like(action, **kwargs):
+        matches = []
+        for entry in LoggingVolumeDriver._LOGS:
+            if entry['action'] != action:
+                continue
+            match = True
+            for k, v in kwargs.iteritems():
+                if entry.get(k) != v:
+                    match = False
+                    break
+            if match:
+                matches.append(entry)
+        return matches

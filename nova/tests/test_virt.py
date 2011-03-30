@@ -77,13 +77,11 @@ class CacheConcurrencyTestCase(test.TestCase):
         eventlet.sleep(0)
         try:
             self.assertFalse(done2.ready())
-            self.assertTrue('fname' in conn._image_sems)
         finally:
             wait1.send()
         done1.wait()
         eventlet.sleep(0)
         self.assertTrue(done2.ready())
-        self.assertFalse('fname' in conn._image_sems)
 
     def test_different_fname_concurrency(self):
         """Ensures that two different fname caches are concurrent"""
@@ -226,6 +224,49 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data['kernel_id'] = 'aki-deadbeef'
         self._check_xml_and_uri(instance_data, expect_kernel=True,
                                 expect_ramdisk=True, rescue=True)
+
+    def test_lxc_container_and_uri(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_container(instance_data)
+
+    def _check_xml_and_container(self, instance):
+        user_context = context.RequestContext(project=self.project,
+                                              user=self.user)
+        instance_ref = db.instance_create(user_context, instance)
+        host = self.network.get_network_host(user_context.elevated())
+        network_ref = db.project_get_network(context.get_admin_context(),
+                                             self.project.id)
+
+        fixed_ip = {'address': self.test_ip,
+                    'network_id': network_ref['id']}
+
+        ctxt = context.get_admin_context()
+        fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
+        db.fixed_ip_update(ctxt, self.test_ip,
+                                 {'allocated': True,
+                                  'instance_id': instance_ref['id']})
+
+        self.flags(libvirt_type='lxc')
+        conn = libvirt_conn.LibvirtConnection(True)
+
+        uri = conn.get_uri()
+        self.assertEquals(uri, 'lxc:///')
+
+        xml = conn.to_xml(instance_ref)
+        tree = xml_to_tree(xml)
+
+        check = [
+        (lambda t: t.find('.').get('type'), 'lxc'),
+        (lambda t: t.find('./os/type').text, 'exe'),
+        (lambda t: t.find('./devices/filesystem/target').get('dir'), '/')]
+
+        for i, (check, expected_result) in enumerate(check):
+            self.assertEqual(check(tree),
+                             expected_result,
+                             '%s failed common check %d' % (xml, i))
+
+        target = tree.find('./devices/filesystem/source').get('dir')
+        self.assertTrue(len(target) > 0)
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
@@ -429,6 +470,15 @@ class LibvirtConnTestCase(test.TestCase):
         def fake_raise(self):
             raise libvirt.libvirtError('ERR')
 
+        class FakeTime(object):
+            def __init__(self):
+                self.counter = 0
+
+            def sleep(self, t):
+                self.counter += t
+
+        fake_timer = FakeTime()
+
         self.create_fake_libvirt_mock(nwfilterLookupByName=fake_raise)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
@@ -438,10 +488,14 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_conn.LibvirtConnection(False)
             conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
             conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
-            conn.ensure_filtering_rules_for_instance(instance_ref)
+            conn.ensure_filtering_rules_for_instance(instance_ref,
+                                                     time=fake_timer)
         except exception.Error, e:
             c1 = (0 <= e.message.find('Timeout migrating for'))
         self.assertTrue(c1)
+
+        self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
+                                                 "amount of time")
 
         db.instance_destroy(self.context, instance_ref['id'])
 
@@ -785,7 +839,8 @@ class NWFilterTestCase(test.TestCase):
 
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
-                                          'project_id': 'fake'})
+                                          'project_id': 'fake',
+                                          'mac_address': '00:A0:C9:14:C8:29'})
         inst_id = instance_ref['id']
 
         ip = '10.11.12.13'
@@ -802,7 +857,8 @@ class NWFilterTestCase(test.TestCase):
                                             'instance_id': instance_ref['id']})
 
         def _ensure_all_called():
-            instance_filter = 'nova-instance-%s' % instance_ref['name']
+            instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
+                                                       '00A0C914C829')
             secgroup_filter = 'nova-secgroup-%s' % self.security_group['id']
             for required in [secgroup_filter, 'allow-dhcp-server',
                              'no-arp-spoofing', 'no-ip-spoofing',

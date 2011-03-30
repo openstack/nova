@@ -15,37 +15,100 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack import common
-
-
-def get_view_builder(req):
-    '''
-    A factory method that returns the correct builder based on the version of
-    the api requested.
-    '''
-    version = common.get_api_version(req)
-    base_url = req.application_url
-    if version == '1.1':
-        return ViewBuilder_1_1(base_url)
-    else:
-        return ViewBuilder_1_0()
+import os.path
 
 
 class ViewBuilder(object):
-    def __init__(self):
-        pass
+    """Base class for generating responses to OpenStack API image requests."""
 
-    def build(self, image_obj):
-        raise NotImplementedError()
-
-
-class ViewBuilder_1_1(ViewBuilder):
     def __init__(self, base_url):
-        self.base_url = base_url
+        """Initialize new `ViewBuilder`."""
+        self._url = base_url
+
+    def _format_dates(self, image):
+        """Update all date fields to ensure standardized formatting."""
+        for attr in ['created_at', 'updated_at', 'deleted_at']:
+            if image.get(attr) is not None:
+                image[attr] = image[attr].strftime('%Y-%m-%dT%H:%M:%SZ')
+
+    def _format_status(self, image):
+        """Update the status field to standardize format."""
+        status_mapping = {
+            'pending': 'queued',
+            'decrypting': 'preparing',
+            'untarring': 'saving',
+            'available': 'active',
+            'killed': 'failed',
+        }
+
+        try:
+            image['status'] = status_mapping[image['status']].upper()
+        except KeyError:
+            image['status'] = image['status'].upper()
 
     def generate_href(self, image_id):
-        return "%s/images/%s" % (self.base_url, image_id)
+        """Return an href string pointing to this object."""
+        return os.path.join(self._url, "images", str(image_id))
+
+    def build(self, image_obj, detail=False):
+        """Return a standardized image structure for display by the API."""
+        properties = image_obj.get("properties", {})
+
+        self._format_dates(image_obj)
+
+        if "status" in image_obj:
+            self._format_status(image_obj)
+
+        image = {
+            "id": image_obj["id"],
+            "name": image_obj["name"],
+        }
+
+        if "instance_id" in properties:
+            try:
+                image["serverId"] = int(properties["instance_id"])
+            except ValueError:
+                pass
+
+        if detail:
+            image.update({
+                "created": image_obj["created_at"],
+                "updated": image_obj["updated_at"],
+                "status": image_obj["status"],
+            })
+
+            if image["status"] == "SAVING":
+                image["progress"] = 0
+
+        return image
 
 
-class ViewBuilder_1_0(ViewBuilder):
+class ViewBuilderV10(ViewBuilder):
+    """OpenStack API v1.0 Image Builder"""
     pass
+
+
+class ViewBuilderV11(ViewBuilder):
+    """OpenStack API v1.1 Image Builder"""
+
+    def build(self, image_obj, detail=False):
+        """Return a standardized image structure for display by the API."""
+        image = ViewBuilder.build(self, image_obj, detail)
+        href = self.generate_href(image_obj["id"])
+
+        image["links"] = [{
+            "rel": "self",
+            "href": href,
+        },
+        {
+            "rel": "bookmark",
+            "type": "application/json",
+            "href": href,
+        },
+        {
+            "rel": "bookmark",
+            "type": "application/xml",
+            "href": href,
+        }]
+
+        return image

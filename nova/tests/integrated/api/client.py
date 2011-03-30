@@ -56,8 +56,12 @@ class OpenStackApiNotFoundException(OpenStackApiException):
 
 
 class TestOpenStackClient(object):
-    """ A really basic OpenStack API client that is under our control,
-    so we can make changes / insert hooks for testing"""
+    """Simple OpenStack API Client.
+
+    This is a really basic OpenStack API client that is under our control,
+    so we can make changes / insert hooks for testing
+
+    """
 
     def __init__(self, auth_user, auth_key, auth_uri):
         super(TestOpenStackClient, self).__init__()
@@ -90,6 +94,7 @@ class TestOpenStackClient(object):
         LOG.info(_("Doing %(method)s on %(relative_url)s") % locals())
         if body:
             LOG.info(_("Body: %s") % body)
+            headers.setdefault('Content-Type', 'application/json')
 
         conn.request(method, relative_url, body, headers)
         response = conn.getresponse()
@@ -108,9 +113,7 @@ class TestOpenStackClient(object):
         http_status = response.status
         LOG.debug(_("%(auth_uri)s => code %(http_status)s") % locals())
 
-        # Until bug732866 is fixed, we can't check this properly...
-        #if http_status == 401:
-        if http_status != 204:
+        if http_status == 401:
             raise OpenStackApiAuthenticationException(response=response)
 
         auth_headers = {}
@@ -123,7 +126,7 @@ class TestOpenStackClient(object):
     def api_request(self, relative_uri, check_response_status=None, **kwargs):
         auth_result = self._authenticate()
 
-        #NOTE(justinsb): httplib 'helpfully' converts headers to lower case
+        # NOTE(justinsb): httplib 'helpfully' converts headers to lower case
         base_uri = auth_result['x-server-management-url']
         full_uri = base_uri + relative_uri
 
@@ -210,3 +213,32 @@ class TestOpenStackClient(object):
 
     def delete_flavor(self, flavor_id):
         return self.api_delete('/flavors/%s' % flavor_id)
+
+    def get_volume(self, volume_id):
+        return self.api_get('/volumes/%s' % volume_id)['volume']
+
+    def get_volumes(self, detail=True):
+        rel_url = '/volumes/detail' if detail else '/volumes'
+        return self.api_get(rel_url)['volumes']
+
+    def post_volume(self, volume):
+        return self.api_post('/volumes', volume)['volume']
+
+    def delete_volume(self, volume_id):
+        return self.api_delete('/volumes/%s' % volume_id)
+
+    def get_server_volume(self, server_id, attachment_id):
+        return self.api_get('/servers/%s/volume_attachments/%s' %
+                            (server_id, attachment_id))['volumeAttachment']
+
+    def get_server_volumes(self, server_id):
+        return self.api_get('/servers/%s/volume_attachments' %
+                            (server_id))['volumeAttachments']
+
+    def post_server_volume(self, server_id, volume_attachment):
+        return self.api_post('/servers/%s/volume_attachments' %
+                        (server_id), volume_attachment)['volumeAttachment']
+
+    def delete_server_volume(self, server_id, attachment_id):
+        return self.api_delete('/servers/%s/volume_attachments/%s' %
+                            (server_id, attachment_id))

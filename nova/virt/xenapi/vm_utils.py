@@ -22,6 +22,7 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 import os
 import pickle
 import re
+import tempfile
 import time
 import urllib
 import uuid
@@ -29,6 +30,8 @@ from xml.dom import minidom
 
 from eventlet import event
 import glance.client
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -36,6 +39,7 @@ from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.virt import disk
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi.volume_utils import StorageError
@@ -670,6 +674,23 @@ class VMHelper(HelperBase):
                 return None
 
     @classmethod
+    def preconfigure_instance(cls, session, instance, vdi_ref, network_info):
+        """Makes alterations to the image before launching as part of spawn.
+        """
+
+        # As mounting the image VDI is expensive, we only want do do it once,
+        # if at all, so determine whether it's required first, and then do
+        # everything
+        mount_required = False
+        key, net = _prepare_injectables(instance, network_info)
+        mount_required = key or net
+        if not mount_required:
+            return
+
+        with_vdi_attached_here(session, vdi_ref, False,
+                               lambda dev: _mounted_processing(dev, key, net))
+
+    @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
         vm_rec = session.get_xenapi().VM.get_record(vm)
         if 'PV_kernel' in vm_rec and 'PV_ramdisk' in vm_rec:
@@ -927,6 +948,7 @@ def vbd_unplug_with_retry(session, vbd_ref):
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 LOG.debug(_('VBD.unplug rejected: retrying...'))
                 time.sleep(1)
+                LOG.debug(_('Not sleeping anymore!'))
             elif (len(e.details) > 0 and
                   e.details[0] == 'DEVICE_ALREADY_DETACHED'):
                 LOG.debug(_('VBD.unplug successful eventually.'))
@@ -991,8 +1013,8 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dest, 'mklabel', 'msdos')
-    execute('parted', '--script', dest, 'mkpart', 'primary',
+    execute('sudo', 'parted', '--script', dest, 'mklabel', 'msdos')
+    execute('sudo', 'parted', '--script', dest, 'mkpart', 'primary',
             '%ds' % primary_first,
             '%ds' % primary_last)
 
@@ -1002,3 +1024,118 @@ def _write_partition(virtual_size, dev):
 def get_name_label_for_image(image):
     # TODO(sirp): This should eventually be the URI for the Glance image
     return _('Glance image %s') % image
+
+
+def _mount_filesystem(dev_path, dir):
+    """mounts the device specified by dev_path in dir"""
+    try:
+        out, err = utils.execute('sudo', 'mount',
+                                 '-t', 'ext2,ext3',
+                                 dev_path, dir)
+    except exception.ProcessExecutionError as e:
+        err = str(e)
+    return err
+
+
+def _find_guest_agent(base_dir, agent_rel_path):
+    """
+    tries to locate a guest agent at the path
+    specificed by agent_rel_path
+    """
+    agent_path = os.path.join(base_dir, agent_rel_path)
+    if os.path.isfile(agent_path):
+        # The presence of the guest agent
+        # file indicates that this instance can
+        # reconfigure the network from xenstore data,
+        # so manipulation of files in /etc is not
+        # required
+        LOG.info(_('XenServer tools installed in this '
+                'image are capable of network injection.  '
+                'Networking files will not be'
+                'manipulated'))
+        return True
+    xe_daemon_filename = os.path.join(base_dir,
+        'usr', 'sbin', 'xe-daemon')
+    if os.path.isfile(xe_daemon_filename):
+        LOG.info(_('XenServer tools are present '
+                'in this image but are not capable '
+                'of network injection'))
+    else:
+        LOG.info(_('XenServer tools are not '
+                'installed in this image'))
+    return False
+
+
+def _mounted_processing(device, key, net):
+    """Callback which runs with the image VDI attached"""
+
+    dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
+    tmpdir = tempfile.mkdtemp()
+    try:
+        # Mount only Linux filesystems, to avoid disturbing NTFS images
+        err = _mount_filesystem(dev_path, tmpdir)
+        if not err:
+            try:
+                # This try block ensures that the umount occurs
+                if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
+                    LOG.info(_('Manipulating interface files '
+                            'directly'))
+                    disk.inject_data_into_fs(tmpdir, key, net,
+                        utils.execute)
+            finally:
+                utils.execute('sudo', 'umount', dev_path)
+        else:
+            LOG.info(_('Failed to mount filesystem (expected for '
+                'non-linux instances): %s') % err)
+    finally:
+        # remove temporary directory
+        os.rmdir(tmpdir)
+
+
+def _prepare_injectables(inst, networks_info):
+    """
+    prepares the ssh key and the network configuration file to be
+    injected into the disk image
+    """
+    #do the import here - Cheetah.Template will be loaded
+    #only if injection is performed
+    from Cheetah import Template as t
+    template = t.Template
+    template_data = open(FLAGS.injected_network_template).read()
+
+    key = str(inst['key_data'])
+    net = None
+    if networks_info:
+        ifc_num = -1
+        interfaces_info = []
+        have_injected_networks = False
+        for (network_ref, info) in networks_info:
+            ifc_num += 1
+            if not network_ref['injected']:
+                continue
+
+            have_injected_networks = True
+            ip_v4 = ip_v6 = None
+            if 'ips' in info and len(info['ips']) > 0:
+                ip_v4 = info['ips'][0]
+            if 'ip6s' in info and len(info['ip6s']) > 0:
+                ip_v6 = info['ip6s'][0]
+            if len(info['dns']) > 0:
+                dns = info['dns'][0]
+            interface_info = {'name': 'eth%d' % ifc_num,
+                              'address': ip_v4 and ip_v4['ip'] or '',
+                              'netmask': ip_v4 and ip_v4['netmask'] or '',
+                              'gateway': info['gateway'],
+                              'broadcast': info['broadcast'],
+                              'dns': dns,
+                              'address_v6': ip_v6 and ip_v6['ip'] or '',
+                              'netmask_v6': ip_v6 and ip_v6['netmask'] or '',
+                              'gateway_v6': ip_v6 and ip_v6['gateway'] or '',
+                              'use_ipv6': FLAGS.use_ipv6}
+            interfaces_info.append(interface_info)
+
+        if have_injected_networks:
+            net = str(template(template_data,
+                                searchList=[{'interfaces': interfaces_info,
+                                            'use_ipv6': FLAGS.use_ipv6}]))
+    return key, net
