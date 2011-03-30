@@ -39,6 +39,7 @@ from nova.db import base
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.compute.api')
+flags.DECLARE('vncproxy_topic', 'nova.vnc')
 
 
 def generate_default_hostname(instance_id):
