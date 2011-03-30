@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.import datetime
 
-"""Incubator contains extensions that are shipped with nova.
+"""Contrib contains extensions that are shipped with nova.
 
 It can't be called 'extensions' because that causes namespacing problems.
 

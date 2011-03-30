@@ -385,9 +385,9 @@ class ExtensionManager(object):
         if os.path.exists(self.path):
             self._load_all_extensions_from_path(self.path)
 
-        incubator_path = os.path.join(os.path.dirname(__file__), "contrib")
-        if os.path.exists(incubator_path):
-            self._load_all_extensions_from_path(incubator_path)
+        contrib_path = os.path.join(os.path.dirname(__file__), "contrib")
+        if os.path.exists(contrib_path):
+            self._load_all_extensions_from_path(contrib_path)
 
     def _load_all_extensions_from_path(self, path):
         for f in os.listdir(path):
