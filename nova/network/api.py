@@ -68,16 +68,20 @@ class API(base.Base):
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
         # Check if the floating ip address is allocated
         if floating_ip['project_id'] is None:
-            raise exception.ApiError(_("Address (%s) is not allocated")
-                                      % floating_ip['address'])
+            raise exception.ApiError(_("Address (%(address)s) is not "
+                                       "allocated") % {'address':
+                                       floating_ip['address']})
         # Check if the floating ip address is allocated to the same project
         if floating_ip['project_id'] != context.project_id:
-            LOG.warn(_("Address (%s) is not allocated to your project "
-                       "(%s)"), floating_ip['address'], context.project_id)
-            raise exception.ApiError(_("Address (%s) is not "
-                                       "allocated to your project (%s)") %
-                                       (floating_ip['address'],
-                                        context.project_id))
+            LOG.warn(_("Address (%(address)s) is not allocated to your "
+                       "project (%(project)s)"),
+                       {'address': floating_ip['address'],
+                       'project': context.project_id})
+            raise exception.ApiError(_("Address (%(address)s) is not "
+                                       "allocated to your project"
+                                       "(%(project)s)") %
+                                        {'address': floating_ip['address'],
+                                        'project': context.project_id})
         # NOTE(vish): Perhaps we should just pass this on to compute and
         #             let compute communicate with network.
         host = fixed_ip['network']['host']
