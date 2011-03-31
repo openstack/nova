@@ -616,7 +616,7 @@ class ControllerV10(Controller):
             self.compute_api.rebuild(context, id, image_id)
         except exception.BuildInProgress:
             msg = _("Unable to rebuild server that is being rebuilt")
-            return faults.Fault(exc.HTTPConflict(msg))
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
 
         return exc.HTTPAccepted()
 
@@ -670,7 +670,7 @@ class ControllerV11(Controller):
             self.compute_api.rebuild(context, id, image_id, metadata)
         except exception.BuildInProgress:
             msg = _("Unable to rebuild server that is being rebuilt")
-            return faults.Fault(exc.HTTPConflict(msg))
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
 
         return exc.HTTPAccepted()
 
