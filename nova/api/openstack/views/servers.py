@@ -67,6 +67,8 @@ class ViewBuilder(object):
             power_state.SHUTOFF: 'active',
             power_state.CRASHED: 'error',
             power_state.FAILED: 'error'}
+            power_state.BUILDING: 'build',
+        }
 
         inst_dict = {
             'id': int(inst['id']),
