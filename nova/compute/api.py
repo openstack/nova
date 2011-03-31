@@ -34,6 +34,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.compute import power_state 
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -487,6 +488,11 @@ class API(base.Base):
 
     def rebuild(self, context, instance_id, image_id, metadata=None):
         """Rebuild the given instance with the provided metadata."""
+
+        instance = db.api.instance_get(context, instance_id)
+        if instance["state"] == power_state.BUILDING:
+            msg = _("Instance already building")
+            raise exception.BuildInProgress(msg)
 
         metadata = metadata or []
         self._check_metadata_quota(context, metadata)
