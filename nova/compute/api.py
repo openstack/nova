@@ -100,6 +100,32 @@ class API(base.Base):
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
+    def _check_metadata_quota(self, context, metadata):
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            pid = context.project_id
+            msg = (_("Quota exceeeded for %(pid)s,"
+                     " tried to set %(num_metadata)s metadata properties")
+                   % locals())
+            LOG.warn(msg)
+            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+    def _check_metadata_item_length(self, context, metadata):
+        # Because metadata is stored in the DB, we hard-code the size limits
+        # In future, we may support more variable length strings, so we act
+        #  as if this is quota-controlled for forwards compatibility
+        for metadata_item in metadata:
+            k = metadata_item['key']
+            v = metadata_item['value']
+            if len(k) > 255 or len(v) > 255:
+                pid = context.project_id
+                msg = (_("Quota exceeeded for %(pid)s,"
+                         " metadata property key or value too long")
+                       % locals())
+                LOG.warn(msg)
+                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
@@ -120,29 +146,8 @@ class API(base.Base):
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
-        num_metadata = len(metadata)
-        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
-        if quota_metadata < num_metadata:
-            pid = context.project_id
-            msg = (_("Quota exceeeded for %(pid)s,"
-                     " tried to set %(num_metadata)s metadata properties")
-                   % locals())
-            LOG.warn(msg)
-            raise quota.QuotaError(msg, "MetadataLimitExceeded")
-
-        # Because metadata is stored in the DB, we hard-code the size limits
-        # In future, we may support more variable length strings, so we act
-        #  as if this is quota-controlled for forwards compatibility
-        for metadata_item in metadata:
-            k = metadata_item['key']
-            v = metadata_item['value']
-            if len(k) > 255 or len(v) > 255:
-                pid = context.project_id
-                msg = (_("Quota exceeeded for %(pid)s,"
-                         " metadata property key or value too long")
-                       % locals())
-                LOG.warn(msg)
-                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+        self._check_metadata_quota(context, metadata)
+        self._check_metadata_item_length(context, metadata)
 
         self._check_injected_file_quota(context, injected_files)
 
@@ -482,15 +487,15 @@ class API(base.Base):
 
     def rebuild(self, context, instance_id, image_id, metadata=None):
         """Rebuild the given instance with the provided metadata."""
-        # default to an empty list
+
         metadata = metadata or []
-        #TODO: validate metadata
-        params = {
-            "image_id": image_id,
-            "metadata": metadata,
-        }
+        self._check_metadata_quota(context, metadata)
+        self._check_metadata_item_length(context, metadata)
+
         self._cast_compute_message('rebuild_instance', context,
-                                   instance_id, params=params)
+                                   instance_id, params={"image_id": image_id})
+
+        self.db.instance_update(context, instance_id, {"metadata": metadata})
 
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process"""
