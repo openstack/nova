@@ -611,7 +611,13 @@ class ControllerV10(Controller):
             return faults.Fault(exc.HTTPBadRequest(msg))
 
         image_id = input_dict['rebuild']['imageId']
-        self.compute_api.rebuild(context, id, image_id)
+
+        try:
+            self.compute_api.rebuild(context, id, image_id)
+        except exception.BuildInProgress:
+            msg = _("Unable to rebuild server that is being rebuilt")
+            return faults.Fault(exc.HTTPConflict(msg))
+
         return exc.HTTPAccepted()
 
 
@@ -660,7 +666,12 @@ class ControllerV11(Controller):
                 msg = _("Improperly formatted metadata provided")
                 return exc.HTTPBadRequest(msg)
 
-        self.compute_api.rebuild(context, id, image_id, metadata)
+        try:
+            self.compute_api.rebuild(context, id, image_id, metadata)
+        except exception.BuildInProgress:
+            msg = _("Unable to rebuild server that is being rebuilt")
+            return faults.Fault(exc.HTTPConflict(msg))
+
         return exc.HTTPAccepted()
 
 

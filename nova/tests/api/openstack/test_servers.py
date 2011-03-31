@@ -31,6 +31,7 @@ from nova import flags
 from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
+from nova.compute import power_state
 import nova.compute.api
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
@@ -55,6 +56,12 @@ def return_server_with_addresses(private, public):
     return _return_server
 
 
+def return_server_with_state(state):
+    def _return_server(context, id):
+        return stub_instance(id, state=state)
+    return _return_server
+
+
 def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
@@ -71,7 +78,8 @@ def instance_address(context, instance_id):
     return None
 
 
-def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
+def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
+                  state=0):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -89,7 +97,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "state": 0,
+        "state": state,
         "state_description": "",
         "memory_mb": 0,
         "vcpus": 0,
@@ -789,6 +797,24 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
+    def test_server_rebuild_rejected_when_building(self):
+        body = {
+            "rebuild": {
+                "imageId": 2,
+            },
+        }
+
+        new_return_server = return_server_with_state(power_state.BUILDING)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 409)
+
     def test_server_rebuild_bad_entity(self):
         body = {
             "rebuild": {
@@ -817,6 +843,24 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
+
+    def test_server_rebuild_rejected_when_building_v11(self):
+        body = {
+            "rebuild": {
+                "imageRef": "http://localhost/images/2",
+            },
+        }
+
+        new_return_server = return_server_with_state(power_state.BUILDING)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = json.dumps(body)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 409)
 
     def test_server_rebuild_accepted_with_metadata_v11(self):
         body = {

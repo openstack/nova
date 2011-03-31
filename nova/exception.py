@@ -96,6 +96,10 @@ class TimeoutException(Error):
     pass
 
 
+class BuildInProgress(Error):
+    pass
+
+
 class DBError(Error):
     """Wraps an implementation specific exception"""
     def __init__(self, inner_exception):

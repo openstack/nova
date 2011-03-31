@@ -489,16 +489,14 @@ class API(base.Base):
     def rebuild(self, context, instance_id, image_id, metadata=None):
         """Rebuild the given instance with the provided metadata."""
 
+        instance = db.api.instance_get(context, instance_id)
+        if instance["state"] == power_state.BUILDING:
+            msg = _("Instance already building")
+            raise exception.BuildInProgress(msg)
+
         metadata = metadata or []
         self._check_metadata_quota(context, metadata)
         self._check_metadata_item_length(context, metadata)
-
-        instance_ref = self.db.instance_get(context, instance_id)
-        if instance_ref.state_description == "rebuilding":
-            raise exception.NotFound("blah")
-        else:
-            LOG.error("SENDING REBUILD MESSAGE, INSTANCE HAD STATE: %s" %
-                instance_ref.state_description)
 
         self._cast_compute_message('rebuild_instance', context,
                                    instance_id, params={"image_id": image_id})
