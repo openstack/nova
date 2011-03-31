@@ -20,11 +20,13 @@ Tests of the new image services, both as a service layer,
 and as a WSGI layer
 """
 
+import copy
 import json
 import datetime
 import os
 import shutil
 import tempfile
+import xml.dom.minidom as minidom
 
 import stubout
 import webob
@@ -214,12 +216,14 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
 
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
-    """Test of the OpenStack API /images application controller"""
-
+    """
+    Test of the OpenStack API /images application controller w/Glance.
+    """
     NOW_GLANCE_FORMAT = "2010-10-11T10:30:22"
     NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
     def setUp(self):
+        """Run before each test."""
         super(ImageControllerWithGlanceServiceTest, self).setUp()
         self.orig_image_service = FLAGS.image_service
         FLAGS.image_service = 'nova.image.glance.GlanceImageService'
@@ -230,18 +234,30 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
-        fixtures = self._make_image_fixtures()
-        fakes.stub_out_glance(self.stubs, initial_fixtures=fixtures)
+        self.fixtures = self._make_image_fixtures()
+        fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
 
     def tearDown(self):
+        """Run after each test."""
         self.stubs.UnsetAll()
         FLAGS.image_service = self.orig_image_service
         super(ImageControllerWithGlanceServiceTest, self).tearDown()
 
+    def _applicable_fixture(self, fixture, user_id):
+        """Determine if this fixture is applicable for given user id."""
+        is_public = fixture["is_public"]
+        try:
+            uid = int(fixture["properties"]["user_id"])
+        except KeyError:
+            uid = None
+        return uid == user_id or is_public
+
     def test_get_image_index(self):
-        req = webob.Request.blank('/v1.0/images')
-        res = req.get_response(fakes.wsgi_app())
-        image_metas = json.loads(res.body)['images']
+        request = webob.Request.blank('/v1.0/images')
+        response = request.get_response(fakes.wsgi_app())
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
 
         expected = [{'id': 123, 'name': 'public image'},
                     {'id': 124, 'name': 'queued backup'},
@@ -249,32 +265,379 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     {'id': 126, 'name': 'active backup'},
                     {'id': 127, 'name': 'killed backup'}]
 
-        self.assertDictListMatch(image_metas, expected)
+        self.assertDictListMatch(response_list, expected)
+
+    def test_get_image(self):
+        request = webob.Request.blank('/v1.0/images/123')
+        response = request.get_response(fakes.wsgi_app())
+
+        self.assertEqual(200, response.status_int)
+
+        actual_image = json.loads(response.body)
+
+        expected_image = {
+            "image": {
+                "id": 123,
+                "name": "public image",
+                "updated": self.NOW_API_FORMAT,
+                "created": self.NOW_API_FORMAT,
+                "status": "ACTIVE",
+            },
+        }
+
+        self.assertEqual(expected_image, actual_image)
+
+    def test_get_image_v1_1(self):
+        request = webob.Request.blank('/v1.1/images/123')
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = json.loads(response.body)
+
+        href = "http://localhost/v1.1/images/123"
+
+        expected_image = {
+            "image": {
+                "id": 123,
+                "name": "public image",
+                "updated": self.NOW_API_FORMAT,
+                "created": self.NOW_API_FORMAT,
+                "status": "ACTIVE",
+                "links": [{
+                    "rel": "self",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": href,
+                }],
+            },
+        }
+
+        self.assertEqual(expected_image, actual_image)
+
+    def test_get_image_xml(self):
+        request = webob.Request.blank('/v1.0/images/123')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = minidom.parseString(response.body.replace("  ", ""))
+
+        expected_now = self.NOW_API_FORMAT
+        expected_image = minidom.parseString("""
+            <image id="123"
+                    name="public image"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="ACTIVE" />
+        """ % (locals()))
+
+        self.assertEqual(expected_image.toxml(), actual_image.toxml())
+
+    def test_get_image_v1_1_xml(self):
+        request = webob.Request.blank('/v1.1/images/123')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = minidom.parseString(response.body.replace("  ", ""))
+
+        expected_href = "http://localhost/v1.1/images/123"
+        expected_now = self.NOW_API_FORMAT
+        expected_image = minidom.parseString("""
+        <image id="123"
+                name="public image"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="ACTIVE">
+            <links>
+                <link href="%(expected_href)s" rel="self"/>
+                <link href="%(expected_href)s" rel="bookmark"
+                    type="application/json" />
+                <link href="%(expected_href)s" rel="bookmark"
+                    type="application/xml" />
+            </links>
+        </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected_image.toxml(), actual_image.toxml())
+
+    def test_get_image_404_json(self):
+        request = webob.Request.blank('/v1.0/images/NonExistantImage')
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
+        expected = {
+            "itemNotFound": {
+                "message": "Image not found.",
+                "code": 404,
+            },
+        }
+
+        actual = json.loads(response.body)
+
+        self.assertEqual(expected, actual)
+
+    def test_get_image_404_xml(self):
+        request = webob.Request.blank('/v1.0/images/NonExistantImage')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
+        expected = minidom.parseString("""
+            <itemNotFound code="404">
+                <message>
+                    Image not found.
+                </message>
+            </itemNotFound>
+        """.replace("  ", ""))
+
+        actual = minidom.parseString(response.body.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_get_image_404_v1_1_json(self):
+        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
+        expected = {
+            "itemNotFound": {
+                "message": "Image not found.",
+                "code": 404,
+            },
+        }
+
+        actual = json.loads(response.body)
+
+        self.assertEqual(expected, actual)
+
+    def test_get_image_404_v1_1_xml(self):
+        request = webob.Request.blank('/v1.1/images/NonExistantImage')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+        self.assertEqual(404, response.status_int)
+
+        expected = minidom.parseString("""
+            <itemNotFound code="404">
+                <message>
+                    Image not found.
+                </message>
+            </itemNotFound>
+        """.replace("  ", ""))
+
+        actual = minidom.parseString(response.body.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_get_image_index_v1_1(self):
+        request = webob.Request.blank('/v1.1/images')
+        response = request.get_response(fakes.wsgi_app())
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+
+        fixtures = copy.copy(self.fixtures)
+
+        for image in fixtures:
+            if not self._applicable_fixture(image, 1):
+                fixtures.remove(image)
+                continue
+
+            href = "http://localhost/v1.1/images/%s" % image["id"]
+            test_image = {
+                "id": image["id"],
+                "name": image["name"],
+                "links": [{
+                    "rel": "self",
+                    "href": "http://localhost/v1.1/images/%s" % image["id"],
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/json",
+                    "href": href,
+                },
+                {
+                    "rel": "bookmark",
+                    "type": "application/xml",
+                    "href": href,
+                }],
+            }
+            self.assertTrue(test_image in response_list)
+
+        self.assertEqual(len(response_list), len(fixtures))
 
     def test_get_image_details(self):
-        req = webob.Request.blank('/v1.0/images/detail')
-        res = req.get_response(fakes.wsgi_app())
-        image_metas = json.loads(res.body)['images']
+        request = webob.Request.blank('/v1.0/images/detail')
+        response = request.get_response(fakes.wsgi_app())
 
-        now = self.NOW_API_FORMAT
-        expected = [
-            {'id': 123, 'name': 'public image', 'updated': now,
-             'created': now, 'status': 'ACTIVE'},
-            {'id': 124, 'name': 'queued backup', 'serverId': 42,
-             'updated': now, 'created': now,
-             'status': 'QUEUED'},
-            {'id': 125, 'name': 'saving backup', 'serverId': 42,
-             'updated': now, 'created': now,
-             'status': 'SAVING', 'progress': 0},
-            {'id': 126, 'name': 'active backup', 'serverId': 42,
-             'updated': now, 'created': now,
-             'status': 'ACTIVE'},
-            {'id': 127, 'name': 'killed backup', 'serverId': 42,
-             'updated': now, 'created': now,
-             'status': 'FAILED'}
-        ]
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
 
-        self.assertDictListMatch(image_metas, expected)
+        expected = [{
+            'id': 123,
+            'name': 'public image',
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+        },
+        {
+            'id': 124,
+            'name': 'queued backup',
+            'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'QUEUED',
+        },
+        {
+            'id': 125,
+            'name': 'saving backup',
+            'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'SAVING',
+            'progress': 0,
+        },
+        {
+            'id': 126,
+            'name': 'active backup',
+            'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE'
+        },
+        {
+            'id': 127,
+            'name': 'killed backup', 'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'FAILED',
+        }]
+
+        self.assertDictListMatch(expected, response_list)
+
+    def test_get_image_details_v1_1(self):
+        request = webob.Request.blank('/v1.1/images/detail')
+        response = request.get_response(fakes.wsgi_app())
+
+        response_dict = json.loads(response.body)
+        response_list = response_dict["images"]
+
+        expected = [{
+            'id': 123,
+            'name': 'public image',
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/123",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/123",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/123",
+            }],
+        },
+        {
+            'id': 124,
+            'name': 'queued backup',
+            'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'QUEUED',
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/124",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/124",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/124",
+            }],
+        },
+        {
+            'id': 125,
+            'name': 'saving backup',
+            'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'SAVING',
+            'progress': 0,
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/125",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/125",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/125",
+            }],
+        },
+        {
+            'id': 126,
+            'name': 'active backup',
+            'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/126",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/126",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/126",
+            }],
+        },
+        {
+            'id': 127,
+            'name': 'killed backup', 'serverId': 42,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'FAILED',
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/127",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/127",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/127",
+            }],
+        }]
+
+        self.assertDictListMatch(expected, response_list)
 
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')

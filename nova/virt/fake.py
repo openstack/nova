@@ -26,9 +26,13 @@ semantics of real hypervisor connections.
 """
 
 from nova import exception
+from nova import log as logging
 from nova import utils
 from nova.compute import power_state
 from nova.virt import driver
+
+
+LOG = logging.getLogger('nova.compute.disk')
 
 
 def get_connection(_):
@@ -256,16 +260,12 @@ class FakeConnection(driver.ComputeDriver):
         pass
 
     def destroy(self, instance):
-        """
-        Destroy (shutdown and delete) the specified instance.
-
-        The given parameter is an instance of nova.compute.service.Instance,
-        and so the instance is being specified as instance.name.
-
-        The work will be done asynchronously.  This function returns a
-        task that allows the caller to detect when it is complete.
-        """
-        del self.instances[instance.name]
+        key = instance.name
+        if key in self.instances:
+            del self.instances[key]
+        else:
+            LOG.warning("Key '%s' not in instances '%s'" %
+                        (key, self.instances))
 
     def attach_volume(self, instance_name, device_path, mountpoint):
         """Attach the disk at device_path to the instance at mountpoint"""
@@ -373,6 +373,11 @@ class FakeConnection(driver.ComputeDriver):
     def get_ajax_console(self, instance):
         return {'token': 'FAKETOKEN',
                 'host': 'fakeajaxconsole.com',
+                'port': 6969}
+
+    def get_vnc_console(self, instance):
+        return {'token': 'FAKETOKEN',
+                'host': 'fakevncconsole.com',
                 'port': 6969}
 
     def get_console_pool_info(self, console_type):
