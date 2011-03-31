@@ -34,7 +34,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
-from nova.compute import power_state 
+from nova.compute import power_state
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
