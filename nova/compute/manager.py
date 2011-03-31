@@ -141,16 +141,15 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.driver.init_host(host=self.host)
 
-    def _update_state(self, context, instance_id):
+    def _update_state(self, context, instance_id, desc=None):
         """Update the state of an instance from the driver info."""
-        # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
         try:
             info = self.driver.get_info(instance_ref['name'])
             state = info['state']
         except exception.NotFound:
             state = power_state.FAILED
-        self.db.instance_set_state(context, instance_id, state)
+        self.db.instance_set_state(context, instance_id, state, desc)
 
     def _update_launched_at(self, context, instance_id, launched_at=None):
         """Update the launched_at parameter of the given instance."""
@@ -303,7 +302,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def rebuild_instance(self, context, instance_id, image_id, metadata):
+    def rebuild_instance(self, context, instance_id, image_id):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -312,7 +311,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
         :param image_id: Image identifier (integer)
-        :param metadata: Metadata dictionary
         """
         context = context.elevated()
 
@@ -320,12 +318,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
 
         # TODO(blamar): Detach volumes prior to rebuild.
+        self._update_state(context, instance_id, "rebuilding")
 
         self.driver.destroy(instance_ref)
-
-        self._update_state(context, instance_id)
         instance_ref.image_id = image_id
-
         self.driver.spawn(instance_ref)
 
         self._update_image_id(context, instance_id, image_id)

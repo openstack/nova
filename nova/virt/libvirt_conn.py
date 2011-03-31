@@ -311,28 +311,37 @@ class LibvirtConnection(driver.ComputeDriver):
         return infos
 
     def destroy(self, instance, cleanup=True):
-        try:
-            virt_dom = self._conn.lookupByName(instance['name'])
-            virt_dom.destroy()
-        except Exception as _err:
-            pass
-            # If the instance is already terminated, we're still happy
+        """Delete the VM instance from the hypervisor.
 
-        # We'll save this for when we do shutdown,
-        # instead of destroy - but destroy returns immediately
-        timer = utils.LoopingCall(f=None)
+        :param instance: Object representing the instance to destroy
+        :param cleanup: Should we erase all of the VM's associated files?
+        """
+        name = instance['name']
+
+        try:
+            virt_dom = self._conn.lookupByName(name)
+        except libvirt.libvirtError as ex:
+            msg = _("Instance %s not found.") % name
+            raise exception.NotFound(msg)
+
+        try:
+            virt_dom.destroy()
+        except libvirt.libvirtError as ex:
+            # If the instance is already terminated, we're still happy
+            msg = _("Error encountered during `libvirt.destroy`: %s") % ex
+            LOG.debug(msg)
 
         while True:
             try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.SHUTDOWN:
-                    break
-            except Exception:
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+                state = self.get_info(name)['state']
+            except (exception.NotFound, libvirt.libvirtError) as ex:
+                msg = _("Error while waiting for VM shutdown: %s") % ex
+                LOG.debug(msg)
+                break
+
+            if state == power_state.SHUTDOWN:
+                msg = _("VM %s was shut down cleanly.") % name
+                LOG.debug(msg)
                 break
 
         self.firewall_driver.unfilter_instance(instance)
@@ -558,37 +567,45 @@ class LibvirtConnection(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     @exception.wrap_exception
     def spawn(self, instance, network_info=None):
+        """Create the given VM instance using the libvirt connection.
+
+        :param instance: Object representing the instance to create
+        :param network_info: Associated network information
+        """
+        _id = instance['id']
+        name = instance['name']
         xml = self.to_xml(instance, network_info)
-        db.instance_set_state(context.get_admin_context(),
-                              instance['id'],
-                              power_state.NOSTATE,
-                              'launching')
+
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
+
         self._create_image(instance, xml, network_info)
-        self._conn.createXML(xml, 0)
-        LOG.debug(_("instance %s: is running"), instance['name'])
+
+        try:
+            self._conn.createXML(xml, 0)
+        except libvirt.libvirtError as ex:
+            msg = _("Error encountered creating VM '%(name)s': %(ex)s")
+            LOG.error(msg % locals())
+            return False
+
+        LOG.debug(_("VM %s successfully created.") % name)
+
         self.firewall_driver.apply_instance_filter(instance)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_boot():
+            """Check to see if the VM is running."""
             try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: booted'), instance['name'])
-                    timer.stop()
-            except:
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance['name'])
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+                state = self.get_info(name)['state']
+            except (exception.NotFound, libvirt.libvirtError) as ex:
+                msg = _("Error while waiting for VM to run: %s") % ex
+                LOG.debug(msg)
                 timer.stop()
 
-        timer.f = _wait_for_boot
+            if state == power_state.RUNNING:
+                LOG.debug(_('VM %s is now running.') % name)
+                timer.stop()
+
+        timer = utils.LoopingCall(f=_wait_for_boot)
         return timer.start(interval=0.5, now=True)
 
     def _flush_xen_console(self, virsh_output):

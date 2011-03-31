@@ -823,7 +823,7 @@ class ServersTest(test.TestCase):
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
                 "metadata": {
-                    "open": "stack",
+                    "new": "metadata",
                 },
             },
         }
