@@ -66,7 +66,19 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def destroy(self, instance, cleanup=True):
-        """Shutdown specified VM"""
+        """Destroy (shutdown and delete) the specified instance.
+
+        The given parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
+
+        If the instance is not found (for example if networking failed), this
+        function should still succeed.  It's probably a good idea to log a
+        warning in that case.
+
+        """
         raise NotImplementedError()
 
     def reboot(self, instance):
@@ -77,13 +89,6 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_console_pool_info(self, console_type):
-        """???
-
-        Returns a dict containing:
-        :address:          ???
-        :username:         ???
-        :password:         ???
-        """
         raise NotImplementedError()
 
     def get_console_output(self, instance):
@@ -114,7 +119,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def snapshot(self, instance, image_id):
-        """ Create snapshot from a running VM instance """
+        """Create snapshot from a running VM instance."""
         raise NotImplementedError()
 
     def finish_resize(self, instance, disk_info):

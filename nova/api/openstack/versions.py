@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
 import webob.dec
-import webob.exc
 
 from nova import wsgi
 import nova.api.openstack.views.versions
@@ -51,4 +51,10 @@ class Versions(wsgi.Application):
         }
 
         content_type = req.best_match_content_type()
-        return wsgi.Serializer(metadata).serialize(response, content_type)
+        body = wsgi.Serializer(metadata).serialize(response, content_type)
+
+        response = webob.Response()
+        response.content_type = content_type
+        response.body = body
+
+        return response

@@ -47,6 +47,7 @@ from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vmops import VMWareVMOps
 
+
 LOG = logging.getLogger("nova.virt.vmwareapi_conn")
 
 FLAGS = flags.FLAGS
@@ -109,7 +110,7 @@ class VMWareESXConnection(object):
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
         session = VMWareAPISession(host_ip, host_username, host_password,
-                 api_retry_count, scheme=scheme)
+                                   api_retry_count, scheme=scheme)
         self._vmops = VMWareVMOps(session)
 
     def init_host(self, host):

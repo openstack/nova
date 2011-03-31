@@ -608,6 +608,25 @@ class API(base.Base):
         return {'url': '%s/?token=%s' % (FLAGS.ajax_console_proxy_url,
                 output['token'])}
 
+    def get_vnc_console(self, context, instance_id):
+        """Get a url to a VNC Console."""
+        instance = self.get(context, instance_id)
+        output = self._call_compute_message('get_vnc_console',
+                                            context,
+                                            instance_id)
+        rpc.call(context, '%s' % FLAGS.vncproxy_topic,
+                 {'method': 'authorize_vnc_console',
+                  'args': {'token': output['token'],
+                           'host': output['host'],
+                           'port': output['port']}})
+
+        # hostignore and portignore are compatability params for noVNC
+        return {'url': '%s/vnc_auto.html?token=%s&host=%s&port=%s' % (
+                       FLAGS.vncproxy_url,
+                       output['token'],
+                       'hostignore',
+                       'portignore')}
+
     def get_console_output(self, context, instance_id):
         """Get console output for an an instance"""
         return self._call_compute_message('get_console_output',
