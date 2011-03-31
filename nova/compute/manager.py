@@ -141,15 +141,21 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.driver.init_host(host=self.host)
 
-    def _update_state(self, context, instance_id, desc=None):
+    def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
         instance_ref = self.db.instance_get(context, instance_id)
-        try:
-            info = self.driver.get_info(instance_ref['name'])
-            state = info['state']
-        except exception.NotFound:
-            state = power_state.FAILED
-        self.db.instance_set_state(context, instance_id, state, desc)
+
+        if state is None:
+            try:
+                info = self.driver.get_info(instance_ref['name'])
+            except exception.NotFound:
+                info = None
+                state = power_state.FAILED
+
+            if info is not None:
+                state = info['state']
+
+        self.db.instance_set_state(context, instance_id, state)
 
     def _update_launched_at(self, context, instance_id, launched_at=None):
         """Update the launched_at parameter of the given instance."""
@@ -318,7 +324,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
 
         # TODO(blamar): Detach volumes prior to rebuild.
-        self._update_state(context, instance_id, "rebuilding")
+        self._update_state(context, instance_id, power_state.BUILDING)
 
         self.driver.destroy(instance_ref)
         instance_ref.image_id = image_id
