@@ -377,7 +377,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         server = json.loads(res.body)['server']
-        self.assertEqual('serv', server['adminPass'][:4])
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
@@ -486,7 +485,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         server = json.loads(res.body)['server']
-        self.assertEqual('serv', server['adminPass'][:4])
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
@@ -1426,7 +1424,7 @@ class TestServerInstanceCreation(test.TestCase):
         self.assertEquals(response.status_int, 200)
         response = json.loads(response.body)
         self.assertTrue('adminPass' in response['server'])
-        self.assertTrue(response['server']['adminPass'].startswith('fake'))
+        self.assertEqual(16, len(response['server']['adminPass']))
 
     def test_create_instance_admin_pass_xml(self):
         request, response, dummy = \
@@ -1435,7 +1433,7 @@ class TestServerInstanceCreation(test.TestCase):
         dom = minidom.parseString(response.body)
         server = dom.childNodes[0]
         self.assertEquals(server.nodeName, 'server')
-        self.assertTrue(server.getAttribute('adminPass').startswith('fake'))
+        self.assertEqual(16, len(server.getAttribute('adminPass')))
 
 
 class TestGetKernelRamdiskFromImage(test.TestCase):
