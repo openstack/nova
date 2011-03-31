@@ -597,8 +597,8 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 state = self.get_info(name)['state']
             except (exception.NotFound, libvirt.libvirtError) as ex:
-                msg = _("Error while waiting for VM to run: %s") % ex
-                LOG.debug(msg)
+                msg = _("Error while waiting for VM '%(_id)s' to run: %(ex)s")
+                LOG.debug(msg % locals())
                 timer.stop()
 
             if state == power_state.RUNNING:

@@ -206,33 +206,27 @@ class VMOps(object):
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
-        timer = utils.LoopingCall(f=None)
 
         def _wait_for_boot():
             try:
                 state = self.get_info(instance_name)['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('Instance %s: booted'), instance_name)
-                    timer.stop()
-                    _inject_files()
-                    return True
-            except Exception, exc:
-                LOG.warn(exc)
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance_name)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+            except self.XenAPI.Failure as ex:
+                msg = _("Error while waiting for VM '%(instance_name)s' "
+                        "to boot: %(ex)s") % locals()
+                LOG.debug(msg)
                 timer.stop()
                 return False
 
-        timer.f = _wait_for_boot
+            if state == power_state.RUNNING:
+                LOG.debug(_('VM %s is now running.') % name)
+                timer.stop()
+                _inject_files()
+                return True
 
         # call to reset network to configure network from xenstore
         self.reset_network(instance, vm_ref)
 
+        timer = utils.LoopingCall(f=_wait_for_boot)
         return timer.start(interval=0.5, now=True)
 
     def _get_vm_opaque_ref(self, instance_or_vm):

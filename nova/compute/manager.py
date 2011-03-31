@@ -240,21 +240,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id)
 
         # TODO(vish) check to make sure the availability zone matches
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'spawning')
+        self._update_state(context, instance_id, power_state.BUILDING)
 
         try:
             self.driver.spawn(instance_ref)
             self._update_launched_at(context, instance_id)
-        except Exception:  # pylint: disable=W0702
+        except Exception as ex:  # pylint: disable=W0702
+            LOG.debug(ex)
             LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
                             " enabled in the BIOS?"), instance_id,
                                                      context=context)
-            self.db.instance_set_state(context,
-                                       instance_id,
-                                       power_state.SHUTDOWN)
 
         self._update_state(context, instance_id)
 
@@ -1133,9 +1128,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
-                self.db.instance_set_state(context,
-                                           db_instance['id'],
-                                           vm_state)
+                self._update_state(context, db_instance['id'], vm_state)
 
             if vm_state == power_state.SHUTOFF:
                 # TODO(soren): This is what the compute manager does when you
