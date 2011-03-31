@@ -1,6 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 OpenStack LLC.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -16,12 +17,14 @@
 #    under the License.
 
 import imp
+import inspect
 import os
 import sys
 import routes
 import webob.dec
 import webob.exc
 
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import wsgi
@@ -32,6 +35,84 @@ LOG = logging.getLogger('extensions')
 
 
 FLAGS = flags.FLAGS
+
+
+class ExtensionDescriptor(object):
+    """Base class that defines the contract for extensions.
+
+    Note that you don't have to derive from this class to have a valid
+    extension; it is purely a convenience.
+
+    """
+
+    def get_name(self):
+        """The name of the extension.
+
+        e.g. 'Fox In Socks'
+
+        """
+        raise NotImplementedError()
+
+    def get_alias(self):
+        """The alias for the extension.
+
+        e.g. 'FOXNSOX'
+
+        """
+        raise NotImplementedError()
+
+    def get_description(self):
+        """Friendly description for the extension.
+
+        e.g. 'The Fox In Socks Extension'
+
+        """
+        raise NotImplementedError()
+
+    def get_namespace(self):
+        """The XML namespace for the extension.
+
+        e.g. 'http://www.fox.in.socks/api/ext/pie/v1.0'
+
+        """
+        raise NotImplementedError()
+
+    def get_updated(self):
+        """The timestamp when the extension was last updated.
+
+        e.g. '2011-01-22T13:25:27-06:00'
+
+        """
+        # NOTE(justinsb): Not sure of the purpose of this is, vs the XML NS
+        raise NotImplementedError()
+
+    def get_resources(self):
+        """List of extensions.ResourceExtension extension objects.
+
+        Resources define new nouns, and are accessible through URLs.
+
+        """
+        resources = []
+        return resources
+
+    def get_actions(self):
+        """List of extensions.ActionExtension extension objects.
+
+        Actions are verbs callable from the API.
+
+        """
+        actions = []
+        return actions
+
+    def get_response_extensions(self):
+        """List of extensions.ResponseExtension extension objects.
+
+        Response extensions are used to insert information into existing
+        response data.
+
+        """
+        response_exts = []
+        return response_exts
 
 
 class ActionExtensionController(wsgi.Controller):
@@ -94,45 +175,38 @@ class ExtensionController(wsgi.Controller):
         ext_data['description'] = ext.get_description()
         ext_data['namespace'] = ext.get_namespace()
         ext_data['updated'] = ext.get_updated()
-        ext_data['links'] = []  # TODO: implement extension links
+        ext_data['links'] = []  # TODO(dprince): implement extension links
         return ext_data
 
     def index(self, req):
         extensions = []
-        for alias, ext in self.extension_manager.extensions.iteritems():
+        for _alias, ext in self.extension_manager.extensions.iteritems():
             extensions.append(self._translate(ext))
         return dict(extensions=extensions)
 
     def show(self, req, id):
-        # NOTE: the extensions alias is used as the 'id' for show
+        # NOTE(dprince): the extensions alias is used as the 'id' for show
         ext = self.extension_manager.extensions[id]
         return self._translate(ext)
 
     def delete(self, req, id):
-        raise faults.Fault(exc.HTTPNotFound())
+        raise faults.Fault(webob.exc.HTTPNotFound())
 
     def create(self, req):
-        raise faults.Fault(exc.HTTPNotFound())
-
-    def delete(self, req, id):
-        raise faults.Fault(exc.HTTPNotFound())
+        raise faults.Fault(webob.exc.HTTPNotFound())
 
 
 class ExtensionMiddleware(wsgi.Middleware):
-    """
-    Extensions middleware that intercepts configured routes for extensions.
-    """
+    """Extensions middleware for WSGI."""
     @classmethod
     def factory(cls, global_config, **local_config):
-        """ paste factory """
+        """Paste factory."""
         def _factory(app):
             return cls(app, **local_config)
         return _factory
 
     def _action_ext_controllers(self, application, ext_mgr, mapper):
-        """
-        Return a dict of ActionExtensionController objects by collection
-        """
+        """Return a dict of ActionExtensionController-s by collection."""
         action_controllers = {}
         for action in ext_mgr.get_actions():
             if not action.collection in action_controllers.keys():
@@ -151,9 +225,7 @@ class ExtensionMiddleware(wsgi.Middleware):
         return action_controllers
 
     def _response_ext_controllers(self, application, ext_mgr, mapper):
-        """
-        Return a dict of ResponseExtensionController objects by collection
-        """
+        """Returns a dict of ResponseExtensionController-s by collection."""
         response_ext_controllers = {}
         for resp_ext in ext_mgr.get_response_extensions():
             if not resp_ext.key in response_ext_controllers.keys():
@@ -212,18 +284,18 @@ class ExtensionMiddleware(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        """
-        Route the incoming request with router.
-        """
+        """Route the incoming request with router."""
         req.environ['extended.app'] = self.application
         return self._router
 
     @staticmethod
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def _dispatch(req):
-        """
+        """Dispatch the request.
+
         Returns the routed WSGI app's response or defers to the extended
         application.
+
         """
         match = req.environ['wsgiorg.routing_args'][1]
         if not match:
@@ -233,10 +305,11 @@ class ExtensionMiddleware(wsgi.Middleware):
 
 
 class ExtensionManager(object):
-    """
-    Load extensions from the configured extension path.
-    See nova/tests/api/openstack/extensions/foxinsocks.py for an example
-    extension implementation.
+    """Load extensions from the configured extension path.
+
+    See nova/tests/api/openstack/extensions/foxinsocks/extension.py for an
+    example extension implementation.
+
     """
 
     def __init__(self, path):
@@ -244,12 +317,10 @@ class ExtensionManager(object):
 
         self.path = path
         self.extensions = {}
-        self._load_extensions()
+        self._load_all_extensions()
 
     def get_resources(self):
-        """
-        returns a list of ResourceExtension objects
-        """
+        """Returns a list of ResourceExtension objects."""
         resources = []
         resources.append(ResourceExtension('extensions',
                                             ExtensionController(self)))
@@ -257,40 +328,37 @@ class ExtensionManager(object):
             try:
                 resources.extend(ext.get_resources())
             except AttributeError:
-                # NOTE: Extension aren't required to have resource extensions
+                # NOTE(dprince): Extension aren't required to have resource
+                # extensions
                 pass
         return resources
 
     def get_actions(self):
-        """
-        returns a list of ActionExtension objects
-        """
+        """Returns a list of ActionExtension objects."""
         actions = []
         for alias, ext in self.extensions.iteritems():
             try:
                 actions.extend(ext.get_actions())
             except AttributeError:
-                # NOTE: Extension aren't required to have action extensions
+                # NOTE(dprince): Extension aren't required to have action
+                # extensions
                 pass
         return actions
 
     def get_response_extensions(self):
-        """
-        returns a list of ResponseExtension objects
-        """
+        """Returns a list of ResponseExtension objects."""
         response_exts = []
         for alias, ext in self.extensions.iteritems():
             try:
                 response_exts.extend(ext.get_response_extensions())
             except AttributeError:
-                # NOTE: Extension aren't required to have response extensions
+                # NOTE(dprince): Extension aren't required to have response
+                # extensions
                 pass
         return response_exts
 
     def _check_extension(self, extension):
-        """
-        Checks for required methods in extension objects.
-        """
+        """Checks for required methods in extension objects."""
         try:
             LOG.debug(_('Ext name: %s'), extension.get_name())
             LOG.debug(_('Ext alias: %s'), extension.get_alias())
@@ -300,43 +368,59 @@ class ExtensionManager(object):
         except AttributeError as ex:
             LOG.exception(_("Exception loading extension: %s"), unicode(ex))
 
-    def _load_extensions(self):
-        """
+    def _load_all_extensions(self):
+        """Load extensions from the configured path.
+
         Load extensions from the configured path. The extension name is
         constructed from the module_name. If your extension module was named
         widgets.py the extension class within that module should be
         'Widgets'.
 
+        In addition, extensions are loaded from the 'contrib' directory.
+
         See nova/tests/api/openstack/extensions/foxinsocks.py for an example
         extension implementation.
-        """
-        if not os.path.exists(self.path):
-            return
 
-        for f in os.listdir(self.path):
+        """
+        if os.path.exists(self.path):
+            self._load_all_extensions_from_path(self.path)
+
+        contrib_path = os.path.join(os.path.dirname(__file__), "contrib")
+        if os.path.exists(contrib_path):
+            self._load_all_extensions_from_path(contrib_path)
+
+    def _load_all_extensions_from_path(self, path):
+        for f in os.listdir(path):
             LOG.audit(_('Loading extension file: %s'), f)
             mod_name, file_ext = os.path.splitext(os.path.split(f)[-1])
-            ext_path = os.path.join(self.path, f)
+            ext_path = os.path.join(path, f)
             if file_ext.lower() == '.py' and not mod_name.startswith('_'):
                 mod = imp.load_source(mod_name, ext_path)
                 ext_name = mod_name[0].upper() + mod_name[1:]
                 new_ext_class = getattr(mod, ext_name, None)
                 if not new_ext_class:
                     LOG.warn(_('Did not find expected name '
-                               '"%(ext_name)" in %(file)s'),
+                               '"%(ext_name)s" in %(file)s'),
                              {'ext_name': ext_name,
-                             'file': ext_path})
+                              'file': ext_path})
                     continue
                 new_ext = new_ext_class()
                 self._check_extension(new_ext)
-                self.extensions[new_ext.get_alias()] = new_ext
+                self._add_extension(new_ext)
+
+    def _add_extension(self, ext):
+        alias = ext.get_alias()
+        LOG.audit(_('Loaded extension: %s'), alias)
+
+        self._check_extension(ext)
+
+        if alias in self.extensions:
+            raise exception.Error("Found duplicate extension: %s" % alias)
+        self.extensions[alias] = ext
 
 
 class ResponseExtension(object):
-    """
-    ResponseExtension objects can be used to add data to responses from
-    core nova OpenStack API controllers.
-    """
+    """Add data to responses from core nova OpenStack API controllers."""
 
     def __init__(self, method, url_route, handler):
         self.url_route = url_route
@@ -346,10 +430,7 @@ class ResponseExtension(object):
 
 
 class ActionExtension(object):
-    """
-    ActionExtension objects can be used to add custom actions to core nova
-    nova OpenStack API controllers.
-    """
+    """Add custom actions to core nova OpenStack API controllers."""
 
     def __init__(self, collection, action_name, handler):
         self.collection = collection
@@ -358,10 +439,7 @@ class ActionExtension(object):
 
 
 class ResourceExtension(object):
-    """
-    ResourceExtension objects can be used to add top level resources
-    to the OpenStack API in nova.
-    """
+    """Add top level resources to the OpenStack API in nova."""
 
     def __init__(self, collection, controller, parent=None,
                  collection_actions={}, member_actions={}):

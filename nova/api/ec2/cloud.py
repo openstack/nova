@@ -536,6 +536,13 @@ class CloudController(object):
         return self.compute_api.get_ajax_console(context,
                                                  instance_id=instance_id)
 
+    def get_vnc_console(self, context, instance_id, **kwargs):
+        """Returns vnc browser url.  Used by OS dashboard."""
+        ec2_id = instance_id
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
+        return self.compute_api.get_vnc_console(context,
+                                                instance_id=instance_id)
+
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
             volumes = []
