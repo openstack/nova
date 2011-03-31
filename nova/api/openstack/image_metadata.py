@@ -18,6 +18,7 @@
 from webob import exc
 
 from nova import flags
+from nova import quota
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
@@ -38,6 +39,15 @@ class Controller(wsgi.Controller):
             image = self.image_service.show(context, image_id)
         metadata = image.get('properties', {})
         return metadata
+
+    def _check_quota_limit(self, context, metadata):
+        if metadata is None:
+            return
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            expl = ("Image metadata limit exceeded")
+            raise exc.HTTPBadRequest(explanation=expl)
 
     def index(self, req, image_id):
         """Returns the list of metadata for a given instance"""
@@ -61,6 +71,7 @@ class Controller(wsgi.Controller):
         if 'metadata' in body:
             for key, value in body['metadata'].iteritems():
                 metadata[key] = value
+        self._check_quota_limit(context, metadata)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
         return dict(metadata=metadata)
@@ -77,6 +88,7 @@ class Controller(wsgi.Controller):
         img = self.image_service.show(context, image_id)
         metadata = self._get_metadata(context, image_id, img)
         metadata[id] = body[id]
+        self._check_quota_limit(context, metadata)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
 
