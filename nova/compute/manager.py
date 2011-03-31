@@ -46,13 +46,13 @@ import functools
 
 from eventlet import greenthread
 
-from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import power_state
 from nova.virt import driver
 
@@ -1037,14 +1037,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  'host': host})
 
         if dest:
-            # NOTE(noguchimn): We set image_service here
-            #                  not to import an image service object.
-            compute_api = compute.API(image_service=1)
-        for volume in instance_ref['volumes']:
-            volume_id = volume['id']
+            volume_api = volume.API()
+        for volume_ref in instance_ref['volumes']:
+            volume_id = volume_ref['id']
             self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
             if dest:
-                compute_api.remove_volume(ctxt, volume_id, dest)
+                volume_api.remove_from_compute(ctxt, volume_id, dest)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
