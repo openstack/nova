@@ -323,7 +323,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.driver.destroy(instance_ref)
 
-        #self._update_state(context, instance_id)
+        self._update_state(context, instance_id)
         instance_ref.image_id = image_id
 
         self.driver.spawn(instance_ref)
