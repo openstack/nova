@@ -80,9 +80,10 @@ class S3ImageService(service.BaseImageService):
 
     @classmethod
     def _is_visible(cls, context, image):
+
         return (context.is_admin
-                or context.project_id == image['properties']['owner_id']
-                or image['properties']['is_public'] == 'True')
+                or context.project_id == image['properties'].get('owner_id')
+                or str(image['properties'].get('is_public')) == 'True')
 
     @classmethod
     def _filter(cls, context, images):
