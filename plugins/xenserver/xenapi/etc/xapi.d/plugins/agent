@@ -23,6 +23,7 @@
 #
 
 import base64
+import commands
 try:
     import json
 except ImportError:
@@ -32,7 +33,6 @@ import random
 import subprocess
 import tempfile
 import time
-import uuid
 
 import XenAPIPlugin
 
@@ -158,7 +158,7 @@ def _agent_has_method(self, method):
         self._agent_methods = []
     if not self._agent_methods:
         # Haven't been defined
-        tmp_id = str(uuid.uuid4())
+        tmp_id = commands.getoutput("uuidgen")
         dct = {}
         dct["value"] = json.dumps({"name": "features", "value": ""})
         dct["path"] = "data/host/%s" % tmp_id
