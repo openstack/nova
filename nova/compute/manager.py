@@ -152,9 +152,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             state = power_state.FAILED
         self.db.instance_set_state(context, instance_id, state)
 
-    def _update_launched_at(self, context, instance_id):
+    def _update_launched_at(self, context, instance_id, launched_at=None):
         """Update the launched_at parameter of the given instance."""
-        data = {'launched_at': datetime.datetime.utcnow()}
+        data = {'launched_at': launched_at or datetime.datetime.utcnow()}
+        self.db.instance_update(context, instance_id, data)
+
+    def _update_image_id(self, context, instance_id, image_id):
+        """Update the image_id for the given instance."""
+        data = {'image_id': image_id}
         self.db.instance_update(context, instance_id, data)
 
     def get_console_topic(self, context, **kwargs):
@@ -298,7 +303,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def rebuild_instance(self, context, instance_id):
+    def rebuild_instance(self, context, instance_id, image_id, metadata):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -306,6 +311,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
+        :param image_id: Image identifier (integer)
+        :param metadata: Metadata dictionary
         """
         context = context.elevated()
 
@@ -314,11 +321,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # TODO(blamar): Detach volumes prior to rebuild.
 
-        # NOTE(blamar): The driver interface seems to indicate `destroy` is an
-        #               async call, but the implementations look sync...
         self.driver.destroy(instance_ref)
+
+        #self._update_state(context, instance_id)
+        instance_ref.image_id = image_id
+
         self.driver.spawn(instance_ref)
 
+        self._update_image_id(context, instance_id, image_id)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
 
