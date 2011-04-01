@@ -1104,7 +1104,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_instance is None:
                 # NOTE(justinsb): We have to be very careful here, because a
                 # concurrent operation could be in progress (e.g. a spawn)
-                if db_state == power_state.NOSTATE:
+                if db_state == power_state.BUILDING:
                     # Assume that NOSTATE => spawning
                     # TODO(justinsb): This does mean that if we crash during a
                     # spawn, the machine will never leave the spawning state,
