@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,26 +25,23 @@ import subprocess
 import sys
 
 
-PNIC_NAME="eth1"
-XEN_BRIDGE="xenbr1"
-
-def main(dom_id, command, only_this_vif=None):
-    pnic_ofport = execute('/usr/bin/ovs-ofctl', 'get', 'Interface', PNIC_NAME,
-                          'ofport', return_stdout=True)
+def main(phys_dev_name, bridge_name):
+    pnic_ofport = execute('/usr/bin/ovs-vsctl', 'get', 'Interface',
+                          phys_dev_name, 'ofport', return_stdout=True)
     ovs_ofctl = lambda *rule: execute('/usr/bin/ovs-ofctl', *rule)
 
     # clear all flows
-    ovs_ofctl('del-flows', XEN_BRIDGE)
+    ovs_ofctl('del-flows', bridge_name)
 
     # these flows are lower priority than all VM-specific flows.
 
     # allow all traffic from the physical NIC, as it is trusted (i.e., from a
     # filtered vif, or from the physical infrastructure
-    ovs_ofctl('add-flow', XEN_BRIDGE,
+    ovs_ofctl('add-flow', bridge_name,
               "priority=2,in_port=%s,action=normal" % pnic_ofport)
 
     # default drop
-    ovs_ofctl('add-flow', XEN_BRIDGE, 'priority=1,action=drop')
+    ovs_ofctl('add-flow', bridge_name, 'priority=1,action=drop')
 
 
 def execute(*command, return_stdout=False):
@@ -60,9 +57,12 @@ def execute(*command, return_stdout=False):
 
 
 if __name__ == "__main__":
-    if sys.argv:
+    if len(sys.argv) != 3:
+        script_name = os.path.basename(sys.argv[0])
         print "This script configures base ovs flows."
-        print "usage: %s" % os.path.basename(sys.argv[0])
+        print "usage: %s phys-dev-name bridge-name" % script_name
+        print "   ex: %s eth2 xenbr2" % script_name
         sys.exit(1)
     else:
-        main()
+        phys_dev_name, bridge_name = sys.argv[1:3]
+        main(phys_dev_name, bridge_name)

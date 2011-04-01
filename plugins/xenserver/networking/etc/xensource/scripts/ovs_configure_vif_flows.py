@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010-2011 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -28,6 +28,7 @@ import sys
 import simplejson as json
 
 
+# FIXME(dubs) this needs to be able to be passed in, check xen vif script
 XEN_BRIDGE = 'xenbr1'
 OVS_OFCTL = '/usr/bin/ovs-ofctl'
 
@@ -62,18 +63,14 @@ class OvsFlow():
             self.add(rule % self.params)
 
 
-def main(dom_id, command, net, only_this_vif=None):
-    # FIXME(dubs) what to do when only_this_vif is None
-    vif_ofport = execute('/usr/bin/ovs-ofctl', 'get', 'Interface',
-                         only_this_vif, 'ofport', return_stdout=True)
-
+def main(dom_id, command, net_type, only_this_vif=None):
     xsls = execute('/usr/bin/xenstore-ls',
                    '/local/domain/%s/vm-data/networking' % dom_id,
                    return_stdout=True)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsread = execute('/usr/bin/enstore-read',
+        xsread = execute('/usr/bin/xenstore-read',
                          '/local/domain/%s/vm-data/networking/%s' %
                          (dom_id, mac), True)
         data = json.loads(xsread)
@@ -83,113 +80,109 @@ def main(dom_id, command, net, only_this_vif=None):
             vif = "vif%s.1" % dom_id
 
         if (only_this_vif is None) or (vif == only_this_vif):
-            params = dict(VIF=vif, MAC=data['mac'])
-            if net in ('ipv4', 'all'):
+            vif_ofport = execute('/usr/bin/ovs-vsctl', 'get', 'Interface',
+                                 vif, 'ofport', return_stdout=True)
+
+            params = dict(VIF_NAME=vif,
+                          VIF_MAC=data['mac'],
+                          VIF_OFPORT=vif_ofport)
+            if net_type in ('ipv4', 'all'):
                 for ip4 in data['ips']:
-                    params.update({'IP': ip4['ip']})
+                    params.update({'VIF_IPv4': ip4['ip']})
                     apply_ovs_ipv4_flows(command, params)
-            if net in ('ipv6', 'all'):
+            if net_type in ('ipv6', 'all'):
                 for ip6 in data['ip6s']:
-                    params.update({'IP': ip6['ip']})
+                    params.update({'VIF_GLOBAL_IPv6': ip6['ip']})
+                    # TODO(dubs) calculate v6 link local addr
+                    #params.update({'VIF_LOCAL_IPv6': XXX})
                     apply_ovs_ipv6_flows(command, params)
 
-
-# usage: <vif device> <vif mac> <vif v4 IP> <vif v6 global IP> <vif v6 linklocal IP>
-# XEN_BRIDGE=xenbr1
-# VIF_NAME=$1
-# VIF_MAC=$2
-# VIF_IPv4=$3
-# VIF_GLOBAL_IPv6=$4
-# VIF_LOCAL_IPv6=$5
-
-# # find the openflow port number associated with the vif interface
-# VIF_OFPORT=`ovs-vsctl get Interface $VIF_NAME ofport`
 
 def apply_ovs_ipv4_flows(command, params):
     flow = OvsFlow(command, params)
 
     # allow valid ARP outbound (both request / reply)
-    flow.apply("priority=3,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,arp,"
-               "arp_sha=$VIF_MAC,nw_src=$VIF_IPv4,action=normal")
+    flow.apply("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,arp,"
+               "arp_sha=%(VIF_MAC)s,nw_src=%(VIF_IPv4)s,action=normal")
 
-    flow.apply("priority=3,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,arp,"
-               "arp_sha=$VIF_MAC,nw_src=0.0.0.0,action=normal")
+    flow.apply("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,arp,"
+               "arp_sha=%(VIF_MAC)s,nw_src=0.0.0.0,action=normal")
 
     # allow valid IPv4 outbound
-    flow.apply("priority=3,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,ip,"
-               "nw_src=$VIF_IPv4,action=normal")
+    flow.apply("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,ip,"
+               "nw_src=%(VIF_IPv4)s,action=normal")
 
 
 def apply_ovs_ipv6_flows(command, params):
     flow = OvsFlow(command, params)
 
     # allow valid IPv6 ND outbound (are both global and local IPs needed?)
-    # Neighbor Solicitation 
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_LOCAL_IPv6,icmp_type=135,nd_sll=$VIF_MAC,"
+    # Neighbor Solicitation
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=135,nd_sll=%(VIF_MAC)s,"
                "action=normal")
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_LOCAL_IPv6,icmp_type=135,action=normal")
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,icmp_type=135,nd_sll=$VIF_MAC,"
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=135,action=normal")
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=135,nd_sll=%(VIF_MAC)s,"
                "action=normal")
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,icmp_type=135,action=normal")
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=135,action=normal")
 
     # Neighbor Advertisement
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_LOCAL_IPv6,icmp_type=136,"
-               "nd_target=$VIF_LOCAL_IPv6,action=normal")
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_LOCAL_IPv6,icmp_type=136,action=normal")
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,icmp_type=136,"
-               "nd_target=$VIF_GLOBAL_IPv6,action=normal")
-    flow.apply("priority=6,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,icmp6,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,icmp_type=136,action=normal")
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=136,"
+               "nd_target=%(VIF_LOCAL_IPv6)s,action=normal")
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=136,action=normal")
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=136,"
+               "nd_target=%(VIF_GLOBAL_IPv6)s,action=normal")
+    flow.apply("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=136,action=normal")
 
     # drop all other neighbor discovery (required because we permit all icmp6 below) 
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=135,action=drop")
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=136,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=135,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=136,action=drop")
 
     # do not allow sending specifc ICMPv6 types
     # Router Advertisement
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=134,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=134,action=drop")
     # Redirect Gateway
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=137,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=137,action=drop")
     # Mobile Prefix Solicitation
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=146,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=146,action=drop")
     # Mobile Prefix Advertisement
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=147,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=147,action=drop")
     # Multicast Router Advertisement
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=151,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=151,action=drop")
     # Multicast Router Solicitation
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=152,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=152,action=drop")
     # Multicast Router Termination
-    flow.apply("priority=5,in_port=$VIF_OFPORT,icmp6,icmp_type=153,action=drop")
+    flow.apply("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=153,action=drop")
 
     # allow valid IPv6 outbound, by type
-    flow.apply("priority=4,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,icmp6,action=normal")
-    flow.apply("priority=4,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,"
-               "ipv6_src=$VIF_LOCAL_IPv6,icmp6,action=normal")
-    flow.apply("priority=4,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,tcp6,action=normal")
-    flow.apply("priority=4,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,"
-               "ipv6_src=$VIF_LOCAL_IPv6,tcp6,action=normal")
-    flow.apply("priority=4,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,"
-               "ipv6_src=$VIF_GLOBAL_IPv6,udp6,action=normal")
-    flow.apply("priority=4,in_port=$VIF_OFPORT,dl_src=$VIF_MAC,"
-               "ipv6_src=$VIF_LOCAL_IPv6,udp6,action=normal")
+    flow.apply("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp6,action=normal")
+    flow.apply("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp6,action=normal")
+    flow.apply("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,tcp6,action=normal")
+    flow.apply("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,tcp6,action=normal")
+    flow.apply("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
+               "ipv6_src=%(VIF_GLOBAL_IPv6)s,udp6,action=normal")
+    flow.apply("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
+               "ipv6_src=%(VIF_LOCAL_IPv6)s,udp6,action=normal")
     # all else will be dropped ...
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "usage: %s dom_id online|offline ipv4|ipv6|all [vif]" % \
+        print "usage: %s dom_id online|offline ipv4|ipv6|all [vif_name]" % \
                os.path.basename(sys.argv[0])
         sys.exit(1)
     else:
-        dom_id, command, net = sys.argv[1:4]
-        vif = len(sys.argv) == 5 and sys.argv[4] or None
-        main(dom_id, command, net, vif)
+        dom_id, command, net_type = sys.argv[1:4]
+        vif_name = len(sys.argv) == 5 and sys.argv[4] or None
+        main(dom_id, command, net_type, vif_name)

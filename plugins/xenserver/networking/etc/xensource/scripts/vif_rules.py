@@ -36,7 +36,7 @@ def main(dom_id, command, only_this_vif=None):
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsread = execute('/usr/bin/enstore-read',
+        xsread = execute('/usr/bin/xenstore-read',
                          '/local/domain/%s/vm-data/networking/%s' %
                          (dom_id, mac), True)
         data = json.loads(xsread)
