@@ -757,20 +757,21 @@ class CloudController(object):
             iterator = db.floating_ip_get_all_by_project(context,
                                                          context.project_id)
         for floating_ip_ref in iterator:
-            if floating_ip_ref['project_id'] is not None:
-                address = floating_ip_ref['address']
-                ec2_id = None
-                if (floating_ip_ref['fixed_ip']
-                    and floating_ip_ref['fixed_ip']['instance']):
-                    instance_id = floating_ip_ref['fixed_ip']['instance']['id']
-                    ec2_id = ec2utils.id_to_ec2_id(instance_id)
-                address_rv = {'public_ip': address,
-                              'instance_id': ec2_id}
-                if context.is_admin:
-                    details = "%s (%s)" % (address_rv['instance_id'],
-                                           floating_ip_ref['project_id'])
-                    address_rv['instance_id'] = details
-                addresses.append(address_rv)
+            if floating_ip_ref['project_id'] is None:
+                continue
+            address = floating_ip_ref['address']
+            ec2_id = None
+            if (floating_ip_ref['fixed_ip']
+                and floating_ip_ref['fixed_ip']['instance']):
+                instance_id = floating_ip_ref['fixed_ip']['instance']['id']
+                ec2_id = ec2utils.id_to_ec2_id(instance_id)
+            address_rv = {'public_ip': address,
+                          'instance_id': ec2_id}
+            if context.is_admin:
+                details = "%s (%s)" % (address_rv['instance_id'],
+                                       floating_ip_ref['project_id'])
+                address_rv['instance_id'] = details
+            addresses.append(address_rv)
         return {'addressesSet': addresses}
 
     def allocate_address(self, context, **kwargs):
