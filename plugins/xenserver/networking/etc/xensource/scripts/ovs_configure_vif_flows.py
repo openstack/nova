@@ -36,7 +36,7 @@ XEN_BRIDGE = 'xenbr0'
 OVS_OFCTL = '/usr/bin/ovs-ofctl'
 
 
-class OvsFlow():
+class OvsFlow(object):
     def __init__(self, command, params, bridge=None):
         self.command = command
         self.params = params

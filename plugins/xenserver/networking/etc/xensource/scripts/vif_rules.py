@@ -29,16 +29,18 @@ import sys
 import simplejson as json
 
 
+from novalib import execute, execute_get_output
+
+
 def main(dom_id, command, only_this_vif=None):
-    xsls = execute('/usr/bin/xenstore-ls',
-                   '/local/domain/%s/vm-data/networking' % dom_id,
-                   return_stdout=True)
+    xsls = execute_get_output('/usr/bin/xenstore-ls',
+                              '/local/domain/%s/vm-data/networking' % dom_id)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsread = execute('/usr/bin/xenstore-read',
-                         '/local/domain/%s/vm-data/networking/%s' %
-                         (dom_id, mac), True)
+        xsread = execute_get_output('/usr/bin/xenstore-read',
+                                    '/local/domain/%s/vm-data/networking/%s' %
+                                    (dom_id, mac))
         data = json.loads(xsread)
         for ip in data['ips']:
             if data["label"] == "public":
@@ -52,17 +54,6 @@ def main(dom_id, command, only_this_vif=None):
                 apply_arptables_rules(command, params)
                 apply_iptables_rules(command, params)
 
-
-def execute(*command, return_stdout=False):
-    devnull = open(os.devnull, 'w')
-    command = map(str, command)
-    proc = subprocess.Popen(command, close_fds=True,
-                            stdout=subprocess.PIPE, stderr=devnull)
-    devnull.close()
-    if return_stdout:
-        return proc.stdout.read()
-    else:
-        return None
 
 # A note about adding rules:
 #   Whenever we add any rule to iptables, arptables or ebtables we first
