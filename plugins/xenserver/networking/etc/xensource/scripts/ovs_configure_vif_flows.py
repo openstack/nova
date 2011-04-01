@@ -29,7 +29,7 @@ import simplejson as json
 
 
 # FIXME(dubs) this needs to be able to be passed in, check xen vif script
-XEN_BRIDGE = 'xenbr1'
+XEN_BRIDGE = 'xenbr0'
 OVS_OFCTL = '/usr/bin/ovs-ofctl'
 
 
@@ -86,6 +86,7 @@ def main(dom_id, command, net_type, only_this_vif=None):
             params = dict(VIF_NAME=vif,
                           VIF_MAC=data['mac'],
                           VIF_OFPORT=vif_ofport)
+
             if net_type in ('ipv4', 'all'):
                 for ip4 in data['ips']:
                     params.update({'VIF_IPv4': ip4['ip']})
