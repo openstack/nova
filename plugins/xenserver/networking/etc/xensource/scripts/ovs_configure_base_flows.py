@@ -25,9 +25,12 @@ import subprocess
 import sys
 
 
+from novalib import execute, execute_get_output
+
+
 def main(phys_dev_name, bridge_name):
-    pnic_ofport = execute('/usr/bin/ovs-vsctl', 'get', 'Interface',
-                          phys_dev_name, 'ofport', return_stdout=True)
+    pnic_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get', 'Interface',
+                                     phys_dev_name, 'ofport')
     ovs_ofctl = lambda *rule: execute('/usr/bin/ovs-ofctl', *rule)
 
     # clear all flows
@@ -44,24 +47,12 @@ def main(phys_dev_name, bridge_name):
     ovs_ofctl('add-flow', bridge_name, 'priority=1,action=drop')
 
 
-def execute(*command, return_stdout=False):
-    devnull = open(os.devnull, 'w')
-    command = map(str, command)
-    proc = subprocess.Popen(command, close_fds=True,
-                            stdout=subprocess.PIPE, stderr=devnull)
-    devnull.close()
-    if return_stdout:
-        return proc.stdout.read()
-    else:
-        return None
-
-
 if __name__ == "__main__":
     if len(sys.argv) != 3:
         script_name = os.path.basename(sys.argv[0])
         print "This script configures base ovs flows."
         print "usage: %s phys-dev-name bridge-name" % script_name
-        print "   ex: %s eth2 xenbr2" % script_name
+        print "   ex: %s eth0 xenbr0" % script_name
         sys.exit(1)
     else:
         phys_dev_name, bridge_name = sys.argv[1:3]

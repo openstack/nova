@@ -28,21 +28,12 @@ import sys
 import simplejson as json
 
 
+from novalib import execute, execute_get_output
+
+
 # FIXME(dubs) this needs to be able to be passed in, check xen vif script
 XEN_BRIDGE = 'xenbr0'
 OVS_OFCTL = '/usr/bin/ovs-ofctl'
-
-
-def execute(*command, return_stdout=False):
-    devnull = open(os.devnull, 'w')
-    command = map(str, command)
-    proc = subprocess.Popen(command, close_fds=True,
-                            stdout=subprocess.PIPE, stderr=devnull)
-    devnull.close()
-    if return_stdout:
-        return proc.stdout.read()
-    else:
-        return None
 
 
 class OvsFlow():
@@ -64,15 +55,14 @@ class OvsFlow():
 
 
 def main(dom_id, command, net_type, only_this_vif=None):
-    xsls = execute('/usr/bin/xenstore-ls',
-                   '/local/domain/%s/vm-data/networking' % dom_id,
-                   return_stdout=True)
+    xsls = execute_get_output('/usr/bin/xenstore-ls',
+                              '/local/domain/%s/vm-data/networking' % dom_id)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
 
     for mac in macs:
-        xsread = execute('/usr/bin/xenstore-read',
-                         '/local/domain/%s/vm-data/networking/%s' %
-                         (dom_id, mac), True)
+        xsread = execute_get_output('/usr/bin/xenstore-read',
+                                    '/local/domain/%s/vm-data/networking/%s' %
+                                    (dom_id, mac))
         data = json.loads(xsread)
         if data["label"] == "public":
             vif = "vif%s.0" % dom_id
@@ -80,8 +70,8 @@ def main(dom_id, command, net_type, only_this_vif=None):
             vif = "vif%s.1" % dom_id
 
         if (only_this_vif is None) or (vif == only_this_vif):
-            vif_ofport = execute('/usr/bin/ovs-vsctl', 'get', 'Interface',
-                                 vif, 'ofport', return_stdout=True)
+            vif_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
+                                            'Interface', vif, 'ofport')
 
             params = dict(VIF_NAME=vif,
                           VIF_MAC=data['mac'],
