@@ -35,6 +35,7 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 import boto
 import nova
 from boto.ec2.connection import EC2Connection
+import euca2ools
 from euca2ools import Euca2ool, InstanceValidationError, Util
 
 usage_string = """
