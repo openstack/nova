@@ -93,7 +93,12 @@ def override_connect_ec2(aws_access_key_id=None,
                              aws_secret_access_key, **kwargs)
 
 # override boto's connect_ec2 method, so that we can use NovaEC2Connection
+# (This is for Euca2ools 1.2)
 boto.connect_ec2 = override_connect_ec2
+
+# Override Euca2ools' EC2Connection class (which it gets from boto)
+# (This is for Euca2ools 1.3)
+euca2ools.EC2Connection = NovaEC2Connection
 
 
 def usage(status=1):
