@@ -31,9 +31,7 @@ from nova import test
 from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
-from nova.compute import manager as compute_manager
 from nova.compute import power_state
-from nova.db.sqlalchemy import models
 from nova.virt import libvirt_conn
 
 libvirt = None
@@ -269,7 +267,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(len(target) > 0)
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
-                           rescue=False):
+                           rescue=False, network_info=None):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
         instance_ref = db.instance_create(user_context, instance)
@@ -327,19 +325,13 @@ class LibvirtConnTestCase(test.TestCase):
                     check = (lambda t: t.find('./os/initrd'), None)
                 check_list.append(check)
 
+        parameter = './devices/interface/filterref/parameter'
         common_checks = [
             (lambda t: t.find('.').tag, 'domain'),
-            (lambda t: t.find(
-                './devices/interface/filterref/parameter').get('name'), 'IP'),
-            (lambda t: t.find(
-                './devices/interface/filterref/parameter').get(
-                    'value'), '10.11.12.13'),
-            (lambda t: t.findall(
-                './devices/interface/filterref/parameter')[1].get(
-                    'name'), 'DHCPSERVER'),
-            (lambda t: t.findall(
-                './devices/interface/filterref/parameter')[1].get(
-                    'value'), '10.0.0.1'),
+            (lambda t: t.find(parameter).get('name'), 'IP'),
+            (lambda t: t.find(parameter).get('value'), '10.11.12.13'),
+            (lambda t: t.findall(parameter)[1].get('name'), 'DHCPSERVER'),
+            (lambda t: t.findall(parameter)[1].get('value'), '10.0.0.1'),
             (lambda t: t.find('./devices/serial/source').get(
                 'path').split('/')[1], 'console.log'),
             (lambda t: t.find('./memory').text, '2097152')]

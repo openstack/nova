@@ -936,7 +936,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    def to_xml(self, instance, rescue=False, network_info=None):
+    def _prepare_xml_info(self, instance, rescue=False, network_info=None):
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
 
@@ -947,8 +947,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(network,
-                                              mapping))
+            nics.append(self._get_nic_for_xml(network, mapping))
         # FIXME(vish): stick this in db
         instance_type_name = instance['instance_type']
         instance_type = instance_types.get_instance_type(instance_type_name)
@@ -979,10 +978,13 @@ class LibvirtConnection(driver.ComputeDriver):
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
             xml_info['disk'] = xml_info['basepath'] + "/disk"
+            
+        return xml_info
 
+    def to_xml(self, instance, rescue=False, network_info=None):
+        xml_info = self._prepare_xml_info(instance, rescue, network_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        LOG.debug(_('instance %s: finished toXML method'),
-                        instance['name'])
+        LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml
 
     def get_info(self, instance_name):
