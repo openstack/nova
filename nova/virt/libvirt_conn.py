@@ -908,7 +908,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 values.extend([("PROJNETV6", net_v6),
                                ("PROJMASKV6", prefixlen_v6)])
 
-            extra_params = "".join([template % value for value in values])         
+            extra_params = "".join([template % value for value in values])
         else:
             extra_params = "\n"
 
@@ -968,7 +968,6 @@ class LibvirtConnection(driver.ComputeDriver):
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
             xml_info['disk'] = xml_info['basepath'] + "/disk"
-            
         return xml_info
 
     def to_xml(self, instance, rescue=False, network_info=None):

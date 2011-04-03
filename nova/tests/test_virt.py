@@ -192,7 +192,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         return db.service_create(context.get_admin_context(), service_ref)
 
-
     def _create_network_info(self, count=1):
         fake = 'fake'
         fake_ip = '0.0.0.0/0'
@@ -224,6 +223,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_get_nic_for_xml(self):
         conn = libvirt_conn.LibvirtConnection(True)
         network, mapping = self._create_network_info()[0]
+        backup = FLAGS.use_ipv6
         FLAGS.use_ipv6 = False
         params_1 = conn._get_nic_for_xml(network, mapping)['extra_params']
         FLAGS.use_ipv6 = True
@@ -232,6 +232,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(params_1.find('PROJMASKV6') == -1)
         self.assertTrue(params_2.find('PROJNETV6') > -1)
         self.assertTrue(params_2.find('PROJMASKV6') > -1)
+        FLAGS.use_ipv6 = backup
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
@@ -267,6 +268,15 @@ class LibvirtConnTestCase(test.TestCase):
     def test_lxc_container_and_uri(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
+
+    def test_multi_nic(self):
+        instance_data = dict(self.test_instance)
+        network_info = self._create_network_info(2)
+        conn = libvirt_conn.LibvirtConnection(True)
+        instance_ref = db.instance_create(self.context, instance_data)
+        xml = conn.to_xml(instance_ref, False, network_info)
+        tree = xml_to_tree(xml)
+        self.assertEquals(len(tree.findall("./devices/interface")), 2)
 
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(project=self.project,
@@ -308,7 +318,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(len(target) > 0)
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
-                           rescue=False, network_info=None):
+                           rescue=False):
         user_context = context.RequestContext(project=self.project,
                                               user=self.user)
         instance_ref = db.instance_create(user_context, instance)
