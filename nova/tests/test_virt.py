@@ -192,6 +192,47 @@ class LibvirtConnTestCase(test.TestCase):
 
         return db.service_create(context.get_admin_context(), service_ref)
 
+
+    def _create_network_info(self, count=1):
+        fake = 'fake'
+        fake_ip = '0.0.0.0/0'
+        network = {'gateway': fake,
+                   'gateway_v6': fake,
+                   'bridge': fake,
+                   'cidr': fake_ip,
+                   'cidr_v6': fake_ip}
+        mapping = {'mac': fake,
+                   'ips': [{'ip': fake_ip}]}
+
+        return [(network, mapping) for x in xrange(0, count)]
+
+    def test_preparing_xml_info(self):
+        conn = libvirt_conn.LibvirtConnection(True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        result = conn._prepare_xml_info(instance_ref, False)
+        self.assertFalse(result['nics'])
+
+        result = conn._prepare_xml_info(instance_ref, False,
+                                        self._create_network_info())
+        self.assertTrue(len(result['nics']) == 1)
+
+        result = conn._prepare_xml_info(instance_ref, False,
+                                        self._create_network_info(2))
+        self.assertTrue(len(result['nics']) == 2)
+
+    def test_get_nic_for_xml(self):
+        conn = libvirt_conn.LibvirtConnection(True)
+        network, mapping = self._create_network_info()[0]
+        FLAGS.use_ipv6 = False
+        params_1 = conn._get_nic_for_xml(network, mapping)['extra_params']
+        FLAGS.use_ipv6 = True
+        params_2 = conn._get_nic_for_xml(network, mapping)['extra_params']
+        self.assertTrue(params_1.find('PROJNETV6') == -1)
+        self.assertTrue(params_1.find('PROJMASKV6') == -1)
+        self.assertTrue(params_2.find('PROJNETV6') > -1)
+        self.assertTrue(params_2.find('PROJMASKV6') > -1)
+
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_uri(instance_data,

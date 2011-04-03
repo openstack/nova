@@ -899,26 +899,16 @@ class LibvirtConnection(driver.ComputeDriver):
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
+            template = "<parameter name=\"%s\"value=\"%s\" />\n"
+            net, mask = _get_net_and_mask(network['cidr'])
+            values = [("PROJNET", net), ("PROJMASK", mask)]
             if FLAGS.use_ipv6:
-                net, mask = _get_net_and_mask(network['cidr'])
                 net_v6, prefixlen_v6 = _get_net_and_prefixlen(
                                            network['cidr_v6'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJNETV6\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask, net_v6, prefixlen_v6)
-            else:
-                net, mask = _get_net_and_mask(network['cidr'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask)
+                values.extend([("PROJNETV6", net_v6),
+                               ("PROJMASKV6", prefixlen_v6)])
+
+            extra_params = "".join([template % value for value in values])         
         else:
             extra_params = "\n"
 
