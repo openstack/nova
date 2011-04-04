@@ -220,7 +220,7 @@ def _convert_timestamps_to_datetimes(image_meta):
     Returns image with known timestamp fields converted to datetime objects
     """
     for attr in ['created_at', 'updated_at', 'deleted_at']:
-        if image_meta.get(attr) is not None:
+        if image_meta.get(attr):
             image_meta[attr] = _parse_glance_iso8601_timestamp(
                 image_meta[attr])
     return image_meta
@@ -230,8 +230,13 @@ def _parse_glance_iso8601_timestamp(timestamp):
     """
     Parse a subset of iso8601 timestamps into datetime objects
     """
-    GLANCE_FMT = "%Y-%m-%dT%H:%M:%S"
-    ISO_FMT = "%Y-%m-%dT%H:%M:%S.%f"
-    # FIXME(sirp): Glance is not returning in ISO format, we should fix Glance
-    # to do so, and then switch to parsing it here
-    return datetime.datetime.strptime(timestamp, GLANCE_FMT)
+    iso_formats = ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"]
+
+    for iso_format in iso_formats:
+        try:
+            return datetime.datetime.strptime(timestamp, iso_format)
+        except ValueError:
+            pass
+
+    raise ValueError(_("%(timestamp)s does not follow any of the "
+                       "signatures: %(ISO_FORMATS)s") % locals())

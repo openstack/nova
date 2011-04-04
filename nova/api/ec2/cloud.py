@@ -536,6 +536,13 @@ class CloudController(object):
         return self.compute_api.get_ajax_console(context,
                                                  instance_id=instance_id)
 
+    def get_vnc_console(self, context, instance_id, **kwargs):
+        """Returns vnc browser url.  Used by OS dashboard."""
+        ec2_id = instance_id
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
+        return self.compute_api.get_vnc_console(context,
+                                                instance_id=instance_id)
+
     def describe_volumes(self, context, volume_id=None, **kwargs):
         if volume_id:
             volumes = []
@@ -750,6 +757,8 @@ class CloudController(object):
             iterator = db.floating_ip_get_all_by_project(context,
                                                          context.project_id)
         for floating_ip_ref in iterator:
+            if floating_ip_ref['project_id'] is None:
+                continue
             address = floating_ip_ref['address']
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
