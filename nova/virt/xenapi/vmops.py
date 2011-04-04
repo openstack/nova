@@ -218,7 +218,7 @@ class VMOps(object):
                 return False
 
             if state == power_state.RUNNING:
-                LOG.debug(_('VM %s is now running.') % name)
+                LOG.debug(_('VM %s is now running.') % instance_name)
                 timer.stop()
                 _inject_files()
                 return True
