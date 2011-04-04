@@ -886,10 +886,7 @@ class CloudController(object):
         image_type = image['properties'].get('type')
         ec2_id = self._image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
-        if name:
-            i['imageId'] = "%s (%s)" % (ec2_id, name)
-        else:
-            i['imageId'] = ec2_id
+        i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
             i['kernelId'] = self._image_ec2_id(kernel_id, 'kernel')
@@ -897,11 +894,15 @@ class CloudController(object):
         if ramdisk_id:
             i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ramdisk')
         i['imageOwnerId'] = image['properties'].get('owner_id')
-        i['imageLocation'] = image['properties'].get('image_location')
+        if name:
+            i['imageLocation'] = "%s (%s)" % (image['properties'].
+                                              get('image_location'), name)
+        else:
+            i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
-        i['displayName'] = image.get('name')
+        i['displayName'] = name
         i['description'] = image.get('description')
-        i['type'] = image_type
+        i['imageType'] = image_type
         i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
         i['architecture'] = image['properties'].get('architecture')
         return i
