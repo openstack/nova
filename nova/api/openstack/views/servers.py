@@ -57,17 +57,17 @@ class ViewBuilder(object):
     def _build_detail(self, inst):
         """Returns a detailed model of a server."""
         power_mapping = {
-            None: 'build',
-            power_state.NOSTATE: 'build',
-            power_state.RUNNING: 'active',
-            power_state.BLOCKED: 'active',
-            power_state.SUSPENDED: 'suspended',
-            power_state.PAUSED: 'paused',
-            power_state.SHUTDOWN: 'active',
-            power_state.SHUTOFF: 'active',
-            power_state.CRASHED: 'error',
-            power_state.FAILED: 'error',
-            power_state.BUILDING: 'build',
+            None: 'BUILD',
+            power_state.NOSTATE: 'BUILD',
+            power_state.RUNNING: 'ACTIVE',
+            power_state.BLOCKED: 'ACTIVE',
+            power_state.SUSPENDED: 'SUSPENDED',
+            power_state.PAUSED: 'PAUSED',
+            power_state.SHUTDOWN: 'ACTIVE',
+            power_state.SHUTOFF: 'ACTIVE',
+            power_state.CRASHED: 'ERROR',
+            power_state.FAILED: 'ERROR',
+            power_state.BUILDING: 'BUILD',
         }
 
         inst_dict = {
@@ -79,7 +79,7 @@ class ViewBuilder(object):
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
         if compute_api.has_finished_migration(ctxt, inst['id']):
-            inst_dict['status'] = 'resize-confirm'
+            inst_dict['status'] = 'RESIZE-CONFIRM'
 
         # Return the metadata as a dictionary
         metadata = {}
