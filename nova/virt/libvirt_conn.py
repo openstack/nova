@@ -797,7 +797,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
         root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
-        if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
+
+        inst_type_id = instance['instance_type_id']
+        inst_type = instance_types.get_instance_type(inst_type_id)
+        if inst_type['name'] == 'm1.tiny' or suffix == '.rescue':
             size = None
             root_fname += "_sm"
 
@@ -809,14 +812,13 @@ class LibvirtConnection(driver.ComputeDriver):
                           user=user,
                           project=project,
                           size=size)
-        type_data = instance_types.get_instance_type(inst['instance_type'])
 
-        if type_data['local_gb']:
+        if inst_type['local_gb']:
             self._cache_image(fn=self._create_local,
                               target=basepath('disk.local'),
-                              fname="local_%s" % type_data['local_gb'],
+                              fname="local_%s" % inst_type['local_gb'],
                               cow=FLAGS.use_cow_images,
-                              local_gb=type_data['local_gb'])
+                              local_gb=inst_type['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -950,8 +952,8 @@ class LibvirtConnection(driver.ComputeDriver):
             nics.append(self._get_nic_for_xml(network,
                                               mapping))
         # FIXME(vish): stick this in db
-        instance_type_name = instance['instance_type']
-        instance_type = instance_types.get_instance_type(instance_type_name)
+        inst_type_id = instance['instance_type_id']
+        inst_type = instance_types.get_instance_type(inst_type_id)
 
         if FLAGS.use_cow_images:
             driver_type = 'qcow2'
@@ -962,10 +964,10 @@ class LibvirtConnection(driver.ComputeDriver):
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
                                              instance['name']),
-                    'memory_kb': instance_type['memory_mb'] * 1024,
-                    'vcpus': instance_type['vcpus'],
+                    'memory_kb': inst_type['memory_mb'] * 1024,
+                    'vcpus': inst_type['vcpus'],
                     'rescue': rescue,
-                    'local': instance_type['local_gb'],
+                    'local': inst_type['local_gb'],
                     'driver_type': driver_type,
                     'nics': nics}
 

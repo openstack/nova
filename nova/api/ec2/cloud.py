@@ -722,7 +722,10 @@ class CloudController(object):
                     instance['project_id'],
                     instance['host'])
             i['productCodesSet'] = self._convert_to_set([], 'product_codes')
-            i['instanceType'] = instance['instance_type']
+            if instance['instance_type']:
+                i['instanceType'] = instance['instance_type'].get('name', None)
+            else:
+                i['instanceType'] = None
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
@@ -805,7 +808,7 @@ class CloudController(object):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
         instances = self.compute_api.create(context,
-            instance_type=instance_types.get_by_type(
+            instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_id=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),

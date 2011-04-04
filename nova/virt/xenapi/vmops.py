@@ -802,8 +802,10 @@ class VMOps(object):
                                               instance['id'])
         networks = db.network_get_all_by_instance(admin_context,
                                                   instance['id'])
-        flavor = db.instance_type_get_by_name(admin_context,
-                                              instance['instance_type'])
+
+        inst_type = db.instance_type_get_by_id(admin_context,
+                                              instance['instance_type_id'])
+
         network_info = []
         for network in networks:
             network_IPs = [ip for ip in IPs if ip.network_id == network.id]
@@ -827,7 +829,7 @@ class VMOps(object):
                 'gateway': network['gateway'],
                 'broadcast': network['broadcast'],
                 'mac': instance.mac_address,
-                'rxtx_cap': flavor['rxtx_cap'],
+                'rxtx_cap': inst_type['rxtx_cap'],
                 'dns': [network['dns']],
                 'ips': [ip_dict(ip) for ip in network_IPs]}
             if network['cidr_v6']:

@@ -101,8 +101,8 @@ class VMHelper(HelperBase):
             3. Using hardware virtualization
         """
 
-        instance_type = instance_types.\
-                                get_instance_type(instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -169,8 +169,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def ensure_free_mem(cls, session, instance):
-        instance_type = instance_types.get_instance_type(
-            instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
