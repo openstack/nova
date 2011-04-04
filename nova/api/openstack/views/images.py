@@ -34,11 +34,11 @@ class ViewBuilder(object):
     def _format_status(self, image):
         """Update the status field to standardize format."""
         status_mapping = {
-            'pending': 'queued',
-            'decrypting': 'preparing',
-            'untarring': 'saving',
-            'available': 'active',
-            'killed': 'failed',
+            'pending': 'QUEUED',
+            'decrypting': 'PREPARING',
+            'untarring': 'SAVING',
+            'available': 'ACTIVE',
+            'killed': 'FAILED',
         }
 
         try:
