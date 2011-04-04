@@ -631,6 +631,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], '10')
             self.assertEqual(s['flavorId'], '1')
+            self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], i)
 
     def test_get_all_server_details_v1_1(self):
@@ -644,6 +645,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
             self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
+            self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], i)
 
     def test_get_all_server_details_with_host(self):
