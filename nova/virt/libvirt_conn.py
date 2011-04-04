@@ -1877,40 +1877,38 @@ class IptablesFirewallDriver(FirewallDriver):
         self.add_filters_for_instance(instance, network_info)
         self.iptables.apply()
 
-    def add_filters_for_instance(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        chain_name = self._instance_chain_name(instance)
+    def _create_filter(self, ips, chain_name):
+        return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
-        self.iptables.ipv4['filter'].add_chain(chain_name)
-
+    def _filters_for_instance(self, chain_name, network_info):
         ips_v4 = [ip['ip'] for (_, mapping) in network_info
-                            for ip in mapping['ips']]
+                 for ip in mapping['ips']]
+        ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        for ipv4_address in ips_v4:
-            self.iptables.ipv4['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv4_address, chain_name))
+        ips_v6 = [ip['ip'] for (_, mapping) in network_info
+                 for ip in mapping['ip6s']]
 
-        if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for (_, mapping) in network_info
-                                 for ip in mapping['ip6s']]
+        ipv6_rules = self._create_filter(ips_v6, chain_name)
+        return ipv4_rules, ipv6_rules
 
-            for ipv6_address in ips_v6:
-                self.iptables.ipv6['filter'].add_rule('local',
-                                                      '-d %s -j $%s' %
-                                                      (ipv6_address,
-                                                       chain_name))
-
-        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-
+    def _add_filters(self, chain_name, ipv4_rules, ipv6_rules):
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def add_filters_for_instance(self, instance, network_info=None):
+        chain_name = self._instance_chain_name(instance)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_rules, ipv6_rules = self._filters_for_instance(chain_name,
+                                                            network_info)
+        self._add_filters('local', ipv4_rules, ipv6_rules)
+        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
+        self._add_filters(chain_name, ipv4_rules, ipv6_rules)
 
     def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
