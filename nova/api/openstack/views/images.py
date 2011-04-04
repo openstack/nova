@@ -61,7 +61,7 @@ class ViewBuilder(object):
 
         image = {
             "id": image_obj["id"],
-            "name": image_obj["name"],
+            "name": image_obj.get("name"),
         }
 
         if "instance_id" in properties:
