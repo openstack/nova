@@ -630,7 +630,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['imageId'], '10')
             self.assertEqual(s['flavorId'], '1')
             self.assertEqual(s['status'], 'BUILD')
-            self.assertEqual(s['metadata']['seq'], i)
+            self.assertEqual(s['metadata']['seq'], str(i))
 
     def test_get_all_server_details_v1_1(self):
         req = webob.Request.blank('/v1.1/servers/detail')
@@ -644,7 +644,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
             self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
             self.assertEqual(s['status'], 'BUILD')
-            self.assertEqual(s['metadata']['seq'], i)
+            self.assertEqual(s['metadata']['seq'], str(i))
 
     def test_get_all_server_details_with_host(self):
         '''
