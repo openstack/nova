@@ -927,9 +927,6 @@ class LibvirtConnection(driver.ComputeDriver):
         return result
 
     def _prepare_xml_info(self, instance, rescue=False, network_info=None):
-        # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
@@ -971,6 +968,8 @@ class LibvirtConnection(driver.ComputeDriver):
         return xml_info
 
     def to_xml(self, instance, rescue=False, network_info=None):
+        # TODO(termie): cache?
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
         xml_info = self._prepare_xml_info(instance, rescue, network_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
         LOG.debug(_('instance %s: finished toXML method'), instance['name'])
