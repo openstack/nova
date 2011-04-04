@@ -884,6 +884,12 @@ class NWFilterTestCase(test.TestCase):
 
         return db.security_group_get_by_name(self.context, 'fake', 'testgroup')
 
+    def _create_instance(self):
+        return db.instance_create(self.context,
+                                  {'user_id': 'fake',
+                                   'project_id': 'fake',
+                                   'mac_address': '00:A0:C9:14:C8:29'})
+
     def test_creates_base_rule_first(self):
         # These come pre-defined by libvirt
         self.defined_filters = ['no-mac-spoofing',
@@ -912,10 +918,7 @@ class NWFilterTestCase(test.TestCase):
 
         self.fake_libvirt_connection.nwfilterDefineXML = _filterDefineXMLMock
 
-        instance_ref = db.instance_create(self.context,
-                                          {'user_id': 'fake',
-                                          'project_id': 'fake',
-                                          'mac_address': '00:A0:C9:14:C8:29'})
+        instance_ref = self._create_instance()
         inst_id = instance_ref['id']
 
         ip = '10.11.12.13'
@@ -955,3 +958,11 @@ class NWFilterTestCase(test.TestCase):
         _ensure_all_called()
         self.teardown_security_group()
         db.instance_destroy(admin_ctxt, instance_ref['id'])
+
+
+    def test_create_network_filters(self):
+        instance_ref = self._create_instance()
+        network_info = _create_network_info(3)
+        result = \
+        self.fw._create_network_filters(instance_ref, network_info, "fake")
+        self.assertEquals(len(result), 3)
