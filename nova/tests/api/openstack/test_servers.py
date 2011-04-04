@@ -631,6 +631,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], '10')
             self.assertEqual(s['flavorId'], '1')
+            self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], i)
 
     def test_get_all_server_details_v1_1(self):
@@ -644,6 +645,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
             self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
+            self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], i)
 
     def test_get_all_server_details_with_host(self):
@@ -917,7 +919,7 @@ class ServersTest(test.TestCase):
                 fake_migration_get)
         res = req.get_response(fakes.wsgi_app())
         body = json.loads(res.body)
-        self.assertEqual(body['server']['status'], 'resize-confirm')
+        self.assertEqual(body['server']['status'], 'RESIZE-CONFIRM')
 
     def test_confirm_resize_server(self):
         req = self.webreq('/1/action', 'POST', dict(confirmResize=None))
