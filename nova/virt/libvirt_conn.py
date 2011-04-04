@@ -1741,7 +1741,6 @@ class NWFilterFirewall(FirewallDriver):
         if not network_info:
             network_info = _get_network_info(instance)
 
-
         ctxt = context.get_admin_context()
 
         instance_secgroup_filter_name = \
@@ -1778,7 +1777,6 @@ class NWFilterFirewall(FirewallDriver):
 
         for (name, children) in network_filters:
             self._define_filters(name, children)
-
 
     def _create_network_filters(self, instance, network_info,
                                instance_secgroup_filter_name):

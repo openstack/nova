@@ -226,16 +226,18 @@ class LibvirtConnTestCase(test.TestCase):
     def test_get_nic_for_xml(self):
         conn = libvirt_conn.LibvirtConnection(True)
         network, mapping = _create_network_info()[0]
-        backup = FLAGS.use_ipv6
-        FLAGS.use_ipv6 = False
-        params_1 = conn._get_nic_for_xml(network, mapping)['extra_params']
-        FLAGS.use_ipv6 = True
-        params_2 = conn._get_nic_for_xml(network, mapping)['extra_params']
-        self.assertTrue(params_1.find('PROJNETV6') == -1)
-        self.assertTrue(params_1.find('PROJMASKV6') == -1)
-        self.assertTrue(params_2.find('PROJNETV6') > -1)
-        self.assertTrue(params_2.find('PROJMASKV6') > -1)
-        FLAGS.use_ipv6 = backup
+        self.flags(use_ipv6=False)
+        params = conn._get_nic_for_xml(network, mapping)['extra_params']
+        self.assertTrue(params.find('PROJNETV6') == -1)
+        self.assertTrue(params.find('PROJMASKV6') == -1)
+
+    def test_get_nic_for_xml_v6(self):
+        conn = libvirt_conn.LibvirtConnection(True)
+        network, mapping = _create_network_info()[0]
+        self.flags(use_ipv6=True)
+        params = conn._get_nic_for_xml(network, mapping)['extra_params']
+        self.assertTrue(params.find('PROJNETV6') > -1)
+        self.assertTrue(params.find('PROJMASKV6') > -1)
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
@@ -958,7 +960,6 @@ class NWFilterTestCase(test.TestCase):
         _ensure_all_called()
         self.teardown_security_group()
         db.instance_destroy(admin_ctxt, instance_ref['id'])
-
 
     def test_create_network_filters(self):
         instance_ref = self._create_instance()
