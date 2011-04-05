@@ -532,6 +532,7 @@ def paste_config_file(basename):
     """
 
     configfiles = [basename,
+                   os.path.join(FLAGS.state_path, 'etc', 'nova', basename),
                    os.path.join(FLAGS.state_path, 'etc', basename),
                    os.path.join(FLAGS.state_path, basename),
                    '/etc/nova/%s' % basename]
