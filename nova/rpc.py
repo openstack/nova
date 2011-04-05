@@ -134,8 +134,6 @@ class Consumer(messaging.Consumer):
             if not self.failed_connection:
                 LOG.exception(_("Failed to fetch message from queue: %s" % e))
                 self.failed_connection = True
-            else:
-                LOG.exception(_("Unhandled exception %s" % e))
 
     def attach_to_eventlet(self):
         """Only needed for unit tests!"""

@@ -30,4 +30,5 @@ sqlalchemy-migrate
 netaddr
 sphinx
 glance
+nova-adminclient
 suds==0.4
