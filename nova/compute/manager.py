@@ -1090,6 +1090,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
+            if db_instance['state_description'] == 'migrating':
+                # A situation which db record exists, but no instance"
+                # sometimes occurs while live-migration at src compute,
+                # this case should be ignored.
+                LOG.info(_("the instance '%(name)s' is not found in hypervisor"
+                           ", while db record is found. But not synchronize "
+                           "since it is migrating." % locals()))
+                continue
+
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
