@@ -186,34 +186,6 @@ class GlanceImageService(service.BaseImageService):
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         return image_meta
 
-    @staticmethod
-    def _is_image_available(context, image_meta):
-        """
-        Images are always available if they are public or if the user is an
-        admin.
-
-        Otherwise, we filter by project_id (if present) and then fall-back to
-        images owned by user.
-        """
-        # FIXME(sirp): We should be filtering by user_id on the Glance side
-        # for security; however, we can't do that until we get authn/authz
-        # sorted out. Until then, filtering in Nova.
-        if image_meta['is_public'] or context.is_admin:
-            return True
-
-        properties = image_meta['properties']
-
-        if context.project_id and ('project_id' in properties):
-            return str(properties['project_id']) == str(project_id)
-
-        try:
-            user_id = properties['user_id']
-        except KeyError:
-            return False
-
-        return str(user_id) == str(context.user_id)
-
-
 # utility functions
 def _convert_timestamps_to_datetimes(image_meta):
     """

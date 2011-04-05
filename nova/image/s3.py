@@ -58,52 +58,14 @@ class S3ImageService(service.BaseImageService):
         return image
 
     def delete(self, context, image_id):
-        # FIXME(vish): call to show is to check filter
+        # FIXME(vish): call to show is to check visibility
         self.show(context, image_id)
         self.service.delete(context, image_id)
 
     def update(self, context, image_id, metadata, data=None):
-        # FIXME(vish): call to show is to check filter
+        # FIXME(vish): call to show is to check visibility
         self.show(context, image_id)
         image = self.service.update(context, image_id, metadata, data)
-        return image
-
-    def index(self, context):
-        images = self.service.index(context)
-        # FIXME(vish): index doesn't filter so we do it manually
-        return self._filter(context, images)
-
-    def detail(self, context):
-        images = self.service.detail(context)
-        # FIXME(vish): detail doesn't filter so we do it manually
-        return self._filter(context, images)
-
-    @classmethod
-    def _is_visible(cls, context, image):
-
-        return (context.is_admin
-                or context.project_id == image['properties'].get('owner_id')
-                or str(image['properties'].get('is_public')) == 'True')
-
-    @classmethod
-    def _filter(cls, context, images):
-        filtered = []
-        for image in images:
-            if not cls._is_visible(context, image):
-                continue
-            filtered.append(image)
-        return filtered
-
-    def show(self, context, image_id):
-        image = self.service.show(context, image_id)
-        if not self._is_visible(context, image):
-            raise exception.NotFound
-        return image
-
-    def show_by_name(self, context, name):
-        image = self.service.show_by_name(context, name)
-        if not self._is_visible(context, image):
-            raise exception.NotFound
         return image
 
     @staticmethod
@@ -168,7 +130,7 @@ class S3ImageService(service.BaseImageService):
             arch = 'x86_64'
 
         properties = metadata['properties']
-        properties['owner_id'] = context.project_id
+        properties['project_id'] = context.project_id
         properties['architecture'] = arch
 
         if kernel_id:
@@ -177,7 +139,6 @@ class S3ImageService(service.BaseImageService):
         if ramdisk_id:
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
-        properties['is_public'] = False
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,
                          'status': 'queued',

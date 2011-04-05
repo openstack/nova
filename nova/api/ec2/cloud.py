@@ -927,7 +927,7 @@ class CloudController(object):
                            'ari': 'ramdisk',
                            'ami': 'machine'}
         i['imageType'] = display_mapping.get(image_type)
-        i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
+        i['isPublic'] = image.get('is_public') == True
         i['architecture'] = image['properties'].get('architecture')
         return i
 

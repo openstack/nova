@@ -897,15 +897,14 @@ class ImageCommands(object):
     def _register(self, container_format, disk_format,
                   path, owner, name=None, is_public='T',
                   architecture='x86_64', kernel_id=None, ramdisk_id=None):
-        meta = {'is_public': True,
+        meta = {'is_public': (is_public == 'T'),
                 'name': name,
                 'container_format': container_format,
                 'disk_format': disk_format,
                 'properties': {'image_state': 'available',
-                               'owner_id': owner,
+                               'project_id': owner,
                                'architecture': architecture,
-                               'image_location': 'local',
-                               'is_public': (is_public == 'T')}}
+                               'image_location': 'local'}}
         if kernel_id:
             meta['properties']['kernel_id'] = int(kernel_id)
         if ramdisk_id:
@@ -980,13 +979,12 @@ class ImageCommands(object):
             disk_format = 'raw'
         new = {'disk_format': disk_format,
                'container_format': container_format,
-               'is_public': True,
+               'is_public': old['isPublic'],
                'name': old['imageId'],
                'properties': {'image_state': old['imageState'],
-                              'owner_id': old['imageOwnerId'],
+                              'project_id': old['imageOwnerId'],
                               'architecture': old['architecture'],
-                              'image_location': old['imageLocation'],
-                              'is_public': old['isPublic']}}
+                              'image_location': old['imageLocation']}}
         if old.get('kernelId'):
             new['properties']['kernel_id'] = self._lookup(old['kernelId'])
         if old.get('ramdiskId'):

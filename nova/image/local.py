@@ -84,7 +84,9 @@ class LocalImageService(service.BaseImageService):
     def show(self, context, image_id):
         try:
             with open(self._path_to(image_id)) as metadata_file:
-                return json.load(metadata_file)
+                image_meta = json.load(metadata_file)
+                if not self._is_image_available(context, image_meta):
+                    raise exception.NotFound
         except (IOError, ValueError):
             raise exception.NotFound
 
