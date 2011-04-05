@@ -120,6 +120,11 @@ class Controller(wsgi.Controller):
 
         context = req.environ['nova.context']
 
+        password = self._get_admin_password_from_request_server(env['server'])
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            return exc.HTTPBadRequest(msg)
+
         key_name = None
         key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
@@ -180,7 +185,6 @@ class Controller(wsgi.Controller):
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        password = self._get_admin_password_from_request_server(env['server'])
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
@@ -652,10 +656,7 @@ class ControllerV11(Controller):
         return common.limited_by_marker(items, req)
 
     def _get_admin_password_from_request_server(self, server):
-        password = server.get('adminPass')
-        if password:
-            return password
-        return utils.generate_password(16)
+        return server.get('adminPass', utils.generate_password(16))
 
 
 class ServerCreateRequestXMLDeserializer(object):
