@@ -1790,6 +1790,11 @@ class NWFilterFirewall(FirewallDriver):
         else:
             base_filter = 'nova-base'
 
+        ctxt = context.get_admin_context()
+
+        instance_secgroup_filter_name = \
+            '%s-secgroup' % (self._instance_filter_name(instance))
+
         instance_secgroup_filter_children = ['nova-base-ipv4',
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']

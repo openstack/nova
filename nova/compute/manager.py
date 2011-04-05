@@ -195,6 +195,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
 
+    @exception.wrap_exception
     def run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
