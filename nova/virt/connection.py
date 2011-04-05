@@ -57,7 +57,6 @@ def get_connection(read_only=False):
                             * fake
                             * libvirt
                             * xenapi
-                            * hyperv
     """
     # TODO(termie): maybe lazy load after initial check for permissions
     # TODO(termie): check whether we can be disconnected
