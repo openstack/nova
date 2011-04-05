@@ -120,10 +120,7 @@ class Controller(wsgi.Controller):
 
         context = req.environ['nova.context']
 
-        password = self._get_admin_password_from_request_server(env['server'])
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            return exc.HTTPBadRequest(msg)
+        password = self._get_server_admin_password(env['server'])
 
         key_name = None
         key_data = None
@@ -246,7 +243,7 @@ class Controller(wsgi.Controller):
         # if the original error is okay, just reraise it
         raise error
 
-    def _get_admin_password_from_request_server(self, server):
+    def _get_server_admin_password(self, server):
         return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
@@ -655,8 +652,14 @@ class ControllerV11(Controller):
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
 
-    def _get_admin_password_from_request_server(self, server):
-        return server.get('adminPass', utils.generate_password(16))
+    def _get_server_admin_password(self, server):
+        password = server.get('adminPass')
+        if password is None:
+            return utils.generate_password(16)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(msg)
+        return password
 
 
 class ServerCreateRequestXMLDeserializer(object):
