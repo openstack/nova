@@ -798,7 +798,7 @@ class LibvirtConnection(driver.ComputeDriver):
         root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
 
-        inst_type_id = instance['instance_type_id']
+        inst_type_id = inst['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
         if inst_type['name'] == 'm1.tiny' or suffix == '.rescue':
             size = None
