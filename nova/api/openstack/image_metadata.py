@@ -46,7 +46,7 @@ class Controller(wsgi.Controller):
         num_metadata = len(metadata)
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
-            expl = ("Image metadata limit exceeded")
+            expl = _("Image metadata limit exceeded")
             raise exc.HTTPBadRequest(explanation=expl)
 
     def index(self, req, image_id):
