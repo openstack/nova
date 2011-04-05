@@ -44,11 +44,12 @@ class Controller(wsgi.Controller):
 
     def create(self, req, server_id):
         context = req.environ['nova.context']
-        data = self._deserialize(req.body, req.get_content_type())['metadata']
+        data = self._deserialize(req.body, req.get_content_type())
+        metadata = data.get('metadata')
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
-                                                                data)
+                                                                metadata)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         return req.body
