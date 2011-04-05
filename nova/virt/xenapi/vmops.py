@@ -814,12 +814,11 @@ class VMOps(object):
                     "netmask": network["netmask"],
                     "enabled": "1"}
 
-            def ip6_dict(ip6):
+            def ip6_dict():
                 return {
                     "ip": utils.to_global_ipv6(network['cidr_v6'],
                                                instance['mac_address']),
                     "netmask": network['netmask_v6'],
-                    "gateway": network['gateway_v6'],
                     "enabled": "1"}
 
             info = {
@@ -831,7 +830,9 @@ class VMOps(object):
                 'dns': [network['dns']],
                 'ips': [ip_dict(ip) for ip in network_IPs]}
             if network['cidr_v6']:
-                info['ip6s'] = [ip6_dict(ip) for ip in network_IPs]
+                info['ip6s'] = [ip6_dict()]
+            if network['gateway_v6']:
+                info['gateway6'] = network['gateway_v6'],
             network_info.append((network, info))
         return network_info
 
