@@ -160,9 +160,45 @@ class StrWrapper(object):
         raise KeyError(name)
 
 
-FLAGS = FlagValues()
-gflags.FLAGS = FLAGS
-gflags.DEFINE_flag(gflags.HelpFlag(), FLAGS)
+# Copied from gflags with small mods to get the naming correct.
+# Originally gflags checks for the first module that is not gflags that is
+# in the call chain, we want to check for the first module that is not gflags
+# and not this module.
+def _GetCallingModule():
+    """Returns the name of the module that's calling into this module.
+
+    We generally use this function to get the name of the module calling a
+    DEFINE_foo... function.
+    """
+    # Walk down the stack to find the first globals dict that's not ours.
+    for depth in range(1, sys.getrecursionlimit()):
+        if not sys._getframe(depth).f_globals is globals():
+            module_name = __GetModuleName(sys._getframe(depth).f_globals)
+            if module_name == 'gflags':
+                continue
+            if module_name is not None:
+                return module_name
+    raise AssertionError("No module was found")
+
+
+# Copied from gflags because it is a private function
+def __GetModuleName(globals_dict):
+    """Given a globals dict, returns the name of the module that defines it.
+
+    Args:
+    globals_dict: A dictionary that should correspond to an environment
+      providing the values of the globals.
+
+    Returns:
+    A string (the name of the module) or None (if the module could not
+    be identified.
+    """
+    for name, module in sys.modules.iteritems():
+        if getattr(module, '__dict__', None) is globals_dict:
+            if name == '__main__':
+                return sys.argv[0]
+            return name
+    return None
 
 
 def _wrapper(func):
@@ -171,6 +207,11 @@ def _wrapper(func):
         func(*args, **kw)
     _wrapped.func_name = func.func_name
     return _wrapped
+
+
+FLAGS = FlagValues()
+gflags.FLAGS = FLAGS
+gflags._GetCallingModule = _GetCallingModule
 
 
 DEFINE = _wrapper(gflags.DEFINE)
@@ -185,8 +226,6 @@ DEFINE_spaceseplist = _wrapper(gflags.DEFINE_spaceseplist)
 DEFINE_multistring = _wrapper(gflags.DEFINE_multistring)
 DEFINE_multi_int = _wrapper(gflags.DEFINE_multi_int)
 DEFINE_flag = _wrapper(gflags.DEFINE_flag)
-
-
 HelpFlag = gflags.HelpFlag
 HelpshortFlag = gflags.HelpshortFlag
 HelpXMLFlag = gflags.HelpXMLFlag
@@ -259,10 +298,14 @@ DEFINE_string('ec2_dmz_host', '$my_ip', 'internal ip of api server')
 DEFINE_integer('ec2_port', 8773, 'cloud controller port')
 DEFINE_string('ec2_scheme', 'http', 'prefix for ec2')
 DEFINE_string('ec2_path', '/services/Cloud', 'suffix for ec2')
+DEFINE_string('osapi_extensions_path', '/var/lib/nova/extensions',
+               'default directory for nova extensions')
 DEFINE_string('osapi_host', '$my_ip', 'ip of api server')
 DEFINE_string('osapi_scheme', 'http', 'prefix for openstack')
 DEFINE_integer('osapi_port', 8774, 'OpenStack API port')
 DEFINE_string('osapi_path', '/v1.0/', 'suffix for openstack')
+DEFINE_integer('osapi_max_limit', 1000,
+               'max number of items returned in a collection response')
 
 DEFINE_string('default_project', 'openstack', 'default project for openstack')
 DEFINE_string('default_image', 'ami-11111',
@@ -282,11 +325,14 @@ DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 
 DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
               "Top-level directory for maintaining nova's state")
+DEFINE_string('lock_path', os.path.join(os.path.dirname(__file__), '../'),
+              "Directory for lock files")
 DEFINE_string('logdir', None, 'output to a per-service log file in named '
                               'directory')
 
+DEFINE_string('sqlite_db', 'nova.sqlite', 'file name for sqlite')
 DEFINE_string('sql_connection',
-              'sqlite:///$state_path/nova.sqlite',
+              'sqlite:///$state_path/$sqlite_db',
               'connection string for sql database')
 DEFINE_integer('sql_idle_timeout',
               3600,
@@ -306,7 +352,7 @@ DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
 
 # The service to use for image search and retrieval
-DEFINE_string('image_service', 'nova.image.s3.S3ImageService',
+DEFINE_string('image_service', 'nova.image.local.LocalImageService',
               'The service to use for retrieving and searching for images.')
 
 DEFINE_string('host', socket.gethostname(),
@@ -314,3 +360,8 @@ DEFINE_string('host', socket.gethostname(),
 
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
+
+DEFINE_string('zone_name', 'nova', 'name of this zone')
+DEFINE_list('zone_capabilities',
+                ['hypervisor=xenserver;kvm', 'os=linux;windows'],
+                 'Key/Multi-value list representng capabilities of this zone')

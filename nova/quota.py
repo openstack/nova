@@ -35,6 +35,14 @@ flags.DEFINE_integer('quota_gigabytes', 1000,
                      'number of volume gigabytes allowed per project')
 flags.DEFINE_integer('quota_floating_ips', 10,
                      'number of floating ips allowed per project')
+flags.DEFINE_integer('quota_metadata_items', 128,
+                     'number of metadata items allowed per instance')
+flags.DEFINE_integer('quota_max_injected_files', 5,
+                     'number of injected files allowed')
+flags.DEFINE_integer('quota_max_injected_file_content_bytes', 10 * 1024,
+                     'number of bytes allowed per injected file')
+flags.DEFINE_integer('quota_max_injected_file_path_bytes', 255,
+                     'number of bytes allowed per injected file path')
 
 
 def get_quota(context, project_id):
@@ -42,7 +50,9 @@ def get_quota(context, project_id):
             'cores': FLAGS.quota_cores,
             'volumes': FLAGS.quota_volumes,
             'gigabytes': FLAGS.quota_gigabytes,
-            'floating_ips': FLAGS.quota_floating_ips}
+            'floating_ips': FLAGS.quota_floating_ips,
+            'metadata_items': FLAGS.quota_metadata_items}
+
     try:
         quota = db.quota_get(context, project_id)
         for key in rval.keys():
@@ -92,6 +102,30 @@ def allowed_floating_ips(context, num_floating_ips):
     quota = get_quota(context, project_id)
     allowed_floating_ips = quota['floating_ips'] - used_floating_ips
     return min(num_floating_ips, allowed_floating_ips)
+
+
+def allowed_metadata_items(context, num_metadata_items):
+    """Check quota; return min(num_metadata_items,allowed_metadata_items)"""
+    project_id = context.project_id
+    context = context.elevated()
+    quota = get_quota(context, project_id)
+    num_allowed_metadata_items = quota['metadata_items']
+    return min(num_metadata_items, num_allowed_metadata_items)
+
+
+def allowed_injected_files(context):
+    """Return the number of injected files allowed"""
+    return FLAGS.quota_max_injected_files
+
+
+def allowed_injected_file_content_bytes(context):
+    """Return the number of bytes allowed per injected file content"""
+    return FLAGS.quota_max_injected_file_content_bytes
+
+
+def allowed_injected_file_path_bytes(context):
+    """Return the number of bytes allowed in an injected file path"""
+    return FLAGS.quota_max_injected_file_path_bytes
 
 
 class QuotaError(exception.ApiError):

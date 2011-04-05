@@ -18,8 +18,6 @@
 Object Model
 ============
 
-.. todo::  Add brief description for core models
-
 .. graphviz::
 
    digraph foo {
@@ -42,27 +40,27 @@ Object Model
 Users
 -----
 
-Each Nova User is authorized based on their access key and secret key, assigned per-user. Read more at :doc:`/adminguide/managing.users`.
+Each Nova User is authorized based on their access key and secret key, assigned per-user. Read more at :doc:`/runnova/managing.users`.
 
 Projects
 --------
 
-For Nova, access to images is based on the project. Read more at :doc:`/adminguide/managing.projects`.
+For Nova, access to images is based on the project. Read more at :doc:`/runnova/managing.projects`.
 
 Images
 ------
 
-Images are binary files that run the operating system. Read more at :doc:`/adminguide/managing.images`.
+Images are binary files that run the operating system. Read more at :doc:`/runnova/managing.images`.
 
 Instances
 ---------
 
-Instances are running virtual servers. Read more at :doc:`/adminguide/managing.instances`.
+Instances are running virtual servers. Read more at :doc:`/runnova/managing.instances`.
 
 Volumes
 -------
 
-.. todo::  Write doc about volumes
+Volumes offer extra block level storage to instances. Read more at `Managing Volumes <http://docs.openstack.org/openstack-compute/admin/content/ch05s07.html>`_.
 
 Security Groups
 ---------------
@@ -72,7 +70,7 @@ In Nova, a security group is a named collection of network access rules, like fi
 VLANs
 -----
 
-VLAN is the default network mode for Nova. Read more at :doc:`/adminguide/network.vlan`.
+VLAN is the default network mode for Nova. Read more at :doc:`/runnova/network.vlan`.
 
 IP Addresses
 ------------

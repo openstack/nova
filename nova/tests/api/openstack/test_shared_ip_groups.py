@@ -15,25 +15,50 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import unittest
-
 import stubout
+import webob
 
+from nova import test
 from nova.api.openstack import shared_ip_groups
+from nova.tests.api.openstack import fakes
 
 
-class SharedIpGroupsTest(unittest.TestCase):
+class SharedIpGroupsTest(test.TestCase):
     def setUp(self):
+        super(SharedIpGroupsTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.reset_fake_data()
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_auth(self.stubs)
 
     def tearDown(self):
         self.stubs.UnsetAll()
+        super(SharedIpGroupsTest, self).tearDown()
 
     def test_get_shared_ip_groups(self):
-        pass
+        req = webob.Request.blank('/v1.0/shared_ip_groups')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
 
     def test_create_shared_ip_group(self):
-        pass
+        req = webob.Request.blank('/v1.0/shared_ip_groups')
+        req.method = 'POST'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
+
+    def test_update_shared_ip_group(self):
+        req = webob.Request.blank('/v1.0/shared_ip_groups/12')
+        req.method = 'PUT'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
 
     def test_delete_shared_ip_group(self):
-        pass
+        req = webob.Request.blank('/v1.0/shared_ip_groups/12')
+        req.method = 'DELETE'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 501)
+
+    def test_deprecated_v11(self):
+        req = webob.Request.blank('/v1.1/shared_ip_groups')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 404)

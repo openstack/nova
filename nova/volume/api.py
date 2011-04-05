@@ -49,7 +49,7 @@ class API(base.Base):
 
         options = {
             'size': size,
-            'user_id': context.user.id,
+            'user_id': context.user_id,
             'project_id': context.project_id,
             'availability_zone': FLAGS.storage_availability_zone,
             'status': "creating",
@@ -82,10 +82,11 @@ class API(base.Base):
         self.db.volume_update(context, volume_id, fields)
 
     def get(self, context, volume_id):
-        return self.db.volume_get(context, volume_id)
+        rv = self.db.volume_get(context, volume_id)
+        return dict(rv.iteritems())
 
     def get_all(self, context):
-        if context.user.is_admin():
+        if context.is_admin:
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
 

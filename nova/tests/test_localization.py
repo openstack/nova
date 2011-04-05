@@ -15,16 +15,16 @@
 #    under the License.
 
 import glob
-import logging
 import os
 import re
 import sys
 import unittest
 
 import nova
+from nova import test
 
 
-class LocalizationTestCase(unittest.TestCase):
+class LocalizationTestCase(test.TestCase):
     def test_multiple_positional_format_placeholders(self):
         pat = re.compile("\W_\(")
         single_pat = re.compile("\W%\W")

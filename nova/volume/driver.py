@@ -21,6 +21,7 @@ Drivers for volumes.
 """
 
 import time
+import os
 
 from nova import exception
 from nova import flags
@@ -36,6 +37,8 @@ flags.DEFINE_string('aoe_eth_dev', 'eth0',
                     'Which device to export the volumes on')
 flags.DEFINE_string('num_shell_tries', 3,
                     'number of times to attempt to run flakey shell commands')
+flags.DEFINE_string('num_iscsi_scan_tries', 3,
+                    'number of times to rescan iSCSI target to find volume')
 flags.DEFINE_integer('num_shelves',
                     100,
                     'Number of vblade shelves')
@@ -62,14 +65,14 @@ class VolumeDriver(object):
         self._execute = execute
         self._sync_exec = sync_exec
 
-    def _try_execute(self, command):
+    def _try_execute(self, *command):
         # NOTE(vish): Volume commands can partially fail due to timing, but
         #             running them a second time on failure will usually
         #             recover nicely.
         tries = 0
         while True:
             try:
-                self._execute(command)
+                self._execute(*command)
                 return True
             except exception.ProcessExecutionError:
                 tries = tries + 1
@@ -81,34 +84,35 @@ class VolumeDriver(object):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        out, err = self._execute("sudo vgs --noheadings -o name")
+        out, err = self._execute('sudo', 'vgs', '--noheadings', '-o', 'name')
         volume_groups = out.split()
         if not FLAGS.volume_group in volume_groups:
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
     def create_volume(self, volume):
-        """Creates a logical volume."""
+        """Creates a logical volume. Can optionally return a Dictionary of
+        changes to the volume object to be persisted."""
         if int(volume['size']) == 0:
             sizestr = '100M'
         else:
             sizestr = '%sG' % volume['size']
-        self._try_execute("sudo lvcreate -L %s -n %s %s" %
-                          (sizestr,
+        self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
                            volume['name'],
-                           FLAGS.volume_group))
+                           FLAGS.volume_group)
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         try:
-            self._try_execute("sudo lvdisplay %s/%s" %
+            self._try_execute('sudo', 'lvdisplay',
+                              '%s/%s' %
                               (FLAGS.volume_group,
                                volume['name']))
         except Exception as e:
             # If the volume isn't present, then don't attempt to delete
             return True
 
-        self._try_execute("sudo lvremove -f %s/%s" %
+        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
 
@@ -123,19 +127,24 @@ class VolumeDriver(object):
         raise NotImplementedError()
 
     def create_export(self, context, volume):
-        """Exports the volume."""
+        """Exports the volume. Can optionally return a Dictionary of changes
+        to the volume object to be persisted."""
         raise NotImplementedError()
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
         raise NotImplementedError()
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
         raise NotImplementedError()
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
+        raise NotImplementedError()
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
         raise NotImplementedError()
 
 
@@ -163,12 +172,13 @@ class AOEDriver(VolumeDriver):
          blade_id) = self.db.volume_allocate_shelf_and_blade(context,
                                                              volume['id'])
         self._try_execute(
-                "sudo vblade-persist setup %s %s %s /dev/%s/%s" %
-                (shelf_id,
+                'sudo', 'vblade-persist', 'setup',
+                 shelf_id,
                  blade_id,
                  FLAGS.aoe_eth_dev,
-                 FLAGS.volume_group,
-                 volume['name']))
+                 "/dev/%s/%s" %
+                 (FLAGS.volume_group,
+                  volume['name']))
         # NOTE(vish): The standard _try_execute does not work here
         #             because these methods throw errors if other
         #             volumes on this host are in the process of
@@ -177,9 +187,9 @@ class AOEDriver(VolumeDriver):
         #             just wait a bit for the current volume to
         #             be ready and ignore any errors.
         time.sleep(2)
-        self._execute("sudo vblade-persist auto all",
+        self._execute('sudo', 'vblade-persist', 'auto', 'all',
                       check_exit_code=False)
-        self._execute("sudo vblade-persist start all",
+        self._execute('sudo', 'vblade-persist', 'start', 'all',
                       check_exit_code=False)
 
     def remove_export(self, context, volume):
@@ -187,19 +197,49 @@ class AOEDriver(VolumeDriver):
         (shelf_id,
          blade_id) = self.db.volume_get_shelf_and_blade(context,
                                                         volume['id'])
-        self._try_execute("sudo vblade-persist stop %s %s" %
-                          (shelf_id, blade_id))
-        self._try_execute("sudo vblade-persist destroy %s %s" %
-                          (shelf_id, blade_id))
+        self._try_execute('sudo', 'vblade-persist', 'stop',
+                          shelf_id, blade_id)
+        self._try_execute('sudo', 'vblade-persist', 'destroy',
+                          shelf_id, blade_id)
 
-    def discover_volume(self, _volume):
+    def discover_volume(self, context, _volume):
         """Discover volume on a remote host."""
-        self._execute("sudo aoe-discover")
-        self._execute("sudo aoe-stat", check_exit_code=False)
+        (shelf_id,
+         blade_id) = self.db.volume_get_shelf_and_blade(context,
+                                                        _volume['id'])
+        self._execute('sudo', 'aoe-discover')
+        out, err = self._execute('sudo', 'aoe-stat', check_exit_code=False)
+        device_path = 'e%(shelf_id)d.%(blade_id)d' % locals()
+        if out.find(device_path) >= 0:
+            return "/dev/etherd/%s" % device_path
+        else:
+            return
 
     def undiscover_volume(self, _volume):
         """Undiscover volume on a remote host."""
         pass
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+        (shelf_id,
+         blade_id) = self.db.volume_get_shelf_and_blade(context,
+                                                        volume_id)
+        cmd = ('sudo', 'vblade-persist', 'ls', '--no-header')
+        out, _err = self._execute(*cmd)
+        exported = False
+        for line in out.split('\n'):
+            param = line.split(' ')
+            if len(param) == 6 and param[0] == str(shelf_id) \
+                    and param[1] == str(blade_id) and param[-1] == "run":
+                exported = True
+                break
+        if not exported:
+            # Instance will be terminated in this case.
+            desc = _("Cannot confirm exported volume id:%(volume_id)s. "
+                     "vblade process for e%(shelf_id)s.%(blade_id)s "
+                     "isn't running.") % locals()
+            raise exception.ProcessExecutionError(out, _err, cmd=cmd,
+                                                  description=desc)
 
 
 class FakeAOEDriver(AOEDriver):
@@ -222,7 +262,18 @@ class FakeAOEDriver(AOEDriver):
 
 
 class ISCSIDriver(VolumeDriver):
-    """Executes commands relating to ISCSI volumes."""
+    """Executes commands relating to ISCSI volumes.
+
+    We make use of model provider properties as follows:
+
+    :provider_location:    if present, contains the iSCSI target information
+                           in the same format as an ietadm discovery
+                           i.e. '<ip>:<port>,<portal> <target IQN>'
+
+    :provider_auth:    if present, contains a space-separated triple:
+                       '<auth method> <auth username> <auth password>'.
+                       `CHAP` is the only auth_method in use at the moment.
+    """
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -236,13 +287,16 @@ class ISCSIDriver(VolumeDriver):
 
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._sync_exec("sudo ietadm --op new "
-                        "--tid=%s --params Name=%s" %
-                        (iscsi_target, iscsi_name),
+        self._sync_exec('sudo', 'ietadm', '--op', 'new',
+                        "--tid=%s" % iscsi_target,
+                        '--params',
+                        "Name=%s" % iscsi_name,
                         check_exit_code=False)
-        self._sync_exec("sudo ietadm --op new --tid=%s "
-                        "--lun=0 --params Path=%s,Type=fileio" %
-                        (iscsi_target, volume_path),
+        self._sync_exec('sudo', 'ietadm', '--op', 'new',
+                        "--tid=%s" % iscsi_target,
+                        '--lun=0',
+                        '--params',
+                        "Path=%s,Type=fileio" % volume_path,
                         check_exit_code=False)
 
     def _ensure_iscsi_targets(self, context, host):
@@ -263,12 +317,13 @@ class ISCSIDriver(VolumeDriver):
                                                       volume['host'])
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
-        self._execute("sudo ietadm --op new "
-                      "--tid=%s --params Name=%s" %
-                      (iscsi_target, iscsi_name))
-        self._execute("sudo ietadm --op new --tid=%s "
-                      "--lun=0 --params Path=%s,Type=fileio" %
-                      (iscsi_target, volume_path))
+        self._execute('sudo', 'ietadm', '--op', 'new',
+                      '--tid=%s' % iscsi_target,
+                      '--params', 'Name=%s' % iscsi_name)
+        self._execute('sudo', 'ietadm', '--op', 'new',
+                      '--tid=%s' % iscsi_target,
+                      '--lun=0', '--params',
+                      'Path=%s,Type=fileio' % volume_path)
 
     def remove_export(self, context, volume):
         """Removes an export for a logical volume."""
@@ -283,51 +338,176 @@ class ISCSIDriver(VolumeDriver):
         try:
             # ietadm show will exit with an error
             # this export has already been removed
-            self._execute("sudo ietadm --op show --tid=%s " % iscsi_target)
+            self._execute('sudo', 'ietadm', '--op', 'show',
+                          '--tid=%s' % iscsi_target)
         except Exception as e:
             LOG.info(_("Skipping remove_export. No iscsi_target " +
                        "is presently exported for volume: %d"), volume['id'])
             return
 
-        self._execute("sudo ietadm --op delete --tid=%s "
-                      "--lun=0" % iscsi_target)
-        self._execute("sudo ietadm --op delete --tid=%s" %
-                      iscsi_target)
+        self._execute('sudo', 'ietadm', '--op', 'delete',
+                      '--tid=%s' % iscsi_target,
+                      '--lun=0')
+        self._execute('sudo', 'ietadm', '--op', 'delete',
+                      '--tid=%s' % iscsi_target)
 
-    def _get_name_and_portal(self, volume):
-        """Gets iscsi name and portal from volume name and host."""
+    def _do_iscsi_discovery(self, volume):
+        #TODO(justinsb): Deprecate discovery and use stored info
+        #NOTE(justinsb): Discovery won't work with CHAP-secured targets (?)
+        LOG.warn(_("ISCSI provider_location not stored, using discovery"))
+
         volume_name = volume['name']
-        host = volume['host']
-        (out, _err) = self._execute("sudo iscsiadm -m discovery -t "
-                                    "sendtargets -p %s" % host)
+
+        (out, _err) = self._execute('sudo', 'iscsiadm', '-m', 'discovery',
+                                    '-t', 'sendtargets', '-p', volume['host'])
         for target in out.splitlines():
             if FLAGS.iscsi_ip_prefix in target and volume_name in target:
-                (location, _sep, iscsi_name) = target.partition(" ")
-                break
-        iscsi_portal = location.split(",")[0]
-        return (iscsi_name, iscsi_portal)
+                return target
+        return None
 
-    def discover_volume(self, volume):
+    def _get_iscsi_properties(self, volume):
+        """Gets iscsi configuration
+
+        We ideally get saved information in the volume entity, but fall back
+        to discovery if need be. Discovery may be completely removed in future
+        The properties are:
+
+        :target_discovered:    boolean indicating whether discovery was used
+
+        :target_iqn:    the IQN of the iSCSI target
+
+        :target_portal:    the portal of the iSCSI target
+
+        :auth_method:, :auth_username:, :auth_password:
+
+            the authentication details. Right now, either auth_method is not
+            present meaning no authentication, or auth_method == `CHAP`
+            meaning use CHAP with the specified credentials.
+        """
+
+        properties = {}
+
+        location = volume['provider_location']
+
+        if location:
+            # provider_location is the same format as iSCSI discovery output
+            properties['target_discovered'] = False
+        else:
+            location = self._do_iscsi_discovery(volume)
+
+            if not location:
+                raise exception.Error(_("Could not find iSCSI export "
+                                        " for volume %s") %
+                                      (volume['name']))
+
+            LOG.debug(_("ISCSI Discovery: Found %s") % (location))
+            properties['target_discovered'] = True
+
+        (iscsi_target, _sep, iscsi_name) = location.partition(" ")
+
+        iscsi_portal = iscsi_target.split(",")[0]
+
+        properties['target_iqn'] = iscsi_name
+        properties['target_portal'] = iscsi_portal
+
+        auth = volume['provider_auth']
+
+        if auth:
+            (auth_method, auth_username, auth_secret) = auth.split()
+
+            properties['auth_method'] = auth_method
+            properties['auth_username'] = auth_username
+            properties['auth_password'] = auth_secret
+
+        return properties
+
+    def _run_iscsiadm(self, iscsi_properties, iscsi_command):
+        (out, err) = self._execute('sudo', 'iscsiadm', '-m', 'node', '-T',
+                                   iscsi_properties['target_iqn'],
+                                   '-p', iscsi_properties['target_portal'],
+                                   iscsi_command)
+        LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
+                  (iscsi_command, out, err))
+        return (out, err)
+
+    def _iscsiadm_update(self, iscsi_properties, property_key, property_value):
+        iscsi_command = ('--op', 'update', '-n', property_key,
+                         '-v', property_value)
+        return self._run_iscsiadm(iscsi_properties, iscsi_command)
+
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
-        iscsi_name, iscsi_portal = self._get_name_and_portal(volume)
-        self._execute("sudo iscsiadm -m node -T %s -p %s --login" %
-                      (iscsi_name, iscsi_portal))
-        self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
-                      "-n node.startup -v automatic" %
-                      (iscsi_name, iscsi_portal))
-        return "/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" % (iscsi_portal,
-                                                           iscsi_name)
+        iscsi_properties = self._get_iscsi_properties(volume)
+
+        if not iscsi_properties['target_discovered']:
+            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
+
+        if iscsi_properties.get('auth_method'):
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.authmethod",
+                                  iscsi_properties['auth_method'])
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.username",
+                                  iscsi_properties['auth_username'])
+            self._iscsiadm_update(iscsi_properties,
+                                  "node.session.auth.password",
+                                  iscsi_properties['auth_password'])
+
+        self._run_iscsiadm(iscsi_properties, "--login")
+
+        self._iscsiadm_update(iscsi_properties, "node.startup", "automatic")
+
+        mount_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-0" %
+                        (iscsi_properties['target_portal'],
+                         iscsi_properties['target_iqn']))
+
+        # The /dev/disk/by-path/... node is not always present immediately
+        # TODO(justinsb): This retry-with-delay is a pattern, move to utils?
+        tries = 0
+        while not os.path.exists(mount_device):
+            if tries >= FLAGS.num_iscsi_scan_tries:
+                raise exception.Error(_("iSCSI device not found at %s") %
+                                      (mount_device))
+
+            LOG.warn(_("ISCSI volume not yet found at: %(mount_device)s. "
+                       "Will rescan & retry.  Try number: %(tries)s") %
+                     locals())
+
+            # The rescan isn't documented as being necessary(?), but it helps
+            self._run_iscsiadm(iscsi_properties, "--rescan")
+
+            tries = tries + 1
+            if not os.path.exists(mount_device):
+                time.sleep(tries ** 2)
+
+        if tries != 0:
+            LOG.debug(_("Found iSCSI node %(mount_device)s "
+                        "(after %(tries)s rescans)") %
+                      locals())
+
+        return mount_device
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
-        iscsi_name, iscsi_portal = self._get_name_and_portal(volume)
-        self._execute("sudo iscsiadm -m node -T %s -p %s --op update "
-                      "-n node.startup -v manual" %
-                      (iscsi_name, iscsi_portal))
-        self._execute("sudo iscsiadm -m node -T %s -p %s --logout " %
-                      (iscsi_name, iscsi_portal))
-        self._execute("sudo iscsiadm -m node --op delete "
-                      "--targetname %s" % iscsi_name)
+        iscsi_properties = self._get_iscsi_properties(volume)
+        self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
+        self._run_iscsiadm(iscsi_properties, "--logout")
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+
+        tid = self.db.volume_get_iscsi_target_num(context, volume_id)
+        try:
+            self._execute('sudo', 'ietadm', '--op', 'show',
+                          '--tid=%(tid)d' % locals())
+        except exception.ProcessExecutionError, e:
+            # Instances remount read-only in this case.
+            # /etc/init.d/iscsitarget restart and rebooting nova-volume
+            # is better since ensure_export() works at boot time.
+            logging.error(_("Cannot confirm exported volume "
+                            "id:%(volume_id)s.") % locals())
+            raise
 
 
 class FakeISCSIDriver(ISCSIDriver):
@@ -353,7 +533,7 @@ class RBDDriver(VolumeDriver):
 
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
-        (stdout, stderr) = self._execute("rados lspools")
+        (stdout, stderr) = self._execute('rados', 'lspools')
         pools = stdout.split("\n")
         if not FLAGS.rbd_pool in pools:
             raise exception.Error(_("rbd has no pool %s") %
@@ -365,16 +545,13 @@ class RBDDriver(VolumeDriver):
             size = 100
         else:
             size = int(volume['size']) * 1024
-        self._try_execute("rbd --pool %s --size %d create %s" %
-                          (FLAGS.rbd_pool,
-                           size,
-                           volume['name']))
+        self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
+                          '--size', size, 'create', volume['name'])
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
-        self._try_execute("rbd --pool %s rm %s" %
-                          (FLAGS.rbd_pool,
-                           volume['name']))
+        self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
+                          'rm', volume['name'])
 
     def local_path(self, volume):
         """Returns the path of the rbd volume."""
@@ -396,6 +573,8 @@ class RBDDriver(VolumeDriver):
 
     def discover_volume(self, volume):
         """Discover volume on a remote host"""
+        # NOTE(justinsb): This is messed up... discover_volume takes 3 args
+        # but then that would break local_path
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def undiscover_volume(self, volume):
@@ -409,7 +588,7 @@ class SheepdogDriver(VolumeDriver):
     def check_for_setup_error(self):
         """Returns an error if prerequisites aren't met"""
         try:
-            (out, err) = self._execute("collie cluster info")
+            (out, err) = self._execute('collie', 'cluster', 'info')
             if not out.startswith('running'):
                 raise exception.Error(_("Sheepdog is not working: %s") % out)
         except exception.ProcessExecutionError:
@@ -421,12 +600,13 @@ class SheepdogDriver(VolumeDriver):
             sizestr = '100M'
         else:
             sizestr = '%sG' % volume['size']
-        self._try_execute("qemu-img create sheepdog:%s %s" %
-                          (volume['name'], sizestr))
+        self._try_execute('qemu-img', 'create',
+                          "sheepdog:%s" % volume['name'],
+                          sizestr)
 
     def delete_volume(self, volume):
         """Deletes a logical volume"""
-        self._try_execute("collie vdi delete %s" % volume['name'])
+        self._try_execute('collie', 'vdi', 'delete', volume['name'])
 
     def local_path(self, volume):
         return "sheepdog:%s" % volume['name']
@@ -443,10 +623,81 @@ class SheepdogDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
         return "sheepdog:%s" % volume['name']
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host"""
         pass
+
+
+class LoggingVolumeDriver(VolumeDriver):
+    """Logs and records calls, for unit tests."""
+
+    def check_for_setup_error(self):
+        pass
+
+    def create_volume(self, volume):
+        self.log_action('create_volume', volume)
+
+    def delete_volume(self, volume):
+        self.log_action('delete_volume', volume)
+
+    def local_path(self, volume):
+        print "local_path not implemented"
+        raise NotImplementedError()
+
+    def ensure_export(self, context, volume):
+        self.log_action('ensure_export', volume)
+
+    def create_export(self, context, volume):
+        self.log_action('create_export', volume)
+
+    def remove_export(self, context, volume):
+        self.log_action('remove_export', volume)
+
+    def discover_volume(self, context, volume):
+        self.log_action('discover_volume', volume)
+
+    def undiscover_volume(self, volume):
+        self.log_action('undiscover_volume', volume)
+
+    def check_for_export(self, context, volume_id):
+        self.log_action('check_for_export', volume_id)
+
+    _LOGS = []
+
+    @staticmethod
+    def clear_logs():
+        LoggingVolumeDriver._LOGS = []
+
+    @staticmethod
+    def log_action(action, parameters):
+        """Logs the command."""
+        LOG.debug(_("LoggingVolumeDriver: %s") % (action))
+        log_dictionary = {}
+        if parameters:
+            log_dictionary = dict(parameters)
+        log_dictionary['action'] = action
+        LOG.debug(_("LoggingVolumeDriver: %s") % (log_dictionary))
+        LoggingVolumeDriver._LOGS.append(log_dictionary)
+
+    @staticmethod
+    def all_logs():
+        return LoggingVolumeDriver._LOGS
+
+    @staticmethod
+    def logs_like(action, **kwargs):
+        matches = []
+        for entry in LoggingVolumeDriver._LOGS:
+            if entry['action'] != action:
+                continue
+            match = True
+            for k, v in kwargs.iteritems():
+                if entry.get(k) != v:
+                    match = False
+                    break
+            if match:
+                matches.append(entry)
+        return matches

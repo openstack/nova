@@ -20,6 +20,8 @@
 
 import boto
 from boto.ec2 import regioninfo
+from boto.exception import EC2ResponseError
+import datetime
 import httplib
 import random
 import StringIO
@@ -123,9 +125,31 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
-        # pylint: disable-msg=E1103
+        # pylint: disable=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
+
+    def test_return_valid_isoformat(self):
+        """
+            Ensure that the ec2 api returns datetime in xs:dateTime
+            (which apparently isn't datetime.isoformat())
+            NOTE(ken-pepple): https://bugs.launchpad.net/nova/+bug/721297
+        """
+        conv = apirequest._database_to_isoformat
+        # sqlite database representation with microseconds
+        time_to_convert = datetime.datetime.strptime(
+                            "2011-02-21 20:14:10.634276",
+                            "%Y-%m-%d %H:%M:%S.%f")
+        self.assertEqual(
+                        conv(time_to_convert),
+                        '2011-02-21T20:14:10Z')
+        # mysqlite database representation
+        time_to_convert = datetime.datetime.strptime(
+                            "2011-02-21 19:56:18",
+                            "%Y-%m-%d %H:%M:%S")
+        self.assertEqual(
+                        conv(time_to_convert),
+                        '2011-02-21T19:56:18Z')
 
     def test_xmlns_version_matches_request_version(self):
         self.expect_http(api_version='2010-10-30')
@@ -151,6 +175,17 @@ class ApiEc2TestCase(test.TestCase):
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertEqual(self.ec2.get_all_instances(), [])
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_terminate_invalid_instance(self):
+        """Attempt to terminate an invalid instance"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        self.assertRaises(EC2ResponseError, self.ec2.terminate_instances,
+                            "i-00000005")
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 

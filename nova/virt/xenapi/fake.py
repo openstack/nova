@@ -60,8 +60,8 @@ from nova import exception
 from nova import log as logging
 
 
-_CLASSES = ['host', 'network', 'session', 'SR', 'VBD',\
-            'PBD', 'VDI', 'VIF', 'VM', 'task']
+_CLASSES = ['host', 'network', 'session', 'SR', 'VBD',
+            'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
 
 _db_content = {}
 
@@ -78,30 +78,36 @@ def reset():
     for c in _CLASSES:
         _db_content[c] = {}
     create_host('fake')
-    create_vm('fake', 'Running', is_a_template=False, is_control_domain=True)
+    create_vm('fake',
+              'Running',
+              is_a_template=False,
+              is_control_domain=True)
+
+
+def reset_table(table):
+    if not table in _CLASSES:
+        return
+    _db_content[table] = {}
 
 
 def create_host(name_label):
-    return _create_object('host', {
-        'name_label': name_label,
-        })
+    return _create_object('host',
+                          {'name_label': name_label})
 
 
 def create_network(name_label, bridge):
-    return _create_object('network', {
-        'name_label': name_label,
-        'bridge': bridge,
-        })
+    return _create_object('network',
+                          {'name_label': name_label,
+                           'bridge': bridge})
 
 
 def create_vm(name_label, status,
               is_a_template=False, is_control_domain=False):
-    return _create_object('VM', {
-        'name_label': name_label,
-        'power-state': status,
-        'is_a_template': is_a_template,
-        'is_control_domain': is_control_domain,
-        })
+    return _create_object('VM',
+                          {'name_label': name_label,
+                           'power-state': status,
+                           'is_a_template': is_a_template,
+                           'is_control_domain': is_control_domain})
 
 
 def destroy_vm(vm_ref):
@@ -123,27 +129,24 @@ def destroy_vdi(vdi_ref):
 
 
 def create_vdi(name_label, read_only, sr_ref, sharable):
-    return _create_object('VDI', {
-        'name_label': name_label,
-        'read_only': read_only,
-        'SR': sr_ref,
-        'type': '',
-        'name_description': '',
-        'sharable': sharable,
-        'other_config': {},
-        'location': '',
-        'xenstore_data': '',
-        'sm_config': {},
-        'VBDs': {},
-        })
+    return _create_object('VDI',
+                          {'name_label': name_label,
+                           'read_only': read_only,
+                           'SR': sr_ref,
+                           'type': '',
+                           'name_description': '',
+                           'sharable': sharable,
+                           'other_config': {},
+                           'location': '',
+                           'xenstore_data': '',
+                           'sm_config': {},
+                           'VBDs': {}})
 
 
 def create_vbd(vm_ref, vdi_ref):
-    vbd_rec = {
-        'VM': vm_ref,
-        'VDI': vdi_ref,
-        'currently_attached': False,
-        }
+    vbd_rec = {'VM': vm_ref,
+               'VDI': vdi_ref,
+               'currently_attached': False}
     vbd_ref = _create_object('VBD', vbd_rec)
     after_VBD_create(vbd_ref, vbd_rec)
     return vbd_ref
@@ -162,20 +165,31 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vbd_rec['vm_name_label'] = vm_name_label
 
 
+def after_VM_create(vm_ref, vm_rec):
+    """Create read-only fields in the VM record."""
+    if 'is_control_domain' not in vm_rec:
+        vm_rec['is_control_domain'] = False
+
+
 def create_pbd(config, host_ref, sr_ref, attached):
-    return _create_object('PBD', {
-        'device-config': config,
-        'host': host_ref,
-        'SR': sr_ref,
-        'currently-attached': attached,
-        })
+    return _create_object('PBD',
+                          {'device-config': config,
+                           'host': host_ref,
+                           'SR': sr_ref,
+                           'currently-attached': attached})
 
 
 def create_task(name_label):
-    return _create_object('task', {
-        'name_label': name_label,
-        'status': 'pending',
-        })
+    return _create_object('task',
+                          {'name_label': name_label,
+                           'status': 'pending'})
+
+
+def create_local_pifs():
+    """Adds a PIF for each to the local database with VLAN=-1.
+       Do this one per host."""
+    for host_ref in _db_content['host'].keys():
+        _create_local_pif(host_ref)
 
 
 def create_local_srs():
@@ -186,23 +200,32 @@ def create_local_srs():
 
 
 def _create_local_sr(host_ref):
-    sr_ref = _create_object('SR', {
-        'name_label': 'Local storage',
-        'type': 'lvm',
-        'content_type': 'user',
-        'shared': False,
-        'physical_size': str(1 << 30),
-        'physical_utilisation': str(0),
-        'virtual_allocation': str(0),
-        'other_config': {
-            'i18n-original-value-name_label': 'Local storage',
-            'i18n-key': 'local-storage',
-            },
-        'VDIs': []
-        })
+    sr_ref = _create_object(
+             'SR',
+             {'name_label': 'Local storage',
+              'type': 'lvm',
+              'content_type': 'user',
+              'shared': False,
+              'physical_size': str(1 << 30),
+              'physical_utilisation': str(0),
+              'virtual_allocation': str(0),
+              'other_config': {
+                     'i18n-original-value-name_label': 'Local storage',
+                     'i18n-key': 'local-storage'},
+              'VDIs': []})
     pbd_ref = create_pbd('', host_ref, sr_ref, True)
     _db_content['SR'][sr_ref]['PBDs'] = [pbd_ref]
     return sr_ref
+
+
+def _create_local_pif(host_ref):
+    pif_ref = _create_object('PIF',
+                             {'name-label': 'Fake PIF',
+                              'MAC': '00:11:22:33:44:55',
+                              'physical': True,
+                              'VLAN': -1,
+                              'device': 'fake0',
+                              'host_uuid': host_ref})
 
 
 def _create_object(table, obj):
@@ -226,6 +249,21 @@ def _create_sr(table, obj):
     _db_content['VDI'][vdi_ref]['SR'] = sr_ref
     _db_content['PBD'][pbd_ref]['SR'] = sr_ref
     return sr_ref
+
+
+def _create_vlan(pif_ref, vlan_num, network_ref):
+    pif_rec = get_record('PIF', pif_ref)
+    vlan_pif_ref = _create_object('PIF',
+                                  {'name-label': 'Fake VLAN PIF',
+                                   'MAC': '00:11:22:33:44:55',
+                                   'physical': True,
+                                   'VLAN': vlan_num,
+                                   'device': pif_rec['device'],
+                                   'host_uuid': pif_rec['host_uuid']})
+    return _create_object('VLAN',
+                          {'tagged-pif': pif_ref,
+                           'untagged-pif': vlan_pif_ref,
+                           'tag': vlan_num})
 
 
 def get_all(table):
@@ -286,9 +324,38 @@ class SessionBase(object):
         rec['currently_attached'] = False
         rec['device'] = ''
 
+    def PIF_get_all_records_where(self, _1, _2):
+        # TODO (salvatore-orlando): filter table on _2
+        return _db_content['PIF']
+
+    def VM_get_xenstore_data(self, _1, vm_ref):
+        return _db_content['VM'][vm_ref].get('xenstore_data', '')
+
+    def VM_remove_from_xenstore_data(self, _1, vm_ref, key):
+        db_ref = _db_content['VM'][vm_ref]
+        if not 'xenstore_data' in db_ref:
+            return
+        db_ref['xenstore_data'][key] = None
+
+    def network_get_all_records_where(self, _1, _2):
+        # TODO (salvatore-orlando): filter table on _2
+        return _db_content['network']
+
+    def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
+        db_ref = _db_content['VM'][vm_ref]
+        if not 'xenstore_data' in db_ref:
+            db_ref['xenstore_data'] = {}
+        db_ref['xenstore_data'][key] = value
+
     def host_compute_free_memory(self, _1, ref):
         #Always return 12GB available
         return 12 * 1024 * 1024 * 1024
+
+    def host_call_plugin(*args):
+        return 'herp'
+
+    def network_get_all_records_where(self, _1, filter):
+        return self.xenapi.network.get_all_records()
 
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):
@@ -309,10 +376,9 @@ class SessionBase(object):
 
     def _login(self, method, params):
         self._session = str(uuid.uuid4())
-        _db_content['session'][self._session] = {
-            'uuid': str(uuid.uuid4()),
-            'this_host': _db_content['host'].keys()[0],
-            }
+        _db_content['session'][self._session] = \
+                                {'uuid': str(uuid.uuid4()),
+                                 'this_host': _db_content['host'].keys()[0]}
 
     def _logout(self):
         s = self._session
@@ -373,7 +439,6 @@ class SessionBase(object):
     def _getter(self, name, params):
         self._check_session(params)
         (cls, func) = name.split('.')
-
         if func == 'get_all':
             self._check_arg_count(params, 1)
             return get_all(cls)
@@ -396,12 +461,13 @@ class SessionBase(object):
         if len(params) == 2:
             field = func[len('get_'):]
             ref = params[1]
+            if (ref in _db_content[cls]):
+                if (field in _db_content[cls][ref]):
+                    return _db_content[cls][ref][field]
+            else:
+                raise Failure(['HANDLE_INVALID', cls, ref])
 
-            if (ref in _db_content[cls] and
-                field in _db_content[cls][ref]):
-                return _db_content[cls][ref][field]
-
-        LOG.debuug(_('Raising NotImplemented'))
+        LOG.debug(_('Raising NotImplemented'))
         raise NotImplementedError(
             _('xenapi.fake does not have an implementation for %s or it has '
             'been called with the wrong number of arguments') % name)
@@ -428,12 +494,16 @@ class SessionBase(object):
     def _create(self, name, params):
         self._check_session(params)
         is_sr_create = name == 'SR.create'
+        is_vlan_create = name == 'VLAN.create'
         # Storage Repositories have a different API
-        expected = is_sr_create and 10 or 2
+        expected = is_sr_create and 10 or is_vlan_create and 4 or 2
         self._check_arg_count(params, expected)
         (cls, _) = name.split('.')
         ref = is_sr_create and \
-            _create_sr(cls, params) or _create_object(cls, params[1])
+              _create_sr(cls, params) or \
+              is_vlan_create and \
+              _create_vlan(params[1], params[2], params[3]) or \
+              _create_object(cls, params[1])
 
         # Call hook to provide any fixups needed (ex. creating backrefs)
         after_hook = 'after_%s_create' % cls
@@ -473,7 +543,7 @@ class SessionBase(object):
     def _check_session(self, params):
         if (self._session is None or
             self._session not in _db_content['session']):
-            raise Failure(['HANDLE_INVALID', 'session', self._session])
+                raise Failure(['HANDLE_INVALID', 'session', self._session])
         if len(params) == 0 or params[0] != self._session:
             LOG.debug(_('Raising NotImplemented'))
             raise NotImplementedError('Call to XenAPI without using .xenapi')

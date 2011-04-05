@@ -18,6 +18,9 @@ if [ ! -n "$HOST_IP" ]; then
 fi
 
 USE_MYSQL=${USE_MYSQL:-0}
+INTERFACE=${INTERFACE:-eth0}
+FLOATING_RANGE=${FLOATING_RANGE:-10.6.0.0/27}
+FIXED_RANGE=${FIXED_RANGE:-10.0.0.0/24}
 MYSQL_PASS=${MYSQL_PASS:-nova}
 TEST=${TEST:-0}
 USE_LDAP=${USE_LDAP:-0}
@@ -66,16 +69,20 @@ if [ "$CMD" == "install" ]; then
     sudo apt-get install -y user-mode-linux kvm libvirt-bin
     sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
     sudo apt-get install -y lvm2 iscsitarget open-iscsi
-    sudo apt-get install -y socat
+    sudo apt-get install -y socat unzip
     echo "ISCSITARGET_ENABLE=true" | sudo tee /etc/default/iscsitarget
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
     sudo /etc/init.d/libvirt-bin restart
     sudo modprobe nbd
-    sudo apt-get install -y python-twisted python-sqlalchemy python-mox python-greenlet python-carrot
-    sudo apt-get install -y python-migrate python-eventlet python-gflags python-ipy python-tempita
-    sudo apt-get install -y python-libvirt python-libxml2 python-routes python-cheetah
-    sudo apt-get install -y python-netaddr python-paste python-pastedeploy python-glance
+    sudo apt-get install -y python-twisted python-mox python-ipy python-paste
+    sudo apt-get install -y python-migrate python-gflags python-greenlet
+    sudo apt-get install -y python-libvirt python-libxml2 python-routes
+    sudo apt-get install -y python-netaddr python-pastedeploy python-eventlet
+    sudo apt-get install -y python-novaclient python-glance python-cheetah
+    sudo apt-get install -y python-carrot python-tempita python-sqlalchemy
+    sudo apt-get install -y python-suds
+
 
     if [ "$USE_IPV6" == 1 ]; then
         sudo apt-get install -y radvd
@@ -104,15 +111,16 @@ function screen_it {
     screen -S nova -p $1 -X stuff "$2$NL"
 }
 
-if [ "$CMD" == "run" ]; then
+if [ "$CMD" == "run" ] || [ "$CMD" == "run_detached" ]; then
 
   cat >$NOVA_DIR/bin/nova.conf << NOVA_CONF_EOF
 --verbose
 --nodaemon
 --dhcpbridge_flagfile=$NOVA_DIR/bin/nova.conf
 --network_manager=nova.network.manager.$NET_MAN
---cc_host=$HOST_IP
---routing_source_ip=$HOST_IP
+--my_ip=$HOST_IP
+--public_interface=$INTERFACE
+--vlan_interface=$INTERFACE
 --sql_connection=$SQL_CONN
 --auth_driver=nova.auth.$AUTH
 --libvirt_type=$LIBVIRT_TYPE
@@ -151,7 +159,6 @@ NOVA_CONF_EOF
     mkdir -p $NOVA_DIR/instances
     rm -rf $NOVA_DIR/networks
     mkdir -p $NOVA_DIR/networks
-    $NOVA_DIR/tools/clean-vlans
     if [ ! -d "$NOVA_DIR/images" ]; then
         ln -s $DIR/images $NOVA_DIR/images
     fi
@@ -168,10 +175,14 @@ NOVA_CONF_EOF
     $NOVA_DIR/bin/nova-manage user admin admin admin admin
     # create a project called 'admin' with project manager of 'admin'
     $NOVA_DIR/bin/nova-manage project create admin admin
-    # export environment variables for project 'admin' and user 'admin'
-    $NOVA_DIR/bin/nova-manage project environment admin admin $NOVA_DIR/novarc
     # create a small network
-    $NOVA_DIR/bin/nova-manage network create 10.0.0.0/8 1 32
+    $NOVA_DIR/bin/nova-manage network create $FIXED_RANGE 1 32
+
+    # create some floating ips
+    $NOVA_DIR/bin/nova-manage floating create `hostname` $FLOATING_RANGE
+
+    # convert old images
+    $NOVA_DIR/bin/nova-manage image convert $DIR/images
 
     # nova api crashes if we start it with a regular screen command,
     # so send the start command by forcing text into the window.
@@ -182,8 +193,15 @@ NOVA_CONF_EOF
     screen_it scheduler "$NOVA_DIR/bin/nova-scheduler"
     screen_it volume "$NOVA_DIR/bin/nova-volume"
     screen_it ajax_console_proxy "$NOVA_DIR/bin/nova-ajax-console-proxy"
-    screen_it test ". $NOVA_DIR/novarc"
-    screen -S nova -x
+    sleep 2
+    # export environment variables for project 'admin' and user 'admin'
+    $NOVA_DIR/bin/nova-manage project zipfile admin admin $NOVA_DIR/nova.zip
+    unzip -o $NOVA_DIR/nova.zip -d $NOVA_DIR/
+
+    screen_it test "export PATH=$NOVA_DIR/bin:$PATH;. $NOVA_DIR/novarc"
+    if [ "$CMD" != "run_detached" ]; then
+      screen -S nova -x
+    fi
 fi
 
 if [ "$CMD" == "run" ] || [ "$CMD" == "terminate" ]; then

@@ -17,34 +17,40 @@
 #    under the License.
 
 import boto
-import boto_v6
 import commands
 import httplib
 import os
 import paramiko
-import random
 import sys
+import time
 import unittest
 from boto.ec2.regioninfo import RegionInfo
 
 from smoketests import flags
 
+SUITE_NAMES = '[image, instance, volume]'
 FLAGS = flags.FLAGS
+flags.DEFINE_string('suite', None, 'Specific test suite to run ' + SUITE_NAMES)
+flags.DEFINE_integer('ssh_tries', 3, 'Numer of times to try ssh')
 
 
 class SmokeTestCase(unittest.TestCase):
     def connect_ssh(self, ip, key_name):
-        # TODO(devcamcar): set a more reasonable connection timeout time
         key = paramiko.RSAKey.from_private_key_file('/tmp/%s.pem' % key_name)
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.WarningPolicy())
-        client.connect(ip, username='root', pkey=key)
-        stdin, stdout, stderr = client.exec_command('uptime')
-        print 'uptime: ', stdout.read()
-        return client
+        tries = 0
+        while(True):
+            try:
+                client = paramiko.SSHClient()
+                client.set_missing_host_key_policy(paramiko.WarningPolicy())
+                client.connect(ip, username='root', pkey=key, timeout=5)
+                return client
+            except (paramiko.AuthenticationException, paramiko.SSHException):
+                tries += 1
+                if tries == FLAGS.ssh_tries:
+                    raise
 
-    def can_ping(self, ip):
-        """ Attempt to ping the specified IP, and give up after 1 second. """
+    def can_ping(self, ip, command="ping"):
+        """Attempt to ping the specified IP, and give up after 1 second."""
 
         # NOTE(devcamcar): ping timeout flag is different in OSX.
         if sys.platform == 'darwin':
@@ -52,9 +58,40 @@ class SmokeTestCase(unittest.TestCase):
         else:
             timeout_flag = 'w'
 
-        status, output = commands.getstatusoutput('ping -c1 -%s1 %s' %
-                                                  (timeout_flag, ip))
+        status, output = commands.getstatusoutput('%s -c1 -%s1 %s' %
+                                                  (command, timeout_flag, ip))
         return status == 0
+
+    def wait_for_running(self, instance, tries=60, wait=1):
+        """Wait for instance to be running"""
+        for x in xrange(tries):
+            instance.update()
+            if instance.state.startswith('running'):
+                return True
+            time.sleep(wait)
+        else:
+            return False
+
+    def wait_for_ping(self, ip, command="ping", tries=120):
+        """Wait for ip to be pingable"""
+        for x in xrange(tries):
+            if self.can_ping(ip, command):
+                return True
+        else:
+            return False
+
+    def wait_for_ssh(self, ip, key_name, tries=30, wait=5):
+        """Wait for ip to be sshable"""
+        for x in xrange(tries):
+            try:
+                conn = self.connect_ssh(ip, key_name)
+                conn.close()
+            except Exception, e:
+                time.sleep(wait)
+            else:
+                return True
+        else:
+            return False
 
     def connection_for_env(self, **kwargs):
         """
@@ -116,8 +153,8 @@ class SmokeTestCase(unittest.TestCase):
         except:
             pass
 
-    def bundle_image(self, image, kernel=False):
-        cmd = 'euca-bundle-image -i %s' % image
+    def bundle_image(self, image, tempdir='/tmp', kernel=False):
+        cmd = 'euca-bundle-image -i %s -d %s' % (image, tempdir)
         if kernel:
             cmd += ' --kernel true'
         status, output = commands.getstatusoutput(cmd)
@@ -126,9 +163,9 @@ class SmokeTestCase(unittest.TestCase):
             raise Exception(output)
         return True
 
-    def upload_image(self, bucket_name, image):
+    def upload_image(self, bucket_name, image, tempdir='/tmp'):
         cmd = 'euca-upload-bundle -b '
-        cmd += '%s -m /tmp/%s.manifest.xml' % (bucket_name, image)
+        cmd += '%s -m %s/%s.manifest.xml' % (bucket_name, tempdir, image)
         status, output = commands.getstatusoutput(cmd)
         if status != 0:
             print '%s -> \n %s' % (cmd, output)
@@ -144,24 +181,14 @@ class SmokeTestCase(unittest.TestCase):
         return True
 
 
-def run_tests(suites):
-    argv = FLAGS(sys.argv)
+TEST_DATA = {}
+if FLAGS.use_ipv6:
+    global boto_v6
+    boto_v6 = __import__('boto_v6')
 
-    if not os.getenv('EC2_ACCESS_KEY'):
-        print >> sys.stderr, 'Missing EC2 environment variables. Please ' \
-                             'source the appropriate novarc file before ' \
-                             'running this test.'
-        return 1
 
-    if FLAGS.suite:
-        try:
-            suite = suites[FLAGS.suite]
-        except KeyError:
-            print >> sys.stderr, 'Available test suites:', \
-                                 ', '.join(suites.keys())
-            return 1
-
-        unittest.TextTestRunner(verbosity=2).run(suite)
-    else:
-        for suite in suites.itervalues():
-            unittest.TextTestRunner(verbosity=2).run(suite)
+class UserSmokeTestCase(SmokeTestCase):
+    def setUp(self):
+        global TEST_DATA
+        self.conn = self.connection_for_env()
+        self.data = TEST_DATA

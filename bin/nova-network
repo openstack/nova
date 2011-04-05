@@ -36,10 +36,14 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import flags
+from nova import log as logging
 from nova import service
 from nova import utils
 
 if __name__ == '__main__':
     utils.default_flagfile()
+    flags.FLAGS(sys.argv)
+    logging.setup()
     service.serve()
     service.wait()

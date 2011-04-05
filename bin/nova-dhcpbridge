@@ -48,6 +48,7 @@ flags.DECLARE('auth_driver', 'nova.auth.manager')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('update_dhcp_on_disassociate', 'nova.network.manager')
+flags.DEFINE_string('dnsmasq_interface', 'br0', 'Default Dnsmasq interface')
 
 LOG = logging.getLogger('nova.dhcpbridge')
 
@@ -94,7 +95,7 @@ def init_leases(interface):
     """Get the list of hosts for an interface."""
     ctxt = context.get_admin_context()
     network_ref = db.network_get_by_bridge(ctxt, interface)
-    return linux_net.get_dhcp_hosts(ctxt, network_ref['id'])
+    return linux_net.get_dhcp_leases(ctxt, network_ref['id'])
 
 
 def main():
@@ -102,19 +103,11 @@ def main():
     flagfile = os.environ.get('FLAGFILE', FLAGS.dhcpbridge_flagfile)
     utils.default_flagfile(flagfile)
     argv = FLAGS(sys.argv)
-    logging.basicConfig()
-    interface = os.environ.get('DNSMASQ_INTERFACE', 'br0')
+    logging.setup()
+    # check ENV first so we don't break any older deploys
+    interface = os.environ.get('DNSMASQ_INTERFACE', FLAGS.dnsmasq_interface)
     if int(os.environ.get('TESTING', '0')):
-        FLAGS.fake_rabbit = True
-        FLAGS.network_size = 16
-        FLAGS.connection_type = 'fake'
-        FLAGS.fake_network = True
-        FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
-        FLAGS.num_networks = 5
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                            '..',
-                                            'nova.sqlite'))
-        FLAGS.sql_connection = 'sqlite:///%s' % path
+        from nova.tests import fake_flags
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]

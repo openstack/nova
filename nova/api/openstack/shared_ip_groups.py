@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
-
 from webob import exc
 
 from nova import wsgi
@@ -44,11 +42,11 @@ class Controller(wsgi.Controller):
 
     def index(self, req):
         """ Returns a list of Shared IP Groups for the user """
-        return dict(sharedIpGroups=[])
+        raise faults.Fault(exc.HTTPNotImplemented())
 
     def show(self, req, id):
         """ Shows in-depth information on a specific Shared IP Group """
-        return _translate_keys({})
+        raise faults.Fault(exc.HTTPNotImplemented())
 
     def update(self, req, id):
         """ You can't update a Shared IP Group """
@@ -60,7 +58,7 @@ class Controller(wsgi.Controller):
 
     def detail(self, req):
         """ Returns a complete list of Shared IP Groups """
-        return _translate_detail_keys({})
+        raise faults.Fault(exc.HTTPNotImplemented())
 
     def create(self, req):
         """ Creates a new Shared IP group """

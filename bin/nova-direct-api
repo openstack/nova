@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -34,23 +34,60 @@ if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
 
 gettext.install('nova', unicode=1)
 
+from nova import compute
 from nova import flags
+from nova import log as logging
+from nova import network
 from nova import utils
+from nova import volume
 from nova import wsgi
 from nova.api import direct
-from nova.compute import api as compute_api
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('direct_port', 8001, 'Direct API port')
 flags.DEFINE_string('direct_host', '0.0.0.0', 'Direct API host')
+flags.DEFINE_flag(flags.HelpFlag())
+flags.DEFINE_flag(flags.HelpshortFlag())
+flags.DEFINE_flag(flags.HelpXMLFlag())
+
+
+# An example of an API that only exposes read-only methods.
+# In this case we're just limiting which methods are exposed.
+class ReadOnlyCompute(direct.Limited):
+    """Read-only Compute API."""
+
+    _allowed = ['get', 'get_all', 'get_console_output']
+
+
+# An example of an API that provides a backwards compatibility layer.
+# In this case we're overwriting the implementation to ensure
+# compatibility with an older version. In reality we would want the
+# "description=None" to be part of the actual API so that code
+# like this isn't even necessary, but this example shows what one can
+# do if that isn't the situation.
+class VolumeVersionOne(direct.Limited):
+    _allowed = ['create', 'delete', 'update', 'get']
+
+    def create(self, context, size, name):
+        self.proxy.create(context, size, name, description=None)
+
 
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
+    logging.setup()
 
-    direct.register_service('compute', compute_api.API())
+    direct.register_service('compute', compute.API())
+    direct.register_service('volume', volume.API())
+    direct.register_service('network', network.API())
     direct.register_service('reflect', direct.Reflection())
+
+    # Here is how we could expose the code in the examples above.
+    #direct.register_service('compute-readonly',
+    #                        ReadOnlyCompute(compute.API()))
+    #direct.register_service('volume-v1', VolumeVersionOne(volume.API()))
+
     router = direct.Router()
     with_json = direct.JsonParamsMiddleware(router)
     with_req = direct.PostParamsMiddleware(with_json)

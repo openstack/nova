@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import logging
 import time
 
 from webob import exc
@@ -43,7 +42,11 @@ class Controller(wsgi.Controller):
 
     def index(self, req, server_id):
         """ Returns the list of backup schedules for a given instance """
-        return _translate_keys({})
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def show(self, req, server_id, id):
+        """ Returns a single backup schedule for a given instance """
+        return faults.Fault(exc.HTTPNotImplemented())
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows

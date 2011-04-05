@@ -10,7 +10,6 @@ export NOVA_CERT=${NOVA_KEY_DIR}/%(nova)s
 export EUCALYPTUS_CERT=${NOVA_CERT} # euca-bundle-image seems to require this set
 alias ec2-bundle-image="ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user 42 --ec2cert ${NOVA_CERT}"
 alias ec2-upload-bundle="ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${NOVA_CERT}"
-export CLOUD_SERVERS_API_KEY="%(access)s"
-export CLOUD_SERVERS_USERNAME="%(user)s"
-export CLOUD_SERVERS_URL="%(os)s"
-
+export NOVA_API_KEY="%(access)s"
+export NOVA_USERNAME="%(user)s"
+export NOVA_URL="%(os)s"

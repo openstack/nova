@@ -65,7 +65,7 @@ class MetadataRequestHandler(wsgi.Application):
                 data = data[item]
         return data
 
-    @webob.dec.wsgify
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         cc = cloud.CloudController()
         remote_address = req.remote_addr

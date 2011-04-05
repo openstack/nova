@@ -15,27 +15,83 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from urlparse import urlparse
+
+import webob
+
 from nova import exception
+from nova import flags
+from nova import log as logging
 
 
-def limited(items, req):
-    """Return a slice of items according to requested offset and limit.
+LOG = logging.getLogger('common')
 
-    items - a sliceable
-    req - wobob.Request possibly containing offset and limit GET variables.
-          offset is where to start in the list, and limit is the maximum number
-          of items to return.
 
-    If limit is not specified, 0, or > 1000, defaults to 1000.
+FLAGS = flags.FLAGS
+
+
+def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
+    Return a slice of items according to requested offset and limit.
 
-    offset = int(req.GET.get('offset', 0))
-    limit = int(req.GET.get('limit', 0))
-    if not limit:
-        limit = 1000
-    limit = min(1000, limit)
+    @param items: A sliceable entity
+    @param request: `wsgi.Request` possibly containing 'offset' and 'limit'
+                    GET variables. 'offset' is where to start in the list,
+                    and 'limit' is the maximum number of items to return. If
+                    'limit' is not specified, 0, or > max_limit, we default
+                    to max_limit. Negative values for either offset or limit
+                    will cause exc.HTTPBadRequest() exceptions to be raised.
+    @kwarg max_limit: The maximum number of items to return from 'items'
+    """
+    try:
+        offset = int(request.GET.get('offset', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', max_limit))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if offset < 0:
+        raise webob.exc.HTTPBadRequest(_('offset param must be positive'))
+
+    limit = min(max_limit, limit or max_limit)
     range_end = offset + limit
     return items[offset:range_end]
+
+
+def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
+    """Return a slice of items according to the requested marker and limit."""
+
+    try:
+        marker = int(request.GET.get('marker', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', max_limit))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    limit = min(max_limit, limit)
+    start_index = 0
+    if marker:
+        start_index = -1
+        for i, item in enumerate(items):
+            if item['id'] == marker:
+                start_index = i + 1
+                break
+        if start_index < 0:
+            raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
+    range_end = start_index + limit
+    return items[start_index:range_end]
 
 
 def get_image_id_from_image_hash(image_service, context, image_hash):
@@ -58,3 +114,17 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
         if abs(hash(image_id)) == int(image_hash):
             return image_id
     raise exception.NotFound(image_hash)
+
+
+def get_id_from_href(href):
+    """Return the id portion of a url as an int.
+
+    Given: http://www.foo.com/bar/123?q=4
+    Returns: 123
+
+    """
+    try:
+        return int(urlparse(href).path.split('/')[-1])
+    except:
+        LOG.debug(_("Error extracting id from href: %s") % href)
+        raise webob.exc.HTTPBadRequest(_('could not parse id from href'))

@@ -36,7 +36,15 @@ pluginlib.configure_logging("xenstore")
 
 def jsonify(fnc):
     def wrapper(*args, **kwargs):
-        return json.dumps(fnc(*args, **kwargs))
+        ret = fnc(*args, **kwargs)
+        try:
+            json.loads(ret)
+        except ValueError:
+            # Value should already be JSON-encoded, but some operations
+            # may write raw sting values; this will catch those and
+            # properly encode them.
+            ret = json.dumps(ret)
+        return ret
     return wrapper
 
 

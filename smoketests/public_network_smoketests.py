@@ -19,14 +19,19 @@
 import commands
 import os
 import random
-import socket
 import sys
 import time
-import unittest
+
+# If ../nova/__init__.py exists, add ../ to Python search path, so that
+# it will override what happens to be installed in /usr/(local/)lib/python...
+possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+                                   os.pardir,
+                                   os.pardir))
+if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
+    sys.path.insert(0, possible_topdir)
 
 from smoketests import flags
 from smoketests import base
-from smoketests import user_smoketests
 
 #Note that this test should run from
 #public network (outside of private network segments)
@@ -42,7 +47,7 @@ TEST_KEY2 = '%s_key2' % TEST_PREFIX
 TEST_DATA = {}
 
 
-class InstanceTestsFromPublic(user_smoketests.UserSmokeTestCase):
+class InstanceTestsFromPublic(base.UserSmokeTestCase):
     def test_001_can_create_keypair(self):
         key = self.create_key_pair(self.conn, TEST_KEY)
         self.assertEqual(key.name, TEST_KEY)
@@ -174,7 +179,3 @@ class InstanceTestsFromPublic(user_smoketests.UserSmokeTestCase):
         self.conn.delete_security_group(security_group_name)
         if 'instance_id' in self.data:
             self.conn.terminate_instances([self.data['instance_id']])
-
-if __name__ == "__main__":
-    suites = {'instance': unittest.makeSuite(InstanceTestsFromPublic)}
-    sys.exit(base.run_tests(suites))

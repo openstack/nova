@@ -20,6 +20,7 @@
 APIRequest class
 """
 
+import datetime
 import re
 # TODO(termie): replace minidom with etree
 from xml.dom import minidom
@@ -45,8 +46,29 @@ def _underscore_to_xmlcase(str):
     return res[:1].lower() + res[1:]
 
 
+def _database_to_isoformat(datetimeobj):
+    """Return a xs:dateTime parsable string from datatime"""
+    return datetimeobj.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _try_convert(value):
-    """Return a non-string if possible"""
+    """Return a non-string from a string or unicode, if possible.
+
+    ============= =====================================================
+    When value is returns
+    ============= =====================================================
+    zero-length   ''
+    'None'        None
+    'True'        True
+    'False'       False
+    '0', '-0'     0
+    0xN, -0xN     int from hex (postitive) (N is any number)
+    0bN, -0bN     int from binary (positive) (N is any number)
+    *             try conversion to int, float, complex, fallback value
+
+    """
+    if len(value) == 0:
+        return ''
     if value == 'None':
         return None
     if value == 'True':
@@ -171,6 +193,9 @@ class APIRequest(object):
             self._render_dict(xml, data_el, data.__dict__)
         elif isinstance(data, bool):
             data_el.appendChild(xml.createTextNode(str(data).lower()))
+        elif isinstance(data, datetime.datetime):
+            data_el.appendChild(
+                  xml.createTextNode(_database_to_isoformat(data)))
         elif data != None:
             data_el.appendChild(xml.createTextNode(str(data)))
 

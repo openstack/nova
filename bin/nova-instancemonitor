@@ -41,9 +41,6 @@ from nova import utils
 from nova import twistd
 from nova.compute import monitor
 
-# TODO(todd): shouldn't this be done with flags?  And what about verbose?
-logging.getLogger('boto').setLevel(logging.WARN)
-
 LOG = logging.getLogger('nova.instancemonitor')
 
 
@@ -53,7 +50,7 @@ if __name__ == '__main__':
 
 if __name__ == '__builtin__':
     LOG.warn(_('Starting instance monitor'))
-    # pylint: disable-msg=C0103
+    # pylint: disable=C0103
     monitor = monitor.InstanceMonitor()
 
     # This is the parent service that twistd will be looking for when it

@@ -21,17 +21,21 @@ Admin API controller, exposed through http via the api worker.
 """
 
 import base64
+import datetime
 import IPy
 import urllib
 
 from nova import compute
 from nova import db
 from nova import exception
+from nova import flags
 from nova import log as logging
+from nova import utils
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
-from nova.compute import instance_types
 
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.ec2.admin')
 
 
@@ -58,20 +62,55 @@ def project_dict(project):
         return {}
 
 
-def host_dict(host):
+def host_dict(host, compute_service, instances, volume_service, volumes, now):
     """Convert a host model object to a result dict"""
-    if host:
-        return host.state
-    else:
-        return {}
+    rv = {'hostname': host, 'instance_count': len(instances),
+          'volume_count': len(volumes)}
+    if compute_service:
+        latest = compute_service['updated_at'] or compute_service['created_at']
+        delta = now - latest
+        if delta.seconds <= FLAGS.service_down_time:
+            rv['compute'] = 'up'
+        else:
+            rv['compute'] = 'down'
+    if volume_service:
+        latest = volume_service['updated_at'] or volume_service['created_at']
+        delta = now - latest
+        if delta.seconds <= FLAGS.service_down_time:
+            rv['volume'] = 'up'
+        else:
+            rv['volume'] = 'down'
+    return rv
 
 
-def instance_dict(name, inst):
-    return {'name': name,
+def instance_dict(inst):
+    return {'name': inst['name'],
             'memory_mb': inst['memory_mb'],
             'vcpus': inst['vcpus'],
             'disk_gb': inst['local_gb'],
             'flavor_id': inst['flavorid']}
+
+
+def vpn_dict(project, vpn_instance):
+    rv = {'project_id': project.id,
+          'public_ip': project.vpn_ip,
+          'public_port': project.vpn_port}
+    if vpn_instance:
+        rv['instance_id'] = ec2utils.id_to_ec2_id(vpn_instance['id'])
+        rv['created_at'] = utils.isotime(vpn_instance['created_at'])
+        address = vpn_instance.get('fixed_ip', None)
+        if address:
+            rv['internal_ip'] = address['address']
+        if project.vpn_ip and project.vpn_port:
+            if utils.vpn_ping(project.vpn_ip, project.vpn_port):
+                rv['state'] = 'running'
+            else:
+                rv['state'] = 'down'
+        else:
+            rv['state'] = 'down - invalid project vpn config'
+    else:
+        rv['state'] = 'pending'
+    return rv
 
 
 class AdminController(object):
@@ -85,9 +124,10 @@ class AdminController(object):
     def __init__(self):
         self.compute_api = compute.API()
 
-    def describe_instance_types(self, _context, **_kwargs):
-        return {'instanceTypeSet': [instance_dict(n, v) for n, v in
-                                    instance_types.INSTANCE_TYPES.iteritems()]}
+    def describe_instance_types(self, context, **_kwargs):
+        """Returns all active instance types data (vcpus, memory, etc.)"""
+        return {'instanceTypeSet': [instance_dict(v) for v in
+                                   db.instance_type_get_all(context).values()]}
 
     def describe_user(self, _context, name, **_kwargs):
         """Returns user data, including access and secret keys."""
@@ -229,19 +269,68 @@ class AdminController(object):
             raise exception.ApiError(_('operation must be add or remove'))
         return True
 
+    def _vpn_for(self, context, project_id):
+        """Get the VPN instance for a project ID."""
+        for instance in db.instance_get_all_by_project(context, project_id):
+            if (instance['image_id'] == FLAGS.vpn_image_id
+                and not instance['state_description'] in
+                    ['shutting_down', 'shutdown']):
+                return instance
+
+    def start_vpn(self, context, project):
+        instance = self._vpn_for(context, project)
+        if not instance:
+            # NOTE(vish) import delayed because of __init__.py
+            from nova.cloudpipe import pipelib
+            pipe = pipelib.CloudPipe()
+            try:
+                pipe.launch_vpn_instance(project)
+            except db.NoMoreNetworks:
+                raise exception.ApiError("Unable to claim IP for VPN instance"
+                                         ", ensure it isn't running, and try "
+                                         "again in a few minutes")
+            instance = self._vpn_for(context, project)
+        return {'instance_id': ec2utils.id_to_ec2_id(instance['id'])}
+
+    def describe_vpns(self, context):
+        vpns = []
+        for project in manager.AuthManager().get_projects():
+            instance = self._vpn_for(context, project.id)
+            vpns.append(vpn_dict(project, instance))
+        return {'items': vpns}
+
     # FIXME(vish): these host commands don't work yet, perhaps some of the
     #              required data can be retrieved from service objects?
 
-    def describe_hosts(self, _context, **_kwargs):
+    def describe_hosts(self, context, **_kwargs):
         """Returns status info for all nodes. Includes:
-            * Disk Space
-            * Instance List
-            * RAM used
-            * CPU used
-            * DHCP servers running
-            * Iptables / bridges
+            * Hostname
+            * Compute (up, down, None)
+            * Instance count
+            * Volume (up, down, None)
+            * Volume Count
         """
-        return {'hostSet': [host_dict(h) for h in db.host_get_all()]}
+        services = db.service_get_all(context, False)
+        now = datetime.datetime.utcnow()
+        hosts = []
+        rv = []
+        for host in [service['host'] for service in services]:
+            if not host in hosts:
+                hosts.append(host)
+        for host in hosts:
+            compute = [s for s in services if s['host'] == host \
+                                           and s['binary'] == 'nova-compute']
+            if compute:
+                compute = compute[0]
+            instances = db.instance_get_all_by_host(context, host)
+            volume = [s for s in services if s['host'] == host \
+                                           and s['binary'] == 'nova-volume']
+            if volume:
+                volume = volume[0]
+            volumes = db.volume_get_all_by_host(context, host)
+            rv.append(host_dict(host, compute, instances, volume, volumes,
+                                now))
+        return {'hosts': rv}
 
     def describe_host(self, _context, name, **_kwargs):
         """Returns status info for single node."""

@@ -2,6 +2,7 @@
 
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Justin Santa Barbara
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,30 +21,38 @@
 System-level utilities and helper functions.
 """
 
+import base64
 import datetime
+import functools
 import inspect
 import json
+import lockfile
+import netaddr
 import os
 import random
+import re
 import socket
+import string
 import struct
 import sys
 import time
+import types
 from xml.sax import saxutils
-import re
-import netaddr
 
 from eventlet import event
 from eventlet import greenthread
+from eventlet import semaphore
 from eventlet.green import subprocess
-
+None
 from nova import exception
 from nova.exception import ProcessExecutionError
+from nova import flags
 from nova import log as logging
 
 
 LOG = logging.getLogger("nova.utils")
 TIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+FLAGS = flags.FLAGS
 
 
 def import_class(import_str):
@@ -53,7 +62,7 @@ def import_class(import_str):
         __import__(mod_str)
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
-        logging.debug(_('Inner Exception: %s'), exc)
+        LOG.debug(_('Inner Exception: %s'), exc)
         raise exception.NotFound(_('Class %s cannot be found') % class_str)
 
 
@@ -121,40 +130,65 @@ def fetchfile(url, target):
 #    c.perform()
 #    c.close()
 #    fp.close()
-    execute("curl --fail %s -o %s" % (url, target))
+    execute("curl", "--fail", url, "-o", target)
 
 
-def execute(cmd, process_input=None, addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (subprocess): %s"), cmd)
-    env = os.environ.copy()
-    if addl_env:
-        env.update(addl_env)
-    obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-    result = None
-    if process_input != None:
-        result = obj.communicate(process_input)
-    else:
-        result = obj.communicate()
-    obj.stdin.close()
-    if obj.returncode:
-        LOG.debug(_("Result was %s") % obj.returncode)
-        if check_exit_code and obj.returncode != 0:
-            (stdout, stderr) = result
-            raise ProcessExecutionError(exit_code=obj.returncode,
-                                        stdout=stdout,
-                                        stderr=stderr,
-                                        cmd=cmd)
-    # NOTE(termie): this appears to be necessary to let the subprocess call
-    #               clean something up in between calls, without it two
-    #               execute calls in a row hangs the second one
-    greenthread.sleep(0)
-    return result
+def execute(*cmd, **kwargs):
+    process_input = kwargs.pop('process_input', None)
+    addl_env = kwargs.pop('addl_env', None)
+    check_exit_code = kwargs.pop('check_exit_code', 0)
+    delay_on_retry = kwargs.pop('delay_on_retry', True)
+    attempts = kwargs.pop('attempts', 1)
+    if len(kwargs):
+        raise exception.Error(_('Got unknown keyword args '
+                                'to utils.execute: %r') % kwargs)
+    cmd = map(str, cmd)
+
+    while attempts > 0:
+        attempts -= 1
+        try:
+            LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
+            env = os.environ.copy()
+            if addl_env:
+                env.update(addl_env)
+            obj = subprocess.Popen(cmd,
+                                   stdin=subprocess.PIPE,
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   env=env)
+            result = None
+            if process_input != None:
+                result = obj.communicate(process_input)
+            else:
+                result = obj.communicate()
+            obj.stdin.close()
+            if obj.returncode:
+                LOG.debug(_("Result was %s") % obj.returncode)
+                if type(check_exit_code) == types.IntType \
+                        and obj.returncode != check_exit_code:
+                    (stdout, stderr) = result
+                    raise ProcessExecutionError(exit_code=obj.returncode,
+                                                stdout=stdout,
+                                                stderr=stderr,
+                                                cmd=' '.join(cmd))
+            return result
+        except ProcessExecutionError:
+            if not attempts:
+                raise
+            else:
+                LOG.debug(_("%r failed. Retrying."), cmd)
+                if delay_on_retry:
+                    greenthread.sleep(random.randint(20, 200) / 100.0)
+        finally:
+            # NOTE(termie): this appears to be necessary to let the subprocess
+            #               call clean something up in between calls, without
+            #               it two execute calls in a row hangs the second one
+            greenthread.sleep(0)
 
 
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (SSH): %s"), cmd)
+    LOG.debug(_("Running cmd (SSH): %s"), ' '.join(cmd))
     if addl_env:
         raise exception.Error("Environment not supported over SSH")
 
@@ -183,7 +217,7 @@ def ssh_execute(ssh, cmd, process_input=None,
             raise exception.ProcessExecutionError(exit_code=exit_status,
                                                   stdout=stdout,
                                                   stderr=stderr,
-                                                  cmd=cmd)
+                                                  cmd=' '.join(cmd))
 
     return (stdout, stderr)
 
@@ -216,9 +250,9 @@ def debug(arg):
     return arg
 
 
-def runthis(prompt, cmd, check_exit_code=True):
-    LOG.debug(_("Running %s"), (cmd))
-    rv, err = execute(cmd, check_exit_code=check_exit_code)
+def runthis(prompt, *cmd, **kwargs):
+    LOG.debug(_("Running %s"), (" ".join(cmd)))
+    rv, err = execute(*cmd, **kwargs)
 
 
 def generate_uid(topic, size=8):
@@ -235,13 +269,34 @@ def generate_mac():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
+# Default symbols to use for passwords. Avoids visually confusing characters.
+# ~6 bits per symbol
+DEFAULT_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0,1
+                            "ABCDEFGHJKLMNPQRSTUVWXYZ"  # Removed: I, O
+                            "abcdefghijkmnopqrstuvwxyz")  # Removed: l
+
+
+# ~5 bits per symbol
+EASIER_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0, 1
+                           "ABCDEFGHJKLMNPQRSTUVWXYZ")  # Removed: I, O
+
+
+def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
+    """Generate a random password from the supplied symbols.
+
+    Believed to be reasonably secure (with a reasonable password length!)
+    """
+    r = random.SystemRandom()
+    return "".join([r.choice(symbols) for _i in xrange(length)])
+
+
 def last_octet(address):
     return int(address.split(".")[-1])
 
 
 def  get_my_linklocal(interface):
     try:
-        if_str = execute("ip -f inet6 -o addr show %s" % interface)
+        if_str = execute("ip", "-f", "inet6", "-o", "addr", "show", interface)
         condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
@@ -256,11 +311,15 @@ def  get_my_linklocal(interface):
 
 
 def to_global_ipv6(prefix, mac):
-    mac64 = netaddr.EUI(mac).eui64().words
-    int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-    mac64_addr = netaddr.IPAddress(int_addr)
-    maskIP = netaddr.IPNetwork(prefix).ip
-    return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).format()
+    try:
+        mac64 = netaddr.EUI(mac).eui64().words
+        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
+        mac64_addr = netaddr.IPAddress(int_addr)
+        maskIP = netaddr.IPNetwork(prefix).ip
+        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
+                                                                    format()
+    except TypeError:
+        raise TypeError(_("Bad mac for to_global_ipv6: %s") % mac)
 
 
 def to_mac(ipv6_address):
@@ -279,6 +338,11 @@ def utcnow():
 
 
 utcnow.override_time = None
+
+
+def is_older_than(before, seconds):
+    """Return True if before is older than seconds"""
+    return utcnow() - before > datetime.timedelta(seconds=seconds)
 
 
 def utcnow_ts():
@@ -476,3 +540,177 @@ def dumps(value):
 
 def loads(s):
     return json.loads(s)
+
+
+_semaphores = {}
+
+
+class _NoopContextManager(object):
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
+
+def synchronized(name, external=False):
+    """Synchronization decorator
+
+    Decorating a method like so:
+    @synchronized('mylock')
+    def foo(self, *args):
+       ...
+
+    ensures that only one thread will execute the bar method at a time.
+
+    Different methods can share the same lock:
+    @synchronized('mylock')
+    def foo(self, *args):
+       ...
+
+    @synchronized('mylock')
+    def bar(self, *args):
+       ...
+
+    This way only one of either foo or bar can be executing at a time.
+
+    The external keyword argument denotes whether this lock should work across
+    multiple processes. This means that if two different workers both run a
+    a method decorated with @synchronized('mylock', external=True), only one
+    of them will execute at a time.
+    """
+
+    def wrap(f):
+        @functools.wraps(f)
+        def inner(*args, **kwargs):
+            # NOTE(soren): If we ever go natively threaded, this will be racy.
+            #              See http://stackoverflow.com/questions/5390569/dyn\
+            #              amically-allocating-and-destroying-mutexes
+            if name not in _semaphores:
+                _semaphores[name] = semaphore.Semaphore()
+            sem = _semaphores[name]
+            LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
+                      '"%(method)s"...' % {"lock": name,
+                                           "method": f.__name__}))
+            with sem:
+                if external:
+                    LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
+                                'method "%(method)s"...' %
+                                {"lock": name, "method": f.__name__}))
+                    lock_file_path = os.path.join(FLAGS.lock_path,
+                                                  'nova-%s.lock' % name)
+                    lock = lockfile.FileLock(lock_file_path)
+                else:
+                    lock = _NoopContextManager()
+
+                with lock:
+                    retval = f(*args, **kwargs)
+
+            # If no-one else is waiting for it, delete it.
+            # See note about possible raciness above.
+            if not sem.balance < 1:
+                del _semaphores[name]
+
+            return retval
+        return inner
+    return wrap
+
+
+def get_from_path(items, path):
+    """ Returns a list of items matching the specified path.  Takes an
+    XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,
+    looks up items[prop1][prop2][prop3].  Like XPath, if any of the
+    intermediate results are lists it will treat each list item individually.
+    A 'None' in items or any child expressions will be ignored, this function
+    will not throw because of None (anywhere) in items.  The returned list
+    will contain no None values."""
+
+    if path is None:
+        raise exception.Error("Invalid mini_xpath")
+
+    (first_token, sep, remainder) = path.partition("/")
+
+    if first_token == "":
+        raise exception.Error("Invalid mini_xpath")
+
+    results = []
+
+    if items is None:
+        return results
+
+    if not isinstance(items, types.ListType):
+        # Wrap single objects in a list
+        items = [items]
+
+    for item in items:
+        if item is None:
+            continue
+        get_method = getattr(item, "get", None)
+        if get_method is None:
+            continue
+        child = get_method(first_token)
+        if child is None:
+            continue
+        if isinstance(child, types.ListType):
+            # Flatten intermediate lists
+            for x in child:
+                results.append(x)
+        else:
+            results.append(child)
+
+    if not sep:
+        # No more tokens
+        return results
+    else:
+        return get_from_path(results, remainder)
+
+
+def flatten_dict(dict_, flattened=None):
+    """Recursively flatten a nested dictionary"""
+    flattened = flattened or {}
+    for key, value in dict_.iteritems():
+        if hasattr(value, 'iteritems'):
+            flatten_dict(value, flattened)
+        else:
+            flattened[key] = value
+    return flattened
+
+
+def partition_dict(dict_, keys):
+    """Return two dicts, one containing only `keys` the other containing
+    everything but `keys`
+    """
+    intersection = {}
+    difference = {}
+    for key, value in dict_.iteritems():
+        if key in keys:
+            intersection[key] = value
+        else:
+            difference[key] = value
+    return intersection, difference
+
+
+def map_dict_keys(dict_, key_map):
+    """Return a dictionary in which the dictionaries keys are mapped to
+    new keys.
+    """
+    mapped = {}
+    for key, value in dict_.iteritems():
+        mapped_key = key_map[key] if key in key_map else key
+        mapped[mapped_key] = value
+    return mapped
+
+
+def subset_dict(dict_, keys):
+    """Return a dict that only contains a subset of keys"""
+    subset = partition_dict(dict_, keys)[0]
+    return subset
+
+
+def check_isinstance(obj, cls):
+    """Checks that obj is of type cls, and lets PyLint infer types"""
+    if isinstance(obj, cls):
+        return obj
+    raise Exception(_("Expected object of type: %s") % (str(cls)))
+    # TODO(justinsb): Can we make this better??
+    return cls()  # Ugly PyLint hack

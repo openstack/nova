@@ -21,17 +21,14 @@
 # XenAPI plugin for managing glance images
 #
 
-import base64
-import errno
-import hmac
 import httplib
 import os
 import os.path
 import pickle
-import sha
+import shlex
+import shutil
 import subprocess
-import time
-import urlparse
+import tempfile
 
 import XenAPIPlugin
 
@@ -41,7 +38,330 @@ configure_logging('glance')
 
 CHUNK_SIZE = 8192
 KERNEL_DIR = '/boot/guest'
-FILE_SR_PATH = '/var/run/sr-mount'
+
+
+def _copy_kernel_vdi(dest, copy_args):
+    vdi_uuid = copy_args['vdi_uuid']
+    vdi_size = copy_args['vdi_size']
+    logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",
+                  dest, vdi_uuid)
+    filename = KERNEL_DIR + '/' + vdi_uuid
+    #make sure KERNEL_DIR exists, otherwise create it
+    if not os.path.isdir(KERNEL_DIR):
+        logging.debug("Creating directory %s", KERNEL_DIR)
+        os.makedirs(KERNEL_DIR)
+    #read data from /dev/ and write into a file on /boot/guest
+    of = open(filename, 'wb')
+    f = open(dest, 'rb')
+    #copy only vdi_size bytes
+    data = f.read(vdi_size)
+    of.write(data)
+    f.close()
+    of.close()
+    logging.debug("Done. Filename: %s", filename)
+    return filename
+
+
+def _download_tarball(sr_path, staging_path, image_id, glance_host,
+                      glance_port):
+    """Download the tarball image from Glance and extract it into the staging
+    area.
+    """
+    conn = httplib.HTTPConnection(glance_host, glance_port)
+    conn.request('GET', '/images/%s' % image_id)
+    resp = conn.getresponse()
+    if resp.status == httplib.NOT_FOUND:
+        raise Exception("Image '%s' not found in Glance" % image_id)
+    elif resp.status != httplib.OK:
+        raise Exception("Unexpected response from Glance %i" % res.status)
+
+    tar_cmd = "tar -zx --directory=%(staging_path)s" % locals()
+    tar_proc = _make_subprocess(tar_cmd, stderr=True, stdin=True)
+
+    chunk = resp.read(CHUNK_SIZE)
+    while chunk:
+        tar_proc.stdin.write(chunk)
+        chunk = resp.read(CHUNK_SIZE)
+
+    _finish_subprocess(tar_proc, tar_cmd)
+    conn.close()
+
+
+def _fixup_vhds(sr_path, staging_path, uuid_stack):
+    """Fixup the downloaded VHDs before we move them into the SR.
+
+    We cannot extract VHDs directly into the SR since they don't yet have
+    UUIDs, aren't properly associated with each other, and would be subject to
+    a race-condition of one-file being present and the other not being
+    downloaded yet.
+
+    To avoid these we problems, we use a staging area to fixup the VHDs before
+    moving them into the SR. The steps involved are:
+
+        1. Extracting tarball into staging area
+
+        2. Renaming VHDs to use UUIDs ('snap.vhd' -> 'ffff-aaaa-...vhd')
+
+        3. Linking the two VHDs together
+
+        4. Pseudo-atomically moving the images into the SR. (It's not really
+           atomic because it takes place as two os.rename operations; however,
+           the chances of an SR.scan occuring between the two rename()
+           invocations is so small that we can safely ignore it)
+    """
+    def rename_with_uuid(orig_path):
+        """Rename VHD using UUID so that it will be recognized by SR on a
+        subsequent scan.
+
+        Since Python2.4 doesn't have the `uuid` module, we pass a stack of
+        pre-computed UUIDs from the compute worker.
+        """
+        orig_dirname = os.path.dirname(orig_path)
+        uuid = uuid_stack.pop()
+        new_path = os.path.join(orig_dirname, "%s.vhd" % uuid)
+        os.rename(orig_path, new_path)
+        return new_path, uuid
+
+    def link_vhds(child_path, parent_path):
+        """Use vhd-util to associate the snapshot VHD with its base_copy.
+
+        This needs to be done before we move both VHDs into the SR to prevent
+        the base_copy from being DOA (deleted-on-arrival).
+        """
+        modify_cmd = ("vhd-util modify -n %(child_path)s -p %(parent_path)s"
+                      % locals())
+        modify_proc = _make_subprocess(modify_cmd, stderr=True)
+        _finish_subprocess(modify_proc, modify_cmd)
+
+    def move_into_sr(orig_path):
+        """Move a file into the SR"""
+        filename = os.path.basename(orig_path)
+        new_path = os.path.join(sr_path, filename)
+        os.rename(orig_path, new_path)
+        return new_path
+
+    def assert_vhd_not_hidden(path):
+        """
+        This is a sanity check on the image; if a snap.vhd isn't
+        present, then the image.vhd better not be marked 'hidden' or it will
+        be deleted when moved into the SR.
+        """
+        query_cmd = "vhd-util query -n %(path)s -f" % locals()
+        query_proc = _make_subprocess(query_cmd, stdout=True, stderr=True)
+        out, err = _finish_subprocess(query_proc, query_cmd)
+
+        for line in out.splitlines():
+            if line.startswith('hidden'):
+                value = line.split(':')[1].strip()
+                if value == "1":
+                    raise Exception(
+                        "VHD %(path)s is marked as hidden without child" %
+                        locals())
+
+    orig_base_copy_path = os.path.join(staging_path, 'image.vhd')
+    if not os.path.exists(orig_base_copy_path):
+        raise Exception("Invalid image: image.vhd not present")
+
+    base_copy_path, base_copy_uuid = rename_with_uuid(orig_base_copy_path)
+
+    vdi_uuid = base_copy_uuid
+    orig_snap_path = os.path.join(staging_path, 'snap.vhd')
+    if os.path.exists(orig_snap_path):
+        snap_path, snap_uuid = rename_with_uuid(orig_snap_path)
+        vdi_uuid = snap_uuid
+        # NOTE(sirp): this step is necessary so that an SR scan won't
+        # delete the base_copy out from under us (since it would be
+        # orphaned)
+        link_vhds(snap_path, base_copy_path)
+        move_into_sr(snap_path)
+    else:
+        assert_vhd_not_hidden(base_copy_path)
+
+    move_into_sr(base_copy_path)
+    return vdi_uuid
+
+
+def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
+    """Hard-link VHDs into staging area with appropriate filename
+    ('snap' or 'image.vhd')
+    """
+    for name, uuid in vdi_uuids.items():
+        source = os.path.join(sr_path, "%s.vhd" % uuid)
+        link_name = os.path.join(staging_path, "%s.vhd" % name)
+        os.link(source, link_name)
+
+
+def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
+    """
+    Create a tarball of the image and then stream that into Glance
+    using chunked-transfer-encoded HTTP.
+    """
+    conn = httplib.HTTPConnection(glance_host, glance_port)
+    # NOTE(sirp): httplib under python2.4 won't accept a file-like object
+    # to request
+    conn.putrequest('PUT', '/images/%s' % image_id)
+
+    # NOTE(sirp): There is some confusion around OVF. Here's a summary of
+    # where we currently stand:
+    #   1. OVF as a container format is misnamed. We really should be using
+    #      OVA since that is the name for the container format; OVF is the
+    #      standard applied to the manifest file contained within.
+    #   2. We're currently uploading a vanilla tarball. In order to be OVF/OVA
+    #      compliant, we'll need to embed a minimal OVF manifest as the first
+    #      file.
+    headers = {
+        'content-type': 'application/octet-stream',
+        'transfer-encoding': 'chunked',
+        'x-image-meta-is-public': 'True',
+        'x-image-meta-status': 'queued',
+        'x-image-meta-disk-format': 'vhd',
+        'x-image-meta-container-format': 'ovf',
+        'x-image-meta-property-os-type': os_type}
+
+    for header, value in headers.iteritems():
+        conn.putheader(header, value)
+    conn.endheaders()
+
+    tar_cmd = "tar -zc --directory=%(staging_path)s ." % locals()
+    tar_proc = _make_subprocess(tar_cmd, stdout=True, stderr=True)
+
+    chunk = tar_proc.stdout.read(CHUNK_SIZE)
+    while chunk:
+        conn.send("%x\r\n%s\r\n" % (len(chunk), chunk))
+        chunk = tar_proc.stdout.read(CHUNK_SIZE)
+    conn.send("0\r\n\r\n")
+
+    _finish_subprocess(tar_proc, tar_cmd)
+
+    resp = conn.getresponse()
+    if resp.status != httplib.OK:
+        raise Exception("Unexpected response from Glance %i" % resp.status)
+    conn.close()
+
+
+def _make_staging_area(sr_path):
+    """
+    The staging area is a place where we can temporarily store and
+    manipulate VHDs. The use of the staging area is different for upload and
+    download:
+
+    Download
+    ========
+
+    When we download the tarball, the VHDs contained within will have names
+    like "snap.vhd" and "image.vhd". We need to assign UUIDs to them before
+    moving them into the SR. However, since 'image.vhd' may be a base_copy, we
+    need to link it to 'snap.vhd' (using vhd-util modify) before moving both
+    into the SR (otherwise the SR.scan will cause 'image.vhd' to be deleted).
+    The staging area gives us a place to perform these operations before they
+    are moved to the SR, scanned, and then registered with XenServer.
+
+    Upload
+    ======
+
+    On upload, we want to rename the VHDs to reflect what they are, 'snap.vhd'
+    in the case of the snapshot VHD, and 'image.vhd' in the case of the
+    base_copy. The staging area provides a directory in which we can create
+    hard-links to rename the VHDs without affecting what's in the SR.
+
+
+    NOTE
+    ====
+
+    The staging area is created as a subdirectory within the SR in order to
+    guarantee that it resides within the same filesystem and therefore permit
+    hard-linking and cheap file moves.
+    """
+    staging_path = tempfile.mkdtemp(dir=sr_path)
+    return staging_path
+
+
+def _cleanup_staging_area(staging_path):
+    """Remove staging area directory
+
+    On upload, the staging area contains hard-links to the VHDs in the SR;
+    it's safe to remove the staging-area because the SR will keep the link
+    count > 0 (so the VHDs in the SR will not be deleted).
+    """
+    shutil.rmtree(staging_path)
+
+
+def _make_subprocess(cmdline, stdout=False, stderr=False, stdin=False):
+    """Make a subprocess according to the given command-line string
+    """
+    kwargs = {}
+    kwargs['stdout'] = stdout and subprocess.PIPE or None
+    kwargs['stderr'] = stderr and subprocess.PIPE or None
+    kwargs['stdin'] = stdin and subprocess.PIPE or None
+    args = shlex.split(cmdline)
+    proc = subprocess.Popen(args, **kwargs)
+    return proc
+
+
+def _finish_subprocess(proc, cmdline):
+    """Ensure that the process returned a zero exit code indicating success
+    """
+    out, err = proc.communicate()
+    ret = proc.returncode
+    if ret != 0:
+        raise Exception("'%(cmdline)s' returned non-zero exit code: "
+                        "retcode=%(ret)i,  stderr='%(err)s'" % locals())
+    return out, err
+
+
+def download_vhd(session, args):
+    """Download an image from Glance, unbundle it, and then deposit the VHDs
+    into the storage repository
+    """
+    params = pickle.loads(exists(args, 'params'))
+    image_id = params["image_id"]
+    glance_host = params["glance_host"]
+    glance_port = params["glance_port"]
+    uuid_stack = params["uuid_stack"]
+    sr_path = params["sr_path"]
+
+    staging_path = _make_staging_area(sr_path)
+    try:
+        _download_tarball(sr_path, staging_path, image_id, glance_host,
+                          glance_port)
+        vdi_uuid = _fixup_vhds(sr_path, staging_path, uuid_stack)
+        return vdi_uuid
+    finally:
+        _cleanup_staging_area(staging_path)
+
+
+def upload_vhd(session, args):
+    """Bundle the VHDs comprising an image and then stream them into Glance.
+    """
+    params = pickle.loads(exists(args, 'params'))
+    vdi_uuids = params["vdi_uuids"]
+    image_id = params["image_id"]
+    glance_host = params["glance_host"]
+    glance_port = params["glance_port"]
+    sr_path = params["sr_path"]
+    os_type = params["os_type"]
+
+    staging_path = _make_staging_area(sr_path)
+    try:
+        _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids)
+        _upload_tarball(staging_path, image_id, glance_host, glance_port,
+                        os_type)
+    finally:
+        _cleanup_staging_area(staging_path)
+
+    return ""  # Nothing useful to return on an upload
+
+
+def copy_kernel_vdi(session, args):
+    vdi = exists(args, 'vdi-ref')
+    size = exists(args, 'image-size')
+    #Use the uuid as a filename
+    vdi_uuid = session.xenapi.VDI.get_uuid(vdi)
+    copy_args = {'vdi_uuid': vdi_uuid, 'vdi_size': int(size)}
+    filename = with_vdi_in_dom0(session, vdi, False,
+                                lambda dev:
+                               _copy_kernel_vdi('/dev/%s' % dev, copy_args))
+    return filename
 
 
 def remove_kernel_ramdisk(session, args):
@@ -55,123 +375,8 @@ def remove_kernel_ramdisk(session, args):
     return "ok"
 
 
-def copy_kernel_vdi(session, args):
-    vdi = exists(args, 'vdi-ref')
-    size = exists(args, 'image-size')
-    #Use the uuid as a filename
-    vdi_uuid = session.xenapi.VDI.get_uuid(vdi)
-    copy_args = {'vdi_uuid': vdi_uuid, 'vdi_size': int(size)}
-    filename = with_vdi_in_dom0(session, vdi, False,
-                              lambda dev:
-                              _copy_kernel_vdi('/dev/%s' % dev, copy_args))
-    return filename
-
-
-def _copy_kernel_vdi(dest, copy_args):
-    vdi_uuid = copy_args['vdi_uuid']
-    vdi_size = copy_args['vdi_size']
-    logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",
-                  dest, vdi_uuid)
-    filename = KERNEL_DIR + '/' + vdi_uuid
-    #read data from /dev/ and write into a file on /boot/guest
-    of = open(filename, 'wb')
-    f = open(dest, 'rb')
-    #copy only vdi_size bytes
-    data = f.read(vdi_size)
-    of.write(data)
-    f.close()
-    of.close()
-    logging.debug("Done. Filename: %s", filename)
-    return filename
-
-
-def put_vdis(session, args):
-    params = pickle.loads(exists(args, 'params'))
-    vdi_uuids = params["vdi_uuids"]
-    image_id = params["image_id"]
-    glance_host = params["glance_host"]
-    glance_port = params["glance_port"]
-
-    sr_path = get_sr_path(session)
-    #FIXME(sirp): writing to a temp file until Glance supports chunked-PUTs
-    tmp_file = "%s.tar.gz" % os.path.join('/tmp', str(image_id))
-    tar_cmd = ['tar', '-zcf', tmp_file, '--directory=%s' % sr_path]
-    paths = ["%s.vhd" % vdi_uuid for vdi_uuid in vdi_uuids]
-    tar_cmd.extend(paths)
-    logging.debug("Bundling image with cmd: %s", tar_cmd)
-    subprocess.call(tar_cmd)
-    logging.debug("Writing to test file %s", tmp_file)
-    put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port)
-    # FIXME(sirp): return anything useful here?
-    return ""
-
-
-def put_bundle_in_glance(tmp_file, image_id, glance_host, glance_port):
-    size = os.path.getsize(tmp_file)
-    basename = os.path.basename(tmp_file)
-
-    bundle = open(tmp_file, 'r')
-    try:
-        headers = {
-            'x-image-meta-store': 'file',
-            'x-image-meta-is_public': 'True',
-            'x-image-meta-type': 'raw',
-            'x-image-meta-size': size,
-            'content-length': size,
-            'content-type': 'application/octet-stream',
-         }
-        conn = httplib.HTTPConnection(glance_host, glance_port)
-        #NOTE(sirp): httplib under python2.4 won't accept a file-like object
-        # to request
-        conn.putrequest('PUT', '/images/%s' % image_id)
-
-        for header, value in headers.iteritems():
-            conn.putheader(header, value)
-        conn.endheaders()
-
-        chunk = bundle.read(CHUNK_SIZE)
-        while chunk:
-            conn.send(chunk)
-            chunk = bundle.read(CHUNK_SIZE)
-
-        res = conn.getresponse()
-        #FIXME(sirp): should this be 201 Created?
-        if res.status != httplib.OK:
-            raise Exception("Unexpected response from Glance %i" % res.status)
-    finally:
-        bundle.close()
-
-
-def get_sr_path(session):
-    sr_ref = find_sr(session)
-
-    if sr_ref is None:
-        raise Exception('Cannot find SR to read VDI from')
-
-    sr_rec = session.xenapi.SR.get_record(sr_ref)
-    sr_uuid = sr_rec["uuid"]
-    sr_path = os.path.join(FILE_SR_PATH, sr_uuid)
-    return sr_path
-
-
-#TODO(sirp): both objectstore and glance need this, should this be refactored
-#into common lib
-def find_sr(session):
-    host = get_this_host(session)
-    srs = session.xenapi.SR.get_all()
-    for sr in srs:
-        sr_rec = session.xenapi.SR.get_record(sr)
-        if not ('i18n-key' in sr_rec['other_config'] and
-                sr_rec['other_config']['i18n-key'] == 'local-storage'):
-            continue
-        for pbd in sr_rec['PBDs']:
-            pbd_rec = session.xenapi.PBD.get_record(pbd)
-            if pbd_rec['host'] == host:
-                return sr
-    return None
-
-
 if __name__ == '__main__':
-    XenAPIPlugin.dispatch({'put_vdis': put_vdis,
+    XenAPIPlugin.dispatch({'upload_vhd': upload_vhd,
+                           'download_vhd': download_vhd,
                            'copy_kernel_vdi': copy_kernel_vdi,
                            'remove_kernel_ramdisk': remove_kernel_ramdisk})
