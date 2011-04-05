@@ -167,7 +167,7 @@ def _get_network_info(instance):
 
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
-    
+ 
     flavor = db.instance_type_get_by_name(admin_context,
                                           instance['instance_type'])
     network_info = []
