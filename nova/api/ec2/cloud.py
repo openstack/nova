@@ -103,10 +103,17 @@ class CloudController(object):
         # Gen root CA, if we don't have one
         root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
         if not os.path.exists(root_ca_path):
+            genrootca_sh_path = os.path.join(os.path.dirname(__file__),
+                                             os.path.pardir,
+                                             os.path.pardir,
+                                             'CA',
+                                             'genrootca.sh')
+
             start = os.getcwd()
+            os.makedirs(FLAGS.ca_path)
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh", "genrootca.sh")
+            utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
