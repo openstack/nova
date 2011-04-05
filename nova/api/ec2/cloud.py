@@ -103,10 +103,17 @@ class CloudController(object):
         # Gen root CA, if we don't have one
         root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
         if not os.path.exists(root_ca_path):
+            genrootca_sh_path = os.path.join(os.path.dirname(__file__),
+                                             os.path.pardir,
+                                             os.path.pardir,
+                                             'CA',
+                                             'genrootca.sh')
+
             start = os.getcwd()
+            os.makedirs(FLAGS.ca_path)
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh", "genrootca.sh")
+            utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
@@ -757,6 +764,8 @@ class CloudController(object):
             iterator = db.floating_ip_get_all_by_project(context,
                                                          context.project_id)
         for floating_ip_ref in iterator:
+            if floating_ip_ref['project_id'] is None:
+                continue
             address = floating_ip_ref['address']
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
@@ -898,10 +907,7 @@ class CloudController(object):
         image_type = self._image_type(image.get('container_format'))
         ec2_id = self._image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
-        if name:
-            i['imageId'] = "%s (%s)" % (ec2_id, name)
-        else:
-            i['imageId'] = ec2_id
+        i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
             i['kernelId'] = self._image_ec2_id(kernel_id, 'aki')
@@ -909,14 +915,18 @@ class CloudController(object):
         if ramdisk_id:
             i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ari')
         i['imageOwnerId'] = image['properties'].get('owner_id')
-        i['imageLocation'] = image['properties'].get('image_location')
+        if name:
+            i['imageLocation'] = "%s (%s)" % (image['properties'].
+                                              get('image_location'), name)
+        else:
+            i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
-        i['displayName'] = image.get('name')
+        i['displayName'] = name
         i['description'] = image.get('description')
         display_mapping = {'aki': 'kernel',
                            'ari': 'ramdisk',
                            'ami': 'machine'}
-        i['type'] = display_mapping.get(image_type)
+        i['imageType'] = display_mapping.get(image_type)
         i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
         i['architecture'] = image['properties'].get('architecture')
         return i
