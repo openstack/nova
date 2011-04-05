@@ -660,7 +660,9 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.instance_id != None).\
                      filter_by(allocated=0).\
                      update({'instance_id': None,
-                             'leased': 0})
+                             'leased': 0,
+                             'updated_at': datetime.datetime.utcnow()},
+                             synchronize_session='fetch')
     return result
 
 

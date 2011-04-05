@@ -182,8 +182,7 @@ class Controller(wsgi.Controller):
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        password = "%s%s" % (server['server']['name'][:4],
-                             utils.generate_password(12))
+        password = utils.generate_password(16)
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
