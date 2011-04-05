@@ -920,7 +920,11 @@ class CloudController(object):
                                               get('image_location'), name)
         else:
             i['imageLocation'] = image['properties'].get('image_location')
-        i['imageState'] = image['properties'].get('image_state')
+        # NOTE(vish): fallback status if image_state isn't set
+        state = image.get('status')
+        if state == 'active':
+            state = 'available'
+        i['imageState'] = image['properties'].get('image_state', state)
         i['displayName'] = name
         i['description'] = image.get('description')
         display_mapping = {'aki': 'kernel',
