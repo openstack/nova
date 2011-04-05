@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -63,10 +63,16 @@ class AjaxConsoleProxy(object):
 
     def __call__(self, env, start_response):
         try:
-            req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
-                                        env['HTTP_HOST'],
-                                        env['PATH_INFO'],
-                                        env['QUERY_STRING'])
+            if 'QUERY_STRING' in env:
+                req_url = '%s://%s%s?%s' % (env['wsgi.url_scheme'],
+                                            env['HTTP_HOST'],
+                                            env['PATH_INFO'],
+                                            env['QUERY_STRING'])
+            else:
+                req_url = '%s://%s%s' % (env['wsgi.url_scheme'],
+                                         env['HTTP_HOST'],
+                                         env['PATH_INFO'])
+
             if 'HTTP_REFERER' in env:
                 auth_url = env['HTTP_REFERER']
             else:
@@ -102,17 +108,17 @@ class AjaxConsoleProxy(object):
             return "Server Error"
 
     def register_listeners(self):
-        class Callback:
-            def __call__(self, data, message):
-                if data['method'] == 'authorize_ajax_console':
-                    AjaxConsoleProxy.tokens[data['args']['token']] =  \
-                        {'args': data['args'], 'last_activity': time.time()}
+        class TopicProxy():
+            @staticmethod
+            def authorize_ajax_console(context, **kwargs):
+                AjaxConsoleProxy.tokens[kwargs['token']] =  \
+                    {'args': kwargs, 'last_activity': time.time()}
 
         conn = rpc.Connection.instance(new=True)
-        consumer = rpc.TopicConsumer(
-                        connection=conn,
-                        topic=FLAGS.ajax_console_proxy_topic)
-        consumer.register_callback(Callback())
+        consumer = rpc.TopicAdapterConsumer(
+                       connection=conn,
+                       proxy=TopicProxy,
+                       topic=FLAGS.ajax_console_proxy_topic)
 
         def delete_expired_tokens():
             now = time.time()
@@ -124,8 +130,7 @@ class AjaxConsoleProxy(object):
             for k in to_delete:
                 del AjaxConsoleProxy.tokens[k]
 
-        utils.LoopingCall(consumer.fetch, auto_ack=True,
-                          enable_callbacks=True).start(0.1)
+        utils.LoopingCall(consumer.fetch, enable_callbacks=True).start(0.1)
         utils.LoopingCall(delete_expired_tokens).start(1)
 
 if __name__ == '__main__':

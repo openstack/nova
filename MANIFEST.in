@@ -1,7 +1,7 @@
 include HACKING LICENSE run_tests.py run_tests.sh
 include README builddeb.sh exercise_rsapi.py
 include ChangeLog MANIFEST.in pylintrc Authors
-graft CA
+graft nova/CA
 graft doc
 graft smoketests
 graft tools
@@ -25,6 +25,7 @@ include nova/db/sqlalchemy/migrate_repo/migrate.cfg
 include nova/db/sqlalchemy/migrate_repo/README
 include nova/virt/interfaces.template
 include nova/virt/libvirt*.xml.template
+include nova/virt/cpuinfo.xml.template
 include nova/tests/CA/
 include nova/tests/CA/cacert.pem
 include nova/tests/CA/private/

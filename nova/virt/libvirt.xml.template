@@ -2,7 +2,12 @@
     <name>${name}</name>
     <memory>${memory_kb}</memory>
     <os>
-#if $type == 'uml'
+#if $type == 'lxc'
+    #set $disk_prefix = ''
+    #set $disk_bus = ''
+        <type>exe</type>
+        <init>/sbin/init</init>
+#else if $type == 'uml'
     #set $disk_prefix = 'ubd'
     #set $disk_bus = 'uml'
         <type>uml</type>
@@ -44,7 +49,13 @@
     </features>
     <vcpu>${vcpus}</vcpu>
     <devices>
-#if $getVar('rescue', False)
+#if $type == 'lxc'
+        <filesystem type='mount'>
+            <source dir='${basepath}/rootfs'/>
+            <target dir='/'/>
+        </filesystem>
+#else
+    #if $getVar('rescue', False)
         <disk type='file'>
             <driver type='${driver_type}'/>
             <source file='${basepath}/disk.rescue'/>
@@ -55,36 +66,39 @@
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}b' bus='${disk_bus}'/>
         </disk>
-#else
+    #else
         <disk type='file'>
             <driver type='${driver_type}'/>
             <source file='${basepath}/disk'/>
             <target dev='${disk_prefix}a' bus='${disk_bus}'/>
         </disk>
-    #if $getVar('local', False)
-        <disk type='file'>
-            <driver type='${driver_type}'/>
-            <source file='${basepath}/disk.local'/>
-            <target dev='${disk_prefix}b' bus='${disk_bus}'/>
-        </disk>
+        #if $getVar('local', False)
+            <disk type='file'>
+                <driver type='${driver_type}'/>
+                <source file='${basepath}/disk.local'/>
+                <target dev='${disk_prefix}b' bus='${disk_bus}'/>
+            </disk>
+        #end if
     #end if
 #end if
+
+#for $nic in $nics
         <interface type='bridge'>
-            <source bridge='${bridge_name}'/>
-            <mac address='${mac_address}'/>
+            <source bridge='${nic.bridge_name}'/>
+            <mac address='${nic.mac_address}'/>
             <!--   <model type='virtio'/>  CANT RUN virtio network right now -->
-            <filterref filter="nova-instance-${name}">
-                <parameter name="IP" value="${ip_address}" />
-                <parameter name="DHCPSERVER" value="${dhcp_server}" />           
-#if $getVar('extra_params', False)
-                ${extra_params}
+            <filterref filter="nova-instance-${name}-${nic.id}">
+                <parameter name="IP" value="${nic.ip_address}" />
+                <parameter name="DHCPSERVER" value="${nic.dhcp_server}" />
+#if $getVar('nic.extra_params', False)
+                ${nic.extra_params}
 #end if
-#if $getVar('ra_server', False)
-                <parameter name="RASERVER" value="${ra_server}" />
+#if $getVar('nic.gateway_v6', False)
+                <parameter name="RASERVER" value="${nic.gateway_v6}" />
 #end if
             </filterref>
         </interface>
-
+#end for
         <!-- The order is significant here.  File must be defined first -->
         <serial type="file">
             <source path='${basepath}/console.log'/>
@@ -101,5 +115,8 @@
             <target port='0'/>
         </serial>
 
+#if $getVar('vncserver_host', False)
+        <graphics type='vnc' port='-1' autoport='yes' keymap='en-us' listen='${vncserver_host}'/>
+#end if
     </devices>
 </domain>

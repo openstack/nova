@@ -20,11 +20,12 @@ from nova import compute
 from nova import context
 from nova import db
 from nova import flags
+from nova import network
 from nova import quota
 from nova import test
 from nova import utils
+from nova import volume
 from nova.auth import manager
-from nova.api.ec2 import cloud
 from nova.compute import instance_types
 
 
@@ -32,6 +33,12 @@ FLAGS = flags.FLAGS
 
 
 class QuotaTestCase(test.TestCase):
+
+    class StubImageService(object):
+
+        def show(self, *args, **kwargs):
+            return {"properties": {}}
+
     def setUp(self):
         super(QuotaTestCase, self).setUp()
         self.flags(connection_type='fake',
@@ -41,7 +48,6 @@ class QuotaTestCase(test.TestCase):
                    quota_gigabytes=20,
                    quota_floating_ips=1)
 
-        self.cloud = cloud.CloudController()
         self.manager = manager.AuthManager()
         self.user = self.manager.create_user('admin', 'admin', 'admin', True)
         self.project = self.manager.create_project('admin', 'admin', 'admin')
@@ -57,7 +63,7 @@ class QuotaTestCase(test.TestCase):
     def _create_instance(self, cores=2):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 'ami-test'
+        inst['image_id'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
@@ -74,19 +80,30 @@ class QuotaTestCase(test.TestCase):
         vol['size'] = size
         return db.volume_create(self.context, vol)['id']
 
+    def _get_instance_type(self, name):
+        instance_types = {
+            'm1.tiny': dict(memory_mb=512, vcpus=1, local_gb=0, flavorid=1),
+            'm1.small': dict(memory_mb=2048, vcpus=1, local_gb=20, flavorid=2),
+            'm1.medium':
+                dict(memory_mb=4096, vcpus=2, local_gb=40, flavorid=3),
+            'm1.large': dict(memory_mb=8192, vcpus=4, local_gb=80, flavorid=4),
+            'm1.xlarge':
+                dict(memory_mb=16384, vcpus=8, local_gb=160, flavorid=5)}
+        return instance_types[name]
+
     def test_quota_overrides(self):
         """Make sure overriding a projects quotas works"""
         num_instances = quota.allowed_instances(self.context, 100,
-            instance_types.INSTANCE_TYPES['m1.small'])
+            self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 2)
         db.quota_create(self.context, {'project_id': self.project.id,
                                        'instances': 10})
         num_instances = quota.allowed_instances(self.context, 100,
-            instance_types.INSTANCE_TYPES['m1.small'])
+            self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 4)
         db.quota_update(self.context, self.project.id, {'cores': 100})
         num_instances = quota.allowed_instances(self.context, 100,
-            instance_types.INSTANCE_TYPES['m1.small'])
+            self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 10)
 
         # metadata_items
@@ -107,12 +124,12 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
-        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type='m1.small',
-                                            image_id='fake')
+                                            image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -120,12 +137,12 @@ class QuotaTestCase(test.TestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
-        self.assertRaises(quota.QuotaError, self.cloud.run_instances,
+        self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
                                             instance_type='m1.small',
-                                            image_id='fake')
+                                            image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -134,9 +151,12 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_volumes):
             volume_id = self._create_volume()
             volume_ids.append(volume_id)
-        self.assertRaises(quota.QuotaError, self.cloud.create_volume,
-                                            self.context,
-                                            size=10)
+        self.assertRaises(quota.QuotaError,
+                          volume.API().create,
+                          self.context,
+                          size=10,
+                          name='',
+                          description='')
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
@@ -145,9 +165,11 @@ class QuotaTestCase(test.TestCase):
         volume_id = self._create_volume(size=20)
         volume_ids.append(volume_id)
         self.assertRaises(quota.QuotaError,
-                          self.cloud.create_volume,
+                          volume.API().create,
                           self.context,
-                          size=10)
+                          size=10,
+                          name='',
+                          description='')
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
@@ -161,7 +183,8 @@ class QuotaTestCase(test.TestCase):
         #             make an rpc.call, the test just finishes with OK. It
         #             appears to be something in the magic inline callbacks
         #             that is breaking.
-        self.assertRaises(quota.QuotaError, self.cloud.allocate_address,
+        self.assertRaises(quota.QuotaError,
+                          network.API().allocate_floating_ip,
                           self.context)
         db.floating_ip_destroy(context.get_admin_context(), address)
 
@@ -176,3 +199,67 @@ class QuotaTestCase(test.TestCase):
                                             instance_type='m1.small',
                                             image_id='fake',
                                             metadata=metadata)
+
+    def test_allowed_injected_files(self):
+        self.assertEqual(
+                quota.allowed_injected_files(self.context),
+                FLAGS.quota_max_injected_files)
+
+    def _create_with_injected_files(self, files):
+        api = compute.API(image_service=self.StubImageService())
+        api.create(self.context, min_count=1, max_count=1,
+                instance_type='m1.small', image_id='fake',
+                injected_files=files)
+
+    def test_no_injected_files(self):
+        api = compute.API(image_service=self.StubImageService())
+        api.create(self.context, instance_type='m1.small', image_id='fake')
+
+    def test_max_injected_files(self):
+        files = []
+        for i in xrange(FLAGS.quota_max_injected_files):
+            files.append(('/my/path%d' % i, 'config = test\n'))
+        self._create_with_injected_files(files)  # no QuotaError
+
+    def test_too_many_injected_files(self):
+        files = []
+        for i in xrange(FLAGS.quota_max_injected_files + 1):
+            files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_injected_files, files)
+
+    def test_allowed_injected_file_content_bytes(self):
+        self.assertEqual(
+                quota.allowed_injected_file_content_bytes(self.context),
+                FLAGS.quota_max_injected_file_content_bytes)
+
+    def test_max_injected_file_content_bytes(self):
+        max = FLAGS.quota_max_injected_file_content_bytes
+        content = ''.join(['a' for i in xrange(max)])
+        files = [('/test/path', content)]
+        self._create_with_injected_files(files)  # no QuotaError
+
+    def test_too_many_injected_file_content_bytes(self):
+        max = FLAGS.quota_max_injected_file_content_bytes
+        content = ''.join(['a' for i in xrange(max + 1)])
+        files = [('/test/path', content)]
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_injected_files, files)
+
+    def test_allowed_injected_file_path_bytes(self):
+        self.assertEqual(
+                quota.allowed_injected_file_path_bytes(self.context),
+                FLAGS.quota_max_injected_file_path_bytes)
+
+    def test_max_injected_file_path_bytes(self):
+        max = FLAGS.quota_max_injected_file_path_bytes
+        path = ''.join(['a' for i in xrange(max)])
+        files = [(path, 'config = quotatest')]
+        self._create_with_injected_files(files)  # no QuotaError
+
+    def test_too_many_injected_file_path_bytes(self):
+        max = FLAGS.quota_max_injected_file_path_bytes
+        path = ''.join(['a' for i in xrange(max + 1)])
+        files = [(path, 'config = quotatest')]
+        self.assertRaises(quota.QuotaError,
+                          self._create_with_injected_files, files)

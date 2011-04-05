@@ -26,6 +26,8 @@ import os
 import tempfile
 import time
 
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -38,8 +40,13 @@ flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
 flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
                      'block_size to use for dd')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('virt/interfaces.template'),
+                    'Template file for injected network')
 flags.DEFINE_integer('timeout_nbd', 10,
                      'time to wait for a NBD device coming up')
+flags.DEFINE_integer('max_nbd_devices', 16,
+                     'maximum number of possible nbd devices')
 
 
 def extend(image, size):
@@ -47,10 +54,10 @@ def extend(image, size):
     file_size = os.path.getsize(image)
     if file_size >= size:
         return
-    utils.execute('truncate -s %s %s' % (size, image))
+    utils.execute('truncate', '-s', size, image)
     # NOTE(vish): attempts to resize filesystem
-    utils.execute('e2fsck -fp %s' % image, check_exit_code=False)
-    utils.execute('resize2fs %s' % image, check_exit_code=False)
+    utils.execute('e2fsck', '-fp', image, check_exit_code=False)
+    utils.execute('resize2fs', image, check_exit_code=False)
 
 
 def inject_data(image, key=None, net=None, partition=None, nbd=False):
@@ -66,7 +73,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
     try:
         if not partition is None:
             # create partition
-            out, err = utils.execute('sudo kpartx -a %s' % device)
+            out, err = utils.execute('sudo', 'kpartx', '-a', device)
             if err:
                 raise exception.Error(_('Failed to load partition: %s') % err)
             mapped_device = '/dev/mapper/%sp%s' % (device.split('/')[-1],
@@ -82,41 +89,73 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                   mapped_device)
 
         # Configure ext2fs so that it doesn't auto-check every N boots
-        out, err = utils.execute('sudo tune2fs -c 0 -i 0 %s' % mapped_device)
+        out, err = utils.execute('sudo', 'tune2fs',
+                                 '-c', 0, '-i', 0, mapped_device)
 
         tmpdir = tempfile.mkdtemp()
         try:
             # mount loopback to dir
             out, err = utils.execute(
-                    'sudo mount %s %s' % (mapped_device, tmpdir))
+                    'sudo', 'mount', mapped_device, tmpdir)
             if err:
                 raise exception.Error(_('Failed to mount filesystem: %s')
                                       % err)
 
             try:
-                if key:
-                    # inject key file
-                    _inject_key_into_fs(key, tmpdir)
-                if net:
-                    _inject_net_into_fs(net, tmpdir)
+                inject_data_into_fs(tmpdir, key, net, utils.execute)
             finally:
                 # unmount device
-                utils.execute('sudo umount %s' % mapped_device)
+                utils.execute('sudo', 'umount', mapped_device)
         finally:
             # remove temporary directory
-            utils.execute('rmdir %s' % tmpdir)
+            utils.execute('rmdir', tmpdir)
             if not partition is None:
                 # remove partitions
-                utils.execute('sudo kpartx -d %s' % device)
+                utils.execute('sudo', 'kpartx', '-d', device)
     finally:
         _unlink_device(device, nbd)
+
+
+def setup_container(image, container_dir=None, nbd=False):
+    """Setup the LXC container.
+
+    It will mount the loopback image to the container directory in order
+    to create the root filesystem for the container.
+
+    LXC does not support qcow2 images yet.
+    """
+    try:
+        device = _link_device(image, nbd)
+        utils.execute('sudo', 'mount', device, container_dir)
+    except Exception, exn:
+        LOG.exception(_('Failed to mount filesystem: %s'), exn)
+        _unlink_device(device, nbd)
+
+
+def destroy_container(target, instance, nbd=False):
+    """Destroy the container once it terminates.
+
+    It will umount the container that is mounted, try to find the loopback
+    device associated with the container and delete it.
+
+    LXC does not support qcow2 images yet.
+    """
+    try:
+        container_dir = '%s/rootfs' % target
+        utils.execute('sudo', 'umount', container_dir)
+    finally:
+        out, err = utils.execute('sudo', 'losetup', '-a')
+        for loop in out.splitlines():
+            if instance['name'] in loop:
+                device = loop.split(loop, ':')
+                _unlink_device(device, nbd)
 
 
 def _link_device(image, nbd):
     """Link image to device using loopback or nbd"""
     if nbd:
         device = _allocate_device()
-        utils.execute('sudo qemu-nbd -c %s %s' % (device, image))
+        utils.execute('sudo', 'qemu-nbd', '-c', device, image)
         # NOTE(vish): this forks into another process, so give it a chance
         #             to set up before continuuing
         for i in xrange(FLAGS.timeout_nbd):
@@ -125,7 +164,7 @@ def _link_device(image, nbd):
             time.sleep(1)
         raise exception.Error(_('nbd device %s did not show up') % device)
     else:
-        out, err = utils.execute('sudo losetup --find --show %s' % image)
+        out, err = utils.execute('sudo', 'losetup', '--find', '--show', image)
         if err:
             raise exception.Error(_('Could not attach image to loopback: %s')
                                   % err)
@@ -135,13 +174,13 @@ def _link_device(image, nbd):
 def _unlink_device(device, nbd):
     """Unlink image from device using loopback or nbd"""
     if nbd:
-        utils.execute('sudo qemu-nbd -d %s' % device)
+        utils.execute('sudo', 'qemu-nbd', '-d', device)
         _free_device(device)
     else:
-        utils.execute('sudo losetup --detach %s' % device)
+        utils.execute('sudo', 'losetup', '--detach', device)
 
 
-_DEVICES = ['/dev/nbd%s' % i for i in xrange(16)]
+_DEVICES = ['/dev/nbd%s' % i for i in xrange(FLAGS.max_nbd_devices)]
 
 
 def _allocate_device():
@@ -161,28 +200,40 @@ def _free_device(device):
     _DEVICES.append(device)
 
 
-def _inject_key_into_fs(key, fs):
+def inject_data_into_fs(fs, key, net, execute):
+    """Injects data into a filesystem already mounted by the caller.
+    Virt connections can call this directly if they mount their fs
+    in a different way to inject_data
+    """
+    if key:
+        _inject_key_into_fs(key, fs, execute=execute)
+    if net:
+        _inject_net_into_fs(net, fs, execute=execute)
+
+
+def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.
 
     key is an ssh key string.
     fs is the path to the base of the filesystem into which to inject the key.
     """
     sshdir = os.path.join(fs, 'root', '.ssh')
-    utils.execute('sudo mkdir -p %s' % sshdir)  # existing dir doesn't matter
-    utils.execute('sudo chown root %s' % sshdir)
-    utils.execute('sudo chmod 700 %s' % sshdir)
+    utils.execute('sudo', 'mkdir', '-p', sshdir)  # existing dir doesn't matter
+    utils.execute('sudo', 'chown', 'root', sshdir)
+    utils.execute('sudo', 'chmod', '700', sshdir)
     keyfile = os.path.join(sshdir, 'authorized_keys')
-    utils.execute('sudo tee -a %s' % keyfile, '\n' + key.strip() + '\n')
+    utils.execute('sudo', 'tee', '-a', keyfile,
+            process_input='\n' + key.strip() + '\n')
 
 
-def _inject_net_into_fs(net, fs):
+def _inject_net_into_fs(net, fs, execute=None):
     """Inject /etc/network/interfaces into the filesystem rooted at fs.
 
     net is the contents of /etc/network/interfaces.
     """
     netdir = os.path.join(os.path.join(fs, 'etc'), 'network')
-    utils.execute('sudo mkdir -p %s' % netdir)  # existing dir doesn't matter
-    utils.execute('sudo chown root:root %s' % netdir)
-    utils.execute('sudo chmod 755 %s' % netdir)
+    utils.execute('sudo', 'mkdir', '-p', netdir)  # existing dir doesn't matter
+    utils.execute('sudo', 'chown', 'root:root', netdir)
+    utils.execute('sudo', 'chmod', 755, netdir)
     netfile = os.path.join(netdir, 'interfaces')
-    utils.execute('sudo tee %s' % netfile, net)
+    utils.execute('sudo', 'tee', netfile, process_input=net)

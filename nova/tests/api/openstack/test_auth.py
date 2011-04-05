@@ -26,6 +26,7 @@ import nova.api.openstack.auth
 import nova.auth.manager
 from nova import auth
 from nova import context
+from nova import db
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -38,7 +39,7 @@ class Test(test.TestCase):
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self.stubs)
@@ -50,11 +51,12 @@ class Test(test.TestCase):
 
     def test_authorize_user(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
+        f.add_user(user)
 
         req = webob.Request.blank('/v1.0/')
-        req.headers['X-Auth-User'] = 'herp'
-        req.headers['X-Auth-Key'] = 'derp'
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
@@ -64,11 +66,13 @@ class Test(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
+        f.add_user(user)
+        f.create_project('user1_project', user)
 
         req = webob.Request.blank('/v1.0/', {'HTTP_HOST': 'foo'})
-        req.headers['X-Auth-User'] = 'herp'
-        req.headers['X-Auth-Key'] = 'derp'
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '204 No Content')
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
@@ -79,8 +83,7 @@ class Test(test.TestCase):
         self.assertEqual(result.headers['X-Storage-Url'], "")
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouter',
-            fakes.FakeRouter)
+        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.headers['X-Auth-Token'] = token
         result = req.get_response(fakes.wsgi_app())
@@ -89,7 +92,7 @@ class Test(test.TestCase):
 
     def test_token_expiry(self):
         self.destroy_called = False
-        token_hash = 'bacon'
+        token_hash = 'token_hash'
 
         def destroy_token_mock(meh, context, token):
             self.destroy_called = True
@@ -99,22 +102,33 @@ class Test(test.TestCase):
                     token_hash=token_hash,
                     created_at=datetime.datetime(1990, 1, 1))
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_destroy_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_destroy',
             destroy_token_mock)
 
-        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_get_token',
+        self.stubs.Set(fakes.FakeAuthDatabase, 'auth_token_get',
             bad_token)
 
         req = webob.Request.blank('/v1.0/')
-        req.headers['X-Auth-Token'] = 'bacon'
+        req.headers['X-Auth-Token'] = 'token_hash'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
         self.assertEqual(self.destroy_called, True)
 
-    def test_bad_user(self):
+    def test_bad_user_bad_key(self):
         req = webob.Request.blank('/v1.0/')
-        req.headers['X-Auth-User'] = 'herp'
-        req.headers['X-Auth-Key'] = 'derp'
+        req.headers['X-Auth-User'] = 'unknown_user'
+        req.headers['X-Auth-Key'] = 'unknown_user_key'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+    def test_bad_user_good_key(self):
+        f = fakes.FakeAuthManager()
+        user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
+        f.add_user(user)
+
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-User'] = 'unknown_user'
+        req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 
@@ -125,7 +139,34 @@ class Test(test.TestCase):
 
     def test_bad_token(self):
         req = webob.Request.blank('/v1.0/')
-        req.headers['X-Auth-Token'] = 'baconbaconbacon'
+        req.headers['X-Auth-Token'] = 'unknown_token'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+
+class TestFunctional(test.TestCase):
+    def test_token_expiry(self):
+        ctx = context.get_admin_context()
+        tok = db.auth_token_create(ctx, dict(
+                token_hash='test_token_hash',
+                cdn_management_url='',
+                server_management_url='',
+                storage_url='',
+                user_id='user1',
+                ))
+
+        db.auth_token_update(ctx, tok.token_hash, dict(
+                created_at=datetime.datetime(2000, 1, 1, 12, 0, 0),
+                ))
+
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-Token'] = 'test_token_hash'
+        result = req.get_response(fakes.wsgi_app())
+        self.assertEqual(result.status, '401 Unauthorized')
+
+    def test_token_doesnotexist(self):
+        req = webob.Request.blank('/v1.0/')
+        req.headers['X-Auth-Token'] = 'nonexistant_token_hash'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 
@@ -137,7 +178,7 @@ class TestLimiter(test.TestCase):
         self.stubs.Set(nova.api.openstack.auth.AuthMiddleware,
             '__init__', fakes.fake_auth_init)
         self.stubs.Set(context, 'RequestContext', fakes.FakeRequestContext)
-        fakes.FakeAuthManager.auth_data = {}
+        fakes.FakeAuthManager.clear_fakes()
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_networking(self.stubs)
 
@@ -148,17 +189,18 @@ class TestLimiter(test.TestCase):
 
     def test_authorize_token(self):
         f = fakes.FakeAuthManager()
-        f.add_user('derp', nova.auth.manager.User(1, 'herp', None, None, None))
+        user = nova.auth.manager.User('id1', 'user1', 'user1_key', None, None)
+        f.add_user(user)
+        f.create_project('test', user)
 
         req = webob.Request.blank('/v1.0/')
-        req.headers['X-Auth-User'] = 'herp'
-        req.headers['X-Auth-Key'] = 'derp'
+        req.headers['X-Auth-User'] = 'user1'
+        req.headers['X-Auth-Key'] = 'user1_key'
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(len(result.headers['X-Auth-Token']), 40)
 
         token = result.headers['X-Auth-Token']
-        self.stubs.Set(nova.api.openstack, 'APIRouter',
-            fakes.FakeRouter)
+        self.stubs.Set(nova.api.openstack, 'APIRouterV10', fakes.FakeRouter)
         req = webob.Request.blank('/v1.0/fake')
         req.method = 'POST'
         req.headers['X-Auth-Token'] = token

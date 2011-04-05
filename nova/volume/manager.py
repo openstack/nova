@@ -64,14 +64,15 @@ flags.DEFINE_boolean('use_local_volumes', True,
                      'if True, will not discover local volumes')
 
 
-class VolumeManager(manager.Manager):
+class VolumeManager(manager.SchedulerDependentManager):
     """Manages attachable block storage devices."""
     def __init__(self, volume_driver=None, *args, **kwargs):
         """Load the driver from the one specified in args, or from flags."""
         if not volume_driver:
             volume_driver = FLAGS.volume_driver
         self.driver = utils.import_object(volume_driver)
-        super(VolumeManager, self).__init__(*args, **kwargs)
+        super(VolumeManager, self).__init__(service_name='volume',
+                                                    *args, **kwargs)
         # NOTE(vish): Implementation specific db handling is done
         #             by the driver.
         self.driver.db = self.db
@@ -160,7 +161,7 @@ class VolumeManager(manager.Manager):
         if volume_ref['host'] == self.host and FLAGS.use_local_volumes:
             path = self.driver.local_path(volume_ref)
         else:
-            path = self.driver.discover_volume(volume_ref)
+            path = self.driver.discover_volume(context, volume_ref)
         return path
 
     def remove_compute_volume(self, context, volume_id):
@@ -171,3 +172,9 @@ class VolumeManager(manager.Manager):
             return True
         else:
             self.driver.undiscover_volume(volume_ref)
+
+    def check_for_export(self, context, instance_id):
+        """Make sure whether volume is exported."""
+        instance_ref = self.db.instance_get(context, instance_id)
+        for volume in instance_ref['volumes']:
+            self.driver.check_for_export(context, volume['id'])

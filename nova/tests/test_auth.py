@@ -80,10 +80,10 @@ class user_and_project_generator(object):
         self.manager.delete_project(self.project)
 
 
-class AuthManagerTestCase(object):
+class _AuthManagerBaseTestCase(test.TestCase):
     def setUp(self):
         FLAGS.auth_driver = self.auth_driver
-        super(AuthManagerTestCase, self).setUp()
+        super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(connection_type='fake')
         self.manager = manager.AuthManager(new=True)
 
@@ -299,6 +299,13 @@ class AuthManagerTestCase(object):
                 self.assertEqual('test2', project.project_manager_id)
                 self.assertEqual('new desc', project.description)
 
+    def test_modify_project_adds_new_manager(self):
+        with user_and_project_generator(self.manager):
+            with user_generator(self.manager, name='test2'):
+                self.manager.modify_project('testproj', 'test2', 'new desc')
+                project = self.manager.get_project('testproj')
+                self.assertTrue('test2' in project.member_ids)
+
     def test_can_delete_project(self):
         with user_generator(self.manager):
             self.manager.create_project('testproj', 'test1')
@@ -324,11 +331,11 @@ class AuthManagerTestCase(object):
             self.assertTrue(user.is_admin())
 
 
-class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
+class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 
 
-class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
+class AuthManagerDbTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
 
 

@@ -13,3 +13,9 @@ CA/serial*
 CA/newcerts/*.pem
 CA/private/cakey.pem
 nova/vcsversion.py
+*.DS_Store
+.project
+.pydevproject
+clean.sqlite
+run_tests.log
+tests.sqlite

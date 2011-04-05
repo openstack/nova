@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,152 +13,143 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from webob import exc
+import datetime
+
+import webob.exc
 
 from nova import compute
+from nova import exception
 from nova import flags
+from nova import log
 from nova import utils
 from nova import wsgi
-import nova.api.openstack
 from nova.api.openstack import common
 from nova.api.openstack import faults
-import nova.image.service
+from nova.api.openstack.views import images as images_view
 
 
+LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
 
-def _translate_keys(item):
-    """
-    Maps key names to Rackspace-like attributes for return
-    also pares down attributes to those we want
-    item is a dict
-
-    Note: should be removed when the set of keys expected by the api
-    and the set of keys returned by the image service are equivalent
-
-    """
-    # TODO(tr3buchet): this map is specific to s3 object store,
-    # replace with a list of keys for _filter_keys later
-    mapped_keys = {'status': 'imageState',
-                   'id': 'imageId',
-                   'name': 'imageLocation'}
-
-    mapped_item = {}
-    # TODO(tr3buchet):
-    # this chunk of code works with s3 and the local image service/glance
-    # when we switch to glance/local image service it can be replaced with
-    # a call to _filter_keys, and mapped_keys can be changed to a list
-    try:
-        for k, v in mapped_keys.iteritems():
-            # map s3 fields
-            mapped_item[k] = item[v]
-    except KeyError:
-        # return only the fields api expects
-        mapped_item = _filter_keys(item, mapped_keys.keys())
-
-    return mapped_item
-
-
-def _translate_status(item):
-    """
-    Translates status of image to match current Rackspace api bindings
-    item is a dict
-
-    Note: should be removed when the set of statuses expected by the api
-    and the set of statuses returned by the image service are equivalent
-
-    """
-    status_mapping = {
-        'pending': 'queued',
-        'decrypting': 'preparing',
-        'untarring': 'saving',
-        'available': 'active'}
-    try:
-        item['status'] = status_mapping[item['status']]
-    except KeyError:
-        # TODO(sirp): Performing translation of status (if necessary) here for
-        # now. Perhaps this should really be done in EC2 API and
-        # S3ImageService
-        pass
-
-    return item
-
-
-def _filter_keys(item, keys):
-    """
-    Filters all model attributes except for keys
-    item is a dict
-
-    """
-    return dict((k, v) for k, v in item.iteritems() if k in keys)
-
-
-def _convert_image_id_to_hash(image):
-    if 'imageId' in image:
-        # Convert EC2-style ID (i-blah) to Rackspace-style (int)
-        image_id = abs(hash(image['imageId']))
-        image['imageId'] = image_id
-        image['id'] = image_id
-
-
 class Controller(wsgi.Controller):
+    """Base `wsgi.Controller` for retrieving/displaying images."""
 
     _serialization_metadata = {
         'application/xml': {
             "attributes": {
                 "image": ["id", "name", "updated", "created", "status",
-                          "serverId", "progress"]}}}
+                          "serverId", "progress"],
+                "link": ["rel", "type", "href"],
+            },
+        },
+    }
 
-    def __init__(self):
-        self._service = utils.import_object(FLAGS.image_service)
+    def __init__(self, image_service=None, compute_service=None):
+        """Initialize new `ImageController`.
+
+        :param compute_service: `nova.compute.api:API`
+        :param image_service: `nova.image.service:BaseImageService`
+        """
+        _default_service = utils.import_object(flags.FLAGS.image_service)
+
+        self._compute_service = compute_service or compute.API()
+        self._image_service = image_service or _default_service
 
     def index(self, req):
-        """Return all public images in brief"""
-        items = self._service.index(req.environ['nova.context'])
-        items = common.limited(items, req)
-        items = [_filter_keys(item, ('id', 'name')) for item in items]
-        return dict(images=items)
+        """Return an index listing of images available to the request.
+
+        :param req: `wsgi.Request` object
+        """
+        context = req.environ['nova.context']
+        images = self._image_service.index(context)
+        images = common.limited(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=False) for image in images])
 
     def detail(self, req):
-        """Return all public images in detail"""
-        try:
-            items = self._service.detail(req.environ['nova.context'])
-        except NotImplementedError:
-            items = self._service.index(req.environ['nova.context'])
-        for image in items:
-            _convert_image_id_to_hash(image)
+        """Return a detailed index listing of images available to the request.
 
-        items = common.limited(items, req)
-        items = [_translate_keys(item) for item in items]
-        items = [_translate_status(item) for item in items]
-        return dict(images=items)
+        :param req: `wsgi.Request` object.
+        """
+        context = req.environ['nova.context']
+        images = self._image_service.detail(context)
+        images = common.limited(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=True) for image in images])
 
     def show(self, req, id):
-        """Return data about the given image id"""
-        image_id = common.get_image_id_from_image_hash(self._service,
-                    req.environ['nova.context'], id)
+        """Return detailed information about a specific image.
 
-        image = self._service.show(req.environ['nova.context'], image_id)
-        _convert_image_id_to_hash(image)
-        return dict(image=image)
+        :param req: `wsgi.Request` object
+        :param id: Image identifier (integer)
+        """
+        context = req.environ['nova.context']
+
+        try:
+            image_id = int(id)
+        except ValueError:
+            explanation = _("Image not found.")
+            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
+
+        try:
+            image = self._image_service.show(context, image_id)
+        except exception.NotFound:
+            explanation = _("Image '%d' not found.") % (image_id)
+            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
+
+        return dict(image=self.get_builder(req).build(image, detail=True))
 
     def delete(self, req, id):
-        # Only public images are supported for now.
-        raise faults.Fault(exc.HTTPNotFound())
+        """Delete an image, if allowed.
+
+        :param req: `wsgi.Request` object
+        :param id: Image identifier (integer)
+        """
+        image_id = id
+        context = req.environ['nova.context']
+        self._image_service.delete(context, image_id)
+        return webob.exc.HTTPNoContent()
 
     def create(self, req):
+        """Snapshot a server instance and save the image.
+
+        :param req: `wsgi.Request` object
+        """
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req)
-        instance_id = env["image"]["serverId"]
-        name = env["image"]["name"]
+        content_type = req.get_content_type()
+        image = self._deserialize(req.body, content_type)
 
-        image_meta = compute.API().snapshot(
-            context, instance_id, name)
+        if not image:
+            raise webob.exc.HTTPBadRequest()
 
-        return dict(image=image_meta)
+        try:
+            server_id = image["image"]["serverId"]
+            image_name = image["image"]["name"]
+        except KeyError:
+            raise webob.exc.HTTPBadRequest()
 
-    def update(self, req, id):
-        # Users may not modify public images, and that's all that
-        # we support for now.
-        raise faults.Fault(exc.HTTPNotFound())
+        image = self._compute_service.snapshot(context, server_id, image_name)
+        return self.get_builder(req).build(image, detail=True)
+
+    def get_builder(self, request):
+        """Indicates that you must use a Controller subclass."""
+        raise NotImplementedError
+
+
+class ControllerV10(Controller):
+    """Version 1.0 specific controller logic."""
+
+    def get_builder(self, request):
+        """Property to get the ViewBuilder class we need to use."""
+        base_url = request.application_url
+        return images_view.ViewBuilderV10(base_url)
+
+
+class ControllerV11(Controller):
+    """Version 1.1 specific controller logic."""
+
+    def get_builder(self, request):
+        """Property to get the ViewBuilder class we need to use."""
+        base_url = request.application_url
+        return images_view.ViewBuilderV11(base_url)

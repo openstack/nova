@@ -24,6 +24,7 @@ and some black magic for inline callbacks.
 
 
 import datetime
+import functools
 import os
 import shutil
 import uuid
@@ -32,6 +33,7 @@ import unittest
 import mox
 import shutil
 import stubout
+from eventlet import greenthread
 
 from nova import context
 from nova import db
@@ -39,6 +41,7 @@ from nova import fakerabbit
 from nova import flags
 from nova import rpc
 from nova import service
+from nova import wsgi
 
 
 FLAGS = flags.FLAGS
@@ -79,6 +82,7 @@ class TestCase(unittest.TestCase):
         self.injected = []
         self._services = []
         self._monkey_patch_attach()
+        self._monkey_patch_wsgi()
         self._original_flags = FLAGS.FlagValuesDict()
 
     def tearDown(self):
@@ -99,7 +103,8 @@ class TestCase(unittest.TestCase):
             self.reset_flags()
 
             # Reset our monkey-patches
-            rpc.Consumer.attach_to_eventlet = self.originalAttach
+            rpc.Consumer.attach_to_eventlet = self.original_attach
+            wsgi.Server.start = self.original_start
 
             # Stop any timers
             for x in self.injected:
@@ -141,12 +146,90 @@ class TestCase(unittest.TestCase):
         return svc
 
     def _monkey_patch_attach(self):
-        self.originalAttach = rpc.Consumer.attach_to_eventlet
+        self.original_attach = rpc.Consumer.attach_to_eventlet
 
-        def _wrapped(innerSelf):
-            rv = self.originalAttach(innerSelf)
+        def _wrapped(inner_self):
+            rv = self.original_attach(inner_self)
             self.injected.append(rv)
             return rv
 
-        _wrapped.func_name = self.originalAttach.func_name
+        _wrapped.func_name = self.original_attach.func_name
         rpc.Consumer.attach_to_eventlet = _wrapped
+
+    def _monkey_patch_wsgi(self):
+        """Allow us to kill servers spawned by wsgi.Server."""
+        # TODO(termie): change these patterns to use functools
+        self.original_start = wsgi.Server.start
+
+        @functools.wraps(self.original_start)
+        def _wrapped_start(inner_self, *args, **kwargs):
+            original_spawn_n = inner_self.pool.spawn_n
+
+            @functools.wraps(original_spawn_n)
+            def _wrapped_spawn_n(*args, **kwargs):
+                rv = greenthread.spawn(*args, **kwargs)
+                self._services.append(rv)
+
+            inner_self.pool.spawn_n = _wrapped_spawn_n
+            self.original_start(inner_self, *args, **kwargs)
+            inner_self.pool.spawn_n = original_spawn_n
+
+        _wrapped_start.func_name = self.original_start.func_name
+        wsgi.Server.start = _wrapped_start
+
+    # Useful assertions
+    def assertDictMatch(self, d1, d2):
+        """Assert two dicts are equivalent.
+
+        This is a 'deep' match in the sense that it handles nested
+        dictionaries appropriately.
+
+        NOTE:
+
+            If you don't care (or don't know) a given value, you can specify
+            the string DONTCARE as the value. This will cause that dict-item
+            to be skipped.
+        """
+        def raise_assertion(msg):
+            d1str = str(d1)
+            d2str = str(d2)
+            base_msg = ("Dictionaries do not match. %(msg)s d1: %(d1str)s "
+                        "d2: %(d2str)s" % locals())
+            raise AssertionError(base_msg)
+
+        d1keys = set(d1.keys())
+        d2keys = set(d2.keys())
+        if d1keys != d2keys:
+            d1only = d1keys - d2keys
+            d2only = d2keys - d1keys
+            raise_assertion("Keys in d1 and not d2: %(d1only)s. "
+                            "Keys in d2 and not d1: %(d2only)s" % locals())
+
+        for key in d1keys:
+            d1value = d1[key]
+            d2value = d2[key]
+            if hasattr(d1value, 'keys') and hasattr(d2value, 'keys'):
+                self.assertDictMatch(d1value, d2value)
+            elif 'DONTCARE' in (d1value, d2value):
+                continue
+            elif d1value != d2value:
+                raise_assertion("d1['%(key)s']=%(d1value)s != "
+                                "d2['%(key)s']=%(d2value)s" % locals())
+
+    def assertDictListMatch(self, L1, L2):
+        """Assert a list of dicts are equivalent"""
+        def raise_assertion(msg):
+            L1str = str(L1)
+            L2str = str(L2)
+            base_msg = ("List of dictionaries do not match: %(msg)s "
+                        "L1: %(L1str)s L2: %(L2str)s" % locals())
+            raise AssertionError(base_msg)
+
+        L1count = len(L1)
+        L2count = len(L2)
+        if L1count != L2count:
+            raise_assertion("Length mismatch: len(L1)=%(L1count)d != "
+                            "len(L2)=%(L2count)d" % locals())
+
+        for d1, d2 in zip(L1, L2):
+            self.assertDictMatch(d1, d2)

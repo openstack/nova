@@ -55,6 +55,8 @@
 
 import datetime
 import gettext
+import glob
+import json
 import os
 import re
 import sys
@@ -81,9 +83,10 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
-from nova.api.ec2.cloud import ec2_id_to_id
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
+from nova.compute import instance_types
 from nova.db import migration
 
 FLAGS = flags.FLAGS
@@ -93,6 +96,8 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+flags.DECLARE('images_path', 'nova.image.local')
+flags.DECLARE('libvirt_type', 'nova.virt.libvirt_conn')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
@@ -103,7 +108,7 @@ def param2id(object_id):
     args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
     """
     if '-' in object_id:
-        return ec2_id_to_id(object_id)
+        return ec2utils.ec2_id_to_id(object_id)
     else:
         return int(object_id)
 
@@ -272,7 +277,7 @@ def _db_error(caught_exception):
     print caught_exception
     print _("The above error may show that the database has not "
             "been created.\nPlease create a database using "
-            "nova-manage sync db before running this command.")
+            "'nova-manage db sync' before running this command.")
     exit(1)
 
 
@@ -433,6 +438,8 @@ class ProjectCommands(object):
                     "been created.\nPlease create a database by running a "
                     "nova-api server on this host.")
 
+AccountCommands = ProjectCommands
+
 
 class FixedIpCommands(object):
     """Class for managing fixed ip."""
@@ -440,10 +447,15 @@ class FixedIpCommands(object):
     def list(self, host=None):
         """Lists all fixed ips (optionally by host) arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
-            fixed_ips = db.fixed_ip_get_all(ctxt)
-        else:
-            fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+
+        try:
+            if host == None:
+                fixed_ips = db.fixed_ip_get_all(ctxt)
+            else:
+                fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
+        except exception.NotFound as ex:
+            print "error: %s" % ex
+            sys.exit(2)
 
         print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (_('network'),
                                                   _('IP address'),
@@ -460,9 +472,9 @@ class FixedIpCommands(object):
                 host = instance['host']
                 mac_address = instance['mac_address']
             print "%-18s\t%-15s\t%-17s\t%-15s\t%s" % (
-                                  fixed_ip['network']['cidr'],
-                                  fixed_ip['address'],
-                                  mac_address, hostname, host)
+                    fixed_ip['network']['cidr'],
+                    fixed_ip['address'],
+                    mac_address, hostname, host)
 
 
 class FloatingIpCommands(object):
@@ -507,11 +519,12 @@ class NetworkCommands(object):
                network_size=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, label='public'):
         """Creates fixed ips for host by range
-        arguments: [fixed_range=FLAG], [num_networks=FLAG],
+        arguments: fixed_range=FLAG, [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
-            fixed_range = FLAGS.fixed_range
+            raise TypeError(_('Fixed range in the form of 10.0.0.0/8 is '
+                              'required to create networks.'))
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
@@ -543,6 +556,51 @@ class NetworkCommands(object):
                                 network.netmask,
                                 network.dhcp_start,
                                 network.dns)
+
+    def delete(self, fixed_range):
+        """Deletes a network"""
+        network = db.network_get_by_cidr(context.get_admin_context(), \
+                                         fixed_range)
+        if network.project_id is not None:
+            raise ValueError(_('Network must be disassociated from project %s'
+                               ' before delete' % network.project_id))
+        db.network_delete_safe(context.get_admin_context(), network.id)
+
+
+class VmCommands(object):
+    """Class for mangaging VM instances."""
+
+    def live_migration(self, ec2_id, dest):
+        """Migrates a running instance to a new machine.
+
+        :param ec2_id: instance id which comes from euca-describe-instance.
+        :param dest: destination host name.
+
+        """
+
+        ctxt = context.get_admin_context()
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
+
+        if (FLAGS.connection_type != 'libvirt' or
+           (FLAGS.connection_type == 'libvirt' and
+            FLAGS.libvirt_type not in ['kvm', 'qemu'])):
+            msg = _('Only KVM and QEmu are supported for now. Sorry!')
+            raise exception.Error(msg)
+
+        if (FLAGS.volume_driver != 'nova.volume.driver.AOEDriver' and \
+            FLAGS.volume_driver != 'nova.volume.driver.ISCSIDriver'):
+            msg = _("Support only AOEDriver and ISCSIDriver. Sorry!")
+            raise exception.Error(msg)
+
+        rpc.call(ctxt,
+                 FLAGS.scheduler_topic,
+                 {"method": "live_migration",
+                  "args": {"instance_id": instance_id,
+                           "dest": dest,
+                           "topic": FLAGS.compute_topic}})
+
+        print _('Migration of %s initiated.'
+               'Check its progress using euca-describe-instances.') % ec2_id
 
 
 class ServiceCommands(object):
@@ -589,6 +647,59 @@ class ServiceCommands(object):
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
+    def describe_resource(self, host):
+        """Describes cpu/memory/hdd info for host.
+
+        :param host: hostname.
+
+        """
+
+        result = rpc.call(context.get_admin_context(),
+                     FLAGS.scheduler_topic,
+                     {"method": "show_host_resources",
+                      "args": {"host": host}})
+
+        if type(result) != dict:
+            print _('An unexpected error has occurred.')
+            print _('[Result]'), result
+        else:
+            cpu = result['resource']['vcpus']
+            mem = result['resource']['memory_mb']
+            hdd = result['resource']['local_gb']
+            cpu_u = result['resource']['vcpus_used']
+            mem_u = result['resource']['memory_mb_used']
+            hdd_u = result['resource']['local_gb_used']
+
+            print 'HOST\t\t\tPROJECT\t\tcpu\tmem(mb)\tdisk(gb)'
+            print '%s(total)\t\t\t%s\t%s\t%s' % (host, cpu, mem, hdd)
+            print '%s(used)\t\t\t%s\t%s\t%s' % (host, cpu_u, mem_u, hdd_u)
+            for p_id, val in result['usage'].items():
+                print '%s\t\t%s\t\t%s\t%s\t%s' % (host,
+                                                  p_id,
+                                                  val['vcpus'],
+                                                  val['memory_mb'],
+                                                  val['local_gb'])
+
+    def update_resource(self, host):
+        """Updates available vcpu/memory/disk info for host.
+
+        :param host: hostname.
+
+        """
+
+        ctxt = context.get_admin_context()
+        service_refs = db.service_get_all_by_host(ctxt, host)
+        if len(service_refs) <= 0:
+            raise exception.Invalid(_('%s does not exist.') % host)
+
+        service_refs = [s for s in service_refs if s['topic'] == 'compute']
+        if len(service_refs) <= 0:
+            raise exception.Invalid(_('%s is not compute node.') % host)
+
+        rpc.call(ctxt,
+                 db.queue_get_for(ctxt, FLAGS.compute_topic, host),
+                 {"method": "update_available_resource"})
+
 
 class LogCommands(object):
     def request(self, request_id, logfile='/var/log/nova.log'):
@@ -612,6 +723,49 @@ class DbCommands(object):
     def version(self):
         """Print the current database version."""
         print migration.db_version()
+
+
+class InstanceCommands(object):
+    """Class for managing instances."""
+
+    def list(self, host=None, instance=None):
+        """Show a list of all instances"""
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+              "  %-10s %-10s %-10s %-5s" % (
+            _('instance'),
+            _('node'),
+            _('type'),
+            _('state'),
+            _('launched'),
+            _('image'),
+            _('kernel'),
+            _('ramdisk'),
+            _('project'),
+            _('user'),
+            _('zone'),
+            _('index'))
+
+        if host == None:
+            instances = db.instance_get_all(context.get_admin_context())
+        else:
+            instances = db.instance_get_all_by_host(
+                           context.get_admin_context(), host)
+
+        for instance in instances:
+            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+                  "  %-10s %-10s %-10s %-5d" % (
+                instance['hostname'],
+                instance['host'],
+                instance['instance_type'],
+                instance['state_description'],
+                instance['launched_at'],
+                instance['image_id'],
+                instance['kernel_id'],
+                instance['ramdisk_id'],
+                instance['project_id'],
+                instance['user_id'],
+                instance['availability_zone'],
+                instance['launch_index'])
 
 
 class VolumeCommands(object):
@@ -661,8 +815,231 @@ class VolumeCommands(object):
                            "mountpoint": volume['mountpoint']}})
 
 
+class InstanceTypeCommands(object):
+    """Class for managing instance types / flavors."""
+
+    def _print_instance_types(self, n, val):
+        deleted = ('', ', inactive')[val["deleted"] == 1]
+        print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
+            "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
+            n, val["memory_mb"], val["vcpus"], val["local_gb"],
+            val["flavorid"], val["swap"], val["rxtx_quota"],
+            val["rxtx_cap"], deleted)
+
+    def create(self, name, memory, vcpus, local_gb, flavorid,
+               swap=0, rxtx_quota=0, rxtx_cap=0):
+        """Creates instance types / flavors
+           arguments: name memory vcpus local_gb flavorid [swap] [rxtx_quota]
+                      [rxtx_cap]
+        """
+        try:
+            instance_types.create(name, memory, vcpus, local_gb,
+                                  flavorid, swap, rxtx_quota, rxtx_cap)
+        except exception.InvalidInputException:
+            print "Must supply valid parameters to create instance type"
+            print e
+            sys.exit(1)
+        except exception.DBError, e:
+            print "DB Error: %s" % e
+            sys.exit(2)
+        except:
+            print "Unknown error"
+            sys.exit(3)
+        else:
+            print "%s created" % name
+
+    def delete(self, name, purge=None):
+        """Marks instance types / flavors as deleted
+        arguments: name"""
+        try:
+            if purge == "--purge":
+                instance_types.purge(name)
+                verb = "purged"
+            else:
+                instance_types.destroy(name)
+                verb = "deleted"
+        except exception.ApiError:
+            print "Valid instance type name is required"
+            sys.exit(1)
+        except exception.DBError, e:
+            print "DB Error: %s" % e
+            sys.exit(2)
+        except:
+            sys.exit(3)
+        else:
+            print "%s %s" % (name, verb)
+
+    def list(self, name=None):
+        """Lists all active or specific instance types / flavors
+        arguments: [name]"""
+        try:
+            if name == None:
+                inst_types = instance_types.get_all_types()
+            elif name == "--all":
+                inst_types = instance_types.get_all_types(True)
+            else:
+                inst_types = instance_types.get_instance_type(name)
+        except exception.DBError, e:
+            _db_error(e)
+        if isinstance(inst_types.values()[0], dict):
+            for k, v in inst_types.iteritems():
+                self._print_instance_types(k, v)
+        else:
+            self._print_instance_types(name, inst_types)
+
+
+class ImageCommands(object):
+    """Methods for dealing with a cloud in an odd state"""
+
+    def __init__(self, *args, **kwargs):
+        self.image_service = utils.import_object(FLAGS.image_service)
+
+    def _register(self, image_type, disk_format, container_format,
+                  path, owner, name=None, is_public='T',
+                  architecture='x86_64', kernel_id=None, ramdisk_id=None):
+        meta = {'is_public': True,
+                'name': name,
+                'disk_format': disk_format,
+                'container_format': container_format,
+                'properties': {'image_state': 'available',
+                               'owner_id': owner,
+                               'type': image_type,
+                               'architecture': architecture,
+                               'image_location': 'local',
+                               'is_public': (is_public == 'T')}}
+        print image_type, meta
+        if kernel_id:
+            meta['properties']['kernel_id'] = int(kernel_id)
+        if ramdisk_id:
+            meta['properties']['ramdisk_id'] = int(ramdisk_id)
+        elevated = context.get_admin_context()
+        try:
+            with open(path) as ifile:
+                image = self.image_service.create(elevated, meta, ifile)
+            new = image['id']
+            print _("Image registered to %(new)s (%(new)08x).") % locals()
+            return new
+        except Exception as exc:
+            print _("Failed to register %(path)s: %(exc)s") % locals()
+
+    def all_register(self, image, kernel, ramdisk, owner, name=None,
+                 is_public='T', architecture='x86_64'):
+        """Uploads an image, kernel, and ramdisk into the image_service
+        arguments: image kernel ramdisk owner [name] [is_public='T']
+                   [architecture='x86_64']"""
+        kernel_id = self.kernel_register(kernel, owner, None,
+                                   is_public, architecture)
+        ramdisk_id = self.ramdisk_register(ramdisk, owner, None,
+                                    is_public, architecture)
+        self.image_register(image, owner, name, is_public,
+                       architecture, kernel_id, ramdisk_id)
+
+    def image_register(self, path, owner, name=None, is_public='T',
+                       architecture='x86_64', kernel_id=None, ramdisk_id=None,
+                       disk_format='ami', container_format='ami'):
+        """Uploads an image into the image_service
+        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+                   [kernel_id=None] [ramdisk_id=None]
+                   [disk_format='ami'] [container_format='ami']"""
+        return self._register('machine', disk_format, container_format, path,
+                              owner, name, is_public, architecture,
+                              kernel_id, ramdisk_id)
+
+    def kernel_register(self, path, owner, name=None, is_public='T',
+               architecture='x86_64'):
+        """Uploads a kernel into the image_service
+        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+        """
+        return self._register('kernel', 'aki', 'aki', path, owner, name,
+                              is_public, architecture)
+
+    def ramdisk_register(self, path, owner, name=None, is_public='T',
+                architecture='x86_64'):
+        """Uploads a ramdisk into the image_service
+        arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+        """
+        return self._register('ramdisk', 'ari', 'ari', path, owner, name,
+                              is_public, architecture)
+
+    def _lookup(self, old_image_id):
+        try:
+            internal_id = ec2utils.ec2_id_to_id(old_image_id)
+            image = self.image_service.show(context, internal_id)
+        except exception.NotFound:
+            image = self.image_service.show_by_name(context, old_image_id)
+        return image['id']
+
+    def _old_to_new(self, old):
+        mapping = {'machine': 'ami',
+                   'kernel': 'aki',
+                   'ramdisk': 'ari'}
+        container_format = mapping[old['type']]
+        disk_format = container_format
+        new = {'disk_format': disk_format,
+               'container_format': container_format,
+               'is_public': True,
+               'name': old['imageId'],
+               'properties': {'image_state': old['imageState'],
+                              'owner_id': old['imageOwnerId'],
+                              'architecture': old['architecture'],
+                              'type': old['type'],
+                              'image_location': old['imageLocation'],
+                              'is_public': old['isPublic']}}
+        if old.get('kernelId'):
+            new['properties']['kernel_id'] = self._lookup(old['kernelId'])
+        if old.get('ramdiskId'):
+            new['properties']['ramdisk_id'] = self._lookup(old['ramdiskId'])
+        return new
+
+    def _convert_images(self, images):
+        elevated = context.get_admin_context()
+        for image_path, image_metadata in images.iteritems():
+            meta = self._old_to_new(image_metadata)
+            old = meta['name']
+            try:
+                with open(image_path) as ifile:
+                    image = self.image_service.create(elevated, meta, ifile)
+                new = image['id']
+                print _("Image %(old)s converted to " \
+                        "%(new)s (%(new)08x).") % locals()
+            except Exception as exc:
+                print _("Failed to convert %(old)s: %(exc)s") % locals()
+
+    def convert(self, directory):
+        """Uploads old objectstore images in directory to new service
+        arguments: directory"""
+        machine_images = {}
+        other_images = {}
+        directory = os.path.abspath(directory)
+        # NOTE(vish): If we're importing from the images path dir, attempt
+        #             to move the files out of the way before importing
+        #             so we aren't writing to the same directory. This
+        #             may fail if the dir was a mointpoint.
+        if (FLAGS.image_service == 'nova.image.local.LocalImageService'
+            and directory == os.path.abspath(FLAGS.images_path)):
+            new_dir = "%s_bak" % directory
+            os.move(directory, new_dir)
+            os.mkdir(directory)
+            directory = new_dir
+        for fn in glob.glob("%s/*/info.json" % directory):
+            try:
+                image_path = os.path.join(fn.rpartition('/')[0], 'image')
+                with open(fn) as metadata_file:
+                    image_metadata = json.load(metadata_file)
+                if image_metadata['type'] == 'machine':
+                    machine_images[image_path] = image_metadata
+                else:
+                    other_images[image_path] = image_metadata
+            except Exception as exc:
+                print _("Failed to load %(fn)s.") % locals()
+        # NOTE(vish): do kernels and ramdisks first so images
+        self._convert_images(other_images)
+        self._convert_images(machine_images)
+
+
 CATEGORIES = [
     ('user', UserCommands),
+    ('account', AccountCommands),
     ('project', ProjectCommands),
     ('role', RoleCommands),
     ('shell', ShellCommands),
@@ -670,10 +1047,15 @@ CATEGORIES = [
     ('fixed', FixedIpCommands),
     ('floating', FloatingIpCommands),
     ('network', NetworkCommands),
+    ('vm', VmCommands),
     ('service', ServiceCommands),
     ('log', LogCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands)]
+    ('volume', VolumeCommands),
+    ('instance_type', InstanceTypeCommands),
+    ('image', ImageCommands),
+    ('flavor', InstanceTypeCommands),
+    ('instance', InstanceCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -716,8 +1098,8 @@ def main():
     script_name = argv.pop(0)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
-        print "Available categories:"
-        for k, _ in CATEGORIES:
+        print _("Available categories:")
+        for k, _v in CATEGORIES:
             print "\t%s" % k
         sys.exit(2)
     category = argv.pop(0)
@@ -728,7 +1110,7 @@ def main():
     actions = methods_of(command_object)
     if len(argv) < 1:
         print script_name + " category action [<args>]"
-        print "Available actions for %s category:" % category
+        print _("Available actions for %s category:") % category
         for k, _v in actions:
             print "\t%s" % k
         sys.exit(2)
@@ -740,8 +1122,11 @@ def main():
         fn(*argv)
         sys.exit(0)
     except TypeError:
-        print "Possible wrong number of arguments supplied"
+        print _("Possible wrong number of arguments supplied")
         print "%s %s: %s" % (category, action, fn.__doc__)
+        raise
+    except Exception:
+        print _("Command failed, please check log for more info")
         raise
 
 if __name__ == '__main__':

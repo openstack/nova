@@ -21,6 +21,7 @@ Handles all requests relating to instances (guest vms).
 """
 
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
@@ -65,6 +66,21 @@ class API(base.Base):
         if isinstance(fixed_ip, str) or isinstance(fixed_ip, unicode):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
+        # Check if the floating ip address is allocated
+        if floating_ip['project_id'] is None:
+            raise exception.ApiError(_("Address (%s) is not allocated") %
+                                       floating_ip['address'])
+        # Check if the floating ip address is allocated to the same project
+        if floating_ip['project_id'] != context.project_id:
+            LOG.warn(_("Address (%(address)s) is not allocated to your "
+                       "project (%(project)s)"),
+                       {'address': floating_ip['address'],
+                       'project': context.project_id})
+            raise exception.ApiError(_("Address (%(address)s) is not "
+                                       "allocated to your project"
+                                       "(%(project)s)") %
+                                        {'address': floating_ip['address'],
+                                        'project': context.project_id})
         # NOTE(vish): Perhaps we should just pass this on to compute and
         #             let compute communicate with network.
         host = fixed_ip['network']['host']
