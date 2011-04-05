@@ -205,7 +205,7 @@ class ServersTest(test.TestCase):
         self.assertEquals(server.nodeName, 'server')
         self.assertEquals(server.getAttribute('id'), '1')
         self.assertEquals(server.getAttribute('name'), 'server1')
-        (public,) = server.getElementsByTagName('public');
+        (public,) = server.getElementsByTagName('public')
         (ip,) = public.getElementsByTagName('ip')
         self.assertEquals(ip.getAttribute('addr'), '1.2.3.4')
         (private,) = server.getElementsByTagName('private')
