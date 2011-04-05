@@ -372,7 +372,7 @@ class AuthManager(object):
                 (Project.safe_id(project) if project else 'None')))
 
     def _clear_mc_key(self, user, role, project=None):
-        # (anthony) it would be better to delete the key
+        # NOTE(anthony): it would be better to delete the key
         self.mc.set(self._build_mc_key(user, role, project), None)
 
     def _has_role(self, user, role, project=None):
