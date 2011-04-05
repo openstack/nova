@@ -777,7 +777,7 @@ class CloudController(object):
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
         public_ip = self.network_api.allocate_floating_ip(context)
-        return {'addressSet': [{'publicIp': public_ip}]}
+        return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
