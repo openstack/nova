@@ -55,6 +55,13 @@ class Controller(wsgi.Controller):
                            "imageRef"],
                 "link": ["rel", "type", "href"],
             },
+            "dict_collections": {
+                "metadata": {"item_name": "meta", "item_key": "key"},
+            },
+            "list_collections": {
+                "public": {"item_name": "ip", "item_key": "addr"},
+                "private": {"item_name": "ip", "item_key": "addr"},
+            },
         },
     }
 
