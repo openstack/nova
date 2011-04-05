@@ -63,7 +63,6 @@ def upgrade(migrate_engine):
             .values(instance_type_id=type_id))
 
     instances.c.instance_type.drop()
-    #instances.c.instance_type_id.alter(nullable=False)
 
 
 def downgrade(migrate_engine):
@@ -83,4 +82,3 @@ def downgrade(migrate_engine):
             .values(instance_type=type_name))
 
     instances.c.instance_type_id.drop()
-    #instances.c.instance_type.alter(nullable=False)
