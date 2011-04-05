@@ -180,7 +180,7 @@ class Controller(wsgi.Controller):
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        password = utils.generate_password(16)
+        password = self._get_admin_password_from_request_server(env['server'])
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
@@ -241,6 +241,9 @@ class Controller(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=expl)
         # if the original error is okay, just reraise it
         raise error
+
+    def _get_admin_password_from_request_server(self, server):
+        return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
     def update(self, req, id):
@@ -647,6 +650,12 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def _get_admin_password_from_request_server(self, server):
+        password = server.get('adminPass')
+        if password:
+            return password
+        return utils.generate_password(16)
 
 
 class ServerCreateRequestXMLDeserializer(object):
