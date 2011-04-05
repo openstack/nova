@@ -1525,29 +1525,27 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
 
     def test_not_ami(self):
         """Anything other than ami should return no kernel and no ramdisk"""
-        image_meta = {'id': 1, 'status': 'active',
-                      'properties': {'disk_format': 'vhd'}}
+        image_meta = {'id': 1, 'status': 'active', 'container_format': 'vhd'}
         kernel_id, ramdisk_id = self._get_k_r(image_meta)
         self.assertEqual(kernel_id, None)
         self.assertEqual(ramdisk_id, None)
 
     def test_ami_no_kernel(self):
         """If an ami is missing a kernel it should raise NotFound"""
-        image_meta = {'id': 1, 'status': 'active',
-                      'properties': {'disk_format': 'ami', 'ramdisk_id': 1}}
+        image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
+                      'properties': {'ramdisk_id': 1}}
         self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
 
     def test_ami_no_ramdisk(self):
         """If an ami is missing a ramdisk it should raise NotFound"""
-        image_meta = {'id': 1, 'status': 'active',
-                      'properties': {'disk_format': 'ami', 'kernel_id': 1}}
+        image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
+                      'properties': {'kernel_id': 1}}
         self.assertRaises(exception.NotFound, self._get_k_r, image_meta)
 
     def test_ami_kernel_ramdisk_present(self):
         """Return IDs if both kernel and ramdisk are present"""
-        image_meta = {'id': 1, 'status': 'active',
-                      'properties': {'disk_format': 'ami', 'kernel_id': 1,
-                                     'ramdisk_id': 2}}
+        image_meta = {'id': 1, 'status': 'active', 'container_format': 'ami',
+                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}}
         kernel_id, ramdisk_id = self._get_k_r(image_meta)
         self.assertEqual(kernel_id, 1)
         self.assertEqual(ramdisk_id, 2)

@@ -87,6 +87,7 @@ class LocalImageService(service.BaseImageService):
                 image_meta = json.load(metadata_file)
                 if not self._is_image_available(context, image_meta):
                     raise exception.NotFound
+                return image_meta
         except (IOError, ValueError):
             raise exception.NotFound
 
