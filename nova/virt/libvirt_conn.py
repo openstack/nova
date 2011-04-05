@@ -1401,18 +1401,13 @@ class LibvirtConnection(driver.ComputeDriver):
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
         while timeout_count:
-            try:
-                filter_name = 'nova-instance-%s' % instance_ref.name
-                self._conn.nwfilterLookupByName(filter_name)
+            if self.firewall_driver.instance_filter_exists(instance_ref):
                 break
-            except libvirt.libvirtError:
-                timeout_count.pop()
-                if len(timeout_count) == 0:
-                    ec2_id = instance_ref['hostname']
-                    iname = instance_ref.name
-                    msg = _('Timeout migrating for %(ec2_id)s(%(iname)s)')
-                    raise exception.Error(msg % locals())
-                time.sleep(1)
+            timeout_count.pop()
+            if len(timeout_count) == 0:
+                msg = _('Timeout migrating for %s. nwfilter not found.')
+                raise exception.Error(msg % instance_ref.name)
+            time.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method):
@@ -1539,6 +1534,10 @@ class FirewallDriver(object):
         :method:`prepare_instance_filter`.
 
         """
+        raise NotImplementedError()
+
+    def instance_filter_exists(self, instance):
+        """Check nova-instance-instance-xxx exists"""
         raise NotImplementedError()
 
 
@@ -1848,6 +1847,19 @@ class NWFilterFirewall(FirewallDriver):
             return 'nova-instance-%s' % (instance['name'])
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
+    def instance_filter_exists(self, instance):
+        """Check nova-instance-instance-xxx exists"""
+
+        network_info = _get_network_info(instance)
+        for (network, mapping) in network_info:
+            nic_id = mapping['mac'].replace(':', '')
+            instance_filter_name = self._instance_filter_name(instance, nic_id)
+            try:
+                self._conn.nwfilterLookupByName(instance_filter_name)
+            except libvirt.libvirtError:
+                return False
+        return True
+
 
 class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, execute=None, **kwargs):
@@ -2036,6 +2048,10 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv6_rules += ['-j $sg-fallback']
 
         return ipv4_rules, ipv6_rules
+
+    def instance_filter_exists(self, instance):
+        """Check nova-instance-instance-xxx exists"""
+        return self.nwfilter.instance_filter_exists(instance)
 
     def refresh_security_group_members(self, security_group):
         pass

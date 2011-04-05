@@ -479,7 +479,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         fake_timer = FakeTime()
 
-        self.create_fake_libvirt_mock(nwfilterLookupByName=fake_raise)
+        self.create_fake_libvirt_mock()
         instance_ref = db.instance_create(self.context, self.test_instance)
 
         # Start test
@@ -488,6 +488,7 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_conn.LibvirtConnection(False)
             conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
             conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
+            conn.firewall_driver.setattr('instance_filter_exists', fake_none)
             conn.ensure_filtering_rules_for_instance(instance_ref,
                                                      time=fake_timer)
         except exception.Error, e:
