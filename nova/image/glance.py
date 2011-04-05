@@ -186,6 +186,7 @@ class GlanceImageService(service.BaseImageService):
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         return image_meta
 
+
 # utility functions
 def _convert_timestamps_to_datetimes(image_meta):
     """
