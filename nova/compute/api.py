@@ -372,6 +372,10 @@ class API(base.Base):
                         instance_id)
             return
 
+        if (instance['state_description'] == 'migrating'):
+            LOG.warning(_("Instance %s is being migrated"), instance_id)
+            return
+
         self.update(context,
                     instance['id'],
                     state_description='terminating',
