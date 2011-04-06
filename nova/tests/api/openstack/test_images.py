@@ -263,7 +263,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     {'id': 124, 'name': 'queued backup'},
                     {'id': 125, 'name': 'saving backup'},
                     {'id': 126, 'name': 'active backup'},
-                    {'id': 127, 'name': 'killed backup'}]
+                    {'id': 127, 'name': 'killed backup'},
+                    {'id': 129, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
 
@@ -332,6 +333,25 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         expected_image = minidom.parseString("""
             <image id="123"
                     name="public image"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
+        """ % (locals()))
+
+        self.assertEqual(expected_image.toxml(), actual_image.toxml())
+
+    def test_get_image_xml_no_name(self):
+        request = webob.Request.blank('/v1.0/images/129')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = minidom.parseString(response.body.replace("  ", ""))
+
+        expected_now = self.NOW_API_FORMAT
+        expected_image = minidom.parseString("""
+            <image id="129"
+                    name="None"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
                     status="ACTIVE"
@@ -522,6 +542,13 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+        },
+        {
+            'id': 129,
+            'name': None,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
         }]
 
         self.assertDictListMatch(expected, response_list)
@@ -641,7 +668,29 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "type": "application/xml",
                 "href": "http://localhost/v1.1/images/127",
             }],
-        }]
+        },
+        {
+            'id': 129,
+            'name': None,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/129",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/129",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/129",
+            }],
+        },
+        ]
 
         self.assertDictListMatch(expected, response_list)
 
@@ -698,6 +747,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         other_backup_properties = {'instance_id': '43', 'user_id': '2'}
         add_fixture(id=image_id, name='someone elses backup', is_public=False,
                     status='active', properties=other_backup_properties)
+        image_id += 1
+
+        # Image without a name
+        add_fixture(id=image_id, is_public=True, status='active',
+                    properties={})
         image_id += 1
 
         return fixtures

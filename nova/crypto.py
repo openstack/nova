@@ -215,9 +215,12 @@ def generate_x509_cert(user_id, project_id, bits=1024):
 
 def _ensure_project_folder(project_id):
     if not os.path.exists(ca_path(project_id)):
+        geninter_sh_path = os.path.join(os.path.dirname(__file__),
+                                        'CA',
+                                        'geninter.sh')
         start = os.getcwd()
         os.chdir(ca_folder())
-        utils.execute('sh', 'geninter.sh', project_id,
+        utils.execute('sh', geninter_sh_path, project_id,
                       _project_cert_subject(project_id))
         os.chdir(start)
 
@@ -227,13 +230,16 @@ def generate_vpn_files(project_id):
     csr_fn = os.path.join(project_folder, "server.csr")
     crt_fn = os.path.join(project_folder, "server.crt")
 
+    genvpn_sh_path = os.path.join(os.path.dirname(__file__),
+                                  'CA',
+                                  'geninter.sh')
     if os.path.exists(crt_fn):
         return
     _ensure_project_folder(project_id)
     start = os.getcwd()
     os.chdir(ca_folder())
     # TODO(vish): the shell scripts could all be done in python
-    utils.execute('sh', 'genvpn.sh',
+    utils.execute('sh', genvpn_sh_path,
                   project_id, _vpn_cert_subject(project_id))
     with open(csr_fn, "r") as csrfile:
         csr_text = csrfile.read()
@@ -263,6 +269,8 @@ def _sign_csr(csr_text, ca_folder):
     LOG.debug(_("Flags path: %s"), ca_folder)
     start = os.getcwd()
     # Change working dir to CA
+    if not os.path.exists(ca_folder):
+        os.makedirs(ca_folder)
     os.chdir(ca_folder)
     utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
                   './openssl.cnf', '-infiles', inbound)
