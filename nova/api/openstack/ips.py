@@ -21,10 +21,11 @@ from webob import exc
 
 import nova
 import nova.api.openstack.views.addresses
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
-class Controller(nova.wsgi.Controller):
+class Controller(common.OpenstackController):
     """The servers addresses API controller for the Openstack API."""
 
     _serialization_metadata = {
