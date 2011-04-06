@@ -55,6 +55,9 @@ class AuthMiddleware(wsgi.Middleware):
         user = self.get_user_by_authentication(req)
         accounts = self.auth.get_projects(user=user)
         if not user:
+            token = req.headers["X-Auth-Token"]
+            msg = _("%(user)s could not be found with token '%(token)s'")
+            LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         if accounts:
@@ -66,6 +69,8 @@ class AuthMiddleware(wsgi.Middleware):
 
         if not self.auth.is_admin(user) and \
            not self.auth.is_project_member(user, account):
+            msg = _("%(user)s must be an admin or a member of %(account)s")
+            LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         req.environ['nova.context'] = context.RequestContext(user, account)
@@ -82,12 +87,15 @@ class AuthMiddleware(wsgi.Middleware):
         # honor it
         path_info = req.path_info
         if len(path_info) > 1:
+            msg = _("Authentication requests must be made against /<version>")
+            LOG.warn(msg)
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         try:
             username = req.headers['X-Auth-User']
             key = req.headers['X-Auth-Key']
-        except KeyError:
+        except KeyError as ex:
+            LOG.warn(_("Could not find %s in request.") % ex)
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         token, user = self._authorize_user(username, key, req)
@@ -100,6 +108,7 @@ class AuthMiddleware(wsgi.Middleware):
             res.headers['X-CDN-Management-Url'] = token.cdn_management_url
             res.content_type = 'text/plain'
             res.status = '204'
+            LOG.debug(_("Successfully authenticated '%s'") % username)
             return res
         else:
             return faults.Fault(webob.exc.HTTPUnauthorized())
@@ -139,6 +148,7 @@ class AuthMiddleware(wsgi.Middleware):
         try:
             user = self.auth.get_user_from_access_key(key)
         except exception.NotFound:
+            LOG.warn(_("User not found with provided API key."))
             user = None
 
         if user and user.name == username:
@@ -153,4 +163,9 @@ class AuthMiddleware(wsgi.Middleware):
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)
             return token, user
+        elif user and user.name != username:
+            msg = _("Provided API key is valid, but not for user "
+                    "'%(username)s'") % locals()
+            LOG.warn(msg)
+
         return None, None

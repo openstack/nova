@@ -43,6 +43,7 @@ from nova import utils
 
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger('nova.wsgi')
 
 
 class WritableLogger(object):
@@ -346,6 +347,7 @@ class Controller(object):
         arg_dict = req.environ['wsgiorg.routing_args'][1]
         action = arg_dict['action']
         method = getattr(self, action)
+        LOG.debug("%s %s" % (req.method, req.url))
         del arg_dict['controller']
         del arg_dict['action']
         if 'format' in arg_dict:
@@ -360,6 +362,9 @@ class Controller(object):
             response = webob.Response()
             response.headers["Content-Type"] = content_type
             response.body = body
+            msg_dict = dict(url=req.url, status=response.status_int)
+            msg = _("%(url)s returned with HTTP %(status)d") % msg_dict
+            LOG.debug(msg)
             return response
 
         else:
