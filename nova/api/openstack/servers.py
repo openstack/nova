@@ -244,6 +244,7 @@ class Controller(wsgi.Controller):
         raise error
 
     def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
         return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
@@ -653,6 +654,7 @@ class ControllerV11(Controller):
         return common.limited_by_marker(items, req)
 
     def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
         password = server.get('adminPass')
         if password is None:
             return utils.generate_password(16)
