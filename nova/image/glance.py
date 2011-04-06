@@ -151,6 +151,8 @@ class GlanceImageService(service.BaseImageService):
 
         :raises NotFound if the image does not exist.
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
@@ -165,6 +167,8 @@ class GlanceImageService(service.BaseImageService):
 
         :raises NotFound if the image does not exist.
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             result = self.client.delete_image(image_id)
         except glance_exception.NotFound:

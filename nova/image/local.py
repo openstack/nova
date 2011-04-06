@@ -126,6 +126,8 @@ class LocalImageService(service.BaseImageService):
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data."""
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         metadata['id'] = image_id
         try:
             if data:
@@ -143,9 +145,11 @@ class LocalImageService(service.BaseImageService):
 
     def delete(self, context, image_id):
         """Delete the given image.
-        Raises OSError if the image does not exist.
+        Raises NotFound if the image does not exist.
 
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             shutil.rmtree(self._path_to(image_id, None))
         except (IOError, ValueError):

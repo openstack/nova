@@ -59,13 +59,9 @@ class S3ImageService(service.BaseImageService):
         return image
 
     def delete(self, context, image_id):
-        # FIXME(vish): call to show is to check visibility
-        self.show(context, image_id)
         self.service.delete(context, image_id)
 
     def update(self, context, image_id, metadata, data=None):
-        # FIXME(vish): call to show is to check visibility
-        self.show(context, image_id)
         image = self.service.update(context, image_id, metadata, data)
         return image
 
