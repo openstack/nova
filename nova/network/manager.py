@@ -100,6 +100,8 @@ flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
 flags.DEFINE_bool('fake_call', False,
                   'If True, skip using the queue and make local calls')
+flags.DEFINE_string('metadata_interface', 'eth0',
+                    'interface to add the metadata ip to')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -128,6 +130,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.driver.init_host()
         # Set up networking for the projects for which we're already
         # the designated network host.
+        self.driver.ensure_metadata_ip(FLAGS.metadata_interface)
         ctxt = context.get_admin_context()
         for network in self.db.host_get_networks(ctxt, self.host):
             self._on_set_network_host(ctxt, network['id'])
