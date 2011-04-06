@@ -135,8 +135,11 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None):
-        """Create the number of instances requested if quota and
-        other arguments check out ok."""
+        """Create number of instances requested, given quotas.
+
+        Create the number of instances requested if quota and
+        other arguments check out ok.
+        """
 
         type_data = instance_types.get_instance_type(instance_type)
         num_instances = quota.allowed_instances(context, max_count, type_data)
