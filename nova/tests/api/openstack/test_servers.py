@@ -228,6 +228,84 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(addresses["private"]), 1)
         self.assertEqual(addresses["private"][0], private)
 
+    def test_get_server_addresses_V10(self):
+        private = '192.168.0.3'
+        public = ['1.2.3.4']
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1/ips')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict, {
+            'addresses': {'public': public, 'private': [private]}})
+
+    def test_get_server_addresses_xml_V10(self):
+        private_expected = "192.168.0.3"
+        public_expected = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private_expected,
+                                                         public_expected)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1/ips')
+        req.headers['Accept'] = 'application/xml'
+        res = req.get_response(fakes.wsgi_app())
+        dom = minidom.parseString(res.body)
+        (addresses,) = dom.childNodes
+        self.assertEquals(addresses.nodeName, 'addresses')
+        (public,) = addresses.getElementsByTagName('public')
+        (ip,) = public.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), public_expected[0])
+        (private,) = addresses.getElementsByTagName('private')
+        (ip,) = private.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), private_expected)
+
+    def test_get_server_addresses_public_V10(self):
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1/ips/public')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict, {'public': public})
+
+    def test_get_server_addresses_private_V10(self):
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1/ips/private')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict, {'private': [private]})
+
+    def test_get_server_addresses_public_xml_V10(self):
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1/ips/public')
+        req.headers['Accept'] = 'application/xml'
+        res = req.get_response(fakes.wsgi_app())
+        dom = minidom.parseString(res.body)
+        (public_node,) = dom.childNodes
+        self.assertEquals(public_node.nodeName, 'public')
+        (ip,) = public_node.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), public[0])
+
+    def test_get_server_addresses_private_xml_V10(self):
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1/ips/private')
+        req.headers['Accept'] = 'application/xml'
+        res = req.get_response(fakes.wsgi_app())
+        dom = minidom.parseString(res.body)
+        (private_node,) = dom.childNodes
+        self.assertEquals(private_node.nodeName, 'private')
+        (ip,) = private_node.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), private)
+
     def test_get_server_by_id_with_addresses_v11(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
