@@ -110,7 +110,8 @@ class CloudController(object):
                                              'genrootca.sh')
 
             start = os.getcwd()
-            os.makedirs(FLAGS.ca_path)
+            if not os.path.exists(FLAGS.ca_path):
+                os.makedirs(FLAGS.ca_path)
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
             utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
