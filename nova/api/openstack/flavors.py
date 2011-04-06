@@ -19,11 +19,11 @@ import webob
 
 from nova import db
 from nova import exception
-from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import views
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """Flavor controller for the OpenStack API."""
 
     _serialization_metadata = {
@@ -76,3 +76,6 @@ class ControllerV11(Controller):
     def _get_view_builder(self, req):
         base_url = req.application_url
         return views.flavors.ViewBuilderV11(base_url)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11
