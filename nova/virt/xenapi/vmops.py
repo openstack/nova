@@ -832,7 +832,7 @@ class VMOps(object):
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             if network['gateway_v6']:
-                info['gateway6'] = network['gateway_v6'],
+                info['gateway6'] = network['gateway_v6']
             network_info.append((network, info))
         return network_info
 
