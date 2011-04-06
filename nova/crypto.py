@@ -269,6 +269,8 @@ def _sign_csr(csr_text, ca_folder):
     LOG.debug(_("Flags path: %s"), ca_folder)
     start = os.getcwd()
     # Change working dir to CA
+    if not os.path.exists(ca_folder):
+        os.makedirs(ca_folder)
     os.chdir(ca_folder)
     utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
                   './openssl.cnf', '-infiles', inbound)
