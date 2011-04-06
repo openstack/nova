@@ -714,3 +714,24 @@ def check_isinstance(obj, cls):
     raise Exception(_("Expected object of type: %s") % (str(cls)))
     # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack
+
+def get_secondary_server_string(str):
+    """Returns host part only of the given server_string if it's a combination
+    of host part and port. Otherwise, return null string."""
+
+    # First of all, exclude pure IPv6 address (w/o port).
+    if netaddr.valid_ipv6(str):
+        return ''
+
+    # Next, check if this is IPv6 address with port number combination.
+    if str.find("]:") != -1: 
+        [address, sep, port] = str.replace('[', '', 1).partition(']:')
+        return address 
+
+    # Third, check if this is a combination of general address and port
+    if str.find(':') == -1: 
+	return ''
+
+    # This must be a combination of host part and port
+    [address, sep, port] = str.partition(':')
+    return address 
