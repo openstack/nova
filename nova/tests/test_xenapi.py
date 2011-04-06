@@ -289,11 +289,11 @@ class XenAPIVMTestCase(test.TestCase):
                                         'enabled':'1'}],
                                 'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
                                           'netmask': '120',
-                                          'enabled': '1',
-                                          'gateway': 'fe80::a00:1'}],
+                                          'enabled': '1'}],
                                 'mac': 'aa:bb:cc:dd:ee:ff',
                                 'dns': ['10.0.0.2'],
-                                'gateway': '10.0.0.1'})
+                                'gateway': '10.0.0.1',
+                                'gateway6': 'fe80::a00:1'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
