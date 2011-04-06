@@ -130,7 +130,7 @@ class Controller(wsgi.Controller):
             raise webob.exc.HTTPBadRequest()
 
         image = self._compute_service.snapshot(context, server_id, image_name)
-        return self.get_builder(req).build(image, detail=True)
+        return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
