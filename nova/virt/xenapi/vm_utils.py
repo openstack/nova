@@ -49,7 +49,7 @@ LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
-flags.DEFINE_integer('timeout_block', 10,
+flags.DEFINE_integer('block_device_creation_timeout', 10,
                      'time to wait for a block device to be created')
 
 XENAPI_POWER_STATE = {
@@ -900,7 +900,7 @@ def remap_vbd_dev(dev):
 
 def _wait_for_device(dev):
     """Wait for device node to appear"""
-    for i in xrange(0, FLAGS.timeout_block):
+    for i in xrange(0, FLAGS.block_device_creation_timeout):
         if os.path.exists('/dev/%s' % dev):
             return
         time.sleep(1)
