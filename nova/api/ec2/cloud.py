@@ -757,6 +757,8 @@ class CloudController(object):
             iterator = db.floating_ip_get_all_by_project(context,
                                                          context.project_id)
         for floating_ip_ref in iterator:
+            if floating_ip_ref['project_id'] is None:
+                continue
             address = floating_ip_ref['address']
             ec2_id = None
             if (floating_ip_ref['fixed_ip']

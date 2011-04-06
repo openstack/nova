@@ -132,10 +132,13 @@ def stubout_stream_disk(stubs):
     stubs.Set(vm_utils, '_stream_disk', f)
 
 
-def stubout_is_vdi_pv(stubs):
-    def f(_1):
+def stubout_determine_is_pv_objectstore(stubs):
+    """Assumes VMs never have PV kernels"""
+
+    @classmethod
+    def f(cls, *args):
         return False
-    stubs.Set(vm_utils, '_is_vdi_pv', f)
+    stubs.Set(vm_utils.VMHelper, '_determine_is_pv_objectstore', f)
 
 
 def stubout_lookup_image(stubs):
@@ -176,7 +179,10 @@ class FakeSessionForVMTests(fake.SessionBase):
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
 
-    def host_call_plugin(self, _1, _2, _3, _4, _5):
+    def host_call_plugin(self, _1, _2, plugin, fn, args):
+        # copy_kernel_vdi returns nothing
+        if fn == 'copy_kernel_vdi':
+            return
         sr_ref = fake.get_all('SR')[0]
         vdi_ref = fake.create_vdi('', False, sr_ref, False)
         vdi_rec = fake.get_record('VDI', vdi_ref)
