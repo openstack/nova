@@ -2143,20 +2143,20 @@ class IptablesFirewallDriver(FirewallDriver):
         self.build_provider_fw_rules(self)
 
     def _purge_provider_fw_rules(self):
-        """Remove all rules from the $provider chains."""
-        self.iptables.ipv4['filter'].empty_chain('$provider')
+        """Remove all rules from the provider chains."""
+        self.iptables.ipv4['filter'].empty_chain('provider')
         if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].empty_chain('$provider')
+            self.iptables.ipv6['filter'].empty_chain('provider')
 
     def _build_provider_fw_rules(self):
         """Create all rules for the provider IP DROPs."""
         ipv4_rules, ipv6_rules = self._provider_rules()
         for rule in ipv4_rules:
-            self.iptables.ipv4['filter'].add_rule('$provider', rule)
+            self.iptables.ipv4['filter'].add_rule('provider', rule)
 
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
-                self.iptables.ipv6['filter'].add_rule('$provider', rule)
+                self.iptables.ipv6['filter'].add_rule('provider', rule)
 
     def _provider_rules(self):
         """Generate a list of rules from provider for IP4 & IP6."""
@@ -2182,7 +2182,7 @@ class IptablesFirewallDriver(FirewallDriver):
             if version == 6 and rule.protocol == 'icmp':
                 protocol = 'icmpv6'
 
-            args = ['-A', '$provider', '-p', protocol, '-s', rule.cidr]
+            args = ['-p', protocol, '-s', rule.cidr]
 
             if rule.protocol in ['udp', 'tcp']:
                 if rule.from_port == rule.to_port:
