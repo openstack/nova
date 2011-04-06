@@ -44,7 +44,7 @@ LOG = logging.getLogger('server')
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
@@ -654,6 +654,9 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11
 
 
 class ServerCreateRequestXMLDeserializer(object):
