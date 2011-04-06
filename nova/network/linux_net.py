@@ -449,6 +449,7 @@ def ensure_vlan(vlan_num):
     return interface
 
 
+@utils.synchronized('ensure_bridge', external=True)
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists.
 
@@ -502,6 +503,8 @@ def ensure_bridge(bridge, interface, net_attrs=None):
             fields = line.split()
             if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
                 gateway = fields[1]
+                _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
+                         'dev', interface)
         out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
                             'scope', 'global')
         for line in out.split("\n"):
@@ -511,11 +514,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                 _execute(*_ip_bridge_cmd('del', params, fields[-1]))
                 _execute(*_ip_bridge_cmd('add', params, bridge))
         if gateway:
-            # NOTE(vish): If the gateway already exists we are fine
-            out, err = _execute('sudo', 'route', 'add', '0.0.0.0', 'gw',
-                                gateway, check_exit_code=False)
-            if err and err != "SIOCADDRT: File exists\n":
-                raise exception.Error("Failed to reset gateway: %s" % err)
+            _execute('sudo', 'route', 'add', 'default', 'gw', gateway)
         out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
                             check_exit_code=False)
 
