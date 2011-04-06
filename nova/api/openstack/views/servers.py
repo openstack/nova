@@ -82,7 +82,6 @@ class ViewBuilder(object):
         # Return the metadata as a dictionary
         metadata = {}
         for item in inst.get('metadata', []):
-            # metadata values must be strings per API
             metadata[item['key']] = str(item['value'])
         inst_dict['metadata'] = metadata
 
