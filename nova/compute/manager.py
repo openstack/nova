@@ -786,7 +786,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Remove volume on compute host.
 
         :param context: security context
-        :param volume_id: nova.db.sqlalchemy.models.Volume.id
+        :param volume_id: volume ID
         """
         self.volume_manager.remove_compute_volume(context, volume_id)
 
