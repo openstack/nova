@@ -70,15 +70,6 @@ class Controller(common.OpenstackController):
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
-    def ips(self, req, id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-
-        builder = self._get_addresses_view_builder(req)
-        return builder.build(instance)
-
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         return self._items(req, is_detail=False)
