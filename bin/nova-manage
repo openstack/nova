@@ -819,6 +819,7 @@ class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
     def _print_instance_types(self, n, val):
+        """helper method to print out instance_types values"""
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
             "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
@@ -836,11 +837,14 @@ class InstanceTypeCommands(object):
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
         except exception.InvalidInputException:
-            print "Must supply valid parameters to create instance type"
+            print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
-        except exception.DBError, e:
-            print "DB Error: %s" % e
+        except exception.ApiError, e:
+            print e
+            print "Please ensure instance_type name and flavor id are unique"
+            print "Here are the already defined instance_type names and flavorids:"
+            self.list("--all")
             sys.exit(2)
         except:
             print "Unknown error"
