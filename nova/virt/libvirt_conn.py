@@ -232,14 +232,8 @@ class LibvirtConnection(driver.ComputeDriver):
                           {'name': instance['name'], 'state': state})
             db.instance_set_state(ctxt, instance['id'], state)
 
-            # NOTE(justinsb): We no longer delete these instances,
+            # NOTE(justinsb): We no longer delete SHUTOFF instances,
             # the user may want to power them back on
-            #if state == power_state.SHUTOFF:
-            #    # TODO(soren): This is what the compute manager does when you
-            #    # terminate # an instance. At some point I figure we'll have a
-            #    # "terminated" state and some sort of cleanup job that runs
-            #    # occasionally, cleaning them out.
-            #    db.instance_destroy(ctxt, instance['id'])
 
             if state != power_state.RUNNING:
                 continue
