@@ -322,7 +322,8 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
         self._session = self._create_session(url)
-        exception = self.XenAPI.Failure(_("Unable to log in to XenAPI."))
+        exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
+                            "(is the Dom0 disk full?)"))
         with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
             self._session.login_with_password(user, pw)
         self.loop = None
