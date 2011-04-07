@@ -13,12 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import common
-
 from nova import db
 from nova import flags
 from nova import log as logging
-from nova import wsgi
+from nova.api.openstack import common
 from nova.scheduler import api
 
 
@@ -43,7 +41,7 @@ def _scrub_zone(zone):
                     'deleted', 'deleted_at', 'updated_at'))
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
 
     _serialization_metadata = {
         'application/xml': {
