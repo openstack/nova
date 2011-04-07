@@ -117,6 +117,8 @@ flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
 flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
+flags.DEFINE_bool('start_guests_on_host_boot', False,
+                  'Whether to restart guests when the host reboots')
 
 
 def get_connection(read_only):
@@ -231,12 +233,8 @@ class LibvirtConnection(driver.ComputeDriver):
                           {'name': instance['name'], 'state': state})
             db.instance_set_state(ctxt, instance['id'], state)
 
-            if state == power_state.SHUTOFF:
-                # TODO(soren): This is what the compute manager does when you
-                # terminate # an instance. At some point I figure we'll have a
-                # "terminated" state and some sort of cleanup job that runs
-                # occasionally, cleaning them out.
-                db.instance_destroy(ctxt, instance['id'])
+            # NOTE(justinsb): We no longer delete SHUTOFF instances,
+            # the user may want to power them back on
 
             if state != power_state.RUNNING:
                 continue
@@ -475,7 +473,7 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
-        self._conn.createXML(xml, 0)
+        self._create_new_domain(xml)
         self.firewall_driver.apply_instance_filter(instance)
 
         timer = utils.LoopingCall(f=None)
@@ -523,7 +521,7 @@ class LibvirtConnection(driver.ComputeDriver):
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
         self._create_image(instance, xml, '.rescue', rescue_images)
-        self._conn.createXML(xml, 0)
+        self._create_new_domain(xml)
 
         timer = utils.LoopingCall(f=None)
 
@@ -566,9 +564,14 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_image(instance, xml, network_info)
-        self._conn.createXML(xml, 0)
+        domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
+
+        if FLAGS.start_guests_on_host_boot:
+            LOG.debug(_("instance %s: setting autostart ON") %
+                      instance['name'])
+            domain.setAutostart(1)
 
         timer = utils.LoopingCall(f=None)
 
@@ -989,17 +992,46 @@ class LibvirtConnection(driver.ComputeDriver):
         return xml
 
     def get_info(self, instance_name):
+        # NOTE(justinsb): When libvirt isn't running / can't connect, we get:
+        # libvir: Remote error : unable to connect to
+        #  '/var/run/libvirt/libvirt-sock', libvirtd may need to be started:
+        #  No such file or directory
         try:
             virt_dom = self._conn.lookupByName(instance_name)
-        except:
-            raise exception.NotFound(_("Instance %s not found")
-                                     % instance_name)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.NotFound(_("Instance %s not found")
+                                         % instance_name)
+            LOG.warning(_("Error from libvirt during lookup. "
+                          "Code=%(errcode)s Error=%(e)s") %
+                        locals())
+            raise
+
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
+
+    def _create_new_domain(self, xml, persistent=True, launch_flags=0):
+        # NOTE(justinsb): libvirt has two types of domain:
+        # * a transient domain disappears when the guest is shutdown
+        # or the host is rebooted.
+        # * a permanent domain is not automatically deleted
+        # NOTE(justinsb): Even for ephemeral instances, transient seems risky
+
+        if persistent:
+            # To create a persistent domain, first define it, then launch it.
+            domain = self._conn.defineXML(xml)
+
+            domain.createWithFlags(launch_flags)
+        else:
+            # createXML call creates a transient domain
+            domain = self._conn.createXML(xml, launch_flags)
+
+        return domain
 
     def get_diagnostics(self, instance_name):
         raise exception.ApiError(_("diagnostics are not supported "
