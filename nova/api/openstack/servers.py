@@ -44,7 +44,7 @@ LOG = logging.getLogger('server')
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
@@ -160,9 +160,11 @@ class Controller(wsgi.Controller):
         name = name.strip()
 
         try:
+            inst_type = \
+                instance_types.get_instance_type_by_flavor_id(flavor_id)
             (inst,) = self.compute_api.create(
                 context,
-                instance_types.get_by_flavor_id(flavor_id),
+                inst_type,
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
@@ -175,7 +177,7 @@ class Controller(wsgi.Controller):
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        inst['instance_type'] = flavor_id
+        inst['instance_type'] = inst_type
         inst['image_id'] = requested_image_id
 
         builder = self._get_view_builder(req)
@@ -647,6 +649,9 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11
 
 
 class ServerCreateRequestXMLDeserializer(object):
