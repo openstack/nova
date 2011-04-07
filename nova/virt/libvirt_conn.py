@@ -1849,7 +1849,6 @@ class NWFilterFirewall(FirewallDriver):
 
     def instance_filter_exists(self, instance):
         """Check nova-instance-instance-xxx exists"""
-
         network_info = _get_network_info(instance)
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
@@ -1857,6 +1856,9 @@ class NWFilterFirewall(FirewallDriver):
             try:
                 self._conn.nwfilterLookupByName(instance_filter_name)
             except libvirt.libvirtError:
+                name = instance.name
+                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for' 
+                            '%(name)s is not found.') % locals())
                 return False
         return True
 
