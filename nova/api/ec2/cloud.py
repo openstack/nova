@@ -731,7 +731,7 @@ class CloudController(object):
                     instance['host'])
             i['productCodesSet'] = self._convert_to_set([], 'product_codes')
             if instance['instance_type']:
-                i['instanceType'] = instance['instance_type'].get('name', None)
+                i['instanceType'] = instance['instance_type'].get('name')
             else:
                 i['instanceType'] = None
             i['launchTime'] = instance['created_at']
