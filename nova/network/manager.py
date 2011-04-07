@@ -100,8 +100,6 @@ flags.DEFINE_string('network_host', socket.gethostname(),
                     'Network host to use for ip allocation in flat modes')
 flags.DEFINE_bool('fake_call', False,
                   'If True, skip using the queue and make local calls')
-flags.DEFINE_string('metadata_interface', 'eth0',
-                    'interface to add the metadata ip to')
 
 
 class AddressAlreadyAllocated(exception.Error):
@@ -128,7 +126,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         standalone service.
         """
         self.driver.init_host()
-        self.driver.ensure_metadata_ip(FLAGS.metadata_interface)
+        self.driver.ensure_metadata_ip()
         # Set up networking for the projects for which we're already
         # the designated network host.
         ctxt = context.get_admin_context()

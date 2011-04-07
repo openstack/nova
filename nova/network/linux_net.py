@@ -391,11 +391,10 @@ def unbind_floating_ip(floating_ip):
              'dev', FLAGS.public_interface)
 
 
-def ensure_metadata_ip(interface):
+def ensure_metadata_ip():
     """Sets up local metadata ip"""
     _execute('sudo', 'ip', 'addr', 'add', '169.254.169.254/32',
-             'scope', 'link', 'dev', interface,
-             check_exit_code=False)
+             'scope', 'link', 'dev', 'lo', check_exit_code=False)
 
 
 def ensure_vlan_forward(public_ip, port, private_ip):
