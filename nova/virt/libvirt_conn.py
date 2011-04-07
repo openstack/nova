@@ -1857,7 +1857,7 @@ class NWFilterFirewall(FirewallDriver):
                 self._conn.nwfilterLookupByName(instance_filter_name)
             except libvirt.libvirtError:
                 name = instance.name
-                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for' 
+                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
                             '%(name)s is not found.') % locals())
                 return False
         return True
