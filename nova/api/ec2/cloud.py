@@ -103,10 +103,18 @@ class CloudController(object):
         # Gen root CA, if we don't have one
         root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
         if not os.path.exists(root_ca_path):
+            genrootca_sh_path = os.path.join(os.path.dirname(__file__),
+                                             os.path.pardir,
+                                             os.path.pardir,
+                                             'CA',
+                                             'genrootca.sh')
+
             start = os.getcwd()
+            if not os.path.exists(FLAGS.ca_path):
+                os.makedirs(FLAGS.ca_path)
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh", "genrootca.sh")
+            utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
@@ -886,10 +894,7 @@ class CloudController(object):
         image_type = image['properties'].get('type')
         ec2_id = self._image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
-        if name:
-            i['imageId'] = "%s (%s)" % (ec2_id, name)
-        else:
-            i['imageId'] = ec2_id
+        i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
             i['kernelId'] = self._image_ec2_id(kernel_id, 'kernel')
@@ -897,11 +902,15 @@ class CloudController(object):
         if ramdisk_id:
             i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ramdisk')
         i['imageOwnerId'] = image['properties'].get('owner_id')
-        i['imageLocation'] = image['properties'].get('image_location')
+        if name:
+            i['imageLocation'] = "%s (%s)" % (image['properties'].
+                                              get('image_location'), name)
+        else:
+            i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
-        i['displayName'] = image.get('name')
+        i['displayName'] = name
         i['description'] = image.get('description')
-        i['type'] = image_type
+        i['imageType'] = image_type
         i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
         i['architecture'] = image['properties'].get('architecture')
         return i
