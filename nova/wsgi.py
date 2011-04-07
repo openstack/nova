@@ -502,6 +502,14 @@ class Serializer(object):
             result.setAttribute('xmlns', xmlns)
 
         if type(data) is list:
+            collections = metadata.get('list_collections', {})
+            if nodename in collections:
+                metadata = collections[nodename]
+                for item in data:
+                    node = doc.createElement(metadata['item_name'])
+                    node.setAttribute(metadata['item_key'], str(item))
+                    result.appendChild(node)
+                return result
             singular = metadata.get('plurals', {}).get(nodename, None)
             if singular is None:
                 if nodename.endswith('s'):
@@ -512,6 +520,16 @@ class Serializer(object):
                 node = self._to_xml_node(doc, metadata, singular, item)
                 result.appendChild(node)
         elif type(data) is dict:
+            collections = metadata.get('dict_collections', {})
+            if nodename in collections:
+                metadata = collections[nodename]
+                for k, v in data.items():
+                    node = doc.createElement(metadata['item_name'])
+                    node.setAttribute(metadata['item_key'], str(k))
+                    text = doc.createTextNode(str(v))
+                    node.appendChild(text)
+                    result.appendChild(node)
+                return result
             attrs = metadata.get('attributes', {}).get(nodename, {})
             for k, v in data.items():
                 if k in attrs:

@@ -199,6 +199,26 @@ class ServersTest(test.TestCase):
         print res_dict['server']
         self.assertEqual(res_dict['server']['links'], expected_links)
 
+    def test_get_server_by_id_with_addresses_xml(self):
+        private = "192.168.0.3"
+        public = ["1.2.3.4"]
+        new_return_server = return_server_with_addresses(private, public)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1')
+        req.headers['Accept'] = 'application/xml'
+        res = req.get_response(fakes.wsgi_app())
+        dom = minidom.parseString(res.body)
+        server = dom.childNodes[0]
+        self.assertEquals(server.nodeName, 'server')
+        self.assertEquals(server.getAttribute('id'), '1')
+        self.assertEquals(server.getAttribute('name'), 'server1')
+        (public,) = server.getElementsByTagName('public')
+        (ip,) = public.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'), '1.2.3.4')
+        (private,) = server.getElementsByTagName('private')
+        (ip,) = private.getElementsByTagName('ip')
+        self.assertEquals(ip.getAttribute('addr'),  '192.168.0.3')
+
     def test_get_server_by_id_with_addresses(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
@@ -624,6 +644,22 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/servers/1/backup_schedule')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
+
+    def test_get_all_server_details_xml_v1_0(self):
+        req = webob.Request.blank('/v1.0/servers/detail')
+        req.headers['Accept'] = 'application/xml'
+        res = req.get_response(fakes.wsgi_app())
+        print res.body
+        dom = minidom.parseString(res.body)
+        for i, server in enumerate(dom.getElementsByTagName('server')):
+            self.assertEqual(server.getAttribute('id'), str(i))
+            self.assertEqual(server.getAttribute('hostId'), '')
+            self.assertEqual(server.getAttribute('name'), 'server%d' % i)
+            self.assertEqual(server.getAttribute('imageId'), '10')
+            self.assertEqual(server.getAttribute('status'), 'BUILD')
+            (meta,) = server.getElementsByTagName('meta')
+            self.assertEqual(meta.getAttribute('key'), 'seq')
+            self.assertEqual(meta.firstChild.data.strip(), str(i))
 
     def test_get_all_server_details_v1_0(self):
         req = webob.Request.blank('/v1.0/servers/detail')
