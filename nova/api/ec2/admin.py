@@ -356,11 +356,11 @@ class AdminController(object):
         IPy.IP(cidr)
         rule = {'cidr': cidr}
         tcp_rule = rule.copy()
-        tcp_rule.update({"protocol": "TCP", "from_port": 1, "to_port": 65535})
+        tcp_rule.update({"protocol": "tcp", "from_port": 1, "to_port": 65535})
         udp_rule = rule.copy()
-        udp_rule.update({"protocol": "UDP", "from_port": 1, "to_port": 65535})
+        udp_rule.update({"protocol": "udp", "from_port": 1, "to_port": 65535})
         icmp_rule = rule.copy()
-        icmp_rule.update({"protocol": "ICMP", "from_port": -1,
+        icmp_rule.update({"protocol": "icmp", "from_port": -1,
                           "to_port": None})
         rules_added = 0
         if not self._provider_fw_rule_exists(context, tcp_rule):

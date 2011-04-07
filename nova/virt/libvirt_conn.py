@@ -1939,6 +1939,7 @@ class IptablesFirewallDriver(FirewallDriver):
             network_info = _get_network_info(instance)
         self.nwfilter.setup_basic_filtering(instance, network_info)
         if not self.basicly_filtered:
+            LOG.debug("Setup Basic Filtering")
             self.refresh_provider_fw_rules()
             self.basicly_filtered = True
 
@@ -1967,6 +1968,7 @@ class IptablesFirewallDriver(FirewallDriver):
         chain_name = self._instance_chain_name(instance)
 
         self.iptables.ipv4['filter'].add_chain(chain_name)
+        self.iptables.ipv4['filter'].empty_chain(chain_name)
 
         ips_v4 = [ip['ip'] for (_, mapping) in network_info
                             for ip in mapping['ips']]
@@ -1978,6 +1980,7 @@ class IptablesFirewallDriver(FirewallDriver):
 
         if FLAGS.use_ipv6:
             self.iptables.ipv6['filter'].add_chain(chain_name)
+            self.iptables.ipv6['filter'].empty_chain(chain_name)
             ips_v6 = [ip['ip'] for (_, mapping) in network_info
                                  for ip in mapping['ip6s']]
 
@@ -1988,9 +1991,6 @@ class IptablesFirewallDriver(FirewallDriver):
                                                        chain_name))
 
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-        for rule in ipv4_rules:
-            self.iptables.ipv4['filter'].add_rule(chain_name, rule)
-
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
@@ -2042,7 +2042,7 @@ class IptablesFirewallDriver(FirewallDriver):
         # they're not worth the clutter.
         if FLAGS.use_ipv6:
             # Allow RA responses
-            gateways_v6 = [network['gateway_v6'] for (network, _) in
+            gateways_v6 = [network['gateway_v6'] for (network, _m) in
                            network_info]
             for gateway_v6 in gateways_v6:
                 ipv6_rules.append(
@@ -2065,7 +2065,7 @@ class IptablesFirewallDriver(FirewallDriver):
                                                           security_group['id'])
 
             for rule in rules:
-                LOG.debug(_('Adding security group rule: %r'), rule)
+                LOG.debug(_("Adding security group rule: %r"), rule)
 
                 if not rule.cidr:
                     # Eventually, a mechanism to grant access for security
@@ -2139,8 +2139,8 @@ class IptablesFirewallDriver(FirewallDriver):
     @utils.synchronized('iptables', external=True)
     def _do_refresh_provider_fw_rules(self):
         """Internal, synchronized version of refresh_provider_fw_rules."""
-        self.purge_provider_fw_rules(self)
-        self.build_provider_fw_rules(self)
+        self._purge_provider_fw_rules()
+        self._build_provider_fw_rules()
 
     def _purge_provider_fw_rules(self):
         """Remove all rules from the provider chains."""
@@ -2150,6 +2150,9 @@ class IptablesFirewallDriver(FirewallDriver):
 
     def _build_provider_fw_rules(self):
         """Create all rules for the provider IP DROPs."""
+        self.iptables.ipv4['filter'].add_chain('provider')
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain('provider')
         ipv4_rules, ipv6_rules = self._provider_rules()
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule('provider', rule)
@@ -2179,19 +2182,19 @@ class IptablesFirewallDriver(FirewallDriver):
                 fw_rules = ipv6_rules
 
             protocol = rule.protocol
-            if version == 6 and rule.protocol == 'icmp':
+            if version == 6 and protocol == 'icmp':
                 protocol = 'icmpv6'
 
             args = ['-p', protocol, '-s', rule.cidr]
 
-            if rule.protocol in ['udp', 'tcp']:
+            if protocol in ['udp', 'tcp']:
                 if rule.from_port == rule.to_port:
                     args += ['--dport', '%s' % (rule.from_port,)]
                 else:
                     args += ['-m', 'multiport',
                              '--dports', '%s:%s' % (rule.from_port,
                                                     rule.to_port)]
-            elif rule.protocol == 'icmp':
+            elif protocol == 'icmp':
                 icmp_type = rule.from_port
                 icmp_code = rule.to_port
 
