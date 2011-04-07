@@ -55,6 +55,13 @@ class Controller(common.OpenstackController):
                            "imageRef"],
                 "link": ["rel", "type", "href"],
             },
+            "dict_collections": {
+                "metadata": {"item_name": "meta", "item_key": "key"},
+            },
+            "list_collections": {
+                "public": {"item_name": "ip", "item_key": "addr"},
+                "private": {"item_name": "ip", "item_key": "addr"},
+            },
         },
     }
 
@@ -62,15 +69,6 @@ class Controller(common.OpenstackController):
         self.compute_api = compute.API()
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
-
-    def ips(self, req, id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-
-        builder = self._get_addresses_view_builder(req)
-        return builder.build(instance)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
