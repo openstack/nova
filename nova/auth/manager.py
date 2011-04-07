@@ -315,15 +315,15 @@ class AuthManager(object):
             LOG.debug('expected_signature: %s', expected_signature)
             LOG.debug('signature: %s', signature)
             if signature != expected_signature:
-                secondary = utils.get_secondary_server_string(server_string)
-                if secondary is not '':
-                    secondary_signature = signer.Signer(
+                host_only = utils.get_host_only_server_string(server_string)
+                # If the given server_string contains port num, try without it.
+                if host_only is not '':
+                    host_only_signature = signer.Signer(
                         user.secret.encode()).generate(params, verb,
-                                                       secondary, path)
-                    LOG.debug('secondary_signature: %s', secondary_signature)
-                    if signature == secondary_signature:
+                                                       host_only, path)
+                    LOG.debug('host_only_signature: %s', host_only_signature)
+                    if signature == host_only_signature:
                         return (user, project)
-                        # NOTE(itoumsn): RightAWS success case.
                 LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.NotAuthorized(_('Signature does not match'))
         return (user, project)

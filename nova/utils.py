@@ -716,9 +716,11 @@ def check_isinstance(obj, cls):
     return cls()  # Ugly PyLint hack
 
 
-def get_secondary_server_string(str):
-    """Returns host part only of the given server_string if it's a combination
-    of host part and port. Otherwise, return null string."""
+def get_host_only_server_string(str):
+    """
+    Returns host part only of the given server_string if it's a combination
+    of host part and port. Otherwise, return null string.
+    """
 
     # First of all, exclude pure IPv6 address (w/o port).
     if netaddr.valid_ipv6(str):
