@@ -247,7 +247,7 @@ Nova VM
     Show a list of all instances. Accepts optional hostname (to show only instances on specific host).
 
 ``nova-manage live-migration <ec2_id> <destination host name>``
-    Live migrate instance from current host to destination host. Requires instance id (which comes from euca-describe-instance) and destination host name.
+    Live migrate instance from current host to destination host. Requires instance id (which comes from euca-describe-instance) and destination host name (which can be found from nova-manage service list).
 
 
 FILES
