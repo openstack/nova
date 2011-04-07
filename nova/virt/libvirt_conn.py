@@ -169,34 +169,34 @@ def _get_network_info(instance):
                                               instance['id'])
     network_info = []
 
-    def ip_dict(ip):
-        return {
-            "ip": ip.address,
-            "netmask": network["netmask"],
-            "enabled": "1"}
-
-    def ip6_dict(ip6):
-        prefix = ip6.network.cidr_v6
-        mac = instance.mac_address
-        return  {
-            "ip": utils.to_global_ipv6(prefix, mac),
-            "netmask": ip6.network.netmask_v6,
-            "gateway": ip6.network.gateway_v6,
-            "enabled": "1"}
-
     for network in networks:
         network_ips = [ip for ip in ip_addresses
-                       if ip.network_id == network.id]
+                       if ip['network_id'] == network['id']]
+
+        def ip_dict(ip):
+            return {
+                'ip': ip['address'],
+                'netmask': network['netmask'],
+                'enabled': '1'}
+
+        def ip6_dict():
+            prefix = network['cidr_v6']
+            mac = instance['mac_address']
+            return  {
+                'ip': utils.to_global_ipv6(prefix, mac),
+                'netmask': network['netmask_v6'],
+                'enabled': '1'}
 
         mapping = {
             'label': network['label'],
             'gateway': network['gateway'],
-            'mac': instance.mac_address,
+            'mac': instance['mac_address'],
             'dns': [network['dns']],
             'ips': [ip_dict(ip) for ip in network_ips]}
 
         if FLAGS.use_ipv6:
-            mapping['ip6s'] = [ip6_dict(ip) for ip in network_ips]
+            mapping['ip6s'] = [ip6_dict()]
+            mapping['gateway6'] = network['gateway_v6']
 
         network_info.append((network, mapping))
     return network_info

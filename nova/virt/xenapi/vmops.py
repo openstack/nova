@@ -176,7 +176,7 @@ class VMOps(object):
                                            vdi_ref, network_info)
 
         self.create_vifs(vm_ref, network_info)
-        self.inject_network_info(instance, vm_ref, network_info)
+        self.inject_network_info(instance, network_info, vm_ref)
         return vm_ref
 
     def _spawn(self, instance, vm_ref):
@@ -814,12 +814,11 @@ class VMOps(object):
                     "netmask": network["netmask"],
                     "enabled": "1"}
 
-            def ip6_dict(ip6):
+            def ip6_dict():
                 return {
                     "ip": utils.to_global_ipv6(network['cidr_v6'],
                                                instance['mac_address']),
                     "netmask": network['netmask_v6'],
-                    "gateway": network['gateway_v6'],
                     "enabled": "1"}
 
             info = {
@@ -831,19 +830,37 @@ class VMOps(object):
                 'dns': [network['dns']],
                 'ips': [ip_dict(ip) for ip in network_IPs]}
             if network['cidr_v6']:
-                info['ip6s'] = [ip6_dict(ip) for ip in network_IPs]
+                info['ip6s'] = [ip6_dict()]
+            if network['gateway_v6']:
+                info['gateway6'] = network['gateway_v6']
             network_info.append((network, info))
         return network_info
 
-    def inject_network_info(self, instance, vm_ref, network_info):
+    #TODO{tr3buchet) remove this shim with nova-multi-nic
+    def inject_network_info(self, instance, network_info=None, vm_ref=None):
+        """
+        shim in place which makes inject_network_info work without being
+        passed network_info.
+        shim goes away after nova-multi-nic
+        """
+        if not network_info:
+            network_info = self._get_network_info(instance)
+        self._inject_network_info(instance, network_info, vm_ref)
+
+    def _inject_network_info(self, instance, network_info, vm_ref=None):
         """
         Generate the network info and make calls to place it into the
         xenstore and the xenstore param list.
+        vm_ref can be passed in because it will sometimes be different than
+        what VMHelper.lookup(session, instance.name) will find (ex: rescue)
         """
         logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
-        # this function raises if vm_ref is not a vm_opaque_ref
-        self._session.get_xenapi().VM.get_record(vm_ref)
+        if vm_ref:
+            # this function raises if vm_ref is not a vm_opaque_ref
+            self._session.get_xenapi().VM.get_record(vm_ref)
+        else:
+            vm_ref = VMHelper.lookup(self._session, instance.name)
 
         for (network, info) in network_info:
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
@@ -875,8 +892,10 @@ class VMOps(object):
             VMHelper.create_vif(self._session, vm_ref, network_ref,
                                 mac_address, device, rxtx_cap)
 
-    def reset_network(self, instance, vm_ref):
+    def reset_network(self, instance, vm_ref=None):
         """Creates uuid arg to pass to make_agent_call and calls it."""
+        if not vm_ref:
+            vm_ref = VMHelper.lookup(self._session, instance.name)
         args = {'id': str(uuid.uuid4())}
         # TODO(tr3buchet): fix function call after refactor
         #resp = self._make_agent_call('resetnetwork', instance, '', args)
