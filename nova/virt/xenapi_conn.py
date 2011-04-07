@@ -145,6 +145,7 @@ flags.DEFINE_integer('xenapi_login_timeout',
                      10,
                      'Timeout in seconds for XenAPI login.')
 
+
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
     the read_only parameter is ignored."""
