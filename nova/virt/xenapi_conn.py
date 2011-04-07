@@ -63,6 +63,7 @@ import xmlrpclib
 
 from eventlet import event
 from eventlet import tpool
+from eventlet import timeout
 
 from nova import context
 from nova import db
@@ -140,7 +141,9 @@ flags.DEFINE_bool('xenapi_remap_vbd_dev', False,
 flags.DEFINE_string('xenapi_remap_vbd_dev_prefix', 'sd',
                     'Specify prefix to remap VBD dev to '
                     '(ex. /dev/xvdb -> /dev/sdb)')
-
+flags.DEFINE_integer('xenapi_login_timeout',
+                     10,
+                     'Timeout in seconds for XenAPI login.')
 
 def get_connection(_):
     """Note that XenAPI doesn't have a read-only connection mode, so
@@ -318,7 +321,9 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
         self._session = self._create_session(url)
-        self._session.login_with_password(user, pw)
+        exception = self.XenAPI.Failure(_("Unable to log in to XenAPI."))
+        with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
+            self._session.login_with_password(user, pw)
         self.loop = None
 
     def get_imported_xenapi(self):
