@@ -731,12 +731,6 @@ class IptablesFirewallTestCase(test.TestCase):
         db.instance_destroy(admin_ctxt, instance_ref['id'])
 
     def test_provider_firewall_rules(self):
-        # keep from changing state of actual firewall
-        #def fake_function(*args, **kwargs):
-        #    pass
-        #self.fw.iptables.apply = fake_function
-        #self.fw.nwfilter.setup_basic_filtering = fake_function
-
         # setup basic instance data
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
