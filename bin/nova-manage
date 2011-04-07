@@ -570,8 +570,12 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for mangaging VM instances."""
 
-    def list(self, host=None, instance=None):
-        """Show a list of all instances"""
+    def list(self, host=None):
+        """Show a list of all instances
+        
+        :param host: show all instance on specified host.
+        :param instance: show specificed instance.
+        """
         print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
               "  %-10s %-10s %-10s %-5s" % (
             _('instance'),
