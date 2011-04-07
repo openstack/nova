@@ -30,7 +30,6 @@ possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
     sys.path.insert(0, possible_topdir)
 
-from nova import adminclient
 from smoketests import flags
 from smoketests import base
 
@@ -47,6 +46,7 @@ TEST_PROJECTNAME = '%sproject' % TEST_PREFIX
 
 class AdminSmokeTestCase(base.SmokeTestCase):
     def setUp(self):
+        import nova_adminclient as adminclient
         self.admin = adminclient.NovaAdminClient(
             access_key=os.getenv('EC2_ACCESS_KEY'),
             secret_key=os.getenv('EC2_SECRET_KEY'),

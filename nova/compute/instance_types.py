@@ -74,8 +74,8 @@ def destroy(name):
         try:
             db.instance_type_destroy(context.get_admin_context(), name)
         except exception.NotFound:
-            LOG.exception(_('Instance type %s not found for deletion' % name))
-            raise exception.ApiError(_("Unknown instance type: %s" % name))
+            LOG.exception(_('Instance type %s not found for deletion') % name)
+            raise exception.ApiError(_("Unknown instance type: %s") % name)
 
 
 def purge(name):
@@ -87,8 +87,8 @@ def purge(name):
         try:
             db.instance_type_purge(context.get_admin_context(), name)
         except exception.NotFound:
-            LOG.exception(_('Instance type %s not found for purge' % name))
-            raise exception.ApiError(_("Unknown instance type: %s" % name))
+            LOG.exception(_('Instance type %s not found for purge') % name)
+            raise exception.ApiError(_("Unknown instance type: %s") % name)
 
 
 def get_all_types(inactive=0):
@@ -103,41 +103,43 @@ def get_all_flavors():
     return get_all_types(context.get_admin_context())
 
 
-def get_instance_type(name):
+def get_default_instance_type():
+    name = FLAGS.default_instance_type
+    try:
+        return get_instance_type_by_name(name)
+    except exception.DBError:
+        raise exception.ApiError(_("Unknown instance type: %s") % name)
+
+
+def get_instance_type(id):
+    """Retrieves single instance type by id"""
+    if id is None:
+        return get_default_instance_type()
+    try:
+        ctxt = context.get_admin_context()
+        return db.instance_type_get_by_id(ctxt, id)
+    except exception.DBError:
+        raise exception.ApiError(_("Unknown instance type: %s") % name)
+
+
+def get_instance_type_by_name(name):
     """Retrieves single instance type by name"""
     if name is None:
-        return FLAGS.default_instance_type
+        return get_default_instance_type()
     try:
         ctxt = context.get_admin_context()
-        inst_type = db.instance_type_get_by_name(ctxt, name)
-        return inst_type
+        return db.instance_type_get_by_name(ctxt, name)
     except exception.DBError:
-        raise exception.ApiError(_("Unknown instance type: %s" % name))
+        raise exception.ApiError(_("Unknown instance type: %s") % name)
 
 
-def get_by_type(instance_type):
-    """retrieve instance type name"""
-    if instance_type is None:
-        return FLAGS.default_instance_type
-
-    try:
-        ctxt = context.get_admin_context()
-        inst_type = db.instance_type_get_by_name(ctxt, instance_type)
-        return inst_type['name']
-    except exception.DBError, e:
-        LOG.exception(_('DB error: %s' % e))
-        raise exception.ApiError(_("Unknown instance type: %s" %\
-                                    instance_type))
-
-
-def get_by_flavor_id(flavor_id):
-    """retrieve instance type's name by flavor_id"""
+def get_instance_type_by_flavor_id(flavor_id):
+    """retrieve instance type by flavor_id"""
     if flavor_id is None:
-        return FLAGS.default_instance_type
+        return get_default_instance_type()
     try:
         ctxt = context.get_admin_context()
-        flavor = db.instance_type_get_by_flavor_id(ctxt, flavor_id)
-        return flavor['name']
+        return db.instance_type_get_by_flavor_id(ctxt, flavor_id)
     except exception.DBError, e:
-        LOG.exception(_('DB error: %s' % e))
-        raise exception.ApiError(_("Unknown flavor: %s" % flavor_id))
+        LOG.exception(_('DB error: %s') % e)
+        raise exception.ApiError(_("Unknown flavor: %s") % flavor_id)

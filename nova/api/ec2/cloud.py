@@ -103,10 +103,18 @@ class CloudController(object):
         # Gen root CA, if we don't have one
         root_ca_path = os.path.join(FLAGS.ca_path, FLAGS.ca_file)
         if not os.path.exists(root_ca_path):
+            genrootca_sh_path = os.path.join(os.path.dirname(__file__),
+                                             os.path.pardir,
+                                             os.path.pardir,
+                                             'CA',
+                                             'genrootca.sh')
+
             start = os.getcwd()
+            if not os.path.exists(FLAGS.ca_path):
+                os.makedirs(FLAGS.ca_path)
             os.chdir(FLAGS.ca_path)
             # TODO(vish): Do this with M2Crypto instead
-            utils.runthis(_("Generating root CA: %s"), "sh", "genrootca.sh")
+            utils.runthis(_("Generating root CA: %s"), "sh", genrootca_sh_path)
             os.chdir(start)
 
     def _get_mpi_data(self, context, project_id):
@@ -722,7 +730,10 @@ class CloudController(object):
                     instance['project_id'],
                     instance['host'])
             i['productCodesSet'] = self._convert_to_set([], 'product_codes')
-            i['instanceType'] = instance['instance_type']
+            if instance['instance_type']:
+                i['instanceType'] = instance['instance_type'].get('name')
+            else:
+                i['instanceType'] = None
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
@@ -757,6 +768,8 @@ class CloudController(object):
             iterator = db.floating_ip_get_all_by_project(context,
                                                          context.project_id)
         for floating_ip_ref in iterator:
+            if floating_ip_ref['project_id'] is None:
+                continue
             address = floating_ip_ref['address']
             ec2_id = None
             if (floating_ip_ref['fixed_ip']
@@ -775,7 +788,7 @@ class CloudController(object):
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
         public_ip = self.network_api.allocate_floating_ip(context)
-        return {'addressSet': [{'publicIp': public_ip}]}
+        return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
@@ -805,7 +818,7 @@ class CloudController(object):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
         instances = self.compute_api.create(context,
-            instance_type=instance_types.get_by_type(
+            instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_id=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
@@ -884,10 +897,7 @@ class CloudController(object):
         image_type = image['properties'].get('type')
         ec2_id = self._image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
-        if name:
-            i['imageId'] = "%s (%s)" % (ec2_id, name)
-        else:
-            i['imageId'] = ec2_id
+        i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
             i['kernelId'] = self._image_ec2_id(kernel_id, 'kernel')
@@ -895,11 +905,15 @@ class CloudController(object):
         if ramdisk_id:
             i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ramdisk')
         i['imageOwnerId'] = image['properties'].get('owner_id')
-        i['imageLocation'] = image['properties'].get('image_location')
+        if name:
+            i['imageLocation'] = "%s (%s)" % (image['properties'].
+                                              get('image_location'), name)
+        else:
+            i['imageLocation'] = image['properties'].get('image_location')
         i['imageState'] = image['properties'].get('image_state')
-        i['displayName'] = image.get('name')
+        i['displayName'] = name
         i['description'] = image.get('description')
-        i['type'] = image_type
+        i['imageType'] = image_type
         i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
         i['architecture'] = image['properties'].get('architecture')
         return i

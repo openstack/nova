@@ -62,7 +62,7 @@ class ConsoleTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
-        inst['instance_type'] = 'm1.tiny'
+        inst['instance_type_id'] = 1
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)['id']

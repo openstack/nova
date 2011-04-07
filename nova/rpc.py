@@ -74,7 +74,12 @@ class Connection(carrot_connection.BrokerConnection):
         """Recreates the connection instance
 
         This is necessary to recover from some network errors/disconnects"""
-        del cls._instance
+        try:
+            del cls._instance
+        except AttributeError, e:
+            # The _instance stuff is for testing purposes. Usually we don't use
+            # it. So don't freak out if it doesn't exist.
+            pass
         return cls.instance()
 
 
@@ -125,9 +130,9 @@ class Consumer(messaging.Consumer):
         # NOTE(vish): This is catching all errors because we really don't
         #             want exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
-        except Exception:  # pylint: disable=W0703
+        except Exception, e:  # pylint: disable=W0703
             if not self.failed_connection:
-                LOG.exception(_("Failed to fetch message from queue"))
+                LOG.exception(_("Failed to fetch message from queue: %s" % e))
                 self.failed_connection = True
 
     def attach_to_eventlet(self):

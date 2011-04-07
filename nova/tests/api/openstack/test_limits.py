@@ -136,10 +136,17 @@ class LimitsControllerTest(BaseLimitTestSuite):
         request = self._get_index_request("application/xml")
         response = request.get_response(self.controller)
 
-        expected = "<limits><rate/><absolute/></limits>"
-        body = response.body.replace("\n", "").replace(" ", "")
+        expected = parseString("""
+            <limits
+                xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
+                <rate/>
+                <absolute/>
+            </limits>
+        """.replace("  ", ""))
 
-        self.assertEqual(expected, body)
+        body = parseString(response.body.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), body.toxml())
 
     def test_index_xml(self):
         """Test getting limit details in XML."""
@@ -148,7 +155,8 @@ class LimitsControllerTest(BaseLimitTestSuite):
         response = request.get_response(self.controller)
 
         expected = parseString("""
-            <limits>
+            <limits
+                xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <rate>
                     <limit URI="*" regex=".*" remaining="10" resetTime="0"
                         unit="MINUTE" value="10" verb="GET"/>
