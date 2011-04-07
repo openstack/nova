@@ -40,7 +40,11 @@ class InstanceTypeTestCase(test.TestCase):
         max_flavorid = session.query(models.InstanceTypes).\
                                      order_by("flavorid desc").\
                                      first()
+        max_id = session.query(models.InstanceTypes).\
+                                     order_by("id desc").\
+                                     first()
         self.flavorid = max_flavorid["flavorid"] + 1
+        self.id = max_id["id"] + 1
         self.name = str(int(time.time()))
 
     def test_instance_type_create_then_delete(self):
@@ -53,7 +57,7 @@ class InstanceTypeTestCase(test.TestCase):
                             'instance type was not created')
         instance_types.destroy(self.name)
         self.assertEqual(1,
-                    instance_types.get_instance_type(self.name)["deleted"])
+                    instance_types.get_instance_type(self.id)["deleted"])
         self.assertEqual(starting_inst_list, instance_types.get_all_types())
         instance_types.purge(self.name)
         self.assertEqual(len(starting_inst_list),

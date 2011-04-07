@@ -140,7 +140,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
-                     'instance_type': 'm1.small'}
+                     'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):
         """check if libvirt is available."""

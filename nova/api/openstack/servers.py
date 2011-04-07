@@ -160,9 +160,11 @@ class Controller(common.OpenstackController):
         name = name.strip()
 
         try:
+            inst_type = \
+                instance_types.get_instance_type_by_flavor_id(flavor_id)
             (inst,) = self.compute_api.create(
                 context,
-                instance_types.get_by_flavor_id(flavor_id),
+                inst_type,
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
@@ -175,7 +177,7 @@ class Controller(common.OpenstackController):
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        inst['instance_type'] = flavor_id
+        inst['instance_type'] = inst_type
         inst['image_id'] = requested_image_id
 
         builder = self._get_view_builder(req)

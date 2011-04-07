@@ -32,6 +32,7 @@ from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.compute.api
+from nova.compute import instance_types
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
@@ -71,12 +72,18 @@ def instance_address(context, instance_id):
     return None
 
 
-def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
+def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
+                  host=None):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
+    inst_type = instance_types.get_instance_type_by_flavor_id(1)
+
     if public_addresses == None:
         public_addresses = list()
+
+    if host != None:
+        host = str(host)
 
     instance = {
         "id": id,
@@ -95,8 +102,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None):
         "vcpus": 0,
         "local_gb": 0,
         "hostname": "",
-        "host": None,
-        "instance_type": "1",
+        "host": host,
+        "instance_type": dict(inst_type),
         "user_data": "",
         "reservation_id": "",
         "mac_address": "",
@@ -628,7 +635,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s['imageId'], '10')
-            self.assertEqual(s['flavorId'], '1')
+            self.assertEqual(s['flavorId'], 1)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], i)
 
@@ -654,12 +661,8 @@ class ServersTest(test.TestCase):
         instances - 2 on one host and 3 on another.
         '''
 
-        def stub_instance(id, user_id=1):
-            return Instance(id=id, state=0, image_id=10, user_id=user_id,
-                display_name='server%s' % id, host='host%s' % (id % 2))
-
         def return_servers_with_host(context, user_id=1):
-            return [stub_instance(i) for i in xrange(5)]
+            return [stub_instance(i, 1, None, None, i % 2) for i in xrange(5)]
 
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
             return_servers_with_host)
@@ -677,7 +680,8 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], 10)
+            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['flavorId'], 1)
 
     def test_server_pause(self):
         FLAGS.allow_admin_api = True
