@@ -970,7 +970,8 @@ class LibvirtConnection(driver.ComputeDriver):
                     'nics': nics}
 
         if FLAGS.vnc_enabled:
-            xml_info['vncserver_host'] = FLAGS.vncserver_host
+            if FLAGS.libvirt_type != 'lxc':
+                xml_info['vncserver_host'] = FLAGS.vncserver_host
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

@@ -20,13 +20,14 @@ from webob import exc
 from nova import flags
 from nova import utils
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """The image metadata API controller for the Openstack API"""
 
     def __init__(self):
