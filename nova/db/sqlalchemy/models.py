@@ -258,8 +258,7 @@ class InstanceActions(BASE, NovaBase):
 class InstanceTypes(BASE, NovaBase):
     """Represent possible instance_types or flavor of VM offered"""
     __tablename__ = "instance_types"
-    id = Column(Integer, ForeignKey('instances.instance_type_id'),
-                primary_key=True)
+    id = Column(Integer, primary_key=True)
     name = Column(String(255), unique=True)
     memory_mb = Column(Integer)
     vcpus = Column(Integer)
