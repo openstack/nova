@@ -814,10 +814,18 @@ class CloudController(object):
         if kwargs.get('ramdisk_id'):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
+        image = self._get_image(context, kwargs['image_id'])
+        if  not image:
+            raise exception.NotFound(_('Image %s not found') %
+                                     kwargs['image_id'])
+        if not 'properties' in image or \
+            (not 'image_state' in image['properties']) or \
+            (image['properties']['image_state'] is not 'available'):
+            raise exception.ApiError(_('Image must be available'))
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_by_type(
                 kwargs.get('instance_type', None)),
-            image_id=self._get_image(context, kwargs['image_id'])['id'],
+            image_id = image['id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),

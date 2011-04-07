@@ -36,12 +36,12 @@ from nova import rpc
 from nova import service
 from nova import test
 from nova import utils
+from nova import exception
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
-from nova.exception import NotFound
 
 
 FLAGS = flags.FLAGS
@@ -226,7 +226,7 @@ class CloudTestCase(test.TestCase):
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
-            raise NotFound
+            raise exception.NotFound
 
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
         # list all
@@ -244,7 +244,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.UnsetAll()
         self.stubs.Set(local.LocalImageService, 'show', fake_show_none)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show_none)
-        self.assertRaises(NotFound, describe_images,
+        self.assertRaises(exception.NotFound, describe_images,
                           self.context, ['ami-fake'])
 
     def test_console_output(self):
@@ -307,39 +307,41 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
-        if FLAGS.connection_type == 'fake':
-            LOG.debug(_("Can't test instances without a real virtual env."))
-            return
+        allinst = db.instance_get_all(context.get_admin_context())
+        self.assertEqual(0, len(allinst))
+        def fake_show_decrypt(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine', 'image_state': 'decrypting'}}
+
+        def fake_show_avail(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine', 'image_state': 'available'}}
+
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
         max_count = 1
         kwargs = {'image_id': image_id,
                   'instance_type': instance_type,
                   'max_count': max_count}
-        rv = self.cloud.run_instances(self.context, **kwargs)
-        # TODO: check for proper response
-        instance_id = rv['reservationSet'][0].keys()[0]
-        instance = rv['reservationSet'][0][instance_id][0]
-        LOG.debug(_("Need to watch instance %s until it's running..."),
-                  instance['instance_id'])
-        while True:
-            greenthread.sleep(1)
-            info = self.cloud._get_instance(instance['instance_id'])
-            LOG.debug(info['state'])
-            if info['state'] == power_state.RUNNING:
-                break
-        self.assert_(rv)
-
-        if FLAGS.connection_type != 'fake':
-            time.sleep(45)  # Should use boto for polling here
-        for reservations in rv['reservationSet']:
-            # for res_id in reservations.keys():
-            #     LOG.debug(reservations[res_id])
-            # for instance in reservations[res_id]:
-            for instance in reservations[reservations.keys()[0]]:
-                instance_id = instance['instance_id']
-                LOG.debug(_("Terminating instance %s"), instance_id)
-                rv = self.compute.terminate_instance(instance_id)
+        run_instances = self.cloud.run_instances
+        # when image doesn't have 'image_state' attr at all
+        self.assertRaises(exception.ApiError, run_instances,
+                          self.context, **kwargs)
+        # when image has 'image_state' yet not 'available'
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
+        self.assertRaises(exception.ApiError, run_instances,
+                          self.context, **kwargs)
+        # when image has valid image_state
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_avail)
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['imageId'], 'ami-00000001')
+        self.assertEqual(instance['displayName'], 'Server 1')
+        self.assertEqual(instance['instanceId'], 'i-00000001')
+        self.assertEqual(instance['instanceState']['name'], 'scheduling')
+        self.assertEqual(instance['instanceType'], 'm1.small')
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
