@@ -715,6 +715,7 @@ def check_isinstance(obj, cls):
     # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack
 
+
 def get_secondary_server_string(str):
     """Returns host part only of the given server_string if it's a combination
     of host part and port. Otherwise, return null string."""
@@ -724,14 +725,14 @@ def get_secondary_server_string(str):
         return ''
 
     # Next, check if this is IPv6 address with port number combination.
-    if str.find("]:") != -1: 
+    if str.find("]:") != -1:
         [address, sep, port] = str.replace('[', '', 1).partition(']:')
-        return address 
+        return address
 
     # Third, check if this is a combination of general address and port
-    if str.find(':') == -1: 
-	return ''
+    if str.find(':') == -1:
+        return ''
 
     # This must be a combination of host part and port
     [address, sep, port] = str.partition(':')
-    return address 
+    return address

@@ -315,7 +315,7 @@ class AuthManager(object):
             LOG.debug('expected_signature: %s', expected_signature)
             LOG.debug('signature: %s', signature)
             if signature != expected_signature:
-	        secondary = utils.get_secondary_server_string(server_string)
+                secondary = utils.get_secondary_server_string(server_string)
                 if secondary is not '':
                     secondary_signature = signer.Signer(
                         user.secret.encode()).generate(params, verb,
