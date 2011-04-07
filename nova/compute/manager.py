@@ -1096,7 +1096,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # this case should be ignored.
                 LOG.info(_("the instance '%(name)s' is not found in hypervisor"
                            ", while db record is found. But not synchronize "
-                           "since it is migrating." % locals()))
+                           "since it is migrating.") % locals())
                 continue
 
             if vm_state != db_state:
