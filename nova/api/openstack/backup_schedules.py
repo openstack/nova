@@ -19,7 +19,7 @@ import time
 
 from webob import exc
 
-from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.image.service
 
@@ -29,7 +29,7 @@ def _translate_keys(inst):
     return dict(backupSchedule=inst)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """ The backup schedule API controller for the Openstack API """
 
     _serialization_metadata = {

@@ -19,7 +19,7 @@ from webob import exc
 
 from nova import console
 from nova import exception
-from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
@@ -43,7 +43,7 @@ def _translate_detail_keys(cons):
     return dict(console=info)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """The Consoles Controller for the Openstack API"""
 
     _serialization_metadata = {
