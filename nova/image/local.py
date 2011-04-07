@@ -122,12 +122,15 @@ class LocalImageService(service.BaseImageService):
         image_path = self._path_to(image_id, None)
         if not os.path.exists(image_path):
             os.mkdir(image_path)
-        return self.update(context, image_id, metadata, data)
+        return self._store(context, image_id, metadata, data)
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data."""
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
+        return self._store(context, image_id, metadata, data)
+
+    def _store(self, context, image_id, metadata, data=None):
         metadata['id'] = image_id
         try:
             if data:
