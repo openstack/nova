@@ -974,10 +974,13 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             virt_dom = self._conn.lookupByName(instance_name)
         except libvirt.libvirtError as e:
-            if e.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
+            errcode = e.get_error_code()
+            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
                 raise exception.NotFound(_("Instance %s not found")
                                          % instance_name)
-            LOG.warning(_("Error from libvirt during lookup: %s") % e)
+            LOG.warning(_("Error from libvirt during lookup. "
+                          "Code=%(errcode)s Error=%(e)s") %
+                        locals())
             raise
 
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
