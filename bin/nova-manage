@@ -572,7 +572,7 @@ class VmCommands(object):
 
     def list(self, host=None):
         """Show a list of all instances
-        
+
         :param host: show all instance on specified host.
         :param instance: show specificed instance.
         """
