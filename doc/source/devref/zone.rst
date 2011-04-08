@@ -28,7 +28,7 @@ Zones share nothing. They communicate via the public OpenStack API only. No data
 
 Capabilities
 ------------
-Routing between Zones is based on the Capabilities of that Zone. Capabilities are nothing more than key/value pairs. When expressed as a string they take the form:
+Routing between Zones is based on the Capabilities of that Zone. Capabilities are nothing more than key/value pairs. Values are multi-value, with each value separated with a semicolon (`;`). When expressed as a string they take the form:
 
 ::
 
@@ -123,6 +123,4 @@ Removing a child Zone
 
   nova zone-delete <N>
 
-This equates to a DELETE call to `.../zones/N`. The Zone with ID=N will be removed. 
-
-
+This equates to a DELETE call to `.../zones/N`. The Zone with ID=N will be removed. This will only remove the zone entry from the current (parent) Zone, no child Zones are affected.
