@@ -701,15 +701,6 @@ class ServiceCommands(object):
                  {"method": "update_available_resource"})
 
 
-class LogCommands(object):
-    def request(self, request_id, logfile='/var/log/nova.log'):
-        """Show all fields in the log for the given request.  Assumes you
-        haven't changed the log format too much.
-        ARGS: request_id [logfile]"""
-        lines = utils.execute("cat %s | grep '\[%s '" % (logfile, request_id))
-        print re.sub('#012', "\n", "\n".join(lines))
-
-
 class DbCommands(object):
     """Class for managing the database."""
 
@@ -1049,7 +1040,6 @@ CATEGORIES = [
     ('network', NetworkCommands),
     ('vm', VmCommands),
     ('service', ServiceCommands),
-    ('log', LogCommands),
     ('db', DbCommands),
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
