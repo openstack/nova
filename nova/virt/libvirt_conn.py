@@ -325,12 +325,13 @@ class LibvirtConnection(driver.ComputeDriver):
                 state = self.get_info(instance['name'])['state']
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'], state)
-                if state == power_state.SHUTDOWN:
+                if state == power_state.SHUTOFF:
                     break
-            except Exception:
+            except Exception as ex:
+                LOG.debug(ex)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
-                                      power_state.SHUTDOWN)
+                                      power_state.SHUTOFF)
                 break
 
         self.firewall_driver.unfilter_instance(instance)
