@@ -103,6 +103,12 @@ def install_dependencies(venv=VENV):
   pthfile = os.path.join(venv, "lib", "python2.6", "site-packages", "nova.pth")
   f = open(pthfile, 'w')
   f.write("%s\n" % ROOT)
+  # Patch eventlet (see FAQ # 1485)
+  patchsrc = os.path.join(ROOT, 'tools', 'eventlet-patch')
+  patchfile = os.path.join(venv, "lib", "python2.6", "site-packages", "eventlet",
+                          "green", "subprocess.py")
+  patch_cmd = "patch %s %s" % (patchfile, patchsrc)
+  os.system(patch_cmd)
 
 
 def print_help():
