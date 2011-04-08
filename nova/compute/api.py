@@ -370,9 +370,13 @@ class API(base.Base):
                         instance_id)
             raise
 
-        if (instance['state_description'] == 'terminating'):
+        if instance['state_description'] == 'terminating':
             LOG.warning(_("Instance %s is already being terminated"),
                         instance_id)
+            return
+
+        if instance['state_description'] == 'migrating':
+            LOG.warning(_("Instance %s is being migrated"), instance_id)
             return
 
         self.update(context,
