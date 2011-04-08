@@ -503,7 +503,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
             if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
                 gateway = fields[1]
                 _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
-                         'dev', interface)
+                         'dev', interface, check_exit_code=False)
         out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
                             'scope', 'global')
         for line in out.split("\n"):
