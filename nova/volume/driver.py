@@ -93,10 +93,7 @@ class VolumeDriver(object):
     def create_volume(self, volume):
         """Creates a logical volume. Can optionally return a Dictionary of
         changes to the volume object to be persisted."""
-        if int(volume['size']) == 0:
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % volume['size']
+        sizestr = '%sG' % volume['size']
         self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
                            volume['name'],
                            FLAGS.volume_group)
@@ -116,6 +113,7 @@ class VolumeDriver(object):
         # TODO(ja): reclaiming space should be done lazy and low priority
         self._try_execute('sudo', 'dd', 'if=/dev/zero', 
                           'of=%s' % self.local_path(volume),
+                          'count=%d' % volume['size'] * 1024,
                           'bs=1M')
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
@@ -601,10 +599,7 @@ class SheepdogDriver(VolumeDriver):
 
     def create_volume(self, volume):
         """Creates a sheepdog volume"""
-        if int(volume['size']) == 0:
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % volume['size']
+        sizestr = '%sG' % volume['size']
         self._try_execute('qemu-img', 'create',
                           "sheepdog:%s" % volume['name'],
                           sizestr)
