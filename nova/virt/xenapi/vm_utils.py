@@ -49,6 +49,8 @@ LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
+flags.DEFINE_integer('block_device_creation_timeout', 10,
+                     'time to wait for a block device to be created')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -896,6 +898,16 @@ def remap_vbd_dev(dev):
     return remapped_dev
 
 
+def _wait_for_device(dev):
+    """Wait for device node to appear"""
+    for i in xrange(0, FLAGS.block_device_creation_timeout):
+        if os.path.exists('/dev/%s' % dev):
+            return
+        time.sleep(1)
+
+    raise StorageError(_('Timeout waiting for device %s to be created') % dev)
+
+
 def with_vdi_attached_here(session, vdi_ref, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
@@ -924,6 +936,11 @@ def with_vdi_attached_here(session, vdi_ref, read_only, f):
         if dev != orig_dev:
             LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
+        if dev != 'autodetect':
+            # NOTE(johannes): Unit tests will end up with a device called
+            # 'autodetect' which obviously won't exist. It's not ideal,
+            # but the alternatives were much messier
+            _wait_for_device(dev)
         return f(dev)
     finally:
         LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
