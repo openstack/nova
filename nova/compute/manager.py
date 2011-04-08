@@ -1097,12 +1097,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            db_instance['id'],
                                            vm_state)
 
-            if vm_state == power_state.SHUTOFF:
-                # TODO(soren): This is what the compute manager does when you
-                # terminate an instance. At some point I figure we'll have a
-                # "terminated" state and some sort of cleanup job that runs
-                # occasionally, cleaning them out.
-                self.db.instance_destroy(context, db_instance['id'])
+            # NOTE(justinsb): We no longer auto-remove SHUTOFF instances
+            # It's quite hard to get them back when we do.
 
         # Are there VMs not in the DB?
         for vm_not_found_in_db in vms_not_found_in_db:

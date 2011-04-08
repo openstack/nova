@@ -115,7 +115,7 @@ class ViewBuilderV10(ViewBuilder):
 
     def _build_flavor(self, response, inst):
         if 'instance_type' in dict(inst):
-            response['flavorId'] = inst['instance_type']
+            response['flavorId'] = inst['instance_type']['flavorid']
 
 
 class ViewBuilderV11(ViewBuilder):
@@ -134,7 +134,7 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):
-            flavor_id = inst["instance_type"]
+            flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
             response["flavorRef"] = flavor_ref
 

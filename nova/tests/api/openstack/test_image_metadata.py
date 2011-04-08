@@ -45,7 +45,6 @@ class ImageMetaDataTest(unittest.TestCase):
         'is_public': True,
         'deleted_at': None,
         'properties': {
-            'type': 'ramdisk',
             'key1': 'value1',
             'key2': 'value2'
         },
@@ -62,7 +61,6 @@ class ImageMetaDataTest(unittest.TestCase):
         'is_public': True,
         'deleted_at': None,
         'properties': {
-            'type': 'ramdisk',
             'key1': 'value1',
             'key2': 'value2'
         },
