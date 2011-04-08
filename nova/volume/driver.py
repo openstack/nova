@@ -112,6 +112,11 @@ class VolumeDriver(object):
             # If the volume isn't present, then don't attempt to delete
             return True
 
+        # zero out old volumes to prevent data leaking between users
+        # TODO(ja): reclaiming space should be done lazy and low priority
+        self._try_execute('sudo', 'dd', 'if=/dev/zero', 
+                          'of=%s' % self.local_path(volume),
+                          'bs=1M')
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
