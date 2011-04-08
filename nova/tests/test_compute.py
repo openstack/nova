@@ -666,4 +666,5 @@ class ComputeTestCase(test.TestCase):
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After force-killing instances: %s"), instances)
-        self.assertEqual(len(instances), 0)
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(power_state.SHUTOFF, instances[0]['state'])
