@@ -1094,9 +1094,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # A situation which db record exists, but no instance"
                 # sometimes occurs while live-migration at src compute,
                 # this case should be ignored.
-                LOG.info(_("the instance '%(name)s' is not found in hypervisor"
-                           ", while db record is found. But not synchronize "
-                           "since it is migrating.") % locals())
+                LOG.debug(_("Ignoring %(name)s, as it's currently being "
+                           "migrated.") % locals())
                 continue
 
             if vm_state != db_state:
