@@ -422,7 +422,6 @@ class LibvirtConnection(driver.ComputeDriver):
                     'container_format': base['container_format'],
                     'is_public': False,
                     'properties': {'architecture': base['architecture'],
-                                   'type': base['type'],
                                    'name': '%s.%s' % (base['name'], image_id),
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',

@@ -565,7 +565,7 @@ class Controller(common.OpenstackController):
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image_meta['properties']['disk_format'] != 'ami':
+        if image_meta.get('container_format') != 'ami':
             return None, None
 
         try:
