@@ -984,7 +984,7 @@ class CloudController(object):
         except exception.NotFound:
             raise exception.NotFound(_('Image %s not found') % image_id)
         result = {'imageId': image_id, 'launchPermission': []}
-        if image['properties']['is_public']:
+        if image['is_public']:
             result['launchPermission'].append({'group': 'all'})
         return result
 
@@ -1009,7 +1009,7 @@ class CloudController(object):
         internal_id = image['id']
         del(image['id'])
 
-        image['properties']['is_public'] = (operation_type == 'add')
+        image['is_public'] = (operation_type == 'add')
         return self.image_service.update(context, internal_id, image)
 
     def update_image(self, context, image_id, **kwargs):
