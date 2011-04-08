@@ -17,7 +17,7 @@
 Zones
 =====
 
-A Nova deployment is called a Zone. At the very least a Zone requires an API node, a Scheduler node, a database and RabbitMQ. Pushed further a Zone may contain many API nodes, many Scheduler, Volume, Network and Compute nodes as well as a cluster of databases and RabbitMQ servers. A Zone allows you partition your deployments into logical groups for load balancing and instance distribution.
+A Nova deployment is called a Zone. At the very least a Zone requires an API node, a Scheduler node, a database and RabbitMQ. Pushed further a Zone may contain many API nodes, many Scheduler, Volume, Network and Compute nodes as well as a cluster of databases and RabbitMQ servers. A Zone allows you to partition your deployments into logical groups for load balancing and instance distribution.
 
 The idea behind Zones is, if a particular deployment is not capable of servicing a particular request, the request may be forwarded to (child) Zones for possible processing. Zones may be nested in a tree fashion. 
 
