@@ -209,17 +209,17 @@ class TestMutatorDateTimeTests(BaseGlanceTest):
         self.assertDateTimesEmpty(image_meta)
 
     def test_update_handles_datetimes(self):
+        self.client.images = {'image1': self._make_datetime_fixture()}
         self.client.update_response = self._make_datetime_fixture()
-        dummy_id = 'dummy_id'
         dummy_meta = {}
-        image_meta = self.service.update(self.context, 'dummy_id', dummy_meta)
+        image_meta = self.service.update(self.context, 'image1', dummy_meta)
         self.assertDateTimesFilled(image_meta)
 
     def test_update_handles_none_datetimes(self):
+        self.client.images = {'image1': self._make_datetime_fixture()}
         self.client.update_response = self._make_none_datetime_fixture()
-        dummy_id = 'dummy_id'
         dummy_meta = {}
-        image_meta = self.service.update(self.context, 'dummy_id', dummy_meta)
+        image_meta = self.service.update(self.context, 'image1', dummy_meta)
         self.assertDateTimesEmpty(image_meta)
 
     def _make_datetime_fixture(self):

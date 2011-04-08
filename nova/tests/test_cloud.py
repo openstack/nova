@@ -247,6 +247,37 @@ class CloudTestCase(test.TestCase):
         self.assertRaises(NotFound, describe_images,
                           self.context, ['ami-fake'])
 
+    def test_describe_image_attribute(self):
+        describe_image_attribute = self.cloud.describe_image_attribute
+
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}, 'is_public': True}
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
+        result = describe_image_attribute(self.context, 'ami-00000001',
+                                          'launchPermission')
+        self.assertEqual([{'group': 'all'}], result['launchPermission'])
+
+    def test_modify_image_attribute(self):
+        modify_image_attribute = self.cloud.modify_image_attribute
+
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}, 'is_public': False}
+
+        def fake_update(meh, context, image_id, metadata, data=None):
+            return metadata
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
+        self.stubs.Set(local.LocalImageService, 'update', fake_update)
+        result = modify_image_attribute(self.context, 'ami-00000001',
+                                          'launchPermission', 'add',
+                                           user_group=['all'])
+        self.assertEqual(True, result['is_public'])
+
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1
