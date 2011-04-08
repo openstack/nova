@@ -936,7 +936,11 @@ def with_vdi_attached_here(session, vdi_ref, read_only, f):
         if dev != orig_dev:
             LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
-        _wait_for_device(dev)
+        if dev != 'autodetect':
+            # NOTE(johannes): Unit tests will end up with a device called
+            # 'autodetect' which obviously won't exist. It's not ideal,
+            # but the alternatives were much messier
+            _wait_for_device(dev)
         return f(dev)
     finally:
         LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
