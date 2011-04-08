@@ -57,6 +57,7 @@ Zone administrative operations are usually done using python-novaclient_
 
 In order to use the Zone operations, be sure to enable administrator operations in OpenStack API by setting the `--allow_admin_api=true` flag.
 
+Finally you need to enable Zone Forwarding. This will be used by the Distributed Scheduler initiative currently underway. Set `--enable_zone_routing=true` to enable this feature.
 
 Find out about this Zone
 ------------------------
@@ -83,7 +84,7 @@ This equates to a GET operation on `.../zones/info`. If you have no child Zones 
 
 Adding a child Zone
 -------------------
-From a parent zone you can add a child zone with the following command:
+Any Zone can be a parent Zone. Children are associated to a Zone. The Zone where this command originates from is known as the Parent Zone. Routing is only ever conducted from a Zone to its children, never the other direction. From a parent zone you can add a child zone with the following command:
 
 ::
 
@@ -123,4 +124,4 @@ Removing a child Zone
 
   nova zone-delete <N>
 
-This equates to a DELETE call to `.../zones/N`. The Zone with ID=N will be removed. This will only remove the zone entry from the current (parent) Zone, no child Zones are affected.
+This equates to a DELETE call to `.../zones/N`. The Zone with ID=N will be removed. This will only remove the zone entry from the current (parent) Zone, no child Zones are affected. Removing a Child Zone doesn't affect any other part of the hierarchy.
