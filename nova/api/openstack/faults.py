@@ -47,7 +47,7 @@ class Fault(webob.exc.HTTPException):
         """Generate a WSGI response based on the exception passed to ctor."""
         # Replace the body with fault details.
         code = self.wrapped_exc.status_int
-        fault_name = self._fault_names.get(code, "computeFault")
+        fault_name = self._fault_names.get(code, "cloudServersFault")
         fault_data = {
             fault_name: {
                 'code': code,
