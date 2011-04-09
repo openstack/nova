@@ -309,10 +309,18 @@ class LibvirtConnection(driver.ComputeDriver):
         return infos
 
     def destroy(self, instance, cleanup=True):
+        name = instance['name']
         try:
-            virt_dom = self._conn.lookupByName(instance['name'])
+            virt_dom = self._conn.lookupByName(name)
             virt_dom.destroy()
-        except Exception as _err:
+            # NOTE(justinsb): We remove the domain definition. We probably
+            # would do better to keep it if cleanup=False (e.g. volumes?)
+            # (e.g. #2 - not losing machines on failure)
+            virt_dom.undefine()
+        except Exception as e:
+            # TODO(justinsb): We really should check the error is 'not found'
+            LOG.warn(_("Ignoring error destroying domain %(name)s: %(e)s") %
+                     locals())
             pass
             # If the instance is already terminated, we're still happy
 
