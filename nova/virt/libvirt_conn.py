@@ -329,7 +329,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     break
             except Exception as ex:
                 msg = _("Error encountered when destroying instance '%(id)s': "
-                        "%(ex)s") % locals().update({"id": instance["id"]})
+                        "%(ex)s") % {"id": instance["id"], "ex": ex}
                 LOG.debug(msg)
                 db.instance_set_state(context.get_admin_context(),
                                       instance['id'],
