@@ -331,12 +331,22 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 virt_dom.destroy()
             except libvirt.libvirtError as e:
+                is_okay = False
                 errcode = e.get_error_code()
-                LOG.warning(_("Error from libvirt during destroy of "
-                              "%(instance_name)s. Code=%(errcode)s "
-                              "Error=%(e)s") %
-                            locals())
-                raise
+                if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
+                    # If the instance if already shut off, we get this:
+                    # Code=55 Error=Requested operation is not valid:
+                    # domain is not running
+                    (state, _, _, _, _) = virt_dom.info()
+                    if state == power_state.SHUTOFF:
+                        is_okay = True
+
+                if not is_okay:
+                    LOG.warning(_("Error from libvirt during destroy of "
+                                  "%(instance_name)s. Code=%(errcode)s "
+                                  "Error=%(e)s") %
+                                locals())
+                    raise
 
             try:
                 # NOTE(justinsb): We remove the domain definition. We probably
