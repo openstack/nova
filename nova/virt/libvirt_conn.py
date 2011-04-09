@@ -309,20 +309,47 @@ class LibvirtConnection(driver.ComputeDriver):
         return infos
 
     def destroy(self, instance, cleanup=True):
-        name = instance['name']
+        instance_name = instance['name']
+
+        # TODO(justinsb): Refactor all lookupByName calls for error-handling
         try:
-            virt_dom = self._conn.lookupByName(name)
-            virt_dom.destroy()
-            # NOTE(justinsb): We remove the domain definition. We probably
-            # would do better to keep it if cleanup=False (e.g. volumes?)
-            # (e.g. #2 - not losing machines on failure)
-            virt_dom.undefine()
-        except Exception as e:
-            # TODO(justinsb): We really should check the error is 'not found'
-            LOG.warn(_("Ignoring error destroying domain %(name)s: %(e)s") %
-                     locals())
-            pass
-            # If the instance is already terminated, we're still happy
+            virt_dom = self._conn.lookupByName(instance_name)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
+                virt_dom = None
+            else:
+                LOG.warning(_("Error from libvirt during lookup of "
+                              "%(instance_name)s. Code=%(errcode)s "
+                              "Error=%(e)s") %
+                            locals())
+                raise
+
+        # If the instance is already terminated, we're still happy
+        # Otherwise, destroy it
+        if virt_dom is not None:
+            try:
+                virt_dom.destroy()
+            except libvirt.libvirtError as e:
+                errcode = e.get_error_code()
+                LOG.warning(_("Error from libvirt during destroy of "
+                              "%(instance_name)s. Code=%(errcode)s "
+                              "Error=%(e)s") %
+                            locals())
+                raise
+
+            try:
+                # NOTE(justinsb): We remove the domain definition. We probably
+                # would do better to keep it if cleanup=False (e.g. volumes?)
+                # (e.g. #2 - not losing machines on failure)
+                virt_dom.undefine()
+            except libvirt.libvirtError as e:
+                errcode = e.get_error_code()
+                LOG.warning(_("Error from libvirt during undefine of "
+                              "%(instance_name)s. Code=%(errcode)s "
+                              "Error=%(e)s") %
+                            locals())
+                raise
 
         # We'll save this for when we do shutdown,
         # instead of destroy - but destroy returns immediately
