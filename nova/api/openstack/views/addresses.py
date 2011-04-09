@@ -28,9 +28,15 @@ class ViewBuilder(object):
 
 class ViewBuilderV10(ViewBuilder):
     def build(self, inst):
-        private_ips = utils.get_from_path(inst, 'fixed_ip/address')
-        public_ips = utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+        private_ips = self.build_private_parts(inst)
+        public_ips = self.build_public_parts(inst)
         return dict(public=public_ips, private=private_ips)
+
+    def build_public_parts(self, inst):
+        return utils.get_from_path(inst, 'fixed_ip/floating_ips/address')
+
+    def build_private_parts(self, inst):
+        return utils.get_from_path(inst, 'fixed_ip/address')
 
 
 class ViewBuilderV11(ViewBuilder):

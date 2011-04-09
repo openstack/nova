@@ -80,7 +80,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'image_id': 1,
                   'kernel_id': 2,
                   'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
+                  'instance_type_id': '3',  # m1.large
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
@@ -289,11 +289,11 @@ class XenAPIVMTestCase(test.TestCase):
                                         'enabled':'1'}],
                                 'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
                                           'netmask': '120',
-                                          'enabled': '1',
-                                          'gateway': 'fe80::a00:1'}],
+                                          'enabled': '1'}],
                                 'mac': 'aa:bb:cc:dd:ee:ff',
                                 'dns': ['10.0.0.2'],
-                                'gateway': '10.0.0.1'})
+                                'gateway': '10.0.0.1',
+                                'gateway6': 'fe80::a00:1'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
@@ -328,7 +328,7 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-                    instance_type="m1.large", os_type="linux",
+                    instance_type_id="3", os_type="linux",
                     instance_id=1, check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
@@ -337,7 +337,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'image_id': image_id,
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
-                  'instance_type': instance_type,
+                  'instance_type_id': instance_type_id,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': os_type}
         instance = db.instance_create(self.context, values)
@@ -349,7 +349,7 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_image_service = 'glance'
         self.assertRaises(Exception,
                           self._test_spawn,
-                          1, 2, 3, "m1.xlarge")
+                          1, 2, 3, "4")  # m1.xlarge
 
     def test_spawn_raw_objectstore(self):
         FLAGS.xenapi_image_service = 'objectstore'
@@ -523,7 +523,7 @@ class XenAPIVMTestCase(test.TestCase):
             'image_id': 1,
             'kernel_id': 2,
             'ramdisk_id': 3,
-            'instance_type': 'm1.large',
+            'instance_type_id': '3',  # m1.large
             'mac_address': 'aa:bb:cc:dd:ee:ff',
             'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
@@ -580,7 +580,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'kernel_id': None,
                   'ramdisk_id': None,
                   'local_gb': 5,
-                  'instance_type': 'm1.large',
+                  'instance_type_id': '3',  # m1.large
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
