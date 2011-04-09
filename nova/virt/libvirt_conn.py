@@ -337,7 +337,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     # If the instance if already shut off, we get this:
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
-                    (state, _, _, _, _) = virt_dom.info()
+                    (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
                     if state == power_state.SHUTOFF:
                         is_okay = True
 
