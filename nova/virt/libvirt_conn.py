@@ -535,12 +535,10 @@ class LibvirtConnection(driver.ComputeDriver):
                                       instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rebooted'), instance['name'])
-
                     # Fix lp747922
                     instance_id = instance['id'] 
                     for vol in db.volume_get_all_by_instance(
                         context.get_admin_context(), instance_id):
-                        # LOG.debug(_("re-attaching: %s") % vol['ec2_id'])
                         # instance-id : instance-00000001
                         # device_path : /dev/etherd/e0.1, etc
                         # mountpoint  :  /dev/sdh
