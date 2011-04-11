@@ -660,7 +660,9 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.instance_id != None).\
                      filter_by(allocated=0).\
                      update({'instance_id': None,
-                             'leased': 0})
+                             'leased': 0,
+                             'updated_at': datetime.datetime.utcnow()},
+                             synchronize_session='fetch')
     return result
 
 
@@ -930,6 +932,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload('volumes')).\
                          options(joinedload_all('fixed_ip.network')).\
                          options(joinedload('metadata')).\
+                         options(joinedload('instance_type')).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=can_read_deleted(context)).\
                          first()
@@ -939,6 +942,7 @@ def instance_get(context, instance_id, session=None):
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload('metadata')).\
+                         options(joinedload('instance_type')).\
                          filter_by(project_id=context.project_id).\
                          filter_by(id=instance_id).\
                          filter_by(deleted=False).\
@@ -958,6 +962,7 @@ def instance_get_all(context):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
 
@@ -969,6 +974,7 @@ def instance_get_all_by_user(context, user_id):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
                    all()
@@ -981,6 +987,7 @@ def instance_get_all_by_host(context, host):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('instance_type')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -995,6 +1002,7 @@ def instance_get_all_by_project(context, project_id):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -1009,6 +1017,7 @@ def instance_get_all_by_reservation(context, reservation_id):
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload('instance_type')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
                        all()
@@ -1017,6 +1026,7 @@ def instance_get_all_by_reservation(context, reservation_id):
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload('instance_type')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=False).\
@@ -1029,6 +1039,7 @@ def instance_get_project_vpn(context, project_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(image_id=FLAGS.vpn_image_id).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -2481,6 +2492,19 @@ def instance_type_get_all(context, inactive=False):
         return inst_dict
     else:
         raise exception.NotFound
+
+
+@require_context
+def instance_type_get_by_id(context, id):
+    """Returns a dict describing specific instance_type"""
+    session = get_session()
+    inst_type = session.query(models.InstanceTypes).\
+                    filter_by(id=id).\
+                    first()
+    if not inst_type:
+        raise exception.NotFound(_("No instance type with id %s") % id)
+    else:
+        return dict(inst_type)
 
 
 @require_context

@@ -1158,6 +1158,11 @@ def instance_type_get_all(context, inactive=False):
     return IMPL.instance_type_get_all(context, inactive)
 
 
+def instance_type_get_by_id(context, id):
+    """Get instance type by id"""
+    return IMPL.instance_type_get_by_id(context, id)
+
+
 def instance_type_get_by_name(context, name):
     """Get instance type by name"""
     return IMPL.instance_type_get_by_name(context, name)

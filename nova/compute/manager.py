@@ -141,12 +141,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         self.driver.init_host(host=self.host)
 
-    def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval."""
-        super(ComputeManager, self).periodic_tasks(context)
-        if FLAGS.rescue_timeout > 0:
-            self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
-
     def _update_state(self, context, instance_id):
         """Update the state of an instance from the driver info."""
         # FIXME(ja): include other fields from state?
@@ -704,6 +698,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return self.driver.get_ajax_console(instance_ref)
 
+    @exception.wrap_exception
+    def get_vnc_console(self, context, instance_id):
+        """Return connection information for an vnc console."""
+        context = context.elevated()
+        LOG.debug(_("instance %s: getting vnc console"), instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+
+        return self.driver.get_vnc_console(instance_ref)
+
     @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
@@ -1008,11 +1011,20 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list = []
 
         try:
+            if FLAGS.rescue_timeout > 0:
+                self.driver.poll_rescued_instances(FLAGS.rescue_timeout)
+        except Exception as ex:
+            LOG.warning(_("Error during poll_rescued_instances: %s"),
+                        unicode(ex))
+            error_list.append(ex)
+
+        try:
             self._poll_instance_states(context)
         except Exception as ex:
             LOG.warning(_("Error during instance poll: %s"),
                         unicode(ex))
             error_list.append(ex)
+
         return error_list
 
     def _poll_instance_states(self, context):
@@ -1026,16 +1038,41 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         for db_instance in db_instances:
             name = db_instance['name']
+            db_state = db_instance['state']
             vm_instance = vm_instances.get(name)
+
             if vm_instance is None:
-                LOG.info(_("Found instance '%(name)s' in DB but no VM. "
-                           "Setting state to shutoff.") % locals())
-                vm_state = power_state.SHUTOFF
+                # NOTE(justinsb): We have to be very careful here, because a
+                # concurrent operation could be in progress (e.g. a spawn)
+                if db_state == power_state.NOSTATE:
+                    # Assume that NOSTATE => spawning
+                    # TODO(justinsb): This does mean that if we crash during a
+                    # spawn, the machine will never leave the spawning state,
+                    # but this is just the way nova is; this function isn't
+                    # trying to correct that problem.
+                    # We could have a separate task to correct this error.
+                    # TODO(justinsb): What happens during a live migration?
+                    LOG.info(_("Found instance '%(name)s' in DB but no VM. "
+                               "State=%(db_state)s, so assuming spawn is in "
+                               "progress.") % locals())
+                    vm_state = db_state
+                else:
+                    LOG.info(_("Found instance '%(name)s' in DB but no VM. "
+                               "State=%(db_state)s, so setting state to "
+                               "shutoff.") % locals())
+                    vm_state = power_state.SHUTOFF
             else:
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
-            db_state = db_instance['state']
+            if db_instance['state_description'] == 'migrating':
+                # A situation which db record exists, but no instance"
+                # sometimes occurs while live-migration at src compute,
+                # this case should be ignored.
+                LOG.debug(_("Ignoring %(name)s, as it's currently being "
+                           "migrated.") % locals())
+                continue
+
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
@@ -1043,12 +1080,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            db_instance['id'],
                                            vm_state)
 
-            if vm_state == power_state.SHUTOFF:
-                # TODO(soren): This is what the compute manager does when you
-                # terminate an instance. At some point I figure we'll have a
-                # "terminated" state and some sort of cleanup job that runs
-                # occasionally, cleaning them out.
-                self.db.instance_destroy(context, db_instance['id'])
+            # NOTE(justinsb): We no longer auto-remove SHUTOFF instances
+            # It's quite hard to get them back when we do.
 
         # Are there VMs not in the DB?
         for vm_not_found_in_db in vms_not_found_in_db:

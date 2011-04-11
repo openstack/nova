@@ -140,7 +140,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
-                     'instance_type': 'm1.small'}
+                     'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):
         """check if libvirt is available."""
@@ -224,6 +224,49 @@ class LibvirtConnTestCase(test.TestCase):
         instance_data['kernel_id'] = 'aki-deadbeef'
         self._check_xml_and_uri(instance_data, expect_kernel=True,
                                 expect_ramdisk=True, rescue=True)
+
+    def test_lxc_container_and_uri(self):
+        instance_data = dict(self.test_instance)
+        self._check_xml_and_container(instance_data)
+
+    def _check_xml_and_container(self, instance):
+        user_context = context.RequestContext(project=self.project,
+                                              user=self.user)
+        instance_ref = db.instance_create(user_context, instance)
+        host = self.network.get_network_host(user_context.elevated())
+        network_ref = db.project_get_network(context.get_admin_context(),
+                                             self.project.id)
+
+        fixed_ip = {'address': self.test_ip,
+                    'network_id': network_ref['id']}
+
+        ctxt = context.get_admin_context()
+        fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
+        db.fixed_ip_update(ctxt, self.test_ip,
+                                 {'allocated': True,
+                                  'instance_id': instance_ref['id']})
+
+        self.flags(libvirt_type='lxc')
+        conn = libvirt_conn.LibvirtConnection(True)
+
+        uri = conn.get_uri()
+        self.assertEquals(uri, 'lxc:///')
+
+        xml = conn.to_xml(instance_ref)
+        tree = xml_to_tree(xml)
+
+        check = [
+        (lambda t: t.find('.').get('type'), 'lxc'),
+        (lambda t: t.find('./os/type').text, 'exe'),
+        (lambda t: t.find('./devices/filesystem/target').get('dir'), '/')]
+
+        for i, (check, expected_result) in enumerate(check):
+            self.assertEqual(check(tree),
+                             expected_result,
+                             '%s failed common check %d' % (xml, i))
+
+        target = tree.find('./devices/filesystem/source').get('dir')
+        self.assertTrue(len(target) > 0)
 
     def _check_xml_and_uri(self, instance, expect_ramdisk, expect_kernel,
                            rescue=False):
@@ -436,7 +479,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         fake_timer = FakeTime()
 
-        self.create_fake_libvirt_mock(nwfilterLookupByName=fake_raise)
+        self.create_fake_libvirt_mock()
         instance_ref = db.instance_create(self.context, self.test_instance)
 
         # Start test
@@ -445,6 +488,7 @@ class LibvirtConnTestCase(test.TestCase):
             conn = libvirt_conn.LibvirtConnection(False)
             conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
             conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
+            conn.firewall_driver.setattr('instance_filter_exists', fake_none)
             conn.ensure_filtering_rules_for_instance(instance_ref,
                                                      time=fake_timer)
         except exception.Error, e:

@@ -44,7 +44,7 @@ LOG = logging.getLogger('server')
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
@@ -55,6 +55,13 @@ class Controller(wsgi.Controller):
                            "imageRef"],
                 "link": ["rel", "type", "href"],
             },
+            "dict_collections": {
+                "metadata": {"item_name": "meta", "item_key": "key"},
+            },
+            "list_collections": {
+                "public": {"item_name": "ip", "item_key": "addr"},
+                "private": {"item_name": "ip", "item_key": "addr"},
+            },
         },
     }
 
@@ -62,15 +69,6 @@ class Controller(wsgi.Controller):
         self.compute_api = compute.API()
         self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
-
-    def ips(self, req, id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
-
-        builder = self._get_addresses_view_builder(req)
-        return builder.build(instance)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
@@ -150,15 +148,26 @@ class Controller(wsgi.Controller):
             injected_files = self._get_injected_files(personality)
 
         flavor_id = self._flavor_id_from_req_data(env)
+
+        if not 'name' in env['server']:
+            msg = _("Server name is not defined")
+            return exc.HTTPBadRequest(msg)
+
+        name = env['server']['name']
+        self._validate_server_name(name)
+        name = name.strip()
+
         try:
+            inst_type = \
+                instance_types.get_instance_type_by_flavor_id(flavor_id)
             (inst,) = self.compute_api.create(
                 context,
-                instance_types.get_by_flavor_id(flavor_id),
+                inst_type,
                 image_id,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
-                display_name=env['server']['name'],
-                display_description=env['server']['name'],
+                display_name=name,
+                display_description=name,
                 key_name=key_name,
                 key_data=key_data,
                 metadata=metadata,
@@ -166,13 +175,12 @@ class Controller(wsgi.Controller):
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        inst['instance_type'] = flavor_id
+        inst['instance_type'] = inst_type
         inst['image_id'] = requested_image_id
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        password = "%s%s" % (server['server']['name'][:4],
-                             utils.generate_password(12))
+        password = utils.generate_password(16)
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
@@ -246,19 +254,32 @@ class Controller(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            try:
-                self.compute_api.set_admin_password(ctxt, id)
-            except exception.TimeoutException:
-                return exc.HTTPRequestTimeout()
+
         if 'name' in inst_dict['server']:
-            update_dict['display_name'] = inst_dict['server']['name']
+            name = inst_dict['server']['name']
+            self._validate_server_name(name)
+            update_dict['display_name'] = name.strip()
+
+        self._parse_update(ctxt, id, inst_dict, update_dict)
+
         try:
             self.compute_api.update(ctxt, id, **update_dict)
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+
         return exc.HTTPNoContent()
+
+    def _validate_server_name(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Server name is not a string or unicode")
+            raise exc.HTTPBadRequest(msg)
+
+        if value.strip() == '':
+            msg = _("Server name is an empty string")
+            raise exc.HTTPBadRequest(msg)
+
+    def _parse_update(self, context, id, inst_dict, update_dict):
+        pass
 
     @scheduler_api.redirect_handler
     def action(self, req, id):
@@ -266,11 +287,12 @@ class Controller(wsgi.Controller):
         resize a server"""
 
         actions = {
-            'reboot':        self._action_reboot,
-            'resize':        self._action_resize,
+            'changePassword': self._action_change_password,
+            'reboot': self._action_reboot,
+            'resize': self._action_resize,
             'confirmResize': self._action_confirm_resize,
-            'revertResize':  self._action_revert_resize,
-            'rebuild':       self._action_rebuild,
+            'revertResize': self._action_revert_resize,
+            'rebuild': self._action_rebuild,
             }
 
         input_dict = self._deserialize(req.body, req.get_content_type())
@@ -278,6 +300,9 @@ class Controller(wsgi.Controller):
             if key in input_dict:
                 return actions[key](input_dict, req, id)
         return faults.Fault(exc.HTTPNotImplemented())
+
+    def _action_change_password(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
 
     def _action_confirm_resize(self, input_dict, req, id):
         try:
@@ -477,10 +502,20 @@ class Controller(wsgi.Controller):
 
     @scheduler_api.redirect_handler
     def get_ajax_console(self, req, id):
-        """ Returns a url to an instance's ajaxterm console. """
+        """Returns a url to an instance's ajaxterm console."""
         try:
             self.compute_api.get_ajax_console(req.environ['nova.context'],
                 int(id))
+        except exception.NotFound:
+            return faults.Fault(exc.HTTPNotFound())
+        return exc.HTTPAccepted()
+
+    @scheduler_api.redirect_handler
+    def get_vnc_console(self, req, id):
+        """Returns a url to an instance's ajaxterm console."""
+        try:
+            self.compute_api.get_vnc_console(req.environ['nova.context'],
+                                             int(id))
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
@@ -530,7 +565,7 @@ class Controller(wsgi.Controller):
                 _("Cannot build from image %(image_id)s, status not active") %
                   locals())
 
-        if image_meta['properties']['disk_format'] != 'ami':
+        if image_meta.get('container_format') != 'ami':
             return None, None
 
         try:
@@ -566,6 +601,14 @@ class ControllerV10(Controller):
     def _limit_items(self, items, req):
         return common.limited(items, req)
 
+    def _parse_update(self, context, server_id, inst_dict, update_dict):
+        if 'adminPass' in inst_dict['server']:
+            update_dict['admin_pass'] = inst_dict['server']['adminPass']
+            try:
+                self.compute_api.set_admin_password(context, server_id)
+            except exception.TimeoutException:
+                return exc.HTTPRequestTimeout()
+
 
 class ControllerV11(Controller):
     def _image_id_from_req_data(self, data):
@@ -589,8 +632,24 @@ class ControllerV11(Controller):
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV11(req)
 
+    def _action_change_password(self, input_dict, req, id):
+        context = req.environ['nova.context']
+        if (not 'changePassword' in input_dict
+            or not 'adminPass' in input_dict['changePassword']):
+            msg = _("No adminPass was specified")
+            return exc.HTTPBadRequest(msg)
+        password = input_dict['changePassword']['adminPass']
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            return exc.HTTPBadRequest(msg)
+        self.compute_api.set_admin_password(context, id, password)
+        return exc.HTTPAccepted()
+
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11
 
 
 class ServerCreateRequestXMLDeserializer(object):

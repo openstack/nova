@@ -67,7 +67,7 @@ class QuotaTestCase(test.TestCase):
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
-        inst['instance_type'] = 'm1.large'
+        inst['instance_type_id'] = '3'  # m1.large
         inst['vcpus'] = cores
         return db.instance_create(self.context, inst)['id']
 
@@ -123,11 +123,12 @@ class QuotaTestCase(test.TestCase):
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small',
+                                            instance_type=inst_type,
                                             image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
@@ -136,11 +137,12 @@ class QuotaTestCase(test.TestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small',
+                                            instance_type=inst_type,
                                             image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
@@ -191,11 +193,12 @@ class QuotaTestCase(test.TestCase):
         metadata = {}
         for i in range(FLAGS.quota_metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small',
+                                            instance_type=inst_type,
                                             image_id='fake',
                                             metadata=metadata)
 
@@ -206,13 +209,15 @@ class QuotaTestCase(test.TestCase):
 
     def _create_with_injected_files(self, files):
         api = compute.API(image_service=self.StubImageService())
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         api.create(self.context, min_count=1, max_count=1,
-                instance_type='m1.small', image_id='fake',
+                instance_type=inst_type, image_id='fake',
                 injected_files=files)
 
     def test_no_injected_files(self):
         api = compute.API(image_service=self.StubImageService())
-        api.create(self.context, instance_type='m1.small', image_id='fake')
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        api.create(self.context, instance_type=inst_type, image_id='fake')
 
     def test_max_injected_files(self):
         files = []

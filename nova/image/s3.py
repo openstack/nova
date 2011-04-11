@@ -31,6 +31,7 @@ from xml.etree import ElementTree
 
 import boto.s3.connection
 
+from nova import crypto
 from nova import exception
 from nova import flags
 from nova import utils
@@ -45,6 +46,7 @@ flags.DEFINE_string('image_decryption_dir', '/tmp',
 
 
 class S3ImageService(service.BaseImageService):
+    """Wraps an existing image service to support s3 based register"""
     def __init__(self, service=None, *args, **kwargs):
         if service == None:
             service = utils.import_object(FLAGS.image_service)
@@ -57,52 +59,23 @@ class S3ImageService(service.BaseImageService):
         return image
 
     def delete(self, context, image_id):
-        # FIXME(vish): call to show is to check filter
-        self.show(context, image_id)
         self.service.delete(context, image_id)
 
     def update(self, context, image_id, metadata, data=None):
-        # FIXME(vish): call to show is to check filter
-        self.show(context, image_id)
         image = self.service.update(context, image_id, metadata, data)
         return image
 
     def index(self, context):
-        images = self.service.index(context)
-        # FIXME(vish): index doesn't filter so we do it manually
-        return self._filter(context, images)
+        return self.service.index(context)
 
     def detail(self, context):
-        images = self.service.detail(context)
-        # FIXME(vish): detail doesn't filter so we do it manually
-        return self._filter(context, images)
-
-    @classmethod
-    def _is_visible(cls, context, image):
-        return (context.is_admin
-                or context.project_id == image['properties']['owner_id']
-                or image['properties']['is_public'] == 'True')
-
-    @classmethod
-    def _filter(cls, context, images):
-        filtered = []
-        for image in images:
-            if not cls._is_visible(context, image):
-                continue
-            filtered.append(image)
-        return filtered
+        return self.service.detail(context)
 
     def show(self, context, image_id):
-        image = self.service.show(context, image_id)
-        if not self._is_visible(context, image):
-            raise exception.NotFound
-        return image
+        return self.service.show(context, image_id)
 
     def show_by_name(self, context, name):
-        image = self.service.show_by_name(context, name)
-        if not self._is_visible(context, image):
-            raise exception.NotFound
-        return image
+        return self.service.show(context, name)
 
     @staticmethod
     def _conn(context):
@@ -166,7 +139,7 @@ class S3ImageService(service.BaseImageService):
             arch = 'x86_64'
 
         properties = metadata['properties']
-        properties['owner_id'] = context.project_id
+        properties['project_id'] = context.project_id
         properties['architecture'] = arch
 
         if kernel_id:
@@ -175,8 +148,6 @@ class S3ImageService(service.BaseImageService):
         if ramdisk_id:
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
-        properties['is_public'] = False
-        properties['type'] = image_type
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,
                          'status': 'queued',
@@ -210,7 +181,7 @@ class S3ImageService(service.BaseImageService):
 
             # FIXME(vish): grab key from common service so this can run on
             #              any host.
-            cloud_pk = os.path.join(FLAGS.ca_path, "private/cakey.pem")
+            cloud_pk = crypto.key_path(context.project_id)
 
             decrypted_filename = os.path.join(image_path, 'image.tar.gz')
             self._decrypt_image(encrypted_filename, encrypted_key,

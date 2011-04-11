@@ -151,6 +151,8 @@ class GlanceImageService(service.BaseImageService):
 
         :raises NotFound if the image does not exist.
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
@@ -165,6 +167,8 @@ class GlanceImageService(service.BaseImageService):
 
         :raises NotFound if the image does not exist.
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             result = self.client.delete_image(image_id)
         except glance_exception.NotFound:
@@ -186,33 +190,6 @@ class GlanceImageService(service.BaseImageService):
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         return image_meta
 
-    @staticmethod
-    def _is_image_available(context, image_meta):
-        """
-        Images are always available if they are public or if the user is an
-        admin.
-
-        Otherwise, we filter by project_id (if present) and then fall-back to
-        images owned by user.
-        """
-        # FIXME(sirp): We should be filtering by user_id on the Glance side
-        # for security; however, we can't do that until we get authn/authz
-        # sorted out. Until then, filtering in Nova.
-        if image_meta['is_public'] or context.is_admin:
-            return True
-
-        properties = image_meta['properties']
-
-        if context.project_id and ('project_id' in properties):
-            return str(properties['project_id']) == str(project_id)
-
-        try:
-            user_id = properties['user_id']
-        except KeyError:
-            return False
-
-        return str(user_id) == str(context.user_id)
-
 
 # utility functions
 def _convert_timestamps_to_datetimes(image_meta):
@@ -220,7 +197,7 @@ def _convert_timestamps_to_datetimes(image_meta):
     Returns image with known timestamp fields converted to datetime objects
     """
     for attr in ['created_at', 'updated_at', 'deleted_at']:
-        if image_meta.get(attr) is not None:
+        if image_meta.get(attr):
             image_meta[attr] = _parse_glance_iso8601_timestamp(
                 image_meta[attr])
     return image_meta
@@ -230,8 +207,13 @@ def _parse_glance_iso8601_timestamp(timestamp):
     """
     Parse a subset of iso8601 timestamps into datetime objects
     """
-    GLANCE_FMT = "%Y-%m-%dT%H:%M:%S"
-    ISO_FMT = "%Y-%m-%dT%H:%M:%S.%f"
-    # FIXME(sirp): Glance is not returning in ISO format, we should fix Glance
-    # to do so, and then switch to parsing it here
-    return datetime.datetime.strptime(timestamp, GLANCE_FMT)
+    iso_formats = ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"]
+
+    for iso_format in iso_formats:
+        try:
+            return datetime.datetime.strptime(timestamp, iso_format)
+        except ValueError:
+            pass
+
+    raise ValueError(_("%(timestamp)s does not follow any of the "
+                       "signatures: %(ISO_FORMATS)s") % locals())

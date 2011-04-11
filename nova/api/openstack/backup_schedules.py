@@ -19,7 +19,7 @@ import time
 
 from webob import exc
 
-from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.image.service
 
@@ -29,7 +29,7 @@ def _translate_keys(inst):
     return dict(backupSchedule=inst)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """ The backup schedule API controller for the Openstack API """
 
     _serialization_metadata = {
@@ -42,7 +42,11 @@ class Controller(wsgi.Controller):
 
     def index(self, req, server_id):
         """ Returns the list of backup schedules for a given instance """
-        return _translate_keys({})
+        return faults.Fault(exc.HTTPNotImplemented())
+
+    def show(self, req, server_id, id):
+        """ Returns a single backup schedule for a given instance """
+        return faults.Fault(exc.HTTPNotImplemented())
 
     def create(self, req, server_id):
         """ No actual update method required, since the existing API allows
