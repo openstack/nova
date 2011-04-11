@@ -211,7 +211,6 @@ class LibvirtConnection(driver.ComputeDriver):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        self.interfaces_xml = open(FLAGS.injected_network_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
