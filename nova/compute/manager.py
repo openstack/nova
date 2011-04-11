@@ -249,7 +249,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if not FLAGS.stub_network:
             rpc.call(context, self.get_network_topic(context),
-                     {"method": "allocate_for_instance",
+                     {"method": "deallocate_for_instance",
                       "args": {"instance_id": instance_id}})
 
         volumes = instance.get('volumes') or []
