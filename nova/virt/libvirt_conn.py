@@ -536,7 +536,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rebooted'), instance['name'])
                     # Fix lp747922
-                    instance_id = instance['id'] 
+                    instance_id = instance['id']
                     for vol in db.volume_get_all_by_instance(
                         context.get_admin_context(), instance_id):
                         # instance-id : instance-00000001
@@ -548,11 +548,11 @@ class LibvirtConnection(driver.ComputeDriver):
                         dev_path = nova.volume.driver.discover_volume(self,
                                                                       context,
                                                                       vol)
-                        LOG.debug(_("instance_id: %s, volume_id: %s, mountpoint: %s") %
-                                  (instance_id, dev_path, vol['mountpoint']))
+                        LOG.debug(
+                            _("Re-attaching %(dev_path)s to %(mountpoint)s") %
+                            (dev_path, vol['mountpoint']))
                         self.attach_volume(instance['name'],
-                                           dev_path,
-                                           vol['mountpoint']);
+                                           dev_path, vol['mountpoint'])
                     # Fix lp747922
 
                     timer.stop()
