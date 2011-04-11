@@ -22,7 +22,7 @@ from migrate import *
 
 meta = MetaData()
 
-c_auto_assigned = Column('auto_assigned',Boolean, default=False)
+c_auto_assigned = Column('auto_assigned', Boolean, default=False)
 
 
 def upgrade(migrate_engine):
@@ -34,5 +34,3 @@ def upgrade(migrate_engine):
                       autoload_with=migrate_engine)
 
     floating_ips.create_column(c_auto_assigned)
-
-  
