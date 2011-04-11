@@ -566,8 +566,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 timer.stop()
 
         timer.f = _wait_for_reboot
-        timer_result=timer.start(interval=0.5, now=True)
-        return timer_result
+        return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception
     def pause(self, instance, callback):
