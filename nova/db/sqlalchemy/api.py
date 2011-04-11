@@ -773,17 +773,20 @@ def mac_address_create(context, values):
     mac_address_ref = models.MacAddress()
     mac_address_ref.update(values)
     mac_address_ref.save()
+#    instance_id = values['instance_id']
+#    network_id = values['network_id']
+#
+#    session = get_session()
+#    with session.begin():
+#        instance = instance_get(context, instance_id, session=session)
+#        network = network_get(context, network_id, session=session)
+#        mac_address.instance = instance
+#        mac_address.network = network
+#        mac_address_ref.save(session=session)
+#    return mac_address_ref
 
-    session = get_session()
-    with session.begin():
-        instance = instance_get(context, instance_id, session=session)
-        network = network_get(context, network_id, session=session)
-        mac_address.instance = instance
-        mac_address.network = network
-        mac_address_ref.save(session=session)
-    return mac_address_ref
 
-
+@require_context
 def mac_address_get(context, mac_address):
     """gets a mac address from the table
 
@@ -811,7 +814,7 @@ def mac_address_get_all_by_instance(context, instance_id):
         return mac_address_refs
 
 
-@require_context
+@require_admin_context
 def mac_address_get_all_by_network(context, network_id):
     """gets all mac addresses for instance
 
@@ -840,7 +843,8 @@ def mac_address_delete(context, mac_address):
 
 @require_context
 def mac_address_delete_by_instance(context, instance_id):
-    """delete mac address record in teh database
+    """delete mac address records in the database that are associated
+    with the instance given by instance_id
 
     context = request context object
     instance_id = instance to remove macs for
@@ -1407,6 +1411,8 @@ def network_get_by_cidr(context, cidr):
 
 @require_admin_context
 def network_get_by_instance(_context, instance_id):
+    # note this uses fixed IP to get to instance
+    # only works for networks the instance has an IP from
     session = get_session()
     rv = session.query(models.Network).\
                  filter_by(deleted=False).\

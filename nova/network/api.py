@@ -86,9 +86,3 @@ class API(base.Base):
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {"method": "disassociate_floating_ip",
                   "args": {"floating_address": floating_ip['address']}})
-
-    def get_instance_network_info(self, context, instance_id):
-        """return the network info for an instance"""
-        return rpc.call(context, FLAGS.network_topic,
-                        {"method": "get_instance_network_info",
-                         "args": {"instance_id": instance_id}})

@@ -200,9 +200,9 @@ class ComputeManager(manager.SchedulerDependentManager):
     def run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        instance_ref.injected_files = kwargs.get('injected_files', [])
-        if instance_ref['name'] in self.driver.list_instances():
+        instance = self.db.instance_get(context, instance_id)
+        instance.injected_files = kwargs.get('injected_files', [])
+        if instance['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
                   context=context)
@@ -215,26 +215,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'networking')
 
-        is_vpn = instance_ref['image_id'] == FLAGS.vpn_image_id
-        # NOTE(vish): This could be a cast because we don't do anything
-        #             with the address currently, but I'm leaving it as
-        #             a call to ensure that network setup completes.  We
-        #             will eventually also need to save the address here.
-        #NOTE(tr3buchet): I don't see why we'd save it here when the network
-        #                 manager is saving it.
+        is_vpn = instance['image_id'] == FLAGS.vpn_image_id
         if not FLAGS.stub_network:
-            rpc.call(context, self.get_network_topic(context),
-                               {"method": "allocate_fixed_ips",
-                                "args": {"instance_id": instance_id,
-                                         "vpn": is_vpn}})
-            rpc.call(context, self.get_network_topic(context),
-                               {"method": "allocate_mac_addresses",
-                                "args": {"instance_id": instance_id}})
-
-            nw_info = rpc.call(context, self.get_network_topic(context),
-                               {"method": "allocate_for_instance",
-                                "args": {"instance_id": instance_id}})
-        Log.debug(_("instance addresses: |%s|"), instance_ref['fixed_ips'])
+            network_info = rpc.call(context, self.get_network_topic(context),
+                                    {"method": "allocate_for_instance",
+                                     "args": {"instance_id": instance_id,
+                                              "vpn": is_vpn}})
+        Log.debug(_("instance network_info: |%s|"), network_info)
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
@@ -243,7 +230,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'spawning')
 
         try:
-            self.driver.spawn(instance_ref)
+            self.driver.spawn(instance, network_info)
             now = datetime.datetime.utcnow()
             self.db.instance_update(context,
                                     instance_id,
@@ -263,45 +250,22 @@ class ComputeManager(manager.SchedulerDependentManager):
     def terminate_instance(self, context, instance_id):
         """Terminate an instance on this machine."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
-        fixed_ip = instance_ref.get('fixed_ip')
-        if not FLAGS.stub_network and fixed_ip:
-            floating_ips = fixed_ip.get('floating_ips') or []
-            for floating_ip in floating_ips:
-                address = floating_ip['address']
-                LOG.debug("Disassociating address %s", address,
-                          context=context)
-                # NOTE(vish): Right now we don't really care if the ip is
-                #             disassociated.  We may need to worry about
-                #             checking this later.
-                network_topic = self.db.queue_get_for(context,
-                                                      FLAGS.network_topic,
-                                                      floating_ip['host'])
-                rpc.cast(context,
-                         network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_address": address}})
+        if not FLAGS.stub_network:
+            rpc.call(context, self.get_network_topic(context),
+                     {"method": "allocate_for_instance",
+                      "args": {"instance_id": instance_id}})
 
-            address = fixed_ip['address']
-            if address:
-                LOG.debug(_("Deallocating address %s"), address,
-                          context=context)
-                # NOTE(vish): Currently, nothing needs to be done on the
-                #             network node until release. If this changes,
-                #             we will need to cast here.
-                self.network_manager.deallocate_fixed_ip(context.elevated(),
-                                                         address)
-
-        volumes = instance_ref.get('volumes') or []
+        volumes = instance.get('volumes') or []
         for volume in volumes:
             self.detach_volume(context, instance_id, volume['id'])
-        if instance_ref['state'] == power_state.SHUTOFF:
+        if instance['state'] == power_state.SHUTOFF:
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
-        self.driver.destroy(instance_ref)
+        self.driver.destroy(instance)
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
@@ -712,10 +676,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
         LOG.debug(_('instance %s: inject network info'), instance_id,
                                                          context=context)
-        self.driver.inject_network_info(instance_ref)
+        instance = self.db.instance_get(context, instance)
+        network_info = rpc.call(context, self.get_network_topic(context),
+                                {"method": "get_instance_nw_info",
+                                 "args": {"instance": instance}})
+        Log.debug(_("network_info: |%s|"), network_info)
+
+        self.driver.inject_network_info(instance, network_info=network_info)
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):

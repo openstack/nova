@@ -209,6 +209,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
+    # aka flavor
     instance_type = Column(String(255))
 
     user_data = Column(Text)
@@ -516,7 +517,7 @@ class MacAddress(BASE, NovaBase):
     """Represents a mac address used by an instance"""
     __tablename__ = 'mac_addresses'
     id = Column(Integer, primary_key=True)
-    mac_address = Column(String(255), unique=True)
+    address = Column(String(255), unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
     network = relationship(Network, backref=backref('mac_addresses'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)

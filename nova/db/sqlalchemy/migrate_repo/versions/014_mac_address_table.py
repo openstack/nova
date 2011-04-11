@@ -27,7 +27,7 @@ mac_addresses = Table('mac_addresses', meta,
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(),  primary_key=True, nullable=False),
-        Column('mac_address',
+        Column('address',
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False),
                unique=True),
@@ -62,7 +62,7 @@ def upgrade(migrate_engine):
     s = select([instances.c.id, instances.c.mac_address,
                 fixed_ips.c.network_id],
                fixed_ips.c.instance_id == instances.c.id)
-    keys = ['instance_id', 'mac_address', 'network_id']
+    keys = ['instance_id', 'address', 'network_id']
     join_list = [dict(zip(keys, row)) for row in s.execute()]
     logging.info("join list |%s|", join_list)
 
@@ -72,3 +72,8 @@ def upgrade(migrate_engine):
 
     # drop the mac_address column from instances
     c.drop
+
+
+def downgrade(migrate_engine):
+    logging.error(_("Can't downgrade without losing data"))
+    raise Exception

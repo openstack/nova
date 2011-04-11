@@ -313,6 +313,7 @@ def migration_get_by_instance_and_status(context, instance_id, status):
     return IMPL.migration_get_by_instance_and_status(context, instance_id,
             status)
 
+
 ####################
 
 
@@ -419,6 +420,8 @@ def mac_address_delete(context, mac_address):
 def mac_address_delete_by_instance(context, instance_id):
     """delete mac address record in teh database"""
     return IMPL.mac_address_delete_by_instance(context, instance_id)
+
+
 ####################
 
 

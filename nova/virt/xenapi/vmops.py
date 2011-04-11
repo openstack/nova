@@ -807,7 +807,6 @@ class VMOps(object):
                     "ip": utils.to_global_ipv6(network['cidr_v6'],
                                                instance['mac_address']),
                     "netmask": network['netmask_v6'],
-                    "gateway": network['gateway_v6'],
                     "enabled": "1"}
 
             info = {
@@ -820,10 +819,12 @@ class VMOps(object):
                 'ips': [ip_dict(ip) for ip in network_IPs]}
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict(ip) for ip in network_IPs]
+            if network['gateway_v6']:
+                info['gateway6'] = network['gateway_v6']
             network_info.append((network, info))
         return network_info
 
-    def inject_network_info(self, instance, vm_ref, network_info):
+    def inject_network_info(self, instance, vm_ref=None, network_info):
         """
         Generate the network info and make calls to place it into the
         xenstore and the xenstore param list
@@ -831,7 +832,10 @@ class VMOps(object):
         logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
         # this function raises if vm_ref is not a vm_opaque_ref
-        self._session.get_xenapi().VM.get_record(vm_ref)
+        if vm_ref:
+            self._session.get_xenapi().VM.get_record(vm_ref)
+        else:
+            vm_ref = VMHelper.lookup(self._session, instance.name)
 
         for (network, info) in network_info:
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
