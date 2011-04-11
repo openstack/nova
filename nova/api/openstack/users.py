@@ -18,7 +18,6 @@ from webob import exc
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager
@@ -35,7 +34,7 @@ def _translate_keys(user):
                 admin=user.admin)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
 
     _serialization_metadata = {
         'application/xml': {
