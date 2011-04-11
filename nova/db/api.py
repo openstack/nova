@@ -290,6 +290,9 @@ def floating_ip_update(context, address, values):
     """Update a floating ip by address or raise if it doesn't exist."""
     return IMPL.floating_ip_update(context, address, values)
 
+def floating_ip_set_auto_assigned(context, address):
+    """Set auto_assigned flag to floating ip"""
+    return IMPL.floating_ip_set_auto_assigned(context, address)
 
 ####################
 
