@@ -209,7 +209,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    instance_type = Column(String(255))
+    instance_type_id = Column(String(255))
 
     user_data = Column(Text)
 
@@ -267,6 +267,12 @@ class InstanceTypes(BASE, NovaBase):
     swap = Column(Integer, nullable=False, default=0)
     rxtx_quota = Column(Integer, nullable=False, default=0)
     rxtx_cap = Column(Integer, nullable=False, default=0)
+
+    instances = relationship(Instance,
+                           backref=backref('instance_type', uselist=False),
+                           foreign_keys=id,
+                           primaryjoin='and_(Instance.instance_type_id == '
+                                       'InstanceTypes.id)')
 
 
 class Volume(BASE, NovaBase):

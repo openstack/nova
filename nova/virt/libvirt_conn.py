@@ -117,6 +117,8 @@ flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
 flags.DEFINE_string('qemu_img', 'qemu-img',
                     'binary to use for qemu-img commands')
+flags.DEFINE_bool('start_guests_on_host_boot', False,
+                  'Whether to restart guests when the host reboots')
 
 
 def get_connection(read_only):
@@ -169,34 +171,34 @@ def _get_network_info(instance):
                                               instance['id'])
     network_info = []
 
-    def ip_dict(ip):
-        return {
-            "ip": ip.address,
-            "netmask": network["netmask"],
-            "enabled": "1"}
-
-    def ip6_dict(ip6):
-        prefix = ip6.network.cidr_v6
-        mac = instance.mac_address
-        return  {
-            "ip": utils.to_global_ipv6(prefix, mac),
-            "netmask": ip6.network.netmask_v6,
-            "gateway": ip6.network.gateway_v6,
-            "enabled": "1"}
-
     for network in networks:
         network_ips = [ip for ip in ip_addresses
-                       if ip.network_id == network.id]
+                       if ip['network_id'] == network['id']]
+
+        def ip_dict(ip):
+            return {
+                'ip': ip['address'],
+                'netmask': network['netmask'],
+                'enabled': '1'}
+
+        def ip6_dict():
+            prefix = network['cidr_v6']
+            mac = instance['mac_address']
+            return  {
+                'ip': utils.to_global_ipv6(prefix, mac),
+                'netmask': network['netmask_v6'],
+                'enabled': '1'}
 
         mapping = {
             'label': network['label'],
             'gateway': network['gateway'],
-            'mac': instance.mac_address,
+            'mac': instance['mac_address'],
             'dns': [network['dns']],
             'ips': [ip_dict(ip) for ip in network_ips]}
 
         if FLAGS.use_ipv6:
-            mapping['ip6s'] = [ip6_dict(ip) for ip in network_ips]
+            mapping['ip6s'] = [ip6_dict()]
+            mapping['gateway6'] = network['gateway_v6']
 
         network_info.append((network, mapping))
     return network_info
@@ -231,12 +233,8 @@ class LibvirtConnection(driver.ComputeDriver):
                           {'name': instance['name'], 'state': state})
             db.instance_set_state(ctxt, instance['id'], state)
 
-            if state == power_state.SHUTOFF:
-                # TODO(soren): This is what the compute manager does when you
-                # terminate # an instance. At some point I figure we'll have a
-                # "terminated" state and some sort of cleanup job that runs
-                # occasionally, cleaning them out.
-                db.instance_destroy(ctxt, instance['id'])
+            # NOTE(justinsb): We no longer delete SHUTOFF instances,
+            # the user may want to power them back on
 
             if state != power_state.RUNNING:
                 continue
@@ -311,6 +309,7 @@ class LibvirtConnection(driver.ComputeDriver):
         return infos
 
     def destroy(self, instance, cleanup=True):
+<<<<<<< TREE
         """Delete the VM instance from the hypervisor.
 
         :param instance: Object representing the instance to destroy
@@ -330,18 +329,77 @@ class LibvirtConnection(driver.ComputeDriver):
             # If the instance is already terminated, we're still happy
             msg = _("Error encountered during `libvirt.destroy`: %s") % ex
             LOG.debug(msg)
+=======
+        instance_name = instance['name']
+
+        # TODO(justinsb): Refactor all lookupByName calls for error-handling
+        try:
+            virt_dom = self._conn.lookupByName(instance_name)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
+                virt_dom = None
+            else:
+                LOG.warning(_("Error from libvirt during lookup of "
+                              "%(instance_name)s. Code=%(errcode)s "
+                              "Error=%(e)s") %
+                            locals())
+                raise
+
+        # If the instance is already terminated, we're still happy
+        # Otherwise, destroy it
+        if virt_dom is not None:
+            try:
+                virt_dom.destroy()
+            except libvirt.libvirtError as e:
+                is_okay = False
+                errcode = e.get_error_code()
+                if errcode == libvirt.VIR_ERR_OPERATION_INVALID:
+                    # If the instance if already shut off, we get this:
+                    # Code=55 Error=Requested operation is not valid:
+                    # domain is not running
+                    (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
+                    if state == power_state.SHUTOFF:
+                        is_okay = True
+
+                if not is_okay:
+                    LOG.warning(_("Error from libvirt during destroy of "
+                                  "%(instance_name)s. Code=%(errcode)s "
+                                  "Error=%(e)s") %
+                                locals())
+                    raise
+
+            try:
+                # NOTE(justinsb): We remove the domain definition. We probably
+                # would do better to keep it if cleanup=False (e.g. volumes?)
+                # (e.g. #2 - not losing machines on failure)
+                virt_dom.undefine()
+            except libvirt.libvirtError as e:
+                errcode = e.get_error_code()
+                LOG.warning(_("Error from libvirt during undefine of "
+                              "%(instance_name)s. Code=%(errcode)s "
+                              "Error=%(e)s") %
+                            locals())
+                raise
+
+        # We'll save this for when we do shutdown,
+        # instead of destroy - but destroy returns immediately
+        timer = utils.LoopingCall(f=None)
 
         while True:
             try:
-                state = self.get_info(name)['state']
-            except (exception.NotFound, libvirt.libvirtError) as ex:
-                msg = _("Error while waiting for VM shutdown: %s") % ex
+                state = self.get_info(instance['name'])['state']
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'], state)
+                if state == power_state.SHUTOFF:
+                    break
+            except Exception as ex:
+                msg = _("Error encountered when destroying instance '%(id)s': "
+                        "%(ex)s") % {"id": instance["id"], "ex": ex}
                 LOG.debug(msg)
-                break
-
-            if state == power_state.SHUTDOWN:
-                msg = _("VM %s was shut down cleanly.") % name
-                LOG.debug(msg)
+                db.instance_set_state(context.get_admin_context(),
+                                      instance['id'],
+                                      power_state.SHUTOFF)
                 break
 
         self.firewall_driver.unfilter_instance(instance)
@@ -433,7 +491,6 @@ class LibvirtConnection(driver.ComputeDriver):
                     'container_format': base['container_format'],
                     'is_public': False,
                     'properties': {'architecture': base['architecture'],
-                                   'type': base['type'],
                                    'name': '%s.%s' % (base['name'], image_id),
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
@@ -484,7 +541,7 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
-        self._conn.createXML(xml, 0)
+        self._create_new_domain(xml)
         self.firewall_driver.apply_instance_filter(instance)
 
         timer = utils.LoopingCall(f=None)
@@ -532,7 +589,7 @@ class LibvirtConnection(driver.ComputeDriver):
                          'kernel_id': FLAGS.rescue_kernel_id,
                          'ramdisk_id': FLAGS.rescue_ramdisk_id}
         self._create_image(instance, xml, '.rescue', rescue_images)
-        self._conn.createXML(xml, 0)
+        self._create_new_domain(xml)
 
         timer = utils.LoopingCall(f=None)
 
@@ -580,6 +637,7 @@ class LibvirtConnection(driver.ComputeDriver):
         self.firewall_driver.prepare_instance_filter(instance, network_info)
 
         self._create_image(instance, xml, network_info)
+<<<<<<< TREE
 
         try:
             self._conn.createXML(xml, 0)
@@ -590,8 +648,22 @@ class LibvirtConnection(driver.ComputeDriver):
 
         LOG.debug(_("VM %s successfully created.") % name)
 
+=======
+        domain = self._create_new_domain(xml)
+        LOG.debug(_("instance %s: is running"), instance['name'])
+>>>>>>> MERGE-SOURCE
         self.firewall_driver.apply_instance_filter(instance)
 
+<<<<<<< TREE
+=======
+        if FLAGS.start_guests_on_host_boot:
+            LOG.debug(_("instance %s: setting autostart ON") %
+                      instance['name'])
+            domain.setAutostart(1)
+
+        timer = utils.LoopingCall(f=None)
+
+>>>>>>> MERGE-SOURCE
         def _wait_for_boot():
             """Check to see if the VM is running."""
             try:
@@ -814,7 +886,10 @@ class LibvirtConnection(driver.ComputeDriver):
 
         root_fname = '%08x' % int(disk_images['image_id'])
         size = FLAGS.minimum_root_size
-        if inst['instance_type'] == 'm1.tiny' or suffix == '.rescue':
+
+        inst_type_id = inst['instance_type_id']
+        inst_type = instance_types.get_instance_type(inst_type_id)
+        if inst_type['name'] == 'm1.tiny' or suffix == '.rescue':
             size = None
             root_fname += "_sm"
 
@@ -826,14 +901,13 @@ class LibvirtConnection(driver.ComputeDriver):
                           user=user,
                           project=project,
                           size=size)
-        type_data = instance_types.get_instance_type(inst['instance_type'])
 
-        if type_data['local_gb']:
+        if inst_type['local_gb']:
             self._cache_image(fn=self._create_local,
                               target=basepath('disk.local'),
-                              fname="local_%s" % type_data['local_gb'],
+                              fname="local_%s" % inst_type['local_gb'],
                               cow=FLAGS.use_cow_images,
-                              local_gb=type_data['local_gb'])
+                              local_gb=inst_type['local_gb'])
 
         # For now, we assume that if we're not using a kernel, we're using a
         # partitioned disk image where the target partition is the first
@@ -967,8 +1041,8 @@ class LibvirtConnection(driver.ComputeDriver):
             nics.append(self._get_nic_for_xml(network,
                                               mapping))
         # FIXME(vish): stick this in db
-        instance_type_name = instance['instance_type']
-        instance_type = instance_types.get_instance_type(instance_type_name)
+        inst_type_id = instance['instance_type_id']
+        inst_type = instance_types.get_instance_type(inst_type_id)
 
         if FLAGS.use_cow_images:
             driver_type = 'qcow2'
@@ -979,10 +1053,10 @@ class LibvirtConnection(driver.ComputeDriver):
                     'name': instance['name'],
                     'basepath': os.path.join(FLAGS.instances_path,
                                              instance['name']),
-                    'memory_kb': instance_type['memory_mb'] * 1024,
-                    'vcpus': instance_type['vcpus'],
+                    'memory_kb': inst_type['memory_mb'] * 1024,
+                    'vcpus': inst_type['vcpus'],
                     'rescue': rescue,
-                    'local': instance_type['local_gb'],
+                    'local': inst_type['local_gb'],
                     'driver_type': driver_type,
                     'nics': nics}
 
@@ -1004,17 +1078,46 @@ class LibvirtConnection(driver.ComputeDriver):
         return xml
 
     def get_info(self, instance_name):
+        # NOTE(justinsb): When libvirt isn't running / can't connect, we get:
+        # libvir: Remote error : unable to connect to
+        #  '/var/run/libvirt/libvirt-sock', libvirtd may need to be started:
+        #  No such file or directory
         try:
             virt_dom = self._conn.lookupByName(instance_name)
-        except:
-            raise exception.NotFound(_("Instance %s not found")
-                                     % instance_name)
+        except libvirt.libvirtError as e:
+            errcode = e.get_error_code()
+            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.NotFound(_("Instance %s not found")
+                                         % instance_name)
+            LOG.warning(_("Error from libvirt during lookup. "
+                          "Code=%(errcode)s Error=%(e)s") %
+                        locals())
+            raise
+
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
                 'mem': mem,
                 'num_cpu': num_cpu,
                 'cpu_time': cpu_time}
+
+    def _create_new_domain(self, xml, persistent=True, launch_flags=0):
+        # NOTE(justinsb): libvirt has two types of domain:
+        # * a transient domain disappears when the guest is shutdown
+        # or the host is rebooted.
+        # * a permanent domain is not automatically deleted
+        # NOTE(justinsb): Even for ephemeral instances, transient seems risky
+
+        if persistent:
+            # To create a persistent domain, first define it, then launch it.
+            domain = self._conn.defineXML(xml)
+
+            domain.createWithFlags(launch_flags)
+        else:
+            # createXML call creates a transient domain
+            domain = self._conn.createXML(xml, launch_flags)
+
+        return domain
 
     def get_diagnostics(self, instance_name):
         raise exception.ApiError(_("diagnostics are not supported "
@@ -1419,18 +1522,13 @@ class LibvirtConnection(driver.ComputeDriver):
         # wait for completion
         timeout_count = range(FLAGS.live_migration_retry_count)
         while timeout_count:
-            try:
-                filter_name = 'nova-instance-%s' % instance_ref.name
-                self._conn.nwfilterLookupByName(filter_name)
+            if self.firewall_driver.instance_filter_exists(instance_ref):
                 break
-            except libvirt.libvirtError:
-                timeout_count.pop()
-                if len(timeout_count) == 0:
-                    ec2_id = instance_ref['hostname']
-                    iname = instance_ref.name
-                    msg = _('Timeout migrating for %(ec2_id)s(%(iname)s)')
-                    raise exception.Error(msg % locals())
-                time.sleep(1)
+            timeout_count.pop()
+            if len(timeout_count) == 0:
+                msg = _('Timeout migrating for %s. nwfilter not found.')
+                raise exception.Error(msg % instance_ref.name)
+            time.sleep(1)
 
     def live_migration(self, ctxt, instance_ref, dest,
                        post_method, recover_method):
@@ -1557,6 +1655,10 @@ class FirewallDriver(object):
         :method:`prepare_instance_filter`.
 
         """
+        raise NotImplementedError()
+
+    def instance_filter_exists(self, instance):
+        """Check nova-instance-instance-xxx exists"""
         raise NotImplementedError()
 
 
@@ -1866,6 +1968,21 @@ class NWFilterFirewall(FirewallDriver):
             return 'nova-instance-%s' % (instance['name'])
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
+    def instance_filter_exists(self, instance):
+        """Check nova-instance-instance-xxx exists"""
+        network_info = _get_network_info(instance)
+        for (network, mapping) in network_info:
+            nic_id = mapping['mac'].replace(':', '')
+            instance_filter_name = self._instance_filter_name(instance, nic_id)
+            try:
+                self._conn.nwfilterLookupByName(instance_filter_name)
+            except libvirt.libvirtError:
+                name = instance.name
+                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
+                            '%(name)s is not found.') % locals())
+                return False
+        return True
+
 
 class IptablesFirewallDriver(FirewallDriver):
     def __init__(self, execute=None, **kwargs):
@@ -2054,6 +2171,10 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv6_rules += ['-j $sg-fallback']
 
         return ipv4_rules, ipv6_rules
+
+    def instance_filter_exists(self, instance):
+        """Check nova-instance-instance-xxx exists"""
+        return self.nwfilter.instance_filter_exists(instance)
 
     def refresh_security_group_members(self, security_group):
         pass
