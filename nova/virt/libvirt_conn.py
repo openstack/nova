@@ -487,6 +487,28 @@ class LibvirtConnection(driver.ComputeDriver):
                                       instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rebooted'), instance['name'])
+
+                    # Fix lp747922
+                    instance_id = instance['id'] 
+                    for vol in db.volume_get_all_by_instance(
+                        context.get_admin_context(), instance_id):
+                        # LOG.debug(_("re-attaching: %s") % vol['ec2_id'])
+                        # instance-id : instance-00000001
+                        # device_path : /dev/etherd/e0.1, etc
+                        # mountpoint  :  /dev/sdh
+                        # dev_path is not stored anywhere, and it has driver
+                        # specific format. Therefore, noway other than calling
+                        # discover_driver here.
+                        dev_path = nova.volume.driver.discover_volume(self,
+                                                                      context,
+                                                                      vol)
+                        LOG.debug(_("instance_id: %s, volume_id: %s, mountpoint: %s") %
+                                  (instance_id, dev_path, vol['mountpoint']))
+                        self.attach_volume(instance['name'],
+                                           dev_path,
+                                           vol['mountpoint']);
+                    # Fix lp747922
+
                     timer.stop()
             except Exception, exn:
                 LOG.exception(_('_wait_for_reboot failed: %s'), exn)
@@ -497,24 +519,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
         timer.f = _wait_for_reboot
         timer_result=timer.start(interval=0.5, now=True)
-
-        # Fix lp747922
-        instance_id = instance['id'] 
-        for vol in db.volume_get_all_by_instance(context.get_admin_context(),
-                                                 instance_id):
-#            LOG.debug(_("re-attaching: %s") % vol['ec2_id'])
-# instance-id : instance-00000001
-# device_path : /dev/etherd/e0.1, /dev/mapper/nova--volumes-volume--00000001
-# mountpoint  :  sdh
-# BTW, is iSCSI working?
-            LOG.debug(_("instance_id: %s, volume_id: %s, mountpoint: %s") %
-                      (instance_id, vol['id'], vol['mountpoint']))
-#            self.attach_volume(instance['name'], vol['id'], vol['mountpoint'])
-
-            self.attach_volume(instance['name'],
-                               '/dev/mapper/nova--volumes-volume--00000001',
-                               'vdb')
-
         return timer_result
 
     @exception.wrap_exception
