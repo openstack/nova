@@ -570,6 +570,49 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for mangaging VM instances."""
 
+    def list(self, host=None):
+        """Show a list of all instances
+
+        :param host: show all instance on specified host.
+        :param instance: show specificed instance.
+        """
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+              "  %-10s %-10s %-10s %-5s" % (
+            _('instance'),
+            _('node'),
+            _('type'),
+            _('state'),
+            _('launched'),
+            _('image'),
+            _('kernel'),
+            _('ramdisk'),
+            _('project'),
+            _('user'),
+            _('zone'),
+            _('index'))
+
+        if host == None:
+            instances = db.instance_get_all(context.get_admin_context())
+        else:
+            instances = db.instance_get_all_by_host(
+                           context.get_admin_context(), host)
+
+        for instance in instances:
+            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+                  "  %-10s %-10s %-10s %-5d" % (
+                instance['hostname'],
+                instance['host'],
+                instance['instance_type'],
+                instance['state_description'],
+                instance['launched_at'],
+                instance['image_id'],
+                instance['kernel_id'],
+                instance['ramdisk_id'],
+                instance['project_id'],
+                instance['user_id'],
+                instance['availability_zone'],
+                instance['launch_index'])
+
     def live_migration(self, ec2_id, dest):
         """Migrates a running instance to a new machine.
 
@@ -714,49 +757,6 @@ class DbCommands(object):
     def version(self):
         """Print the current database version."""
         print migration.db_version()
-
-
-class InstanceCommands(object):
-    """Class for managing instances."""
-
-    def list(self, host=None, instance=None):
-        """Show a list of all instances"""
-        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
-              "  %-10s %-10s %-10s %-5s" % (
-            _('instance'),
-            _('node'),
-            _('type'),
-            _('state'),
-            _('launched'),
-            _('image'),
-            _('kernel'),
-            _('ramdisk'),
-            _('project'),
-            _('user'),
-            _('zone'),
-            _('index'))
-
-        if host == None:
-            instances = db.instance_get_all(context.get_admin_context())
-        else:
-            instances = db.instance_get_all_by_host(
-                           context.get_admin_context(), host)
-
-        for instance in instances:
-            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
-                  "  %-10s %-10s %-10s %-5d" % (
-                instance['hostname'],
-                instance['host'],
-                instance['instance_type'],
-                instance['state_description'],
-                instance['launched_at'],
-                instance['image_id'],
-                instance['kernel_id'],
-                instance['ramdisk_id'],
-                instance['project_id'],
-                instance['user_id'],
-                instance['availability_zone'],
-                instance['launch_index'])
 
 
 class VolumeCommands(object):
@@ -1044,8 +1044,7 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands),
-    ('instance', InstanceCommands)]
+    ('flavor', InstanceTypeCommands)]
 
 
 def lazy_match(name, key_value_tuples):
