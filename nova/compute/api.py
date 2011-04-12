@@ -105,7 +105,7 @@ class API(base.Base):
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
     def _check_metadata_properties_quota(self, context, metadata={}):
-        """Enforce quota limits on metadata properties"""
+        """Enforce quota limits on metadata properties."""
         num_metadata = len(metadata)
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
