@@ -232,7 +232,7 @@ def generate_vpn_files(project_id):
 
     genvpn_sh_path = os.path.join(os.path.dirname(__file__),
                                   'CA',
-                                  'geninter.sh')
+                                  'genvpn.sh')
     if os.path.exists(crt_fn):
         return
     _ensure_project_folder(project_id)
