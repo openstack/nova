@@ -111,10 +111,10 @@ class VolumeDriver(object):
 
         # zero out old volumes to prevent data leaking between users
         # TODO(ja): reclaiming space should be done lazy and low priority
-        self._try_execute('sudo', 'dd', 'if=/dev/zero',
-                          'of=%s' % self.local_path(volume),
-                          'count=%d' % (volume['size'] * 1024),
-                          'bs=1M')
+        self._execute('sudo', 'dd', 'if=/dev/zero',
+                      'of=%s' % self.local_path(volume),
+                      'count=%d' % (volume['size'] * 1024),
+                      'bs=1M')
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
