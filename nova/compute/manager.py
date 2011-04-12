@@ -150,10 +150,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                 info = self.driver.get_info(instance_ref['name'])
             except exception.NotFound:
                 info = None
-                state = power_state.FAILED
 
             if info is not None:
                 state = info['state']
+            else:
+                state = power_state.FAILED
 
         self.db.instance_set_state(context, instance_id, state)
 
@@ -246,10 +247,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.spawn(instance_ref)
             self._update_launched_at(context, instance_id)
         except Exception as ex:  # pylint: disable=W0702
-            LOG.debug(ex)
-            LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
-                            " enabled in the BIOS?"), instance_id,
-                                                     context=context)
+            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                    "virtualization enabled in the BIOS? Details: "
+                    "%(ex)s") % locals()
+            LOG.exception(msg)
 
         self._update_state(context, instance_id)
 
