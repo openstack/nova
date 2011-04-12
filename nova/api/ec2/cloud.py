@@ -144,7 +144,7 @@ class CloudController(object):
             return None
 
         # This ensures that all attributes of the instance
-        # are populated. 
+        # are populated.
         instance_ref = db.instance_get(ctxt, instance_ref['id'])
 
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
