@@ -20,6 +20,7 @@
 Handles all requests relating to instances (guest vms).
 """
 
+import base64
 import datetime
 import re
 import time
