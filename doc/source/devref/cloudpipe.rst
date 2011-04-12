@@ -50,6 +50,18 @@ Making a cloudpipe image is relatively easy.
    :language: bash
    :linenos:
 
+# set up.sh in /etc/openvpn/
+
+.. literalinclude:: up.sh
+   :language: bash
+   :linenos:
+
+# set down.sh in /etc/openvpn/
+
+.. literalinclude:: down.sh
+   :language: bash
+   :linenos:
+
 # download and run the payload on boot from /etc/rc.local.
 
 .. literalinclude:: rc.local
