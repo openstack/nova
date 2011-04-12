@@ -222,7 +222,7 @@ class VMOps(object):
                 timer.stop()
                 return False
 
-            timer.f = _wait_for_boot
+        timer.f = _wait_for_boot
 
         # call to reset network to configure network from xenstore
         self.reset_network(instance, vm_ref)
