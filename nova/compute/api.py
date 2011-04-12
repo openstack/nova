@@ -105,6 +105,15 @@ class API(base.Base):
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
+    def _check_injected_file_format(self, injected_files):
+        """Ensure given injected files are in the correct format."""
+        for _, content in injected_files:
+            try:
+                base64.b64decode(content)
+            except TypeError:
+                msg = _("File contents must be base64 encoded.")
+                raise exception.Error(msg)
+
     def _check_metadata_properties_quota(self, context, metadata={}):
         """Enforce quota limits on metadata properties"""
         num_metadata = len(metadata)
@@ -262,32 +271,6 @@ class API(base.Base):
             self.trigger_security_group_members_refresh(elevated, group_id)
 
         return [dict(x.iteritems()) for x in instances]
-
-    def _check_metadata_quota(self, context, metadata):
-        num_metadata = len(metadata)
-        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
-        if quota_metadata < num_metadata:
-            pid = context.project_id
-            msg = (_("Quota exceeeded for %(pid)s,"
-                     " tried to set %(num_metadata)s metadata properties")
-                   % locals())
-            LOG.warn(msg)
-            raise quota.QuotaError(msg, "MetadataLimitExceeded")
-
-    def _check_metadata_item_length(self, context, metadata):
-        # Because metadata is stored in the DB, we hard-code the size limits
-        # In future, we may support more variable length strings, so we act
-        #  as if this is quota-controlled for forwards compatibility
-        for metadata_item in metadata:
-            k = metadata_item['key']
-            v = metadata_item['value']
-            if len(k) > 255 or len(v) > 255:
-                pid = context.project_id
-                msg = (_("Quota exceeeded for %(pid)s,"
-                         " metadata property key or value too long")
-                       % locals())
-                LOG.warn(msg)
-                raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
     def has_finished_migration(self, context, instance_id):
         """Retrieves whether or not a finished migration exists for
@@ -528,13 +511,12 @@ class API(base.Base):
             msg = _("Instance already building")
             raise exception.BuildInProgress(msg)
 
-        metadata = metadata or []
-        self._check_metadata_quota(context, metadata)
-        self._check_metadata_item_length(context, metadata)
+        metadata = metadata or {}
+        self._check_metadata_properties_quota(context, metadata)
 
         files_to_inject = files_to_inject or []
         self._check_injected_file_quota(context, files_to_inject)
-        self._check_injected_file_format(context, files_to_inject)
+        self._check_injected_file_format(files_to_inject)
 
         self.db.instance_update(context, instance_id, {"metadata": metadata})
 
