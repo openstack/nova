@@ -33,7 +33,8 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 :rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
 :injected_network_template:  Template file for injected network
 :allow_project_net_traffic:  Whether to allow in project network traffic
-
+:volume_manager:  Name of class that handles persistent storage, loaded by
+                  :func:`nova.utils.import_object`
 """
 
 import multiprocessing
@@ -218,6 +219,8 @@ class LibvirtConnection(driver.ComputeDriver):
 
         fw_class = utils.import_class(FLAGS.firewall_driver)
         self.firewall_driver = fw_class(get_connection=self._get_connection)
+        # NOTE(itoumsn): This is an ugly hack to re-attach volumes on reboot.
+        self.volume_manager = utils.import_object(FLAGS.volume_manager)
 
     def init_host(self, host):
         # Adopt existing VM's running here
@@ -539,15 +542,12 @@ class LibvirtConnection(driver.ComputeDriver):
                     instance_id = instance['id']
                     for vol in db.volume_get_all_by_instance(
                         context.get_admin_context(), instance_id):
-                        # instance-id : instance-00000001
-                        # device_path : /dev/etherd/e0.1, etc
-                        # mountpoint  :  /dev/sdh
                         # dev_path is not stored anywhere, and it has driver
-                        # specific format. Therefore, noway other than calling
-                        # discover_driver here.
-                        dev_path = nova.volume.driver.discover_volume(self,
-                                                                      context,
-                                                                      vol)
+                        # specific format. Furthermore, compute node specific.
+                        # Therefore, noway other than calling discover_driver
+                        # here.
+                        dev_path = self.volume_manager.driver.discover_volume(
+                            context, vol)
                         LOG.debug(
                             _("Re-attaching %(dev_path)s to %(mountpoint)s") %
                             (dev_path, vol['mountpoint']))
