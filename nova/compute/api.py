@@ -497,10 +497,11 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_id, metadata=None):
+    def rebuild(self, context, instance_id, image_id, metadata=None,
+                files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
-
         instance = db.api.instance_get(context, instance_id)
+
         if instance["state"] == power_state.BUILDING:
             msg = _("Instance already building")
             raise exception.BuildInProgress(msg)
@@ -509,10 +510,21 @@ class API(base.Base):
         self._check_metadata_quota(context, metadata)
         self._check_metadata_item_length(context, metadata)
 
-        self._cast_compute_message('rebuild_instance', context,
-                                   instance_id, params={"image_id": image_id})
+        files_to_inject = files_to_inject or []
+        self._check_injected_file_quota(context, files_to_inject)
+        self._check_injected_file_format(context, files_to_inject)
 
         self.db.instance_update(context, instance_id, {"metadata": metadata})
+
+        rebuild_params = {
+            "image_id": image_id,
+            "injected_files": files_to_inject,
+        }
+
+        self._cast_compute_message('rebuild_instance',
+                                   context,
+                                   instance_id,
+                                   params=rebuild_params)
 
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process"""

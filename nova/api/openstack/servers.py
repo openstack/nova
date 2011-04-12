@@ -606,22 +606,32 @@ class ControllerV10(Controller):
             except exception.TimeoutException:
                 return exc.HTTPRequestTimeout()
 
-    def _action_rebuild(self, input_dict, req, id):
-        context = req.environ['nova.context']
-        if (not 'rebuild' in input_dict
-            or not 'imageId' in input_dict['rebuild']):
-            msg = _("No imageId was specified")
-            return faults.Fault(exc.HTTPBadRequest(msg))
-
-        image_id = input_dict['rebuild']['imageId']
+    def _action_rebuild(self, info, request, instance_id):
+        context = request.environ['nova.context']
+        instance_id = int(instance_id)
 
         try:
-            self.compute_api.rebuild(context, id, image_id)
-        except exception.BuildInProgress:
-            msg = _("Unable to rebuild server that is being rebuilt")
-            return faults.Fault(exc.HTTPConflict(explanation=msg))
+            image_id = info["rebuild"]["imageId"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageId from request.")
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        return exc.HTTPAccepted()
+        try:
+            self.compute_api.rebuild(context, instance_id, image_id)
+        except exception.BuildInProgress:
+            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
+        except exception.Error as ex:
+            msg = _("Error encountered attempting to rebuild instance "
+                    "%(instance_id): %(ex)") % locals()
+            LOG.error(msg)
+            raise
+
+        response = exc.HTTPAccepted()
+        response.empty_body = True
+        return response
 
 
 class ControllerV11(Controller):
@@ -662,33 +672,66 @@ class ControllerV11(Controller):
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
 
-    def _action_rebuild(self, input_dict, req, id):
-        context = req.environ['nova.context']
-        if (not 'rebuild' in input_dict
-            or not 'imageRef' in input_dict['rebuild']):
-            msg = _("No imageRef was specified")
-            return faults.Fault(exc.HTTPBadRequest(msg))
+    def _check_metadata(self, metadata):
+        """Ensure that the metadata given is of the correct type."""
+        try:
+            metadata.iteritems()
+        except AttributeError as ex:
+            msg = _("Unable to parse metadata key/value pairs.")
+            LOG.debug(msg)
+            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        image_ref = input_dict['rebuild']['imageRef']
-        image_id = common.get_id_from_href(image_ref)
-
-        metadata = []
-        if 'metadata' in input_dict['rebuild']:
+    def _check_personalities(self, personalities):
+        """Ensure the given personalities have valid paths and contents."""
+        for personality in personalities:
             try:
-                for k, v in input_dict['rebuild']['metadata'].items():
-                    metadata.append({'key': k, 'value': v})
+                path = personality["path"]
+                contents = personality["contents"]
+            except (KeyError, TypeError):
+                msg = _("Unable to parse personality path/contents.")
+                LOG.info(msg)
+                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-            except Exception:
-                msg = _("Improperly formatted metadata provided")
-                return exc.HTTPBadRequest(msg)
+            try:
+                base64.b64decode(contents)
+            except TypeError:
+                msg = _("Personality content could not be Base64 decoded.")
+                LOG.info(msg)
+                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+    def _action_rebuild(self, info, request, instance_id):
+        context = request.environ['nova.context']
+        instance_id = int(instance_id)
 
         try:
-            self.compute_api.rebuild(context, id, image_id, metadata)
-        except exception.BuildInProgress:
-            msg = _("Unable to rebuild server that is being rebuilt")
-            return faults.Fault(exc.HTTPConflict(explanation=msg))
+            image_ref = info["rebuild"]["imageRef"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageRef from request.")
+            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        return exc.HTTPAccepted()
+        image_id = common.get_id_from_href(image_ref)
+        personalities = info["rebuild"].get("personality", [])
+        metadata = info["rebuild"].get("metadata", {})
+
+        self._check_metadata(metadata)
+        self._check_personalities(personalities)
+
+        try:
+            args = [context, instance_id, image_id, metadata, personalities]
+            self.compute_api.rebuild(*args)
+        except exception.BuildInProgress:
+            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
+        except exception.Error as ex:
+            msg = _("Error encountered attempting to rebuild instance "
+                    "%(instance_id): %(ex)") % locals()
+            LOG.error(msg)
+            raise
+
+        response = exc.HTTPAccepted()
+        response.empty_body = True
+        return response
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11

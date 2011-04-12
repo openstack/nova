@@ -981,6 +981,7 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
+        self.assertEqual(res.body, "")
 
     def test_server_rebuild_rejected_when_building(self):
         body = {
