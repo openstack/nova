@@ -114,7 +114,6 @@ class API(base.Base):
         Verifies that quota and other arguments are valid.
 
         """
-
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 
