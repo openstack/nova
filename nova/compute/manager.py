@@ -1090,6 +1090,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
+            if db_instance['state_description'] == 'migrating':
+                # A situation which db record exists, but no instance"
+                # sometimes occurs while live-migration at src compute,
+                # this case should be ignored.
+                LOG.debug(_("Ignoring %(name)s, as it's currently being "
+                           "migrated.") % locals())
+                continue
+
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
@@ -1097,12 +1105,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            db_instance['id'],
                                            vm_state)
 
-            if vm_state == power_state.SHUTOFF:
-                # TODO(soren): This is what the compute manager does when you
-                # terminate an instance. At some point I figure we'll have a
-                # "terminated" state and some sort of cleanup job that runs
-                # occasionally, cleaning them out.
-                self.db.instance_destroy(context, db_instance['id'])
+            # NOTE(justinsb): We no longer auto-remove SHUTOFF instances
+            # It's quite hard to get them back when we do.
 
         # Are there VMs not in the DB?
         for vm_not_found_in_db in vms_not_found_in_db:

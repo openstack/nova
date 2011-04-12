@@ -570,6 +570,49 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for mangaging VM instances."""
 
+    def list(self, host=None):
+        """Show a list of all instances
+
+        :param host: show all instance on specified host.
+        :param instance: show specificed instance.
+        """
+        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+              "  %-10s %-10s %-10s %-5s" % (
+            _('instance'),
+            _('node'),
+            _('type'),
+            _('state'),
+            _('launched'),
+            _('image'),
+            _('kernel'),
+            _('ramdisk'),
+            _('project'),
+            _('user'),
+            _('zone'),
+            _('index'))
+
+        if host == None:
+            instances = db.instance_get_all(context.get_admin_context())
+        else:
+            instances = db.instance_get_all_by_host(
+                           context.get_admin_context(), host)
+
+        for instance in instances:
+            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
+                  "  %-10s %-10s %-10s %-5d" % (
+                instance['hostname'],
+                instance['host'],
+                instance['instance_type'],
+                instance['state_description'],
+                instance['launched_at'],
+                instance['image_id'],
+                instance['kernel_id'],
+                instance['ramdisk_id'],
+                instance['project_id'],
+                instance['user_id'],
+                instance['availability_zone'],
+                instance['launch_index'])
+
     def live_migration(self, ec2_id, dest):
         """Migrates a running instance to a new machine.
 
@@ -701,15 +744,6 @@ class ServiceCommands(object):
                  {"method": "update_available_resource"})
 
 
-class LogCommands(object):
-    def request(self, request_id, logfile='/var/log/nova.log'):
-        """Show all fields in the log for the given request.  Assumes you
-        haven't changed the log format too much.
-        ARGS: request_id [logfile]"""
-        lines = utils.execute("cat %s | grep '\[%s '" % (logfile, request_id))
-        print re.sub('#012', "\n", "\n".join(lines))
-
-
 class DbCommands(object):
     """Class for managing the database."""
 
@@ -723,49 +757,6 @@ class DbCommands(object):
     def version(self):
         """Print the current database version."""
         print migration.db_version()
-
-
-class InstanceCommands(object):
-    """Class for managing instances."""
-
-    def list(self, host=None, instance=None):
-        """Show a list of all instances"""
-        print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
-              "  %-10s %-10s %-10s %-5s" % (
-            _('instance'),
-            _('node'),
-            _('type'),
-            _('state'),
-            _('launched'),
-            _('image'),
-            _('kernel'),
-            _('ramdisk'),
-            _('project'),
-            _('user'),
-            _('zone'),
-            _('index'))
-
-        if host == None:
-            instances = db.instance_get_all(context.get_admin_context())
-        else:
-            instances = db.instance_get_all_by_host(
-                           context.get_admin_context(), host)
-
-        for instance in instances:
-            print "%-10s %-15s %-10s %-10s %-19s %-12s %-12s %-12s" \
-                  "  %-10s %-10s %-10s %-5d" % (
-                instance['hostname'],
-                instance['host'],
-                instance['instance_type'],
-                instance['state_description'],
-                instance['launched_at'],
-                instance['image_id'],
-                instance['kernel_id'],
-                instance['ramdisk_id'],
-                instance['project_id'],
-                instance['user_id'],
-                instance['availability_zone'],
-                instance['launch_index'])
 
 
 class VolumeCommands(object):
@@ -878,7 +869,7 @@ class InstanceTypeCommands(object):
             elif name == "--all":
                 inst_types = instance_types.get_all_types(True)
             else:
-                inst_types = instance_types.get_instance_type(name)
+                inst_types = instance_types.get_instance_type_by_name(name)
         except exception.DBError, e:
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
@@ -894,20 +885,17 @@ class ImageCommands(object):
     def __init__(self, *args, **kwargs):
         self.image_service = utils.import_object(FLAGS.image_service)
 
-    def _register(self, image_type, disk_format, container_format,
+    def _register(self, container_format, disk_format,
                   path, owner, name=None, is_public='T',
                   architecture='x86_64', kernel_id=None, ramdisk_id=None):
-        meta = {'is_public': True,
+        meta = {'is_public': (is_public == 'T'),
                 'name': name,
-                'disk_format': disk_format,
                 'container_format': container_format,
+                'disk_format': disk_format,
                 'properties': {'image_state': 'available',
-                               'owner_id': owner,
-                               'type': image_type,
+                               'project_id': owner,
                                'architecture': architecture,
-                               'image_location': 'local',
-                               'is_public': (is_public == 'T')}}
-        print image_type, meta
+                               'image_location': 'local'}}
         if kernel_id:
             meta['properties']['kernel_id'] = int(kernel_id)
         if ramdisk_id:
@@ -932,16 +920,18 @@ class ImageCommands(object):
         ramdisk_id = self.ramdisk_register(ramdisk, owner, None,
                                     is_public, architecture)
         self.image_register(image, owner, name, is_public,
-                       architecture, kernel_id, ramdisk_id)
+                            architecture, 'ami', 'ami',
+                            kernel_id, ramdisk_id)
 
     def image_register(self, path, owner, name=None, is_public='T',
-                       architecture='x86_64', kernel_id=None, ramdisk_id=None,
-                       disk_format='ami', container_format='ami'):
+                       architecture='x86_64', container_format='bare',
+                       disk_format='raw', kernel_id=None, ramdisk_id=None):
         """Uploads an image into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
+                   [container_format='bare'] [disk_format='raw']
                    [kernel_id=None] [ramdisk_id=None]
-                   [disk_format='ami'] [container_format='ami']"""
-        return self._register('machine', disk_format, container_format, path,
+        """
+        return self._register(container_format, disk_format, path,
                               owner, name, is_public, architecture,
                               kernel_id, ramdisk_id)
 
@@ -950,7 +940,7 @@ class ImageCommands(object):
         """Uploads a kernel into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
         """
-        return self._register('kernel', 'aki', 'aki', path, owner, name,
+        return self._register('aki', 'aki', path, owner, name,
                               is_public, architecture)
 
     def ramdisk_register(self, path, owner, name=None, is_public='T',
@@ -958,7 +948,7 @@ class ImageCommands(object):
         """Uploads a ramdisk into the image_service
         arguments: path owner [name] [is_public='T'] [architecture='x86_64']
         """
-        return self._register('ramdisk', 'ari', 'ari', path, owner, name,
+        return self._register('ari', 'ari', path, owner, name,
                               is_public, architecture)
 
     def _lookup(self, old_image_id):
@@ -975,16 +965,17 @@ class ImageCommands(object):
                    'ramdisk': 'ari'}
         container_format = mapping[old['type']]
         disk_format = container_format
+        if container_format == 'ami' and not old.get('kernelId'):
+            container_format = 'bare'
+            disk_format = 'raw'
         new = {'disk_format': disk_format,
                'container_format': container_format,
-               'is_public': True,
+               'is_public': old['isPublic'],
                'name': old['imageId'],
                'properties': {'image_state': old['imageState'],
-                              'owner_id': old['imageOwnerId'],
+                              'project_id': old['imageOwnerId'],
                               'architecture': old['architecture'],
-                              'type': old['type'],
-                              'image_location': old['imageLocation'],
-                              'is_public': old['isPublic']}}
+                              'image_location': old['imageLocation']}}
         if old.get('kernelId'):
             new['properties']['kernel_id'] = self._lookup(old['kernelId'])
         if old.get('ramdiskId'):
@@ -1049,13 +1040,11 @@ CATEGORIES = [
     ('network', NetworkCommands),
     ('vm', VmCommands),
     ('service', ServiceCommands),
-    ('log', LogCommands),
     ('db', DbCommands),
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands),
-    ('instance', InstanceCommands)]
+    ('flavor', InstanceTypeCommands)]
 
 
 def lazy_match(name, key_value_tuples):

@@ -110,9 +110,8 @@ class API(base.Base):
         quota_metadata = quota.allowed_metadata_items(context, num_metadata)
         if quota_metadata < num_metadata:
             pid = context.project_id
-            msg = (_("Quota exceeeded for %(pid)s,"
-                     " tried to set %(num_metadata)s metadata properties")
-                   % locals())
+            msg = _("Quota exceeeded for %(pid)s, tried to set "
+                    "%(num_metadata)s metadata properties") % locals()
             LOG.warn(msg)
             raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
@@ -122,9 +121,8 @@ class API(base.Base):
         for k, v in metadata.iteritems():
             if len(k) > 255 or len(v) > 255:
                 pid = context.project_id
-                msg = (_("Quota exceeeded for %(pid)s,"
-                         " metadata property key or value too long")
-                       % locals())
+                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                        "key or value too long") % locals()
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
@@ -140,9 +138,11 @@ class API(base.Base):
         Create the number of instances requested if quota and
         other arguments check out ok.
         """
+        if not instance_type:
+            instance_type = instance_types.get_default_instance_type()
 
-        type_data = instance_types.get_instance_type(instance_type)
-        num_instances = quota.allowed_instances(context, max_count, type_data)
+        num_instances = quota.allowed_instances(context, max_count,
+                                                instance_type)
         if num_instances < min_count:
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s,"
@@ -205,10 +205,10 @@ class API(base.Base):
             'user_id': context.user_id,
             'project_id': context.project_id,
             'launch_time': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
-            'instance_type': instance_type,
-            'memory_mb': type_data['memory_mb'],
-            'vcpus': type_data['vcpus'],
-            'local_gb': type_data['local_gb'],
+            'instance_type_id': instance_type['id'],
+            'memory_mb': instance_type['memory_mb'],
+            'vcpus': instance_type['vcpus'],
+            'local_gb': instance_type['local_gb'],
             'display_name': display_name,
             'display_description': display_description,
             'user_data': user_data or '',
@@ -371,9 +371,13 @@ class API(base.Base):
                         instance_id)
             raise
 
-        if (instance['state_description'] == 'terminating'):
+        if instance['state_description'] == 'terminating':
             LOG.warning(_("Instance %s is already being terminated"),
                         instance_id)
+            return
+
+        if instance['state_description'] == 'migrating':
+            LOG.warning(_("Instance %s is being migrated"), instance_id)
             return
 
         self.update(context,
@@ -525,8 +529,7 @@ class API(base.Base):
     def resize(self, context, instance_id, flavor_id):
         """Resize a running instance."""
         instance = self.db.instance_get(context, instance_id)
-        current_instance_type = self.db.instance_type_get_by_name(
-            context, instance['instance_type'])
+        current_instance_type = instance['instance_type']
 
         new_instance_type = self.db.instance_type_get_by_flavor_id(
                 context, flavor_id)
