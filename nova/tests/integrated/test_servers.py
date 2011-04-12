@@ -134,50 +134,50 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Should be gone
         self.assertFalse(found_server)
 
-# TODO(justinsb): Enable this unit test when the metadata bug is fixed
-#    def test_create_server_with_metadata(self):
-#        """Creates a server with metadata"""
-#
-#        # Build the server data gradually, checking errors along the way
-#        server = self._build_minimal_create_server_request()
-#
-#        for metadata_count in range(30):
-#            metadata = {}
-#            for i in range(metadata_count):
-#                metadata['key_%s' % i] = 'value_%s' % i
-#            server['metadata'] = metadata
-#
-#            post = {'server': server}
-#            created_server = self.api.post_server(post)
-#            LOG.debug("created_server: %s" % created_server)
-#            self.assertTrue(created_server['id'])
-#            created_server_id = created_server['id']
-#            # Reenable when bug fixed
-#            # self.assertEqual(metadata, created_server.get('metadata'))
-#
-#            # Check it's there
-#            found_server = self.api.get_server(created_server_id)
-#            self.assertEqual(created_server_id, found_server['id'])
-#            self.assertEqual(metadata, found_server.get('metadata'))
-#
-#            # The server should also be in the all-servers details list
-#            servers = self.api.get_servers(detail=True)
-#            server_map = dict((server['id'], server) for server in servers)
-#            found_server = server_map.get(created_server_id)
-#            self.assertTrue(found_server)
-#            # Details do include metadata
-#            self.assertEqual(metadata, found_server.get('metadata'))
-#
-#            # The server should also be in the all-servers summary list
-#            servers = self.api.get_servers(detail=False)
-#            server_map = dict((server['id'], server) for server in servers)
-#            found_server = server_map.get(created_server_id)
-#            self.assertTrue(found_server)
-#            # Summary should not include metadata
-#            self.assertFalse(found_server.get('metadata'))
-#
-#            # Cleanup
-#            self._delete_server(created_server_id)
+    def test_create_server_with_metadata(self):
+        """Creates a server with metadata"""
+
+        # Build the server data gradually, checking errors along the way
+        server = self._build_minimal_create_server_request()
+
+        metadata = {}
+        for i in range(30):
+            metadata['key_%s' % i] = 'value_%s' % i
+
+        server['metadata'] = metadata
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # Reenable when bug fixed
+        self.assertEqual(metadata, created_server.get('metadata'))
+        # Check it's there
+
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+        self.assertEqual(metadata, found_server.get('metadata'))
+
+        # The server should also be in the all-servers details list
+        servers = self.api.get_servers(detail=True)
+        server_map = dict((server['id'], server) for server in servers)
+        found_server = server_map.get(created_server_id)
+        self.assertTrue(found_server)
+        # Details do include metadata
+        self.assertEqual(metadata, found_server.get('metadata'))
+
+        # The server should also be in the all-servers summary list
+        servers = self.api.get_servers(detail=False)
+        server_map = dict((server['id'], server) for server in servers)
+        found_server = server_map.get(created_server_id)
+        self.assertTrue(found_server)
+        # Summary should not include metadata
+        self.assertFalse(found_server.get('metadata'))
+
+        # Cleanup
+        self._delete_server(created_server_id)
 
 
 if __name__ == "__main__":
