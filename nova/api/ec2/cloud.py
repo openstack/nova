@@ -142,6 +142,11 @@ class CloudController(object):
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
+
+        # This ensures that all attributes of the instance
+        # are populated.
+        instance_ref = db.instance_get(ctxt, instance_ref['id'])
+
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
             keys = {'0': {'_name': instance_ref['key_name'],
