@@ -557,7 +557,7 @@ class RBDDriver(VolumeDriver):
         """Returns the path of the rbd volume."""
         # This is the same as the remote path
         # since qemu accesses it directly.
-        return self.discover_volume(volume)
+        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -571,10 +571,8 @@ class RBDDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
-        # NOTE(justinsb): This is messed up... discover_volume takes 3 args
-        # but then that would break local_path
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def undiscover_volume(self, volume):
