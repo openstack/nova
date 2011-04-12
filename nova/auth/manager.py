@@ -317,7 +317,7 @@ class AuthManager(object):
             if signature != expected_signature:
                 host_only = utils.get_host_only_server_string(server_string)
                 # If the given server_string contains port num, try without it.
-                if host_only is not '':
+                if host_only != '':
                     host_only_signature = signer.Signer(
                         user.secret.encode()).generate(params, verb,
                                                        host_only, path)
