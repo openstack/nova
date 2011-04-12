@@ -250,7 +250,7 @@ def _get_target(volume_id):
     result = (None, None)
     try:
         (r, _e) = utils.execute('sudo', 'iscsiadm', '-m', 'discovery',
-                                    '-t', 'sendtargets', '-p', volume_ref['host'])
+                                '-t', 'sendtargets', '-p', volume_ref['host'])
     except exception.ProcessExecutionError, exc:
         LOG.exception(exc)
     else:
