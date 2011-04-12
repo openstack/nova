@@ -51,6 +51,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
 flags.DEFINE_integer('block_device_creation_timeout', 10,
                      'time to wait for a block device to be created')
+flags.DEFINE_integer('max_kernel_ramdisk_size', 16 * 1024 * 1024,
+                     'maximum size in bytes of kernel or ramdisk images')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -448,6 +450,12 @@ class VMHelper(HelperBase):
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
+        elif image_type == ImageType.KERNEL_RAMDISK and \
+             vdi_size > FLAGS.max_kernel_ramdisk_size:
+            max_size = FLAGS.max_kernel_ramdisk_size
+            raise exception.Error(
+                _("Kernel/Ramdisk image is too large, %(vdi_size)d bytes "
+                  "(max %(max_size)d bytes)") % locals())
 
         name_label = get_name_label_for_image(image)
         vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
