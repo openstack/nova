@@ -142,6 +142,11 @@ class CloudController(object):
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
+
+        # This ensures that all attributes of the instance
+        # are populated.
+        instance_ref = db.instance_get(ctxt, instance_ref['id'])
+
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
             keys = {'0': {'_name': instance_ref['key_name'],
@@ -903,7 +908,10 @@ class CloudController(object):
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
         except exception.NotFound:
-            return self.image_service.show_by_name(context, ec2_id)
+            try:
+                return self.image_service.show_by_name(context, ec2_id)
+            except exception.NotFound:
+                raise exception.NotFound(_('Image %s not found') % ec2_id)
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
