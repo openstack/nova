@@ -93,7 +93,10 @@ class VolumeDriver(object):
     def create_volume(self, volume):
         """Creates a logical volume. Can optionally return a Dictionary of
         changes to the volume object to be persisted."""
-        sizestr = '%sG' % volume['size']
+        if int(volume['size']) == 0:
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % volume['size']
         self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
                            volume['name'],
                            FLAGS.volume_group)
@@ -599,7 +602,10 @@ class SheepdogDriver(VolumeDriver):
 
     def create_volume(self, volume):
         """Creates a sheepdog volume"""
-        sizestr = '%sG' % volume['size']
+        if int(volume['size']) == 0:
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % volume['size']
         self._try_execute('qemu-img', 'create',
                           "sheepdog:%s" % volume['name'],
                           sizestr)

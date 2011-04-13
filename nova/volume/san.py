@@ -219,7 +219,10 @@ class SolarisISCSIDriver(SanISCSIDriver):
 
     def create_volume(self, volume):
         """Creates a volume."""
-        sizestr = '%sG' % volume['size']
+        if int(volume['size']) == 0:
+            sizestr = '100M'
+        else:
+            sizestr = '%sG' % volume['size']
 
         zfs_poolname = self._build_zfs_poolname(volume)
 
@@ -486,7 +489,10 @@ class HpSanISCSIDriver(SanISCSIDriver):
         #TODO(justinsb): Should we default to inheriting thinProvision?
         cliq_args['thinProvision'] = '1' if FLAGS.san_thin_provision else '0'
         cliq_args['volumeName'] = volume['name']
-        cliq_args['size'] = '%sGB' % volume['size']
+        if int(volume['size']) == 0:
+            cliq_args['size'] = '100MB'
+        else:
+            cliq_args['size'] = '%sGB' % volume['size']
 
         self._cliq_run_xml("createVolume", cliq_args)
 
