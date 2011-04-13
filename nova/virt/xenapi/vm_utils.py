@@ -454,8 +454,8 @@ class VMHelper(HelperBase):
              vdi_size > FLAGS.max_kernel_ramdisk_size:
             max_size = FLAGS.max_kernel_ramdisk_size
             raise exception.Error(
-                _("Kernel/Ramdisk image is too large, %(vdi_size)d bytes "
-                  "(max %(max_size)d bytes)") % locals())
+                _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
+                  "max %(max_size)d bytes") % locals())
 
         name_label = get_name_label_for_image(image)
         vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
