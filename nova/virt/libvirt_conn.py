@@ -538,23 +538,23 @@ class LibvirtConnection(driver.ComputeDriver):
                                       instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rebooted'), instance['name'])
-                    # Fix lp747922
+                    # Re-attach volumes
                     instance_id = instance['id']
                     for vol in db.volume_get_all_by_instance(
                         context.get_admin_context(), instance_id):
-                        # dev_path is not stored anywhere, and it has driver
-                        # specific format. Furthermore, compute node specific.
-                        # Therefore, noway other than calling discover_driver
-                        # here.
+                        # NOTE(itoumsn): dev_path is not stored anywhere,
+                        # and it has driver specific format. Furthermore, it's
+                        # also compute node specific in general.
+                        # Therefore, no way other than calling 
+                        # undiscover/discover_driver here at this moment.
+                        self.volume_manager.driver.undiscover_volume(vol)
                         dev_path = self.volume_manager.driver.discover_volume(
                             context, vol)
                         LOG.debug(
-                            _("Re-attaching %(dev_path)s to %(mountpoint)s") %
+                            _("Re-attaching %s to %s") %
                             (dev_path, vol['mountpoint']))
                         self.attach_volume(instance['name'],
                                            dev_path, vol['mountpoint'])
-                    # Fix lp747922
-
                     timer.stop()
             except Exception, exn:
                 LOG.exception(_('_wait_for_reboot failed: %s'), exn)
