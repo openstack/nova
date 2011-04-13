@@ -33,6 +33,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 :rescue_ramdisk_id:  Rescue ari image (default: ari-rescue).
 :injected_network_template:  Template file for injected network
 :allow_project_net_traffic:  Whether to allow in project network traffic
+
 """
 
 import multiprocessing
@@ -515,69 +516,15 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def reboot(self, instance):
-        # NOTE(itoumsn): self.shutdown() and wait instead of destroy would be
-        # better because we cannot ensure flushing dirty buffers
-        # in the guest OS. But, in case of KVM, shutdown often fails...
-#        instance_id = instance['id']
-#        volume_list = []
-#        dev_path_list = {}
-#        vols = db.volume_get_all_by_instance(context.get_admin_context(),
-#                                             instance_id)
-#        LOG.debug(_("DEBUG: vols %s") % vols)
-#        for vol in vols:
-#            LOG.debug(_("DEBUG: reboot: %s %s") % (vol['mountpoint'],
-#                      vol['mountpoint'].rpartition("/")[2]))
-#            volume_list.append(vol['mountpoint'].partition("/")[2])
-#
-#        if len(volume_list) != 0:
-#            LOG.debug(_("DEBUG: volume_list is not empty"))
-#            virt_dom = self._conn.lookupByName(instance['name'])
-#            xml = virt_dom.XMLDesc(0)
-#            try:
-#                doc = libxml2.parseDoc(xml)
-#            except:
-#                LOG.exception(_('Failed to get xml description %s'),
-#                              instance_id)
-#            ctx = doc.xpathNewContext()
-#            try:
-#                ret = ctx.xpathEval('/domain/devices/disk')
-#                for node in ret:
-#                    LOG.debug(_("DEBUG: node.name %s") % node.name)
-#                    target_dev = ''
-#                    source_dev = ''
-#                    for child in node.children:
-#                        LOG.debug(
-#                            _("child.name: %s prop.dev %s") %
-#                            (child.name, child.prop('dev')))
-#
-#                        if child.name == 'source':
-#                            source_dev = child.prop('dev')
-#                        elif child.name == 'target':
-#                            target_dev = child.prop('dev')
-#                    LOG.debug(
-#                        _("source: %s target %s") %
-#                        (source_dev, target_dev))
-#
-#                    if target_dev in volume_list:
-#                        dev_path_list[target_dev] = source_dev
-#                        LOG.debug(
-#                            _("append to dev_path_list source: %s target: %s") %
-#                            (source_dev, target_dev))
-#                    else:
-#                        LOG.debug(_("DEBUG: %s not found in volume_list") %
-#                                  (target_dev))
-#            finally:
-#                LOG.debug(_("DEBUG: finally block"))
-#                if ctx != None:
-#                    ctx.xpathFreeContext()
-#                    if doc != None:
-#                        doc.freeDoc()
-
         virt_dom = self._conn.lookupByName(instance['name'])
+        # NOTE(itoumsn): Use XML delived from the running instance
+        # instead of using to_xml(instance). This is almost the ultimate
+        # stupid workaround.
         xml = virt_dom.XMLDesc(0)
-
+        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
+        # better because we cannot ensure flushing dirty buffers
+        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, False)
-#        xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
@@ -592,30 +539,6 @@ class LibvirtConnection(driver.ComputeDriver):
                                       instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('instance %s: rebooted'), instance['name'])
-                    # Re-attach volumes
-#                    for mp in dev_path_list.iterkeys():
-#                        LOG.debug(
-#                            _("Re-attaching %s to %s") %
-#                            (dev_path_list[mp], mp))
-#                        self.attach_volume(instance['name'],
-#                                           dev_path_list[mp], mp)
-#
-#                    instance_id = instance['id']
-#                    for vol in db.volume_get_all_by_instance(
-#                        context.get_admin_context(), instance_id):
-                        # NOTE(itoumsn): dev_path is not stored anywhere,
-                        # and it has driver specific format. Furthermore, it's
-                        # also compute node specific in general.
-                        # Therefore, no way other than calling 
-                        # undiscover/discover_driver here at this moment.
-#                        self.volume_manager.driver.undiscover_volume(vol)
-#                        dev_path = self.volume_manager.driver.discover_volume(
-#                            context, vol)
-#                        LOG.debug(
-#                            _("Re-attaching %s to %s") %
-#                            (dev_path, vol['mountpoint']))
-#                        self.attach_volume(instance['name'],
-#                                           dev_path, vol['mountpoint'])
                     timer.stop()
             except Exception, exn:
                 LOG.exception(_('_wait_for_reboot failed: %s'), exn)
