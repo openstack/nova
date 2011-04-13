@@ -97,4 +97,3 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertRaises(
                 exception.ApiError,
                 instance_types.create, new_name, 256, 1, 120, self.flavorid)
-        
