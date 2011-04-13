@@ -88,3 +88,13 @@ class InstanceTypeTestCase(test.TestCase):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(exception.ApiError,
                           instance_types.destroy, "sfsfsdfdfs")
+
+    def test_repeated_inst_types_should_raise_api_error(self):
+        """Ensures that instance duplicates raises ApiError"""
+        new_name = self.name + "dup"
+        instance_types.create(new_name, 256, 1, 120, self.flavorid + 1)
+        instance_types.destroy(new_name)
+        self.assertRaises(
+                exception.ApiError,
+                instance_types.create, new_name, 256, 1, 120, self.flavorid)
+        
