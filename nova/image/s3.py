@@ -75,7 +75,7 @@ class S3ImageService(service.BaseImageService):
         return self.service.show(context, image_id)
 
     def show_by_name(self, context, name):
-        return self.service.show(context, name)
+        return self.service.show_by_name(context, name)
 
     @staticmethod
     def _conn(context):
