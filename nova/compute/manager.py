@@ -226,15 +226,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_manager.setup_compute_network(context,
                                                        instance_id)
 
-            if FLAGS.auto_assign_floating_ip:
-                public_ip = rpc.call(context,
-                                FLAGS.network_topic,
-                                {"method": "allocate_floating_ip",
-                                "args": {"project_id": context.project_id}})
-                self.network_manager.associate_floating_ip(context,
-                                               instance_id=instance_id,
-                                               address=public_ip)
-
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
                                    instance_id,
@@ -254,6 +245,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.db.instance_set_state(context,
                                        instance_id,
                                        power_state.SHUTDOWN)
+
+        if not FLAGS.stub_network:
+            if FLAGS.auto_assign_floating_ip:
+                public_ip = rpc.call(context,
+                                FLAGS.network_topic,
+                                {"method": "allocate_floating_ip",
+                                "args": {"project_id": context.project_id}})
+                self.network_manager.associate_floating_ip(context,
+                                               floating_address=public_ip,
+                                               fixed_address=address)
 
         self._update_state(context, instance_id)
 
