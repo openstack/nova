@@ -736,5 +736,5 @@ def get_host_only_server_string(server_str):
         return ''
 
     # This must be a combination of host part and port
-    [address, sep, port] = server_str.partition(':')
+    (address, port) = server_str.split(':')
     return address
