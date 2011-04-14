@@ -372,6 +372,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                       instance['id'], state)
                 if state == power_state.SHUTOFF:
                     break
+
+                # Let's not hammer on the DB
+                time.sleep(1)
             except Exception as ex:
                 msg = _("Error encountered when destroying instance '%(id)s': "
                         "%(ex)s") % {"id": instance["id"], "ex": ex}
