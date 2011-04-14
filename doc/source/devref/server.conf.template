@@ -1,0 +1,34 @@
+port 1194
+proto udp
+dev tap0
+up "/etc/openvpn/up.sh br0"
+down "/etc/openvpn/down.sh br0"
+
+persist-key
+persist-tun
+
+ca ca.crt
+cert server.crt
+key server.key  # This file should be kept secret
+
+dh dh1024.pem
+ifconfig-pool-persist ipp.txt
+
+server-bridge VPN_IP DHCP_SUBNET DHCP_LOWER DHCP_UPPER
+
+client-to-client
+keepalive 10 120
+comp-lzo
+
+max-clients 1
+
+user nobody
+group nogroup
+
+persist-key
+persist-tun
+
+status openvpn-status.log
+
+verb 3
+mute 20
