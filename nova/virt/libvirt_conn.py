@@ -606,7 +606,7 @@ class LibvirtConnection(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     @exception.wrap_exception
     def spawn(self, instance, network_info=None):
-        xml = self.to_xml(instance, network_info)
+        xml = self.to_xml(instance, False, network_info)
         db.instance_set_state(context.get_admin_context(),
                               instance['id'],
                               power_state.NOSTATE,
