@@ -27,30 +27,28 @@ import sys
 # This is written to Python 2.4, since that is what is available on XenServer
 import simplejson as json
 
-
 from novalib import execute, execute_get_output
 
 
-# FIXME(dubs) this needs to be able to be passed in, check xen vif script
-XEN_BRIDGE = 'xenbr0'
 OVS_OFCTL = '/usr/bin/ovs-ofctl'
 
 
 class OvsFlow(object):
-    def __init__(self, command, params, bridge=None):
+    def __init__(self, command, bridge, params):
         self.command = command
+        self.bridge = bridge
         self.params = params
-        self.bridge = bridge or XEN_BRIDGE
 
     def add(self, rule):
         execute(OVS_OFCTL, 'add-flow', self.bridge, rule)
 
     def delete(self, rule):
-        execute(OVS_OFCTL, 'del-flow', self.bridge, rule)
+        execute(OVS_OFCTL, 'del-flows', self.bridge, rule)
 
     def apply(self, rule):
-        self.delete(rule % self.params)
-        if self.command == 'online':
+        if self.command in ('offline', 'reset'):
+            self.delete(rule % self.params)
+        if self.command in ('online', 'reset'):
             self.add(rule % self.params)
 
 
@@ -66,8 +64,10 @@ def main(dom_id, command, net_type, only_this_vif=None):
         data = json.loads(xsread)
         if data["label"] == "public":
             vif = "vif%s.0" % dom_id
+            bridge = "xenbr0"
         else:
             vif = "vif%s.1" % dom_id
+            bridge = "xenbr1"
 
         if (only_this_vif is None) or (vif == only_this_vif):
             vif_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
@@ -80,17 +80,17 @@ def main(dom_id, command, net_type, only_this_vif=None):
             if net_type in ('ipv4', 'all'):
                 for ip4 in data['ips']:
                     params.update({'VIF_IPv4': ip4['ip']})
-                    apply_ovs_ipv4_flows(command, params)
+                    apply_ovs_ipv4_flows(command, bridge, params)
             if net_type in ('ipv6', 'all'):
                 for ip6 in data['ip6s']:
                     params.update({'VIF_GLOBAL_IPv6': ip6['ip']})
                     # TODO(dubs) calculate v6 link local addr
                     #params.update({'VIF_LOCAL_IPv6': XXX})
-                    apply_ovs_ipv6_flows(command, params)
+                    apply_ovs_ipv6_flows(command, bridge, params)
 
 
-def apply_ovs_ipv4_flows(command, params):
-    flow = OvsFlow(command, params)
+def apply_ovs_ipv4_flows(command, bridge, params):
+    flow = OvsFlow(command, bridge, params)
 
     # allow valid ARP outbound (both request / reply)
     flow.apply("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,arp,"
@@ -104,8 +104,8 @@ def apply_ovs_ipv4_flows(command, params):
                "nw_src=%(VIF_IPv4)s,action=normal")
 
 
-def apply_ovs_ipv6_flows(command, params):
-    flow = OvsFlow(command, params)
+def apply_ovs_ipv6_flows(command, bridge, params):
+    flow = OvsFlow(command, bridge, params)
 
     # allow valid IPv6 ND outbound (are both global and local IPs needed?)
     # Neighbor Solicitation
@@ -170,7 +170,7 @@ def apply_ovs_ipv6_flows(command, params):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "usage: %s dom_id online|offline ipv4|ipv6|all [vif_name]" % \
+        print "usage: %s dom_id online|offline|reset ipv4|ipv6|all [vif_name]" % \
                os.path.basename(sys.argv[0])
         sys.exit(1)
     else:
