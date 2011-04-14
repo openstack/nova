@@ -561,9 +561,7 @@ class Controller(common.OpenstackController):
         """
         image_id = image_meta['id']
         if image_meta['status'] != 'active':
-            raise exception.Invalid(
-                _("Cannot build from image %(image_id)s, status not active") %
-                  locals())
+            raise exception.InstanceNotRunning(image_id=image_id)
 
         if image_meta.get('container_format') != 'ami':
             return None, None

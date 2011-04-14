@@ -421,7 +421,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                    name,
                                    mount_device)
         else:
-            raise exception.Invalid(_("Invalid device path %s") % device_path)
+            raise exception.InvalidDevicePath(path=device_path)
 
         virt_dom.attachDevice(xml)
 
@@ -1302,9 +1302,9 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
-            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
-                                      "but %d\n") % len(nodes)
-                                      + xml.serialize())
+            reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
+            reason += xml.serialize()
+            raise exception.InvalidCPUInfo(reason=reason)
 
         cpu_info = dict()
 
@@ -1333,9 +1333,8 @@ class LibvirtConnection(driver.ComputeDriver):
             tkeys = topology.keys()
             if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
-                raise exception.Invalid(_("Invalid xml: topology"
-                                          "(%(topology)s) must have "
-                                          "%(ks)s") % locals())
+                reason = _("topology (%(topology)s) must have %(ks)s")
+                raise exception.InvalidCPUInfo(reason=reason % locals())
 
         feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
@@ -1390,9 +1389,7 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            raise exception.Invalid(_("Cannot update compute manager "
-                                      "specific info, because no service "
-                                      "record was found."))
+            raise exception.ComputeServiceUnavailable()
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -1445,7 +1442,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise
 
         if ret <= 0:
-            raise exception.Invalid(m % locals())
+            raise exception.InvalidCPUInfo(reason=m % locals())
 
         return
 
