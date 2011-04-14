@@ -545,19 +545,54 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.ApiError("pause not supported for libvirt.")
+        """Pause VM instance"""
+        if self.read_only:
+            tmpconn = self._connect(self.libvirt_uri, False)
+            dom = tmpconn.lookupByName(instance.name)
+            dom.suspend()
+            tmpconn.close()
+        else:
+            dom = self._conn.lookupByName(instance.name)
+            dom.suspend()
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.ApiError("unpause not supported for libvirt.")
+        """Unpause paused VM instance"""
+        if self.read_only:
+            tmpconn = self._connect(self.libvirt_uri, False)
+            dom = tmpconn.lookupByName(instance.name)
+            dom.resume()
+            tmpconn.close()
+        else:
+            dom = self._conn.lookupByName(instance.name)
+            dom.resume()
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.ApiError("suspend not supported for libvirt")
+        """Suspend the specified instance"""
+        if self.read_only:
+            tmpconn = self._connect(self.libvirt_uri, False)
+            dom = tmpconn.lookupByName(instance.name)
+            dom.managedSave(0)
+            tmpconn.close()
+        else:
+            dom = self._conn.lookupByName(instance.name)
+            dom.managedSave(0)
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.ApiError("resume not supported for libvirt")
+        """resume the specified instance"""
+        try:
+            if self.read_only:
+                tmpconn = self._connect(self.libvirt_uri, False)
+                dom = tmpconn.lookupByName(instance.name)
+                tmpconn.close()
+            else:
+                dom = self._conn.lookupByName(instance.name)
+            dom.create()
+        except libvirt.LibvirtError:
+            xml = self.to_xml(instance, None)
+            self._create_new_domain(xml)
 
     @exception.wrap_exception
     def rescue(self, instance, callback=None):
