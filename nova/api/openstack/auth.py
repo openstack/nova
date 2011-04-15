@@ -87,9 +87,10 @@ class AuthMiddleware(wsgi.Middleware):
         # honor it
         path_info = req.path_info
         if len(path_info) > 1:
-            msg = _("Authentication requests must be made against /<version>")
+            msg = _("Authentication requests must be made against a version "
+                    "root (e.g. /v1.0 or /v1.1).")
             LOG.warn(msg)
-            return faults.Fault(webob.exc.HTTPUnauthorized())
+            return faults.Fault(webob.exc.HTTPUnauthorized(explanation=msg))
 
         try:
             username = req.headers['X-Auth-User']
