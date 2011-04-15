@@ -561,7 +561,8 @@ class Controller(common.OpenstackController):
         """
         image_id = image_meta['id']
         if image_meta['status'] != 'active':
-            raise exception.InstanceNotRunning(image_id=image_id)
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=_("status is not active"))
 
         if image_meta.get('container_format') != 'ami':
             return None, None

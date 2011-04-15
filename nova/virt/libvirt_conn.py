@@ -1389,7 +1389,7 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            raise exception.ComputeServiceUnavailable()
+            raise exception.ComputeServiceUnavailable(host=host)
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),

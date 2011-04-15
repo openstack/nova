@@ -168,7 +168,8 @@ class Scheduler(object):
         src = instance_ref['host']
         if dest == src:
             ec2_id = instance_ref['hostname']
-            raise exception.UnableToMigrateToSelf(instance_id=ec2_id, host=dest)
+            raise exception.UnableToMigrateToSelf(instance_id=ec2_id,
+                                                  host=dest)
 
         # Checking dst host still has enough capacities.
         self.assert_compute_node_has_enough_resources(context,

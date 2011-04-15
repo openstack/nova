@@ -698,14 +698,10 @@ class SimpleDriverTestCase(test.TestCase):
                'topic': 'volume', 'report_count': 0}
         s_ref = db.service_create(self.context, dic)
 
-        try:
-            self.scheduler.driver.schedule_live_migration(self.context,
-                                                          instance_id,
-                                                          i_ref['host'])
-        except exception.Invalid, e:
-            c = (e.message.find('volume node is not alive') >= 0)
+        self.assertRaises(exception.VolumeServiceUnavailable,
+                          self.scheduler.driver.schedule_live_migration,
+                          self.context, instance_id, i_ref['host'])
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.volume_destroy(self.context, v_ref['id'])
@@ -718,13 +714,10 @@ class SimpleDriverTestCase(test.TestCase):
         s_ref = self._create_compute_service(created_at=t, updated_at=t,
                                              host=i_ref['host'])
 
-        try:
-            self.scheduler.driver._live_migration_src_check(self.context,
-                                                            i_ref)
-        except exception.Invalid, e:
-            c = (e.message.find('is not alive') >= 0)
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                          self.scheduler.driver._live_migration_src_check,
+                          self.context, i_ref)
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
@@ -749,14 +742,10 @@ class SimpleDriverTestCase(test.TestCase):
         s_ref = self._create_compute_service(created_at=t, updated_at=t,
                                              host=i_ref['host'])
 
-        try:
-            self.scheduler.driver._live_migration_dest_check(self.context,
-                                                             i_ref,
-                                                             i_ref['host'])
-        except exception.Invalid, e:
-            c = (e.message.find('is not alive') >= 0)
+        self.assertRaises(exception.ComputeServiceUnavailable,
+                          self.scheduler.driver._live_migration_dest_check,
+                          self.context, i_ref, i_ref['host'])
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
@@ -766,14 +755,10 @@ class SimpleDriverTestCase(test.TestCase):
         i_ref = db.instance_get(self.context, instance_id)
         s_ref = self._create_compute_service(host=i_ref['host'])
 
-        try:
-            self.scheduler.driver._live_migration_dest_check(self.context,
-                                                             i_ref,
-                                                             i_ref['host'])
-        except exception.Invalid, e:
-            c = (e.message.find('choose other host') >= 0)
+        self.assertRaises(exception.UnableToMigrateToSelf,
+                          self.scheduler.driver._live_migration_dest_check,
+                          self.context, i_ref, i_ref['host'])
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
@@ -837,14 +822,10 @@ class SimpleDriverTestCase(test.TestCase):
              "args": {'filename': fpath}})
 
         self.mox.ReplayAll()
-        try:
-            self.scheduler.driver._live_migration_common_check(self.context,
-                                                               i_ref,
-                                                               dest)
-        except exception.Invalid, e:
-            c = (e.message.find('does not exist') >= 0)
+        self.assertRaises(exception.SourceHostUnavailable,
+                          self.scheduler.driver._live_migration_common_check,
+                          self.context, i_ref, dest)
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
@@ -865,14 +846,10 @@ class SimpleDriverTestCase(test.TestCase):
         driver.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
 
         self.mox.ReplayAll()
-        try:
-            self.scheduler.driver._live_migration_common_check(self.context,
-                                                               i_ref,
-                                                               dest)
-        except exception.Invalid, e:
-            c = (e.message.find(_('Different hypervisor type')) >= 0)
+        self.assertRaises(exception.InvalidHypervisorType,
+                          self.scheduler.driver._live_migration_common_check,
+                          self.context, i_ref, dest)
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])
@@ -895,14 +872,10 @@ class SimpleDriverTestCase(test.TestCase):
         driver.mounted_on_same_shared_storage(mox.IgnoreArg(), i_ref, dest)
 
         self.mox.ReplayAll()
-        try:
-            self.scheduler.driver._live_migration_common_check(self.context,
-                                                               i_ref,
-                                                               dest)
-        except exception.Invalid, e:
-            c = (e.message.find(_('Older hypervisor version')) >= 0)
+        self.assertRaises(exception.DestinationHypervisorTooOld,
+                          self.scheduler.driver._live_migration_common_check,
+                          self.context, i_ref, dest)
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
         db.service_destroy(self.context, s_ref2['id'])

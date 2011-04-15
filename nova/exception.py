@@ -141,23 +141,23 @@ class Invalid(NovaException):
 
 
 class InstanceNotRunning(Invalid):
-    message = "Instance is not 'running'."
+    message = "Instance %(instance_id)s is not running."
 
 
 class InstanceNotSuspended(Invalid):
-    message = "Instance is not 'suspended'."
+    message = "Instance %(instance_id)s is not suspended."
 
 
 class InstanceSuspendFailure(Invalid):
-    message = "Failed to suspend instance: %(reason)s."
+    message = "Failed to suspend instance: %(reason)s"
 
 
 class InstanceResumeFailure(Invalid):
-    message = "Failed to resume server: %(reson)s."
+    message = "Failed to resume server: %(reason)s."
 
 
 class InstanceRebootFailure(Invalid):
-    message = "Failed to reboot instance: %(reason)s."
+    message = "Failed to reboot instance: %(reason)s"
 
 
 class ServiceUnavailable(Invalid):
@@ -169,7 +169,7 @@ class VolumeServiceUnavailable(ServiceUnavailable):
 
 
 class ComputeServiceUnavailable(ServiceUnavailable):
-    message = "Compute service on %(host)s is unavailable at this time."
+    message = "Compute service is unavailable at this time."
 
 
 class UnableToMigrateToSelf(Invalid):
@@ -182,7 +182,7 @@ class SourceHostUnavailable(Invalid):
 
 
 class InvalidHypervisorType(Invalid):
-    message = "The supplied hypervisor type of %(type)s is invalid."
+    message = "The supplied hypervisor type of is invalid."
 
 
 class DestinationHypervisorTooOld(Invalid):
@@ -195,7 +195,7 @@ class InvalidDevicePath(Invalid):
 
 
 class InvalidCPUInfo(Invalid):
-    message = "Unacceptable CPU info: %(reason)s."
+    message = "Unacceptable CPU info: %(reason)s"
 
 
 class InvalidVLANTag(Invalid):
@@ -209,3 +209,7 @@ class InvalidVLANPortGroup(Invalid):
               "not associated with the desired physical adapter. " \
               "Expected vSwitch is %(expected)s, but the one associated " \
               "is %(actual)s."
+
+
+class ImageUnacceptable(Invalid):
+    message = "Image %(image_id)s is unacceptable: %(reason)s"
