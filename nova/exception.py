@@ -126,16 +126,28 @@ def wrap_exception(f):
 
 
 class NovaException(Exception):
-    message = ""
+    """Base Nova Exception
+
+    To correctly use this class, inherit from it and define
+    a 'message' property. That message will get printf'd
+    with the keyword arguments provided to the constructor.
+
+    """
+    message = "An unknown exception occurred."
 
     def __init__(self, **kwargs):
-        self._error_string = _(self.message) % kwargs
+        try:
+            self._error_string = _(self.message) % kwargs
+
+        except Exception:
+            # at least get the core message out if something happened
+            self._error_string = _(self.message)
 
     def __str__(self):
         return self._error_string
 
 
-#TODO: EOL this exception!
+#TODO(bcwaldon): EOL this exception!
 class Invalid(NovaException):
     pass
 
