@@ -211,7 +211,6 @@ class LibvirtConnection(driver.ComputeDriver):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        self.interfaces_xml = open(FLAGS.injected_network_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
@@ -372,6 +371,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                       instance['id'], state)
                 if state == power_state.SHUTOFF:
                     break
+
+                # Let's not hammer on the DB
+                time.sleep(1)
             except Exception as ex:
                 msg = _("Error encountered when destroying instance '%(id)s': "
                         "%(ex)s") % {"id": instance["id"], "ex": ex}
