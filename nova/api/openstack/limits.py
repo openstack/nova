@@ -31,6 +31,7 @@ from collections import defaultdict
 from webob.dec import wsgify
 
 from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import limits as limits_views
 from nova.wsgi import Controller
@@ -44,7 +45,7 @@ PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
 
-class LimitsController(Controller):
+class LimitsController(common.OpenstackController):
     """
     Controller for accessing limits in the OpenStack API.
     """

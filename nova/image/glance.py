@@ -151,6 +151,8 @@ class GlanceImageService(service.BaseImageService):
 
         :raises NotFound if the image does not exist.
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
@@ -165,6 +167,8 @@ class GlanceImageService(service.BaseImageService):
 
         :raises NotFound if the image does not exist.
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             result = self.client.delete_image(image_id)
         except glance_exception.NotFound:
@@ -182,36 +186,10 @@ class GlanceImageService(service.BaseImageService):
         """Overriding the base translation to handle conversion to datetime
         objects
         """
-        image_meta = service.BaseImageService._translate_to_base(image_meta)
+        image_meta = service.BaseImageService._propertify_metadata(
+                        image_meta, cls.SERVICE_IMAGE_ATTRS)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         return image_meta
-
-    @staticmethod
-    def _is_image_available(context, image_meta):
-        """
-        Images are always available if they are public or if the user is an
-        admin.
-
-        Otherwise, we filter by project_id (if present) and then fall-back to
-        images owned by user.
-        """
-        # FIXME(sirp): We should be filtering by user_id on the Glance side
-        # for security; however, we can't do that until we get authn/authz
-        # sorted out. Until then, filtering in Nova.
-        if image_meta['is_public'] or context.is_admin:
-            return True
-
-        properties = image_meta['properties']
-
-        if context.project_id and ('project_id' in properties):
-            return str(properties['project_id']) == str(project_id)
-
-        try:
-            user_id = properties['user_id']
-        except KeyError:
-            return False
-
-        return str(user_id) == str(context.user_id)
 
 
 # utility functions

@@ -17,7 +17,7 @@
 
 from webob import exc
 
-from nova import wsgi
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 
@@ -32,7 +32,7 @@ def _translate_detail_keys(inst):
     return dict(sharedIpGroups=inst)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """ The Shared IP Groups Controller for the Openstack API """
 
     _serialization_metadata = {
