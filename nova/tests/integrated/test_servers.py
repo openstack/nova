@@ -135,7 +135,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertFalse(found_server)
 
     def test_create_server_with_metadata(self):
-        """Creates a server with metadata"""
+        """Creates a server with metadata."""
 
         # Build the server data gradually, checking errors along the way
         server = self._build_minimal_create_server_request()
