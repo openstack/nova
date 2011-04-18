@@ -129,8 +129,13 @@ class Controller(common.OpenstackController):
             key_data = key_pair['public_key']
 
         requested_image_id = self._image_id_from_req_data(env)
-        image_id = common.get_image_id_from_image_hash(self._image_service,
-            context, requested_image_id)
+        try:
+            image_id = common.get_image_id_from_image_hash(self._image_service,
+                context, requested_image_id)
+        except:
+            msg = _("Can not find requested image")
+            return faults.Fault(exc.HTTPBadRequest(msg))
+
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
 
