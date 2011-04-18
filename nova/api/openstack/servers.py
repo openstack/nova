@@ -133,7 +133,7 @@ class Controller(common.OpenstackController):
         except:
             msg = _("Can not find requested image")
             return faults.Fault(exc.HTTPBadRequest(msg))
-        
+
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
 
