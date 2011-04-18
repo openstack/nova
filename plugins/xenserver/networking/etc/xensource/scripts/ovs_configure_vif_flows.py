@@ -25,6 +25,7 @@ import subprocess
 import sys
 
 # This is written to Python 2.4, since that is what is available on XenServer
+import netaddr
 import simplejson as json
 
 from novalib import execute, execute_get_output
@@ -84,8 +85,8 @@ def main(dom_id, command, net_type, only_this_vif=None):
             if net_type in ('ipv6', 'all'):
                 for ip6 in data['ip6s']:
                     params.update({'VIF_GLOBAL_IPv6': ip6['ip']})
-                    # TODO(dubs) calculate v6 link local addr
-                    #params.update({'VIF_LOCAL_IPv6': XXX})
+                    mac64 = netaddr.EUI(mac).eui64()
+                    params.update({'VIF_LOCAL_IPv6': mac64.ipv6_link_local()})
                     apply_ovs_ipv6_flows(command, bridge, params)
 
 
