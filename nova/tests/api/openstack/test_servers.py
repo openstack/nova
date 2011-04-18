@@ -82,7 +82,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
     if public_addresses == None:
         public_addresses = list()
 
-    if host != None:
+    if host is not None:
         host = str(host)
 
     instance = {

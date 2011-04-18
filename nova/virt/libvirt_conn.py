@@ -437,9 +437,9 @@ class LibvirtConnection(driver.ComputeDriver):
                         if child.prop('dev') == device:
                             return str(node)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
     @exception.wrap_exception
@@ -1119,9 +1119,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
                 disks.append(devdst)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
         return disks
@@ -1161,9 +1161,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
                 interfaces.append(devdst)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
         return interfaces

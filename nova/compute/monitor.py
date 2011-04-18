@@ -260,7 +260,7 @@ class Instance(object):
 
         try:
             data = self.fetch_cpu_stats()
-            if data != None:
+            if data is not None:
                 LOG.debug('CPU: %s', data)
                 update_rrd(self, 'cpu', data)
 
