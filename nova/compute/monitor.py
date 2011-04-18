@@ -313,7 +313,7 @@ class Instance(object):
         LOG.debug('CPU: %d', self.cputime)
 
         # Skip calculation on first pass. Need delta to get a meaningful value.
-        if cputime_last_updated == None:
+        if cputime_last_updated is None:
             return None
 
         # Calculate the number of seconds between samples.

@@ -126,6 +126,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         standalone service.
         """
         self.driver.init_host()
+        self.driver.ensure_metadata_ip()
         # Set up networking for the projects for which we're already
         # the designated network host.
         ctxt = context.get_admin_context()

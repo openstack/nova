@@ -232,7 +232,7 @@ def generate_vpn_files(project_id):
 
     genvpn_sh_path = os.path.join(os.path.dirname(__file__),
                                   'CA',
-                                  'geninter.sh')
+                                  'genvpn.sh')
     if os.path.exists(crt_fn):
         return
     _ensure_project_folder(project_id)
@@ -269,6 +269,8 @@ def _sign_csr(csr_text, ca_folder):
     LOG.debug(_("Flags path: %s"), ca_folder)
     start = os.getcwd()
     # Change working dir to CA
+    if not os.path.exists(ca_folder):
+        os.makedirs(ca_folder)
     os.chdir(ca_folder)
     utils.execute('openssl', 'ca', '-batch', '-out', outbound, '-config',
                   './openssl.cnf', '-infiles', inbound)
