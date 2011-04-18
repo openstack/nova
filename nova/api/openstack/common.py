@@ -123,7 +123,7 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
             msg = _("Requested image_id has wrong format: %s,"
                     "should have numerical format") % image_id
             LOG.error(msg)
-            raise msg
+            raise Exception(msg)
     raise exception.NotFound(image_hash)
 
 
