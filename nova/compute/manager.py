@@ -1157,6 +1157,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Are there VMs not in the DB?
         for vm_not_found_in_db in vms_not_found_in_db:
             name = vm_not_found_in_db
-            # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
-            LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
-                        % locals())
+
+            # We only care about instances that compute *should* know about
+            if name.startswith("instance-"):
+                # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
+                LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
+                            % locals())
