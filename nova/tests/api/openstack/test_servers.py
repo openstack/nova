@@ -79,7 +79,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     inst_type = instance_types.get_instance_type_by_flavor_id(1)
 
-    if public_addresses == None:
+    if public_addresses is None:
         public_addresses = list()
 
     if host != None:
@@ -610,6 +610,70 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.body = json.dumps(body)
         req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_with_admin_pass_v10(self):
+        self._setup_for_create_instance()
+
+        body = {
+            'server': {
+                'name': 'test-server-create',
+                'imageId': 3,
+                'flavorId': 1,
+                'adminPass': 'testpass',
+            },
+        }
+
+        req = webob.Request.blank('/v1.0/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        res = json.loads(res.body)
+        self.assertNotEqual(res['server']['adminPass'],
+                            body['server']['adminPass'])
+
+    def test_create_instance_with_admin_pass_v11(self):
+        self._setup_for_create_instance()
+
+        imageRef = 'http://localhost/v1.1/images/2'
+        flavorRef = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': imageRef,
+                'flavorRef': flavorRef,
+                'adminPass': 'testpass',
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        server = json.loads(res.body)['server']
+        self.assertEqual(server['adminPass'], body['server']['adminPass'])
+
+    def test_create_instance_with_empty_admin_pass_v11(self):
+        self._setup_for_create_instance()
+
+        imageRef = 'http://localhost/v1.1/images/2'
+        flavorRef = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': imageRef,
+                'flavorRef': flavorRef,
+                'adminPass': '',
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers['content-type'] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
