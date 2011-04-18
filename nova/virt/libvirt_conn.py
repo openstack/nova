@@ -1116,7 +1116,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     if child.name == 'target':
                         devdst = child.prop('dev')
 
-                if devdst == None:
+                if devdst is None:
                     continue
 
                 disks.append(devdst)
@@ -1158,7 +1158,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     if child.name == 'target':
                         devdst = child.prop('dev')
 
-                if devdst == None:
+                if devdst is None:
                     continue
 
                 interfaces.append(devdst)

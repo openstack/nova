@@ -737,7 +737,7 @@ class SimpleDriverTestCase(test.TestCase):
         ret = self.scheduler.driver._live_migration_src_check(self.context,
                                                               i_ref)
 
-        self.assertTrue(ret == None)
+        self.assertTrue(ret is None)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
@@ -805,7 +805,7 @@ class SimpleDriverTestCase(test.TestCase):
         ret = self.scheduler.driver._live_migration_dest_check(self.context,
                                                              i_ref,
                                                              'somewhere')
-        self.assertTrue(ret == None)
+        self.assertTrue(ret is None)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 
