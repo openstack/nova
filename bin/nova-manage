@@ -1009,7 +1009,7 @@ class ImageCommands(object):
         if (FLAGS.image_service == 'nova.image.local.LocalImageService'
             and directory == os.path.abspath(FLAGS.images_path)):
             new_dir = "%s_bak" % directory
-            os.move(directory, new_dir)
+            os.rename(directory, new_dir)
             os.mkdir(directory)
             directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
