@@ -196,7 +196,7 @@ class APIRequest(object):
         elif isinstance(data, datetime.datetime):
             data_el.appendChild(
                   xml.createTextNode(_database_to_isoformat(data)))
-        elif data != None:
+        elif data is not None:
             data_el.appendChild(xml.createTextNode(str(data)))
 
         return data_el
