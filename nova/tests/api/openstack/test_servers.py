@@ -79,7 +79,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     inst_type = instance_types.get_instance_type_by_flavor_id(1)
 
-    if public_addresses == None:
+    if public_addresses is None:
         public_addresses = list()
 
     if host != None:

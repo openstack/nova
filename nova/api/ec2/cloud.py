@@ -442,7 +442,7 @@ class CloudController(object):
                                                        group_name)
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
-        if criteria == None:
+        if criteria is None:
             raise exception.ApiError(_("Not enough parameters to build a "
                                        "valid rule."))
 
@@ -664,7 +664,7 @@ class CloudController(object):
                 'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def _convert_to_set(self, lst, label):
-        if lst == None or lst == []:
+        if lst is None or lst == []:
             return None
         if not isinstance(lst, list):
             lst = [lst]
