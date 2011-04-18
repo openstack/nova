@@ -308,7 +308,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                          network_topic,
                          {"method": "disassociate_floating_ip",
                           "args": {"floating_address": address}})
-                if FLAGS.auto_assign_floating_ip:
+                if FLAGS.auto_assign_floating_ip \
+                        and floating_ip.get('auto_assigned'):
                     LOG.debug(_("Deallocating floating ip %s"),
                                     floating_ip['address'], context=context)
                     rpc.cast(context,

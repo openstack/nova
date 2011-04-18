@@ -461,6 +461,7 @@ def floating_ip_count_by_project(context, project_id):
     session = get_session()
     return session.query(models.FloatingIp).\
                    filter_by(project_id=project_id).\
+                   filter_by(auto_assigned=False).\
                    filter_by(deleted=False).\
                    count()
 
@@ -560,6 +561,7 @@ def floating_ip_get_all_by_project(context, project_id):
     return session.query(models.FloatingIp).\
                    options(joinedload_all('fixed_ip.instance')).\
                    filter_by(project_id=project_id).\
+                   filter_by(auto_assigned=False).\
                    filter_by(deleted=False).\
                    all()
 

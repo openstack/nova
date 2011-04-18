@@ -53,6 +53,8 @@ class API(base.Base):
 
     def release_floating_ip(self, context, address):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
+        if floating_ip.get('auto_assigned'):
+            return
         # NOTE(vish): We don't know which network host should get the ip
         #             when we deallocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
@@ -66,6 +68,8 @@ class API(base.Base):
         if isinstance(fixed_ip, str) or isinstance(fixed_ip, unicode):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
+        if floating_ip.get('auto_assigned'):
+            return
         # Check if the floating ip address is allocated
         if floating_ip['project_id'] is None:
             raise exception.ApiError(_("Address (%s) is not allocated") %
@@ -92,6 +96,8 @@ class API(base.Base):
 
     def disassociate_floating_ip(self, context, address):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
+        if floating_ip.get('auto_assigned'):
+            return
         if not floating_ip.get('fixed_ip'):
             raise exception.ApiError('Address is not associated.')
         # NOTE(vish): Get the topic from the host name of the network of
