@@ -34,11 +34,11 @@ class ViewBuilder(object):
     def _format_status(self, image):
         """Update the status field to standardize format."""
         status_mapping = {
-            'pending': 'queued',
-            'decrypting': 'preparing',
-            'untarring': 'saving',
-            'available': 'active',
-            'killed': 'failed',
+            'pending': 'QUEUED',
+            'decrypting': 'PREPARING',
+            'untarring': 'SAVING',
+            'available': 'ACTIVE',
+            'killed': 'FAILED',
         }
 
         try:
@@ -60,8 +60,8 @@ class ViewBuilder(object):
             self._format_status(image_obj)
 
         image = {
-            "id": image_obj["id"],
-            "name": image_obj["name"],
+            "id": image_obj.get("id"),
+            "name": image_obj.get("name"),
         }
 
         if "instance_id" in properties:
@@ -72,9 +72,9 @@ class ViewBuilder(object):
 
         if detail:
             image.update({
-                "created": image_obj["created_at"],
-                "updated": image_obj["updated_at"],
-                "status": image_obj["status"],
+                "created": image_obj.get("created_at"),
+                "updated": image_obj.get("updated_at"),
+                "status": image_obj.get("status"),
             })
 
             if image["status"] == "SAVING":

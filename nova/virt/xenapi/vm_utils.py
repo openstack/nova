@@ -49,6 +49,8 @@ LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
+flags.DEFINE_integer('block_device_creation_timeout', 10,
+                     'time to wait for a block device to be created')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -101,8 +103,8 @@ class VMHelper(HelperBase):
             3. Using hardware virtualization
         """
 
-        instance_type = instance_types.\
-                                get_instance_type(instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -169,8 +171,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def ensure_free_mem(cls, session, instance):
-        instance_type = instance_types.get_instance_type(
-            instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
@@ -896,6 +898,16 @@ def remap_vbd_dev(dev):
     return remapped_dev
 
 
+def _wait_for_device(dev):
+    """Wait for device node to appear"""
+    for i in xrange(0, FLAGS.block_device_creation_timeout):
+        if os.path.exists('/dev/%s' % dev):
+            return
+        time.sleep(1)
+
+    raise StorageError(_('Timeout waiting for device %s to be created') % dev)
+
+
 def with_vdi_attached_here(session, vdi_ref, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
@@ -924,6 +936,11 @@ def with_vdi_attached_here(session, vdi_ref, read_only, f):
         if dev != orig_dev:
             LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
+        if dev != 'autodetect':
+            # NOTE(johannes): Unit tests will end up with a device called
+            # 'autodetect' which obviously won't exist. It's not ideal,
+            # but the alternatives were much messier
+            _wait_for_device(dev)
         return f(dev)
     finally:
         LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
@@ -1130,7 +1147,7 @@ def _prepare_injectables(inst, networks_info):
                               'dns': dns,
                               'address_v6': ip_v6 and ip_v6['ip'] or '',
                               'netmask_v6': ip_v6 and ip_v6['netmask'] or '',
-                              'gateway_v6': ip_v6 and ip_v6['gateway'] or '',
+                              'gateway_v6': ip_v6 and info['gateway6'] or '',
                               'use_ipv6': FLAGS.use_ipv6}
             interfaces_info.append(interface_info)
 
