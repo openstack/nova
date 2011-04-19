@@ -360,7 +360,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 raise
 
         def _wait_for_destroy():
-            """Called at an interval until the VM is running again."""
+            """Called at an interval until the VM is gone."""
             instance_name = instance['name']
 
             try:
