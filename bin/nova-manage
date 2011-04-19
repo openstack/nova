@@ -449,7 +449,7 @@ class FixedIpCommands(object):
         ctxt = context.get_admin_context()
 
         try:
-            if host == None:
+            if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
                 fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
@@ -499,7 +499,7 @@ class FloatingIpCommands(object):
         """Lists all floating ips (optionally by host)
         arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
+        if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
         else:
             floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
@@ -591,7 +591,7 @@ class VmCommands(object):
             _('zone'),
             _('index'))
 
-        if host == None:
+        if host is None:
             instances = db.instance_get_all(context.get_admin_context())
         else:
             instances = db.instance_get_all_by_host(
@@ -864,7 +864,7 @@ class InstanceTypeCommands(object):
         """Lists all active or specific instance types / flavors
         arguments: [name]"""
         try:
-            if name == None:
+            if name is None:
                 inst_types = instance_types.get_all_types()
             elif name == "--all":
                 inst_types = instance_types.get_all_types(True)
@@ -1009,7 +1009,7 @@ class ImageCommands(object):
         if (FLAGS.image_service == 'nova.image.local.LocalImageService'
             and directory == os.path.abspath(FLAGS.images_path)):
             new_dir = "%s_bak" % directory
-            os.move(directory, new_dir)
+            os.rename(directory, new_dir)
             os.mkdir(directory)
             directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):

@@ -239,7 +239,7 @@ class API(base.Base):
             # Set sane defaults if not specified
             updates = dict(hostname=self.hostname_factory(instance_id))
             if (not hasattr(instance, 'display_name') or
-                    instance.display_name == None):
+                    instance.display_name is None):
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)

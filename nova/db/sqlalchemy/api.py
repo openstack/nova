@@ -1849,7 +1849,7 @@ def security_group_get_by_instance(context, instance_id):
 def security_group_exists(context, project_id, group_name):
     try:
         group = security_group_get_by_name(context, project_id, group_name)
-        return group != None
+        return group is not None
     except exception.NotFound:
         return False
 
