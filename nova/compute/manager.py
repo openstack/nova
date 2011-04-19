@@ -54,6 +54,7 @@ from nova import rpc
 from nova import utils
 from nova.compute import power_state
 from nova.virt import driver
+from nova.network import api as network_api
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -134,6 +135,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
+        self.network_api = network_api.API()
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -248,39 +250,15 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         if not FLAGS.stub_network:
             if FLAGS.auto_assign_floating_ip:
-                public_ip = rpc.call(context,
-                                FLAGS.network_topic,
-                                {"method": "allocate_floating_ip",
-                                "args": {"project_id": context.project_id}})
+                public_ip = self.network_api.allocate_floating_ip(context)
 
                 fixed_ip = self.db.fixed_ip_get_by_address(context, address)
                 floating_ip = self.db.floating_ip_get_by_address(context,
                                                                  public_ip)
-                # Check if the floating ip address is allocated
-                if floating_ip['project_id'] is None:
-                    raise exception.Error(_("Address (%s) is not allocated") %
-                                               floating_ip['address'])
-                # Check if the floating ip address is allocated
-                # to the same project
-                if floating_ip['project_id'] != context.project_id:
-                    LOG.warn(_("Address (%(address)s) is not allocated to your"
-                               " project (%(project)s)"),
-                               {'address': floating_ip['address'],
-                               'project': context.project_id})
-                    raise exception.Error(_("Address (%(address)s) is not "
-                                            "allocated to your project"
-                                            "(%(project)s)") %
-                                            {'address': floating_ip['address'],
-                                            'project': context.project_id})
 
-                host = fixed_ip['network']['host']
-                rpc.cast(context,
-                         self.db.queue_get_for(context,
-                                               FLAGS.network_topic, host),
-                         {"method": "associate_floating_ip",
-                          "args": {"floating_address": floating_ip['address'],
-                                   "fixed_address": fixed_ip['address']}})
-
+                self.network_api.associate_floating_ip(context, floating_ip,
+                                                    fixed_ip,
+                                                    affect_auto_assigned=True)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -301,22 +279,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
-                network_topic = self.db.queue_get_for(context,
-                                                      FLAGS.network_topic,
-                                                      floating_ip['host'])
-                rpc.cast(context,
-                         network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_address": address}})
+                self.network_api.disassociate_floating_ip(context, address,
+                                                    affect_auto_assigned=True)
                 if FLAGS.auto_assign_floating_ip \
                         and floating_ip.get('auto_assigned'):
                     LOG.debug(_("Deallocating floating ip %s"),
                                     floating_ip['address'], context=context)
-                    rpc.cast(context,
-                             FLAGS.network_topic,
-                             {"method": "deallocate_floating_ip",
-                              "args": {"floating_address":
-                                                floating_ip['address']}})
+                    self.network_api.release_floating_ip(context, address,
+                                                    affect_auto_assigned=True)
 
             address = fixed_ip['address']
             if address:

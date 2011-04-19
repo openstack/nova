@@ -51,9 +51,10 @@ class API(base.Base):
                         {"method": "allocate_floating_ip",
                          "args": {"project_id": context.project_id}})
 
-    def release_floating_ip(self, context, address):
+    def release_floating_ip(self, context, address,
+                            affect_auto_assigned = False):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
-        if floating_ip.get('auto_assigned'):
+        if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
         # NOTE(vish): We don't know which network host should get the ip
         #             when we deallocate, so just send it to any one.  This
@@ -64,11 +65,12 @@ class API(base.Base):
                  {"method": "deallocate_floating_ip",
                   "args": {"floating_address": floating_ip['address']}})
 
-    def associate_floating_ip(self, context, floating_ip, fixed_ip):
+    def associate_floating_ip(self, context, floating_ip, fixed_ip,
+                              affect_auto_assigned = False):
         if isinstance(fixed_ip, str) or isinstance(fixed_ip, unicode):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
-        if floating_ip.get('auto_assigned'):
+        if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
         # Check if the floating ip address is allocated
         if floating_ip['project_id'] is None:
@@ -94,9 +96,10 @@ class API(base.Base):
                   "args": {"floating_address": floating_ip['address'],
                            "fixed_address": fixed_ip['address']}})
 
-    def disassociate_floating_ip(self, context, address):
+    def disassociate_floating_ip(self, context, address,
+                                 affect_auto_assigned = False):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
-        if floating_ip.get('auto_assigned'):
+        if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
         if not floating_ip.get('fixed_ip'):
             raise exception.ApiError('Address is not associated.')
