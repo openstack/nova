@@ -287,6 +287,8 @@ class Volume(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
+    snapshot_id = Column(String(255))
+
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
