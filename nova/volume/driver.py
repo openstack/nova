@@ -101,6 +101,10 @@ class VolumeDriver(object):
                            volume['name'],
                            FLAGS.volume_group)
 
+    def create_volume_from_snapshot(self, volume, snapshot):
+        """Creates a volume from a snapshot."""
+        raise NotImplementedError()
+
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         try:

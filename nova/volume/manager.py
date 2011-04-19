@@ -90,7 +90,7 @@ class VolumeManager(manager.SchedulerDependentManager):
             else:
                 LOG.info(_("volume %s: skipping export"), volume['name'])
 
-    def create_volume(self, context, volume_id):
+    def create_volume(self, context, volume_id, snapshot_id):
         """Creates and exports the volume."""
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
@@ -108,7 +108,12 @@ class VolumeManager(manager.SchedulerDependentManager):
             vol_size = volume_ref['size']
             LOG.debug(_("volume %(vol_name)s: creating lv of"
                     " size %(vol_size)sG") % locals())
-            model_update = self.driver.create_volume(volume_ref)
+            if snapshot_id == None:
+                model_update = self.driver.create_volume(volume_ref)
+            else:
+                snapshot_ref = self.db.snapshot_get(context, snapshot_id)
+                model_update = self.driver.create_volume_from_snapshot(volume_ref,
+                                                                       snapshot_ref)
             if model_update:
                 self.db.volume_update(context, volume_ref['id'], model_update)
 
