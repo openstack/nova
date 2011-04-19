@@ -255,4 +255,3 @@ class ProjectExists(Duplicate):
 
 class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
-
