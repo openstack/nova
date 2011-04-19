@@ -68,6 +68,12 @@ Making a cloudpipe image is relatively easy.
    :language: bash
    :linenos:
 
+# setup network interfaces.
+
+.. literalinclude:: interfaces
+   :language: bash
+   :linenos:
+
 # register the image and set the image id in your flagfile::
 
     --vpn_image_id=ami-xxxxxxxx
