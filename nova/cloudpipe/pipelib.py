@@ -107,7 +107,7 @@ class CloudPipe(object):
             max_count=1,
             min_count=1,
             instance_type='m1.tiny',
-            image_id=FLAGS.vpn_image_id,
+            image_id=ec2_id,
             key_name=key_name,
             security_group=[group_name])
 
