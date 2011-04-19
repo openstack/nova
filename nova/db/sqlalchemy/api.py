@@ -1759,6 +1759,83 @@ def volume_update(context, volume_id, values):
 
 
 @require_context
+def snapshot_create(context, values):
+    snapshot_ref = models.Snapshot()
+    snapshot_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        snapshot_ref.save(session=session)
+    return snapshot_ref
+
+
+@require_admin_context
+def snapshot_destroy(context, snapshot_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.Snapshot).\
+                filter_by(id=snapshot_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def snapshot_get(context, snapshot_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Snapshot).\
+                         filter_by(id=snapshot_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Snapshot).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=snapshot_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.SnapshotNotFound(_('Snapshot %s not found') % snapshot_id,
+                                         snapshot_id)
+
+    return result
+
+
+@require_admin_context
+def snapshot_get_all(context):
+    session = get_session()
+    return session.query(models.Snapshot).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def snapshot_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.Snapshot).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def snapshot_update(context, snapshot_id, values):
+    session = get_session()
+    with session.begin():
+        snapshot_ref = snapshot_get(context, snapshot_id, session=session)
+        snapshot_ref.update(values)
+        snapshot_ref.save(session=session)
+
+
+###################
+
+
+@require_context
 def security_group_get_all(context):
     session = get_session()
     return session.query(models.SecurityGroup).\

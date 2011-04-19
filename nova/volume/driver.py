@@ -122,6 +122,14 @@ class VolumeDriver(object):
                           (FLAGS.volume_group,
                            volume['name']))
 
+    def create_snapshot(self, snapshot):
+        """Creates a snapshot."""
+        raise NotImplementedError()
+
+    def delete_snapshot(self, snapshot):
+        """Deletes a snapshot."""
+        raise NotImplementedError()
+
     def local_path(self, volume):
         # NOTE(vish): stops deprecation warning
         escaped_group = FLAGS.volume_group.replace('-', '--')

@@ -60,6 +60,56 @@ class ApiError(Error):
 
 
 class BuildInProgress(Error):
+        super(ApiError, self).__init__('%s: %s' % (code, message))
+
+
+class NotFound(Error):
+    pass
+
+
+class InstanceNotFound(NotFound):
+    def __init__(self, message, instance_id):
+        self.instance_id = instance_id
+        super(InstanceNotFound, self).__init__(message)
+
+
+class VolumeNotFound(NotFound):
+    def __init__(self, message, volume_id):
+        self.volume_id = volume_id
+        super(VolumeNotFound, self).__init__(message)
+
+
+class SnapshotNotFound(NotFound):
+    def __init__(self, message, snapshot_id):
+        self.snapshot_id = snapshot_id
+        super(SnapshotNotFound, self).__init__(message)
+
+
+class Duplicate(Error):
+    pass
+
+
+class NotAuthorized(Error):
+    pass
+
+
+class NotEmpty(Error):
+    pass
+
+
+class Invalid(Error):
+    pass
+
+
+class InvalidInputException(Error):
+    pass
+
+
+class InvalidContentType(Error):
+    pass
+
+
+class TimeoutException(Error):
     pass
 
 

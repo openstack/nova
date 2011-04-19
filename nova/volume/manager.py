@@ -152,6 +152,48 @@ class VolumeManager(manager.SchedulerDependentManager):
         LOG.debug(_("volume %s: deleted successfully"), volume_ref['name'])
         return True
 
+    def create_snapshot(self, context, volume_id, snapshot_id):
+        """Creates and exports the snapshot."""
+        context = context.elevated()
+        snapshot_ref = self.db.snapshot_get(context, snapshot_id)
+        LOG.info(_("snapshot %s: creating"), snapshot_ref['name'])
+
+        try:
+            snap_name = snapshot_ref['name']
+            LOG.debug(_("snapshot %(snap_name)s: creating") % locals())
+            model_update = self.driver.create_snapshot(snapshot_ref)
+            if model_update:
+                self.db.snapshot_update(context, snapshot_ref['id'], model_update)
+
+        except Exception:
+            self.db.snapshot_update(context,
+                                    snapshot_ref['id'], {'status': 'error'})
+            raise
+
+        self.db.snapshot_update(context,
+                                snapshot_ref['id'], {'status': 'available',
+                                                     'progress': '100%'})
+        LOG.debug(_("snapshot %s: created successfully"), snapshot_ref['name'])
+        return snapshot_id
+
+    def delete_snapshot(self, context, snapshot_id):
+        """Deletes and unexports snapshot."""
+        context = context.elevated()
+        snapshot_ref = self.db.snapshot_get(context, snapshot_id)
+
+        try:
+            LOG.debug(_("snapshot %s: deleting"), snapshot_ref['name'])
+            self.driver.delete_snapshot(snapshot_ref)
+        except Exception:
+            self.db.snapshot_update(context,
+                                    snapshot_ref['id'],
+                                    {'status': 'error_deleting'})
+            raise
+
+        self.db.snapshot_destroy(context, snapshot_id)
+        LOG.debug(_("snapshot %s: deleted successfully"), snapshot_ref['name'])
+        return True
+
     def setup_compute_volume(self, context, volume_id):
         """Setup remote volume on compute host.
 

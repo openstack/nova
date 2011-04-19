@@ -47,6 +47,8 @@ flags.DEFINE_string('instance_name_template', 'instance-%08x',
                     'Template string to be used to generate instance names')
 flags.DEFINE_string('volume_name_template', 'volume-%08x',
                     'Template string to be used to generate instance names')
+flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
+                    'Template string to be used to generate instance names')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -866,6 +868,43 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+
+####################
+
+
+def snapshot_create(context, values):
+    """Create a volume from the values dictionary."""
+    return IMPL.snapshot_create(context, values)
+
+
+def snapshot_destroy(context, snapshot_id):
+    """Create a volume from the values dictionary."""
+    return IMPL.snapshot_destroy(context, snapshot_id)
+
+
+def snapshot_get(context, snapshot_id):
+    """Get a volume or raise if it does not exist."""
+    return IMPL.snapshot_get(context, snapshot_id)
+
+
+def snapshot_get_all(context):
+    """Get all volumes."""
+    return IMPL.snapshot_get_all(context)
+
+
+def snapshot_get_all_by_project(context, project_id):
+    """Get all volumes belonging to a project."""
+    return IMPL.snapshot_get_all_by_project(context, project_id)
+
+
+def snapshot_update(context, snapshot_id, values):
+    """Set the given properties on an snapshot and update it.
+
+    Raises NotFound if snapshot does not exist.
+
+    """
+    return IMPL.snapshot_update(context, snapshot_id, values)
 
 
 ####################
