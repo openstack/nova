@@ -61,8 +61,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate(_("The key_pair %s already exists")
-                                  % key_name)
+        raise exception.KeyPairExists(key_name=key_name)
     except exception.NotFound:
         pass
     private_key, public_key, fingerprint = crypto.generate_key_pair()

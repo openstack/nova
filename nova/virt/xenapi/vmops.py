@@ -127,8 +127,7 @@ class VMOps(object):
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is not None:
-            raise exception.Duplicate(_('Attempted to create'
-                    ' non-unique name %s') % instance_name)
+            raise exception.InstanceExists(name=instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):

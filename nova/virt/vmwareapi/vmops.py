@@ -100,8 +100,7 @@ class VMWareVMOps(object):
         """
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref:
-            raise exception.Duplicate(_("Attempted to create a VM with a name"
-                " %s, but that already exists on the host") % instance.name)
+            raise exception.InstanceExists(name=instance.name)
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
