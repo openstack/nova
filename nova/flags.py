@@ -316,7 +316,7 @@ DEFINE_string('null_kernel', 'nokernel',
               'kernel image that indicates not to use a kernel,'
               ' but to use a raw disk image instead')
 
-DEFINE_string('vpn_image_id', 'ami-cloudpipe', 'AMI for cloudpipe vpn server')
+DEFINE_integer('vpn_image_id', 0, 'integer id for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
               '-vpn',
               'Suffix to add to project name for vpn key and secgroups')

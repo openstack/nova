@@ -455,11 +455,6 @@ def instance_get_project_vpn(context, project_id):
     return IMPL.instance_get_project_vpn(context, project_id)
 
 
-def instance_is_vpn(context, instance_id):
-    """True if instance is a vpn."""
-    return IMPL.instance_is_vpn(context, instance_id)
-
-
 def instance_set_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
     return IMPL.instance_set_state(context, instance_id, state, description)

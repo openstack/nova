@@ -37,6 +37,7 @@ from nova import utils
 from nova.auth import manager
 # TODO(eday): Eventually changes these to something not ec2-specific
 from nova.api.ec2 import cloud
+from nova.api
 
 
 FLAGS = flags.FLAGS
@@ -101,6 +102,7 @@ class CloudPipe(object):
         key_name = self.setup_key_pair(ctxt)
         group_name = self.setup_security_group(ctxt)
 
+        ec2_id = self.controller.image_ec2_id(FLAGS.vpn_image_id)
         reservation = self.controller.run_instances(ctxt,
             user_data=self.get_encoded_zip(project_id),
             max_count=1,

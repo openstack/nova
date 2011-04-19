@@ -1837,7 +1837,7 @@ class NWFilterFirewall(FirewallDriver):
         """
         if not network_info:
             network_info = _get_network_info(instance)
-        if instance['image_id'] == FLAGS.vpn_image_id:
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
             base_filter = 'nova-vpn'
         else:
             base_filter = 'nova-base'

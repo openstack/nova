@@ -703,7 +703,7 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == FLAGS.vpn_image_id:
+                if instance['image_id'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
@@ -898,7 +898,7 @@ class CloudController(object):
         return image_type
 
     @staticmethod
-    def _image_ec2_id(image_id, image_type='ami'):
+    def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
         return ec2utils.id_to_ec2_id(int(image_id), template=template)
