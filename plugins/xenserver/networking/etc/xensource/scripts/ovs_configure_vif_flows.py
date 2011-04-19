@@ -82,10 +82,10 @@ def main(dom_id, command, net_type, only_this_vif=None):
                 for ip4 in data['ips']:
                     params.update({'VIF_IPv4': ip4['ip']})
                     apply_ovs_ipv4_flows(command, bridge, params)
-            if net_type in ('ipv6', 'all'):
+            if net_type in ('ipv6', 'all') and 'ip6s' in data:
                 for ip6 in data['ip6s']:
                     params.update({'VIF_GLOBAL_IPv6': ip6['ip']})
-                    mac64 = netaddr.EUI(mac).eui64()
+                    mac64 = netaddr.EUI(data['mac']).eui64()
                     params.update({'VIF_LOCAL_IPv6': str(mac64.ipv6_link_local())})
                     apply_ovs_ipv6_flows(command, bridge, params)
 
