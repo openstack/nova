@@ -68,6 +68,12 @@ class VolumeNotFound(NotFound):
         super(VolumeNotFound, self).__init__(message)
 
 
+class SnapshotNotFound(NotFound):
+    def __init__(self, message, snapshot_id):
+        self.snapshot_id = snapshot_id
+        super(SnapshotNotFound, self).__init__(message)
+
+
 class Duplicate(Error):
     pass
 

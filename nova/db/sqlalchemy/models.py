@@ -327,6 +327,30 @@ class Quota(BASE, NovaBase):
     metadata_items = Column(Integer)
 
 
+class Snapshot(BASE, NovaBase):
+    """Represents a block storage device that can be attached to a vm."""
+    __tablename__ = 'snapshots'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.snapshot_name_template % self.id
+
+    @property
+    def volume_name(self):
+        return FLAGS.volume_name_template % self.volume_id
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    volume_id = Column(Integer)
+    status = Column(String(255))
+    progress = Column(String(255))
+    volume_size = Column(Integer)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
+
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on."""
     __tablename__ = 'export_devices'
