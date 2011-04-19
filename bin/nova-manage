@@ -833,6 +833,7 @@ class InstanceTypeCommands(object):
             sys.exit(1)
         except exception.ApiError, e:
             print "\n\n"
+            print "\n%s" % e
             print "Please ensure instance_type name and flavorid are unique."
             print "To complete remove a instance_type, use the --purge flag:"
             print "\n     # nova-manage instance_type delete <name> --purge\n"

@@ -56,8 +56,8 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
                     rxtx_cap=rxtx_cap))
     except exception.DBError, e:
         LOG.exception(_('DB error: %s') % e)
-        raise exception.ApiError(_("Cannot create instance_type with\
-                                    name %(name)s and flavorid %(flavorid)s") %
+        raise exception.ApiError(_("Cannot create instance_type with "
+                                    "name %(name)s and flavorid %(flavorid)s") %
                                     locals())
 
 
