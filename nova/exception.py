@@ -133,7 +133,7 @@ class NovaException(Exception):
     with the keyword arguments provided to the constructor.
 
     """
-    message = "An unknown exception occurred."
+    message = _("An unknown exception occurred.")
 
     def __init__(self, **kwargs):
         try:
