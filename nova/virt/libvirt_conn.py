@@ -366,11 +366,6 @@ class LibvirtConnection(driver.ComputeDriver):
             try:
                 state = self.get_info(instance_name)['state']
             except exception.NotFound:
-                msg = _("During destroy, %s disappeared.") % instance_name
-                LOG.error(msg)
-                raise utils.LoopingCallDone
-
-            if state == power_state.SHUTOFF:
                 msg = _("Instance %s destroyed successfully.") % instance_name
                 LOG.debug(instance_name)
                 raise utils.LoopingCallDone
