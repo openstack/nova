@@ -367,7 +367,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 state = self.get_info(instance_name)['state']
             except exception.NotFound:
                 msg = _("Instance %s destroyed successfully.") % instance_name
-                LOG.debug(instance_name)
+                LOG.info(msg)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_destroy)
@@ -539,7 +539,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state == power_state.RUNNING:
                 msg = _("Instance %s rebooted successfully.") % instance_name
-                LOG.debug(instance_name)
+                LOG.info(msg)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_reboot)
@@ -593,7 +593,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state == power_state.RUNNING:
                 msg = _("Instance %s rescued successfully.") % instance_name
-                LOG.debug(instance_name)
+                LOG.info(msg)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_rescue)
@@ -643,7 +643,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
             if state == power_state.RUNNING:
                 msg = _("Instance %s spawned successfully.") % instance_name
-                LOG.debug(instance_name)
+                LOG.info(msg)
                 raise utils.LoopingCallDone
 
         timer = utils.LoopingCall(_wait_for_boot)
