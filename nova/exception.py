@@ -186,7 +186,7 @@ class ComputeServiceUnavailable(ServiceUnavailable):
 
 class UnableToMigrateToSelf(Invalid):
     message = _("Unable to migrate instance (%(instance_id)s) "
-              "to current host (%(host)s).")
+                "to current host (%(host)s).")
 
 
 class SourceHostUnavailable(Invalid):
@@ -199,7 +199,7 @@ class InvalidHypervisorType(Invalid):
 
 class DestinationHypervisorTooOld(Invalid):
     message = _("The instance requires a newer hypervisor version than "
-              "has been provided.")
+                "has been provided.")
 
 
 class InvalidDevicePath(Invalid):
@@ -212,15 +212,15 @@ class InvalidCPUInfo(Invalid):
 
 class InvalidVLANTag(Invalid):
     message = _("VLAN tag is not appropriate for the port group "
-              "%(bridge)s. Expected VLAN tag is %(tag)s, "
-              "but the one associated with the port group is %(pgroup)s.")
+                "%(bridge)s. Expected VLAN tag is %(tag)s, "
+                "but the one associated with the port group is %(pgroup)s.")
 
 
 class InvalidVLANPortGroup(Invalid):
     message = _("vSwitch which contains the port group %(bridge)s is "
-              "not associated with the desired physical adapter. "
-              "Expected vSwitch is %(expected)s, but the one associated "
-              "is %(actual)s.")
+                "not associated with the desired physical adapter. "
+                "Expected vSwitch is %(expected)s, but the one associated "
+                "is %(actual)s.")
 
 
 class ImageUnacceptable(Invalid):
