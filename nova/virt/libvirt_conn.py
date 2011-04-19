@@ -361,7 +361,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         def _wait_for_destroy():
             """Called at an interval until the VM is running again."""
-            instance_name = insatnce['name']
+            instance_name = instance['name']
 
             try:
                 state = self.get_info(instance_name)['state']
@@ -533,7 +533,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         def _wait_for_reboot():
             """Called at an interval until the VM is running again."""
-            instance_name = insatnce['name']
+            instance_name = instance['name']
 
             try:
                 state = self.get_info(instance_name)['state']
@@ -637,7 +637,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
-            instance_name = insatnce['name']
+            instance_name = instance['name']
 
             try:
                 state = self.get_info(instance_name)['state']
