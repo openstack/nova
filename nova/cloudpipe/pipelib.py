@@ -37,7 +37,6 @@ from nova import utils
 from nova.auth import manager
 # TODO(eday): Eventually changes these to something not ec2-specific
 from nova.api.ec2 import cloud
-from nova.api
 
 
 FLAGS = flags.FLAGS
