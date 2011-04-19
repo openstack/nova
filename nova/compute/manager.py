@@ -524,6 +524,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.migration_update(context, migration_id,
                 {'status': 'post-migrating', })
 
+        # Make sure the service exists before sending a message.
+        _service = self.db.service_get_by_host_and_topic(context,
+                 migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 migration_ref['dest_compute'])
         rpc.cast(context, topic,
