@@ -18,6 +18,7 @@ import eventlet
 import mox
 import os
 import re
+import socket
 import sys
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
@@ -548,6 +549,17 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.volume_destroy(self.context, volume_ref['id'])
         db.instance_destroy(self.context, instance_ref['id'])
+
+    def test_get_host_ip_addr(self):
+
+        def getHostname():
+            return socket.gethostname()
+
+        self.create_fake_libvirt_mock(getHostname=getHostname)
+        self.mox.ReplayAll()
+        conn = libvirt_conn.LibvirtConnection(False)
+        ip = conn.get_host_ip_addr()
+        self.assertTrue(ip is not None)
 
     def tearDown(self):
         self.manager.delete_project(self.project)
