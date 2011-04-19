@@ -620,7 +620,7 @@ class VMWareVMOps(object):
             LOG.debug(_("Suspended the VM %s ") % instance.name)
         # Raise Exception if VM is poweredOff
         elif pwr_state == "poweredOff":
-            reason = _("instance is poweredOff and can not be suspended.")
+            reason = _("instance is powered off and can not be suspended.")
             raise exception.InstanceSuspendFailure(reason=reason)
 
         LOG.debug(_("VM %s was already in suspended state. So returning "

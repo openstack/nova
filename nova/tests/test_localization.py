@@ -59,6 +59,7 @@ class LocalizationTestCase(test.TestCase):
                     pos = 0
                     while parenCount > 0:
                         char = txt[pos]
+                        print char
                         if char == "(":
                             parenCount += 1
                         elif char == ")":
