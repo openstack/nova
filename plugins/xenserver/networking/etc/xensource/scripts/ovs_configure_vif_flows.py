@@ -86,7 +86,7 @@ def main(dom_id, command, net_type, only_this_vif=None):
                 for ip6 in data['ip6s']:
                     params.update({'VIF_GLOBAL_IPv6': ip6['ip']})
                     mac64 = netaddr.EUI(mac).eui64()
-                    params.update({'VIF_LOCAL_IPv6': mac64.ipv6_link_local()})
+                    params.update({'VIF_LOCAL_IPv6': str(mac64.ipv6_link_local())})
                     apply_ovs_ipv6_flows(command, bridge, params)
 
 

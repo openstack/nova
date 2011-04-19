@@ -29,7 +29,7 @@ def execute_get_output(*command):
     proc = subprocess.Popen(command, close_fds=True,
                             stdout=subprocess.PIPE, stderr=devnull)
     devnull.close()
-    return proc.stdout.read()
+    return proc.stdout.read().strip()
 
 
 def execute(*command):
