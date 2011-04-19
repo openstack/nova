@@ -129,15 +129,14 @@ class Scheduler(object):
         if (power_state.RUNNING != instance_ref['state'] or \
            'running' != instance_ref['state_description']):
             ec2_id = instance_ref['hostname']
-            raise exception.Invalid(_('Instance(%s) is not running') % ec2_id)
+            raise exception.InstanceNotRunning(instance_id=ec2_id)
 
         # Checing volume node is running when any volumes are mounted
         # to the instance.
         if len(instance_ref['volumes']) != 0:
             services = db.service_get_all_by_topic(context, 'volume')
             if len(services) < 1 or  not self.service_is_up(services[0]):
-                raise exception.Invalid(_("volume node is not alive"
-                                          "(time synchronize problem?)"))
+                raise exception.VolumeServiceUnavailable()
 
         # Checking src host exists and compute node
         src = instance_ref['host']
@@ -145,8 +144,7 @@ class Scheduler(object):
 
         # Checking src host is alive.
         if not self.service_is_up(services[0]):
-            raise exception.Invalid(_("%s is not alive(time "
-                                      "synchronize problem?)") % src)
+            raise exception.ComputeServiceUnavailable(host=src)
 
     def _live_migration_dest_check(self, context, instance_ref, dest):
         """Live migration check routine (for destination host).
@@ -163,17 +161,15 @@ class Scheduler(object):
 
         # Checking dest host is alive.
         if not self.service_is_up(dservice_ref):
-            raise exception.Invalid(_("%s is not alive(time "
-                                      "synchronize problem?)") % dest)
+            raise exception.ComputeServiceUnavailable(host=dest)
 
         # Checking whether The host where instance is running
         # and dest is not same.
         src = instance_ref['host']
         if dest == src:
             ec2_id = instance_ref['hostname']
-            raise exception.Invalid(_("%(dest)s is where %(ec2_id)s is "
-                                       "running now. choose other host.")
-                                       % locals())
+            raise exception.UnableToMigrateToSelf(instance_id=ec2_id,
+                                                  host=dest)
 
         # Checking dst host still has enough capacities.
         self.assert_compute_node_has_enough_resources(context,
@@ -204,26 +200,20 @@ class Scheduler(object):
             oservice_refs = db.service_get_all_compute_by_host(context,
                                            instance_ref['launched_on'])
         except exception.NotFound:
-            raise exception.Invalid(_("host %s where instance was launched "
-                                      "does not exist.")
-                                       % instance_ref['launched_on'])
+            raise exception.SourceHostUnavailable()
         oservice_ref = oservice_refs[0]['compute_node'][0]
 
         # Checking hypervisor is same.
         orig_hypervisor = oservice_ref['hypervisor_type']
         dest_hypervisor = dservice_ref['hypervisor_type']
         if orig_hypervisor != dest_hypervisor:
-            raise exception.Invalid(_("Different hypervisor type"
-                                      "(%(orig_hypervisor)s->"
-                                      "%(dest_hypervisor)s)')" % locals()))
+            raise exception.InvalidHypervisorType()
 
         # Checkng hypervisor version.
         orig_hypervisor = oservice_ref['hypervisor_version']
         dest_hypervisor = dservice_ref['hypervisor_version']
         if orig_hypervisor > dest_hypervisor:
-            raise exception.Invalid(_("Older hypervisor version"
-                                      "(%(orig_hypervisor)s->"
-                                      "%(dest_hypervisor)s)") % locals())
+            raise exception.DestinationHypervisorTooOld()
 
         # Checking cpuinfo.
         try:

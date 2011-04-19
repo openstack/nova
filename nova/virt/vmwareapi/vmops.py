@@ -501,8 +501,8 @@ class VMWareVMOps(object):
 
         # Raise an exception if the VM is not powered On.
         if pwr_state not in ["poweredOn"]:
-            raise exception.Invalid(_("instance - %s not poweredOn. So can't "
-                            "be rebooted.") % instance.name)
+            reason = _("instance is not powered on")
+            raise exception.InstanceRebootFailure(reason=reason)
 
         # If latest vmware tools are installed in the VM, and that the tools
         # are running, then only do a guest reboot. Otherwise do a hard reset.
@@ -620,8 +620,9 @@ class VMWareVMOps(object):
             LOG.debug(_("Suspended the VM %s ") % instance.name)
         # Raise Exception if VM is poweredOff
         elif pwr_state == "poweredOff":
-            raise exception.Invalid(_("instance - %s is poweredOff and hence "
-                            " can't be suspended.") % instance.name)
+            reason = _("instance is powered off and can not be suspended.")
+            raise exception.InstanceSuspendFailure(reason=reason)
+
         LOG.debug(_("VM %s was already in suspended state. So returning "
                     "without doing anything") % instance.name)
 
@@ -643,8 +644,8 @@ class VMWareVMOps(object):
             self._wait_with_callback(instance.id, suspend_task, callback)
             LOG.debug(_("Resumed the VM %s ") % instance.name)
         else:
-            raise exception.Invalid(_("instance - %s not in Suspended state "
-                            "and hence can't be Resumed.") % instance.name)
+            reason = _("instance is not in a suspended state")
+            raise exception.InstanceResumeFailure(reason=reason)
 
     def get_info(self, instance_name):
         """Return data about the VM instance."""

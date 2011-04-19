@@ -451,7 +451,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         conn = libvirt_conn.LibvirtConnection(False)
-        self.assertRaises(exception.Invalid,
+        self.assertRaises(exception.ComputeServiceUnavailable,
                           conn.update_available_resource,
                           self.context, 'dummy')
 
