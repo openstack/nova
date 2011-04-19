@@ -620,6 +620,16 @@ class SheepdogDriver(VolumeDriver):
         """Deletes a logical volume"""
         self._try_execute('collie', 'vdi', 'delete', volume['name'])
 
+    def create_snapshot(self, snapshot):
+        """Creates a sheepdog snapshot"""
+        self._try_execute('qemu-img', 'snapshot', '-c', snapshot['name'],
+                          "sheepdog:%s" % snapshot['volume_name'])
+
+    def delete_snapshot(self, snapshot):
+        """Deletes a sheepdog snapshot"""
+        self._try_execute('collie', 'vdi', 'delete', snapshot['volume_name'],
+                          '-s', snapshot['name'])
+
     def local_path(self, volume):
         return "sheepdog:%s" % volume['name']
 
