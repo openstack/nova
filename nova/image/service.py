@@ -20,7 +20,7 @@ from nova import utils
 
 
 class BaseImageService(object):
-    """Base class for providing image search and retrieval services
+    """Base class for providing image search and retrieval services.
 
     ImageService exposes two concepts of metadata:
 
@@ -35,7 +35,9 @@ class BaseImageService(object):
     This means that ImageServices will return BASE_IMAGE_ATTRS as keys in the
     metadata dict, all other attributes will be returned as keys in the nested
     'properties' dict.
+
     """
+
     BASE_IMAGE_ATTRS = ['id', 'name', 'created_at', 'updated_at',
                         'deleted_at', 'deleted', 'status', 'is_public']
 
@@ -45,23 +47,18 @@ class BaseImageService(object):
     SERVICE_IMAGE_ATTRS = []
 
     def index(self, context):
-        """
-        Returns a sequence of mappings of id and name information about
-        images.
+        """List images.
 
-        :rtype: array
-        :retval: a sequence of mappings with the following signature
+        :returnsl: a sequence of mappings with the following signature
                     {'id': opaque id of image, 'name': name of image}
 
         """
         raise NotImplementedError
 
     def detail(self, context):
-        """
-        Returns a sequence of mappings of detailed information about images.
+        """Detailed information about an images.
 
-        :rtype: array
-        :retval: a sequence of mappings with the following signature
+        :returns: a sequence of mappings with the following signature
                     {'id': opaque id of image,
                      'name': name of image,
                      'created_at': creation datetime object,
@@ -77,15 +74,14 @@ class BaseImageService(object):
         NotImplementedError, in which case Nova will emulate this method
         with repeated calls to show() for each image received from the
         index() method.
+
         """
         raise NotImplementedError
 
     def show(self, context, image_id):
-        """
-        Returns a dict containing image metadata for the given opaque image id.
+        """Detailed information about an image.
 
-        :retval a mapping with the following signature:
-
+        :returns: a mapping with the following signature:
             {'id': opaque id of image,
              'name': name of image,
              'created_at': creation datetime object,
@@ -96,31 +92,32 @@ class BaseImageService(object):
              'is_public': boolean indicating if image is public
              }, ...
 
-        :raises NotFound if the image does not exist
+        :raises: NotFound if the image does not exist
+
         """
         raise NotImplementedError
 
     def get(self, context, data):
-        """
-        Returns a dict containing image metadata and writes image data to data.
+        """Get an image.
 
         :param data: a file-like object to hold binary image data
-
+        :returns: a dict containing image metadata, writes image data to data.
         :raises NotFound if the image does not exist
+
         """
         raise NotImplementedError
 
     def create(self, context, metadata, data=None):
-        """
-        Store the image metadata and data and return the new image metadata.
+        """Store the image metadata and data.
 
-        :raises AlreadyExists if the image already exist.
+        :returns: the new image metadata.
+        :raises: AlreadyExists if the image already exist.
 
         """
         raise NotImplementedError
 
     def update(self, context, image_id, metadata, data=None):
-        """Update the given image metadata and data and return the metadata
+        """Update the given image metadata and data and return the metadata.
 
         :raises NotFound if the image does not exist.
 
@@ -128,8 +125,7 @@ class BaseImageService(object):
         raise NotImplementedError
 
     def delete(self, context, image_id):
-        """
-        Delete the given image.
+        """Delete the given image.
 
         :raises NotFound if the image does not exist.
 
@@ -138,12 +134,14 @@ class BaseImageService(object):
 
     @staticmethod
     def _is_image_available(context, image_meta):
-        """
+        """Check image availability.
+
         Images are always available if they are public or if the user is an
         admin.
 
         Otherwise, we filter by project_id (if present) and then fall-back to
         images owned by user.
+
         """
         # FIXME(sirp): We should be filtering by user_id on the Glance side
         # for security; however, we can't do that until we get authn/authz
@@ -169,29 +167,32 @@ class BaseImageService(object):
 
         This is used by subclasses to expose only a metadata dictionary that
         is the same across ImageService implementations.
+
         """
         return cls._propertify_metadata(metadata, cls.BASE_IMAGE_ATTRS)
 
     @classmethod
     def _translate_to_service(cls, metadata):
-        """Return a metadata dictionary that is usable by the ImageService
-        subclass.
+        """Return a metadata dict that is usable by the ImageService subclass.
 
         As an example, Glance has additional attributes (like 'location'); the
         BaseImageService considers these properties, but we need to translate
         these back to first-class attrs for sending to Glance. This method
         handles this by allowing you to specify the attributes an ImageService
         considers first-class.
+
         """
         if not cls.SERVICE_IMAGE_ATTRS:
-            raise NotImplementedError(_("Cannot use this without specifying "
-                                        "SERVICE_IMAGE_ATTRS for subclass"))
+            raise NotImplementedError(_('Cannot use this without specifying '
+                                        'SERVICE_IMAGE_ATTRS for subclass'))
         return cls._propertify_metadata(metadata, cls.SERVICE_IMAGE_ATTRS)
 
     @staticmethod
     def _propertify_metadata(metadata, keys):
-        """Return a dict with any unrecognized keys placed in the nested
-        'properties' dict.
+        """Move unknown keys to a nested 'properties' dict.
+
+        :returns: a new dict with the keys moved.
+
         """
         flattened = utils.flatten_dict(metadata)
         attributes, properties = utils.partition_dict(flattened, keys)
