@@ -252,6 +252,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if FLAGS.auto_assign_floating_ip:
                 public_ip = self.network_api.allocate_floating_ip(context)
 
+                self.db.floating_ip_set_auto_assigned(context, public_ip)
                 fixed_ip = self.db.fixed_ip_get_by_address(context, address)
                 floating_ip = self.db.floating_ip_get_by_address(context,
                                                                  public_ip)
