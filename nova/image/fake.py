@@ -44,11 +44,10 @@ class FakeImageService(service.BaseImageService):
                  'created_at': timestamp,
                  'updated_at': timestamp,
                  'status': 'active',
-                 'type': 'machine',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
                  'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel,
-                                'disk_format': 'ami'}
-                }
+                                'ramdisk_id': FLAGS.null_kernel}}
         self.create(None, image)
         super(FakeImageService, self).__init__()
 

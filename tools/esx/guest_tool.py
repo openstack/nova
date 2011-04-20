@@ -209,7 +209,7 @@ def _execute(cmd_list, process_input=None, check_exit_code=True):
     obj = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     result = None
-    if process_input != None:
+    if process_input is not None:
         result = obj.communicate(process_input)
     else:
         result = obj.communicate()
