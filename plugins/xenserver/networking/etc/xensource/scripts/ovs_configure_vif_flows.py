@@ -91,7 +91,7 @@ def main(dom_id, command, net_type, only_this_vif=None):
                         apply_ovs_ipv6_flows(ovs, bridge, params)
 
 
-def apply_ovs_ipv4_flows(ovs, command, bridge, params):
+def apply_ovs_ipv4_flows(ovs, bridge, params):
     # allow valid ARP outbound (both request / reply)
     ovs.add("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,arp,"
             "arp_sha=%(VIF_MAC)s,nw_src=%(VIF_IPv4)s,action=normal")
@@ -104,7 +104,7 @@ def apply_ovs_ipv4_flows(ovs, command, bridge, params):
             "nw_src=%(VIF_IPv4)s,action=normal")
 
 
-def apply_ovs_ipv6_flows(ovs, command, bridge, params):
+def apply_ovs_ipv6_flows(ovs, bridge, params):
     # allow valid IPv6 ND outbound (are both global and local IPs needed?)
     # Neighbor Solicitation
     ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
