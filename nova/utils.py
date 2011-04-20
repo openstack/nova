@@ -182,11 +182,11 @@ def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
     LOG.debug(_('Running cmd (SSH): %s'), ' '.join(cmd))
     if addl_env:
-        raise exception.Error('Environment not supported over SSH')
+        raise exception.Error(_('Environment not supported over SSH'))
 
     if process_input:
         # This is (probably) fixable if we need it...
-        raise exception.Error('process_input not supported over SSH')
+        raise exception.Error(_('process_input not supported over SSH'))
 
     stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
     channel = stdout_stream.channel

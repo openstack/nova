@@ -89,7 +89,6 @@ class Request(webob.Request):
         Based on the query extension then the Accept header.
 
         """
-
         parts = self.path.rsplit('.', 1)
 
         if len(parts) > 1:
