@@ -18,4 +18,9 @@
 Managing Images
 ===============
 
-.. todo:: Put info on managing images  here!
+With Nova, you can manage images either using the built-in object store or using Glance, a related OpenStack project. Glance is a server that provides the following services:
+
+ * Ability to store and retrieve virtual machine images
+ * Ability to store and retrieve metadata about these virtual machine images
+
+Refer to http://glance.openstack.org for additional details. 

@@ -48,7 +48,7 @@ flags.DEFINE_string('image_decryption_dir', '/tmp',
 class S3ImageService(service.BaseImageService):
     """Wraps an existing image service to support s3 based register"""
     def __init__(self, service=None, *args, **kwargs):
-        if service == None:
+        if service is None:
             service = utils.import_object(FLAGS.image_service)
         self.service = service
         self.service.__init__(*args, **kwargs)
@@ -75,7 +75,7 @@ class S3ImageService(service.BaseImageService):
         return self.service.show(context, image_id)
 
     def show_by_name(self, context, name):
-        return self.service.show(context, name)
+        return self.service.show_by_name(context, name)
 
     @staticmethod
     def _conn(context):

@@ -17,7 +17,6 @@ redis==2.0.0
 routes==1.12.3
 WebOb==0.9.8
 wsgiref==0.1.2
-zope.interface==3.6.1
 mox==0.5.0
 -f http://pymox.googlecode.com/files/mox-0.5.0.tar.gz
 greenlet==0.3.1

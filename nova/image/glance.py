@@ -186,7 +186,8 @@ class GlanceImageService(service.BaseImageService):
         """Overriding the base translation to handle conversion to datetime
         objects
         """
-        image_meta = service.BaseImageService._translate_to_base(image_meta)
+        image_meta = service.BaseImageService._propertify_metadata(
+                        image_meta, cls.SERVICE_IMAGE_ATTRS)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         return image_meta
 

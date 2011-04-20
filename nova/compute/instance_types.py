@@ -18,9 +18,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-The built-in instance properties.
-"""
+"""Built-in instance properties."""
 
 from nova import context
 from nova import db
@@ -34,9 +32,7 @@ LOG = logging.getLogger('nova.instance_types')
 
 def create(name, memory, vcpus, local_gb, flavorid, swap=0,
            rxtx_quota=0, rxtx_cap=0):
-    """Creates instance types / flavors
-       arguments: name memory vcpus local_gb flavorid swap rxtx_quota rxtx_cap
-    """
+    """Creates instance types."""
     for option in [memory, vcpus, local_gb, flavorid]:
         try:
             int(option)
@@ -64,9 +60,8 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
 
 
 def destroy(name):
-    """Marks instance types / flavors as deleted
-    arguments: name"""
-    if name == None:
+    """Marks instance types as deleted."""
+    if name is None:
         raise exception.InvalidInputException(_("No instance type specified"))
     else:
         try:
@@ -77,9 +72,8 @@ def destroy(name):
 
 
 def purge(name):
-    """Removes instance types / flavors from database
-    arguments: name"""
-    if name == None:
+    """Removes instance types from database."""
+    if name is None:
         raise exception.InvalidInputException(_("No instance type specified"))
     else:
         try:
@@ -90,18 +84,19 @@ def purge(name):
 
 
 def get_all_types(inactive=0):
-    """Retrieves non-deleted instance_types.
-    Pass true as argument if you want deleted instance types returned also."""
+    """Get all non-deleted instance_types.
+
+    Pass true as argument if you want deleted instance types returned also.
+
+    """
     return db.instance_type_get_all(context.get_admin_context(), inactive)
 
 
-def get_all_flavors():
-    """retrieves non-deleted flavors. alias for instance_types.get_all_types().
-    Pass true as argument if you want deleted instance types returned also."""
-    return get_all_types(context.get_admin_context())
+get_all_flavors = get_all_types
 
 
 def get_default_instance_type():
+    """Get the default instance type."""
     name = FLAGS.default_instance_type
     try:
         return get_instance_type_by_name(name)
@@ -110,7 +105,7 @@ def get_default_instance_type():
 
 
 def get_instance_type(id):
-    """Retrieves single instance type by id"""
+    """Retrieves single instance type by id."""
     if id is None:
         return get_default_instance_type()
     try:
@@ -121,7 +116,7 @@ def get_instance_type(id):
 
 
 def get_instance_type_by_name(name):
-    """Retrieves single instance type by name"""
+    """Retrieves single instance type by name."""
     if name is None:
         return get_default_instance_type()
     try:
@@ -131,8 +126,10 @@ def get_instance_type_by_name(name):
         raise exception.ApiError(_("Unknown instance type: %s") % name)
 
 
+# TODO(termie): flavor-specific code should probably be in the API that uses
+#               flavors.
 def get_instance_type_by_flavor_id(flavor_id):
-    """retrieve instance type by flavor_id"""
+    """Retrieve instance type by flavor_id."""
     if flavor_id is None:
         return get_default_instance_type()
     try:

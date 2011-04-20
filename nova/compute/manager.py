@@ -470,7 +470,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Destroys the source instance"""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        migration_ref = self.db.migration_get(context, migration_id)
         self.driver.destroy(instance_ref)
 
     @exception.wrap_exception
@@ -561,8 +560,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.migration_update(context, migration_id,
                 {'status': 'post-migrating', })
 
-        service = self.db.service_get_by_host_and_topic(context,
-                migration_ref['dest_compute'], FLAGS.compute_topic)
+        # Make sure the service exists before sending a message.
+        _service = self.db.service_get_by_host_and_topic(context,
+                 migration_ref['dest_compute'], FLAGS.compute_topic)
         topic = self.db.queue_get_for(context, FLAGS.compute_topic,
                 migration_ref['dest_compute'])
         rpc.cast(context, topic,
@@ -688,7 +688,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
 
         LOG.debug(_('instance %s: locking'), instance_id, context=context)
         self.db.instance_update(context, instance_id, {'locked': True})
@@ -700,7 +699,6 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
 
         LOG.debug(_('instance %s: unlocking'), instance_id, context=context)
         self.db.instance_update(context, instance_id, {'locked': False})
@@ -1145,6 +1143,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Are there VMs not in the DB?
         for vm_not_found_in_db in vms_not_found_in_db:
             name = vm_not_found_in_db
-            # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
-            LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
-                        % locals())
+
+            # We only care about instances that compute *should* know about
+            if name.startswith("instance-"):
+                # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
+                LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
+                            % locals())

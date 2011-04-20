@@ -42,6 +42,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.virt import driver
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
@@ -104,11 +105,12 @@ def get_connection(_):
                                api_retry_count)
 
 
-class VMWareESXConnection(object):
+class VMWareESXConnection(driver.ComputeDriver):
     """The ESX host connection object."""
 
     def __init__(self, host_ip, host_username, host_password,
                  api_retry_count, scheme="https"):
+        super(VMWareESXConnection, self).__init__()
         session = VMWareAPISession(host_ip, host_username, host_password,
                                    api_retry_count, scheme=scheme)
         self._vmops = VMWareVMOps(session)

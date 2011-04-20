@@ -381,7 +381,6 @@ class VMOps(object):
 
     def link_disks(self, instance, base_copy_uuid, cow_uuid):
         """Links the base copy VHD to the COW via the XAPI plugin."""
-        vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
         new_cow_uuid = str(uuid.uuid4())
         params = {'instance_id': instance.id,
@@ -754,7 +753,6 @@ class VMOps(object):
                                                               instance)))
 
         for vm in rescue_vms:
-            rescue_name = vm["name"]
             rescue_vm_ref = vm["vm_ref"]
 
             self._destroy_rescue_instance(rescue_vm_ref)
@@ -792,7 +790,7 @@ class VMOps(object):
     def _get_network_info(self, instance):
         """Creates network info list for instance."""
         admin_context = context.get_admin_context()
-        IPs = db.fixed_ip_get_all_by_instance(admin_context,
+        ips = db.fixed_ip_get_all_by_instance(admin_context,
                                               instance['id'])
         networks = db.network_get_all_by_instance(admin_context,
                                                   instance['id'])
@@ -802,7 +800,7 @@ class VMOps(object):
 
         network_info = []
         for network in networks:
-            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+            network_ips = [ip for ip in ips if ip.network_id == network.id]
 
             def ip_dict(ip):
                 return {
@@ -824,7 +822,7 @@ class VMOps(object):
                 'mac': instance.mac_address,
                 'rxtx_cap': inst_type['rxtx_cap'],
                 'dns': [network['dns']],
-                'ips': [ip_dict(ip) for ip in network_IPs]}
+                'ips': [ip_dict(ip) for ip in network_ips]}
             if network['cidr_v6']:
                 info['ip6s'] = [ip6_dict()]
             if network['gateway_v6']:
@@ -917,7 +915,7 @@ class VMOps(object):
         try:
             ret = self._make_xenstore_call('read_record', vm, path,
                     {'ignore_missing_path': 'True'})
-        except self.XenAPI.Failure, e:
+        except self.XenAPI.Failure:
             return None
         ret = json.loads(ret)
         if ret == "None":
