@@ -49,8 +49,8 @@ class BaseImageService(object):
     def index(self, context):
         """List images.
 
-        :returnsl: a sequence of mappings with the following signature
-                    {'id': opaque id of image, 'name': name of image}
+        :returns: a sequence of mappings with the following signature
+                  {'id': opaque id of image, 'name': name of image}
 
         """
         raise NotImplementedError
@@ -102,7 +102,7 @@ class BaseImageService(object):
 
         :param data: a file-like object to hold binary image data
         :returns: a dict containing image metadata, writes image data to data.
-        :raises NotFound if the image does not exist
+        :raises: NotFound if the image does not exist
 
         """
         raise NotImplementedError
@@ -119,7 +119,7 @@ class BaseImageService(object):
     def update(self, context, image_id, metadata, data=None):
         """Update the given image metadata and data and return the metadata.
 
-        :raises NotFound if the image does not exist.
+        :raises: NotFound if the image does not exist.
 
         """
         raise NotImplementedError
@@ -127,7 +127,7 @@ class BaseImageService(object):
     def delete(self, context, image_id):
         """Delete the given image.
 
-        :raises NotFound if the image does not exist.
+        :raises: NotFound if the image does not exist.
 
         """
         raise NotImplementedError

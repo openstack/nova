@@ -57,9 +57,8 @@ class LocalImageService(service.BaseImageService):
             try:
                 unhexed_image_id = int(image_dir, 16)
             except ValueError:
-                LOG.error(
-                    _('%s is not in correct directory naming format'\
-                       % image_dir))
+                LOG.error(_('%s is not in correct directory naming format')
+                          % image_dir)
             else:
                 images.append(unhexed_image_id)
         return images
