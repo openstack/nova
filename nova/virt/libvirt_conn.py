@@ -1839,12 +1839,12 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-allow-dhcp-server']
 
         if FLAGS.use_ipv6:
-            networks = [network for (network, _) in network_info if
+            networks = [network for (network, _m) in network_info if
                         network['gateway_v6']]
 
             if networks:
                 instance_secgroup_filter_children.\
-                append('nova-allow-ra-server')
+                    append('nova-allow-ra-server')
 
         for security_group in \
                 db.security_group_get_by_instance(ctxt, instance['id']):
@@ -1859,8 +1859,8 @@ class NWFilterFirewall(FirewallDriver):
                                            instance_secgroup_filter_children))
 
         network_filters = self.\
-        _create_network_filters(instance, network_info,
-                                instance_secgroup_filter_name)
+            _create_network_filters(instance, network_info,
+                                    instance_secgroup_filter_name)
 
         for (name, children) in network_filters:
             self._define_filters(name, children)
@@ -1873,7 +1873,7 @@ class NWFilterFirewall(FirewallDriver):
             base_filter = 'nova-base'
 
         result = []
-        for (_, mapping) in network_info:
+        for (_n, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
             instance_filter_children = [base_filter,
@@ -1996,11 +1996,11 @@ class IptablesFirewallDriver(FirewallDriver):
         return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
     def _filters_for_instance(self, chain_name, network_info):
-        ips_v4 = [ip['ip'] for (_, mapping) in network_info
+        ips_v4 = [ip['ip'] for (_n, mapping) in network_info
                  for ip in mapping['ips']]
         ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        ips_v6 = [ip['ip'] for (_, mapping) in network_info
+        ips_v6 = [ip['ip'] for (_n, mapping) in network_info
                  for ip in mapping['ip6s']]
 
         ipv6_rules = self._create_filter(ips_v6, chain_name)

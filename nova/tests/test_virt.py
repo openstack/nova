@@ -223,7 +223,7 @@ class LibvirtConnTestCase(test.TestCase):
                                         _create_network_info(2))
         self.assertTrue(len(result['nics']) == 2)
 
-    def test_get_nic_for_xml(self):
+    def test_get_nic_for_xml_v4(self):
         conn = libvirt_conn.LibvirtConnection(True)
         network, mapping = _create_network_info()[0]
         self.flags(use_ipv6=False)
@@ -794,8 +794,11 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(len(rulesv6), 3)
 
     def multinic_iptables_test(self):
+        ipv4_rules_per_network = 2
+        ipv6_rules_per_network = 3
+        networks_count = 5
         instance_ref = self._create_instance_ref()
-        network_info = _create_network_info()
+        network_info = _create_network_info(networks_count)
         ipv4_len = len(self.fw.iptables.ipv4['filter'].rules)
         ipv6_len = len(self.fw.iptables.ipv6['filter'].rules)
         inst_ipv4, inst_ipv6 = self.fw.instance_rules(instance_ref,
@@ -803,8 +806,12 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.add_filters_for_instance(instance_ref, network_info)
         ipv4 = self.fw.iptables.ipv4['filter'].rules
         ipv6 = self.fw.iptables.ipv6['filter'].rules
-        self.assertEquals(len(ipv4) - len(inst_ipv4) - ipv4_len, 2)
-        self.assertEquals(len(ipv6) - len(inst_ipv6) - ipv6_len, 3)
+        ipv4_network_rules = len(ipv4) - len(inst_ipv4) - ipv4_len
+        ipv6_network_rules = len(ipv6) - len(inst_ipv6) - ipv6_len
+        self.assertEquals(ipv4_network_rules,
+                          ipv4_rules_per_network * networks_count)
+        self.assertEquals(ipv6_network_rules,
+                          ipv6_rules_per_network * networks_count)
 
 
 class NWFilterTestCase(test.TestCase):
@@ -965,6 +972,7 @@ class NWFilterTestCase(test.TestCase):
     def test_create_network_filters(self):
         instance_ref = self._create_instance()
         network_info = _create_network_info(3)
-        result = \
-        self.fw._create_network_filters(instance_ref, network_info, "fake")
+        result = self.fw._create_network_filters(instance_ref,
+                                                 network_info,
+                                                 "fake")
         self.assertEquals(len(result), 3)
