@@ -96,7 +96,7 @@ then
   fi
 fi
 
-run_tests
+run_tests || exit
 
 # Also run pep8 if no options were provided.
 if [ -z "$noseargs" ]; then
