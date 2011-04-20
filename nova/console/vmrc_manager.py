@@ -51,10 +51,11 @@ class ConsoleVMRCManager(manager.Manager):
         """Get VIM session for the pool specified."""
         vim_session = None
         if pool['id'] not in self.sessions.keys():
-            vim_session = vmwareapi_conn.VMWareAPISession(pool['address'],
-                                           pool['username'],
-                                            pool['password'],
-                                           FLAGS.console_vmrc_error_retries)
+            vim_session = vmwareapi_conn.VMWareAPISession(
+                    pool['address'],
+                    pool['username'],
+                    pool['password'],
+                    FLAGS.console_vmrc_error_retries)
             self.sessions[pool['id']] = vim_session
         return self.sessions[pool['id']]
 
