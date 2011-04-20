@@ -396,7 +396,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'rescuing')
         self.network_manager.setup_compute_network(context, instance_id)
         _update_state = lambda result: self._update_state_callback(
-                self, context, instance_id, result))
+                self, context, instance_id, result)
         self.driver.rescue(instance_ref, _update_state)
         self._update_state(context, instance_id)
 
@@ -412,7 +412,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'unrescuing')
         _update_state = lambda result: self._update_state_callback(
-                self, context, instance_id, result))
+                self, context, instance_id, result)
         self.driver.unrescue(instance_ref, _update_state)
         self._update_state(context, instance_id)
 
