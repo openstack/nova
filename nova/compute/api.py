@@ -106,7 +106,7 @@ class API(base.Base):
 
     def _check_injected_file_format(self, injected_files):
         """Ensure given injected files are in the correct format."""
-        for _, content in injected_files:
+        for file_path, content in injected_files:
             try:
                 base64.b64decode(content)
             except TypeError:
