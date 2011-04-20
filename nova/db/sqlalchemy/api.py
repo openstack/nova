@@ -770,9 +770,10 @@ def instance_create(context, values):
     metadata = values.get('metadata')
     metadata_refs = []
     if metadata:
-        for metadata_item in metadata:
+        for k, v in metadata.iteritems():
             metadata_ref = models.InstanceMetadata()
-            metadata_ref.update(metadata_item)
+            metadata_ref['key'] = k
+            metadata_ref['value'] = v
             metadata_refs.append(metadata_ref)
     values['metadata'] = metadata_refs
 
@@ -1835,7 +1836,7 @@ def security_group_get_by_instance(context, instance_id):
 def security_group_exists(context, project_id, group_name):
     try:
         group = security_group_get_by_name(context, project_id, group_name)
-        return group != None
+        return group is not None
     except exception.NotFound:
         return False
 

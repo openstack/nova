@@ -47,8 +47,7 @@ class FakeImageService(service.BaseImageService):
                  'container_format': 'ami',
                  'disk_format': 'raw',
                  'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel}
-                }
+                                'ramdisk_id': FLAGS.null_kernel}}
         self.create(None, image)
         super(FakeImageService, self).__init__()
 
