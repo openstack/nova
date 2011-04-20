@@ -268,7 +268,7 @@ class AuthManager(object):
         LOG.debug(_('Looking up user: %r'), access_key)
         user = self.get_user_from_access_key(access_key)
         LOG.debug('user: %r', user)
-        if user == None:
+        if user is None:
             LOG.audit(_("Failed authorization for access key %s"), access_key)
             raise exception.NotFound(_('No user found for access key %s')
                                      % access_key)
@@ -280,7 +280,7 @@ class AuthManager(object):
             project_id = user.name
 
         project = self.get_project(project_id)
-        if project == None:
+        if project is None:
             pjid = project_id
             uname = user.name
             LOG.audit(_("failed authorization: no project named %(pjid)s"
@@ -656,9 +656,9 @@ class AuthManager(object):
         @rtype: User
         @return: The new user.
         """
-        if access == None:
+        if access is None:
             access = str(uuid.uuid4())
-        if secret == None:
+        if secret is None:
             secret = str(uuid.uuid4())
         with self.driver() as drv:
             user_dict = drv.create_user(name, access, secret, admin)

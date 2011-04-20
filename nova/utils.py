@@ -157,7 +157,7 @@ def execute(*cmd, **kwargs):
                                    stderr=subprocess.PIPE,
                                    env=env)
             result = None
-            if process_input != None:
+            if process_input is not None:
                 result = obj.communicate(process_input)
             else:
                 result = obj.communicate()
