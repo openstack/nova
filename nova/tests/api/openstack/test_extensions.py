@@ -158,6 +158,7 @@ class ActionExtensionTest(unittest.TestCase):
         request.method = 'POST'
         request.content_type = 'application/json'
         request.body = json.dumps(body)
+        request.environ = {'nova.context': 'context'}
         response = request.get_response(ext_midware)
         return response
 

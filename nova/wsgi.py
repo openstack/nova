@@ -28,6 +28,7 @@ from xml.dom import minidom
 import eventlet
 import eventlet.wsgi
 eventlet.patcher.monkey_patch(all=False, socket=True, time=True)
+import re
 import routes
 import routes.middleware
 import webob
@@ -105,12 +106,19 @@ class Request(webob.Request):
         return bm or "application/json"
 
     def get_content_type(self):
-        try:
-            ct = self.headers["Content-Type"]
-            assert ct in ("application/xml", "application/json")
-            return ct
-        except Exception:
-            raise webob.exc.HTTPBadRequest("Invalid content type")
+        allowed_types = ("application/xml", "application/json")
+        if not "Content-Type" in self.headers:
+            msg = _("Missing Content-Type")
+            LOG.debug(msg)
+            raise webob.exc.HTTPBadRequest(msg)
+        content_type = self.headers["Content-Type"]
+        match = re.search("([\w/]+)", content_type)
+        if match:
+            type = match.group(0)
+            if type in allowed_types:
+                return type
+        LOG.debug(_("Wrong Content-Type: %s") % content_type)
+        raise webob.exc.HTTPBadRequest("Invalid content type")
 
 
 class Application(object):

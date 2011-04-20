@@ -294,61 +294,47 @@ class Controller(common.OpenstackController):
             'revertResize': self._action_revert_resize,
             'rebuild': self._action_rebuild,
             }
-
         input_dict = self._deserialize(req.body, req.get_content_type())
         for key in actions.keys():
             if key in input_dict:
-                return actions[key](input_dict, req, id)
+                try:
+                    context = req.environ['nova.context']
+                    return actions[key](context, input_dict, id)
+                except Exception, e:
+                    LOG.exception(_("Error in action %(key)s: %(e)s") %
+                                  locals())
+                    return faults.Fault(exc.HTTPBadRequest())
         return faults.Fault(exc.HTTPNotImplemented())
 
-    def _action_change_password(self, input_dict, req, id):
+    def _action_change_password(self, context, input_dict, id):
         return exc.HTTPNotImplemented()
 
-    def _action_confirm_resize(self, input_dict, req, id):
-        try:
-            self.compute_api.confirm_resize(req.environ['nova.context'], id)
-        except Exception, e:
-            LOG.exception(_("Error in confirm-resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+    def _action_confirm_resize(self, context, input_dict, id):
+        self.compute_api.confirm_resize(context, id)
         return exc.HTTPNoContent()
 
-    def _action_revert_resize(self, input_dict, req, id):
-        try:
-            self.compute_api.revert_resize(req.environ['nova.context'], id)
-        except Exception, e:
-            LOG.exception(_("Error in revert-resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+    def _action_revert_resize(self, context, input_dict, id):
+        self.compute_api.revert_resize(context, id)
         return exc.HTTPAccepted()
 
-    def _action_rebuild(self, input_dict, req, id):
+    def _action_rebuild(self, context, input_dict, id):
         return faults.Fault(exc.HTTPNotImplemented())
 
-    def _action_resize(self, input_dict, req, id):
+    def _action_resize(self, context, input_dict, id):
         """ Resizes a given instance to the flavor size requested """
-        try:
-            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-                flavor_id = input_dict['resize']['flavorId']
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing arguments for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
+        if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
+            flavor_id = input_dict['resize']['flavorId']
+            self.compute_api.resize(context, id, flavor_id)
+        else:
+            LOG.exception(_("Missing arguments for resize"))
+            return faults.Fault(exc.HTTPUnprocessableEntity())
         return faults.Fault(exc.HTTPAccepted())
 
-    def _action_reboot(self, input_dict, req, id):
-        try:
-            reboot_type = input_dict['reboot']['type']
-        except Exception:
-            raise faults.Fault(exc.HTTPNotImplemented())
-        try:
-            # TODO(gundlach): pass reboot_type, support soft reboot in
-            # virt driver
-            self.compute_api.reboot(req.environ['nova.context'], id)
-        except:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+    def _action_reboot(self, context, input_dict, id):
+        reboot_type = input_dict['reboot']['type']
+        # TODO(gundlach): pass reboot_type, support soft reboot in
+        # virt driver
+        self.compute_api.reboot(context, id)
         return exc.HTTPAccepted()
 
     @scheduler_api.redirect_handler
@@ -632,8 +618,7 @@ class ControllerV11(Controller):
     def _get_addresses_view_builder(self, req):
         return nova.api.openstack.views.addresses.ViewBuilderV11(req)
 
-    def _action_change_password(self, input_dict, req, id):
-        context = req.environ['nova.context']
+    def _action_change_password(self, context, input_dict, id):
         if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             msg = _("No adminPass was specified")
