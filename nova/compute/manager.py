@@ -319,7 +319,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
 
-        # TODO(blamar): Detach volumes prior to rebuild.
         self._update_state(context, instance_id, power_state.BUILDING)
 
         self.driver.destroy(instance_ref)
