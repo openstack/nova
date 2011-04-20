@@ -1103,7 +1103,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(justinsb): We have to be very careful here, because a
                 # concurrent operation could be in progress (e.g. a spawn)
                 if db_state == power_state.BUILDING:
-                    # Assume that NOSTATE => spawning
                     # TODO(justinsb): This does mean that if we crash during a
                     # spawn, the machine will never leave the spawning state,
                     # but this is just the way nova is; this function isn't
