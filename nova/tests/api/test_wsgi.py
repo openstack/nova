@@ -139,7 +139,6 @@ class RequestTest(test.TestCase):
     def test_request_content_type_with_charset(self):
         request = wsgi.Request.blank('/tests/123')
         request.headers["Content-Type"] = "application/json; charset=UTF-8"
-        request.body = "<body />"
         result = request.get_content_type()
         self.assertEqual(result, "application/json")
 
