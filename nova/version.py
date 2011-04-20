@@ -21,9 +21,9 @@ except ImportError:
                     'revision_id': 'LOCALREVISION',
                     'revno': 0}
 
+
 NOVA_VERSION = ['2011', '3']
 YEAR, COUNT = NOVA_VERSION
-
 FINAL = False   # This becomes true at Release Candidate time
 
 
@@ -39,8 +39,8 @@ def version_string():
 
 
 def vcs_version_string():
-    return "%s:%s" % (version_info['branch_nick'], version_info['revision_id'])
+    return '%s:%s' % (version_info['branch_nick'], version_info['revision_id'])
 
 
 def version_string_with_vcs():
-    return "%s-%s" % (canonical_version_string(), vcs_version_string())
+    return '%s-%s' % (canonical_version_string(), vcs_version_string())
