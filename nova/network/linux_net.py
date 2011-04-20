@@ -407,6 +407,10 @@ def ensure_vlan_forward(public_ip, port, private_ip):
                                           "-d %s -p udp "
                                           "--dport %s -j DNAT --to %s:1194" %
                                           (public_ip, port, private_ip))
+    iptables_manager.ipv4['nat'].add_rule("OUTPUT",
+                                          "-d %s -p udp "
+                                          "--dport %s -j DNAT --to %s:1194" %
+                                          (public_ip, port, private_ip))
     iptables_manager.apply()
 
 

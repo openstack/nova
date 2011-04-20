@@ -151,7 +151,7 @@ class VpnCommands(object):
                     state = 'up'
                 print address,
                 print vpn['host'],
-                print vpn['ec2_id'],
+                print ec2utils.id_to_ec2_id(vpn['id']),
                 print vpn['state_description'],
                 print state
             else:
