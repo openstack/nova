@@ -28,7 +28,6 @@ from xml.dom import minidom
 import eventlet
 import eventlet.wsgi
 eventlet.patcher.monkey_patch(all=False, socket=True, time=True)
-import re
 import routes
 import routes.middleware
 import webob
@@ -111,13 +110,10 @@ class Request(webob.Request):
             msg = _("Missing Content-Type")
             LOG.debug(msg)
             raise webob.exc.HTTPBadRequest(msg)
-        content_type = self.headers["Content-Type"]
-        match = re.search("([\w/]+)", content_type)
-        if match:
-            type = match.group(0)
-            if type in allowed_types:
-                return type
-        LOG.debug(_("Wrong Content-Type: %s") % content_type)
+        type = self.content_type
+        if type in allowed_types:
+            return type
+        LOG.debug(_("Wrong Content-Type: %s") % type)
         raise webob.exc.HTTPBadRequest("Invalid content type")
 
 
