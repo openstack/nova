@@ -609,7 +609,7 @@ class LibvirtConnection(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     @exception.wrap_exception
     def spawn(self, instance, network_info=None):
-        xml = self.to_xml(instance, network_info)
+        xml = self.to_xml(instance, False, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
 
