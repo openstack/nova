@@ -31,7 +31,9 @@ def upgrade(migrate_engine):
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
-    floating_ips = Table('floating_ips', meta, autoload=True,
-                      autoload_with=migrate_engine)
+    floating_ips = Table('floating_ips',
+                         meta,
+                         autoload=True,
+                         autoload_with=migrate_engine)
 
     floating_ips.create_column(c_auto_assigned)
