@@ -63,7 +63,7 @@ class ViewBuilder(object):
             power_state.BLOCKED: 'ACTIVE',
             power_state.SUSPENDED: 'SUSPENDED',
             power_state.PAUSED: 'PAUSED',
-            power_state.SHUTDOWN: 'ACTIVE',
+            power_state.SHUTDOWN: 'INACTIVE',
             power_state.SHUTOFF: 'ACTIVE',
             power_state.CRASHED: 'ERROR',
             power_state.FAILED: 'ERROR'}
