@@ -58,7 +58,6 @@ import gettext
 import glob
 import json
 import os
-import re
 import sys
 import time
 
@@ -66,11 +65,11 @@ import IPy
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
                                    os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
+if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
+    sys.path.insert(0, POSSIBLE_TOPDIR)
 
 gettext.install('nova', unicode=1)
 
@@ -449,7 +448,7 @@ class FixedIpCommands(object):
         ctxt = context.get_admin_context()
 
         try:
-            if host == None:
+            if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
                 fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
@@ -499,7 +498,7 @@ class FloatingIpCommands(object):
         """Lists all floating ips (optionally by host)
         arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
+        if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
         else:
             floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
@@ -595,7 +594,7 @@ class VmCommands(object):
             _('zone'),
             _('index'))
 
-        if host == None:
+        if host is None:
             instances = db.instance_get_all(context.get_admin_context())
         else:
             instances = db.instance_get_all_by_host(
@@ -813,11 +812,11 @@ class VolumeCommands(object):
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
-    def _print_instance_types(self, n, val):
+    def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
             "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
-            n, val["memory_mb"], val["vcpus"], val["local_gb"],
+            name, val["memory_mb"], val["vcpus"], val["local_gb"],
             val["flavorid"], val["swap"], val["rxtx_quota"],
             val["rxtx_cap"], deleted)
 
@@ -868,7 +867,7 @@ class InstanceTypeCommands(object):
         """Lists all active or specific instance types / flavors
         arguments: [name]"""
         try:
-            if name == None:
+            if name is None:
                 inst_types = instance_types.get_all_types()
             elif name == "--all":
                 inst_types = instance_types.get_all_types(True)
@@ -1013,7 +1012,7 @@ class ImageCommands(object):
         if (FLAGS.image_service == 'nova.image.local.LocalImageService'
             and directory == os.path.abspath(FLAGS.images_path)):
             new_dir = "%s_bak" % directory
-            os.move(directory, new_dir)
+            os.rename(directory, new_dir)
             os.mkdir(directory)
             directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
@@ -1025,7 +1024,7 @@ class ImageCommands(object):
                     machine_images[image_path] = image_metadata
                 else:
                     other_images[image_path] = image_metadata
-            except Exception as exc:
+            except Exception:
                 print _("Failed to load %(fn)s.") % locals()
         # NOTE(vish): do kernels and ramdisks first so images
         self._convert_images(other_images)

@@ -17,9 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-System-level utilities and helper functions.
-"""
+"""Utilities and helper functions."""
 
 import base64
 import datetime
@@ -43,9 +41,8 @@ from eventlet import event
 from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
-None
+
 from nova import exception
-from nova.exception import ProcessExecutionError
 from nova import flags
 from nova import log as logging
 
@@ -56,7 +53,7 @@ FLAGS = flags.FLAGS
 
 
 def import_class(import_str):
-    """Returns a class from a string including module and class"""
+    """Returns a class from a string including module and class."""
     mod_str, _sep, class_str = import_str.rpartition('.')
     try:
         __import__(mod_str)
@@ -67,7 +64,7 @@ def import_class(import_str):
 
 
 def import_object(import_str):
-    """Returns an object including a module or module and class"""
+    """Returns an object including a module or module and class."""
     try:
         __import__(import_str)
         return sys.modules[import_str]
@@ -99,11 +96,12 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
     cli_id = 64 bit identifier
     ? = unknown, probably flags/padding
     bit 9 was 1 and the rest were 0 in testing
+
     """
     if session_id is None:
         session_id = random.randint(0, 0xffffffffffffffff)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data = struct.pack("!BQxxxxxx", 0x38, session_id)
+    data = struct.pack('!BQxxxxxx', 0x38, session_id)
     sock.sendto(data, (address, port))
     sock.settimeout(timeout)
     try:
@@ -112,7 +110,7 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         return False
     finally:
         sock.close()
-    fmt = "!BQxxxxxQxxxx"
+    fmt = '!BQxxxxxQxxxx'
     if len(received) != struct.calcsize(fmt):
         print struct.calcsize(fmt)
         return False
@@ -122,15 +120,8 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
 
 
 def fetchfile(url, target):
-    LOG.debug(_("Fetching %s") % url)
-#    c = pycurl.Curl()
-#    fp = open(target, "wb")
-#    c.setopt(c.URL, url)
-#    c.setopt(c.WRITEDATA, fp)
-#    c.perform()
-#    c.close()
-#    fp.close()
-    execute("curl", "--fail", url, "-o", target)
+    LOG.debug(_('Fetching %s') % url)
+    execute('curl', '--fail', url, '-o', target)
 
 
 def execute(*cmd, **kwargs):
@@ -147,7 +138,7 @@ def execute(*cmd, **kwargs):
     while attempts > 0:
         attempts -= 1
         try:
-            LOG.debug(_("Running cmd (subprocess): %s"), ' '.join(cmd))
+            LOG.debug(_('Running cmd (subprocess): %s'), ' '.join(cmd))
             env = os.environ.copy()
             if addl_env:
                 env.update(addl_env)
@@ -157,26 +148,27 @@ def execute(*cmd, **kwargs):
                                    stderr=subprocess.PIPE,
                                    env=env)
             result = None
-            if process_input != None:
+            if process_input is not None:
                 result = obj.communicate(process_input)
             else:
                 result = obj.communicate()
             obj.stdin.close()
             if obj.returncode:
-                LOG.debug(_("Result was %s") % obj.returncode)
+                LOG.debug(_('Result was %s') % obj.returncode)
                 if type(check_exit_code) == types.IntType \
                         and obj.returncode != check_exit_code:
                     (stdout, stderr) = result
-                    raise ProcessExecutionError(exit_code=obj.returncode,
-                                                stdout=stdout,
-                                                stderr=stderr,
-                                                cmd=' '.join(cmd))
+                    raise exception.ProcessExecutionError(
+                            exit_code=obj.returncode,
+                            stdout=stdout,
+                            stderr=stderr,
+                            cmd=' '.join(cmd))
             return result
-        except ProcessExecutionError:
+        except exception.ProcessExecutionError:
             if not attempts:
                 raise
             else:
-                LOG.debug(_("%r failed. Retrying."), cmd)
+                LOG.debug(_('%r failed. Retrying.'), cmd)
                 if delay_on_retry:
                     greenthread.sleep(random.randint(20, 200) / 100.0)
         finally:
@@ -188,13 +180,13 @@ def execute(*cmd, **kwargs):
 
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
-    LOG.debug(_("Running cmd (SSH): %s"), ' '.join(cmd))
+    LOG.debug(_('Running cmd (SSH): %s'), ' '.join(cmd))
     if addl_env:
-        raise exception.Error("Environment not supported over SSH")
+        raise exception.Error(_('Environment not supported over SSH'))
 
     if process_input:
         # This is (probably) fixable if we need it...
-        raise exception.Error("process_input not supported over SSH")
+        raise exception.Error(_('process_input not supported over SSH'))
 
     stdin_stream, stdout_stream, stderr_stream = ssh.exec_command(cmd)
     channel = stdout_stream.channel
@@ -212,7 +204,7 @@ def ssh_execute(ssh, cmd, process_input=None,
 
     # exit_status == -1 if no exit code was returned
     if exit_status != -1:
-        LOG.debug(_("Result was %s") % exit_status)
+        LOG.debug(_('Result was %s') % exit_status)
         if check_exit_code and exit_status != 0:
             raise exception.ProcessExecutionError(exit_code=exit_status,
                                                   stdout=stdout,
@@ -251,7 +243,7 @@ def debug(arg):
 
 
 def runthis(prompt, *cmd, **kwargs):
-    LOG.debug(_("Running %s"), (" ".join(cmd)))
+    LOG.debug(_('Running %s'), (' '.join(cmd)))
     rv, err = execute(*cmd, **kwargs)
 
 
@@ -263,43 +255,44 @@ def generate_uid(topic, size=8):
 
 # Default symbols to use for passwords. Avoids visually confusing characters.
 # ~6 bits per symbol
-DEFAULT_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0,1
-                            "ABCDEFGHJKLMNPQRSTUVWXYZ"  # Removed: I, O
-                            "abcdefghijkmnopqrstuvwxyz")  # Removed: l
+DEFAULT_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0,1
+                            'ABCDEFGHJKLMNPQRSTUVWXYZ'  # Removed: I, O
+                            'abcdefghijkmnopqrstuvwxyz')  # Removed: l
 
 
 # ~5 bits per symbol
-EASIER_PASSWORD_SYMBOLS = ("23456789"  # Removed: 0, 1
-                           "ABCDEFGHJKLMNPQRSTUVWXYZ")  # Removed: I, O
+EASIER_PASSWORD_SYMBOLS = ('23456789'  # Removed: 0, 1
+                           'ABCDEFGHJKLMNPQRSTUVWXYZ')  # Removed: I, O
 
 
 def generate_password(length=20, symbols=DEFAULT_PASSWORD_SYMBOLS):
     """Generate a random password from the supplied symbols.
 
     Believed to be reasonably secure (with a reasonable password length!)
+
     """
     r = random.SystemRandom()
-    return "".join([r.choice(symbols) for _i in xrange(length)])
+    return ''.join([r.choice(symbols) for _i in xrange(length)])
 
 
 def last_octet(address):
-    return int(address.split(".")[-1])
+    return int(address.split('.')[-1])
 
 
 def  get_my_linklocal(interface):
     try:
-        if_str = execute("ip", "-f", "inet6", "-o", "addr", "show", interface)
-        condition = "\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link"
+        if_str = execute('ip', '-f', 'inet6', '-o', 'addr', 'show', interface)
+        condition = '\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link'
         links = [re.search(condition, x) for x in if_str[0].split('\n')]
         address = [w.group(1) for w in links if w is not None]
         if address[0] is not None:
             return address[0]
         else:
-            raise exception.Error(_("Link Local address is not found.:%s")
+            raise exception.Error(_('Link Local address is not found.:%s')
                                   % if_str)
     except Exception as ex:
         raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
-                " :%(ex)s") % locals())
+                                " :%(ex)s") % locals())
 
 
 def to_global_ipv6(prefix, mac):
@@ -311,15 +304,15 @@ def to_global_ipv6(prefix, mac):
         return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
                                                                     format()
     except TypeError:
-        raise TypeError(_("Bad mac for to_global_ipv6: %s") % mac)
+        raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
 
 
 def to_mac(ipv6_address):
     address = netaddr.IPAddress(ipv6_address)
-    mask1 = netaddr.IPAddress("::ffff:ffff:ffff:ffff")
-    mask2 = netaddr.IPAddress("::0200:0:0:0")
+    mask1 = netaddr.IPAddress('::ffff:ffff:ffff:ffff')
+    mask2 = netaddr.IPAddress('::0200:0:0:0')
     mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
-    return ":".join(["%02x" % i for i in mac64[0:3] + mac64[5:8]])
+    return ':'.join(['%02x' % i for i in mac64[0:3] + mac64[5:8]])
 
 
 def utcnow():
@@ -333,7 +326,7 @@ utcnow.override_time = None
 
 
 def is_older_than(before, seconds):
-    """Return True if before is older than seconds"""
+    """Return True if before is older than seconds."""
     return utcnow() - before > datetime.timedelta(seconds=seconds)
 
 
@@ -371,7 +364,7 @@ def isotime(at=None):
 
 
 def parse_isotime(timestr):
-    """Turn an iso formatted time back into a datetime"""
+    """Turn an iso formatted time back into a datetime."""
     return datetime.datetime.strptime(timestr, TIME_FORMAT)
 
 
@@ -425,16 +418,19 @@ class LazyPluggable(object):
 
 
 class LoopingCallDone(Exception):
-    """The poll-function passed to LoopingCall can raise this exception to
+    """Exception to break out and stop a LoopingCall.
+
+    The poll-function passed to LoopingCall can raise this exception to
     break out of the loop normally. This is somewhat analogous to
     StopIteration.
 
     An optional return-value can be included as the argument to the exception;
     this return-value will be returned by LoopingCall.wait()
+
     """
 
     def __init__(self, retvalue=True):
-        """:param retvalue: Value that LoopingCall.wait() should return"""
+        """:param retvalue: Value that LoopingCall.wait() should return."""
         self.retvalue = retvalue
 
 
@@ -485,7 +481,7 @@ def xhtml_escape(value):
     http://github.com/facebook/tornado/blob/master/tornado/escape.py
 
     """
-    return saxutils.escape(value, {'"': "&quot;"})
+    return saxutils.escape(value, {'"': '&quot;'})
 
 
 def utf8(value):
@@ -496,7 +492,7 @@ def utf8(value):
 
     """
     if isinstance(value, unicode):
-        return value.encode("utf-8")
+        return value.encode('utf-8')
     assert isinstance(value, str)
     return value
 
@@ -546,7 +542,7 @@ class _NoopContextManager(object):
 
 
 def synchronized(name, external=False):
-    """Synchronization decorator
+    """Synchronization decorator.
 
     Decorating a method like so:
     @synchronized('mylock')
@@ -570,6 +566,7 @@ def synchronized(name, external=False):
     multiple processes. This means that if two different workers both run a
     a method decorated with @synchronized('mylock', external=True), only one
     of them will execute at a time.
+
     """
 
     def wrap(f):
@@ -582,13 +579,13 @@ def synchronized(name, external=False):
                 _semaphores[name] = semaphore.Semaphore()
             sem = _semaphores[name]
             LOG.debug(_('Attempting to grab semaphore "%(lock)s" for method '
-                      '"%(method)s"...' % {"lock": name,
-                                           "method": f.__name__}))
+                        '"%(method)s"...' % {'lock': name,
+                                             'method': f.__name__}))
             with sem:
                 if external:
                     LOG.debug(_('Attempting to grab file lock "%(lock)s" for '
                                 'method "%(method)s"...' %
-                                {"lock": name, "method": f.__name__}))
+                                {'lock': name, 'method': f.__name__}))
                     lock_file_path = os.path.join(FLAGS.lock_path,
                                                   'nova-%s.lock' % name)
                     lock = lockfile.FileLock(lock_file_path)
@@ -609,21 +606,23 @@ def synchronized(name, external=False):
 
 
 def get_from_path(items, path):
-    """ Returns a list of items matching the specified path.  Takes an
-    XPath-like expression e.g. prop1/prop2/prop3, and for each item in items,
-    looks up items[prop1][prop2][prop3].  Like XPath, if any of the
+    """Returns a list of items matching the specified path.
+
+    Takes an XPath-like expression e.g. prop1/prop2/prop3, and for each item
+    in items, looks up items[prop1][prop2][prop3].  Like XPath, if any of the
     intermediate results are lists it will treat each list item individually.
     A 'None' in items or any child expressions will be ignored, this function
     will not throw because of None (anywhere) in items.  The returned list
-    will contain no None values."""
+    will contain no None values.
 
+    """
     if path is None:
-        raise exception.Error("Invalid mini_xpath")
+        raise exception.Error('Invalid mini_xpath')
 
-    (first_token, sep, remainder) = path.partition("/")
+    (first_token, sep, remainder) = path.partition('/')
 
-    if first_token == "":
-        raise exception.Error("Invalid mini_xpath")
+    if first_token == '':
+        raise exception.Error('Invalid mini_xpath')
 
     results = []
 
@@ -637,7 +636,7 @@ def get_from_path(items, path):
     for item in items:
         if item is None:
             continue
-        get_method = getattr(item, "get", None)
+        get_method = getattr(item, 'get', None)
         if get_method is None:
             continue
         child = get_method(first_token)
@@ -658,7 +657,7 @@ def get_from_path(items, path):
 
 
 def flatten_dict(dict_, flattened=None):
-    """Recursively flatten a nested dictionary"""
+    """Recursively flatten a nested dictionary."""
     flattened = flattened or {}
     for key, value in dict_.iteritems():
         if hasattr(value, 'iteritems'):
@@ -669,9 +668,7 @@ def flatten_dict(dict_, flattened=None):
 
 
 def partition_dict(dict_, keys):
-    """Return two dicts, one containing only `keys` the other containing
-    everything but `keys`
-    """
+    """Return two dicts, one with `keys` the other with everything else."""
     intersection = {}
     difference = {}
     for key, value in dict_.iteritems():
@@ -683,9 +680,7 @@ def partition_dict(dict_, keys):
 
 
 def map_dict_keys(dict_, key_map):
-    """Return a dictionary in which the dictionaries keys are mapped to
-    new keys.
-    """
+    """Return a dict in which the dictionaries keys are mapped to new keys."""
     mapped = {}
     for key, value in dict_.iteritems():
         mapped_key = key_map[key] if key in key_map else key
@@ -694,15 +689,15 @@ def map_dict_keys(dict_, key_map):
 
 
 def subset_dict(dict_, keys):
-    """Return a dict that only contains a subset of keys"""
+    """Return a dict that only contains a subset of keys."""
     subset = partition_dict(dict_, keys)[0]
     return subset
 
 
 def check_isinstance(obj, cls):
-    """Checks that obj is of type cls, and lets PyLint infer types"""
+    """Checks that obj is of type cls, and lets PyLint infer types."""
     if isinstance(obj, cls):
         return obj
-    raise Exception(_("Expected object of type: %s") % (str(cls)))
+    raise Exception(_('Expected object of type: %s') % (str(cls)))
     # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack

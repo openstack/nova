@@ -142,6 +142,11 @@ class CloudController(object):
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
+
+        # This ensures that all attributes of the instance
+        # are populated.
+        instance_ref = db.instance_get(ctxt, instance_ref['id'])
+
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
             keys = {'0': {'_name': instance_ref['key_name'],
@@ -182,7 +187,7 @@ class CloudController(object):
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance_ref:
+            if instance_ref.get('%s_id' % image_type):
                 ec2_id = self._image_ec2_id(instance_ref['%s_id' % image_type],
                                             self._image_type(image_type))
                 data['meta-data']['%s-id' % image_type] = ec2_id
@@ -437,7 +442,7 @@ class CloudController(object):
                                                        group_name)
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
-        if criteria == None:
+        if criteria is None:
             raise exception.ApiError(_("Not enough parameters to build a "
                                        "valid rule."))
 
@@ -608,7 +613,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume))]}
+        return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -659,7 +664,7 @@ class CloudController(object):
                 'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def _convert_to_set(self, lst, label):
-        if lst == None or lst == []:
+        if lst is None or lst == []:
             return None
         if not isinstance(lst, list):
             lst = [lst]
@@ -721,7 +726,9 @@ class CloudController(object):
                         instance['mac_address'])
 
             i['privateDnsName'] = fixed_addr
+            i['privateIpAddress'] = fixed_addr
             i['publicDnsName'] = floating_addr
+            i['ipAddress'] = floating_addr or fixed_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
@@ -903,7 +910,10 @@ class CloudController(object):
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
         except exception.NotFound:
-            return self.image_service.show_by_name(context, ec2_id)
+            try:
+                return self.image_service.show_by_name(context, ec2_id)
+            except exception.NotFound:
+                raise exception.NotFound(_('Image %s not found') % ec2_id)
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""

@@ -618,7 +618,8 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
                                           'project_id': 'fake',
-                                          'mac_address': '56:12:12:12:12:12'})
+                                          'mac_address': '56:12:12:12:12:12',
+                                          'instance_type_id': 1})
         ip = '10.11.12.13'
 
         network_ref = db.project_get_network(self.context,
@@ -841,7 +842,8 @@ class NWFilterTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
                                           'project_id': 'fake',
-                                          'mac_address': '00:A0:C9:14:C8:29'})
+                                          'mac_address': '00:A0:C9:14:C8:29',
+                                          'instance_type_id': 1})
         inst_id = instance_ref['id']
 
         ip = '10.11.12.13'

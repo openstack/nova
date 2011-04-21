@@ -23,13 +23,14 @@ import shutil
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.image import service
 from nova import utils
+from nova.image import service
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', '$state_path/images',
                     'path to decrypted images')
+
 
 LOG = logging.getLogger('nova.image.local')
 
@@ -56,9 +57,8 @@ class LocalImageService(service.BaseImageService):
             try:
                 unhexed_image_id = int(image_dir, 16)
             except ValueError:
-                LOG.error(
-                    _("%s is not in correct directory naming format"\
-                       % image_dir))
+                LOG.error(_('%s is not in correct directory naming format')
+                          % image_dir)
             else:
                 images.append(unhexed_image_id)
         return images
@@ -101,7 +101,7 @@ class LocalImageService(service.BaseImageService):
             if name == cantidate.get('name'):
                 image = cantidate
                 break
-        if image == None:
+        if image is None:
             raise exception.NotFound
         return image
 
@@ -148,7 +148,8 @@ class LocalImageService(service.BaseImageService):
 
     def delete(self, context, image_id):
         """Delete the given image.
-        Raises NotFound if the image does not exist.
+
+        :raises: NotFound if the image does not exist.
 
         """
         # NOTE(vish): show is to check if image is available

@@ -18,7 +18,7 @@
 Running Nova
 ============
 
-This guide describes the basics of running and managing Nova. For more administrator's documentation, refer to `docs.openstack.org <http://docs.openstack.org>`_.
+This guide describes the basics of running and managing Nova. This site is intended to provide developer documentation. For more administrator's documentation, refer to `docs.openstack.org <http://docs.openstack.org>`_.
 
 Running the Cloud
 -----------------
@@ -60,7 +60,7 @@ For background on the core objects referenced in this section, see :doc:`../obje
 Deployment
 ----------
 
-For a starting multi-node architecture, you would start with two nodes - a cloud controller node and a compute node. The cloud controller node contains the nova- services plus the Nova database. The compute node installs all the nova-services but then refers to the database installation, which is hosted by the cloud controller node. Ensure that the nova.conf file is identical on each node. If you find performance issues not related to database reads or writes, but due to the messaging queue backing up, you could add additional messaging services (rabbitmq). For instructions on multi-server installations, refer to `Installing and Configuring OpenStack Compute <http://docs.openstack.org/openstack-compute/admin/content/ch03.html>`_.
+For a starting multi-node architecture, you would start with two nodes - a cloud controller node and a compute node. The cloud controller node contains the nova- services plus the Nova database. The compute node installs all the nova-services but then refers to the database installation, which is hosted by the cloud controller node. Ensure that the nova.conf file is identical on each node. If you find performance issues not related to database reads or writes, but due to the messaging queue backing up, you could add additional messaging services (rabbitmq). For instructions on multi-server installations, refer to `Installing and Configuring OpenStack Compute <http://docs.openstack.org/>`_.
 
 
 .. toctree::
