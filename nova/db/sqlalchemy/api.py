@@ -799,7 +799,10 @@ def mac_address_get(context, mac_address_id):
     session = get_session()
     with session.begin():
         mac_address_ref = session.query(models.MacAddress).\
-                                  filter_by(id=mac_address_id)
+                                  filter_by(id=mac_address_id).\
+                                  options(joinedload('network')).\
+                                  options(joinedload('instance')).\
+                                  first()
         return mac_address_ref
 
 
@@ -813,7 +816,10 @@ def mac_address_get_by_address(context, address):
     session = get_session()
     with session.begin():
         mac_address_ref = session.query(models.MacAddress).\
-                                  filter_by(address=address)
+                                  filter_by(address=address).\
+                                  options(joinedload('network')).\
+                                  options(joinedload('instance')).\
+                                  first()
         return mac_address_ref
 
 
@@ -828,6 +834,8 @@ def mac_address_get_all_by_instance(context, instance_id):
     with session.begin():
         mac_address_refs = session.query(models.MacAddress).\
                                    filter_by(instance_id=instance_id).\
+                                   options(joinedload('network')).\
+                                   options(joinedload('instance')).\
                                    all()
         return mac_address_refs
 
@@ -843,6 +851,8 @@ def mac_address_get_all_by_network(context, network_id):
     with session.begin():
         mac_address_refs = session.query(models.MacAddress).\
                                    filter_by(network_id=network_id).\
+                                   options(joinedload('network')).\
+                                   options(joinedload('instance')).\
                                    all()
         return mac_address_refs
 
