@@ -40,7 +40,7 @@ import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
 
-LOG = logging.getLogger('server')
+LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
@@ -118,6 +118,8 @@ class Controller(common.OpenstackController):
 
         context = req.environ['nova.context']
 
+        password = self._get_server_admin_password(env['server'])
+
         key_name = None
         key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
@@ -127,20 +129,15 @@ class Controller(common.OpenstackController):
             key_data = key_pair['public_key']
 
         requested_image_id = self._image_id_from_req_data(env)
-        image_id = common.get_image_id_from_image_hash(self._image_service,
-            context, requested_image_id)
+        try:
+            image_id = common.get_image_id_from_image_hash(self._image_service,
+                context, requested_image_id)
+        except:
+            msg = _("Can not find requested image")
+            return faults.Fault(exc.HTTPBadRequest(msg))
+
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
-
-        # Metadata is a list, not a Dictionary, because we allow duplicate keys
-        # (even though JSON can't encode this)
-        # In future, we may not allow duplicate keys.
-        # However, the CloudServers API is not definitive on this front,
-        #  and we want to be compatible.
-        metadata = []
-        if env['server'].get('metadata'):
-            for k, v in env['server']['metadata'].items():
-                metadata.append({'key': k, 'value': v})
 
         personality = env['server'].get('personality')
         injected_files = []
@@ -170,7 +167,7 @@ class Controller(common.OpenstackController):
                 display_description=name,
                 key_name=key_name,
                 key_data=key_data,
-                metadata=metadata,
+                metadata=env['server'].get('metadata', {}),
                 injected_files=injected_files)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
@@ -180,7 +177,6 @@ class Controller(common.OpenstackController):
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        password = utils.generate_password(16)
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
@@ -241,6 +237,10 @@ class Controller(common.OpenstackController):
             raise exc.HTTPBadRequest(explanation=expl)
         # if the original error is okay, just reraise it
         raise error
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
     def update(self, req, id):
@@ -321,6 +321,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     def _action_rebuild(self, input_dict, req, id):
+        LOG.debug(_("Rebuild server action is not implemented"))
         return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_resize(self, input_dict, req, id):
@@ -336,18 +337,20 @@ class Controller(common.OpenstackController):
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return faults.Fault(exc.HTTPAccepted())
+        return exc.HTTPAccepted()
 
     def _action_reboot(self, input_dict, req, id):
-        try:
+        if 'reboot' in input_dict and 'type' in input_dict['reboot']:
             reboot_type = input_dict['reboot']['type']
-        except Exception:
-            raise faults.Fault(exc.HTTPNotImplemented())
+        else:
+            LOG.exception(_("Missing argument 'type' for reboot"))
+            return faults.Fault(exc.HTTPUnprocessableEntity())
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
             self.compute_api.reboot(req.environ['nova.context'], id)
-        except:
+        except Exception, e:
+            LOG.exception(_("Error in reboot %s"), e)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -647,6 +650,16 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        password = server.get('adminPass')
+        if password is None:
+            return utils.generate_password(16)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(msg)
+        return password
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11

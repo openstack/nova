@@ -187,7 +187,7 @@ class CloudController(object):
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance_ref:
+            if instance_ref.get('%s_id' % image_type):
                 ec2_id = self.image_ec2_id(instance_ref['%s_id' % image_type],
                                            self._image_type(image_type))
                 data['meta-data']['%s-id' % image_type] = ec2_id
@@ -442,7 +442,7 @@ class CloudController(object):
                                                        group_name)
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
-        if criteria == None:
+        if criteria is None:
             raise exception.ApiError(_("Not enough parameters to build a "
                                        "valid rule."))
 
@@ -613,7 +613,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume))]}
+        return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -664,7 +664,7 @@ class CloudController(object):
                 'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def _convert_to_set(self, lst, label):
-        if lst == None or lst == []:
+        if lst is None or lst == []:
             return None
         if not isinstance(lst, list):
             lst = [lst]
@@ -726,7 +726,9 @@ class CloudController(object):
                         instance['mac_address'])
 
             i['privateDnsName'] = fixed_addr
+            i['privateIpAddress'] = fixed_addr
             i['publicDnsName'] = floating_addr
+            i['ipAddress'] = floating_addr or fixed_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 

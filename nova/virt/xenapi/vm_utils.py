@@ -28,10 +28,7 @@ import urllib
 import uuid
 from xml.dom import minidom
 
-from eventlet import event
 import glance.client
-from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -306,7 +303,6 @@ class VMHelper(HelperBase):
                 % locals())
 
         vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
-        vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
@@ -755,14 +751,14 @@ class VMHelper(HelperBase):
         session.call_xenapi('SR.scan', sr_ref)
 
 
-def get_rrd(host, uuid):
+def get_rrd(host, vm_uuid):
     """Return the VM RRD XML as a string"""
     try:
         xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
             FLAGS.xenapi_connection_username,
             FLAGS.xenapi_connection_password,
             host,
-            uuid))
+            vm_uuid))
         return xml.read()
     except IOError:
         return None
@@ -1020,7 +1016,6 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
 
 def _write_partition(virtual_size, dev):
     dest = '/dev/%s' % dev
-    mbr_last = MBR_SIZE_SECTORS - 1
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
