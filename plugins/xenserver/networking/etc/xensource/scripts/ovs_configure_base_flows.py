@@ -41,10 +41,10 @@ def main(phys_dev_name, bridge_name):
     # allow all traffic from the physical NIC, as it is trusted (i.e., from a
     # filtered vif, or from the physical infrastructure
     ovs_ofctl('add-flow', bridge_name,
-              "priority=2,in_port=%s,action=normal" % pnic_ofport)
+              "priority=2,in_port=%s,actions=normal" % pnic_ofport)
 
     # default drop
-    ovs_ofctl('add-flow', bridge_name, 'priority=1,action=drop')
+    ovs_ofctl('add-flow', bridge_name, 'priority=1,actions=drop')
 
 
 if __name__ == "__main__":
