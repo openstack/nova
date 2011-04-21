@@ -15,10 +15,11 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""
-Wrappers around standard crypto data elements.
+
+"""Wrappers around standard crypto data elements.
 
 Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
+
 """
 
 import base64
@@ -43,6 +44,8 @@ from nova import log as logging
 
 
 LOG = logging.getLogger("nova.crypto")
+
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('ca_file', 'cacert.pem', _('Filename of root CA'))
 flags.DEFINE_string('key_file',
@@ -90,13 +93,13 @@ def key_path(project_id=None):
 def fetch_ca(project_id=None, chain=True):
     if not FLAGS.use_project_ca:
         project_id = None
-    buffer = ""
+    buffer = ''
     if project_id:
-        with open(ca_path(project_id), "r") as cafile:
+        with open(ca_path(project_id), 'r') as cafile:
             buffer += cafile.read()
         if not chain:
             return buffer
-    with open(ca_path(None), "r") as cafile:
+    with open(ca_path(None), 'r') as cafile:
         buffer += cafile.read()
     return buffer
 
@@ -143,7 +146,7 @@ def ssl_pub_to_ssh_pub(ssl_public_key, name='root', suffix='nova'):
 
 
 def revoke_cert(project_id, file_name):
-    """Revoke a cert by file name"""
+    """Revoke a cert by file name."""
     start = os.getcwd()
     os.chdir(ca_folder(project_id))
     # NOTE(vish): potential race condition here
@@ -155,14 +158,14 @@ def revoke_cert(project_id, file_name):
 
 
 def revoke_certs_by_user(user_id):
-    """Revoke all user certs"""
+    """Revoke all user certs."""
     admin = context.get_admin_context()
     for cert in db.certificate_get_all_by_user(admin, user_id):
         revoke_cert(cert['project_id'], cert['file_name'])
 
 
 def revoke_certs_by_project(project_id):
-    """Revoke all project certs"""
+    """Revoke all project certs."""
     # NOTE(vish): This is somewhat useless because we can just shut down
     #             the vpn.
     admin = context.get_admin_context()
@@ -171,29 +174,29 @@ def revoke_certs_by_project(project_id):
 
 
 def revoke_certs_by_user_and_project(user_id, project_id):
-    """Revoke certs for user in project"""
+    """Revoke certs for user in project."""
     admin = context.get_admin_context()
     for cert in db.certificate_get_all_by_user(admin, user_id, project_id):
         revoke_cert(cert['project_id'], cert['file_name'])
 
 
 def _project_cert_subject(project_id):
-    """Helper to generate user cert subject"""
+    """Helper to generate user cert subject."""
     return FLAGS.project_cert_subject % (project_id, utils.isotime())
 
 
 def _vpn_cert_subject(project_id):
-    """Helper to generate user cert subject"""
+    """Helper to generate user cert subject."""
     return FLAGS.vpn_cert_subject % (project_id, utils.isotime())
 
 
 def _user_cert_subject(user_id, project_id):
-    """Helper to generate user cert subject"""
+    """Helper to generate user cert subject."""
     return FLAGS.user_cert_subject % (project_id, user_id, utils.isotime())
 
 
 def generate_x509_cert(user_id, project_id, bits=1024):
-    """Generate and sign a cert for user in project"""
+    """Generate and sign a cert for user in project."""
     subject = _user_cert_subject(user_id, project_id)
     tmpdir = tempfile.mkdtemp()
     keyfile = os.path.abspath(os.path.join(tmpdir, 'temp.key'))
@@ -205,7 +208,7 @@ def generate_x509_cert(user_id, project_id, bits=1024):
     csr = open(csrfile).read()
     shutil.rmtree(tmpdir)
     (serial, signed_csr) = sign_csr(csr, project_id)
-    fname = os.path.join(ca_folder(project_id), "newcerts/%s.pem" % serial)
+    fname = os.path.join(ca_folder(project_id), 'newcerts/%s.pem' % serial)
     cert = {'user_id': user_id,
             'project_id': project_id,
             'file_name': fname}
@@ -227,8 +230,8 @@ def _ensure_project_folder(project_id):
 
 def generate_vpn_files(project_id):
     project_folder = ca_folder(project_id)
-    csr_fn = os.path.join(project_folder, "server.csr")
-    crt_fn = os.path.join(project_folder, "server.crt")
+    csr_fn = os.path.join(project_folder, 'server.csr')
+    crt_fn = os.path.join(project_folder, 'server.crt')
 
     genvpn_sh_path = os.path.join(os.path.dirname(__file__),
                                   'CA',
@@ -241,10 +244,10 @@ def generate_vpn_files(project_id):
     # TODO(vish): the shell scripts could all be done in python
     utils.execute('sh', genvpn_sh_path,
                   project_id, _vpn_cert_subject(project_id))
-    with open(csr_fn, "r") as csrfile:
+    with open(csr_fn, 'r') as csrfile:
         csr_text = csrfile.read()
     (serial, signed_csr) = sign_csr(csr_text, project_id)
-    with open(crt_fn, "w") as crtfile:
+    with open(crt_fn, 'w') as crtfile:
         crtfile.write(signed_csr)
     os.chdir(start)
 
@@ -261,12 +264,12 @@ def sign_csr(csr_text, project_id=None):
 
 def _sign_csr(csr_text, ca_folder):
     tmpfolder = tempfile.mkdtemp()
-    inbound = os.path.join(tmpfolder, "inbound.csr")
-    outbound = os.path.join(tmpfolder, "outbound.csr")
-    csrfile = open(inbound, "w")
+    inbound = os.path.join(tmpfolder, 'inbound.csr')
+    outbound = os.path.join(tmpfolder, 'outbound.csr')
+    csrfile = open(inbound, 'w')
     csrfile.write(csr_text)
     csrfile.close()
-    LOG.debug(_("Flags path: %s"), ca_folder)
+    LOG.debug(_('Flags path: %s'), ca_folder)
     start = os.getcwd()
     # Change working dir to CA
     if not os.path.exists(ca_folder):
@@ -276,13 +279,13 @@ def _sign_csr(csr_text, ca_folder):
                   './openssl.cnf', '-infiles', inbound)
     out, _err = utils.execute('openssl', 'x509', '-in', outbound,
                               '-serial', '-noout')
-    serial = string.strip(out.rpartition("=")[2])
+    serial = string.strip(out.rpartition('=')[2])
     os.chdir(start)
-    with open(outbound, "r") as crtfile:
+    with open(outbound, 'r') as crtfile:
         return (serial, crtfile.read())
 
 
-def mkreq(bits, subject="foo", ca=0):
+def mkreq(bits, subject='foo', ca=0):
     pk = M2Crypto.EVP.PKey()
     req = M2Crypto.X509.Request()
     rsa = M2Crypto.RSA.gen_key(bits, 65537, callback=lambda: None)
@@ -314,7 +317,7 @@ def mkcacert(subject='nova', years=1):
     cert.set_not_before(now)
     cert.set_not_after(nowPlusYear)
     issuer = M2Crypto.X509.X509_Name()
-    issuer.C = "US"
+    issuer.C = 'US'
     issuer.CN = subject
     cert.set_issuer(issuer)
     cert.set_pubkey(pkey)
@@ -352,13 +355,15 @@ def mkcacert(subject='nova', years=1):
 # http://code.google.com/p/boto
 
 def compute_md5(fp):
-    """
+    """Compute an md5 hash.
+
     :type fp: file
     :param fp: File pointer to the file to MD5 hash.  The file pointer will be
                reset to the beginning of the file before the method returns.
 
     :rtype: tuple
-    :return: the hex digest version of the MD5 hash
+    :returns: the hex digest version of the MD5 hash
+
     """
     m = hashlib.md5()
     fp.seek(0)
