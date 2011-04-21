@@ -43,7 +43,6 @@ import socket
 import sys
 import tempfile
 import functools
-import pickle
 
 from eventlet import greenthread
 
