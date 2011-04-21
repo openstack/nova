@@ -87,6 +87,7 @@ class ViewBuilderV10(ViewBuilder):
     """OpenStack API v1.0 Image Builder"""
     pass
 
+
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
 

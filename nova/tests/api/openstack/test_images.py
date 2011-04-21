@@ -538,7 +538,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup', 
+            'name': 'killed backup',
             'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
