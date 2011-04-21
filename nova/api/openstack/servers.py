@@ -623,11 +623,6 @@ class ControllerV10(Controller):
             msg = _("Instance %d is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             return faults.Fault(exc.HTTPConflict(explanation=msg))
-        except exception.Error as ex:
-            msg = _("Error encountered attempting to rebuild instance "
-                    "%(instance_id): %(ex)") % locals()
-            LOG.error(msg)
-            raise
 
         response = exc.HTTPAccepted()
         response.empty_body = True
@@ -672,8 +667,8 @@ class ControllerV11(Controller):
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
 
-    def _check_metadata(self, metadata):
-        """Ensure that the metadata given is of the correct type."""
+    def _validate_metadata(self, metadata):
+        """Ensure that we can work with the metadata given."""
         try:
             metadata.iteritems()
         except AttributeError as ex:
@@ -681,8 +676,8 @@ class ControllerV11(Controller):
             LOG.debug(msg)
             raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-    def _check_personalities(self, personalities):
-        """Ensure the given personalities have valid paths and contents."""
+    def _decode_personalities(self, personalities):
+        """Decode the Base64-encoded personalities."""
         for personality in personalities:
             try:
                 path = personality["path"]
@@ -693,7 +688,7 @@ class ControllerV11(Controller):
                 raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
             try:
-                base64.b64decode(contents)
+                personality["contents"] = base64.b64decode(contents)
             except TypeError:
                 msg = _("Personality content could not be Base64 decoded.")
                 LOG.info(msg)
@@ -713,21 +708,16 @@ class ControllerV11(Controller):
         personalities = info["rebuild"].get("personality", [])
         metadata = info["rebuild"].get("metadata", {})
 
-        self._check_metadata(metadata)
-        self._check_personalities(personalities)
+        self._validate_metadata(metadata)
+        self._decode_personalities(personalities)
 
         try:
-            args = [context, instance_id, image_id, metadata, personalities]
-            self.compute_api.rebuild(*args)
+            self.compute_api.rebuild(context, instance_id, image_id, metadata,
+                                     personalities)
         except exception.BuildInProgress:
             msg = _("Instance %d is currently being rebuilt.") % instance_id
             LOG.debug(msg)
             return faults.Fault(exc.HTTPConflict(explanation=msg))
-        except exception.Error as ex:
-            msg = _("Error encountered attempting to rebuild instance "
-                    "%(instance_id): %(ex)") % locals()
-            LOG.error(msg)
-            raise
 
         response = exc.HTTPAccepted()
         response.empty_body = True

@@ -18,7 +18,6 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-import base64
 import datetime
 import re
 import time
@@ -103,15 +102,6 @@ class API(base.Base):
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
-
-    def _check_injected_file_format(self, injected_files):
-        """Ensure given injected files are in the correct format."""
-        for file_path, content in injected_files:
-            try:
-                base64.b64decode(content)
-            except TypeError:
-                msg = _("File contents must be base64 encoded.")
-                raise exception.Error(msg)
 
     def _check_metadata_properties_quota(self, context, metadata={}):
         """Enforce quota limits on metadata properties."""
@@ -526,7 +516,6 @@ class API(base.Base):
 
         files_to_inject = files_to_inject or []
         self._check_injected_file_quota(context, files_to_inject)
-        self._check_injected_file_format(files_to_inject)
 
         self.db.instance_update(context, instance_id, {"metadata": metadata})
 
