@@ -16,9 +16,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-AMQP-based RPC. Queues have consumers and publishers.
+"""AMQP-based RPC.
+
+Queues have consumers and publishers.
+
 No fan-out support yet.
+
 """
 
 import json
@@ -40,17 +43,19 @@ from nova import log as logging
 from nova import utils
 
 
-FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.rpc')
 
+
+FLAGS = flags.FLAGS
 flags.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
 
 
 class Connection(carrot_connection.BrokerConnection):
-    """Connection instance object"""
+    """Connection instance object."""
+
     @classmethod
     def instance(cls, new=True):
-        """Returns the instance"""
+        """Returns the instance."""
         if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
@@ -71,9 +76,11 @@ class Connection(carrot_connection.BrokerConnection):
 
     @classmethod
     def recreate(cls):
-        """Recreates the connection instance
+        """Recreates the connection instance.
 
-        This is necessary to recover from some network errors/disconnects"""
+        This is necessary to recover from some network errors/disconnects.
+
+        """
         try:
             del cls._instance
         except AttributeError, e:
@@ -84,10 +91,12 @@ class Connection(carrot_connection.BrokerConnection):
 
 
 class Consumer(messaging.Consumer):
-    """Consumer base class
+    """Consumer base class.
 
-    Contains methods for connecting the fetch method to async loops
+    Contains methods for connecting the fetch method to async loops.
+
     """
+
     def __init__(self, *args, **kwargs):
         for i in xrange(FLAGS.rabbit_max_retries):
             if i > 0:
@@ -100,19 +109,18 @@ class Consumer(messaging.Consumer):
                 fl_host = FLAGS.rabbit_host
                 fl_port = FLAGS.rabbit_port
                 fl_intv = FLAGS.rabbit_retry_interval
-                LOG.error(_("AMQP server on %(fl_host)s:%(fl_port)d is"
-                        " unreachable: %(e)s. Trying again in %(fl_intv)d"
-                        " seconds.")
-                        % locals())
+                LOG.error(_('AMQP server on %(fl_host)s:%(fl_port)d is'
+                            ' unreachable: %(e)s. Trying again in %(fl_intv)d'
+                            ' seconds.') % locals())
                 self.failed_connection = True
         if self.failed_connection:
-            LOG.error(_("Unable to connect to AMQP server "
-                        "after %d tries. Shutting down."),
+            LOG.error(_('Unable to connect to AMQP server '
+                        'after %d tries. Shutting down.'),
                       FLAGS.rabbit_max_retries)
             sys.exit(1)
 
     def fetch(self, no_ack=None, auto_ack=None, enable_callbacks=False):
-        """Wraps the parent fetch with some logic for failed connections"""
+        """Wraps the parent fetch with some logic for failed connection."""
         # TODO(vish): the logic for failed connections and logging should be
         #             refactored into some sort of connection manager object
         try:
@@ -125,14 +133,14 @@ class Consumer(messaging.Consumer):
                 self.declare()
             super(Consumer, self).fetch(no_ack, auto_ack, enable_callbacks)
             if self.failed_connection:
-                LOG.error(_("Reconnected to queue"))
+                LOG.error(_('Reconnected to queue'))
                 self.failed_connection = False
         # NOTE(vish): This is catching all errors because we really don't
         #             want exceptions to be logged 10 times a second if some
         #             persistent failure occurs.
         except Exception, e:  # pylint: disable=W0703
             if not self.failed_connection:
-                LOG.exception(_("Failed to fetch message from queue: %s" % e))
+                LOG.exception(_('Failed to fetch message from queue: %s' % e))
                 self.failed_connection = True
 
     def attach_to_eventlet(self):
@@ -143,8 +151,9 @@ class Consumer(messaging.Consumer):
 
 
 class AdapterConsumer(Consumer):
-    """Calls methods on a proxy object based on method and args"""
-    def __init__(self, connection=None, topic="broadcast", proxy=None):
+    """Calls methods on a proxy object based on method and args."""
+
+    def __init__(self, connection=None, topic='broadcast', proxy=None):
         LOG.debug(_('Initing the Adapter Consumer for %s') % topic)
         self.proxy = proxy
         self.pool = greenpool.GreenPool(FLAGS.rpc_thread_pool_size)
@@ -156,13 +165,14 @@ class AdapterConsumer(Consumer):
 
     @exception.wrap_exception
     def _receive(self, message_data, message):
-        """Magically looks for a method on the proxy object and calls it
+        """Magically looks for a method on the proxy object and calls it.
 
         Message data should be a dictionary with two keys:
             method: string representing the method to call
             args: dictionary of arg: value
 
         Example: {'method': 'echo', 'args': {'value': 42}}
+
         """
         LOG.debug(_('received %s') % message_data)
         msg_id = message_data.pop('_msg_id', None)
@@ -189,22 +199,23 @@ class AdapterConsumer(Consumer):
             if msg_id:
                 msg_reply(msg_id, rval, None)
         except Exception as e:
-            logging.exception("Exception during message handling")
+            logging.exception('Exception during message handling')
             if msg_id:
                 msg_reply(msg_id, None, sys.exc_info())
         return
 
 
 class Publisher(messaging.Publisher):
-    """Publisher base class"""
+    """Publisher base class."""
     pass
 
 
 class TopicAdapterConsumer(AdapterConsumer):
-    """Consumes messages on a specific topic"""
-    exchange_type = "topic"
+    """Consumes messages on a specific topic."""
 
-    def __init__(self, connection=None, topic="broadcast", proxy=None):
+    exchange_type = 'topic'
+
+    def __init__(self, connection=None, topic='broadcast', proxy=None):
         self.queue = topic
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
@@ -214,27 +225,29 @@ class TopicAdapterConsumer(AdapterConsumer):
 
 
 class FanoutAdapterConsumer(AdapterConsumer):
-    """Consumes messages from a fanout exchange"""
-    exchange_type = "fanout"
+    """Consumes messages from a fanout exchange."""
 
-    def __init__(self, connection=None, topic="broadcast", proxy=None):
-        self.exchange = "%s_fanout" % topic
+    exchange_type = 'fanout'
+
+    def __init__(self, connection=None, topic='broadcast', proxy=None):
+        self.exchange = '%s_fanout' % topic
         self.routing_key = topic
         unique = uuid.uuid4().hex
-        self.queue = "%s_fanout_%s" % (topic, unique)
+        self.queue = '%s_fanout_%s' % (topic, unique)
         self.durable = False
-        LOG.info(_("Created '%(exchange)s' fanout exchange "
-                   "with '%(key)s' routing key"),
-                dict(exchange=self.exchange, key=self.routing_key))
+        LOG.info(_('Created "%(exchange)s" fanout exchange '
+                   'with "%(key)s" routing key'),
+                 dict(exchange=self.exchange, key=self.routing_key))
         super(FanoutAdapterConsumer, self).__init__(connection=connection,
                                     topic=topic, proxy=proxy)
 
 
 class TopicPublisher(Publisher):
-    """Publishes messages on a specific topic"""
-    exchange_type = "topic"
+    """Publishes messages on a specific topic."""
 
-    def __init__(self, connection=None, topic="broadcast"):
+    exchange_type = 'topic'
+
+    def __init__(self, connection=None, topic='broadcast'):
         self.routing_key = topic
         self.exchange = FLAGS.control_exchange
         self.durable = False
@@ -243,20 +256,22 @@ class TopicPublisher(Publisher):
 
 class FanoutPublisher(Publisher):
     """Publishes messages to a fanout exchange."""
-    exchange_type = "fanout"
+
+    exchange_type = 'fanout'
 
     def __init__(self, topic, connection=None):
-        self.exchange = "%s_fanout" % topic
-        self.queue = "%s_fanout" % topic
+        self.exchange = '%s_fanout' % topic
+        self.queue = '%s_fanout' % topic
         self.durable = False
-        LOG.info(_("Creating '%(exchange)s' fanout exchange"),
-                            dict(exchange=self.exchange))
+        LOG.info(_('Creating "%(exchange)s" fanout exchange'),
+                 dict(exchange=self.exchange))
         super(FanoutPublisher, self).__init__(connection=connection)
 
 
 class DirectConsumer(Consumer):
-    """Consumes messages directly on a channel specified by msg_id"""
-    exchange_type = "direct"
+    """Consumes messages directly on a channel specified by msg_id."""
+
+    exchange_type = 'direct'
 
     def __init__(self, connection=None, msg_id=None):
         self.queue = msg_id
@@ -268,8 +283,9 @@ class DirectConsumer(Consumer):
 
 
 class DirectPublisher(Publisher):
-    """Publishes messages directly on a channel specified by msg_id"""
-    exchange_type = "direct"
+    """Publishes messages directly on a channel specified by msg_id."""
+
+    exchange_type = 'direct'
 
     def __init__(self, connection=None, msg_id=None):
         self.routing_key = msg_id
@@ -279,9 +295,9 @@ class DirectPublisher(Publisher):
 
 
 def msg_reply(msg_id, reply=None, failure=None):
-    """Sends a reply or an error on the channel signified by msg_id
+    """Sends a reply or an error on the channel signified by msg_id.
 
-    failure should be a sys.exc_info() tuple.
+    Failure should be a sys.exc_info() tuple.
 
     """
     if failure:
@@ -303,17 +319,20 @@ def msg_reply(msg_id, reply=None, failure=None):
 
 
 class RemoteError(exception.Error):
-    """Signifies that a remote class has raised an exception
+    """Signifies that a remote class has raised an exception.
 
     Containes a string representation of the type of the original exception,
     the value of the original exception, and the traceback.  These are
     sent to the parent as a joined string so printing the exception
-    contains all of the relevent info."""
+    contains all of the relevent info.
+
+    """
+
     def __init__(self, exc_type, value, traceback):
         self.exc_type = exc_type
         self.value = value
         self.traceback = traceback
-        super(RemoteError, self).__init__("%s %s\n%s" % (exc_type,
+        super(RemoteError, self).__init__('%s %s\n%s' % (exc_type,
                                                          value,
                                                          traceback))
 
@@ -339,6 +358,7 @@ def _pack_context(msg, context):
     context out into a bunch of separate keys. If we want to support
     more arguments in rabbit messages, we may want to do the same
     for args at some point.
+
     """
     context = dict([('_context_%s' % key, value)
                    for (key, value) in context.to_dict().iteritems()])
@@ -346,11 +366,11 @@ def _pack_context(msg, context):
 
 
 def call(context, topic, msg):
-    """Sends a message on a topic and wait for a response"""
-    LOG.debug(_("Making asynchronous call on %s ..."), topic)
+    """Sends a message on a topic and wait for a response."""
+    LOG.debug(_('Making asynchronous call on %s ...'), topic)
     msg_id = uuid.uuid4().hex
     msg.update({'_msg_id': msg_id})
-    LOG.debug(_("MSG_ID is %s") % (msg_id))
+    LOG.debug(_('MSG_ID is %s') % (msg_id))
     _pack_context(msg, context)
 
     class WaitMessage(object):
@@ -387,8 +407,8 @@ def call(context, topic, msg):
 
 
 def cast(context, topic, msg):
-    """Sends a message on a topic without waiting for a response"""
-    LOG.debug(_("Making asynchronous cast on %s..."), topic)
+    """Sends a message on a topic without waiting for a response."""
+    LOG.debug(_('Making asynchronous cast on %s...'), topic)
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = TopicPublisher(connection=conn, topic=topic)
@@ -397,8 +417,8 @@ def cast(context, topic, msg):
 
 
 def fanout_cast(context, topic, msg):
-    """Sends a message on a fanout exchange without waiting for a response"""
-    LOG.debug(_("Making asynchronous fanout cast..."))
+    """Sends a message on a fanout exchange without waiting for a response."""
+    LOG.debug(_('Making asynchronous fanout cast...'))
     _pack_context(msg, context)
     conn = Connection.instance()
     publisher = FanoutPublisher(topic, connection=conn)
@@ -407,14 +427,14 @@ def fanout_cast(context, topic, msg):
 
 
 def generic_response(message_data, message):
-    """Logs a result and exits"""
+    """Logs a result and exits."""
     LOG.debug(_('response %s'), message_data)
     message.ack()
     sys.exit(0)
 
 
 def send_message(topic, message, wait=True):
-    """Sends a message for testing"""
+    """Sends a message for testing."""
     msg_id = uuid.uuid4().hex
     message.update({'_msg_id': msg_id})
     LOG.debug(_('topic is %s'), topic)
@@ -425,14 +445,14 @@ def send_message(topic, message, wait=True):
                                       queue=msg_id,
                                       exchange=msg_id,
                                       auto_delete=True,
-                                      exchange_type="direct",
+                                      exchange_type='direct',
                                       routing_key=msg_id)
         consumer.register_callback(generic_response)
 
     publisher = messaging.Publisher(connection=Connection.instance(),
                                     exchange=FLAGS.control_exchange,
                                     durable=False,
-                                    exchange_type="topic",
+                                    exchange_type='topic',
                                     routing_key=topic)
     publisher.send(message)
     publisher.close()
@@ -441,8 +461,8 @@ def send_message(topic, message, wait=True):
         consumer.wait()
 
 
-if __name__ == "__main__":
-    # NOTE(vish): you can send messages from the command line using
-    #             topic and a json sting representing a dictionary
-    #             for the method
+if __name__ == '__main__':
+    # You can send messages from the command line using
+    # topic and a json string representing a dictionary
+    # for the method
     send_message(sys.argv[1], json.loads(sys.argv[2]))
