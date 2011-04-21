@@ -1734,11 +1734,16 @@ class NWFilterFirewall(FirewallDriver):
         logging.info('ensuring static filters')
         self._ensure_static_filters()
 
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
+            base_filter = 'nova-vpn'
+        else:
+            base_filter = 'nova-base'
+
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
             self._define_filter(self._filter_container(instance_filter_name,
-                                                       ['nova-base']))
+                                                       [base_filter]))
 
     def _ensure_static_filters(self):
         if self.static_filters_configured:
@@ -1749,11 +1754,12 @@ class NWFilterFirewall(FirewallDriver):
                                                     'no-ip-spoofing',
                                                     'no-arp-spoofing',
                                                     'allow-dhcp-server']))
+        self._define_filter(self._filter_container('nova-vpn',
+                                                   ['allow-dhcp-server']))
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)
         self._define_filter(self.nova_ra_filter)
-        self._define_filter(self.nova_vpn_filter)
         if FLAGS.allow_project_net_traffic:
             self._define_filter(self.nova_project_filter)
             if FLAGS.use_ipv6:
@@ -1766,14 +1772,6 @@ class NWFilterFirewall(FirewallDriver):
                  name,
                  ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
         return xml
-
-    nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
-                           <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
-                           <filterref filter='allow-dhcp-server'/>
-                           <filterref filter='nova-allow-dhcp-server'/>
-                           <filterref filter='nova-base-ipv4'/>
-                           <filterref filter='nova-base-ipv6'/>
-                         </filter>'''
 
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
