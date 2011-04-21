@@ -726,7 +726,9 @@ class CloudController(object):
                         instance['mac_address'])
 
             i['privateDnsName'] = fixed_addr
+            i['privateIpAddress'] = fixed_addr
             i['publicDnsName'] = floating_addr
+            i['ipAddress'] = floating_addr or fixed_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
