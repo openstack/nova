@@ -68,23 +68,6 @@ class API(base.Base):
         self.hostname_factory = hostname_factory
         super(API, self).__init__(**kwargs)
 
-    def get_network_topic(self, context, instance_id):
-        """Get the network topic for an instance."""
-        try:
-            instance = self.get(context, instance_id)
-        except exception.NotFound:
-            LOG.warning(_("Instance %d was not found in get_network_topic"),
-                        instance_id)
-            raise
-
-        host = instance['host']
-        if not host:
-            raise exception.Error(_("Instance %d has no host") % instance_id)
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic, host)
-        return rpc.call(context,
-                        topic,
-                        {"method": "get_network_topic", "args": {'fake': 1}})
-
     def _check_injected_file_quota(self, context, injected_files):
         """
         Enforce quota limits on injected files

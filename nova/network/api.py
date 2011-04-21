@@ -131,7 +131,6 @@ class API(base.Base):
         """
         args = kwargs
         args['instance'] = pickle.dumps(instance)
-        host = self.network_manager.get_network_host(context)
         rval = rpc.call(context, self.get_network_topic(context),
                         {'method': 'allocate_for_instance',
                          'args': args}),
