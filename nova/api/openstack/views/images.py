@@ -87,7 +87,6 @@ class ViewBuilderV10(ViewBuilder):
     """OpenStack API v1.0 Image Builder"""
     pass
 
-
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
 
@@ -95,6 +94,9 @@ class ViewBuilderV11(ViewBuilder):
         """Return a standardized image structure for display by the API."""
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
+        if "serverId" in image:
+            image["serverRef"] = image["serverId"]
+            del image["serverId"]
 
         image["links"] = [{
             "rel": "self",
