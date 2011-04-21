@@ -86,10 +86,10 @@ class LocalImageService(service.BaseImageService):
             with open(self._path_to(image_id)) as metadata_file:
                 image_meta = json.load(metadata_file)
                 if not self._is_image_available(context, image_meta):
-                    raise exception.NotFound
+                    raise exception.ImageNotFound(image_id=image_id)
                 return image_meta
         except (IOError, ValueError):
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
     def show_by_name(self, context, name):
         """Returns a dict containing image data for the given name."""
@@ -102,7 +102,7 @@ class LocalImageService(service.BaseImageService):
                 image = cantidate
                 break
         if image is None:
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
         return image
 
     def get(self, context, image_id, data):
@@ -113,7 +113,7 @@ class LocalImageService(service.BaseImageService):
             with open(self._path_to(image_id, 'image')) as image_file:
                 shutil.copyfileobj(image_file, data)
         except (IOError, ValueError):
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
         return metadata
 
     def create(self, context, metadata, data=None):
@@ -143,12 +143,12 @@ class LocalImageService(service.BaseImageService):
             with open(self._path_to(image_id), 'w') as metadata_file:
                 json.dump(metadata, metadata_file)
         except (IOError, ValueError):
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
         return metadata
 
     def delete(self, context, image_id):
         """Delete the given image.
-        Raises NotFound if the image does not exist.
+        Raises ImageNotFound if the image does not exist.
 
         """
         # NOTE(vish): show is to check if image is available
@@ -156,7 +156,7 @@ class LocalImageService(service.BaseImageService):
         try:
             shutil.rmtree(self._path_to(image_id, None))
         except (IOError, ValueError):
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
     def delete_all(self):
         """Clears out all images in local directory."""

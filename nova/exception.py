@@ -52,22 +52,6 @@ class ApiError(Error):
         super(ApiError, self).__init__('%s: %s' % (code, message))
 
 
-class NotFound(Error):
-    pass
-
-
-class InstanceNotFound(NotFound):
-    def __init__(self, message, instance_id):
-        self.instance_id = instance_id
-        super(InstanceNotFound, self).__init__(message)
-
-
-class VolumeNotFound(NotFound):
-    def __init__(self, message, volume_id):
-        self.volume_id = volume_id
-        super(VolumeNotFound, self).__init__(message)
-
-
 class Duplicate(Error):
     pass
 
@@ -160,6 +144,10 @@ class InstanceNotSuspended(Invalid):
     message = _("Instance %(instance_id)s is not suspended.")
 
 
+class InstanceNotInRescueMode(Invalid):
+    message = _("Instance %(instance_id)s is not in rescue mode")
+
+
 class InstanceSuspendFailure(Invalid):
     message = _("Failed to suspend instance") + ": %(reason)s"
 
@@ -223,5 +211,276 @@ class InvalidVLANPortGroup(Invalid):
                 "is %(actual)s.")
 
 
+class InvalidDiskFormat(Invalid):
+    message = _("Disk format %(disk_format)s is not acceptable")
+
+
 class ImageUnacceptable(Invalid):
     message = _("Image %(image_id)s is unacceptable") + ": %(reason)s"
+
+
+class InstanceUnacceptable(Invalid):
+    message = _("Instance %(instance_id)s is unacceptable") + ": %(reason)s"
+
+
+class NotFound(NovaException):
+    message = _("Resource could not be found.")
+
+    def __init__(self, *args, **kwargs):
+        super(NotFound, self).__init__(**kwargs)
+
+
+class InstanceNotFound(NotFound):
+    message = _("Instance %(instance_id)s could not be found.")
+
+
+class VolumeNotFound(NotFound):
+    message = _("Volume %(volume_id)s could not be found.")
+
+
+class VolumeNotFoundForInstance(VolumeNotFound):
+    message = _("Volume not found for instance %(instance_id)s.")
+
+
+class ExportDeviceNotFoundForVolume(NotFound):
+    message = _("No export device found for volume %(volume_id)s.")
+
+
+class ISCSITargetNotFoundForVolume(NotFound):
+    message = _("No target id found for volume %(volume_id)s.")
+
+
+class DiskNotFound(NotFound):
+    message = _("No disk at %(location)s")
+
+
+class ImageNotFound(NotFound):
+    message = _("Image %(image_id)s could not be found.")
+
+
+class KernelNotFoundForImage(ImageNotFound):
+    message = _("Kernel not found for image %(image_id)s.")
+
+
+class RamdiskNotFoundForImage(ImageNotFound):
+    message = _("Ramdisk not found for image %(image_id)s.")
+
+
+class UserNotFound(NotFound):
+    message = _("User %(user_id)s could not be found.")
+
+
+class ProjectNotFound(NotFound):
+    message = _("Project %(project_id)s could not be found.")
+
+
+class ProjectMembershipNotFound(NotFound):
+    message = _("User %(user_id)s is not a member of project %(project_id)s.")
+
+
+class UserRoleNotFound(NotFound):
+    message = _("Role %(role_id)s could not be found.")
+
+
+class StorageRepositoryNotFound(NotFound):
+    message = _("Cannot find SR to read/write VDI.")
+
+
+class NetworkNotFound(NotFound):
+    message = _("Network %(network_id)s could not be found.")
+
+
+class NetworkNotFoundForBridge(NetworkNotFound):
+    message = _("Network could not be found for bridge %(bridge)s")
+
+
+class NetworkNotFoundForCidr(NetworkNotFound):
+    message = _("Network could not be found with cidr %(cidr)s.")
+
+
+class NetworkNotFoundForInstance(NetworkNotFound):
+    message = _("Network could not be found for instance %(instance_id)s.")
+
+
+class NoNetworksFound(NotFound):
+    message = _("No networks defined.")
+
+
+class DatastoreNotFound(NotFound):
+    message = _("Could not find the datastore reference(s) which the VM uses.")
+
+
+class NoFixedIpsFoundForInstance(NotFound):
+    message = _("Instance %(instance_id)s has zero fixed ips.")
+
+
+class FloatingIpNotFound(NotFound):
+    message = _("Floating ip not found for fixed address %(fixed_ip)s.")
+
+
+class NoFloatingIpsDefined(NotFound):
+    message = _("Zero floating ips could be found.")
+
+
+class NoFloatingIpsDefinedForHost(NoFloatingIpsDefined):
+    message = _("Zero floating ips defined for host %(host)s.")
+
+
+class NoFloatingIpsDefinedForInstance(NoFloatingIpsDefined):
+    message = _("Zero floating ips defined for instance %(instance_id)s.")
+
+
+class KeypairNotFound(NotFound):
+    message = _("Keypair %(keypair_name)s not found for user %(user_id)s")
+
+
+class CertificateNotFound(NotFound):
+    message = _("Certificate %(certificate_id)s not found.")
+
+
+class ServiceNotFound(NotFound):
+    message = _("Service %(service_id)s could not be found.")
+
+
+class HostNotFound(NotFound):
+    message = _("Host %(host)s could not be found.")
+
+
+class ComputeHostNotFound(HostNotFound):
+    message = _("Compute host %(host)s could not be found.")
+
+
+class HostBinaryNotFound(NotFound):
+    message = _("Could not find binary %(binary)s on host %(host)s.")
+
+
+class AuthTokenNotFound(NotFound):
+    message = _("Auth token %(token)s could not be found.")
+
+
+class AccessKeyNotFound(NotFound):
+    message = _("Access Key %(access_key)s could not be found.")
+
+
+class QuotaNotFound(NotFound):
+    message = _("Quota could not be found")
+
+
+class ProjectQuotaNotFound(QuotaNotFound):
+    message = _("Quota for project %(project_id)s could not be found.")
+
+
+class SecurityGroupNotFound(NotFound):
+    message = _("Security group %(security_group_id)s not found.")
+
+
+class SecurityGroupNotFoundForProject(SecurityGroupNotFound):
+    message = _("Security group %(security_group_id)s not found "
+                "for project %(project_id)s.")
+
+
+class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
+    message = _("Security group with rule %(rule_id)s not found.")
+
+
+class MigrationNotFound(NotFound):
+    message = _("Migration %(migration_id)s could not be found.")
+
+
+class MigrationNotFoundByStatus(MigrationNotFound):
+    message = _("Migration not found for instance %(instance_id)s "
+                "with status %(status)s.")
+
+
+class ConsolePoolNotFound(NotFound):
+    message = _("Console pool %(pool_id)s could not be found.")
+
+
+class ConsolePoolNotFoundForHostType(NotFound):
+    message = _("Console pool of type %(console_type)s "
+                "for compute host %(compute_host)s "
+                "on proxy host %(host)s not found.")
+
+
+class ConsoleNotFound(NotFound):
+    message = _("Console %(console_id)s could not be found.")
+
+
+class ConsoleNotFoundForInstance(ConsoleNotFound):
+    message = _("Console for instance %(instance_id)s could not be found.")
+
+
+class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
+    message = _("Console for instance %(instance_id)s "
+                "in pool %(pool_id)s could not be found.")
+
+
+class NoInstanceTypesFound(NotFound):
+    message = _("Zero instance types found.")
+
+
+class InstanceTypeNotFound(NotFound):
+    message = _("Instance type %(instance_type_id)s could not be found.")
+
+
+class InstanceTypeNotFoundByName(InstanceTypeNotFound):
+    message = _("Instance type with name %(instance_type_name)s "
+                "could not be found.")
+
+
+class FlavorNotFound(NotFound):
+    message = _("Flavor %(flavor_id)s could not be found.")
+
+
+class ZoneNotFound(NotFound):
+    message = _("Zone %(zone_id)s could not be found.")
+
+
+class InstanceMetadataNotFound(NotFound):
+    message = _("Instance %(instance_id)s has no metadata with "
+                "key %(metadata_key)s.")
+
+
+class LDAPObjectNotFound(NotFound):
+    message = _("LDAP object could not be found")
+
+
+class LDAPUserNotFound(LDAPObjectNotFound):
+    message = _("LDAP user %(user_id)s could not be found.")
+
+
+class LDAPGroupNotFound(LDAPObjectNotFound):
+    message = _("LDAP group %(group_id)s could not be found.")
+
+
+class LDAPGroupMembershipNotFound(NotFound):
+    message = _("LDAP user %(user_id)s is not a member of group %(group_id)s.")
+
+
+class FileNotFound(NotFound):
+    message = _("File %(file_path)s could not be found.")
+
+
+class NoFilesFound(NotFound):
+    message = _("Zero files could be found.")
+
+
+class SwitchNotFoundForNetworkAdapter(NotFound):
+    message = _("Virtual switch associated with the "
+                "network adapter %(adapter)s not found.")
+
+
+class NetworkAdapterNotFound(NotFound):
+    message = _("Network adapter %(adapter)s could not be found.")
+
+
+class ClassNotFound(NotFound):
+    message = _("Class %(class_name)s could not be found")
+
+
+class NotAllowed(NovaException):
+    message = _("Action not allowed.")
+
+
+class GlobalRoleNotAllowed(NotAllowed):
+    message = _("Unable to use global role %(role_id)s")

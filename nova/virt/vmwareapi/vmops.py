@@ -116,8 +116,7 @@ class VMWareVMOps(object):
                 network_utils.get_network_with_the_name(self._session,
                                                         net_name)
             if network_ref is None:
-                raise exception.NotFound(_("Network with the name '%s' doesn't"
-                        " exist on the ESX host") % net_name)
+                raise exception.NetworkNotFoundForBridge(bridge=net_name)
 
         _check_if_network_bridge_exists()
 
@@ -337,8 +336,7 @@ class VMWareVMOps(object):
         """
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
@@ -388,8 +386,7 @@ class VMWareVMOps(object):
                                     "VirtualMachine",
                                     "datastore")
             if not ds_ref_ret:
-                raise exception.NotFound(_("Failed to get the datastore "
-                                "reference(s) which the VM uses"))
+                raise exception.DatastoreNotFound()
             ds_ref = ds_ref_ret.ManagedObjectReference[0]
             ds_browser = vim_util.get_dynamic_property(
                                        self._session._get_vim(),
@@ -480,8 +477,7 @@ class VMWareVMOps(object):
         """Reboot a VM instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
         lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
                           "summary.guest.toolsRunningStatus"]
         props = self._session._call_method(vim_util, "get_object_properties",
@@ -605,8 +601,7 @@ class VMWareVMOps(object):
         """Suspend the specified instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
 
         pwr_state = self._session._call_method(vim_util,
                     "get_dynamic_property", vm_ref,
@@ -630,8 +625,7 @@ class VMWareVMOps(object):
         """Resume the specified instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
 
         pwr_state = self._session._call_method(vim_util,
                                      "get_dynamic_property", vm_ref,
@@ -651,8 +645,7 @@ class VMWareVMOps(object):
         """Return data about the VM instance."""
         vm_ref = self._get_vm_ref_from_the_name(instance_name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
 
         lst_properties = ["summary.config.numCpu",
                     "summary.config.memorySizeMB",
@@ -688,8 +681,7 @@ class VMWareVMOps(object):
         """Return snapshot of console."""
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
         param_list = {"id": str(vm_ref)}
         base_url = "%s://%s/screen?%s" % (self._session._scheme,
                                          self._session._host_ip,
@@ -717,8 +709,7 @@ class VMWareVMOps(object):
         """
         vm_ref = self._get_vm_ref_from_the_name(instance.name)
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
         network = db.network_get_by_instance(context.get_admin_context(),
                                             instance['id'])
         mac_addr = instance.mac_address

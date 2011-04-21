@@ -89,10 +89,10 @@ class GlanceImageService(service.BaseImageService):
         try:
             image_meta = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
         if not self._is_image_available(context, image_meta):
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
         base_image_meta = self._translate_to_base(image_meta)
         return base_image_meta
@@ -107,7 +107,7 @@ class GlanceImageService(service.BaseImageService):
         for image_meta in image_metas:
             if name == image_meta.get('name'):
                 return image_meta
-        raise exception.NotFound
+        raise exception.ImageNotFound(image_id=name)
 
     def get(self, context, image_id, data):
         """
@@ -116,7 +116,7 @@ class GlanceImageService(service.BaseImageService):
         try:
             image_meta, image_chunks = self.client.get_image(image_id)
         except glance_exception.NotFound:
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
         for chunk in image_chunks:
             data.write(chunk)
@@ -149,14 +149,14 @@ class GlanceImageService(service.BaseImageService):
     def update(self, context, image_id, image_meta, data=None):
         """Replace the contents of the given image with the new data.
 
-        :raises NotFound if the image does not exist.
+        :raises ImageNotFound if the image does not exist.
         """
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
         base_image_meta = self._translate_to_base(image_meta)
         return base_image_meta
@@ -165,14 +165,14 @@ class GlanceImageService(service.BaseImageService):
         """
         Delete the given image.
 
-        :raises NotFound if the image does not exist.
+        :raises ImageNotFound if the image does not exist.
         """
         # NOTE(vish): show is to check if image is available
         self.show(context, image_id)
         try:
             result = self.client.delete_image(image_id)
         except glance_exception.NotFound:
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
         return result
 
     def delete_all(self):

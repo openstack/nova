@@ -21,10 +21,7 @@ from nova import exception
 
 def ec2_id_to_id(ec2_id):
     """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
-    try:
-        return int(ec2_id.split('-')[-1], 16)
-    except ValueError:
-        raise exception.NotFound(_("Id %s Not Found") % ec2_id)
+    return int(ec2_id.split('-')[-1], 16)
 
 
 def id_to_ec2_id(instance_id, template='i-%08x'):

@@ -71,7 +71,7 @@ class FakeImageService(service.BaseImageService):
             return copy.deepcopy(image)
         LOG.warn("Unable to find image id %s.  Have images: %s",
                  image_id, self.images)
-        raise exception.NotFound
+        raise exception.ImageNotFound(image_id=image_id)
 
     def create(self, context, data):
         """Store the image data and return the new image id.
@@ -88,24 +88,24 @@ class FakeImageService(service.BaseImageService):
     def update(self, context, image_id, data):
         """Replace the contents of the given image with the new data.
 
-        :raises NotFound if the image does not exist.
+        :raises ImageNotFound if the image does not exist.
 
         """
         image_id = int(image_id)
         if not self.images.get(image_id):
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
         self.images[image_id] = copy.deepcopy(data)
 
     def delete(self, context, image_id):
         """Delete the given image.
 
-        :raises NotFound if the image does not exist.
+        :raises ImageNotFound if the image does not exist.
 
         """
         image_id = int(image_id)
         removed = self.images.pop(image_id, None)
         if not removed:
-            raise exception.NotFound
+            raise exception.ImageNotFound(image_id=image_id)
 
     def delete_all(self):
         """Clears out all images."""

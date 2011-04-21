@@ -260,8 +260,7 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.NotFound(
-                            _('Instance not present %s') % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_obj.id)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -578,9 +577,8 @@ class VMOps(object):
 
         if not (instance.kernel_id and instance.ramdisk_id):
             # 2. We only have kernel xor ramdisk
-            raise exception.NotFound(
-                _("Instance %(instance_id)s has a kernel or ramdisk but not "
-                  "both" % locals()))
+            raise exception.InstanceUnacceptable(instance_id=instance_id,
+               reason=_("instance has a kernel or ramdisk but not both"))
 
         # 3. We have both kernel and ramdisk
         (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(self._session,
@@ -721,8 +719,7 @@ class VMOps(object):
                                         "%s-rescue" % instance.name)
 
         if not rescue_vm_ref:
-            raise exception.NotFound(_(
-                "Instance is not in Rescue Mode: %s" % instance.name))
+            raise exception.InstanceNotInRescueMode(instance_id=instance.id)
 
         original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False

@@ -449,7 +449,7 @@ class LibvirtConnection(driver.ComputeDriver):
         mount_device = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
         if not xml:
-            raise exception.NotFound(_("No disk at %s") % mount_device)
+            raise exception.DiskNotFound(location=mount_device)
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
@@ -1054,8 +1054,7 @@ class LibvirtConnection(driver.ComputeDriver):
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
             if errcode == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.NotFound(_("Instance %s not found")
-                                         % instance_name)
+                raise exception.InstanceNotFound(instance_id=instance_name)
             LOG.warning(_("Error from libvirt during lookup. "
                           "Code=%(errcode)s Error=%(e)s") %
                         locals())

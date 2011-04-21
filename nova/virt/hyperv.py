@@ -368,7 +368,7 @@ class HyperVConnection(driver.ComputeDriver):
         """Reboot the specified instance."""
         vm = self._lookup(instance.name)
         if vm is None:
-            raise exception.NotFound('instance not present %s' % instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
         self._set_vm_state(instance.name, 'Reboot')
 
     def destroy(self, instance):
@@ -412,7 +412,7 @@ class HyperVConnection(driver.ComputeDriver):
         """Get information about the VM"""
         vm = self._lookup(instance_id)
         if vm is None:
-            raise exception.NotFound('instance not present %s' % instance_id)
+            raise exception.InstanceNotFound(instance_id=instance_id)
         vm = self._conn.Msvm_ComputerSystem(ElementName=instance_id)[0]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = vm.associators(
@@ -474,14 +474,12 @@ class HyperVConnection(driver.ComputeDriver):
     def attach_volume(self, instance_name, device_path, mountpoint):
         vm = self._lookup(instance_name)
         if vm is None:
-            raise exception.NotFound('Cannot attach volume to missing %s vm'
-                    % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
 
     def detach_volume(self, instance_name, mountpoint):
         vm = self._lookup(instance_name)
         if vm is None:
-            raise exception.NotFound('Cannot detach volume from missing %s '
-                    % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
 
     def poll_rescued_instances(self, timeout):
         pass

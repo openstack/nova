@@ -92,8 +92,7 @@ class VMRCConsole(object):
                 vm_ds_path_name = ds_path_name
                 break
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         json_data = json.dumps({"vm_id": vm_ds_path_name,
                     "username": username,
                     "password": password})
@@ -127,8 +126,7 @@ class VMRCSessionConsole(VMRCConsole):
             if vm.propSet[0].val == instance_name:
                 vm_ref = vm.obj
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         virtual_machine_ticket = \
                         vim_session._call_method(
             vim_session._get_vim(),

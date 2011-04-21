@@ -120,12 +120,11 @@ class SchedulerTestCase(test.TestCase):
         dest = 'dummydest'
         ctxt = context.get_admin_context()
 
-        try:
-            scheduler.show_host_resources(ctxt, dest)
-        except exception.NotFound, e:
-            c1 = (e.message.find(_("does not exist or is not a "
-                                   "compute node.")) >= 0)
-        self.assertTrue(c1)
+        self.assertRaises(exception.NotFound, scheduler.show_host_resources,
+                          ctxt, dest)
+        #TODO(bcwaldon): reimplement this functionality
+        #c1 = (e.message.find(_("does not exist or is not a "
+        #                       "compute node.")) >= 0)
 
     def _dic_is_equal(self, dic1, dic2, keys=None):
         """Compares 2 dictionary contents(Helper method)"""
@@ -941,7 +940,7 @@ class FakeRerouteCompute(api.reroute_compute):
 
 
 def go_boom(self, context, instance):
-    raise exception.InstanceNotFound("boom message", instance)
+    raise exception.InstanceNotFound(instance_id=instance)
 
 
 def found_instance(self, context, instance):
@@ -990,11 +989,8 @@ class ZoneRedirectTest(test.TestCase):
     def test_routing_flags(self):
         FLAGS.enable_zone_routing = False
         decorator = FakeRerouteCompute("foo")
-        try:
-            result = decorator(go_boom)(None, None, 1)
-            self.assertFail(_("Should have thrown exception."))
-        except exception.InstanceNotFound, e:
-            self.assertEquals(e.message, 'boom message')
+        self.assertRaises(exception.InstanceNotFound, decorator(go_boom),
+                          None, None, 1)
 
     def test_get_collection_context_and_id(self):
         decorator = api.reroute_compute("foo")
