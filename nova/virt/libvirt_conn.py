@@ -165,9 +165,10 @@ def _get_network_info(instance):
 
     ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
                                                    instance['id'])
-
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
+    flavor = db.instance_type_get_by_id(admin_context,
+                                        instance['instance_type_id'])
     network_info = []
 
     for network in networks:
@@ -191,7 +192,9 @@ def _get_network_info(instance):
         mapping = {
             'label': network['label'],
             'gateway': network['gateway'],
+            'broadcast': network['broadcast'],
             'mac': instance['mac_address'],
+            'rxtx_cap': flavor['rxtx_cap'],
             'dns': [network['dns']],
             'ips': [ip_dict(ip) for ip in network_ips]}
 
