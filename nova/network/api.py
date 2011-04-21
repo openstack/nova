@@ -133,7 +133,7 @@ class API(base.Base):
         args['instance'] = pickle.dumps(instance)
         rval = rpc.call(context, self.get_network_topic(context),
                         {'method': 'allocate_for_instance',
-                         'args': args}),
+                         'args': args})
         return pickle.loads(rval)
 
     def deallocate_for_instance(self, context, instance, **kwargs):
@@ -144,7 +144,7 @@ class API(base.Base):
         args['instance'] = pickle.dumps(instance)
         rpc.cast(context, self.get_network_topic(context),
                  {'method': 'deallocate_for_instance',
-                  'args': args}),
+                  'args': args})
 
     def get_instance_nw_info(self, context, instance):
         """rpc.calls network manager get_instance_nw_info
