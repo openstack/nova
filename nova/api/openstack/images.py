@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 import webob.exc
 
 from nova import compute
@@ -22,7 +20,6 @@ from nova import exception
 from nova import flags
 from nova import log
 from nova import utils
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
@@ -32,7 +29,7 @@ LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
     """Base `wsgi.Controller` for retrieving/displaying images."""
 
     _serialization_metadata = {
@@ -153,3 +150,6 @@ class ControllerV11(Controller):
         """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11

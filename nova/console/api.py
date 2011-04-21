@@ -15,23 +15,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Handles ConsoleProxy API requests
-"""
+"""Handles ConsoleProxy API requests."""
 
 from nova import exception
-from nova.db import base
-
-
 from nova import flags
 from nova import rpc
+from nova.db import base
 
 
 FLAGS = flags.FLAGS
 
 
 class API(base.Base):
-    """API for spining up or down console proxy connections"""
+    """API for spinning up or down console proxy connections."""
 
     def __init__(self, **kwargs):
         super(API, self).__init__(**kwargs)
@@ -51,8 +47,8 @@ class API(base.Base):
                  self.db.queue_get_for(context,
                                        FLAGS.console_topic,
                                        pool['host']),
-                 {"method": "remove_console",
-                  "args": {"console_id": console['id']}})
+                 {'method': 'remove_console',
+                  'args': {'console_id': console['id']}})
 
     def create_console(self, context, instance_id):
         instance = self.db.instance_get(context, instance_id)
@@ -63,13 +59,12 @@ class API(base.Base):
         #               here.
         rpc.cast(context,
                  self._get_console_topic(context, instance['host']),
-                 {"method": "add_console",
-                  "args": {"instance_id": instance_id}})
+                 {'method': 'add_console',
+                  'args': {'instance_id': instance_id}})
 
     def _get_console_topic(self, context, instance_host):
         topic = self.db.queue_get_for(context,
                                       FLAGS.compute_topic,
                                       instance_host)
-        return rpc.call(context,
-                        topic,
-                        {"method": "get_console_topic", "args": {'fake': 1}})
+        return rpc.call(context, topic, {'method': 'get_console_topic',
+                                         'args': {'fake': 1}})
