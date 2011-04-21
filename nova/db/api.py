@@ -397,9 +397,14 @@ def mac_address_create(context, values):
     return IMPL.mac_address_create(context, values)
 
 
-def mac_address_get(context, mac_address):
+def mac_address_get(context, mac_address_id):
     """gets a mac address from the table"""
-    return IMPL.mac_address_get(context, mac_address)
+    return IMPL.mac_address_get(context, mac_address_id)
+
+
+def mac_address_get_by_address(context, address):
+    """gets a mac address from the table"""
+    return IMPL.mac_address_get_by_address(context, address)
 
 
 def mac_address_get_all_by_instance(context, instance_id):

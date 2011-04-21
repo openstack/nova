@@ -43,6 +43,7 @@ import socket
 import sys
 import tempfile
 import functools
+import pickle
 
 from eventlet import greenthread
 
@@ -50,6 +51,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import network
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
@@ -130,6 +132,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
+        self.network_api = network.API()
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         super(ComputeManager, self).__init__(service_name="compute",
@@ -211,11 +214,16 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         is_vpn = instance['image_id'] == FLAGS.vpn_image_id
         if not FLAGS.stub_network:
-            network_info = rpc.call(context, self.get_network_topic(context),
-                                    {"method": "allocate_for_instance",
-                                     "args": {"instance_id": instance_id,
-                                              "vpn": is_vpn}})
-        Log.debug(_("instance network_info: |%s|"), network_info)
+            network_info = self.network_api.allocate_for_instance(context,
+                                                                  instance,
+                                                                  vpn=is_vpn)
+            LOG.debug(_("instance network_info: |%s|"), network_info)
+        else:
+            # TODO(tr3buchet) not really sure how this should be handled.
+            # virt requires network_info to be passed in but stub_network
+            # is enabled. Setting to [] for now will cause virt to skip
+            # all vif creation and network injection, maybe this is correct
+            network_info = []
 
         # TODO(vish) check to make sure the availability zone matches
         self.db.instance_set_state(context,
@@ -248,9 +256,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
 
         if not FLAGS.stub_network:
-            rpc.call(context, self.get_network_topic(context),
-                     {"method": "deallocate_for_instance",
-                      "args": {"instance_id": instance_id}})
+            self.network_api.deallocate_for_instance(context, instance)
 
         volumes = instance.get('volumes') or []
         for volume in volumes:
@@ -672,13 +678,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         LOG.debug(_('instance %s: inject network info'), instance_id,
                                                          context=context)
-        instance = self.db.instance_get(context, instance)
-        network_info = rpc.call(context, self.get_network_topic(context),
-                                {"method": "get_instance_nw_info",
-                                 "args": {"instance": instance}})
-        Log.debug(_("network_info: |%s|"), network_info)
+        instance = self.db.instance_get(context, instance_id)
+        network_info = self.network_api.get_instance_nw_info(context,
+                                                             instance)
+        LOG.debug(_("network_info to inject: |%s|"), network_info)
 
-        self.driver.inject_network_info(instance, network_info=network_info)
+        self.driver.inject_network_info(instance, network_info)
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
@@ -840,8 +845,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         ec2_id = instance_ref['hostname']
 
         # Getting fixed ips
-        fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
-        if not fixed_ip:
+        fixed_ips = self.db.instance_get_fixed_addresses(context, instance_id)
+        if not fixed_ips:
             msg = _("%(instance_id)s(%(ec2_id)s) does not have fixed_ip.")
             raise exception.NotFound(msg % locals())
 

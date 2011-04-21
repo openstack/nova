@@ -63,7 +63,12 @@ class API(base.Base):
                   "args": {"floating_address": floating_ip['address']}})
 
     def associate_floating_ip(self, context, floating_ip, fixed_ip):
-        if isinstance(fixed_ip, str) or isinstance(fixed_ip, unicode):
+        """rpc.casts to network associate_floating_ip
+
+        fixed_ip is either a fixed_ip object or a string fixed ip address
+        floating_ip is a string floating ip address
+        """
+        if isinstance(fixed_ip, basestring):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
         # Check if the floating ip address is allocated
@@ -101,3 +106,34 @@ class API(base.Base):
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {"method": "disassociate_floating_ip",
                   "args": {"floating_address": floating_ip['address']}})
+
+    def allocate_for_instance(self, context, instance, **kwargs):
+        """rpc.calls network manager allocate_for_instance
+        handles args and return value serialization
+        """
+        args = kwargs
+        args['instance'] = pickle.dumps(instance)
+        rval = rpc.call(context, self.get_network_topic(context),
+                        {'method': 'allocate_for_instance',
+                         'args': args}),
+        return pickle.loads(rval)
+
+    def deallocate_for_instance(self, context, instance, **kwargs):
+        """rpc.casts network manager allocate_for_instance
+        handles argument serialization
+        """
+        args = kwargs
+        args['instance'] = pickle.dumps(instance)
+        rpc.cast(context, self.get_network_topic(context),
+                 {'method': 'deallocate_for_instance',
+                  'args': args}),
+
+    def get_instance_nw_info(self, context, instance):
+        """rpc.calls network manager get_instance_nw_info
+        handles the args and return value serialization
+        """
+        args = {'instance': pickle.dumps(instance)}
+        rval = rpc.call(context, self.get_network_topic(context),
+                        {'method': 'get_instance_nw_info',
+                         'args': args})
+        return pickle.loads(rval)

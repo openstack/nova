@@ -62,13 +62,14 @@ def upgrade(migrate_engine):
     s = select([instances.c.id, instances.c.mac_address,
                 fixed_ips.c.network_id],
                fixed_ips.c.instance_id == instances.c.id)
-    keys = ['instance_id', 'address', 'network_id']
+    keys = ('instance_id', 'address', 'network_id')
     join_list = [dict(zip(keys, row)) for row in s.execute()]
-    logging.info("join list |%s|", join_list)
+    logging.debug(_("join list for moving mac_addressse |%s|"), join_list)
 
     # insert data into the table
-    i = mac_addresses.insert()
-    i.execute(join_list)
+    if join_list:
+        i = mac_addresses.insert()
+        i.execute(join_list)
 
     # drop the mac_address column from instances
     c.drop

@@ -183,9 +183,9 @@ class XenAPIConnection(driver.ComputeDriver):
     def list_instances_detail(self):
         return self._vmops.list_instances_detail()
 
-    def spawn(self, instance):
+    def spawn(self, instance, network_info):
         """Create VM instance"""
-        self._vmops.spawn(instance)
+        self._vmops.spawn(instance, network_info)
 
     def revert_resize(self, instance):
         """Reverts a resize, powering back on the instance"""

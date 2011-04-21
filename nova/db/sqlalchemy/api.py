@@ -704,7 +704,7 @@ def fixed_ip_get_by_address(context, address, session=None):
                      options(joinedload('instance')).\
                      first()
     if not result:
-        raise exception.NotFound(_('No floating ip for address %s') % address)
+        raise exception.NotFound(_('No fixed ip for address %s') % address)
 
     if is_user_context(context):
         authorize_project_context(context, result.instance.project_id)
@@ -723,7 +723,8 @@ def fixed_ip_get_all_by_instance(context, instance_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
                  filter_by(instance_id=instance_id).\
-                 filter_by(deleted=False)
+                 filter_by(deleted=False).\
+                 all()
     if not rv:
         raise exception.NotFound(_('No address for instance %s') % instance_id)
     return rv
@@ -737,7 +738,7 @@ def fixed_ip_get_instance_v6(context, address):
     mac = utils.to_mac(address)
 
     # get mac address row
-    mac_ref = mac_address_get(context, mac)
+    mac_ref = mac_address_get_by_address(context, mac)
 
     # look up instance based on instance_id from mac address row
     result = session.query(models.Instance).\
@@ -789,16 +790,30 @@ def mac_address_create(context, values):
 
 
 @require_context
-def mac_address_get(context, mac_address):
+def mac_address_get(context, mac_address_id):
     """gets a mac address from the table
 
     context = request context object
-    mac_address = the mac you're looking to get
+    mac_address_id = id of the mac_address
     """
     session = get_session()
     with session.begin():
         mac_address_ref = session.query(models.MacAddress).\
-                                  filter_by(mac_address=mac_address)
+                                  filter_by(id=mac_address_id)
+        return mac_address_ref
+
+
+@require_context
+def mac_address_get_by_address(context, address):
+    """gets a mac address from the table
+
+    context = request context object
+    address = the mac you're looking to get
+    """
+    session = get_session()
+    with session.begin():
+        mac_address_ref = session.query(models.MacAddress).\
+                                  filter_by(address=address)
         return mac_address_ref
 
 
@@ -812,7 +827,8 @@ def mac_address_get_all_by_instance(context, instance_id):
     session = get_session()
     with session.begin():
         mac_address_refs = session.query(models.MacAddress).\
-                                   filter_by(instance_id=instance_id)
+                                   filter_by(instance_id=instance_id).\
+                                   all()
         return mac_address_refs
 
 
@@ -826,18 +842,19 @@ def mac_address_get_all_by_network(context, network_id):
     session = get_session()
     with session.begin():
         mac_address_refs = session.query(models.MacAddress).\
-                                   filter_by(network_id=network_id)
+                                   filter_by(network_id=network_id).\
+                                   all()
         return mac_address_refs
 
 
 @require_context
-def mac_address_delete(context, mac_address):
+def mac_address_delete(context, address):
     """delete mac address record in teh database
 
     context = request context object
     instance_id = instance to remove macs for
     """
-    ref = mac_address_get(mac_address)
+    ref = mac_address_get_by_address(address)
     session = get_session()
     with session.begin():
         ref.delete(session=session)
@@ -927,10 +944,10 @@ def instance_get(context, instance_id, session=None):
 
     if is_admin_context(context):
         result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ips.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
-                         options(joinedload_all('fixed_ip.network')).\
+                         options(joinedload_all('fixed_ips.network')).\
                          options(joinedload('metadata')).\
                          options(joinedload('instance_type')).\
                          filter_by(id=instance_id).\
@@ -938,7 +955,7 @@ def instance_get(context, instance_id, session=None):
                          first()
     elif is_user_context(context):
         result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
+                         options(joinedload_all('fixed_ips.floating_ips')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload('metadata')).\
@@ -959,9 +976,9 @@ def instance_get(context, instance_id, session=None):
 def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -971,9 +988,9 @@ def instance_get_all(context):
 def instance_get_all_by_user(context, user_id):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
@@ -984,9 +1001,9 @@ def instance_get_all_by_user(context, user_id):
 def instance_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -999,9 +1016,9 @@ def instance_get_all_by_project(context, project_id):
 
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
-                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -1014,18 +1031,18 @@ def instance_get_all_by_reservation(context, reservation_id):
 
     if is_admin_context(context):
         return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ip.floating_ips')).\
+                       options(joinedload_all('fixed_ips.floating_ips')).\
                        options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('instance_type')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
                        all()
     elif is_user_context(context):
         return session.query(models.Instance).\
-                       options(joinedload_all('fixed_ip.floating_ips')).\
+                       options(joinedload_all('fixed_ips.floating_ips')).\
                        options(joinedload('security_groups')).\
-                       options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('instance_type')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
@@ -1037,7 +1054,7 @@ def instance_get_all_by_reservation(context, reservation_id):
 def instance_get_project_vpn(context, project_id):
     session = get_session()
     return session.query(models.Instance).\
-                   options(joinedload_all('fixed_ip.floating_ips')).\
+                   options(joinedload_all('fixed_ips.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
@@ -1051,9 +1068,11 @@ def instance_get_fixed_addresses(context, instance_id):
     session = get_session()
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
-        if not instance_ref.fixed_ips:
-            return None
-        return [fixed_ip.address for fixed_ip in instance_ref.fixed_ips]
+        try:
+            fixed_ips = fixed_ip_get_all_by_instance(context, instance_id)
+        except exception.NotFound:
+            return []
+        return [fixed_ip.address for fixed_ip in fixed_ips]
 
 
 @require_context
@@ -1062,6 +1081,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
     with session.begin():
         # get instance
         instance_ref = instance_get(context, instance_id, session=session)
+        # assume instance has 1 mac for each network associated with it
         # get networks associated with instance
         network_refs = network_get_all_by_instance(context, instance_id)
         # compile a list of cidr_v6 prefixes sorted by network id
@@ -1085,6 +1105,8 @@ def instance_get_floating_address(context, instance_id):
         instance_ref = instance_get(context, instance_id, session=session)
         if not instance_ref.fixed_ip:
             return None
+        # NOTE(tr3buchet): this only gets the first fixed_ip
+        # won't find floating ips associated with other fixed_ips
         if not instance_ref.fixed_ip.floating_ips:
             return None
         # NOTE(vish): this just returns the first floating ip
@@ -1443,7 +1465,8 @@ def network_get_all_by_instance(_context, instance_id):
                  filter_by(deleted=False).\
                  join(models.Network.fixed_ips).\
                  filter_by(instance_id=instance_id).\
-                 filter_by(deleted=False)
+                 filter_by(deleted=False).\
+                 all()
     if not rv:
         raise exception.NotFound(_('No network for instance %s') % instance_id)
     return rv

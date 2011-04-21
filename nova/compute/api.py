@@ -461,7 +461,7 @@ class API(base.Base):
             params = {}
         if not host:
             instance = self.get(context, instance_id)
-            host = instance["host"]
+            host = instance['host']
         queue = self.db.queue_get_for(context, FLAGS.compute_topic, host)
         params['instance_id'] = instance_id
         kwargs = {'method': method, 'args': params}
@@ -697,10 +697,32 @@ class API(base.Base):
         return instance
 
     def associate_floating_ip(self, context, instance_id, address):
+        """makes calls to network_api to associate_floating_ip
+
+        address is a string floating ip address
+        """
         instance = self.get(context, instance_id)
+
+        # TODO(tr3buchet): currently network_info doesn't contain floating IPs
+        # in its info, if this changes, the next few lines will need to
+        # accomodate the info containing floating as well as fixed ip addresses
+        fixed_ip_addrs = []
+        for (network, info) in self.network_api.get_instance_nw_info(context,
+                                                                     instance):
+            fixed_ip_addrs.extend([ip_dict.ip for ip_dict in info['ips']])
+
+        # TODO(tr3buchet): this will associate the floating IP with the first
+        # fixed_ip (lowest id) an instance has. This should be changed to
+        # support specifying a particular fixed_ip if multiple exist.
+        if not fixed_ip_addrs:
+            msg = _("instance |%s| has no fixed_ips. "
+                    "unable to associate floating ip") % instance_id
+            raise exception.ApiError(msg)
+        if len(fixed_ip_addrs) > 1:
+            LOG.warning(_("multiple fixed_ips exist, using the first"))
         self.network_api.associate_floating_ip(context,
                                                floating_ip=address,
-                                               fixed_ip=instance['fixed_ip'])
+                                               fixed_ip=fixed_ip_addrs[0])
 
     def get_instance_metadata(self, context, instance_id):
         """Get all metadata associated with an instance."""

@@ -58,6 +58,8 @@ from nova import log as logging
 from nova import manager
 from nova import utils
 from nova import rpc
+import random
+import random
 
 
 LOG = logging.getLogger("nova.network.manager")
@@ -174,28 +176,38 @@ class NetworkManager(manager.SchedulerDependentManager):
         # return only networks which are not vlan networks
         return [network for network in networks if network['vlan'] is None]
 
-    def allocate_for_instance(self, context, instance_id, **kwargs):
-        """handles allocating the various network resources for an instance"""
-        LOG.debug(_("network allocations for instance %s"), instance_id,
+    def allocate_for_instance(self, context, instance, **kwargs):
+        """handles allocating the various network resources for an instance
+
+        rpc.called by network_api
+        instance expected to be pickled
+        return value is also pickled
+        """
+        instance = pickle.loads(instance)
+        LOG.debug(_("network allocations for instance %s"), instance['id'],
                                                             context=context)
         admin_context = context.elevated()
-        instance = self.db.instance_get(context, instance_id)
         networks = self._get_networks_for_instance(admin_context, instance)
         self._allocate_mac_addresses(context, instance, networks)
         self._allocate_fixed_ips(admin_context, instance, networks, **kwargs)
-        return self.get_instance_nw_info(admin_context, instance)
+        return pickle.dumps(self._create_nw_info(admin_context, instance))
 
-    def deallocate_for_instance(self, context, instance_id, **kwargs):
-        """handles deallocating various network resources for an instance"""
-        LOG.debug(_("network deallocations for instance %s"), instance_id,
-                                                              context=context)
-        instance = self.db.instance_get(context, instance_id)
+    def deallocate_for_instance(self, context, instance, **kwargs):
+        """handles deallocating various network resources for an instance
+
+        rpc.called by network_api
+        instance is expected to be pickled
+        """
+        instance = pickle.loads(instance)
+        LOG.debug(_("network deallocation for instance |%s|"), instance['id'],
+                                                               context=context)
 
         # deallocate mac addresses
         self.db.mac_address_delete_by_instance(context, instance_id)
 
         # deallocate fixed ips
-        for fixed_ip in instance.fixed_ips:
+        for fixed_ip in self.db.fixed_ip_get_all_by_instance(context,
+                                                             instance['id']):
             # disassociate floating ips related to fixed_ip
             for floating_ip in fixed_ip.floating_ips:
                 network_topic = self.db.queue_get_for(context,
@@ -203,12 +215,82 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                       floating_ip['host'])
                 # NOTE(tr3buchet) from vish, may need to check to make sure
                 #                 disassocate worked in the future
-                rpc.cast(context
-                        network_topic
-                        {'method': 'disassociate_floating_ip',
-                         'args': {'floating_address': floating_ip['address']}})
+                args = {'floating_address': floating_ip['address']}
+                rpc.cast(context,
+                         network_topic,
+                         {'method': 'disassociate_floating_ip',
+                          'args': args})
             # then deallocate fixed_ip
             self.deallocate_fixed_ip(context, fixed_ip['address'], **kwargs)
+
+    def get_instance_nw_info(self, context, instance):
+        """unpickles instance and calls _create_nw_info
+           then pickles its return for passing through rpc
+
+        rpc.called by network_api
+        instance is expected to be pickled
+        return value is also pickled
+        """
+        instance = pickle.loads(instance)
+        LOG.debug(_("getting network info for instance |%s|"), instance['id'])
+        admin_context = context.elevated()
+        return pickle.dumps(self._create_nw_info(admin_context, instance))
+
+    def _create_nw_info(self, context, instance):
+        """creates network info list for instance
+
+        called by allocate_for_instance and get_instance_nw_info
+        context needs to be elevated
+        returns network info list [(network,info),(network,info)...]
+        where network is a db object and info is a dict
+        """
+        # TODO(tr3buchet) should handle floating IPs as well?
+        fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
+                                                         instance['id'])
+        mac_addresses = self.db.mac_address_get_all_by_instance(context,
+                                                                instance['id'])
+        flavor = self.db.instance_type_get_by_id(context,
+                                                 instance['instance_type_id'])
+        network_info = []
+        # a mac_address contains address, instance_id, network_id
+        # it is also joined to the instance and network given by those IDs
+        for mac_address in mac_addresses:
+            network = mac_address['network']
+
+            # determine which of the instance's IPs belong to this network
+            network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
+                           fixed_ip['network_id'] == network['id']]
+
+            # TODO(tr3buchet) eventually "enabled" should be determined
+            def ip_dict(ip):
+                return {
+                    "ip": ip,
+                    "netmask": network["netmask"],
+                    "enabled": "1"}
+
+            def ip6_dict():
+                return {
+                    "ip": utils.to_global_ipv6(network['cidr_v6'],
+                                               mac_address['address']),
+                    "netmask": network['netmask_v6'],
+                    "enabled": "1"}
+
+            info = {
+                'label': network['label'],
+                'gateway': network['gateway'],
+                'gateway6': network['gateway_v6'],
+                'broadcast': network['broadcast'],
+                'mac': mac_address['address'],
+                'rxtx_cap': flavor['rxtx_cap'],
+                'dns': [network['dns']],
+                'ips': [ip_dict(ip) for ip in network_IPs]}
+            if network['cidr_v6']:
+                info['ip6s'] = [ip6_dict()]
+            # TODO(tr3buchet): handle ip6 routes here as well
+            if network['gateway_v6']:
+                info['gateway6'] = network['gateway_v6']
+            network_info.append((network, info))
+        return network_info
 
     def _allocate_mac_addresses(self, context, instance, networks):
         """generates and stores mac addresses"""
@@ -249,55 +331,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         self.db.fixed_ip_update(context, address, {'allocated': False})
         self.db.fixed_ip_disassociate(context, address)
 
-    def get_instance_nw_info(self, context, instance):
-        """creates network info list for instance"""
-        # TODO(tr3buchet) should handle floating IPs as well?
-        fixed_ips = db.fixed_ip_get_all_by_instance(context,
-                                                  instance['id'])
-        mac_addresses = mac_address_get_all_by_instance(context,
-                                                        instance['id'])
-        flavor = db.instance_type_get_by_name(context,
-                                                  instance['instance_type'])
-        network_info = []
-        # a mac_address contains address, instance_id, network_id
-        # it is also joined to the instance and network given by those IDs
-        for mac_address in mac_addresses:
-            network = mac_address['network']
-
-            # determine which of the instance's IPs belong to this network
-            network_IPs = [fixed_ip['address'] for fixed_ip in fixed_ips if
-                           fixed_ip['network_id'] == network['id']]
-
-            # TODO(tr3buchet) eventually "enabled" should be determined
-            def ip_dict(ip):
-                return {
-                    "ip": ip,
-                    "netmask": network["netmask"],
-                    "enabled": "1"}
-
-            def ip6_dict():
-                return {
-                    "ip": utils.to_global_ipv6(network['cidr_v6'],
-                                               mac_address['address'])
-                    "netmask": network['netmask_v6'],
-                    "enabled": "1"}
-
-            info = {
-                'label': network['label'],
-                'gateway': network['gateway'],
-                'gateway6': network['gateway_v6'],
-                'broadcast': network['broadcast'],
-                'mac': mac_address['address'],
-                'rxtx_cap': flavor['rxtx_cap'],
-                'dns': [network['dns']],
-                'ips': [ip_dict(ip) for ip in network_IPs]}
-            if network['cidr_v6']:
-                info['ip6s'] = [ip6_dict()]
-            if network['gateway_v6']:
-                info['gateway6'] = network['gateway_v6']
-            network_info.append((mac_address['network'], info))
-        return network_info
-
     def setup_fixed_ip(self, context, address):
         """Sets up rules for fixed ip."""
         raise NotImplementedError()
@@ -336,6 +369,31 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Returns an floating ip to the pool."""
         self.db.floating_ip_deallocate(context, floating_address)
 
+    def _get_mac_addr_for_fixed_ip(self, context, fixed_ip):
+        """returns a mac_address if the fixed_ip object has an instance
+           and that instance has a mac_address belonging to the same network
+           as the fixed_ip object
+           else
+           returns None
+
+        called by lease_fixed_ip and release_fixed_ip
+        """
+        instance = fixed_ip.get('instance')
+        if not instance:
+            return None
+
+        mac_addresses = self.db.mac_address_get_all_by_instance(context,
+                                                         instance['id'])
+        # determine the mac_address the instance has for the network
+        # that the fixed ip address belongs to
+        for mac_addr in mac_addresses:
+            if mac_addr['network_id'] == fixed_ip['network_id']:
+                # return it since there can be only one
+                return mac_addr['address']
+
+        # instance doesn't have a mac address for the fixed_ip's network
+        return None
+
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
         LOG.debug(_("Leasing IP %s"), address, context=context)
@@ -344,10 +402,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not instance_ref:
             raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
-        if instance_ref['mac_address'] != mac:
-            inst_addr = instance_ref['mac_address']
+        mac_address = self._get_mac_addr_for_fixed_ip(context, fixed_ip_ref)
+        if mac_address != mac:
             raise exception.Error(_("IP %(address)s leased to bad"
-                    " mac %(inst_addr)s vs %(mac)s") % locals())
+                    " mac %(mac_address)s vs %(mac)s") % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -365,10 +423,10 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not instance_ref:
             raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
-        if instance_ref['mac_address'] != mac:
-            inst_addr = instance_ref['mac_address']
+        mac_address = self._get_mac_addr_for_fixed_ip(context, fixed_ip_ref)
+        if mac_address != mac:
             raise exception.Error(_("IP %(address)s released from"
-                    " bad mac %(inst_addr)s vs %(mac)s") % locals())
+                    " bad mac %(mac_address)s vs %(mac)s") % locals())
         if not fixed_ip_ref['leased']:
             LOG.warn(_("IP %s released that was not leased"), address,
                      context=context)
