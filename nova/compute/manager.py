@@ -163,20 +163,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      FLAGS.console_topic,
                                      FLAGS.console_host)
 
-    def get_network_topic(self, context, **kwargs):
-        """Retrieves the network host for a project on this host"""
-        # TODO(vish): This method should be memoized. This will make
-        #             the call to get_network_host cheaper, so that
-        #             it can pas messages instead of checking the db
-        #             locally.
-        if FLAGS.stub_network:
-            host = FLAGS.network_host
-        else:
-            host = self.network_manager.get_network_host(context)
-        return self.db.queue_get_for(context,
-                                     FLAGS.network_topic,
-                                     host)
-
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 

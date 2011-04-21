@@ -37,6 +37,22 @@ LOG = logging.getLogger('nova.network')
 class API(base.Base):
     """API for interacting with the network manager."""
 
+    def get_network_topic(self, context):
+        """Retrieves the network host for a project on this host"""
+        # TODO(vish): This method should be memoized. This will make
+        #             the call to get_network_host cheaper, so that
+        #             it can pas messages instead of checking the db
+        #             locally.
+        if FLAGS.stub_network:
+            host = FLAGS.network_host
+        else:
+#            host = self.network_manager.get_network_host(context)
+            host = rpc.call(context, FLAGS.network_topic,
+                            {'method': 'get_network_host'})
+        return self.db.queue_get_for(context,
+                                     FLAGS.network_topic,
+                                     host)
+
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_("Quota exceeeded for %s, tried to allocate "
@@ -115,6 +131,7 @@ class API(base.Base):
         """
         args = kwargs
         args['instance'] = pickle.dumps(instance)
+        host = self.network_manager.get_network_host(context)
         rval = rpc.call(context, self.get_network_topic(context),
                         {'method': 'allocate_for_instance',
                          'args': args}),
