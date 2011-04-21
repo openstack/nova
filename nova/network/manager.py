@@ -159,6 +159,9 @@ class NetworkManager(manager.SchedulerDependentManager):
             if num:
                 LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
 
+        # setup any new networks which have been created
+        self.set_network_hosts(context)
+
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
         LOG.debug(_("setting network host"), context=context)
@@ -168,11 +171,15 @@ class NetworkManager(manager.SchedulerDependentManager):
         self._on_set_network_host(context, network_id)
         return host
 
-    def _get_networks_for_instance(self, context, instance):
+    def _get_networks_for_instance(self, context, instance=None):
         """determine which networks an instance should connect to"""
         # TODO(tr3buchet) maybe this needs to be updated in the future if
         #                 there is a better way to determine which networks
         #                 a non-vlan instance should connect to
+        return self._get_flat_networks(context)
+
+    def _get_flat_networks(self, context):
+        """returns all networks for which vlan is None"""
         networks = self.db.network_get_all(context)
         # return only networks which are not vlan networks
         return [network for network in networks if network['vlan'] is None]
@@ -443,28 +450,29 @@ class NetworkManager(manager.SchedulerDependentManager):
                 network_ref = self.db.fixed_ip_get_network(context, address)
                 self.driver.update_dhcp(context, network_ref['id'])
 
+    def set_network_hosts(self, context):
+        """Set the network hosts for the flat networks, if they are unset"""
+        networks = self._get_flat_networks(context)
+        for network in networks:
+            host = network['host']
+            if not host:
+                if FLAGS.fake_call:
+                    return self.set_network_host(context, network['id'])
+                host = rpc.call(context,
+                                FLAGS.network_topic,
+                                {'method': 'set_network_host',
+                                 'args': {'network_id': network['id']}})
+
     def get_network_host(self, context):
-        """Get the network host for the current context."""
-        network_ref = self.db.network_get_by_bridge(context,
-                                                    FLAGS.flat_network_bridge)
-        # NOTE(vish): If the network has no host, use the network_host flag.
-        #             This could eventually be a a db lookup of some sort, but
-        #             a flag is easy to handle for now.
-        host = network_ref['host']
-        if not host:
-            topic = self.db.queue_get_for(context,
-                                          FLAGS.network_topic,
-                                          FLAGS.network_host)
-            if FLAGS.fake_call:
-                return self.set_network_host(context, network_ref['id'])
-            host = rpc.call(context,
-                            FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
-        return host
+        """returns self.host
+
+        this only exists for code that calls get_network_host regardless of
+        whether network manager is flat or vlan. ex: tests
+        """
+        return self.host
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, label, **kwargs):
+                        cidr_v6, label, bridge, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
@@ -477,7 +485,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             cidr = "%s/%s" % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
             net = {}
-            net['bridge'] = FLAGS.flat_network_bridge
+            net['bridge'] = bridge
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask())

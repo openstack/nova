@@ -39,19 +39,14 @@ class API(base.Base):
 
     def get_network_topic(self, context):
         """Retrieves the network host for a project on this host"""
-        # TODO(vish): This method should be memoized. This will make
-        #             the call to get_network_host cheaper, so that
-        #             it can pas messages instead of checking the db
-        #             locally.
         if FLAGS.stub_network:
             host = FLAGS.network_host
+        elif 'Flat' in FLAGS.network_manager:
+            return FLAGS.network_topic
         else:
-#            host = self.network_manager.get_network_host(context)
             host = rpc.call(context, FLAGS.network_topic,
                             {'method': 'get_network_host'})
-        return self.db.queue_get_for(context,
-                                     FLAGS.network_topic,
-                                     host)
+            return self.db.queue_get_for(context, FLAGS.network_topic, host)
 
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
