@@ -613,7 +613,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume))]}
+        return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
