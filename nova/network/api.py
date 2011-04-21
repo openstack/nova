@@ -52,7 +52,7 @@ class API(base.Base):
                          "args": {"project_id": context.project_id}})
 
     def release_floating_ip(self, context, address,
-                            affect_auto_assigned = False):
+                            affect_auto_assigned=False):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
@@ -66,7 +66,7 @@ class API(base.Base):
                   "args": {"floating_address": floating_ip['address']}})
 
     def associate_floating_ip(self, context, floating_ip, fixed_ip,
-                              affect_auto_assigned = False):
+                              affect_auto_assigned=False):
         if isinstance(fixed_ip, str) or isinstance(fixed_ip, unicode):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
@@ -97,7 +97,7 @@ class API(base.Base):
                            "fixed_address": fixed_ip['address']}})
 
     def disassociate_floating_ip(self, context, address,
-                                 affect_auto_assigned = False):
+                                 affect_auto_assigned=False):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return

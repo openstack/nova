@@ -22,6 +22,7 @@ from migrate import *
 
 meta = MetaData()
 
+
 c_auto_assigned = Column('auto_assigned', Boolean, default=False)
 
 
