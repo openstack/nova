@@ -952,7 +952,6 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        req.environ = {"nova.context": "context"}
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 501)
 
@@ -974,7 +973,6 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        req.environ = {"nova.context": "context"}
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
         self.assertEqual(mock_method.instance_id, '1')
@@ -995,7 +993,6 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        req.environ = {"nova.context": "context"}
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
@@ -1005,7 +1002,6 @@ class ServersTest(test.TestCase):
         req.method = 'POST'
         req.content_type = 'application/json'
         req.body = json.dumps(body)
-        req.environ = {"nova.context": "context"}
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
