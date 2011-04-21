@@ -48,11 +48,11 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import network
 from nova import rpc
 from nova import utils
 from nova.compute import power_state
 from nova.virt import driver
-from nova import network
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
