@@ -187,7 +187,7 @@ class CloudController(object):
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance_ref:
+            if instance_ref.get('%s_id' % image_type):
                 ec2_id = self._image_ec2_id(instance_ref['%s_id' % image_type],
                                             self._image_type(image_type))
                 data['meta-data']['%s-id' % image_type] = ec2_id
