@@ -16,9 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-RequestContext: context for requests that persist through all of nova.
-"""
+"""RequestContext: context for requests that persist through all of nova."""
 
 import datetime
 import random
@@ -28,6 +26,12 @@ from nova import utils
 
 
 class RequestContext(object):
+    """Security context and request information.
+
+    Represents the user taking a given action within the system.
+
+    """
+
     def __init__(self, user, project, is_admin=None, read_deleted=False,
                  remote_address=None, timestamp=None, request_id=None):
         if hasattr(user, 'id'):

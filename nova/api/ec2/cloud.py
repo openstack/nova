@@ -187,7 +187,7 @@ class CloudController(object):
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance_ref:
+            if instance_ref.get('%s_id' % image_type):
                 ec2_id = self._image_ec2_id(instance_ref['%s_id' % image_type],
                                             self._image_type(image_type))
                 data['meta-data']['%s-id' % image_type] = ec2_id
@@ -613,7 +613,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume))]}
+        return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -726,7 +726,9 @@ class CloudController(object):
                         instance['mac_address'])
 
             i['privateDnsName'] = fixed_addr
+            i['privateIpAddress'] = fixed_addr
             i['publicDnsName'] = floating_addr
+            i['ipAddress'] = floating_addr or fixed_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
