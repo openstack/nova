@@ -25,6 +25,7 @@ from nova import log as logging
 from nova import test
 from nova.auth import manager
 from nova.api.ec2 import cloud
+from nova.auth import authutils
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.auth_unittest')
@@ -337,6 +338,29 @@ class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
 
 class AuthManagerDbTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
+
+
+class AuthManagerUtilTestCase(test.TestCase):
+    def test_get_host_only_server_string(self):
+        result = authutils.get_host_only_server_string('::1')
+        self.assertEqual('', result)
+        result = authutils.get_host_only_server_string('[::1]:8773')
+        self.assertEqual('::1', result)
+        result = authutils.get_host_only_server_string('2001:db8::192.168.1.1')
+        self.assertEqual('', result)
+        result = authutils.get_host_only_server_string(
+            '[2001:db8::192.168.1.1]:8773')
+        self.assertEqual('2001:db8::192.168.1.1', result)
+        result = authutils.get_host_only_server_string('192.168.1.1')
+        self.assertEqual('', result)
+        result = authutils.get_host_only_server_string('192.168.1.2:8773')
+        self.assertEqual('192.168.1.2', result)
+        result = authutils.get_host_only_server_string('192.168.1.3')
+        self.assertEqual('', result)
+        result = authutils.get_host_only_server_string('www.example.com:8443')
+        self.assertEqual('www.example.com', result)
+        result = authutils.get_host_only_server_string('www.example.com')
+        self.assertEqual('', result)
 
 
 if __name__ == "__main__":
