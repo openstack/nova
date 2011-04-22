@@ -368,10 +368,10 @@ class AuthManager(object):
                 return True
 
     def _build_mc_key(self, user, role, project=None):
-        role_key = str("rolecache-%s-%s" % (User.safe_id(user), role))
+        key_parts = ['rolecache', User.safe_id(user), str(role)]
         if project:
-            return "%s-%s" % (role_key, Project.safe_id(project))
-        return role_key
+            key_parts.append(Project.safe_id(project))
+        return '-'.join(key_parts)
 
     def _clear_mc_key(self, user, role, project=None):
         # NOTE(anthony): it would be better to delete the key
@@ -380,7 +380,7 @@ class AuthManager(object):
     def _has_role(self, user, role, project=None):
         mc_key = self._build_mc_key(user, role, project)
         rslt = self.mc.get(mc_key)
-        if rslt == None:
+        if rslt is None:
             with self.driver() as drv:
                 rslt = drv.has_role(user, role, project)
                 self.mc.set(mc_key, rslt)
