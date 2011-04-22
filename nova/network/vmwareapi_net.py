@@ -75,17 +75,13 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
         pg_vlanid, pg_vswitch = \
             network_utils.get_vlanid_and_vswitch_for_portgroup(session, bridge)
 
-        # Check if the vsiwtch associated is proper
+        # Check if the vswitch associated is proper
         if pg_vswitch != vswitch_associated:
-            raise exception.Invalid(_("vSwitch which contains the port group "
-                            "%(bridge)s is not associated with the desired "
-                            "physical adapter. Expected vSwitch is "
-                            "%(vswitch_associated)s, but the one associated"
-                            " is %(pg_vswitch)s") % locals())
+            raise exception.InvalidVLANPortGroup(bridge=bridge,
+                                                 expected=vswitch_associated,
+                                                 actual=pg_vswitch)
 
         # Check if the vlan id is proper for the port group
         if pg_vlanid != vlan_num:
-            raise exception.Invalid(_("VLAN tag is not appropriate for the "
-                            "port group %(bridge)s. Expected VLAN tag is "
-                            "%(vlan_num)s, but the one associated with the "
-                            "port group is %(pg_vlanid)s") % locals())
+            raise exception.InvalidVLANTag(bridge=bridge, tag=vlan_num,
+                                           pgroup=pg_vlanid)
