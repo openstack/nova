@@ -46,8 +46,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'deleted_at': None,
         'properties': {
             'key1': 'value1',
-            'key2': 'value2'
-        },
+            'key2': 'value2'},
         'size': 5882349},
         {'status': 'active',
         'name': 'image2',
@@ -62,8 +61,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'deleted_at': None,
         'properties': {
             'key1': 'value1',
-            'key2': 'value2'
-        },
+            'key2': 'value2'},
         'size': 5882349},
         {'status': 'active',
         'name': 'image3',

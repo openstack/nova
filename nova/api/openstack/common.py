@@ -25,7 +25,7 @@ from nova import log as logging
 from nova import wsgi
 
 
-LOG = logging.getLogger('common')
+LOG = logging.getLogger('nova.api.openstack.common')
 
 
 FLAGS = flags.FLAGS
@@ -116,8 +116,14 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
         items = image_service.index(context)
     for image in items:
         image_id = image['id']
-        if abs(hash(image_id)) == int(image_hash):
-            return image_id
+        try:
+            if abs(hash(image_id)) == int(image_hash):
+                return image_id
+        except ValueError:
+            msg = _("Requested image_id has wrong format: %s,"
+                    "should have numerical format") % image_id
+            LOG.error(msg)
+            raise Exception(msg)
     raise exception.NotFound(image_hash)
 
 

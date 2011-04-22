@@ -21,7 +21,7 @@ NAME=$1
 SUBJ=$2
 mkdir -p projects/$NAME
 cd projects/$NAME
-cp ../../openssl.cnf.tmpl openssl.cnf
+cp "$(dirname $0)/openssl.cnf.tmpl" openssl.cnf
 sed -i -e s/%USERNAME%/$NAME/g openssl.cnf
 mkdir -p certs crl newcerts private
 openssl req -new -x509 -extensions v3_ca -keyout private/cakey.pem -out cacert.pem -days 365 -config ./openssl.cnf -batch -nodes
