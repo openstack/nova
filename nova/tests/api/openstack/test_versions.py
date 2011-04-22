@@ -47,8 +47,7 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "self",
                         "href": "http://localhost/v1.1",
-                    }
-                ],
+                    }],
             },
             {
                 "id": "v1.0",
@@ -57,8 +56,7 @@ class VersionsTest(test.TestCase):
                     {
                         "rel": "self",
                         "href": "http://localhost/v1.0",
-                    }
-                ],
+                    }],
             },
         ]
         self.assertEqual(versions, expected)
