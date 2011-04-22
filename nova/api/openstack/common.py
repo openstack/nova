@@ -21,8 +21,18 @@ import webob
 
 from nova import exception
 from nova import flags
+from nova import log as logging
+from nova import wsgi
+
+
+LOG = logging.getLogger('nova.api.openstack.common')
+
 
 FLAGS = flags.FLAGS
+
+
+XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
+XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 
 def limited(items, request, max_limit=FLAGS.osapi_max_limit):
@@ -106,8 +116,14 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
         items = image_service.index(context)
     for image in items:
         image_id = image['id']
-        if abs(hash(image_id)) == int(image_hash):
-            return image_id
+        try:
+            if abs(hash(image_id)) == int(image_hash):
+                return image_id
+        except ValueError:
+            msg = _("Requested image_id has wrong format: %s,"
+                    "should have numerical format") % image_id
+            LOG.error(msg)
+            raise Exception(msg)
     raise exception.NotFound(image_hash)
 
 
@@ -121,4 +137,11 @@ def get_id_from_href(href):
     try:
         return int(urlparse(href).path.split('/')[-1])
     except:
+        LOG.debug(_("Error extracting id from href: %s") % href)
         raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
+
+
+class OpenstackController(wsgi.Controller):
+    def get_default_xmlns(self, req):
+        # Use V10 by default
+        return XML_NS_V10

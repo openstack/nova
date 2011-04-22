@@ -23,13 +23,14 @@ import shutil
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.image import service
 from nova import utils
+from nova.image import service
 
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('images_path', '$state_path/images',
                     'path to decrypted images')
+
 
 LOG = logging.getLogger('nova.image.local')
 
@@ -56,9 +57,8 @@ class LocalImageService(service.BaseImageService):
             try:
                 unhexed_image_id = int(image_dir, 16)
             except ValueError:
-                LOG.error(
-                    _("%s is not in correct directory naming format"\
-                       % image_dir))
+                LOG.error(_('%s is not in correct directory naming format')
+                          % image_dir)
             else:
                 images.append(unhexed_image_id)
         return images
@@ -84,7 +84,10 @@ class LocalImageService(service.BaseImageService):
     def show(self, context, image_id):
         try:
             with open(self._path_to(image_id)) as metadata_file:
-                return json.load(metadata_file)
+                image_meta = json.load(metadata_file)
+                if not self._is_image_available(context, image_meta):
+                    raise exception.NotFound
+                return image_meta
         except (IOError, ValueError):
             raise exception.NotFound
 
@@ -98,7 +101,7 @@ class LocalImageService(service.BaseImageService):
             if name == cantidate.get('name'):
                 image = cantidate
                 break
-        if image == None:
+        if image is None:
             raise exception.NotFound
         return image
 
@@ -119,10 +122,15 @@ class LocalImageService(service.BaseImageService):
         image_path = self._path_to(image_id, None)
         if not os.path.exists(image_path):
             os.mkdir(image_path)
-        return self.update(context, image_id, metadata, data)
+        return self._store(context, image_id, metadata, data)
 
     def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data."""
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
+        return self._store(context, image_id, metadata, data)
+
+    def _store(self, context, image_id, metadata, data=None):
         metadata['id'] = image_id
         try:
             if data:
@@ -140,9 +148,12 @@ class LocalImageService(service.BaseImageService):
 
     def delete(self, context, image_id):
         """Delete the given image.
-        Raises OSError if the image does not exist.
+
+        :raises: NotFound if the image does not exist.
 
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             shutil.rmtree(self._path_to(image_id, None))
         except (IOError, ValueError):

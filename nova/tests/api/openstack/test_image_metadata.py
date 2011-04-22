@@ -45,10 +45,8 @@ class ImageMetaDataTest(unittest.TestCase):
         'is_public': True,
         'deleted_at': None,
         'properties': {
-            'type': 'ramdisk',
             'key1': 'value1',
-            'key2': 'value2'
-        },
+            'key2': 'value2'},
         'size': 5882349},
         {'status': 'active',
         'name': 'image2',
@@ -62,10 +60,21 @@ class ImageMetaDataTest(unittest.TestCase):
         'is_public': True,
         'deleted_at': None,
         'properties': {
-            'type': 'ramdisk',
             'key1': 'value1',
-            'key2': 'value2'
-        },
+            'key2': 'value2'},
+        'size': 5882349},
+        {'status': 'active',
+        'name': 'image3',
+        'deleted': False,
+        'container_format': None,
+        'created_at': '2011-03-22T17:40:15',
+        'disk_format': None,
+        'updated_at': '2011-03-22T17:40:15',
+        'id': '3',
+        'location': 'file:///var/lib/glance/images/2',
+        'is_public': True,
+        'deleted_at': None,
+        'properties': {},
         'size': 5882349},
         ]
 
@@ -77,6 +86,10 @@ class ImageMetaDataTest(unittest.TestCase):
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
+        # NOTE(dprince) max out properties/metadata in image 3 for testing
+        img3 = self.IMAGE_FIXTURES[2]
+        for num in range(FLAGS.quota_metadata_items):
+            img3['properties']['key%i' % num] = "blah"
         fakes.stub_out_glance(self.stubs, self.IMAGE_FIXTURES)
 
     def tearDown(self):
@@ -164,3 +177,25 @@ class ImageMetaDataTest(unittest.TestCase):
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(404, res.status_int)
+
+    def test_too_many_metadata_items_on_create(self):
+        data = {"metadata": {}}
+        for num in range(FLAGS.quota_metadata_items + 1):
+            data['metadata']['key%i' % num] = "blah"
+        json_string = str(data).replace("\'", "\"")
+        req = webob.Request.blank('/v1.1/images/2/meta')
+        req.environ['api.version'] = '1.1'
+        req.method = 'POST'
+        req.body = json_string
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)
+
+    def test_too_many_metadata_items_on_put(self):
+        req = webob.Request.blank('/v1.1/images/3/meta/blah')
+        req.environ['api.version'] = '1.1'
+        req.method = 'PUT'
+        req.body = '{"blah": "blah"}'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)

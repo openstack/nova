@@ -17,8 +17,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Handles all processes relating to instances (guest vms).
+"""Handles all processes relating to instances (guest vms).
 
 The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that
 handles RPC calls relating to creating instances.  It is responsible for
@@ -33,12 +32,11 @@ terminating it.
                   by :func:`nova.utils.import_object`
 :volume_manager:  Name of class that handles persistent storage, loaded by
                   :func:`nova.utils.import_object`
+
 """
 
 import datetime
 import os
-import random
-import string
 import socket
 import sys
 import tempfile
@@ -50,10 +48,13 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import network
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import power_state
 from nova.virt import driver
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('instances_path', '$state_path/instances',
@@ -73,20 +74,17 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
+flags.DEFINE_bool('auto_assign_floating_ip', False,
+                  'Autoassigning floating ip to VM')
+
 
 LOG = logging.getLogger('nova.compute.manager')
 
 
 def checks_instance_lock(function):
-    """
-    decorator used for preventing action against locked instances
-    unless, of course, you happen to be admin
-
-    """
-
+    """Decorator to prevent action against locked instances for non-admins."""
     @functools.wraps(function)
     def decorated_function(self, context, instance_id, *args, **kwargs):
-
         LOG.info(_("check_instance_lock: decorating: |%s|"), function,
                  context=context)
         LOG.info(_("check_instance_lock: arguments: |%(self)s| |%(context)s|"
@@ -112,7 +110,6 @@ def checks_instance_lock(function):
 
 
 class ComputeManager(manager.SchedulerDependentManager):
-
     """Manages the running instances from creation to destruction."""
 
     def __init__(self, compute_driver=None, *args, **kwargs):
@@ -132,13 +129,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
+        self.network_api = network.API()
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
     def init_host(self):
-        """Do any initialization that needs to be run if this is a
-           standalone service.
-        """
+        """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
 
     def _update_state(self, context, instance_id):
@@ -153,16 +149,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.instance_set_state(context, instance_id, state)
 
     def get_console_topic(self, context, **kwargs):
-        """Retrieves the console host for a project on this host
-           Currently this is just set in the flags for each compute
-           host."""
+        """Retrieves the console host for a project on this host.
+
+        Currently this is just set in the flags for each compute host.
+
+        """
         #TODO(mdragon): perhaps make this variable by console_type?
         return self.db.queue_get_for(context,
                                      FLAGS.console_topic,
                                      FLAGS.console_host)
 
     def get_network_topic(self, context, **kwargs):
-        """Retrieves the network host for a project on this host"""
+        """Retrieves the network host for a project on this host."""
         # TODO(vish): This method should be memoized. This will make
         #             the call to get_network_host cheaper, so that
         #             it can pas messages instead of checking the db
@@ -179,15 +177,23 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.get_console_pool_info(console_type)
 
     @exception.wrap_exception
-    def refresh_security_group_rules(self, context,
-                                     security_group_id, **kwargs):
-        """This call passes straight through to the virtualization driver."""
+    def refresh_security_group_rules(self, context, security_group_id,
+                                     **kwargs):
+        """Tell the virtualization driver to refresh security group rules.
+
+        Passes straight through to the virtualization driver.
+
+        """
         return self.driver.refresh_security_group_rules(security_group_id)
 
     @exception.wrap_exception
     def refresh_security_group_members(self, context,
                                        security_group_id, **kwargs):
-        """This call passes straight through to the virtualization driver."""
+        """Tell the virtualization driver to refresh security group members.
+
+        Passes straight through to the virtualization driver.
+
+        """
         return self.driver.refresh_security_group_members(security_group_id)
 
     @exception.wrap_exception
@@ -209,7 +215,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'networking')
 
-        is_vpn = instance_ref['image_id'] == FLAGS.vpn_image_id
+        is_vpn = instance_ref['image_id'] == str(FLAGS.vpn_image_id)
         # NOTE(vish): This could be a cast because we don't do anything
         #             with the address currently, but I'm leaving it as
         #             a call to ensure that network setup completes.  We
@@ -244,12 +250,24 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        instance_id,
                                        power_state.SHUTDOWN)
 
+        if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
+            public_ip = self.network_api.allocate_floating_ip(context)
+
+            self.db.floating_ip_set_auto_assigned(context, public_ip)
+            fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+            floating_ip = self.db.floating_ip_get_by_address(context,
+                                                             public_ip)
+
+            self.network_api.associate_floating_ip(context,
+                                                   floating_ip,
+                                                   fixed_ip,
+                                                   affect_auto_assigned=True)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
     @checks_instance_lock
     def terminate_instance(self, context, instance_id):
-        """Terminate an instance on this machine."""
+        """Terminate an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Terminating instance %s"), instance_id, context=context)
@@ -264,13 +282,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
-                network_topic = self.db.queue_get_for(context,
-                                                      FLAGS.network_topic,
-                                                      floating_ip['host'])
-                rpc.cast(context,
-                         network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_address": address}})
+                self.network_api.disassociate_floating_ip(context,
+                                                          address,
+                                                          True)
+                if (FLAGS.auto_assign_floating_ip
+                        and floating_ip.get('auto_assigned')):
+                    LOG.debug(_("Deallocating floating ip %s"),
+                              floating_ip['address'],
+                              context=context)
+                    self.network_api.release_floating_ip(context,
+                                                         address,
+                                                         True)
 
             address = fixed_ip['address']
             if address:
@@ -297,7 +319,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def reboot_instance(self, context, instance_id):
-        """Reboot an instance on this server."""
+        """Reboot an instance on this host."""
         context = context.elevated()
         self._update_state(context, instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
@@ -321,7 +343,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     def snapshot_instance(self, context, instance_id, image_id):
-        """Snapshot an instance on this server."""
+        """Snapshot an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -344,7 +366,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def set_admin_password(self, context, instance_id, new_pass=None):
-        """Set the root/admin password for an instance on this server."""
+        """Set the root/admin password for an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_id = instance_ref['id']
@@ -365,7 +387,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def inject_file(self, context, instance_id, path, file_contents):
-        """Write a file to the specified path on an instance on this server"""
+        """Write a file to the specified path in an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_id = instance_ref['id']
@@ -383,44 +405,34 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def rescue_instance(self, context, instance_id):
-        """Rescue an instance on this server."""
+        """Rescue an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: rescuing'), instance_id, context=context)
-        self.db.instance_set_state(
-            context,
-            instance_id,
-            power_state.NOSTATE,
-            'rescuing')
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'rescuing')
         self.network_manager.setup_compute_network(context, instance_id)
-        self.driver.rescue(
-            instance_ref,
-            lambda result: self._update_state_callback(
-                self,
-                context,
-                instance_id,
-                result))
+        _update_state = lambda result: self._update_state_callback(
+                self, context, instance_id, result)
+        self.driver.rescue(instance_ref, _update_state)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
     @checks_instance_lock
     def unrescue_instance(self, context, instance_id):
-        """Rescue an instance on this server."""
+        """Rescue an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: unrescuing'), instance_id, context=context)
-        self.db.instance_set_state(
-            context,
-            instance_id,
-            power_state.NOSTATE,
-            'unrescuing')
-        self.driver.unrescue(
-            instance_ref,
-            lambda result: self._update_state_callback(
-                self,
-                context,
-                instance_id,
-                result))
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'unrescuing')
+        _update_state = lambda result: self._update_state_callback(
+                self, context, instance_id, result)
+        self.driver.unrescue(instance_ref, _update_state)
         self._update_state(context, instance_id)
 
     @staticmethod
@@ -431,18 +443,20 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def confirm_resize(self, context, instance_id, migration_id):
-        """Destroys the source instance"""
+        """Destroys the source instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        migration_ref = self.db.migration_get(context, migration_id)
         self.driver.destroy(instance_ref)
 
     @exception.wrap_exception
     @checks_instance_lock
     def revert_resize(self, context, instance_id, migration_id):
-        """Destroys the new instance on the destination machine,
-        reverts the model changes, and powers on the old
-        instance on the source machine"""
+        """Destroys the new instance on the destination machine.
+
+        Reverts the model changes, and powers on the old instance on the
+        source machine.
+
+        """
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
 
@@ -459,9 +473,12 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def finish_revert_resize(self, context, instance_id, migration_id):
-        """Finishes the second half of reverting a resize, powering back on
-        the source instance and reverting the resized attributes in the
-        database"""
+        """Finishes the second half of reverting a resize.
+
+        Power back on the source instance and revert the resized attributes
+        in the database.
+
+        """
         instance_ref = self.db.instance_get(context, instance_id)
         migration_ref = self.db.migration_get(context, migration_id)
         instance_type = self.db.instance_type_get_by_flavor_id(context,
@@ -481,8 +498,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def prep_resize(self, context, instance_id, flavor_id):
-        """Initiates the process of moving a running instance to another
-        host, possibly changing the RAM and disk size in the process"""
+        """Initiates the process of moving a running instance to another host.
+
+        Possibly changes the RAM and disk size in the process.
+
+        """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         if instance_ref['host'] == FLAGS.host:
@@ -514,34 +534,38 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def resize_instance(self, context, instance_id, migration_id):
-        """Starts the migration of a running instance to another host"""
+        """Starts the migration of a running instance to another host."""
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get(context, instance_id)
-        self.db.migration_update(context, migration_id,
-                {'status': 'migrating', })
+        self.db.migration_update(context,
+                                 migration_id,
+                                 {'status': 'migrating'})
 
-        disk_info = self.driver.migrate_disk_and_power_off(instance_ref,
-                                  migration_ref['dest_host'])
-        self.db.migration_update(context, migration_id,
-                {'status': 'post-migrating', })
+        disk_info = self.driver.migrate_disk_and_power_off(
+                instance_ref, migration_ref['dest_host'])
+        self.db.migration_update(context,
+                                 migration_id,
+                                 {'status': 'post-migrating'})
 
-        service = self.db.service_get_by_host_and_topic(context,
-                migration_ref['dest_compute'], FLAGS.compute_topic)
-        topic = self.db.queue_get_for(context, FLAGS.compute_topic,
-                migration_ref['dest_compute'])
-        rpc.cast(context, topic,
-                {'method': 'finish_resize',
-                 'args': {
-                       'migration_id': migration_id,
-                       'instance_id': instance_id,
-                       'disk_info': disk_info, },
-                })
+        service = self.db.service_get_by_host_and_topic(
+                context, migration_ref['dest_compute'], FLAGS.compute_topic)
+        topic = self.db.queue_get_for(context,
+                                      FLAGS.compute_topic,
+                                      migration_ref['dest_compute'])
+        rpc.cast(context, topic, {'method': 'finish_resize',
+                                  'args': {'migration_id': migration_id,
+                                           'instance_id': instance_id,
+                                           'disk_info': disk_info}})
 
     @exception.wrap_exception
     @checks_instance_lock
     def finish_resize(self, context, instance_id, migration_id, disk_info):
-        """Completes the migration process by setting up the newly transferred
-        disk and turning on the instance on its new host machine"""
+        """Completes the migration process.
+
+        Sets up the newly transferred disk and turns on the instance at its
+        new host machine.
+
+        """
         migration_ref = self.db.migration_get(context, migration_id)
         instance_ref = self.db.instance_get(context,
                 migration_ref['instance_id'])
@@ -566,7 +590,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def pause_instance(self, context, instance_id):
-        """Pause an instance on this server."""
+        """Pause an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: pausing'), instance_id, context=context)
@@ -583,7 +607,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def unpause_instance(self, context, instance_id):
-        """Unpause a paused instance on this server."""
+        """Unpause a paused instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: unpausing'), instance_id, context=context)
@@ -599,7 +623,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     def get_diagnostics(self, context, instance_id):
-        """Retrieve diagnostics for an instance on this server."""
+        """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
 
         if instance_ref["state"] == power_state.RUNNING:
@@ -610,10 +634,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def suspend_instance(self, context, instance_id):
-        """
-        suspend the instance with instance_id
-
-        """
+        """Suspend the given instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: suspending'), instance_id, context=context)
@@ -629,10 +650,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def resume_instance(self, context, instance_id):
-        """
-        resume the suspended instance with instance_id
-
-        """
+        """Resume the given suspended instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_('instance %s: resuming'), instance_id, context=context)
@@ -647,34 +665,23 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     def lock_instance(self, context, instance_id):
-        """
-        lock the instance with instance_id
-
-        """
+        """Lock the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
 
         LOG.debug(_('instance %s: locking'), instance_id, context=context)
         self.db.instance_update(context, instance_id, {'locked': True})
 
     @exception.wrap_exception
     def unlock_instance(self, context, instance_id):
-        """
-        unlock the instance with instance_id
-
-        """
+        """Unlock the given instance."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
 
         LOG.debug(_('instance %s: unlocking'), instance_id, context=context)
         self.db.instance_update(context, instance_id, {'locked': False})
 
     @exception.wrap_exception
     def get_lock(self, context, instance_id):
-        """
-        return the boolean state of (instance with instance_id)'s lock
-
-        """
+        """Return the boolean state of the given instance's lock."""
         context = context.elevated()
         LOG.debug(_('instance %s: getting locked state'), instance_id,
                   context=context)
@@ -683,10 +690,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @checks_instance_lock
     def reset_network(self, context, instance_id):
-        """
-        Reset networking on the instance.
-
-        """
+        """Reset networking on the given instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.debug(_('instance %s: reset network'), instance_id,
@@ -695,10 +699,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @checks_instance_lock
     def inject_network_info(self, context, instance_id):
-        """
-        Inject network info for the instance.
-
-        """
+        """Inject network info for the given instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.debug(_('instance %s: inject network info'), instance_id,
@@ -707,7 +708,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     def get_console_output(self, context, instance_id):
-        """Send the console output for an instance."""
+        """Send the console output for the given instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Get console output for instance %s"), instance_id,
@@ -716,12 +717,19 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     def get_ajax_console(self, context, instance_id):
-        """Return connection information for an ajax console"""
+        """Return connection information for an ajax console."""
         context = context.elevated()
         LOG.debug(_("instance %s: getting ajax console"), instance_id)
         instance_ref = self.db.instance_get(context, instance_id)
-
         return self.driver.get_ajax_console(instance_ref)
+
+    @exception.wrap_exception
+    def get_vnc_console(self, context, instance_id):
+        """Return connection information for a vnc console."""
+        context = context.elevated()
+        LOG.debug(_("instance %s: getting vnc console"), instance_id)
+        instance_ref = self.db.instance_get(context, instance_id)
+        return self.driver.get_vnc_console(instance_ref)
 
     @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
@@ -772,9 +780,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.volume_detached(context, volume_id)
         return True
 
+    def remove_volume(self, context, volume_id):
+        """Remove volume on compute host.
+
+        :param context: security context
+        :param volume_id: volume ID
+        """
+        self.volume_manager.remove_compute_volume(context, volume_id)
+
     @exception.wrap_exception
     def compare_cpu(self, context, cpu_info):
-        """Checks the host cpu is compatible to a cpu given by xml.
+        """Checks that the host cpu is compatible with a cpu given by xml.
 
         :param context: security context
         :param cpu_info: json string obtained from virConnect.getCapabilities
@@ -795,7 +811,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :returns: tmpfile name(basename)
 
         """
-
         dirpath = FLAGS.instances_path
         fd, tmp_file = tempfile.mkstemp(dir=dirpath)
         LOG.debug(_("Creating tmpfile %s to notify to other "
@@ -812,7 +827,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param filename: confirm existence of FLAGS.instances_path/thisfile
 
         """
-
         tmp_file = os.path.join(FLAGS.instances_path, filename)
         if not os.path.exists(tmp_file):
             raise exception.NotFound(_('%s not found') % tmp_file)
@@ -825,7 +839,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param filename: remove existence of FLAGS.instances_path/thisfile
 
         """
-
         tmp_file = os.path.join(FLAGS.instances_path, filename)
         os.remove(tmp_file)
 
@@ -837,7 +850,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :returns: See driver.update_available_resource()
 
         """
-
         return self.driver.update_available_resource(context, self.host)
 
     def pre_live_migration(self, context, instance_id, time=None):
@@ -847,7 +859,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
 
         """
-
         if not time:
             time = greenthread
 
@@ -906,7 +917,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param dest: destination host
 
         """
-
         # Get instance for error handling.
         instance_ref = self.db.instance_get(context, instance_id)
         i_name = instance_ref.name
@@ -997,17 +1007,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None):
+    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
-        :param host:
-            DB column value is updated by this hostname.
-            if none, the host instance currently running is selected.
+        :param host: DB column value is updated by this hostname.
+                     If none, the host instance currently running is selected.
 
         """
-
         if not host:
             host = instance_ref['host']
 
@@ -1017,8 +1025,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  'state': power_state.RUNNING,
                                  'host': host})
 
-        for volume in instance_ref['volumes']:
-            self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
+        if dest:
+            volume_api = volume.API()
+        for volume_ref in instance_ref['volumes']:
+            volume_id = volume_ref['id']
+            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
+            if dest:
+                volume_api.remove_from_compute(ctxt, volume_id, dest)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
@@ -1081,6 +1094,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
+            if db_instance['state_description'] == 'migrating':
+                # A situation which db record exists, but no instance"
+                # sometimes occurs while live-migration at src compute,
+                # this case should be ignored.
+                LOG.debug(_("Ignoring %(name)s, as it's currently being "
+                           "migrated.") % locals())
+                continue
+
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
@@ -1088,16 +1109,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            db_instance['id'],
                                            vm_state)
 
-            if vm_state == power_state.SHUTOFF:
-                # TODO(soren): This is what the compute manager does when you
-                # terminate an instance. At some point I figure we'll have a
-                # "terminated" state and some sort of cleanup job that runs
-                # occasionally, cleaning them out.
-                self.db.instance_destroy(context, db_instance['id'])
+            # NOTE(justinsb): We no longer auto-remove SHUTOFF instances
+            # It's quite hard to get them back when we do.
 
         # Are there VMs not in the DB?
         for vm_not_found_in_db in vms_not_found_in_db:
             name = vm_not_found_in_db
-            # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
-            LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
-                        % locals())
+
+            # We only care about instances that compute *should* know about
+            if name.startswith("instance-"):
+                # TODO(justinsb): What to do here?  Adopt it?  Shut it down?
+                LOG.warning(_("Found VM not in DB: '%(name)s'.  Ignoring")
+                            % locals())

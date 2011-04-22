@@ -84,7 +84,8 @@ class ComputeTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
-        inst['instance_type'] = 'm1.tiny'
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        inst['instance_type_id'] = type_id
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         inst.update(params)
@@ -132,7 +133,7 @@ class ComputeTestCase(test.TestCase):
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
             ref = self.compute_api.create(self.context,
-                FLAGS.default_instance_type, None, **instance)
+                instance_types.get_default_instance_type(), None, **instance)
             try:
                 self.assertNotEqual(ref[0]['display_name'], None)
             finally:
@@ -143,7 +144,7 @@ class ComputeTestCase(test.TestCase):
         group = self._create_group()
         ref = self.compute_api.create(
                 self.context,
-                instance_type=FLAGS.default_instance_type,
+                instance_type=instance_types.get_default_instance_type(),
                 image_id=None,
                 security_group=['testgroup'])
         try:
@@ -161,7 +162,7 @@ class ComputeTestCase(test.TestCase):
 
         ref = self.compute_api.create(
                 self.context,
-                instance_type=FLAGS.default_instance_type,
+                instance_type=instance_types.get_default_instance_type(),
                 image_id=None,
                 security_group=['testgroup'])
         try:
@@ -177,7 +178,7 @@ class ComputeTestCase(test.TestCase):
 
         ref = self.compute_api.create(
                 self.context,
-                instance_type=FLAGS.default_instance_type,
+                instance_type=instance_types.get_default_instance_type(),
                 image_id=None,
                 security_group=['testgroup'])
 
@@ -286,6 +287,16 @@ class ComputeTestCase(test.TestCase):
 
         console = self.compute.get_ajax_console(self.context,
                                                 instance_id)
+        self.assert_(set(['token', 'host', 'port']).issubset(console.keys()))
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_vnc_console(self):
+        """Make sure we can a vnc console for an instance."""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+
+        console = self.compute.get_vnc_console(self.context,
+                                               instance_id)
         self.assert_(console)
         self.compute.terminate_instance(self.context, instance_id)
 
@@ -349,8 +360,9 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
 
         self.compute.run_instance(self.context, instance_id)
+        inst_type = instance_types.get_instance_type_by_name('m1.xlarge')
         db.instance_update(self.context, instance_id,
-                {'instance_type': 'm1.xlarge'})
+                {'instance_type_id': inst_type['id']})
 
         self.assertRaises(exception.ApiError, self.compute_api.resize,
                 context, instance_id, 1)
@@ -370,8 +382,8 @@ class ComputeTestCase(test.TestCase):
         self.compute.terminate_instance(context, instance_id)
 
     def test_get_by_flavor_id(self):
-        type = instance_types.get_by_flavor_id(1)
-        self.assertEqual(type, 'm1.tiny')
+        type = instance_types.get_instance_type_by_flavor_id(1)
+        self.assertEqual(type['name'], 'm1.tiny')
 
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are
@@ -654,4 +666,5 @@ class ComputeTestCase(test.TestCase):
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After force-killing instances: %s"), instances)
-        self.assertEqual(len(instances), 0)
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(power_state.SHUTOFF, instances[0]['state'])

@@ -115,7 +115,7 @@ class DbDriver(object):
         # on to create the project. This way we won't have to destroy
         # the project again because a user turns out to be invalid.
         members = set([manager])
-        if member_uids != None:
+        if member_uids is not None:
             for member_uid in member_uids:
                 member = db.user_get(context.get_admin_context(), member_uid)
                 if not member:
