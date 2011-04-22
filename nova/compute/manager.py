@@ -37,8 +37,6 @@ terminating it.
 
 import datetime
 import os
-import random
-import string
 import socket
 import sys
 import tempfile
@@ -50,8 +48,10 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import network
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import power_state
 from nova.virt import driver
 
@@ -74,6 +74,8 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
+flags.DEFINE_bool('auto_assign_floating_ip', False,
+                  'Autoassigning floating ip to VM')
 
 
 LOG = logging.getLogger('nova.compute.manager')
@@ -127,6 +129,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
+        self.network_api = network.API()
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -212,7 +215,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'networking')
 
-        is_vpn = instance_ref['image_id'] == FLAGS.vpn_image_id
+        is_vpn = instance_ref['image_id'] == str(FLAGS.vpn_image_id)
         # NOTE(vish): This could be a cast because we don't do anything
         #             with the address currently, but I'm leaving it as
         #             a call to ensure that network setup completes.  We
@@ -247,6 +250,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        instance_id,
                                        power_state.SHUTDOWN)
 
+        if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
+            public_ip = self.network_api.allocate_floating_ip(context)
+
+            self.db.floating_ip_set_auto_assigned(context, public_ip)
+            fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+            floating_ip = self.db.floating_ip_get_by_address(context,
+                                                             public_ip)
+
+            self.network_api.associate_floating_ip(context,
+                                                   floating_ip,
+                                                   fixed_ip,
+                                                   affect_auto_assigned=True)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -267,13 +282,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
-                network_topic = self.db.queue_get_for(context,
-                                                      FLAGS.network_topic,
-                                                      floating_ip['host'])
-                rpc.cast(context,
-                         network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_address": address}})
+                self.network_api.disassociate_floating_ip(context,
+                                                          address,
+                                                          True)
+                if (FLAGS.auto_assign_floating_ip
+                        and floating_ip.get('auto_assigned')):
+                    LOG.debug(_("Deallocating floating ip %s"),
+                              floating_ip['address'],
+                              context=context)
+                    self.network_api.release_floating_ip(context,
+                                                         address,
+                                                         True)
 
             address = fixed_ip['address']
             if address:
@@ -761,6 +780,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.volume_detached(context, volume_id)
         return True
 
+    def remove_volume(self, context, volume_id):
+        """Remove volume on compute host.
+
+        :param context: security context
+        :param volume_id: volume ID
+        """
+        self.volume_manager.remove_compute_volume(context, volume_id)
+
     @exception.wrap_exception
     def compare_cpu(self, context, cpu_info):
         """Checks that the host cpu is compatible with a cpu given by xml.
@@ -980,7 +1007,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None):
+    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
@@ -998,8 +1025,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  'state': power_state.RUNNING,
                                  'host': host})
 
-        for volume in instance_ref['volumes']:
-            self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
+        if dest:
+            volume_api = volume.API()
+        for volume_ref in instance_ref['volumes']:
+            volume_id = volume_ref['id']
+            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
+            if dest:
+                volume_api.remove_from_compute(ctxt, volume_id, dest)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""

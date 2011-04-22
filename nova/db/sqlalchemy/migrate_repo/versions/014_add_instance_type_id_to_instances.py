@@ -54,10 +54,12 @@ def upgrade(migrate_engine):
 
     instances.create_column(c_instance_type_id)
 
+    type_names = {}
     recs = migrate_engine.execute(instance_types.select())
     for row in recs:
-        type_id = row[0]
-        type_name = row[1]
+        type_names[row[0]] = row[1]
+
+    for type_id, type_name in type_names.iteritems():
         migrate_engine.execute(instances.update()\
             .where(instances.c.instance_type == type_name)\
             .values(instance_type_id=type_id))

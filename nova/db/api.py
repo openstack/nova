@@ -292,7 +292,12 @@ def floating_ip_update(context, address, values):
     return IMPL.floating_ip_update(context, address, values)
 
 
+def floating_ip_set_auto_assigned(context, address):
+    """Set auto_assigned flag to floating ip"""
+    return IMPL.floating_ip_set_auto_assigned(context, address)
+
 ####################
+
 
 def migration_update(context, id, values):
     """Update a migration instance."""
@@ -454,11 +459,6 @@ def instance_get_floating_address(context, instance_id):
 def instance_get_project_vpn(context, project_id):
     """Get a vpn instance by project or return None."""
     return IMPL.instance_get_project_vpn(context, project_id)
-
-
-def instance_is_vpn(context, instance_id):
-    """True if instance is a vpn."""
-    return IMPL.instance_is_vpn(context, instance_id)
 
 
 def instance_set_state(context, instance_id, state, description=None):
