@@ -619,10 +619,6 @@ class LibvirtConnection(driver.ComputeDriver):
     @exception.wrap_exception
     def spawn(self, instance, network_info=None):
         xml = self.to_xml(instance, False, network_info)
-        db.instance_set_state(context.get_admin_context(),
-                              instance['id'],
-                              power_state.NOSTATE,
-                              'launching')
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_image(instance, xml, network_info)
