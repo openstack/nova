@@ -101,12 +101,13 @@ class CloudPipe(object):
         key_name = self.setup_key_pair(ctxt)
         group_name = self.setup_security_group(ctxt)
 
+        ec2_id = self.controller.image_ec2_id(FLAGS.vpn_image_id)
         reservation = self.controller.run_instances(ctxt,
             user_data=self.get_encoded_zip(project_id),
             max_count=1,
             min_count=1,
             instance_type='m1.tiny',
-            image_id=FLAGS.vpn_image_id,
+            image_id=ec2_id,
             key_name=key_name,
             security_group=[group_name])
 

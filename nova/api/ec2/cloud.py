@@ -159,7 +159,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self._image_ec2_id(instance_ref['image_id'], 'ami')
+        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -188,8 +188,8 @@ class CloudController(object):
 
         for image_type in ['kernel', 'ramdisk']:
             if instance_ref.get('%s_id' % image_type):
-                ec2_id = self._image_ec2_id(instance_ref['%s_id' % image_type],
-                                            self._image_type(image_type))
+                ec2_id = self.image_ec2_id(instance_ref['%s_id' % image_type],
+                                           self._image_type(image_type))
                 data['meta-data']['%s-id' % image_type] = ec2_id
 
         if False:  # TODO(vish): store ancestor ids
@@ -613,7 +613,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume))]}
+        return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -703,13 +703,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == FLAGS.vpn_image_id:
+                if instance['image_id'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self._image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_id'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -726,7 +726,9 @@ class CloudController(object):
                         instance['mac_address'])
 
             i['privateDnsName'] = fixed_addr
+            i['privateIpAddress'] = fixed_addr
             i['publicDnsName'] = floating_addr
+            i['ipAddress'] = floating_addr or fixed_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
@@ -898,7 +900,7 @@ class CloudController(object):
         return image_type
 
     @staticmethod
-    def _image_ec2_id(image_id, image_type='ami'):
+    def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
         return ec2utils.id_to_ec2_id(int(image_id), template=template)
@@ -917,15 +919,15 @@ class CloudController(object):
         """Convert from format defined by BaseImageService to S3 format."""
         i = {}
         image_type = self._image_type(image.get('container_format'))
-        ec2_id = self._image_ec2_id(image.get('id'), image_type)
+        ec2_id = self.image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
         i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
-            i['kernelId'] = self._image_ec2_id(kernel_id, 'aki')
+            i['kernelId'] = self.image_ec2_id(kernel_id, 'aki')
         ramdisk_id = image['properties'].get('ramdisk_id')
         if ramdisk_id:
-            i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ari')
+            i['ramdiskId'] = self.image_ec2_id(ramdisk_id, 'ari')
         i['imageOwnerId'] = image['properties'].get('owner_id')
         if name:
             i['imageLocation'] = "%s (%s)" % (image['properties'].
@@ -976,8 +978,8 @@ class CloudController(object):
         metadata = {'properties': {'image_location': image_location}}
         image = self.image_service.create(context, metadata)
         image_type = self._image_type(image.get('container_format'))
-        image_id = self._image_ec2_id(image['id'],
-                                      image_type)
+        image_id = self.image_ec2_id(image['id'],
+                                     image_type)
         msg = _("Registered image %(image_location)s with"
                 " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
