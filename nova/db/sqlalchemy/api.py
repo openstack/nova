@@ -2270,7 +2270,7 @@ def console_pool_get_by_host_type(context, compute_host, host,
     if not result:
         raise exception.ConsolePoolNotFoundForHostType(host=host,
                                                   console_type=console_type,
-                                                  compute_host=compute_host )
+                                                  compute_host=compute_host)
     return result
 
 
