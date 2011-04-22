@@ -19,7 +19,6 @@
 
 import os
 import subprocess
-import sys
 
 
 def execute_get_output(*command):

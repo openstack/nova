@@ -21,7 +21,6 @@ This script is used to configure openvswitch flows on XenServer hosts.
 """
 
 import os
-import subprocess
 import sys
 
 # This is written to Python 2.4, since that is what is available on XenServer
@@ -68,8 +67,8 @@ def main(dom_id, command, net_type, only_this_vif=None):
                                             'Interface', vif, 'ofport')
 
             params = dict(VIF_NAME=vif,
-                          VIF_MAC=data['mac'],
-                          VIF_OFPORT=vif_ofport)
+                          MAC=data['mac'],
+                          OF_PORT=vif_ofport)
 
             ovs = OvsFlow(bridge, params)
 
@@ -80,95 +79,95 @@ def main(dom_id, command, net_type, only_this_vif=None):
             if command in ('online', 'reset'):
                 if net_type in ('ipv4', 'all') and 'ips' in data:
                     for ip4 in data['ips']:
-                        ovs.params.update({'VIF_IPv4': ip4['ip']})
+                        ovs.params.update({'IPV4_ADDR': ip4['ip']})
                         apply_ovs_ipv4_flows(ovs, bridge, params)
                 if net_type in ('ipv6', 'all') and 'ip6s' in data:
                     for ip6 in data['ip6s']:
                         link_local = str(netaddr.EUI(data['mac']).eui64()\
                                         .ipv6_link_local())
-                        ovs.params.update({'VIF_LOCAL_IPv6': link_local})
-                        ovs.params.update({'VIF_GLOBAL_IPv6': ip6['ip']})
+                        ovs.params.update({'IPV6_LINK_LOCAL_ADDR': link_local})
+                        ovs.params.update({'IPV6_GLOBAL_ADDR': ip6['ip']})
                         apply_ovs_ipv6_flows(ovs, bridge, params)
 
 
 def apply_ovs_ipv4_flows(ovs, bridge, params):
     # allow valid ARP outbound (both request / reply)
-    ovs.add("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,arp,"
-            "arp_sha=%(VIF_MAC)s,nw_src=%(VIF_IPv4)s,actions=normal")
+    ovs.add("priority=3,in_port=%(OF_PORT)s,dl_src=%(MAC)s,arp,"
+            "arp_sha=%(MAC)s,nw_src=%(IPV4_ADDR)s,actions=normal")
 
-    ovs.add("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,arp,"
-            "arp_sha=%(VIF_MAC)s,nw_src=0.0.0.0,actions=normal")
+    ovs.add("priority=3,in_port=%(OF_PORT)s,dl_src=%(MAC)s,arp,"
+            "arp_sha=%(MAC)s,nw_src=0.0.0.0,actions=normal")
 
     # allow valid IPv4 outbound
-    ovs.add("priority=3,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,ip,"
-            "nw_src=%(VIF_IPv4)s,actions=normal")
+    ovs.add("priority=3,in_port=%(OF_PORT)s,dl_src=%(MAC)s,ip,"
+            "nw_src=%(IPV4_ADDR)s,actions=normal")
 
 
 def apply_ovs_ipv6_flows(ovs, bridge, params):
     # allow valid IPv6 ND outbound (are both global and local IPs needed?)
     # Neighbor Solicitation
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=135,nd_sll=%(VIF_MAC)s,"
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,icmp_type=135,nd_sll=%(MAC)s,"
             "actions=normal")
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=135,actions=normal")
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=135,nd_sll=%(VIF_MAC)s,"
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,icmp_type=135,actions=normal")
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,icmp_type=135,nd_sll=%(MAC)s,"
             "actions=normal")
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=135,actions=normal")
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,icmp_type=135,actions=normal")
 
     # Neighbor Advertisement
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=136,"
-            "nd_target=%(VIF_LOCAL_IPv6)s,actions=normal")
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp_type=136,actions=normal")
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=136,"
-            "nd_target=%(VIF_GLOBAL_IPv6)s,actions=normal")
-    ovs.add("priority=6,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,icmp6,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp_type=136,actions=normal")
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,icmp_type=136,"
+            "nd_target=%(IPV6_LINK_LOCAL_ADDR)s,actions=normal")
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,icmp_type=136,actions=normal")
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,icmp_type=136,"
+            "nd_target=%(IPV6_GLOBAL_ADDR)s,actions=normal")
+    ovs.add("priority=6,in_port=%(OF_PORT)s,dl_src=%(MAC)s,icmp6,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,icmp_type=136,actions=normal")
 
-    # drop all other neighbor discovery (required because we permit all icmp6 below) 
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=135,actions=drop")
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=136,actions=drop")
+    # drop all other neighbor discovery (req b/c we permit all icmp6 below)
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=135,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=136,actions=drop")
 
     # do not allow sending specifc ICMPv6 types
     # Router Advertisement
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=134,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=134,actions=drop")
     # Redirect Gateway
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=137,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=137,actions=drop")
     # Mobile Prefix Solicitation
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=146,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=146,actions=drop")
     # Mobile Prefix Advertisement
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=147,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=147,actions=drop")
     # Multicast Router Advertisement
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=151,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=151,actions=drop")
     # Multicast Router Solicitation
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=152,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=152,actions=drop")
     # Multicast Router Termination
-    ovs.add("priority=5,in_port=%(VIF_OFPORT)s,icmp6,icmp_type=153,actions=drop")
+    ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=153,actions=drop")
 
     # allow valid IPv6 outbound, by type
-    ovs.add("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,icmp6,actions=normal")
-    ovs.add("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,icmp6,actions=normal")
-    ovs.add("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,tcp6,actions=normal")
-    ovs.add("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,tcp6,actions=normal")
-    ovs.add("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
-            "ipv6_src=%(VIF_GLOBAL_IPv6)s,udp6,actions=normal")
-    ovs.add("priority=4,in_port=%(VIF_OFPORT)s,dl_src=%(VIF_MAC)s,"
-            "ipv6_src=%(VIF_LOCAL_IPv6)s,udp6,actions=normal")
+    ovs.add("priority=4,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,icmp6,actions=normal")
+    ovs.add("priority=4,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,icmp6,actions=normal")
+    ovs.add("priority=4,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,tcp6,actions=normal")
+    ovs.add("priority=4,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,tcp6,actions=normal")
+    ovs.add("priority=4,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "ipv6_src=%(IPV6_GLOBAL_ADDR)s,udp6,actions=normal")
+    ovs.add("priority=4,in_port=%(OF_PORT)s,dl_src=%(MAC)s,"
+            "ipv6_src=%(IPV6_LINK_LOCAL_ADDR)s,udp6,actions=normal")
     # all else will be dropped ...
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "usage: %s dom_id online|offline|reset ipv4|ipv6|all [vif_name]" % \
+        print "usage: %s dom_id online|offline|reset ipv4|ipv6|all [vif]" % \
                os.path.basename(sys.argv[0])
         sys.exit(1)
     else:

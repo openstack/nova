@@ -21,7 +21,6 @@ This script is used to configure base openvswitch flows for XenServer hosts.
 """
 
 import os
-import subprocess
 import sys
 
 
