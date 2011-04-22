@@ -37,8 +37,6 @@ terminating it.
 
 import datetime
 import os
-import random
-import string
 import socket
 import sys
 import tempfile
@@ -50,6 +48,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import network
 from nova import rpc
 from nova import utils
 from nova import volume
@@ -75,6 +74,8 @@ flags.DEFINE_integer('live_migration_retry_count', 30,
 flags.DEFINE_integer("rescue_timeout", 0,
                      "Automatically unrescue an instance after N seconds."
                      " Set to 0 to disable.")
+flags.DEFINE_bool('auto_assign_floating_ip', False,
+                  'Autoassigning floating ip to VM')
 
 
 LOG = logging.getLogger('nova.compute.manager')
@@ -128,6 +129,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
+        self.network_api = network.API()
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -248,6 +250,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        instance_id,
                                        power_state.SHUTDOWN)
 
+        if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
+            public_ip = self.network_api.allocate_floating_ip(context)
+
+            self.db.floating_ip_set_auto_assigned(context, public_ip)
+            fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+            floating_ip = self.db.floating_ip_get_by_address(context,
+                                                             public_ip)
+
+            self.network_api.associate_floating_ip(context,
+                                                   floating_ip,
+                                                   fixed_ip,
+                                                   affect_auto_assigned=True)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -268,13 +282,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(vish): Right now we don't really care if the ip is
                 #             disassociated.  We may need to worry about
                 #             checking this later.
-                network_topic = self.db.queue_get_for(context,
-                                                      FLAGS.network_topic,
-                                                      floating_ip['host'])
-                rpc.cast(context,
-                         network_topic,
-                         {"method": "disassociate_floating_ip",
-                          "args": {"floating_address": address}})
+                self.network_api.disassociate_floating_ip(context,
+                                                          address,
+                                                          True)
+                if (FLAGS.auto_assign_floating_ip
+                        and floating_ip.get('auto_assigned')):
+                    LOG.debug(_("Deallocating floating ip %s"),
+                              floating_ip['address'],
+                              context=context)
+                    self.network_api.release_floating_ip(context,
+                                                         address,
+                                                         True)
 
             address = fixed_ip['address']
             if address:

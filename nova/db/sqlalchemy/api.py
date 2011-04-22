@@ -461,6 +461,7 @@ def floating_ip_count_by_project(context, project_id):
     session = get_session()
     return session.query(models.FloatingIp).\
                    filter_by(project_id=project_id).\
+                   filter_by(auto_assigned=False).\
                    filter_by(deleted=False).\
                    count()
 
@@ -489,6 +490,7 @@ def floating_ip_deallocate(context, address):
                                                      address,
                                                      session=session)
         floating_ip_ref['project_id'] = None
+        floating_ip_ref['auto_assigned'] = False
         floating_ip_ref.save(session=session)
 
 
@@ -522,6 +524,17 @@ def floating_ip_disassociate(context, address):
     return fixed_ip_address
 
 
+@require_context
+def floating_ip_set_auto_assigned(context, address):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
+        floating_ip_ref.auto_assigned = True
+        floating_ip_ref.save(session=session)
+
+
 @require_admin_context
 def floating_ip_get_all(context):
     session = get_session()
@@ -548,6 +561,7 @@ def floating_ip_get_all_by_project(context, project_id):
     return session.query(models.FloatingIp).\
                    options(joinedload_all('fixed_ip.instance')).\
                    filter_by(project_id=project_id).\
+                   filter_by(auto_assigned=False).\
                    filter_by(deleted=False).\
                    all()
 
