@@ -18,14 +18,14 @@
 
 """Super simple fake memcache client."""
 
-import utils
+from nova import utils
 
 
 class Client(object):
     """Replicates a tiny subset of memcached client interface."""
 
     def __init__(self, *args, **kwargs):
-        """Ignores the passed in args"""
+        """Ignores the passed in args."""
         self.cache = {}
 
     def get(self, key):
