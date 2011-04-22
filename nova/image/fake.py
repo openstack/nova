@@ -14,6 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 """Implementation of an fake image service"""
 
 import copy
@@ -69,14 +70,14 @@ class FakeImageService(service.BaseImageService):
         image = self.images.get(image_id)
         if image:
             return copy.deepcopy(image)
-        LOG.warn("Unable to find image id %s.  Have images: %s",
+        LOG.warn('Unable to find image id %s.  Have images: %s',
                  image_id, self.images)
         raise exception.ImageNotFound(image_id=image_id)
 
     def create(self, context, data):
         """Store the image data and return the new image id.
 
-        :raises Duplicate if the image already exist.
+        :raises: Duplicate if the image already exist.
 
         """
         image_id = int(data['id'])
@@ -88,7 +89,7 @@ class FakeImageService(service.BaseImageService):
     def update(self, context, image_id, data):
         """Replace the contents of the given image with the new data.
 
-        :raises ImageNotFound if the image does not exist.
+        :raises: ImageNotFound if the image does not exist.
 
         """
         image_id = int(image_id)
@@ -99,7 +100,7 @@ class FakeImageService(service.BaseImageService):
     def delete(self, context, image_id):
         """Delete the given image.
 
-        :raises ImageNotFound if the image does not exist.
+        :raises: ImageNotFound if the image does not exist.
 
         """
         image_id = int(image_id)
