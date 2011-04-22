@@ -322,8 +322,7 @@ class Volumes(extensions.ExtensionDescriptor):
         # Does this matter?
         res = extensions.ResourceExtension('volumes',
                                         VolumeController(),
-                                        collection_actions={'detail': 'GET'}
-                                          )
+                                        collection_actions={'detail': 'GET'})
         resources.append(res)
 
         res = extensions.ResourceExtension('volume_attachments',

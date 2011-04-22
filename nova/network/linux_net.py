@@ -391,6 +391,12 @@ def unbind_floating_ip(floating_ip):
              'dev', FLAGS.public_interface)
 
 
+def ensure_metadata_ip():
+    """Sets up local metadata ip"""
+    _execute('sudo', 'ip', 'addr', 'add', '169.254.169.254/32',
+             'scope', 'link', 'dev', 'lo', check_exit_code=False)
+
+
 def ensure_vlan_forward(public_ip, port, private_ip):
     """Sets up forwarding rules for vlan"""
     iptables_manager.ipv4['filter'].add_rule("FORWARD",
@@ -442,6 +448,7 @@ def ensure_vlan(vlan_num):
     return interface
 
 
+@utils.synchronized('ensure_bridge', external=True)
 def ensure_bridge(bridge, interface, net_attrs=None):
     """Create a bridge unless it already exists.
 
@@ -495,6 +502,8 @@ def ensure_bridge(bridge, interface, net_attrs=None):
             fields = line.split()
             if fields and fields[0] == "0.0.0.0" and fields[-1] == interface:
                 gateway = fields[1]
+                _execute('sudo', 'route', 'del', 'default', 'gw', gateway,
+                         'dev', interface, check_exit_code=False)
         out, err = _execute('sudo', 'ip', 'addr', 'show', 'dev', interface,
                             'scope', 'global')
         for line in out.split("\n"):
@@ -504,7 +513,7 @@ def ensure_bridge(bridge, interface, net_attrs=None):
                 _execute(*_ip_bridge_cmd('del', params, fields[-1]))
                 _execute(*_ip_bridge_cmd('add', params, bridge))
         if gateway:
-            _execute('sudo', 'route', 'add', '0.0.0.0', 'gw', gateway)
+            _execute('sudo', 'route', 'add', 'default', 'gw', gateway)
         out, err = _execute('sudo', 'brctl', 'addif', bridge, interface,
                             check_exit_code=False)
 

@@ -36,11 +36,13 @@ from nova import rpc
 from nova import service
 from nova import test
 from nova import utils
+from nova import exception
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
+from nova.exception import NotFound
 
 
 FLAGS = flags.FLAGS
@@ -71,7 +73,8 @@ class CloudTestCase(test.TestCase):
         host = self.network.get_network_host(self.context.elevated())
 
         def fake_show(meh, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}}
 
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
@@ -216,6 +219,66 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
+    def test_describe_images(self):
+        describe_images = self.cloud.describe_images
+
+        def fake_detail(meh, context):
+            return [{'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}}]
+
+        def fake_show_none(meh, context, id):
+            raise NotFound
+
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
+        # list all
+        result1 = describe_images(self.context)
+        result1 = result1['imagesSet'][0]
+        self.assertEqual(result1['imageId'], 'ami-00000001')
+        # provided a valid image_id
+        result2 = describe_images(self.context, ['ami-00000001'])
+        self.assertEqual(1, len(result2['imagesSet']))
+        # provide more than 1 valid image_id
+        result3 = describe_images(self.context, ['ami-00000001',
+                                                 'ami-00000002'])
+        self.assertEqual(2, len(result3['imagesSet']))
+        # provide an non-existing image_id
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_none)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show_none)
+        self.assertRaises(NotFound, describe_images,
+                          self.context, ['ami-fake'])
+
+    def test_describe_image_attribute(self):
+        describe_image_attribute = self.cloud.describe_image_attribute
+
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}, 'is_public': True}
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
+        result = describe_image_attribute(self.context, 'ami-00000001',
+                                          'launchPermission')
+        self.assertEqual([{'group': 'all'}], result['launchPermission'])
+
+    def test_modify_image_attribute(self):
+        modify_image_attribute = self.cloud.modify_image_attribute
+
+        def fake_show(meh, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}, 'is_public': False}
+
+        def fake_update(meh, context, image_id, metadata, data=None):
+            return metadata
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
+        self.stubs.Set(local.LocalImageService, 'update', fake_update)
+        result = modify_image_attribute(self.context, 'ami-00000001',
+                                          'launchPermission', 'add',
+                                           user_group=['all'])
+        self.assertEqual(True, result['is_public'])
+
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1
@@ -309,6 +372,19 @@ class CloudTestCase(test.TestCase):
                 instance_id = instance['instance_id']
                 LOG.debug(_("Terminating instance %s"), instance_id)
                 rv = self.compute.terminate_instance(instance_id)
+
+    def test_terminate_instances(self):
+        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
+                                                  'image_id': 1,
+                                                  'host': 'host1'})
+        terminate_instances = self.cloud.terminate_instances
+        # valid instance_id
+        result = terminate_instances(self.context, ['i-00000001'])
+        self.assertTrue(result)
+        # non-existing instance_id
+        self.assertRaises(exception.InstanceNotFound, terminate_instances,
+                          self.context, ['i-2'])
+        db.instance_destroy(self.context, inst1['id'])
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
