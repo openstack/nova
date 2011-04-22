@@ -102,19 +102,40 @@ class API(base.Base):
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
+    def _check_metadata_properties_quota(self, context, metadata={}):
+        """Enforce quota limits on metadata properties."""
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            pid = context.project_id
+            msg = _("Quota exceeeded for %(pid)s, tried to set "
+                    "%(num_metadata)s metadata properties") % locals()
+            LOG.warn(msg)
+            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        # Because metadata is stored in the DB, we hard-code the size limits
+        # In future, we may support more variable length strings, so we act
+        #  as if this is quota-controlled for forwards compatibility
+        for k, v in metadata.iteritems():
+            if len(k) > 255 or len(v) > 255:
+                pid = context.project_id
+                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                        "key or value too long") % locals()
+                LOG.warn(msg)
+                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata=[],
+               availability_zone=None, user_data=None, metadata={},
                injected_files=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
 
         """
-
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 
@@ -128,30 +149,7 @@ class API(base.Base):
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
-        num_metadata = len(metadata)
-        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
-        if quota_metadata < num_metadata:
-            pid = context.project_id
-            msg = (_("Quota exceeeded for %(pid)s,"
-                     " tried to set %(num_metadata)s metadata properties")
-                   % locals())
-            LOG.warn(msg)
-            raise quota.QuotaError(msg, "MetadataLimitExceeded")
-
-        # Because metadata is stored in the DB, we hard-code the size limits
-        # In future, we may support more variable length strings, so we act
-        #  as if this is quota-controlled for forwards compatibility
-        for metadata_item in metadata:
-            k = metadata_item['key']
-            v = metadata_item['value']
-            if len(k) > 255 or len(v) > 255:
-                pid = context.project_id
-                msg = (_("Quota exceeeded for %(pid)s,"
-                         " metadata property key or value too long")
-                       % locals())
-                LOG.warn(msg)
-                raise quota.QuotaError(msg, "MetadataLimitExceeded")
-
+        self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
         image = self.image_service.show(context, image_id)
@@ -722,5 +720,8 @@ class API(base.Base):
     def update_or_create_instance_metadata(self, context, instance_id,
                                             metadata):
         """Updates or creates instance metadata."""
+        combined_metadata = self.get_instance_metadata(context, instance_id)
+        combined_metadata.update(metadata)
+        self._check_metadata_properties_quota(context, combined_metadata)
         self.db.instance_metadata_update_or_create(context, instance_id,
                                                     metadata)

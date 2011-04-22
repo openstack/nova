@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import gettext
 import glob
 import os
 import subprocess
@@ -33,6 +34,7 @@ except ImportError:
 assert DistUtilsExtra.auto.__version__ >= '2.18',\
        'needs DistUtilsExtra.auto >= 2.18'
 
+gettext.install('nova', unicode=1)
 
 from nova.utils import parse_mailmap, str_dict_replace
 from nova import version

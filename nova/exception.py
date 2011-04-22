@@ -16,31 +16,34 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Nova base exception handling, including decorator for re-raising
-Nova-type exceptions. SHOULD include dedicated exception logging.
+"""Nova base exception handling.
+
+Includes decorator for re-raising Nova-type exceptions.
+
+SHOULD include dedicated exception logging.
+
 """
 
 from nova import log as logging
+
+
 LOG = logging.getLogger('nova.exception')
 
 
 class ProcessExecutionError(IOError):
-
     def __init__(self, stdout=None, stderr=None, exit_code=None, cmd=None,
                  description=None):
         if description is None:
-            description = _("Unexpected error while running command.")
+            description = _('Unexpected error while running command.')
         if exit_code is None:
             exit_code = '-'
-        message = _("%(description)s\nCommand: %(cmd)s\n"
-                "Exit code: %(exit_code)s\nStdout: %(stdout)r\n"
-                "Stderr: %(stderr)r") % locals()
+        message = _('%(description)s\nCommand: %(cmd)s\n'
+                    'Exit code: %(exit_code)s\nStdout: %(stdout)r\n'
+                    'Stderr: %(stderr)r') % locals()
         IOError.__init__(self, message)
 
 
 class Error(Exception):
-
     def __init__(self, message=None):
         super(Error, self).__init__(message)
 
@@ -89,7 +92,7 @@ class TimeoutException(Error):
 
 
 class DBError(Error):
-    """Wraps an implementation specific exception"""
+    """Wraps an implementation specific exception."""
     def __init__(self, inner_exception):
         self.inner_exception = inner_exception
         super(DBError, self).__init__(str(inner_exception))
@@ -100,7 +103,7 @@ def wrap_db_error(f):
         try:
             return f(*args, **kwargs)
         except Exception, e:
-            LOG.exception(_('DB exception wrapped'))
+            LOG.exception(_('DB exception wrapped.'))
             raise DBError(e)
     return _wrap
     _wrap.func_name = f.func_name

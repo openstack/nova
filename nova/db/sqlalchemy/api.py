@@ -461,6 +461,7 @@ def floating_ip_count_by_project(context, project_id):
     session = get_session()
     return session.query(models.FloatingIp).\
                    filter_by(project_id=project_id).\
+                   filter_by(auto_assigned=False).\
                    filter_by(deleted=False).\
                    count()
 
@@ -489,6 +490,7 @@ def floating_ip_deallocate(context, address):
                                                      address,
                                                      session=session)
         floating_ip_ref['project_id'] = None
+        floating_ip_ref['auto_assigned'] = False
         floating_ip_ref.save(session=session)
 
 
@@ -522,6 +524,17 @@ def floating_ip_disassociate(context, address):
     return fixed_ip_address
 
 
+@require_context
+def floating_ip_set_auto_assigned(context, address):
+    session = get_session()
+    with session.begin():
+        floating_ip_ref = floating_ip_get_by_address(context,
+                                                     address,
+                                                     session=session)
+        floating_ip_ref.auto_assigned = True
+        floating_ip_ref.save(session=session)
+
+
 @require_admin_context
 def floating_ip_get_all(context):
     session = get_session()
@@ -548,6 +561,7 @@ def floating_ip_get_all_by_project(context, project_id):
     return session.query(models.FloatingIp).\
                    options(joinedload_all('fixed_ip.instance')).\
                    filter_by(project_id=project_id).\
+                   filter_by(auto_assigned=False).\
                    filter_by(deleted=False).\
                    all()
 
@@ -770,9 +784,10 @@ def instance_create(context, values):
     metadata = values.get('metadata')
     metadata_refs = []
     if metadata:
-        for metadata_item in metadata:
+        for k, v in metadata.iteritems():
             metadata_ref = models.InstanceMetadata()
-            metadata_ref.update(metadata_item)
+            metadata_ref['key'] = k
+            metadata_ref['value'] = v
             metadata_refs.append(metadata_ref)
     values['metadata'] = metadata_refs
 
@@ -940,7 +955,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
-                   filter_by(image_id=FLAGS.vpn_image_id).\
+                   filter_by(image_id=str(FLAGS.vpn_image_id)).\
                    filter_by(deleted=can_read_deleted(context)).\
                    first()
 
@@ -977,13 +992,6 @@ def instance_get_floating_address(context, instance_id):
             return None
         # NOTE(vish): this just returns the first floating ip
         return instance_ref.fixed_ip.floating_ips[0]['address']
-
-
-@require_admin_context
-def instance_is_vpn(context, instance_id):
-    # TODO(vish): Move this into image code somewhere
-    instance_ref = instance_get(context, instance_id)
-    return instance_ref['image_id'] == FLAGS.vpn_image_id
 
 
 @require_admin_context
