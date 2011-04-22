@@ -709,3 +709,33 @@ def check_isinstance(obj, cls):
     raise Exception(_('Expected object of type: %s') % (str(cls)))
     # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack
+
+
+def parse_server_string(server_str):
+    """
+    Parses the given server_string and returns a list of host and port.
+    If it's not a combination of host part and port, the port element
+    is a null string. If the input is invalid expression, return a null
+    list.
+    """
+    try:
+        # First of all, exclude pure IPv6 address (w/o port).
+        if netaddr.valid_ipv6(server_str):
+            return (server_str, '')
+
+        # Next, check if this is IPv6 address with a port number combination.
+        if server_str.find("]:") != -1:
+            (address, port) = server_str.replace('[', '', 1).split(']:')
+            return (address, port)
+
+        # Third, check if this is a combination of an address and a port
+        if server_str.find(':') == -1:
+            return (server_str, '')
+
+        # This must be a combination of an address and a port
+        (address, port) = server_str.split(':')
+        return (address, port)
+
+    except:
+        LOG.debug(_('Invalid server_string: %s' % server_str))
+        return ('', '')

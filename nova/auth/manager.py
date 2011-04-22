@@ -35,7 +35,6 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.auth import signer
-from nova.auth import authutils
 
 
 FLAGS = flags.FLAGS
@@ -316,13 +315,12 @@ class AuthManager(object):
             LOG.debug(_('expected_signature: %s'), expected_signature)
             LOG.debug(_('signature: %s'), signature)
             if signature != expected_signature:
-                host_only = authutils.get_host_only_server_string(
-                    server_string)
+                (addr_str, port_str) = utils.parse_server_string(server_string)
                 # If the given server_string contains port num, try without it.
-                if host_only != '':
+                if port_str != '':
                     host_only_signature = signer.Signer(
                         user.secret.encode()).generate(params, verb,
-                                                       host_only, path)
+                                                       addr_str, path)
                     LOG.debug(_('host_only_signature: %s'),
                               host_only_signature)
                     if signature == host_only_signature:
