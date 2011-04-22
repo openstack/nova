@@ -312,19 +312,10 @@ class LibvirtConnection(driver.ComputeDriver):
     def destroy(self, instance, cleanup=True):
         instance_name = instance['name']
 
-        # TODO(justinsb): Refactor all lookupByName calls for error-handling
         try:
-            virt_dom = self._conn.lookupByName(instance_name)
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
-                virt_dom = None
-            else:
-                LOG.warning(_("Error from libvirt during lookup of "
-                              "%(instance_name)s. Code=%(errcode)s "
-                              "Error=%(e)s") %
-                            locals())
-                raise
+            virt_dom = self._lookup_by_name(instance_name)
+        except exception.NotFound:
+            virt_dom = None
 
         # If the instance is already terminated, we're still happy
         # Otherwise, destroy it
@@ -395,7 +386,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
-        virt_dom = self._conn.lookupByName(instance_name)
+        virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         if device_path.startswith('/dev/'):
             xml = """<disk type='block'>
@@ -439,7 +430,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def detach_volume(self, instance_name, mountpoint):
-        virt_dom = self._conn.lookupByName(instance_name)
+        virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
         if not xml:
@@ -456,7 +447,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
         image_service = utils.import_object(FLAGS.image_service)
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
         base = image_service.show(elevated, instance['image_id'])
@@ -715,7 +706,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise Exception(_('Unable to find an open port'))
 
         def get_pty_for_instance(instance_name):
-            virt_dom = self._conn.lookupByName(instance_name)
+            virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             dom = minidom.parseString(xml)
 
@@ -740,7 +731,7 @@ class LibvirtConnection(driver.ComputeDriver):
     @exception.wrap_exception
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
-            virt_dom = self._conn.lookupByName(instance_name)
+            virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             # TODO: use etree instead of minidom
             dom = minidom.parseString(xml)
@@ -1049,16 +1040,15 @@ class LibvirtConnection(driver.ComputeDriver):
                         instance['name'])
         return xml
 
-    def get_info(self, instance_name):
-        """Retrieve information from libvirt for a specific instance name.
+    def _lookup_by_name(self, instance_name):
+        """Retrieve libvirt domain object given an instance name.
 
-        If a libvirt error is encountered during lookup, we might raise a
-        NotFound exception or Error exception depending on how severe the
-        libvirt error is.
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
 
         """
         try:
-            virt_dom = self._conn.lookupByName(instance_name)
+            return self._conn.lookupByName(instance_name)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
@@ -1069,6 +1059,15 @@ class LibvirtConnection(driver.ComputeDriver):
                     "[Error Code %(error_code)s] %(ex)s") % locals()
             raise exception.Error(msg)
 
+    def get_info(self, instance_name):
+        """Retrieve information from libvirt for a specific instance name.
+
+        If a libvirt error is encountered during lookup, we might raise a
+        NotFound exception or Error exception depending on how severe the
+        libvirt error is.
+
+        """
+        virt_dom = self._lookup_by_name(instance_name)
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
@@ -1105,7 +1104,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         Returns a list of all block devices for this domain.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
@@ -1147,7 +1146,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         Returns a list of all network interfaces for this instance.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
@@ -1362,7 +1361,7 @@ class LibvirtConnection(driver.ComputeDriver):
         Note that this function takes an instance name, not an Instance, so
         that it can be called by monitor.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         return domain.blockStats(disk)
 
     def interface_stats(self, instance_name, interface):
@@ -1370,7 +1369,7 @@ class LibvirtConnection(driver.ComputeDriver):
         Note that this function takes an instance name, not an Instance, so
         that it can be called by monitor.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         return domain.interfaceStats(interface)
 
     def get_console_pool_info(self, console_type):
