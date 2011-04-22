@@ -52,6 +52,7 @@ from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
+from nova import volume
 from nova.compute import power_state
 from nova.virt import driver
 
@@ -761,6 +762,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.db.volume_detached(context, volume_id)
         return True
 
+    def remove_volume(self, context, volume_id):
+        """Remove volume on compute host.
+
+        :param context: security context
+        :param volume_id: volume ID
+        """
+        self.volume_manager.remove_compute_volume(context, volume_id)
+
     @exception.wrap_exception
     def compare_cpu(self, context, cpu_info):
         """Checks that the host cpu is compatible with a cpu given by xml.
@@ -980,7 +989,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None):
+    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
@@ -998,8 +1007,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  'state': power_state.RUNNING,
                                  'host': host})
 
-        for volume in instance_ref['volumes']:
-            self.db.volume_update(ctxt, volume['id'], {'status': 'in-use'})
+        if dest:
+            volume_api = volume.API()
+        for volume_ref in instance_ref['volumes']:
+            volume_id = volume_ref['id']
+            self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
+            if dest:
+                volume_api.remove_from_compute(ctxt, volume_id, dest)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
