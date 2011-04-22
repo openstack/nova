@@ -106,7 +106,7 @@ logging.addLevelName(AUDIT, 'AUDIT')
 
 
 def _dictify_context(context):
-    if context == None:
+    if context is None:
         return None
     if not isinstance(context, dict) \
     and getattr(context, 'to_dict', None):

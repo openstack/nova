@@ -16,6 +16,8 @@
 Managing Instance Types and Flavors
 ===================================
 
+You can manage instance types and instance flavors using the nova-manage command-line interface coupled with the instance_type subcommand for nova-manage. 
+
 What are Instance Types or Flavors ?
 ------------------------------------
 

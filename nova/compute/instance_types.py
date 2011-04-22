@@ -63,7 +63,7 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
 
 def destroy(name):
     """Marks instance types as deleted."""
-    if name == None:
+    if name is None:
         raise exception.InvalidInputException(_("No instance type specified"))
     else:
         try:
@@ -75,7 +75,7 @@ def destroy(name):
 
 def purge(name):
     """Removes instance types from database."""
-    if name == None:
+    if name is None:
         raise exception.InvalidInputException(_("No instance type specified"))
     else:
         try:
