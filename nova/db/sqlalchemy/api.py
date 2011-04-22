@@ -941,7 +941,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
-                   filter_by(image_id=FLAGS.vpn_image_id).\
+                   filter_by(image_id=str(FLAGS.vpn_image_id)).\
                    filter_by(deleted=can_read_deleted(context)).\
                    first()
 
@@ -978,13 +978,6 @@ def instance_get_floating_address(context, instance_id):
             return None
         # NOTE(vish): this just returns the first floating ip
         return instance_ref.fixed_ip.floating_ips[0]['address']
-
-
-@require_admin_context
-def instance_is_vpn(context, instance_id):
-    # TODO(vish): Move this into image code somewhere
-    instance_ref = instance_get(context, instance_id)
-    return instance_ref['image_id'] == FLAGS.vpn_image_id
 
 
 @require_admin_context
