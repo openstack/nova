@@ -513,8 +513,15 @@ class LibvirtConnection(driver.ComputeDriver):
         reboot happens, as the guest OS cannot ignore this action.
 
         """
+        virt_dom = self._conn.lookupByName(instance['name'])
+        # NOTE(itoumsn): Use XML delived from the running instance
+        # instead of using to_xml(instance). This is almost the ultimate
+        # stupid workaround.
+        xml = virt_dom.XMLDesc(0)
+        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
+        # better because we cannot ensure flushing dirty buffers
+        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, False)
-        xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
