@@ -21,10 +21,10 @@ Classes for making VMware VI SOAP calls.
 
 import httplib
 
-from suds import WebFault
-from suds.client import Client
-from suds.plugin import MessagePlugin
-from suds.sudsobject import Property
+try:
+    import suds
+except ImportError:
+    suds = None
 
 from nova import flags
 from nova.virt.vmwareapi import error_util
@@ -42,24 +42,26 @@ flags.DEFINE_string('vmwareapi_wsdl_loc',
                    'Refer readme-vmware to setup')
 
 
-class VIMMessagePlugin(MessagePlugin):
+if suds:
 
-    def addAttributeForValue(self, node):
-        # suds does not handle AnyType properly.
-        # VI SDK requires type attribute to be set when AnyType is used
-        if node.name == 'value':
-            node.set('xsi:type', 'xsd:string')
+    class VIMMessagePlugin(suds.plugin.MessagePlugin):
 
-    def marshalled(self, context):
-        """suds will send the specified soap envelope.
-        Provides the plugin with the opportunity to prune empty
-        nodes and fixup nodes before sending it to the server.
-        """
-        # suds builds the entire request object based on the wsdl schema.
-        # VI SDK throws server errors if optional SOAP nodes are sent without
-        # values, e.g. <test/> as opposed to <test>test</test>
-        context.envelope.prune()
-        context.envelope.walk(self.addAttributeForValue)
+        def addAttributeForValue(self, node):
+            # suds does not handle AnyType properly.
+            # VI SDK requires type attribute to be set when AnyType is used
+            if node.name == 'value':
+                node.set('xsi:type', 'xsd:string')
+
+        def marshalled(self, context):
+            """suds will send the specified soap envelope.
+            Provides the plugin with the opportunity to prune empty
+            nodes and fixup nodes before sending it to the server.
+            """
+            # suds builds the entire request object based on the wsdl schema.
+            # VI SDK throws server errors if optional SOAP nodes are sent
+            # without values, e.g. <test/> as opposed to <test>test</test>
+            context.envelope.prune()
+            context.envelope.walk(self.addAttributeForValue)
 
 
 class Vim:
@@ -75,6 +77,9 @@ class Vim:
         protocol: http or https
         host    : ESX IPAddress[:port] or ESX Hostname[:port]
         """
+        if not suds:
+            raise Exception(_("Unable to import suds."))
+
         self._protocol = protocol
         self._host_name = host
         wsdl_url = FLAGS.vmwareapi_wsdl_loc
@@ -84,7 +89,7 @@ class Vim:
         #wsdl_url = '%s://%s/sdk/vimService.wsdl' % (self._protocol,
         #        self._host_name)
         url = '%s://%s/sdk' % (self._protocol, self._host_name)
-        self.client = Client(wsdl_url, location=url,
+        self.client = suds.client.Client(wsdl_url, location=url,
                             plugins=[VIMMessagePlugin()])
         self._service_content = \
                 self.RetrieveServiceContent("ServiceInstance")
@@ -127,7 +132,7 @@ class Vim:
                 # check of the SOAP response
                 except error_util.VimFaultException, excep:
                     raise
-                except WebFault, excep:
+                except suds.WebFault, excep:
                     doc = excep.document
                     detail = doc.childAtPath("/Envelope/Body/Fault/detail")
                     fault_list = []
@@ -163,7 +168,7 @@ class Vim:
         """Builds the request managed object."""
         # Request Managed Object Builder
         if type(managed_object) == type(""):
-            mo = Property(managed_object)
+            mo = suds.sudsobject.Property(managed_object)
             mo._type = managed_object
         else:
             mo = managed_object

@@ -16,6 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import gettext
+import glob
 import os
 import subprocess
 import sys
@@ -32,6 +34,7 @@ except ImportError:
 assert DistUtilsExtra.auto.__version__ >= '2.18',\
        'needs DistUtilsExtra.auto >= 2.18'
 
+gettext.install('nova', unicode=1)
 
 from nova.utils import parse_mailmap, str_dict_replace
 from nova import version
@@ -86,6 +89,19 @@ try:
 except:
     pass
 
+
+def find_data_files(destdir, srcdir):
+    package_data = []
+    files = []
+    for d in glob.glob('%s/*' % (srcdir, )):
+        if os.path.isdir(d):
+            package_data += find_data_files(
+                                 os.path.join(destdir, os.path.basename(d)), d)
+        else:
+            files += [d]
+    package_data += [(destdir, files)]
+    return package_data
+
 DistUtilsExtra.auto.setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
@@ -96,6 +112,7 @@ DistUtilsExtra.auto.setup(name='nova',
       packages=find_packages(exclude=['bin', 'smoketests']),
       include_package_data=True,
       test_suite='nose.collector',
+      data_files=find_data_files('share/nova', 'tools'),
       scripts=['bin/nova-ajax-console-proxy',
                'bin/nova-api',
                'bin/nova-compute',
@@ -112,4 +129,5 @@ DistUtilsExtra.auto.setup(name='nova',
                'bin/nova-spoolsentry',
                'bin/stack',
                'bin/nova-volume',
+               'bin/nova-vncproxy',
                'tools/nova-debug'])

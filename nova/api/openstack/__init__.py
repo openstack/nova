@@ -34,6 +34,7 @@ from nova.api.openstack import consoles
 from nova.api.openstack import flavors
 from nova.api.openstack import images
 from nova.api.openstack import image_metadata
+from nova.api.openstack import ips
 from nova.api.openstack import limits
 from nova.api.openstack import servers
 from nova.api.openstack import server_metadata
@@ -106,25 +107,15 @@ class APIRouter(wsgi.Router):
                             controller=accounts.Controller(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("backup_schedule", "backup_schedule",
-                        controller=backup_schedules.Controller(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
-
         mapper.resource("console", "consoles",
                         controller=consoles.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("image", "images", controller=images.Controller(),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("shared_ip_group", "shared_ip_groups",
-                        collection={'detail': 'GET'},
-                        controller=shared_ip_groups.Controller())
-
         _limits = limits.LimitsController()
         mapper.resource("limit", "limits", controller=_limits)
+
+        super(APIRouter, self).__init__(mapper)
 
 
 class APIRouterV10(APIRouter):
@@ -137,9 +128,27 @@ class APIRouterV10(APIRouter):
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
+        mapper.resource("image", "images",
+                        controller=images.ControllerV10(),
+                        collection={'detail': 'GET'})
+
         mapper.resource("flavor", "flavors",
                         controller=flavors.ControllerV10(),
                         collection={'detail': 'GET'})
+
+        mapper.resource("shared_ip_group", "shared_ip_groups",
+                        collection={'detail': 'GET'},
+                        controller=shared_ip_groups.Controller())
+
+        mapper.resource("backup_schedule", "backup_schedule",
+                        controller=backup_schedules.Controller(),
+                        parent_resource=dict(member_name='server',
+                        collection_name='servers'))
+
+        mapper.resource("ip", "ips", controller=ips.Controller(),
+                        collection=dict(public='GET', private='GET'),
+                        parent_resource=dict(member_name='server',
+                                             collection_name='servers'))
 
 
 class APIRouterV11(APIRouter):
@@ -151,6 +160,10 @@ class APIRouterV11(APIRouter):
                         controller=servers.ControllerV11(),
                         collection={'detail': 'GET'},
                         member=self.server_members)
+
+        mapper.resource("image", "images",
+                        controller=images.ControllerV11(),
+                        collection={'detail': 'GET'})
 
         mapper.resource("image_meta", "meta",
                         controller=image_metadata.Controller(),

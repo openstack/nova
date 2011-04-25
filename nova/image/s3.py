@@ -16,13 +16,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Proxy AMI-related calls from the cloud controller, to the running
-objectstore service.
-"""
+"""Proxy AMI-related calls from cloud controller to objectstore service."""
 
 import binascii
-import eventlet
 import os
 import shutil
 import tarfile
@@ -30,7 +26,9 @@ import tempfile
 from xml.etree import ElementTree
 
 import boto.s3.connection
+import eventlet
 
+from nova import crypto
 from nova import exception
 from nova import flags
 from nova import utils
@@ -45,64 +43,41 @@ flags.DEFINE_string('image_decryption_dir', '/tmp',
 
 
 class S3ImageService(service.BaseImageService):
+    """Wraps an existing image service to support s3 based register."""
+
     def __init__(self, service=None, *args, **kwargs):
-        if service == None:
+        if service is None:
             service = utils.import_object(FLAGS.image_service)
         self.service = service
         self.service.__init__(*args, **kwargs)
 
     def create(self, context, metadata, data=None):
-        """metadata['properties'] should contain image_location"""
+        """Create an image.
+
+        metadata['properties'] should contain image_location.
+
+        """
         image = self._s3_create(context, metadata)
         return image
 
     def delete(self, context, image_id):
-        # FIXME(vish): call to show is to check filter
-        self.show(context, image_id)
         self.service.delete(context, image_id)
 
     def update(self, context, image_id, metadata, data=None):
-        # FIXME(vish): call to show is to check filter
-        self.show(context, image_id)
         image = self.service.update(context, image_id, metadata, data)
         return image
 
     def index(self, context):
-        images = self.service.index(context)
-        # FIXME(vish): index doesn't filter so we do it manually
-        return self._filter(context, images)
+        return self.service.index(context)
 
     def detail(self, context):
-        images = self.service.detail(context)
-        # FIXME(vish): detail doesn't filter so we do it manually
-        return self._filter(context, images)
-
-    @classmethod
-    def _is_visible(cls, context, image):
-        return (context.is_admin
-                or context.project_id == image['properties']['owner_id']
-                or image['properties']['is_public'] == 'True')
-
-    @classmethod
-    def _filter(cls, context, images):
-        filtered = []
-        for image in images:
-            if not cls._is_visible(context, image):
-                continue
-            filtered.append(image)
-        return filtered
+        return self.service.detail(context)
 
     def show(self, context, image_id):
-        image = self.service.show(context, image_id)
-        if not self._is_visible(context, image):
-            raise exception.NotFound
-        return image
+        return self.service.show(context, image_id)
 
     def show_by_name(self, context, name):
-        image = self.service.show_by_name(context, name)
-        if not self._is_visible(context, image):
-            raise exception.NotFound
-        return image
+        return self.service.show_by_name(context, name)
 
     @staticmethod
     def _conn(context):
@@ -127,12 +102,12 @@ class S3ImageService(service.BaseImageService):
         return local_filename
 
     def _s3_create(self, context, metadata):
-        """Gets a manifext from s3 and makes an image"""
+        """Gets a manifext from s3 and makes an image."""
 
         image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
 
         image_location = metadata['properties']['image_location']
-        bucket_name = image_location.split("/")[0]
+        bucket_name = image_location.split('/')[0]
         manifest_path = image_location[len(bucket_name) + 1:]
         bucket = self._conn(context).get_bucket(bucket_name)
         key = bucket.get_key(manifest_path)
@@ -143,7 +118,7 @@ class S3ImageService(service.BaseImageService):
         image_type = 'machine'
 
         try:
-            kernel_id = manifest.find("machine_configuration/kernel_id").text
+            kernel_id = manifest.find('machine_configuration/kernel_id').text
             if kernel_id == 'true':
                 image_format = 'aki'
                 image_type = 'kernel'
@@ -152,7 +127,7 @@ class S3ImageService(service.BaseImageService):
             kernel_id = None
 
         try:
-            ramdisk_id = manifest.find("machine_configuration/ramdisk_id").text
+            ramdisk_id = manifest.find('machine_configuration/ramdisk_id').text
             if ramdisk_id == 'true':
                 image_format = 'ari'
                 image_type = 'ramdisk'
@@ -161,12 +136,12 @@ class S3ImageService(service.BaseImageService):
             ramdisk_id = None
 
         try:
-            arch = manifest.find("machine_configuration/architecture").text
+            arch = manifest.find('machine_configuration/architecture').text
         except Exception:
             arch = 'x86_64'
 
         properties = metadata['properties']
-        properties['owner_id'] = context.project_id
+        properties['project_id'] = context.project_id
         properties['architecture'] = arch
 
         if kernel_id:
@@ -175,8 +150,6 @@ class S3ImageService(service.BaseImageService):
         if ramdisk_id:
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
 
-        properties['is_public'] = False
-        properties['type'] = image_type
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,
                          'status': 'queued',
@@ -189,7 +162,7 @@ class S3ImageService(service.BaseImageService):
         def delayed_create():
             """This handles the fetching and decrypting of the part files."""
             parts = []
-            for fn_element in manifest.find("image").getiterator("filename"):
+            for fn_element in manifest.find('image').getiterator('filename'):
                 part = self._download_file(bucket, fn_element.text, image_path)
                 parts.append(part)
 
@@ -203,14 +176,14 @@ class S3ImageService(service.BaseImageService):
             metadata['properties']['image_state'] = 'decrypting'
             self.service.update(context, image_id, metadata)
 
-            hex_key = manifest.find("image/ec2_encrypted_key").text
+            hex_key = manifest.find('image/ec2_encrypted_key').text
             encrypted_key = binascii.a2b_hex(hex_key)
-            hex_iv = manifest.find("image/ec2_encrypted_iv").text
+            hex_iv = manifest.find('image/ec2_encrypted_iv').text
             encrypted_iv = binascii.a2b_hex(hex_iv)
 
             # FIXME(vish): grab key from common service so this can run on
             #              any host.
-            cloud_pk = os.path.join(FLAGS.ca_path, "private/cakey.pem")
+            cloud_pk = crypto.key_path(context.project_id)
 
             decrypted_filename = os.path.join(image_path, 'image.tar.gz')
             self._decrypt_image(encrypted_filename, encrypted_key,
@@ -243,7 +216,7 @@ class S3ImageService(service.BaseImageService):
                                  process_input=encrypted_key,
                                  check_exit_code=False)
         if err:
-            raise exception.Error(_("Failed to decrypt private key: %s")
+            raise exception.Error(_('Failed to decrypt private key: %s')
                                   % err)
         iv, err = utils.execute('openssl',
                                 'rsautl',
@@ -252,8 +225,8 @@ class S3ImageService(service.BaseImageService):
                                 process_input=encrypted_iv,
                                 check_exit_code=False)
         if err:
-            raise exception.Error(_("Failed to decrypt initialization "
-                                    "vector: %s") % err)
+            raise exception.Error(_('Failed to decrypt initialization '
+                                    'vector: %s') % err)
 
         _out, err = utils.execute('openssl', 'enc',
                                   '-d', '-aes-128-cbc',
@@ -263,14 +236,14 @@ class S3ImageService(service.BaseImageService):
                                   '-out', '%s' % (decrypted_filename,),
                                   check_exit_code=False)
         if err:
-            raise exception.Error(_("Failed to decrypt image file "
-                                    "%(image_file)s: %(err)s") %
+            raise exception.Error(_('Failed to decrypt image file '
+                                    '%(image_file)s: %(err)s') %
                                     {'image_file': encrypted_filename,
                                      'err': err})
 
     @staticmethod
     def _untarzip_image(path, filename):
-        tar_file = tarfile.open(filename, "r|gz")
+        tar_file = tarfile.open(filename, 'r|gz')
         tar_file.extractall(path)
         image_file = tar_file.getnames()[0]
         tar_file.close()

@@ -25,58 +25,75 @@ from nova import utils
 
 
 def stub_out_db_instance_api(stubs, injected=True):
-    """ Stubs out the db API for creating Instances """
+    """Stubs out the db API for creating Instances."""
 
     INSTANCE_TYPES = {
-        'm1.tiny': dict(memory_mb=512,
+        'm1.tiny': dict(id=2,
+                        memory_mb=512,
                         vcpus=1,
                         local_gb=0,
                         flavorid=1,
                         rxtx_cap=1),
-        'm1.small': dict(memory_mb=2048,
+        'm1.small': dict(id=5,
+                         memory_mb=2048,
                          vcpus=1,
                          local_gb=20,
                          flavorid=2,
                          rxtx_cap=2),
         'm1.medium':
-            dict(memory_mb=4096,
+            dict(id=1,
+                 memory_mb=4096,
                  vcpus=2,
                  local_gb=40,
                  flavorid=3,
                  rxtx_cap=3),
-        'm1.large': dict(memory_mb=8192,
+        'm1.large': dict(id=3,
+                         memory_mb=8192,
                          vcpus=4,
                          local_gb=80,
                          flavorid=4,
                          rxtx_cap=4),
         'm1.xlarge':
-            dict(memory_mb=16384,
+            dict(id=4,
+                 memory_mb=16384,
                  vcpus=8,
                  local_gb=160,
                  flavorid=5,
                  rxtx_cap=5)}
 
-    network_fields = {
-        'id': 'test',
-        'bridge': 'xenbr0',
-        'label': 'test_network',
-        'netmask': '255.255.255.0',
-        'cidr_v6': 'fe80::a00:0/120',
-        'netmask_v6': '120',
-        'gateway': '10.0.0.1',
-        'gateway_v6': 'fe80::a00:1',
-        'broadcast': '10.0.0.255',
-        'dns': '10.0.0.2',
-        'ra_server': None,
-        'injected': injected}
+    flat_network_fields = {'id': 'fake_flat',
+                           'bridge': 'xenbr0',
+                           'label': 'fake_flat_network',
+                           'netmask': '255.255.255.0',
+                           'cidr_v6': 'fe80::a00:0/120',
+                           'netmask_v6': '120',
+                           'gateway': '10.0.0.1',
+                           'gateway_v6': 'fe80::a00:1',
+                           'broadcast': '10.0.0.255',
+                           'dns': '10.0.0.2',
+                           'ra_server': None,
+                           'injected': injected}
 
-    fixed_ip_fields = {
-        'address': '10.0.0.3',
-        'address_v6': 'fe80::a00:3',
-        'network_id': 'test'}
+    vlan_network_fields = {'id': 'fake_vlan',
+                           'bridge': 'br111',
+                           'label': 'fake_vlan_network',
+                           'netmask': '255.255.255.0',
+                           'cidr_v6': 'fe80::a00:0/120',
+                           'netmask_v6': '120',
+                           'gateway': '10.0.0.1',
+                           'gateway_v6': 'fe80::a00:1',
+                           'broadcast': '10.0.0.255',
+                           'dns': '10.0.0.2',
+                           'ra_server': None,
+                           'vlan': 111,
+                           'injected': False}
+
+    fixed_ip_fields = {'address': '10.0.0.3',
+                       'address_v6': 'fe80::a00:3',
+                       'network_id': 'fake_flat'}
 
     class FakeModel(object):
-        """ Stubs out for model """
+        """Stubs out for model."""
         def __init__(self, values):
             self.values = values
 
@@ -95,11 +112,26 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_instance_type_get_by_name(context, name):
         return INSTANCE_TYPES[name]
 
+    def fake_instance_type_get_by_id(context, id):
+        for name, inst_type in INSTANCE_TYPES.iteritems():
+            if str(inst_type['id']) == str(id):
+                return inst_type
+        return None
+
     def fake_network_get_by_instance(context, instance_id):
+        # Even instance numbers are on vlan networks
+        if instance_id % 2 == 0:
+            return FakeModel(vlan_network_fields)
+        else:
+            return FakeModel(flat_network_fields)
         return FakeModel(network_fields)
 
     def fake_network_get_all_by_instance(context, instance_id):
-        return [FakeModel(network_fields)]
+        # Even instance numbers are on vlan networks
+        if instance_id % 2 == 0:
+            return [FakeModel(vlan_network_fields)]
+        else:
+            return [FakeModel(flat_network_fields)]
 
     def fake_instance_get_fixed_address(context, instance_id):
         return FakeModel(fixed_ip_fields).address
@@ -111,8 +143,11 @@ def stub_out_db_instance_api(stubs, injected=True):
         return [FakeModel(fixed_ip_fields)]
 
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
+    stubs.Set(db, 'network_get_all_by_instance',
+              fake_network_get_all_by_instance)
     stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
     stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'instance_type_get_by_id', fake_instance_type_get_by_id)
     stubs.Set(db, 'instance_get_fixed_address',
         fake_instance_get_fixed_address)
     stubs.Set(db, 'instance_get_fixed_address_v6',

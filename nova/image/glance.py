@@ -14,6 +14,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 """Implementation of an image service that uses Glance as the backend"""
 
 from __future__ import absolute_import
@@ -31,7 +32,9 @@ from nova.image import service
 
 LOG = logging.getLogger('nova.image.glance')
 
+
 FLAGS = flags.FLAGS
+
 
 GlanceClient = utils.import_class('glance.client.Client')
 
@@ -39,8 +42,8 @@ GlanceClient = utils.import_class('glance.client.Client')
 class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
-    GLANCE_ONLY_ATTRS = ["size", "location", "disk_format",
-                         "container_format"]
+    GLANCE_ONLY_ATTRS = ['size', 'location', 'disk_format',
+                         'container_format']
 
     # NOTE(sirp): Overriding to use _translate_to_service provided by
     # BaseImageService
@@ -56,9 +59,7 @@ class GlanceImageService(service.BaseImageService):
             self.client = client
 
     def index(self, context):
-        """
-        Calls out to Glance for a list of images available
-        """
+        """Calls out to Glance for a list of images available."""
         # NOTE(sirp): We need to use `get_images_detailed` and not
         # `get_images` here because we need `is_public` and `properties`
         # included so we can filter by user
@@ -71,9 +72,7 @@ class GlanceImageService(service.BaseImageService):
         return filtered
 
     def detail(self, context):
-        """
-        Calls out to Glance for a list of detailed image information
-        """
+        """Calls out to Glance for a list of detailed image information."""
         filtered = []
         image_metas = self.client.get_images_detailed()
         for image_meta in image_metas:
@@ -83,9 +82,7 @@ class GlanceImageService(service.BaseImageService):
         return filtered
 
     def show(self, context, image_id):
-        """
-        Returns a dict containing image data for the given opaque image id.
-        """
+        """Returns a dict with image data for the given opaque image id."""
         try:
             image_meta = self.client.get_image_meta(image_id)
         except glance_exception.NotFound:
@@ -98,9 +95,7 @@ class GlanceImageService(service.BaseImageService):
         return base_image_meta
 
     def show_by_name(self, context, name):
-        """
-        Returns a dict containing image data for the given name.
-        """
+        """Returns a dict containing image data for the given name."""
         # TODO(vish): replace this with more efficient call when glance
         #             supports it.
         image_metas = self.detail(context)
@@ -110,9 +105,7 @@ class GlanceImageService(service.BaseImageService):
         raise exception.NotFound
 
     def get(self, context, image_id, data):
-        """
-        Calls out to Glance for metadata and data and writes data.
-        """
+        """Calls out to Glance for metadata and data and writes data."""
         try:
             image_meta, image_chunks = self.client.get_image(image_id)
         except glance_exception.NotFound:
@@ -125,16 +118,16 @@ class GlanceImageService(service.BaseImageService):
         return base_image_meta
 
     def create(self, context, image_meta, data=None):
-        """
-        Store the image data and return the new image id.
+        """Store the image data and return the new image id.
 
-        :raises AlreadyExists if the image already exist.
+        :raises: AlreadyExists if the image already exist.
+
         """
         # Translate Base -> Service
-        LOG.debug(_("Creating image in Glance. Metadata passed in %s"),
+        LOG.debug(_('Creating image in Glance. Metadata passed in %s'),
                   image_meta)
         sent_service_image_meta = self._translate_to_service(image_meta)
-        LOG.debug(_("Metadata after formatting for Glance %s"),
+        LOG.debug(_('Metadata after formatting for Glance %s'),
                   sent_service_image_meta)
 
         recv_service_image_meta = self.client.add_image(
@@ -142,15 +135,18 @@ class GlanceImageService(service.BaseImageService):
 
         # Translate Service -> Base
         base_image_meta = self._translate_to_base(recv_service_image_meta)
-        LOG.debug(_("Metadata returned from Glance formatted for Base %s"),
+        LOG.debug(_('Metadata returned from Glance formatted for Base %s'),
                   base_image_meta)
         return base_image_meta
 
     def update(self, context, image_id, image_meta, data=None):
         """Replace the contents of the given image with the new data.
 
-        :raises NotFound if the image does not exist.
+        :raises: NotFound if the image does not exist.
+
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             image_meta = self.client.update_image(image_id, image_meta, data)
         except glance_exception.NotFound:
@@ -160,11 +156,13 @@ class GlanceImageService(service.BaseImageService):
         return base_image_meta
 
     def delete(self, context, image_id):
-        """
-        Delete the given image.
+        """Delete the given image.
 
-        :raises NotFound if the image does not exist.
+        :raises: NotFound if the image does not exist.
+
         """
+        # NOTE(vish): show is to check if image is available
+        self.show(context, image_id)
         try:
             result = self.client.delete_image(image_id)
         except glance_exception.NotFound:
@@ -172,66 +170,37 @@ class GlanceImageService(service.BaseImageService):
         return result
 
     def delete_all(self):
-        """
-        Clears out all images
-        """
+        """Clears out all images."""
         pass
 
     @classmethod
     def _translate_to_base(cls, image_meta):
-        """Overriding the base translation to handle conversion to datetime
-        objects
-        """
-        image_meta = service.BaseImageService._translate_to_base(image_meta)
+        """Override translation to handle conversion to datetime objects."""
+        image_meta = service.BaseImageService._propertify_metadata(
+                        image_meta, cls.SERVICE_IMAGE_ATTRS)
         image_meta = _convert_timestamps_to_datetimes(image_meta)
         return image_meta
-
-    @staticmethod
-    def _is_image_available(context, image_meta):
-        """
-        Images are always available if they are public or if the user is an
-        admin.
-
-        Otherwise, we filter by project_id (if present) and then fall-back to
-        images owned by user.
-        """
-        # FIXME(sirp): We should be filtering by user_id on the Glance side
-        # for security; however, we can't do that until we get authn/authz
-        # sorted out. Until then, filtering in Nova.
-        if image_meta['is_public'] or context.is_admin:
-            return True
-
-        properties = image_meta['properties']
-
-        if context.project_id and ('project_id' in properties):
-            return str(properties['project_id']) == str(project_id)
-
-        try:
-            user_id = properties['user_id']
-        except KeyError:
-            return False
-
-        return str(user_id) == str(context.user_id)
 
 
 # utility functions
 def _convert_timestamps_to_datetimes(image_meta):
-    """
-    Returns image with known timestamp fields converted to datetime objects
-    """
+    """Returns image with timestamp fields converted to datetime objects."""
     for attr in ['created_at', 'updated_at', 'deleted_at']:
-        if image_meta.get(attr) is not None:
+        if image_meta.get(attr):
             image_meta[attr] = _parse_glance_iso8601_timestamp(
                 image_meta[attr])
     return image_meta
 
 
 def _parse_glance_iso8601_timestamp(timestamp):
-    """
-    Parse a subset of iso8601 timestamps into datetime objects
-    """
-    GLANCE_FMT = "%Y-%m-%dT%H:%M:%S"
-    ISO_FMT = "%Y-%m-%dT%H:%M:%S.%f"
-    # FIXME(sirp): Glance is not returning in ISO format, we should fix Glance
-    # to do so, and then switch to parsing it here
-    return datetime.datetime.strptime(timestamp, GLANCE_FMT)
+    """Parse a subset of iso8601 timestamps into datetime objects."""
+    iso_formats = ['%Y-%m-%dT%H:%M:%S.%f', '%Y-%m-%dT%H:%M:%S']
+
+    for iso_format in iso_formats:
+        try:
+            return datetime.datetime.strptime(timestamp, iso_format)
+        except ValueError:
+            pass
+
+    raise ValueError(_('%(timestamp)s does not follow any of the '
+                       'signatures: %(ISO_FORMATS)s') % locals())
