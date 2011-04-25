@@ -404,7 +404,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                    name,
                                    mount_device)
         else:
-            raise exception.Invalid(_("Invalid device path %s") % device_path)
+            raise exception.InvalidDevicePath(path=device_path)
 
         virt_dom.attachDevice(xml)
 
@@ -513,8 +513,15 @@ class LibvirtConnection(driver.ComputeDriver):
         reboot happens, as the guest OS cannot ignore this action.
 
         """
+        virt_dom = self._conn.lookupByName(instance['name'])
+        # NOTE(itoumsn): Use XML delived from the running instance
+        # instead of using to_xml(instance). This is almost the ultimate
+        # stupid workaround.
+        xml = virt_dom.XMLDesc(0)
+        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
+        # better because we cannot ensure flushing dirty buffers
+        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, False)
-        xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
@@ -614,7 +621,7 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = self.to_xml(instance, False, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info)
+        self._create_image(instance, xml, network_info=network_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -1312,9 +1319,9 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
-            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
-                                      "but %d\n") % len(nodes)
-                                      + xml.serialize())
+            reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
+            reason += xml.serialize()
+            raise exception.InvalidCPUInfo(reason=reason)
 
         cpu_info = dict()
 
@@ -1343,9 +1350,8 @@ class LibvirtConnection(driver.ComputeDriver):
             tkeys = topology.keys()
             if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
-                raise exception.Invalid(_("Invalid xml: topology"
-                                          "(%(topology)s) must have "
-                                          "%(ks)s") % locals())
+                reason = _("topology (%(topology)s) must have %(ks)s")
+                raise exception.InvalidCPUInfo(reason=reason % locals())
 
         feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
@@ -1400,9 +1406,7 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            raise exception.Invalid(_("Cannot update compute manager "
-                                      "specific info, because no service "
-                                      "record was found."))
+            raise exception.ComputeServiceUnavailable(host=host)
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -1455,7 +1459,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise
 
         if ret <= 0:
-            raise exception.Invalid(m % locals())
+            raise exception.InvalidCPUInfo(reason=m % locals())
 
         return
 
