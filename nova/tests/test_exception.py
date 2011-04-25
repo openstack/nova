@@ -21,7 +21,6 @@ from nova import exception
 
 
 class ApiErrorTestCase(test.TestCase):
-
     def test_return_valid_error(self):
         # without 'code' arg
         err = exception.ApiError('fake error')
