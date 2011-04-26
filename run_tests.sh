@@ -6,6 +6,7 @@ function usage {
   echo ""
   echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
+  echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -h, --help               Print this usage message"
   echo ""
