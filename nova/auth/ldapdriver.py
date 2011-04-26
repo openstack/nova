@@ -171,7 +171,7 @@ class LdapDriver(object):
     def create_user(self, name, access_key, secret_key, is_admin):
         """Create a user"""
         if self.__user_exists(name):
-            raise exception.Duplicate(_("LDAP user %s already exists") % name)
+            raise exception.LDAPUserExists(user=name)
         if FLAGS.ldap_user_modify_only:
             if self.__ldap_user_exists(name):
                 # Retrieve user by name
@@ -225,8 +225,7 @@ class LdapDriver(object):
                        description=None, member_uids=None):
         """Create a project"""
         if self.__project_exists(name):
-            raise exception.Duplicate(_("Project can't be created because "
-                                        "project %s already exists") % name)
+            raise exception.ProjectExists(project=name)
         if not self.__user_exists(manager_uid):
             raise exception.LDAPUserNotFound(user_id=manager_uid)
         manager_dn = self.__uid_to_dn(manager_uid)
@@ -464,8 +463,7 @@ class LdapDriver(object):
                        description, member_uids=None):
         """Create a group"""
         if self.__group_exists(group_dn):
-            raise exception.Duplicate(_("Group can't be created because "
-                                        "group %s already exists") % name)
+            raise exception.LDAPGroupExists(group=name)
         members = []
         if member_uids is not None:
             for member_uid in member_uids:
@@ -500,8 +498,7 @@ class LdapDriver(object):
         if not self.__group_exists(group_dn):
             raise exception.LDAPGroupNotFound(group_id=group_dn)
         if self.__is_in_group(uid, group_dn):
-            raise exception.Duplicate(_("User %(uid)s is already a member of "
-                                        "the group %(group_dn)s") % locals())
+            raise exception.LDAPMembershipExists(uid=uid, group_dn=group_dn)
         attr = [(self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))]
         self.conn.modify_s(group_dn, attr)
 

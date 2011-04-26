@@ -55,8 +55,20 @@ class ApiError(Error):
         super(ApiError, self).__init__('%s: %s' % (code, message))
 
 
-class Duplicate(Error):
+class NotFound(Error):
     pass
+
+
+class InstanceNotFound(NotFound):
+    def __init__(self, message, instance_id):
+        self.instance_id = instance_id
+        super(InstanceNotFound, self).__init__(message)
+
+
+class VolumeNotFound(NotFound):
+    def __init__(self, message, volume_id):
+        self.volume_id = volume_id
+        super(VolumeNotFound, self).__init__(message)
 
 
 class NotAuthorized(Error):
@@ -487,3 +499,37 @@ class NotAllowed(NovaException):
 
 class GlobalRoleNotAllowed(NotAllowed):
     message = _("Unable to use global role %(role_id)s")
+
+
+#TODO(bcwaldon): EOL this exception!
+class Duplicate(NovaException):
+    pass
+
+
+class KeyPairExists(Duplicate):
+    message = _("Key pair %(key_name)s already exists.")
+
+
+class UserExists(Duplicate):
+    message = _("User %(user)s already exists.")
+
+
+class LDAPUserExists(UserExists):
+    message = _("LDAP user %(user)s already exists.")
+
+
+class LDAPGroupExists(Duplicate):
+    message = _("LDAP group %(group)s already exists.")
+
+
+class LDAPMembershipExists(Duplicate):
+    message = _("User %(uid)s is already a member of "
+                "the group %(group_dn)s")
+
+
+class ProjectExists(Duplicate):
+    message = _("Project %(project)s already exists.")
+
+
+class InstanceExists(Duplicate):
+    message = _("Instance %(name)s already exists.")

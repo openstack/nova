@@ -81,7 +81,7 @@ class DbDriver(object):
             user_ref = db.user_create(context.get_admin_context(), values)
             return self._db_user_to_auth_user(user_ref)
         except exception.Duplicate, e:
-            raise exception.Duplicate(_('User %s already exists') % name)
+            raise exception.UserExists(user=name)
 
     def _db_user_to_auth_user(self, user_ref):
         return {'id': user_ref['id'],
@@ -128,8 +128,7 @@ class DbDriver(object):
         try:
             project = db.project_create(context.get_admin_context(), values)
         except exception.Duplicate:
-            raise exception.Duplicate(_("Project can't be created because "
-                                        "project %s already exists") % name)
+            raise exception.ProjectExists(project=name)
 
         for member in members:
             db.project_add_member(context.get_admin_context(),

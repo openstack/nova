@@ -143,8 +143,7 @@ class HyperVConnection(driver.ComputeDriver):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:
-            raise exception.Duplicate(_('Attempt to create duplicate vm %s') %
-                    instance.name)
+            raise exception.InstanceExists(name=instance.name)
 
         user = manager.AuthManager().get_user(instance['user_id'])
         project = manager.AuthManager().get_project(instance['project_id'])

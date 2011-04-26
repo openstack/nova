@@ -621,7 +621,7 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = self.to_xml(instance, False, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info)
+        self._create_image(instance, xml, network_info=network_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
