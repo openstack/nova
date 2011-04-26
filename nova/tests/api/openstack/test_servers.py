@@ -1169,7 +1169,16 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
-        self.assertEqual(res_dict['server']['status'], 'INACTIVE')
+        self.assertEqual(res_dict['server']['status'], 'SHUTDOWN')
+        
+    def test_shutoff_status(self): 
+        new_return_server = return_server_with_power_state(power_state.SHUTOFF)
+        self.stubs.Set(nova.db.api, 'instance_get', new_return_server)
+        req = webob.Request.blank('/v1.0/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
         
 
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
