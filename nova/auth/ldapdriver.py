@@ -202,8 +202,7 @@ class LdapDriver(object):
                 self.conn.modify_s(self.__uid_to_dn(name), attr)
                 return self.get_user(name)
             else:
-                raise exception.NotFound(_("LDAP object for %s doesn't exist")
-                                         % name)
+                raise exception.LDAPUserNotFound(user_id=name)
         else:
             attr = [
                 ('objectclass', ['person',
@@ -228,9 +227,7 @@ class LdapDriver(object):
         if self.__project_exists(name):
             raise exception.ProjectExists(project=name)
         if not self.__user_exists(manager_uid):
-            raise exception.NotFound(_("Project can't be created because "
-                                       "manager %s doesn't exist")
-                                     % manager_uid)
+            raise exception.LDAPUserNotFound(user_id=manager_uid)
         manager_dn = self.__uid_to_dn(manager_uid)
         # description is a required attribute
         if description is None:
@@ -239,9 +236,7 @@ class LdapDriver(object):
         if member_uids is not None:
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
-                    raise exception.NotFound(_("Project can't be created "
-                                               "because user %s doesn't exist")
-                                             % member_uid)
+                    raise exception.LDAPUserNotFound(user_id=member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         # always add the manager as a member because members is required
         if not manager_dn in members:
@@ -264,9 +259,7 @@ class LdapDriver(object):
         attr = []
         if manager_uid:
             if not self.__user_exists(manager_uid):
-                raise exception.NotFound(_("Project can't be modified because "
-                                           "manager %s doesn't exist")
-                                         % manager_uid)
+                raise exception.LDAPUserNotFound(user_id=manager_uid)
             manager_dn = self.__uid_to_dn(manager_uid)
             attr.append((self.ldap.MOD_REPLACE, LdapDriver.project_attribute,
                          manager_dn))
@@ -346,7 +339,7 @@ class LdapDriver(object):
     def delete_user(self, uid):
         """Delete a user"""
         if not self.__user_exists(uid):
-            raise exception.NotFound(_("User %s doesn't exist") % uid)
+            raise exception.LDAPUserNotFound(user_id=uid)
         self.__remove_from_all(uid)
         if FLAGS.ldap_user_modify_only:
             # Delete attributes
@@ -475,9 +468,7 @@ class LdapDriver(object):
         if member_uids is not None:
             for member_uid in member_uids:
                 if not self.__user_exists(member_uid):
-                    raise exception.NotFound(_("Group can't be created "
-                                               "because user %s doesn't exist")
-                                             % member_uid)
+                    raise exception.LDAPUserNotFound(user_id=member_uid)
                 members.append(self.__uid_to_dn(member_uid))
         dn = self.__uid_to_dn(uid)
         if not dn in members:
@@ -492,8 +483,7 @@ class LdapDriver(object):
     def __is_in_group(self, uid, group_dn):
         """Check if user is in group"""
         if not self.__user_exists(uid):
-            raise exception.NotFound(_("User %s can't be searched in group "
-                                       "because the user doesn't exist") % uid)
+            raise exception.LDAPUserNotFound(user_id=uid)
         if not self.__group_exists(group_dn):
             return False
         res = self.__find_object(group_dn,
@@ -504,11 +494,9 @@ class LdapDriver(object):
     def __add_to_group(self, uid, group_dn):
         """Add user to group"""
         if not self.__user_exists(uid):
-            raise exception.NotFound(_("User %s can't be added to the group "
-                                       "because the user doesn't exist") % uid)
+            raise exception.LDAPUserNotFound(user_id=uid)
         if not self.__group_exists(group_dn):
-            raise exception.NotFound(_("The group at dn %s doesn't exist") %
-                                     group_dn)
+            raise exception.LDAPGroupNotFound(group_id=group_dn)
         if self.__is_in_group(uid, group_dn):
             raise exception.LDAPMembershipExists(uid=uid, group_dn=group_dn)
         attr = [(self.ldap.MOD_ADD, 'member', self.__uid_to_dn(uid))]
@@ -517,15 +505,12 @@ class LdapDriver(object):
     def __remove_from_group(self, uid, group_dn):
         """Remove user from group"""
         if not self.__group_exists(group_dn):
-            raise exception.NotFound(_("The group at dn %s doesn't exist")
-                                     % group_dn)
+            raise exception.LDAPGroupNotFound(group_id=group_dn)
         if not self.__user_exists(uid):
-            raise exception.NotFound(_("User %s can't be removed from the "
-                                       "group because the user doesn't exist")
-                                     % uid)
+            raise exception.LDAPUserNotFound(user_id=uid)
         if not self.__is_in_group(uid, group_dn):
-            raise exception.NotFound(_("User %s is not a member of the group")
-                                     % uid)
+            raise exception.LDAPGroupMembershipNotFound(user_id=uid,
+                                                        group_id=group_dn)
         # NOTE(vish): remove user from group and any sub_groups
         sub_dns = self.__find_group_dns_with_member(group_dn, uid)
         for sub_dn in sub_dns:
@@ -545,9 +530,7 @@ class LdapDriver(object):
     def __remove_from_all(self, uid):
         """Remove user from all roles and projects"""
         if not self.__user_exists(uid):
-            raise exception.NotFound(_("User %s can't be removed from all "
-                                       "because the user doesn't exist")
-                                     % uid)
+            raise exception.LDAPUserNotFound(user_id=uid)
         role_dns = self.__find_group_dns_with_member(
                 FLAGS.role_project_subtree, uid)
         for role_dn in role_dns:
@@ -560,8 +543,7 @@ class LdapDriver(object):
     def __delete_group(self, group_dn):
         """Delete Group"""
         if not self.__group_exists(group_dn):
-            raise exception.NotFound(_("Group at dn %s doesn't exist")
-                                     % group_dn)
+            raise exception.LDAPGroupNotFound(group_id=group_dn)
         self.conn.delete_s(group_dn)
 
     def __delete_roles(self, project_dn):

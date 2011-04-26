@@ -103,9 +103,7 @@ class DbDriver(object):
         """Create a project"""
         manager = db.user_get(context.get_admin_context(), manager_uid)
         if not manager:
-            raise exception.NotFound(_("Project can't be created because "
-                                       "manager %s doesn't exist")
-                                     % manager_uid)
+            raise exception.UserNotFound(user_id=manager_uid)
 
         # description is a required attribute
         if description is None:
@@ -119,9 +117,7 @@ class DbDriver(object):
             for member_uid in member_uids:
                 member = db.user_get(context.get_admin_context(), member_uid)
                 if not member:
-                    raise exception.NotFound(_("Project can't be created "
-                                               "because user %s doesn't exist")
-                                             % member_uid)
+                    raise exception.UserNotFound(user_id=member_uid)
                 members.add(member)
 
         values = {'id': name,
@@ -153,9 +149,7 @@ class DbDriver(object):
         if manager_uid:
             manager = db.user_get(context.get_admin_context(), manager_uid)
             if not manager:
-                raise exception.NotFound(_("Project can't be modified because "
-                                           "manager %s doesn't exist") %
-                                          manager_uid)
+                raise exception.UserNotFound(user_id=manager_uid)
             values['project_manager'] = manager['id']
         if description:
             values['description'] = description
@@ -243,8 +237,8 @@ class DbDriver(object):
     def _validate_user_and_project(self, user_id, project_id):
         user = db.user_get(context.get_admin_context(), user_id)
         if not user:
-            raise exception.NotFound(_('User "%s" not found') % user_id)
+            raise exception.UserNotFound(user_id=user_id)
         project = db.project_get(context.get_admin_context(), project_id)
         if not project:
-            raise exception.NotFound(_('Project "%s" not found') % project_id)
+            raise exception.ProjectNotFound(project_id=project_id)
         return user, project

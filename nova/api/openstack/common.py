@@ -124,7 +124,7 @@ def get_image_id_from_image_hash(image_service, context, image_hash):
                     "should have numerical format") % image_id
             LOG.error(msg)
             raise Exception(msg)
-    raise exception.NotFound(image_hash)
+    raise exception.ImageNotFound(image_id=image_hash)
 
 
 def get_id_from_href(href):

@@ -288,8 +288,7 @@ class FakeConnection(driver.ComputeDriver):
         knowledge of the instance
         """
         if instance_name not in self.instances:
-            raise exception.NotFound(_("Instance %s Not Found")
-                                     % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         i = self.instances[instance_name]
         return {'state': i.state,
                 'max_mem': 0,

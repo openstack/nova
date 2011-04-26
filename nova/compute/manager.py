@@ -829,7 +829,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         tmp_file = os.path.join(FLAGS.instances_path, filename)
         if not os.path.exists(tmp_file):
-            raise exception.NotFound(_('%s not found') % tmp_file)
+            raise exception.FileNotFound(file_path=tmp_file)
 
     @exception.wrap_exception
     def cleanup_shared_storage_test_file(self, context, filename):
@@ -869,8 +869,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Getting fixed ips
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
-            msg = _("%(instance_id)s(%(ec2_id)s) does not have fixed_ip.")
-            raise exception.NotFound(msg % locals())
+            raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
 
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:

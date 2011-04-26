@@ -506,9 +506,7 @@ class VMHelper(HelperBase):
             try:
                 return glance_disk_format2nova_type[disk_format]
             except KeyError:
-                raise exception.NotFound(
-                    _("Unrecognized disk_format '%(disk_format)s'")
-                    % locals())
+                raise exception.InvalidDiskFormat(disk_format=disk_format)
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -852,7 +850,7 @@ def safe_find_sr(session):
     """
     sr_ref = find_sr(session)
     if sr_ref is None:
-        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+        raise exception.StorageRepositoryNotFound()
     return sr_ref
 
 
