@@ -71,10 +71,6 @@ class VolumeNotFound(NotFound):
         super(VolumeNotFound, self).__init__(message)
 
 
-class Duplicate(Error):
-    pass
-
-
 class NotAuthorized(Error):
     pass
 
@@ -228,3 +224,37 @@ class InvalidVLANPortGroup(Invalid):
 
 class ImageUnacceptable(Invalid):
     message = _("Image %(image_id)s is unacceptable") + ": %(reason)s"
+
+
+#TODO(bcwaldon): EOL this exception!
+class Duplicate(NovaException):
+    pass
+
+
+class KeyPairExists(Duplicate):
+    message = _("Key pair %(key_name)s already exists.")
+
+
+class UserExists(Duplicate):
+    message = _("User %(user)s already exists.")
+
+
+class LDAPUserExists(UserExists):
+    message = _("LDAP user %(user)s already exists.")
+
+
+class LDAPGroupExists(Duplicate):
+    message = _("LDAP group %(group)s already exists.")
+
+
+class LDAPMembershipExists(Duplicate):
+    message = _("User %(uid)s is already a member of "
+                "the group %(group_dn)s")
+
+
+class ProjectExists(Duplicate):
+    message = _("Project %(project)s already exists.")
+
+
+class InstanceExists(Duplicate):
+    message = _("Instance %(name)s already exists.")

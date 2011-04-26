@@ -643,8 +643,7 @@ class VMHelper(HelperBase):
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') %
-                                        name_label)
+            raise exception.InstanceExists(name=name_label)
         else:
             return vm_refs[0]
 
