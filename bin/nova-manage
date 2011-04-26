@@ -385,10 +385,10 @@ class ProjectCommands(object):
         with open(filename, 'w') as f:
             f.write(rc)
 
-    def list(self):
+    def list(self, username=None):
         """Lists all projects
-        arguments: <none>"""
-        for project in self.manager.get_projects():
+        arguments: [username]"""
+        for project in self.manager.get_projects(username):
             print project.name
 
     def quota(self, project_id, key=None, value=None):
