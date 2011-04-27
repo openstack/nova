@@ -797,6 +797,13 @@ class VlanManager(NetworkManager):
 
         return host
 
+    def set_network_hosts(self, context):
+        """skip setting network hosts in vlan, if there is ever a need
+        for a nonhomogeneous network setup, this function would be removed in
+        favor of the super class function
+        """
+        pass
+
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
         network_ref = self.db.network_get(context, network_id)

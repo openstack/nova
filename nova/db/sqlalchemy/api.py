@@ -956,6 +956,7 @@ def instance_get(context, instance_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ips.floating_ips')).\
+                         options(joinedload('mac_addresses')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload_all('fixed_ips.network')).\
@@ -967,6 +968,7 @@ def instance_get(context, instance_id, session=None):
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ips.floating_ips')).\
+                         options(joinedload('mac_addresses')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload('metadata')).\
@@ -988,6 +990,7 @@ def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('mac_addresses')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
@@ -1000,6 +1003,7 @@ def instance_get_all_by_user(context, user_id):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('mac_addresses')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
@@ -1013,6 +1017,7 @@ def instance_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('mac_addresses')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
@@ -1028,6 +1033,7 @@ def instance_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('mac_addresses')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
@@ -1043,6 +1049,7 @@ def instance_get_all_by_reservation(context, reservation_id):
     if is_admin_context(context):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ips.floating_ips')).\
+                       options(joinedload('mac_addresses')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('instance_type')).\
@@ -1052,6 +1059,7 @@ def instance_get_all_by_reservation(context, reservation_id):
     elif is_user_context(context):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ips.floating_ips')).\
+                       options(joinedload('mac_addresses')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('instance_type')).\
@@ -1066,6 +1074,7 @@ def instance_get_project_vpn(context, project_id):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
+                   options(joinedload('mac_addresses')).\
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
