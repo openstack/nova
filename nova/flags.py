@@ -16,9 +16,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
+"""Command-line flag library.
+
+Wraps gflags.
+
 Package-level global flags are defined here, the rest are defined
 where they're used.
+
 """
 
 import getopt
@@ -145,10 +149,12 @@ class FlagValues(gflags.FlagValues):
 
 
 class StrWrapper(object):
-    """Wrapper around FlagValues objects
+    """Wrapper around FlagValues objects.
 
     Wraps FlagValues objects for string.Template so that we're
-    sure to return strings."""
+    sure to return strings.
+
+    """
     def __init__(self, context_objs):
         self.context_objs = context_objs
 
@@ -169,6 +175,7 @@ def _GetCallingModule():
 
     We generally use this function to get the name of the module calling a
     DEFINE_foo... function.
+
     """
     # Walk down the stack to find the first globals dict that's not ours.
     for depth in range(1, sys.getrecursionlimit()):
@@ -192,6 +199,7 @@ def __GetModuleName(globals_dict):
     Returns:
     A string (the name of the module) or None (if the module could not
     be identified.
+
     """
     for name, module in sys.modules.iteritems():
         if getattr(module, '__dict__', None) is globals_dict:
@@ -316,7 +324,7 @@ DEFINE_string('null_kernel', 'nokernel',
               'kernel image that indicates not to use a kernel,'
               ' but to use a raw disk image instead')
 
-DEFINE_string('vpn_image_id', 'ami-cloudpipe', 'AMI for cloudpipe vpn server')
+DEFINE_integer('vpn_image_id', 0, 'integer id for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
               '-vpn',
               'Suffix to add to project name for vpn key and secgroups')
@@ -326,7 +334,7 @@ DEFINE_integer('auth_token_ttl', 3600, 'Seconds for auth tokens to linger')
 DEFINE_string('state_path', os.path.join(os.path.dirname(__file__), '../'),
               "Top-level directory for maintaining nova's state")
 DEFINE_string('lock_path', os.path.join(os.path.dirname(__file__), '../'),
-              "Directory for lock files")
+              'Directory for lock files')
 DEFINE_string('logdir', None, 'output to a per-service log file in named '
                               'directory')
 

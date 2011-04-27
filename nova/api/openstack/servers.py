@@ -40,7 +40,7 @@ import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
 
-LOG = logging.getLogger('server')
+LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
@@ -321,6 +321,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     def _action_rebuild(self, input_dict, req, id):
+        LOG.debug(_("Rebuild server action is not implemented"))
         return faults.Fault(exc.HTTPNotImplemented())
 
     def _action_resize(self, input_dict, req, id):
@@ -336,18 +337,20 @@ class Controller(common.OpenstackController):
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return faults.Fault(exc.HTTPAccepted())
+        return exc.HTTPAccepted()
 
     def _action_reboot(self, input_dict, req, id):
-        try:
+        if 'reboot' in input_dict and 'type' in input_dict['reboot']:
             reboot_type = input_dict['reboot']['type']
-        except Exception:
-            raise faults.Fault(exc.HTTPNotImplemented())
+        else:
+            LOG.exception(_("Missing argument 'type' for reboot"))
+            return faults.Fault(exc.HTTPUnprocessableEntity())
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
             self.compute_api.reboot(req.environ['nova.context'], id)
-        except:
+        except Exception, e:
+            LOG.exception(_("Error in reboot %s"), e)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -561,9 +564,8 @@ class Controller(common.OpenstackController):
         """
         image_id = image_meta['id']
         if image_meta['status'] != 'active':
-            raise exception.Invalid(
-                _("Cannot build from image %(image_id)s, status not active") %
-                  locals())
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=_("status is not active"))
 
         if image_meta.get('container_format') != 'ami':
             return None, None
@@ -571,14 +573,12 @@ class Controller(common.OpenstackController):
         try:
             kernel_id = image_meta['properties']['kernel_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Kernel not found for image %(image_id)s") % locals())
+            raise exception.KernelNotFoundForImage(image_id=image_id)
 
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Ramdisk not found for image %(image_id)s") % locals())
+            raise exception.RamdiskNotFoundForImage(image_id=image_id)
 
         return kernel_id, ramdisk_id
 

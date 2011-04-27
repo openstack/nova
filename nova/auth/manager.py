@@ -270,8 +270,7 @@ class AuthManager(object):
         LOG.debug('user: %r', user)
         if user is None:
             LOG.audit(_("Failed authorization for access key %s"), access_key)
-            raise exception.NotFound(_('No user found for access key %s')
-                                     % access_key)
+            raise exception.AccessKeyNotFound(access_key=access_key)
 
         # NOTE(vish): if we stop using project name as id we need better
         #             logic to find a default project for user
@@ -285,8 +284,7 @@ class AuthManager(object):
             uname = user.name
             LOG.audit(_("failed authorization: no project named %(pjid)s"
                     " (user=%(uname)s)") % locals())
-            raise exception.NotFound(_('No project called %s could be found')
-                                     % project_id)
+            raise exception.ProjectNotFound(project_id=project_id)
         if not self.is_admin(user) and not self.is_project_member(user,
                                                                   project):
             uname = user.name
@@ -295,8 +293,8 @@ class AuthManager(object):
             pjid = project.id
             LOG.audit(_("Failed authorization: user %(uname)s not admin"
                     " and not member of project %(pjname)s") % locals())
-            raise exception.NotFound(_('User %(uid)s is not a member of'
-                    ' project %(pjid)s') % locals())
+            raise exception.ProjectMembershipNotFound(project_id=pjid,
+                                                      user_id=uid)
         if check_type == 's3':
             sign = signer.Signer(user.secret.encode())
             expected_signature = sign.s3_authorization(headers, verb, path)
@@ -420,9 +418,9 @@ class AuthManager(object):
         @param project: Project in which to add local role.
         """
         if role not in FLAGS.allowed_roles:
-            raise exception.NotFound(_("The %s role can not be found") % role)
+            raise exception.UserRoleNotFound(role_id=role)
         if project is not None and role in FLAGS.global_roles:
-            raise exception.NotFound(_("The %s role is global only") % role)
+            raise exception.GlobalRoleNotAllowed(role_id=role)
         uid = User.safe_id(user)
         pid = Project.safe_id(project)
         if project:
