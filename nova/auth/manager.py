@@ -303,7 +303,8 @@ class AuthManager(object):
             LOG.debug('signature: %s', signature)
             if signature != expected_signature:
                 LOG.audit(_("Invalid signature for user %s"), user.name)
-                raise exception.NotAuthorized(_('Signature does not match'))
+                raise exception.InvalidSignature(signature=signature,
+                                                 user=user)
         elif check_type == 'ec2':
             # NOTE(vish): hmac can't handle unicode, so encode ensures that
             #             secret isn't unicode
@@ -314,7 +315,8 @@ class AuthManager(object):
             LOG.debug('signature: %s', signature)
             if signature != expected_signature:
                 LOG.audit(_("Invalid signature for user %s"), user.name)
-                raise exception.NotAuthorized(_('Signature does not match'))
+                raise exception.InvalidSignature(signature=signature,
+                                                 user=user)
         return (user, project)
 
     def get_access_key(self, user, project):

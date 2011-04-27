@@ -94,7 +94,7 @@ def require_admin_context(f):
     """
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]):
-            raise exception.NotAuthorized()
+            raise exception.AdminRequired()
         return f(*args, **kwargs)
     return wrapper
 
@@ -105,7 +105,7 @@ def require_context(f):
     """
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
-            raise exception.NotAuthorized()
+            raise exception.AdminRequired()
         return f(*args, **kwargs)
     return wrapper
 
