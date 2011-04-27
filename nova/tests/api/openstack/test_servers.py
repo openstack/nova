@@ -1162,7 +1162,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_shutdown_status(self): 
+    def test_shutdown_status(self):
         new_server = return_server_with_power_state(power_state.SHUTDOWN)
         self.stubs.Set(nova.db.api, 'instance_get', new_server)
         req = webob.Request.blank('/v1.0/servers/1')
@@ -1170,8 +1170,8 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['status'], 'SHUTDOWN')
-        
-    def test_shutoff_status(self): 
+
+    def test_shutoff_status(self):
         new_server = return_server_with_power_state(power_state.SHUTOFF)
         self.stubs.Set(nova.db.api, 'instance_get', new_server)
         req = webob.Request.blank('/v1.0/servers/1')
@@ -1179,7 +1179,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
-        
+
 
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
