@@ -760,7 +760,7 @@ class DbCommands(object):
 
 
 class VersionCommands(object):
-    """Class for managing the database."""
+    """Class for exposing the codebase version."""
 
     def __init__(self):
         pass
