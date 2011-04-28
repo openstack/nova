@@ -82,6 +82,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import version
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
@@ -1091,6 +1092,8 @@ def main():
 
     script_name = argv.pop(0)
     if len(argv) < 1:
+        print _("\nOpenStack Nova version: %s (%s)\n") %\
+                (version.version_string(), version.version_string_with_vcs())
         print script_name + " category action [<args>]"
         print _("Available categories:")
         for k, _v in CATEGORIES:
