@@ -759,6 +759,16 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class VersionCommands(object):
+    """Class for managing the database."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print _("%s (%s)") %\
+                (version.version_string(), version.version_string_with_vcs())
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -1050,7 +1060,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('version', VersionCommands)]
 
 
 def lazy_match(name, key_value_tuples):
