@@ -769,6 +769,7 @@ class VersionCommands(object):
         print _("%s (%s)") %\
                 (version.version_string(), version.version_string_with_vcs())
 
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
