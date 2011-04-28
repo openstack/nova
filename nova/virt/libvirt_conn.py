@@ -960,26 +960,16 @@ class LibvirtConnection(driver.ComputeDriver):
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
+            template = "<parameter name=\"%s\"value=\"%s\" />\n"
+            net, mask = _get_net_and_mask(network['cidr'])
+            values = [("PROJNET", net), ("PROJMASK", mask)]
             if FLAGS.use_ipv6:
-                net, mask = _get_net_and_mask(network['cidr'])
                 net_v6, prefixlen_v6 = _get_net_and_prefixlen(
                                            network['cidr_v6'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJNETV6\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask, net_v6, prefixlen_v6)
-            else:
-                net, mask = _get_net_and_mask(network['cidr'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask)
+                values.extend([("PROJNETV6", net_v6),
+                               ("PROJMASKV6", prefixlen_v6)])
+
+            extra_params = "".join([template % value for value in values])
         else:
             extra_params = "\n"
 
@@ -997,10 +987,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    def to_xml(self, instance, rescue=False, network_info=None):
-        # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-
+    def _prepare_xml_info(self, instance, rescue=False, network_info=None):
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
@@ -1008,8 +995,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(network,
-                                              mapping))
+            nics.append(self._get_nic_for_xml(network, mapping))
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
@@ -1041,10 +1027,14 @@ class LibvirtConnection(driver.ComputeDriver):
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
             xml_info['disk'] = xml_info['basepath'] + "/disk"
+        return xml_info
 
+    def to_xml(self, instance, rescue=False, network_info=None):
+        # TODO(termie): cache?
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+        xml_info = self._prepare_xml_info(instance, rescue, network_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        LOG.debug(_('instance %s: finished toXML method'),
-                        instance['name'])
+        LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml
 
     def _lookup_by_name(self, instance_name):
@@ -1846,10 +1836,6 @@ class NWFilterFirewall(FirewallDriver):
         """
         if not network_info:
             network_info = _get_network_info(instance)
-        if instance['image_id'] == str(FLAGS.vpn_image_id):
-            base_filter = 'nova-vpn'
-        else:
-            base_filter = 'nova-base'
 
         ctxt = context.get_admin_context()
 
@@ -1861,41 +1847,59 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
 
+        if FLAGS.use_ipv6:
+            networks = [network for (network, _m) in network_info if
+                        network['gateway_v6']]
+
+            if networks:
+                instance_secgroup_filter_children.\
+                    append('nova-allow-ra-server')
+
         for security_group in \
                 db.security_group_get_by_instance(ctxt, instance['id']):
 
             self.refresh_security_group_rules(security_group['id'])
 
-            instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                    security_group['id'])]
+            instance_secgroup_filter_children.append('nova-secgroup-%s' %
+                                                    security_group['id'])
 
             self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
 
-        for (network, mapping) in network_info:
+        network_filters = self.\
+            _create_network_filters(instance, network_info,
+                                    instance_secgroup_filter_name)
+
+        for (name, children) in network_filters:
+            self._define_filters(name, children)
+
+    def _create_network_filters(self, instance, network_info,
+                               instance_secgroup_filter_name):
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
+            base_filter = 'nova-vpn'
+        else:
+            base_filter = 'nova-base'
+
+        result = []
+        for (_n, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
-            instance_filter_children = \
-                [base_filter, instance_secgroup_filter_name]
-
-            if FLAGS.use_ipv6:
-                gateway_v6 = network['gateway_v6']
-
-                if gateway_v6:
-                    instance_secgroup_filter_children += \
-                        ['nova-allow-ra-server']
+            instance_filter_children = [base_filter,
+                                        instance_secgroup_filter_name]
 
             if FLAGS.allow_project_net_traffic:
-                instance_filter_children += ['nova-project']
+                instance_filter_children.append('nova-project')
                 if FLAGS.use_ipv6:
-                    instance_filter_children += ['nova-project-v6']
+                    instance_filter_children.append('nova-project-v6')
 
-            self._define_filter(
-                    self._filter_container(instance_filter_name,
-                                           instance_filter_children))
+            result.append((instance_filter_name, instance_filter_children))
 
-        return
+        return result
+
+    def _define_filters(self, filter_name, filter_children):
+        self._define_filter(self._filter_container(filter_name,
+                                                   filter_children))
 
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
@@ -1997,40 +2001,38 @@ class IptablesFirewallDriver(FirewallDriver):
         self.add_filters_for_instance(instance, network_info)
         self.iptables.apply()
 
-    def add_filters_for_instance(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        chain_name = self._instance_chain_name(instance)
+    def _create_filter(self, ips, chain_name):
+        return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
-        self.iptables.ipv4['filter'].add_chain(chain_name)
+    def _filters_for_instance(self, chain_name, network_info):
+        ips_v4 = [ip['ip'] for (_n, mapping) in network_info
+                 for ip in mapping['ips']]
+        ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        ips_v4 = [ip['ip'] for (_, mapping) in network_info
-                            for ip in mapping['ips']]
+        ips_v6 = [ip['ip'] for (_n, mapping) in network_info
+                 for ip in mapping['ip6s']]
 
-        for ipv4_address in ips_v4:
-            self.iptables.ipv4['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv4_address, chain_name))
+        ipv6_rules = self._create_filter(ips_v6, chain_name)
+        return ipv4_rules, ipv6_rules
 
-        if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for (_, mapping) in network_info
-                                 for ip in mapping['ip6s']]
-
-            for ipv6_address in ips_v6:
-                self.iptables.ipv6['filter'].add_rule('local',
-                                                      '-d %s -j $%s' %
-                                                      (ipv6_address,
-                                                       chain_name))
-
-        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-
+    def _add_filters(self, chain_name, ipv4_rules, ipv6_rules):
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def add_filters_for_instance(self, instance, network_info=None):
+        chain_name = self._instance_chain_name(instance)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_rules, ipv6_rules = self._filters_for_instance(chain_name,
+                                                            network_info)
+        self._add_filters('local', ipv4_rules, ipv6_rules)
+        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
+        self._add_filters(chain_name, ipv4_rules, ipv6_rules)
 
     def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
