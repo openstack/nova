@@ -142,7 +142,7 @@ class VolumeTestCase(test.TestCase):
         self.assertEqual(vol['status'], "available")
 
         self.volume.delete_volume(self.context, volume_id)
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.VolumeNotFound,
                           db.volume_get,
                           self.context,
                           volume_id)

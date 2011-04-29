@@ -61,8 +61,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate(_("The key_pair %s already exists")
-                                  % key_name)
+        raise exception.KeyPairExists(key_name=key_name)
     except exception.NotFound:
         pass
     private_key, public_key, fingerprint = crypto.generate_key_pair()
@@ -909,11 +908,11 @@ class CloudController(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
-        except exception.NotFound:
+        except ValueError:
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:
-                raise exception.NotFound(_('Image %s not found') % ec2_id)
+                raise exception.ImageNotFound(image_id=ec2_id)
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
@@ -957,8 +956,7 @@ class CloudController(object):
                 try:
                     image = self._get_image(context, ec2_id)
                 except exception.NotFound:
-                    raise exception.NotFound(_('Image %s not found') %
-                                             ec2_id)
+                    raise exception.ImageNotFound(image_id=ec2_id)
                 images.append(image)
         else:
             images = self.image_service.detail(context)
@@ -992,7 +990,7 @@ class CloudController(object):
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
-            raise exception.NotFound(_('Image %s not found') % image_id)
+            raise exception.ImageNotFound(image_id=image_id)
         result = {'imageId': image_id, 'launchPermission': []}
         if image['is_public']:
             result['launchPermission'].append({'group': 'all'})
@@ -1015,7 +1013,7 @@ class CloudController(object):
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
-            raise exception.NotFound(_('Image %s not found') % image_id)
+            raise exception.ImageNotFound(image_id=image_id)
         internal_id = image['id']
         del(image['id'])
 

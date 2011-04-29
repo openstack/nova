@@ -573,14 +573,12 @@ class Controller(common.OpenstackController):
         try:
             kernel_id = image_meta['properties']['kernel_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Kernel not found for image %(image_id)s") % locals())
+            raise exception.KernelNotFoundForImage(image_id=image_id)
 
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Ramdisk not found for image %(image_id)s") % locals())
+            raise exception.RamdiskNotFoundForImage(image_id=image_id)
 
         return kernel_id, ramdisk_id
 

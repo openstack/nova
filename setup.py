@@ -25,14 +25,18 @@ import sys
 from setuptools import find_packages
 from setuptools.command.sdist import sdist
 
+# In order to run the i18n commands for compiling and
+# installing message catalogs, we use DistUtilsExtra.
+# Don't make this a hard requirement, but warn that
+# i18n commands won't be available if DistUtilsExtra is
+# not installed...
 try:
-    import DistUtilsExtra.auto
+    from DistUtilsExtra.auto import setup
 except ImportError:
-    print >> sys.stderr, 'To build nova you need '\
-                         'https://launchpad.net/python-distutils-extra'
-    sys.exit(1)
-assert DistUtilsExtra.auto.__version__ >= '2.18',\
-       'needs DistUtilsExtra.auto >= 2.18'
+    from setuptools import setup
+    print "Warning: DistUtilsExtra required to use i18n builders. "
+    print "To build nova with support for message catalogs, you need "
+    print "  https://launchpad.net/python-distutils-extra >= 2.18"
 
 gettext.install('nova', unicode=1)
 
@@ -102,7 +106,7 @@ def find_data_files(destdir, srcdir):
     package_data += [(destdir, files)]
     return package_data
 
-DistUtilsExtra.auto.setup(name='nova',
+setup(name='nova',
       version=version.canonical_version_string(),
       description='cloud computing fabric controller',
       author='OpenStack',
