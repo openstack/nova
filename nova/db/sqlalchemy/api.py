@@ -816,17 +816,17 @@ def instance_destroy(context, instance_id):
     with session.begin():
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_id=instance_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.InstanceMetadata).\
                 filter_by(instance_id=instance_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -2513,7 +2513,7 @@ def instance_metadata_delete(context, instance_id, key):
         filter_by(instance_id=instance_id).\
         filter_by(key=key).\
         filter_by(deleted=False).\
-        update({'deleted': 1,
+        update({'deleted': True,
                 'deleted_at': datetime.datetime.utcnow(),
                 'updated_at': literal_column('updated_at')})
 
