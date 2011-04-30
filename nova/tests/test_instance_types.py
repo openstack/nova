@@ -75,16 +75,25 @@ class InstanceTypeTestCase(test.TestCase):
     def test_invalid_create_args_should_fail(self):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(
-                exception.InvalidInputException,
+                exception.InvalidInput,
                 instance_types.create, self.name, 0, 1, 120, self.flavorid)
         self.assertRaises(
-                exception.InvalidInputException,
+                exception.InvalidInput,
                 instance_types.create, self.name, 256, -1, 120, self.flavorid)
         self.assertRaises(
-                exception.InvalidInputException,
+                exception.InvalidInput,
                 instance_types.create, self.name, 256, 1, "aa", self.flavorid)
 
     def test_non_existant_inst_type_shouldnt_delete(self):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(exception.ApiError,
                           instance_types.destroy, "sfsfsdfdfs")
+
+    def test_repeated_inst_types_should_raise_api_error(self):
+        """Ensures that instance duplicates raises ApiError"""
+        new_name = self.name + "dup"
+        instance_types.create(new_name, 256, 1, 120, self.flavorid + 1)
+        instance_types.destroy(new_name)
+        self.assertRaises(
+                exception.ApiError,
+                instance_types.create, new_name, 256, 1, 120, self.flavorid)

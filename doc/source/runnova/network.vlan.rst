@@ -36,9 +36,7 @@ In this mode, each project gets its own VLAN, Linux networking bridge, and subne
    
 While network traffic between VM instances belonging to the same VLAN is always open, Nova can enforce isolation of network traffic between different projects by enforcing one VLAN per project. 
 
-In addition, the network administrator can specify a pool of public IP addresses that users may allocate and then assign to VMs, either at boot or dynamically at run-time. This capability is similar to Amazon's 'elastic IPs'. A public IP address may be associated with a running instances, allowing the VM instance to be accessed from the public network. The public IP addresses are accessible from the network host and NATed to the private IP address of the project. 
-
-.. todo:: Describe how a public IP address could be associated with a project (a VLAN)
+In addition, the network administrator can specify a pool of public IP addresses that users may allocate and then assign to VMs, either at boot or dynamically at run-time. This capability is similar to Amazon's 'elastic IPs'. A public IP address may be associated with a running instances, allowing the VM instance to be accessed from the public network. The public IP addresses are accessible from the network host and NATed to the private IP address of the project. A public IP address could be associated with a project using the euca-allocate-address commands. 
 
 This is the default networking mode and supports the most features.  For multiple machine installation, it requires a switch that supports host-managed vlan tagging.  In this mode, nova will create a vlan and bridge for each project.  The project gets a range of private ips that are only accessible from inside the vlan.  In order for a user to access the instances in their project, a special vpn instance (code named :ref:`cloudpipe <cloudpipe>`) needs to be created.  Nova generates a certificate and key for the user to access the vpn and starts the vpn automatically. More information on cloudpipe can be found :ref:`here <cloudpipe>`.
 
@@ -176,4 +174,3 @@ Setup
   * project network size
   * DMZ network
 
-.. todo:: need specific Nova configuration added
