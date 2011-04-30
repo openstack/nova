@@ -223,22 +223,9 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
             "limits": {
                 "rate": [
                     {
-                        "regex": "changes-since",
-                        "uri": "changes-since*",
-                        "limits": [
-                            {
-                                "verb": "GET",
-                                "next-available": 0,
-                                "unit": "MINUTE",
-                                "value": 5,
-                                "remaining": 5,
-                            },
-                        ],
-                    },
-                    {
                         "regex": ".*",
                         "uri": "*",
-                        "limits": [
+                        "limit": [
                             {
                                 "verb": "GET",
                                 "next-available": 0,
@@ -250,6 +237,19 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                                 "verb": "POST",
                                 "next-available": 0,
                                 "unit": "HOUR",
+                                "value": 5,
+                                "remaining": 5,
+                            },
+                        ],
+                    },
+                    {
+                        "regex": "changes-since",
+                        "uri": "changes-since*",
+                        "limit": [
+                            {
+                                "verb": "GET",
+                                "next-available": 0,
+                                "unit": "MINUTE",
                                 "value": 5,
                                 "remaining": 5,
                             },
