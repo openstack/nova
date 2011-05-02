@@ -63,8 +63,8 @@ flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
 flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
                     'dmz range that should be accepted')
-flags.DEFINE_string('dnsmasq_config_file',"",
-                    'Override the default dnsmasq settings with those in this file')
+flags.DEFINE_string('dnsmasq_config_file', "",
+                    'Override the default dnsmasq settings with this file')
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
 
