@@ -768,14 +768,10 @@ class SimpleDriverTestCase(test.TestCase):
         s_ref = self._create_compute_service(host='somewhere',
                                              memory_mb_used=12)
 
-        try:
-            self.scheduler.driver._live_migration_dest_check(self.context,
-                                                             i_ref,
-                                                             'somewhere')
-        except exception.NotEmpty, e:
-            c = (e.message.find('Unable to migrate') >= 0)
+        self.assertRaises(exception.MigrationError,
+                          self.scheduler.driver._live_migration_dest_check,
+                          self.context, i_ref, 'somewhere')
 
-        self.assertTrue(c)
         db.instance_destroy(self.context, instance_id)
         db.service_destroy(self.context, s_ref['id'])
 

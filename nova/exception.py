@@ -49,46 +49,14 @@ class Error(Exception):
 
 
 class ApiError(Error):
-    def __init__(self, message='Unknown', code='ApiError'):
+    def __init__(self, message='Unknown', code=None):
         self.message = message
         self.code = code
-        super(ApiError, self).__init__('%s: %s' % (code, message))
-
-
-class NotFound(Error):
-    pass
-
-
-class InstanceNotFound(NotFound):
-    def __init__(self, message, instance_id):
-        self.instance_id = instance_id
-        super(InstanceNotFound, self).__init__(message)
-
-
-class VolumeNotFound(NotFound):
-    def __init__(self, message, volume_id):
-        self.volume_id = volume_id
-        super(VolumeNotFound, self).__init__(message)
-
-
-class NotAuthorized(Error):
-    pass
-
-
-class NotEmpty(Error):
-    pass
-
-
-class InvalidInputException(Error):
-    pass
-
-
-class InvalidContentType(Error):
-    pass
-
-
-class TimeoutException(Error):
-    pass
+        if code:
+            outstr = '%s: %s' % (code, message)
+        else:
+            outstr = '%s' % message
+        super(ApiError, self).__init__(outstr)
 
 
 class DBError(Error):
@@ -146,9 +114,43 @@ class NovaException(Exception):
         return self._error_string
 
 
-#TODO(bcwaldon): EOL this exception!
+class NotAuthorized(NovaException):
+    message = _("Not authorized.")
+
+    def __init__(self, *args, **kwargs):
+        super(NotFound, self).__init__(**kwargs)
+
+
+class AdminRequired(NotAuthorized):
+    message = _("User does not have admin privileges")
+
+
 class Invalid(NovaException):
-    pass
+    message = _("Unacceptable parameters.")
+
+
+class InvalidSignature(Invalid):
+    message = _("Invalid signature %(signature)s for user %(user)s.")
+
+
+class InvalidInput(Invalid):
+    message = _("Invalid input received") + ": %(reason)s"
+
+
+class InvalidInstanceType(Invalid):
+    message = _("Invalid instance type %(instance_type)s.")
+
+
+class InvalidPortRange(Invalid):
+    message = _("Invalid port range %(from_port)s:%(to_port)s.")
+
+
+class InvalidIpProtocol(Invalid):
+    message = _("Invalid IP protocol %(protocol)s.")
+
+
+class InvalidContentType(Invalid):
+    message = _("Invalid content type %(content_type)s.")
 
 
 class InstanceNotRunning(Invalid):
@@ -533,3 +535,7 @@ class ProjectExists(Duplicate):
 
 class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
+
+
+class MigrationError(NovaException):
+    message = _("Migration error") + ": %(reason)s"

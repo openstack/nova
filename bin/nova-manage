@@ -82,6 +82,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import version
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
@@ -385,10 +386,10 @@ class ProjectCommands(object):
         with open(filename, 'w') as f:
             f.write(rc)
 
-    def list(self):
+    def list(self, username=None):
         """Lists all projects
-        arguments: <none>"""
-        for project in self.manager.get_projects():
+        arguments: [username]"""
+        for project in self.manager.get_projects(username):
             print project.name
 
     def quota(self, project_id, key=None, value=None):
@@ -758,6 +759,17 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class VersionCommands(object):
+    """Class for exposing the codebase version."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print _("%s (%s)") %\
+                (version.version_string(), version.version_string_with_vcs())
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -1049,7 +1061,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('version', VersionCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -1091,6 +1104,8 @@ def main():
 
     script_name = argv.pop(0)
     if len(argv) < 1:
+        print _("\nOpenStack Nova version: %s (%s)\n") %\
+                (version.version_string(), version.version_string_with_vcs())
         print script_name + " category action [<args>]"
         print _("Available categories:")
         for k, _v in CATEGORIES:

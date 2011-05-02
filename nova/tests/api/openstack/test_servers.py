@@ -33,6 +33,7 @@ import nova.api.openstack
 from nova.api.openstack import servers
 import nova.compute.api
 from nova.compute import instance_types
+from nova.compute import power_state
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
@@ -56,6 +57,12 @@ def return_server_with_addresses(private, public):
     return _return_server
 
 
+def return_server_with_power_state(power_state):
+    def _return_server(context, id):
+        return stub_instance(id, power_state=power_state)
+    return _return_server
+
+
 def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
@@ -73,7 +80,7 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
-                  host=None):
+                  host=None, power_state=0):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -96,7 +103,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "launch_index": 0,
         "key_name": "",
         "key_data": "",
-        "state": 0,
+        "state": power_state,
         "state_description": "",
         "memory_mb": 0,
         "vcpus": 0,
@@ -612,6 +619,33 @@ class ServersTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_create_instance_v11_local_href(self):
+        self._setup_for_create_instance()
+
+        imageRef = 'http://localhost/v1.1/images/2'
+        imageRefLocal = '2'
+        flavorRef = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': imageRefLocal,
+                'flavorRef': flavorRef,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertEqual(flavorRef, server['flavorRef'])
+        self.assertEqual(imageRef, server['imageRef'])
+        self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v10(self):
         self._setup_for_create_instance()
@@ -1154,6 +1188,24 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
+
+    def test_shutdown_status(self):
+        new_server = return_server_with_power_state(power_state.SHUTDOWN)
+        self.stubs.Set(nova.db.api, 'instance_get', new_server)
+        req = webob.Request.blank('/v1.0/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['status'], 'SHUTDOWN')
+
+    def test_shutoff_status(self):
+        new_server = return_server_with_power_state(power_state.SHUTOFF)
+        self.stubs.Set(nova.db.api, 'instance_get', new_server)
+        req = webob.Request.blank('/v1.0/servers/1')
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['status'], 'SHUTOFF')
 
 
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
