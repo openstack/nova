@@ -29,7 +29,7 @@ from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
-import nova.api.openstack.views.flavors
+import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
