@@ -223,6 +223,13 @@ class AuthManager(object):
         if driver or not getattr(self, 'driver', None):
             self.driver = utils.import_class(driver or FLAGS.auth_driver)
 
+        if FLAGS.memcached_servers:
+            import memcache
+        else:
+            from nova import fakememcache as memcache
+        self.mc = memcache.Client(FLAGS.memcached_servers,
+                                  debug=0)
+
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
                      check_type='ec2', headers=None):
@@ -270,8 +277,7 @@ class AuthManager(object):
         LOG.debug('user: %r', user)
         if user is None:
             LOG.audit(_("Failed authorization for access key %s"), access_key)
-            raise exception.NotFound(_('No user found for access key %s')
-                                     % access_key)
+            raise exception.AccessKeyNotFound(access_key=access_key)
 
         # NOTE(vish): if we stop using project name as id we need better
         #             logic to find a default project for user
@@ -285,8 +291,7 @@ class AuthManager(object):
             uname = user.name
             LOG.audit(_("failed authorization: no project named %(pjid)s"
                     " (user=%(uname)s)") % locals())
-            raise exception.NotFound(_('No project called %s could be found')
-                                     % project_id)
+            raise exception.ProjectNotFound(project_id=project_id)
         if not self.is_admin(user) and not self.is_project_member(user,
                                                                   project):
             uname = user.name
@@ -295,8 +300,8 @@ class AuthManager(object):
             pjid = project.id
             LOG.audit(_("Failed authorization: user %(uname)s not admin"
                     " and not member of project %(pjname)s") % locals())
-            raise exception.NotFound(_('User %(uid)s is not a member of'
-                    ' project %(pjid)s') % locals())
+            raise exception.ProjectMembershipNotFound(project_id=pjid,
+                                                      user_id=uid)
         if check_type == 's3':
             sign = signer.Signer(user.secret.encode())
             expected_signature = sign.s3_authorization(headers, verb, path)
@@ -305,7 +310,8 @@ class AuthManager(object):
             LOG.debug('signature: %s', signature)
             if signature != expected_signature:
                 LOG.audit(_("Invalid signature for user %s"), user.name)
-                raise exception.NotAuthorized(_('Signature does not match'))
+                raise exception.InvalidSignature(signature=signature,
+                                                 user=user)
         elif check_type == 'ec2':
             # NOTE(vish): hmac can't handle unicode, so encode ensures that
             #             secret isn't unicode
@@ -316,7 +322,8 @@ class AuthManager(object):
             LOG.debug('signature: %s', signature)
             if signature != expected_signature:
                 LOG.audit(_("Invalid signature for user %s"), user.name)
-                raise exception.NotAuthorized(_('Signature does not match'))
+                raise exception.InvalidSignature(signature=signature,
+                                                 user=user)
         return (user, project)
 
     def get_access_key(self, user, project):
@@ -360,6 +367,27 @@ class AuthManager(object):
             if self.has_role(user, role):
                 return True
 
+    def _build_mc_key(self, user, role, project=None):
+        key_parts = ['rolecache', User.safe_id(user), str(role)]
+        if project:
+            key_parts.append(Project.safe_id(project))
+        return '-'.join(key_parts)
+
+    def _clear_mc_key(self, user, role, project=None):
+        # NOTE(anthony): it would be better to delete the key
+        self.mc.set(self._build_mc_key(user, role, project), None)
+
+    def _has_role(self, user, role, project=None):
+        mc_key = self._build_mc_key(user, role, project)
+        rslt = self.mc.get(mc_key)
+        if rslt is None:
+            with self.driver() as drv:
+                rslt = drv.has_role(user, role, project)
+                self.mc.set(mc_key, rslt)
+                return rslt
+        else:
+            return rslt
+
     def has_role(self, user, role, project=None):
         """Checks existence of role for user
 
@@ -383,24 +411,24 @@ class AuthManager(object):
         @rtype: bool
         @return: True if the user has the role.
         """
-        with self.driver() as drv:
-            if role == 'projectmanager':
-                if not project:
-                    raise exception.Error(_("Must specify project"))
-                return self.is_project_manager(user, project)
+        if role == 'projectmanager':
+            if not project:
+                raise exception.Error(_("Must specify project"))
+            return self.is_project_manager(user, project)
 
-            global_role = drv.has_role(User.safe_id(user),
-                                        role,
-                                        None)
-            if not global_role:
-                return global_role
+        global_role = self._has_role(User.safe_id(user),
+                                     role,
+                                     None)
 
-            if not project or role in FLAGS.global_roles:
-                return global_role
+        if not global_role:
+            return global_role
 
-            return drv.has_role(User.safe_id(user),
-                                 role,
-                                 Project.safe_id(project))
+        if not project or role in FLAGS.global_roles:
+            return global_role
+
+        return self._has_role(User.safe_id(user),
+                              role,
+                              Project.safe_id(project))
 
     def add_role(self, user, role, project=None):
         """Adds role for user
@@ -420,9 +448,9 @@ class AuthManager(object):
         @param project: Project in which to add local role.
         """
         if role not in FLAGS.allowed_roles:
-            raise exception.NotFound(_("The %s role can not be found") % role)
+            raise exception.UserRoleNotFound(role_id=role)
         if project is not None and role in FLAGS.global_roles:
-            raise exception.NotFound(_("The %s role is global only") % role)
+            raise exception.GlobalRoleNotAllowed(role_id=role)
         uid = User.safe_id(user)
         pid = Project.safe_id(project)
         if project:
@@ -432,6 +460,7 @@ class AuthManager(object):
             LOG.audit(_("Adding sitewide role %(role)s to user %(uid)s")
                     % locals())
         with self.driver() as drv:
+            self._clear_mc_key(uid, role, pid)
             drv.add_role(uid, role, pid)
 
     def remove_role(self, user, role, project=None):
@@ -460,6 +489,7 @@ class AuthManager(object):
             LOG.audit(_("Removing sitewide role %(role)s"
                     " from user %(uid)s") % locals())
         with self.driver() as drv:
+            self._clear_mc_key(uid, role, pid)
             drv.remove_role(uid, role, pid)
 
     @staticmethod

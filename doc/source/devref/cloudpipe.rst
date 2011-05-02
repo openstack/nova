@@ -62,9 +62,15 @@ Making a cloudpipe image is relatively easy.
    :language: bash
    :linenos:
 
-# download and run the payload on boot from /etc/rc.local.
+# download and run the payload on boot from /etc/rc.local
 
 .. literalinclude:: rc.local
+   :language: bash
+   :linenos:
+
+# setup /etc/network/interfaces
+
+.. literalinclude:: interfaces
    :language: bash
    :linenos:
 

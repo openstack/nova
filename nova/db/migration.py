@@ -15,10 +15,12 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 """Database setup and migration commands."""
 
 from nova import flags
 from nova import utils
+
 
 FLAGS = flags.FLAGS
 flags.DECLARE('db_backend', 'nova.db.api')

@@ -16,16 +16,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Nova logging handler.
+"""Nova logging handler.
 
 This module adds to logging functionality by adding the option to specify
 a context object when calling the various log methods.  If the context object
 is not specified, default formatting is used.
 
 It also allows setting of formatting information through flags.
-"""
 
+"""
 
 import cStringIO
 import inspect
@@ -41,34 +40,28 @@ from nova import version
 
 
 FLAGS = flags.FLAGS
-
 flags.DEFINE_string('logging_context_format_string',
                     '%(asctime)s %(levelname)s %(name)s '
                     '[%(request_id)s %(user)s '
                     '%(project)s] %(message)s',
                     'format string to use for log messages with context')
-
 flags.DEFINE_string('logging_default_format_string',
                     '%(asctime)s %(levelname)s %(name)s [-] '
                     '%(message)s',
                     'format string to use for log messages without context')
-
 flags.DEFINE_string('logging_debug_format_suffix',
                     'from (pid=%(process)d) %(funcName)s'
                     ' %(pathname)s:%(lineno)d',
                     'data to append to log format when level is DEBUG')
-
 flags.DEFINE_string('logging_exception_prefix',
                     '(%(name)s): TRACE: ',
                     'prefix each line of exception output with this format')
-
 flags.DEFINE_list('default_log_levels',
                   ['amqplib=WARN',
                    'sqlalchemy=WARN',
                    'boto=WARN',
                    'eventlet.wsgi.server=WARN'],
                   'list of logger=LEVEL pairs')
-
 flags.DEFINE_bool('use_syslog', False, 'output to syslog')
 flags.DEFINE_string('logfile', None, 'output to named file')
 
@@ -83,6 +76,8 @@ WARN = logging.WARN
 INFO = logging.INFO
 DEBUG = logging.DEBUG
 NOTSET = logging.NOTSET
+
+
 # methods
 getLogger = logging.getLogger
 debug = logging.debug
@@ -93,6 +88,8 @@ error = logging.error
 exception = logging.exception
 critical = logging.critical
 log = logging.log
+
+
 # handlers
 StreamHandler = logging.StreamHandler
 WatchedFileHandler = logging.handlers.WatchedFileHandler
@@ -127,17 +124,18 @@ def _get_log_file_path(binary=None):
 
 
 class NovaLogger(logging.Logger):
-    """
-    NovaLogger manages request context and formatting.
+    """NovaLogger manages request context and formatting.
 
     This becomes the class that is instanciated by logging.getLogger.
+
     """
+
     def __init__(self, name, level=NOTSET):
         logging.Logger.__init__(self, name, level)
         self.setup_from_flags()
 
     def setup_from_flags(self):
-        """Setup logger from flags"""
+        """Setup logger from flags."""
         level = NOTSET
         for pair in FLAGS.default_log_levels:
             logger, _sep, level_name = pair.partition('=')
@@ -148,7 +146,7 @@ class NovaLogger(logging.Logger):
         self.setLevel(level)
 
     def _log(self, level, msg, args, exc_info=None, extra=None, context=None):
-        """Extract context from any log call"""
+        """Extract context from any log call."""
         if not extra:
             extra = {}
         if context:
@@ -157,17 +155,17 @@ class NovaLogger(logging.Logger):
         return logging.Logger._log(self, level, msg, args, exc_info, extra)
 
     def addHandler(self, handler):
-        """Each handler gets our custom formatter"""
+        """Each handler gets our custom formatter."""
         handler.setFormatter(_formatter)
         return logging.Logger.addHandler(self, handler)
 
     def audit(self, msg, *args, **kwargs):
-        """Shortcut for our AUDIT level"""
+        """Shortcut for our AUDIT level."""
         if self.isEnabledFor(AUDIT):
             self._log(AUDIT, msg, args, **kwargs)
 
     def exception(self, msg, *args, **kwargs):
-        """Logging.exception doesn't handle kwargs, so breaks context"""
+        """Logging.exception doesn't handle kwargs, so breaks context."""
         if not kwargs.get('exc_info'):
             kwargs['exc_info'] = 1
         self.error(msg, *args, **kwargs)
@@ -181,14 +179,13 @@ class NovaLogger(logging.Logger):
             for k in env.keys():
                 if not isinstance(env[k], str):
                     env.pop(k)
-            message = "Environment: %s" % json.dumps(env)
+            message = 'Environment: %s' % json.dumps(env)
             kwargs.pop('exc_info')
             self.error(message, **kwargs)
 
 
 class NovaFormatter(logging.Formatter):
-    """
-    A nova.context.RequestContext aware formatter configured through flags.
+    """A nova.context.RequestContext aware formatter configured through flags.
 
     The flags used to set format strings are: logging_context_foramt_string
     and logging_default_format_string.  You can also specify
@@ -197,10 +194,11 @@ class NovaFormatter(logging.Formatter):
 
     For information about what variables are available for the formatter see:
     http://docs.python.org/library/logging.html#formatter
+
     """
 
     def format(self, record):
-        """Uses contextstring if request_id is set, otherwise default"""
+        """Uses contextstring if request_id is set, otherwise default."""
         if record.__dict__.get('request_id', None):
             self._fmt = FLAGS.logging_context_format_string
         else:
@@ -214,20 +212,21 @@ class NovaFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
     def formatException(self, exc_info, record=None):
-        """Format exception output with FLAGS.logging_exception_prefix"""
+        """Format exception output with FLAGS.logging_exception_prefix."""
         if not record:
             return logging.Formatter.formatException(self, exc_info)
         stringbuffer = cStringIO.StringIO()
         traceback.print_exception(exc_info[0], exc_info[1], exc_info[2],
                                   None, stringbuffer)
-        lines = stringbuffer.getvalue().split("\n")
+        lines = stringbuffer.getvalue().split('\n')
         stringbuffer.close()
         formatted_lines = []
         for line in lines:
             pl = FLAGS.logging_exception_prefix % record.__dict__
-            fl = "%s%s" % (pl, line)
+            fl = '%s%s' % (pl, line)
             formatted_lines.append(fl)
-        return "\n".join(formatted_lines)
+        return '\n'.join(formatted_lines)
+
 
 _formatter = NovaFormatter()
 
@@ -241,7 +240,7 @@ class NovaRootLogger(NovaLogger):
         NovaLogger.__init__(self, name, level)
 
     def setup_from_flags(self):
-        """Setup logger from flags"""
+        """Setup logger from flags."""
         global _filelog
         if FLAGS.use_syslog:
             self.syslog = SysLogHandler(address='/dev/log')

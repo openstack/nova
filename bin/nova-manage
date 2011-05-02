@@ -58,7 +58,6 @@ import gettext
 import glob
 import json
 import os
-import re
 import sys
 import time
 
@@ -66,11 +65,11 @@ import IPy
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
                                    os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
+if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
+    sys.path.insert(0, POSSIBLE_TOPDIR)
 
 gettext.install('nova', unicode=1)
 
@@ -83,6 +82,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import version
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
@@ -386,10 +386,10 @@ class ProjectCommands(object):
         with open(filename, 'w') as f:
             f.write(rc)
 
-    def list(self):
+    def list(self, username=None):
         """Lists all projects
-        arguments: <none>"""
-        for project in self.manager.get_projects():
+        arguments: [username]"""
+        for project in self.manager.get_projects(username):
             print project.name
 
     def quota(self, project_id, key=None, value=None):
@@ -759,6 +759,17 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class VersionCommands(object):
+    """Class for exposing the codebase version."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print _("%s (%s)") %\
+                (version.version_string(), version.version_string_with_vcs())
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -809,11 +820,11 @@ class VolumeCommands(object):
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
-    def _print_instance_types(self, n, val):
+    def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
             "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
-            n, val["memory_mb"], val["vcpus"], val["local_gb"],
+            name, val["memory_mb"], val["vcpus"], val["local_gb"],
             val["flavorid"], val["swap"], val["rxtx_quota"],
             val["rxtx_cap"], deleted)
 
@@ -827,11 +838,17 @@ class InstanceTypeCommands(object):
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
         except exception.InvalidInputException:
-            print "Must supply valid parameters to create instance type"
+            print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
-        except exception.DBError, e:
-            print "DB Error: %s" % e
+        except exception.ApiError, e:
+            print "\n\n"
+            print "\n%s" % e
+            print "Please ensure instance_type name and flavorid are unique."
+            print "To complete remove a instance_type, use the --purge flag:"
+            print "\n     # nova-manage instance_type delete <name> --purge\n"
+            print "Currently defined instance_type names and flavorids:"
+            self.list("--all")
             sys.exit(2)
         except:
             print "Unknown error"
@@ -1021,7 +1038,7 @@ class ImageCommands(object):
                     machine_images[image_path] = image_metadata
                 else:
                     other_images[image_path] = image_metadata
-            except Exception as exc:
+            except Exception:
                 print _("Failed to load %(fn)s.") % locals()
         # NOTE(vish): do kernels and ramdisks first so images
         self._convert_images(other_images)
@@ -1044,7 +1061,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('version', VersionCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -1086,6 +1104,8 @@ def main():
 
     script_name = argv.pop(0)
     if len(argv) < 1:
+        print _("\nOpenStack Nova version: %s (%s)\n") %\
+                (version.version_string(), version.version_string_with_vcs())
         print script_name + " category action [<args>]"
         print _("Available categories:")
         for k, _v in CATEGORIES:
