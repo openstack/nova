@@ -735,6 +735,9 @@ class LibvirtConnection(driver.ComputeDriver):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    def get_host_ip_addr(self):
+        return FLAGS.my_ip
+
     @exception.wrap_exception
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
