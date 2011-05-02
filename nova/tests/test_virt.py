@@ -44,7 +44,9 @@ def _concurrency(wait, done, target):
     done.send()
 
 
-def _create_network_info(count=1, ipv6=True):
+def _create_network_info(count=1, ipv6=None):
+    if ipv6 is None:
+        ipv6 = FLAGS.use_ipv6
     fake = 'fake'
     fake_ip = '0.0.0.0/0'
     fake_ip_2 = '0.0.0.1/0'
@@ -830,14 +832,14 @@ class IptablesFirewallTestCase(test.TestCase):
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)
-        network_info = _create_network_info(ipv6=FLAGS.use_ipv6)
+        network_info = _create_network_info()
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 3)
 
     def test_filters_for_instance_without_ip_v6(self):
         self.flags(use_ipv6=False)
-        network_info = _create_network_info(ipv6=FLAGS.use_ipv6)
+        network_info = _create_network_info()
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 0)
