@@ -646,6 +646,11 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.assertTrue(count)
 
+    def test_get_host_ip_addr(self):
+        conn = libvirt_conn.LibvirtConnection(False)
+        ip = conn.get_host_ip_addr()
+        self.assertEquals(ip, FLAGS.my_ip)
+
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
