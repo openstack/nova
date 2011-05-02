@@ -43,6 +43,7 @@ flags.DEFINE_string('vmwareapi_wsdl_loc',
 
 
 if suds:
+
     class VIMMessagePlugin(suds.plugin.MessagePlugin):
 
         def addAttributeForValue(self, node):

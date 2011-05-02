@@ -146,7 +146,7 @@ class LocalImageServiceTest(_BaseImageServiceTests):
         for x in [1, 2, 3]:
             tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
         # create some valid image directories names
-        for x in ["1485baed", "1a60f0ee",  "3123a73d"]:
+        for x in ["1485baed", "1a60f0ee", "3123a73d"]:
             os.makedirs(os.path.join(self.tempdir, x))
         found_image_ids = self.service._ids()
         self.assertEqual(True, isinstance(found_image_ids, list))
@@ -335,7 +335,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     name="public image"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
-                    status="ACTIVE" />
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
@@ -353,7 +354,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     name="None"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
-                    status="ACTIVE" />
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
@@ -372,7 +374,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 name="public image"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE">
+                status="ACTIVE"
+                xmlns="http://docs.openstack.org/compute/api/v1.1">
             <links>
                 <link href="%(expected_href)s" rel="self"/>
                 <link href="%(expected_href)s" rel="bookmark"
@@ -408,7 +411,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(404, response.status_int)
 
         expected = minidom.parseString("""
-            <itemNotFound code="404">
+            <itemNotFound code="404"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <message>
                     Image not found.
                 </message>
@@ -441,8 +445,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
+        # NOTE(justinsb): I believe this should still use the v1.0 XSD,
+        # because the element hasn't changed definition
         expected = minidom.parseString("""
-            <itemNotFound code="404">
+            <itemNotFound code="404"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <message>
                     Image not found.
                 </message>

@@ -28,10 +28,7 @@ import urllib
 import uuid
 from xml.dom import minidom
 
-from eventlet import event
 import glance.client
-from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -49,6 +46,8 @@ LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
+flags.DEFINE_integer('block_device_creation_timeout', 10,
+                     'time to wait for a block device to be created')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -101,8 +100,8 @@ class VMHelper(HelperBase):
             3. Using hardware virtualization
         """
 
-        instance_type = instance_types.\
-                                get_instance_type(instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -169,8 +168,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def ensure_free_mem(cls, session, instance):
-        instance_type = instance_types.get_instance_type(
-            instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
@@ -304,7 +303,6 @@ class VMHelper(HelperBase):
                 % locals())
 
         vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
-        vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
@@ -508,9 +506,7 @@ class VMHelper(HelperBase):
             try:
                 return glance_disk_format2nova_type[disk_format]
             except KeyError:
-                raise exception.NotFound(
-                    _("Unrecognized disk_format '%(disk_format)s'")
-                    % locals())
+                raise exception.InvalidDiskFormat(disk_format=disk_format)
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -645,8 +641,7 @@ class VMHelper(HelperBase):
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') %
-                                        name_label)
+            raise exception.InstanceExists(name=name_label)
         else:
             return vm_refs[0]
 
@@ -753,14 +748,14 @@ class VMHelper(HelperBase):
         session.call_xenapi('SR.scan', sr_ref)
 
 
-def get_rrd(host, uuid):
+def get_rrd(host, vm_uuid):
     """Return the VM RRD XML as a string"""
     try:
         xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
             FLAGS.xenapi_connection_username,
             FLAGS.xenapi_connection_password,
             host,
-            uuid))
+            vm_uuid))
         return xml.read()
     except IOError:
         return None
@@ -855,7 +850,7 @@ def safe_find_sr(session):
     """
     sr_ref = find_sr(session)
     if sr_ref is None:
-        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+        raise exception.StorageRepositoryNotFound()
     return sr_ref
 
 
@@ -896,6 +891,16 @@ def remap_vbd_dev(dev):
     return remapped_dev
 
 
+def _wait_for_device(dev):
+    """Wait for device node to appear"""
+    for i in xrange(0, FLAGS.block_device_creation_timeout):
+        if os.path.exists('/dev/%s' % dev):
+            return
+        time.sleep(1)
+
+    raise StorageError(_('Timeout waiting for device %s to be created') % dev)
+
+
 def with_vdi_attached_here(session, vdi_ref, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
@@ -924,6 +929,11 @@ def with_vdi_attached_here(session, vdi_ref, read_only, f):
         if dev != orig_dev:
             LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
+        if dev != 'autodetect':
+            # NOTE(johannes): Unit tests will end up with a device called
+            # 'autodetect' which obviously won't exist. It's not ideal,
+            # but the alternatives were much messier
+            _wait_for_device(dev)
         return f(dev)
     finally:
         LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
@@ -1003,7 +1013,6 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
 
 def _write_partition(virtual_size, dev):
     dest = '/dev/%s' % dev
-    mbr_last = MBR_SIZE_SECTORS - 1
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
@@ -1130,7 +1139,7 @@ def _prepare_injectables(inst, networks_info):
                               'dns': dns,
                               'address_v6': ip_v6 and ip_v6['ip'] or '',
                               'netmask_v6': ip_v6 and ip_v6['netmask'] or '',
-                              'gateway_v6': ip_v6 and ip_v6['gateway'] or '',
+                              'gateway_v6': ip_v6 and info['gateway6'] or '',
                               'use_ipv6': FLAGS.use_ipv6}
             interfaces_info.append(interface_info)
 
