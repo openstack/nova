@@ -33,7 +33,6 @@ PIP_REQUIRES = os.path.join(ROOT, 'tools', 'pip-requires')
 TWISTED_NOVA='http://nova.openstack.org/Twisted-10.0.0Nova.tar.gz'
 PY_VERSION = "python" + str(sys.version_info[0]) + '.' + str(sys.version_info[1])
 
-
 def die(message, *args):
   print >>sys.stderr, message % args
   sys.exit(1)
@@ -41,8 +40,6 @@ def die(message, *args):
 def check_python_version():
   if sys.version_info < (2,6):
     die("Need Python Version >= 2.6")
-
-
 
 def run_command(cmd, redirect_output=True, check_exit_code=True):
   """
