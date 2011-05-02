@@ -40,7 +40,6 @@ import multiprocessing
 import os
 import random
 import shutil
-import socket
 import subprocess
 import sys
 import tempfile
@@ -737,9 +736,7 @@ class LibvirtConnection(driver.ComputeDriver):
         return {'token': token, 'host': host, 'port': port}
 
     def get_host_ip_addr(self):
-        hostname = self._conn.getHostname()
-        ip = socket.gethostbyname(hostname)
-        return ip
+        return FLAGS.my_ip
 
     @exception.wrap_exception
     def get_vnc_console(self, instance):
