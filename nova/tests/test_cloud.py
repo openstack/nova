@@ -30,13 +30,13 @@ from eventlet import greenthread
 from nova import context
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import service
 from nova import test
 from nova import utils
-from nova import exception
 from nova.auth import manager
 from nova.compute import power_state
 from nova.api.ec2 import cloud
@@ -73,7 +73,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}}
+                    'type': 'machine', 'image_state': 'available'}}
 
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
@@ -307,15 +307,16 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
-        allinst = db.instance_get_all(context.get_admin_context())
-        self.assertEqual(0, len(allinst))
-        def fake_show_decrypt(meh, context, id):
+        all_instances = db.instance_get_all(context.get_admin_context())
+        self.assertEqual(0, len(all_instances))
+
+        def fake_show_decrypt(self, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'decrypting'}}
 
-        def fake_show_avail(meh, context, id):
+        def fake_show_no_state(self, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine', 'image_state': 'available'}}
+                    'type': 'machine'}}
 
         image_id = FLAGS.default_image
         instance_type = FLAGS.default_instance_type
@@ -324,17 +325,7 @@ class CloudTestCase(test.TestCase):
                   'instance_type': instance_type,
                   'max_count': max_count}
         run_instances = self.cloud.run_instances
-        # when image doesn't have 'image_state' attr at all
-        self.assertRaises(exception.ApiError, run_instances,
-                          self.context, **kwargs)
-        # when image has 'image_state' yet not 'available'
-        self.stubs.UnsetAll()
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
-        self.assertRaises(exception.ApiError, run_instances,
-                          self.context, **kwargs)
         # when image has valid image_state
-        self.stubs.UnsetAll()
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_avail)
         result = run_instances(self.context, **kwargs)
         instance = result['instancesSet'][0]
         self.assertEqual(instance['imageId'], 'ami-00000001')
@@ -342,6 +333,16 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['instanceId'], 'i-00000001')
         self.assertEqual(instance['instanceState']['name'], 'scheduling')
         self.assertEqual(instance['instanceType'], 'm1.small')
+        # when image doesn't have 'image_state' attr at all
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_no_state)
+        self.assertRaises(exception.ApiError, run_instances,
+                          self.context, **kwargs)
+        # when image has 'image_state' yet not 'available'
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
+        self.assertRaises(exception.ApiError, run_instances,
+                          self.context, **kwargs)
 
     def test_update_of_instance_display_fields(self):
         inst = db.instance_create(self.context, {})
