@@ -635,7 +635,6 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
 
         server = json.loads(res.body)['server']
-        self.assertEqual(16, len(server['adminPass']))
         self.assertEqual(1, server['id'])
         self.assertEqual(flavorRef, server['flavorRef'])
         self.assertEqual(imageRef, server['imageRef'])
