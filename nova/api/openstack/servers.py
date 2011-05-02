@@ -14,28 +14,25 @@
 #    under the License.
 
 import base64
-import hashlib
 import traceback
 
 from webob import exc
 from xml.dom import minidom
 
 from nova import compute
-from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import utils
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
+import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
-from nova.compute import power_state
 import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
@@ -560,9 +557,8 @@ class Controller(common.OpenstackController):
         """
         image_id = image_meta['id']
         if image_meta['status'] != 'active':
-            raise exception.Invalid(
-                _("Cannot build from image %(image_id)s, status not active") %
-                  locals())
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=_("status is not active"))
 
         if image_meta.get('container_format') != 'ami':
             return None, None
@@ -570,14 +566,12 @@ class Controller(common.OpenstackController):
         try:
             kernel_id = image_meta['properties']['kernel_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Kernel not found for image %(image_id)s") % locals())
+            raise exception.KernelNotFoundForImage(image_id=image_id)
 
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Ramdisk not found for image %(image_id)s") % locals())
+            raise exception.RamdiskNotFoundForImage(image_id=image_id)
 
         return kernel_id, ramdisk_id
 
@@ -593,9 +587,6 @@ class ControllerV10(Controller):
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV10()
         return nova.api.openstack.views.servers.ViewBuilderV10(
             addresses_builder)
-
-    def _get_addresses_view_builder(self, req):
-        return nova.api.openstack.views.addresses.ViewBuilderV10(req)
 
     def _limit_items(self, items, req):
         return common.limited(items, req)
@@ -649,9 +640,6 @@ class ControllerV11(Controller):
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV11()
         return nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder, base_url)
-
-    def _get_addresses_view_builder(self, req):
-        return nova.api.openstack.views.addresses.ViewBuilderV11(req)
 
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']

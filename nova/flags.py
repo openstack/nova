@@ -324,7 +324,7 @@ DEFINE_string('null_kernel', 'nokernel',
               'kernel image that indicates not to use a kernel,'
               ' but to use a raw disk image instead')
 
-DEFINE_string('vpn_image_id', 'ami-cloudpipe', 'AMI for cloudpipe vpn server')
+DEFINE_integer('vpn_image_id', 0, 'integer id for cloudpipe vpn server')
 DEFINE_string('vpn_key_suffix',
               '-vpn',
               'Suffix to add to project name for vpn key and secgroups')
@@ -368,6 +368,9 @@ DEFINE_string('host', socket.gethostname(),
 
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
+
+DEFINE_list('memcached_servers', None,
+            'Memcached servers or None for in process cache.')
 
 DEFINE_string('zone_name', 'nova', 'name of this zone')
 DEFINE_list('zone_capabilities',
