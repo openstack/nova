@@ -31,10 +31,17 @@ ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 VENV = os.path.join(ROOT, '.nova-venv')
 PIP_REQUIRES = os.path.join(ROOT, 'tools', 'pip-requires')
 TWISTED_NOVA='http://nova.openstack.org/Twisted-10.0.0Nova.tar.gz'
+PY_VERSION = "python" + str(sys.version_info[0]) + '.' + str(sys.version_info[1])
+
 
 def die(message, *args):
   print >>sys.stderr, message % args
   sys.exit(1)
+
+def check_python_version():
+  if sys.version_info < (2,6):
+    die("Need Python Version >= 2.6")
+
 
 
 def run_command(cmd, redirect_output=True, check_exit_code=True):
@@ -100,12 +107,12 @@ def install_dependencies(venv=VENV):
 
 
   # Tell the virtual env how to "import nova"
-  pthfile = os.path.join(venv, "lib", "python2.6", "site-packages", "nova.pth")
+  pthfile = os.path.join(venv, "lib", PY_VERSION, "site-packages", "nova.pth")
   f = open(pthfile, 'w')
   f.write("%s\n" % ROOT)
   # Patch eventlet (see FAQ # 1485)
   patchsrc = os.path.join(ROOT, 'tools', 'eventlet-patch')
-  patchfile = os.path.join(venv, "lib", "python2.6", "site-packages", "eventlet",
+  patchfile = os.path.join(venv, "lib", PY_VERSION, "site-packages", "eventlet",
                           "green", "subprocess.py")
   patch_cmd = "patch %s %s" % (patchfile, patchsrc)
   os.system(patch_cmd)
@@ -134,6 +141,7 @@ def print_help():
 
 
 def main(argv):
+  check_python_version()
   check_dependencies()
   create_virtualenv()
   install_dependencies()

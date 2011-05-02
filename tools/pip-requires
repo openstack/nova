@@ -2,7 +2,7 @@ SQLAlchemy==0.6.3
 pep8==0.5.0
 pylint==0.19
 IPy==0.70
-Cheetah==2.4.2.1
+Cheetah==2.4.4
 M2Crypto==0.20.2
 amqplib==0.6.1
 anyjson==0.2.4
