@@ -620,6 +620,33 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
+    def test_create_instance_v11_local_href(self):
+        self._setup_for_create_instance()
+
+        imageRef = 'http://localhost/v1.1/images/2'
+        imageRefLocal = '2'
+        flavorRef = 'http://localhost/v1.1/flavors/3'
+        body = {
+            'server': {
+                'name': 'server_test',
+                'imageRef': imageRefLocal,
+                'flavorRef': flavorRef,
+            },
+        }
+
+        req = webob.Request.blank('/v1.1/servers')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        server = json.loads(res.body)['server']
+        self.assertEqual(1, server['id'])
+        self.assertEqual(flavorRef, server['flavorRef'])
+        self.assertEqual(imageRef, server['imageRef'])
+        self.assertEqual(res.status_int, 200)
+
     def test_create_instance_with_admin_pass_v10(self):
         self._setup_for_create_instance()
 
