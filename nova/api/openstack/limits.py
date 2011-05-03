@@ -34,8 +34,6 @@ from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import limits as limits_views
-from nova.wsgi import Controller
-from nova.wsgi import Middleware
 
 
 # Convenience constants for the limits dictionary passed to Limiter().
@@ -197,7 +195,7 @@ DEFAULT_LIMITS = [
 ]
 
 
-class RateLimitingMiddleware(Middleware):
+class RateLimitingMiddleware(wsgi.Middleware):
     """
     Rate-limits requests passing through this middleware. All limit information
     is stored in memory for this implementation.
@@ -211,7 +209,7 @@ class RateLimitingMiddleware(Middleware):
         @param application: WSGI application to wrap
         @param limits: List of dictionaries describing limits
         """
-        Middleware.__init__(self, application)
+        wsgi.Middleware.__init__(self, application)
         self._limiter = Limiter(limits or DEFAULT_LIMITS)
 
     @wsgify(RequestClass=wsgi.Request)
