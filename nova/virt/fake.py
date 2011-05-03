@@ -367,7 +367,7 @@ class FakeConnection(driver.ComputeDriver):
         return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
 
     def get_console_output(self, instance):
-        return 'FAKE CONSOLE\xffOUTPUT'.decode('utf8','replace').encode('ascii','replace')
+        return 'FAKE CONSOLE\xffOUTPUT'
 
 
     def get_ajax_console(self, instance):

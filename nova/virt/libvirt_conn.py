@@ -695,7 +695,7 @@ class LibvirtConnection(driver.ComputeDriver):
         else:
             fpath = console_log
 
-        return self._dump_file(fpath).decode('utf8','replace').encode('ascii','replace')
+        return self._dump_file(fpath)
 
     @exception.wrap_exception
     def get_ajax_console(self, instance):
