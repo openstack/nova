@@ -15,39 +15,38 @@
 
 """
 Query is a plug-in mechanism for requesting instance resources.
-Three plug-ins are included: PassThru, Flavor & JSON. PassThru just
+Three plug-ins are included: AllHosts, Flavor & JSON. AllHosts just
 returns the full, unfiltered list of hosts. Flavor is a hard coded
 matching mechanism based on flavor criteria and JSON is an ad-hoc
 query grammar.
 """
 
 from nova import exception
+from nova import flags
+from nova import log as logging
 from nova import utils
+
+LOG = logging.getLogger('nova.scheduler.query')
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('default_query_engine',
+                    'nova.scheduler.query.AllHostsQuery',
+                    'Which query engine to use for filtering hosts.')
+
 
 class Query:
     """Base class for query plug-ins."""
 
     def instance_type_to_query(self, instance_type):
         """Convert instance_type into a query for most common use-case."""
-        raise exception.Error(_("Query driver not specified."))
+        raise exception.BadSchedulerQueryDriver()
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that fulfill the query."""
-        raise exception.Error(_("Query driver not specified."))
+        raise exception.BadSchedulerQueryDriver()
 
 
-def load_driver(driver_name):
-    resource = utils.import_class(driver_name)
-    if type(resource) != types.ClassType:
-        continue
-    cls = resource
-    if not issubclass(cls, Query):
-        raise exception.Error(_("Query driver does not derive "
-                "from nova.scheduler.query.Query."))
-    return cls
-
-
-class PassThruQuery:
+class AllHostsQuery:
     """NOP query plug-in. Returns all hosts in ZoneManager.
     This essentially does what the old Scheduler+Chance used
     to give us."""
@@ -59,7 +58,7 @@ class PassThruQuery:
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts from ZoneManager list."""
-        hosts = zone_manager.service_state.get('compute', {})
+        hosts = zone_manager.service_states.get('compute', {})
         return [(host, capabilities)
                 for host, capabilities in hosts.iteritems()]
 
@@ -73,7 +72,7 @@ class FlavorQuery:
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can create instance_type."""
-        hosts = zone_manager.service_state.get('compute', {})
+        hosts = zone_manager.service_states.get('compute', {})
         selected_hosts = []
         instance_type = query
         for host, capabilities in hosts.iteritems():
@@ -148,8 +147,8 @@ class JsonQuery:
         '<=': _less_than_equal,
         '>=': _greater_than_equal,
         'not': _not,
-        'must', _must,
-        'or', _or,
+        'must': _must,
+        'or': _or,
     }
 
     def instance_type_to_query(self, instance_type):
@@ -161,4 +160,15 @@ class JsonQuery:
         return []
 
 
-                              
+# Since the caller may specify which driver to use we need
+# to have an authoritative list of what is permissible. 
+DRIVERS = [AllHostsQuery, FlavorQuery, JsonQuery]
+
+
+def choose_driver(driver_name=None):
+    if not driver_name:
+        driver_name = FLAGS.default_query_engine
+    for driver in DRIVERS:
+        if str(driver) == driver_name:
+            return driver
+    raise exception.SchedulerQueryDriverNotFound(driver_name=driver_name)

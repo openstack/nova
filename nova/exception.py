@@ -449,6 +449,14 @@ class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
 
 
+class SchedulerQueryDriverNotFound(NotFound):
+    message = _("Scheduler Query Driver %(driver_name)s could not be found.")
+
+
+class BadSchedulerQueryDriver(NotFound):
+    message = _("Invalid Scheduler Query Driver selected.")
+
+
 class InstanceMetadataNotFound(NotFound):
     message = _("Instance %(instance_id)s has no metadata with "
                 "key %(metadata_key)s.")
