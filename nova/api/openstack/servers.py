@@ -692,6 +692,7 @@ class ControllerV11(Controller):
             image_ref = info["rebuild"]["imageRef"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageRef from request.")
+            LOG.debug(msg)
             return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         image_id = common.get_id_from_href(image_ref)
