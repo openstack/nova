@@ -74,10 +74,10 @@ class FlavorQuery:
         """Return a list of hosts that can create instance_type."""
         hosts = zone_manager.service_states.get('compute', {})
         selected_hosts = []
-        instance_type = query
+        query_type, instance_type = query
         for host, capabilities in hosts.iteritems():
-            host_ram_mb = capabilities.get['host_memory']['free']
-            disk_bytes = capabilities.get['disk']['available']
+            host_ram_mb = capabilities['host_memory']['free']
+            disk_bytes = capabilities['disk']['available']
             if host_ram_mb >= instance_type['memory_mb'] and \
                 disk_bytes >= instance_type['local_gb']:
                     selected_hosts.append((host, capabilities))
