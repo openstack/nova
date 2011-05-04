@@ -246,19 +246,21 @@ def _get_target(volume_id):
     1) volume_ref['host'] must resolve to something rather than loopback
     """
     volume_ref = db.volume_get(context.get_admin_context(),
-                                         volume_id)
+                               volume_id)
     result = (None, None)
     try:
-        (r, _e) = utils.execute('sudo', 'iscsiadm', '-m', 'discovery',
-                                '-t', 'sendtargets', '-p', volume_ref['host'])
+        (r, _e) = utils.execute('sudo', 'iscsiadm',
+                                '-m', 'discovery',
+                                '-t', 'sendtargets',
+                                '-p', volume_ref['host'])
     except exception.ProcessExecutionError, exc:
         LOG.exception(exc)
     else:
         volume_name = "volume-%08x" % volume_id
         for target in r.splitlines():
             if FLAGS.iscsi_ip_prefix in target and volume_name in target:
-                    (location, _sep, iscsi_name) = target.partition(" ")
-                    break
+                (location, _sep, iscsi_name) = target.partition(" ")
+                break
         iscsi_portal = location.split(",")[0]
         result = (iscsi_name, iscsi_portal)
     return result
