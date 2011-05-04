@@ -64,13 +64,11 @@ class QueryTestCase(test.TestCase):
                 rxtx_quota= 30000,
                 rxtx_cap= 200)
 
-        hosts = {}
-        for x in xrange(10):
-            hosts['host%s' % x] = self._host_caps(x)
-
         self.zone_manager = FakeZoneManager()
-        self.zone_manager.service_states = {}
-        self.zone_manager.service_states['compute'] = hosts
+        states = {}
+        for x in xrange(10):
+            states['host%s' % x] = {'compute': self._host_caps(x)}
+        self.zone_manager.service_states = states
 
     def tearDown(self):
         FLAGS.default_query_engine = self.old_flag
@@ -100,7 +98,20 @@ class QueryTestCase(test.TestCase):
     def test_flavor_driver(self):
         driver = query.FlavorQuery()
         # filter all hosts that can support 50 ram and 500 disk
-        cooked = driver.instance_type_to_query(self.instance_type)
+        name, cooked = driver.instance_type_to_query(self.instance_type)
+        self.assertEquals('nova.scheduler.query.FlavorQuery', name)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
+        self.assertEquals(6, len(hosts))
+        just_hosts = [host for host, caps in hosts]
+        just_hosts.sort()
+        self.assertEquals('host4', just_hosts[0])
+        self.assertEquals('host9', just_hosts[5])
+
+    def test_json_driver(self):
+        driver = query.JsonQuery()
+        # filter all hosts that can support 50 ram and 500 disk
+        name, cooked = driver.instance_type_to_query(self.instance_type)
+        self.assertEquals('nova.scheduler.query.JsonQuery', name)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]

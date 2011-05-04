@@ -21,6 +21,8 @@ matching mechanism based on flavor criteria and JSON is an ad-hoc
 query grammar.
 """
 
+import json
+
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -58,9 +60,8 @@ class AllHostsQuery:
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts from ZoneManager list."""
-        hosts = zone_manager.service_states.get('compute', {})
-        return [(host, capabilities)
-                for host, capabilities in hosts.iteritems()]
+        return [(host, services)
+               for host, services in zone_manager.service_state.iteritems()]
 
 
 class FlavorQuery:
@@ -72,10 +73,10 @@ class FlavorQuery:
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can create instance_type."""
-        hosts = zone_manager.service_states.get('compute', {})
+        instance_type = query
         selected_hosts = []
-        query_type, instance_type = query
-        for host, capabilities in hosts.iteritems():
+        for host, services in zone_manager.service_states.iteritems():
+            capabilities = services.get('compute', {})
             host_ram_mb = capabilities['host_memory']['free']
             disk_bytes = capabilities['disk']['available']
             if host_ram_mb >= instance_type['memory_mb'] and \
@@ -113,31 +114,74 @@ class JsonQuery:
     """Query plug-in to allow simple JSON-based grammar for selecting hosts."""
 
     def _equals(self, args):
-        pass
+        """First term is == all the other terms."""
+        if len(args) < 2:
+            return False
+        lhs = args[0]
+        for rhs in args[1:]:
+            if lhs != rhs:
+                return False
+        return True
 
     def _less_than(self, args):
-        pass
+        """First term is < all the other terms."""
+        if len(args) < 2:
+            return False
+        lhs = args[0]
+        for rhs in args[1:]:
+            if lhs >= rhs:
+                return False
+        return True
 
     def _greater_than(self, args):
-        pass
+        """First term is > all the other terms."""
+        if len(args) < 2:
+            return False
+        lhs = args[0]
+        for rhs in args[1:]:
+            if lhs <= rhs:
+                return False
+        return True
 
     def _in(self, args):
-        pass
+        """First term is in set of remaining terms"""
+        if len(args) < 2:
+            return False
+        return args[0] in args[1:]
 
     def _less_than_equal(self, args):
-        pass
+        """First term is <= all the other terms."""
+        if len(args) < 2:
+            return False
+        lhs = args[0]
+        for rhs in args[1:]:
+            if lhs > rhs:
+                return False
+        return True
         
     def _greater_than_equal(self, args):
-        pass
+        """First term is >= all the other terms."""
+        if len(args) < 2:
+            return False
+        lhs = args[0]
+        for rhs in args[1:]:
+            if lhs < rhs:
+                return False
+        return True
 
     def _not(self, args):
-        pass
+        if len(args) == 0:
+            return False
+        return not args[0]
 
     def _must(self, args):
-        pass
+        return True
 
     def _or(self, args):
-        pass
+        return True in args
+ 
+    def _and(self, args):
+        return False not in args
  
     commands = {
         '=': _equals,
@@ -149,15 +193,60 @@ class JsonQuery:
         'not': _not,
         'must': _must,
         'or': _or,
+        'and': _and,
     }
 
     def instance_type_to_query(self, instance_type):
         """Convert instance_type into JSON query object."""
-        return (str(self.__class__), instance_type)
+        required_ram = instance_type['memory_mb']
+        required_disk = instance_type['local_gb']
+        query = ['and', 
+                    ['>=', '$compute.host_memory.free', required_ram],
+                    ['>=', '$compute.disk.available', required_disk]
+                ]
+        return (str(self.__class__), json.dumps(query))
+
+    def _parse_string(self, string, host, services):
+        """Strings prefixed with $ are capability lookups in the
+        form '$service.capability[.subcap*]'"""
+        if not string:
+            return None
+        if string[0] != '$':
+            return string
+
+        path = string[1:].split('.')
+        for item in path:
+            services = services.get(item, None)
+            if not services:
+                return None
+        return services 
+
+    def _process_query(self, zone_manager, query, host, services):
+       if len(query) == 0:
+           return True
+       cmd = query[0] 
+       method = self.commands[cmd]  # Let exception fly.
+       cooked_args = []
+       for arg in query[1:]:
+           if isinstance(arg, list):
+               arg = self._process_query(zone_manager, arg, host, services)
+           elif isinstance(arg, basestring):
+               arg = self._parse_string(arg, host, services)
+           if arg != None:
+               cooked_args.append(arg)
+       result = method(self, cooked_args)
+       print "*** %s %s = %s" % (cmd, cooked_args, result)
+       return result
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can fulfill query."""
-        return []
+        expanded = json.loads(query)
+        hosts = []
+        for host, services in zone_manager.service_states.iteritems():
+            print "-----"
+            if self._process_query(zone_manager, expanded, host, services):
+                hosts.append((host, services))
+        return hosts
 
 
 # Since the caller may specify which driver to use we need
