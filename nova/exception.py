@@ -50,13 +50,17 @@ class Error(Exception):
 
 class ApiError(Error):
     def __init__(self, message='Unknown', code=None):
-        self.message = message
+        self.msg = message
         self.code = code
         if code:
             outstr = '%s: %s' % (code, message)
         else:
             outstr = '%s' % message
         super(ApiError, self).__init__(outstr)
+
+
+class BuildInProgress(Error):
+    pass
 
 
 class DBError(Error):
