@@ -114,6 +114,7 @@ class FlavorQuery:
 #rxtx_quota = Column(Integer, nullable=False, default=0)
 #rxtx_cap = Column(Integer, nullable=False, default=0)
 
+
 class JsonQuery:
     """Query plug-in to allow simple JSON-based grammar for selecting hosts."""
 
@@ -162,7 +163,7 @@ class JsonQuery:
             if lhs > rhs:
                 return False
         return True
-        
+
     def _greater_than_equal(self, args):
         """First term is >= all the other terms."""
         if len(args) < 2:
@@ -180,10 +181,10 @@ class JsonQuery:
 
     def _or(self, args):
         return True in args
- 
+
     def _and(self, args):
         return False not in args
- 
+
     commands = {
         '=': _equals,
         '<': _less_than,
@@ -200,7 +201,7 @@ class JsonQuery:
         """Convert instance_type into JSON query object."""
         required_ram = instance_type['memory_mb']
         required_disk = instance_type['local_gb']
-        query = ['and', 
+        query = ['and',
                     ['>=', '$compute.host_memory.free', required_ram],
                     ['>=', '$compute.disk.available', required_disk]
                 ]
@@ -219,24 +220,24 @@ class JsonQuery:
             services = services.get(item, None)
             if not services:
                 return None
-        return services 
+        return services
 
     def _process_query(self, zone_manager, query, host, services):
-       if len(query) == 0:
-           return True
-       cmd = query[0] 
-       method = self.commands[cmd]  # Let exception fly.
-       cooked_args = []
-       for arg in query[1:]:
-           if isinstance(arg, list):
-               arg = self._process_query(zone_manager, arg, host, services)
-           elif isinstance(arg, basestring):
-               arg = self._parse_string(arg, host, services)
-           if arg != None:
-               cooked_args.append(arg)
-       result = method(self, cooked_args)
-       print "*** %s %s = %s" % (cmd, cooked_args, result)
-       return result
+        if len(query) == 0:
+            return True
+        cmd = query[0]
+        method = self.commands[cmd]  # Let exception fly.
+        cooked_args = []
+        for arg in query[1:]:
+            if isinstance(arg, list):
+                arg = self._process_query(zone_manager, arg, host, services)
+            elif isinstance(arg, basestring):
+                arg = self._parse_string(arg, host, services)
+            if arg != None:
+                cooked_args.append(arg)
+        result = method(self, cooked_args)
+        print "*** %s %s = %s" % (cmd, cooked_args, result)
+        return result
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can fulfill query."""
@@ -253,7 +254,7 @@ class JsonQuery:
 
 
 # Since the caller may specify which driver to use we need
-# to have an authoritative list of what is permissible. 
+# to have an authoritative list of what is permissible.
 DRIVERS = [AllHostsQuery, FlavorQuery, JsonQuery]
 
 
