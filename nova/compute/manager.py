@@ -137,16 +137,32 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
 
-    def _update_state(self, context, instance_id):
+    def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
-        # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
-        try:
-            info = self.driver.get_info(instance_ref['name'])
-            state = info['state']
-        except exception.NotFound:
-            state = power_state.FAILED
+
+        if state is None:
+            try:
+                info = self.driver.get_info(instance_ref['name'])
+            except exception.NotFound:
+                info = None
+
+            if info is not None:
+                state = info['state']
+            else:
+                state = power_state.FAILED
+
         self.db.instance_set_state(context, instance_id, state)
+
+    def _update_launched_at(self, context, instance_id, launched_at=None):
+        """Update the launched_at parameter of the given instance."""
+        data = {'launched_at': launched_at or datetime.datetime.utcnow()}
+        self.db.instance_update(context, instance_id, data)
+
+    def _update_image_id(self, context, instance_id, image_id):
+        """Update the image_id for the given instance."""
+        data = {'image_id': image_id}
+        self.db.instance_update(context, instance_id, data)
 
     def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host.
@@ -231,24 +247,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id)
 
         # TODO(vish) check to make sure the availability zone matches
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'spawning')
+        self._update_state(context, instance_id, power_state.BUILDING)
 
         try:
             self.driver.spawn(instance_ref)
-            now = datetime.datetime.utcnow()
-            self.db.instance_update(context,
-                                    instance_id,
-                                    {'launched_at': now})
-        except Exception:  # pylint: disable=W0702
-            LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
-                            " enabled in the BIOS?"), instance_id,
-                                                     context=context)
-            self.db.instance_set_state(context,
-                                       instance_id,
-                                       power_state.SHUTDOWN)
+        except Exception as ex:  # pylint: disable=W0702
+            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                    "virtualization enabled in the BIOS? Details: "
+                    "%(ex)s") % locals()
+            LOG.exception(msg)
 
         if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
             public_ip = self.network_api.allocate_floating_ip(context)
@@ -262,6 +269,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    floating_ip,
                                                    fixed_ip,
                                                    affect_auto_assigned=True)
+
+        self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -315,6 +324,33 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def rebuild_instance(self, context, instance_id, image_id):
+        """Destroy and re-make this instance.
+
+        A 'rebuild' effectively purges all existing data from the system and
+        remakes the VM with given 'metadata' and 'personalities'.
+
+        :param context: `nova.RequestContext` object
+        :param instance_id: Instance identifier (integer)
+        :param image_id: Image identifier (integer)
+        """
+        context = context.elevated()
+
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
+
+        self._update_state(context, instance_id, power_state.BUILDING)
+
+        self.driver.destroy(instance_ref)
+        instance_ref.image_id = image_id
+        self.driver.spawn(instance_ref)
+
+        self._update_image_id(context, instance_id, image_id)
+        self._update_launched_at(context, instance_id)
+        self._update_state(context, instance_id)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -1072,8 +1108,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_instance is None:
                 # NOTE(justinsb): We have to be very careful here, because a
                 # concurrent operation could be in progress (e.g. a spawn)
-                if db_state == power_state.NOSTATE:
-                    # Assume that NOSTATE => spawning
+                if db_state == power_state.BUILDING:
                     # TODO(justinsb): This does mean that if we crash during a
                     # spawn, the machine will never leave the spawning state,
                     # but this is just the way nova is; this function isn't
@@ -1104,9 +1139,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
-                self.db.instance_set_state(context,
-                                           db_instance['id'],
-                                           vm_state)
+                self._update_state(context, db_instance['id'], vm_state)
 
             # NOTE(justinsb): We no longer auto-remove SHUTOFF instances
             # It's quite hard to get them back when we do.

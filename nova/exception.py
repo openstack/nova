@@ -49,10 +49,18 @@ class Error(Exception):
 
 
 class ApiError(Error):
-    def __init__(self, message='Unknown', code='ApiError'):
-        self.message = message
+    def __init__(self, message='Unknown', code=None):
+        self.msg = message
         self.code = code
-        super(ApiError, self).__init__('%s: %s' % (code, message))
+        if code:
+            outstr = '%s: %s' % (code, message)
+        else:
+            outstr = '%s' % message
+        super(ApiError, self).__init__(outstr)
+
+
+class BuildInProgress(Error):
+    pass
 
 
 class DBError(Error):
