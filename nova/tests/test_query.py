@@ -153,4 +153,14 @@ class QueryTestCase(test.TestCase):
         just_hosts.sort()
         for index, host in zip([1, 2, 4, 5, 6, 7, 8, 9, 10], just_hosts):
             self.assertEquals('host%02d' % index, host)
+ 
+        raw  = ['in', '$compute.host_memory.free', 20, 40, 60, 80, 100]]
+        cooked = json.dumps(raw)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
+
+        self.assertEquals(5, len(hosts))
+        just_hosts = [host for host, caps in hosts]
+        just_hosts.sort()
+        for index, host in zip([2, 4, 6, 8, 10], just_hosts):
+            self.assertEquals('host%02d' % index, host)
             
