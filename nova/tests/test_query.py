@@ -33,7 +33,7 @@ class QueryTestCase(test.TestCase):
 
     def _host_caps(self, multiplier):
         # Returns host capabilities in the following way:
-        # host0 = memory:free 10 (100max)
+        # host1 = memory:free 10 (100max)
         #         disk:available 100 (1000max)
         # hostN = memory:free 10 + 10N
         #         disk:available 100 + 100N
@@ -69,7 +69,7 @@ class QueryTestCase(test.TestCase):
         self.zone_manager = FakeZoneManager()
         states = {}
         for x in xrange(10):
-            states['host%s' % x] = {'compute': self._host_caps(x)}
+            states['host%02d' % (x + 1)] = {'compute': self._host_caps(x)}
         self.zone_manager.service_states = states
 
     def tearDown(self):
@@ -106,8 +106,8 @@ class QueryTestCase(test.TestCase):
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
-        self.assertEquals('host4', just_hosts[0])
-        self.assertEquals('host9', just_hosts[5])
+        self.assertEquals('host05', just_hosts[0])
+        self.assertEquals('host10', just_hosts[5])
 
     def test_json_driver(self):
         driver = query.JsonQuery()
@@ -118,8 +118,8 @@ class QueryTestCase(test.TestCase):
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
-        self.assertEquals('host4', just_hosts[0])
-        self.assertEquals('host9', just_hosts[5])
+        self.assertEquals('host05', just_hosts[0])
+        self.assertEquals('host10', just_hosts[5])
 
         # Try some custom queries
 
@@ -139,5 +139,18 @@ class QueryTestCase(test.TestCase):
         self.assertEquals(5, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
-        for index, host in zip([0, 1, 7, 8, 9], just_hosts):
-            self.assertEquals('host%d' % index, host)
+        for index, host in zip([1, 2, 8, 9, 10], just_hosts):
+            self.assertEquals('host%02d' % index, host)
+ 
+        raw  = ['not', 
+                    ['=', '$compute.host_memory.free', 30],
+               ]
+        cooked = json.dumps(raw)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
+
+        self.assertEquals(9, len(hosts))
+        just_hosts = [host for host, caps in hosts]
+        just_hosts.sort()
+        for index, host in zip([1, 2, 4, 5, 6, 7, 8, 9, 10], just_hosts):
+            self.assertEquals('host%02d' % index, host)
+            

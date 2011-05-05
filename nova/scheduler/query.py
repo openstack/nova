@@ -176,7 +176,7 @@ class JsonQuery:
     def _not(self, args):
         if len(args) == 0:
             return False
-        return not args[0]
+        return [not arg for arg in args]
 
     def _or(self, args):
         return True in args
@@ -244,7 +244,10 @@ class JsonQuery:
         hosts = []
         for host, services in zone_manager.service_states.iteritems():
             print "-----"
-            if self._process_query(zone_manager, expanded, host, services):
+            r = self._process_query(zone_manager, expanded, host, services)
+            if isinstance(r, list):
+                r = True in r
+            if r:
                 hosts.append((host, services))
         return hosts
 
