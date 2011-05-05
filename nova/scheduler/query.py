@@ -236,7 +236,6 @@ class JsonQuery:
             if arg != None:
                 cooked_args.append(arg)
         result = method(self, cooked_args)
-        print "*** %s %s = %s" % (cmd, cooked_args, result)
         return result
 
     def filter_hosts(self, zone_manager, query):
@@ -244,7 +243,6 @@ class JsonQuery:
         expanded = json.loads(query)
         hosts = []
         for host, services in zone_manager.service_states.iteritems():
-            print "-----"
             r = self._process_query(zone_manager, expanded, host, services)
             if isinstance(r, list):
                 r = True in r
