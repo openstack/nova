@@ -538,7 +538,7 @@ class CloudController(object):
         now = datetime.datetime.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
-                "output": base64.b64encode(output.encode('utf-8','replace'))}
+                "output": base64.b64encode(output)}
 
     def get_ajax_console(self, context, instance_id, **kwargs):
         ec2_id = instance_id[0]

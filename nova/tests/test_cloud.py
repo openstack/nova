@@ -290,8 +290,7 @@ class CloudTestCase(test.TestCase):
         instance_id = rv['instancesSet'][0]['instanceId']
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
-        self.assertEquals(b64decode(output['output']).decode('utf-8'),
-                          u'FAKE CONSOLE\ufffdOUTPUT')
+        self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE?OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
