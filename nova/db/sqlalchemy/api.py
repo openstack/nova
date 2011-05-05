@@ -94,7 +94,7 @@ def require_admin_context(f):
     """
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]):
-            raise exception.NotAuthorized()
+            raise exception.AdminRequired()
         return f(*args, **kwargs)
     return wrapper
 
@@ -105,7 +105,7 @@ def require_context(f):
     """
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
-            raise exception.NotAuthorized()
+            raise exception.AdminRequired()
         return f(*args, **kwargs)
     return wrapper
 
@@ -816,17 +816,17 @@ def instance_destroy(context, instance_id):
     with session.begin():
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_id=instance_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.InstanceMetadata).\
                 filter_by(instance_id=instance_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -2513,7 +2513,7 @@ def instance_metadata_delete(context, instance_id, key):
         filter_by(instance_id=instance_id).\
         filter_by(key=key).\
         filter_by(deleted=False).\
-        update({'deleted': 1,
+        update({'deleted': True,
                 'deleted_at': datetime.datetime.utcnow(),
                 'updated_at': literal_column('updated_at')})
 
