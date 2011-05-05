@@ -369,7 +369,6 @@ class FakeConnection(driver.ComputeDriver):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE\xffOUTPUT'
 
-
     def get_ajax_console(self, instance):
         return {'token': 'FAKETOKEN',
                 'host': 'fakeajaxconsole.com',
