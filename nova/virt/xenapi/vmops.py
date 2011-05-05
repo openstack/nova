@@ -210,8 +210,6 @@ class VMOps(object):
         def _wait_for_boot():
             try:
                 state = self.get_info(instance_name)['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
@@ -219,11 +217,7 @@ class VMOps(object):
                     return True
             except Exception, exc:
                 LOG.warn(exc)
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance_name)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+                LOG.exception(_('Instance %s: failed to boot'), instance_name)
                 timer.stop()
                 return False
 
