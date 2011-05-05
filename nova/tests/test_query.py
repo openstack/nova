@@ -139,8 +139,5 @@ class QueryTestCase(test.TestCase):
         self.assertEquals(5, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
-        self.assertEquals('host0', just_hosts[0])
-        self.assertEquals('host1', just_hosts[1])
-        self.assertEquals('host7', just_hosts[2])
-        self.assertEquals('host8', just_hosts[3])
-        self.assertEquals('host9', just_hosts[4])
+        for index, host in zip([0, 1, 7, 8, 9], just_hosts):
+            self.assertEquals('host%d' % index, host)
