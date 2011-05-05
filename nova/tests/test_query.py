@@ -80,10 +80,12 @@ class QueryTestCase(test.TestCase):
     def test_choose_driver(self):
         # Test default driver ...
         driver = query.choose_driver()
-        self.assertEquals(str(driver), 'nova.scheduler.query.AllHostsQuery')
+        self.assertEquals(driver._full_name(),
+                        'nova.scheduler.query.AllHostsQuery')
         # Test valid driver ...
         driver = query.choose_driver('nova.scheduler.query.FlavorQuery')
-        self.assertEquals(str(driver), 'nova.scheduler.query.FlavorQuery')
+        self.assertEquals(driver._full_name(),
+                        'nova.scheduler.query.FlavorQuery')
         # Test invalid driver ...
         try:
             query.choose_driver('does not exist')
@@ -165,3 +167,40 @@ class QueryTestCase(test.TestCase):
         just_hosts.sort()
         for index, host in zip([2, 4, 6, 8, 10], just_hosts):
             self.assertEquals('host%02d' % index, host)
+
+        # Try some bogus input ...
+        raw = ['unknown command', ]
+        cooked = json.dumps(raw)
+        try:
+            driver.filter_hosts(self.zone_manager, cooked)
+            self.fail("Should give KeyError")
+        except KeyError, e:
+            pass
+
+        self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps([])))
+        self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps({})))
+        self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['not', True, False, True, False]
+            )))
+
+        try:
+            driver.filter_hosts(self.zone_manager, json.dumps(
+                'not', True, False, True, False
+            ))
+            self.fail("Should give KeyError")
+        except KeyError, e:
+            pass
+
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['=', '$foo', 100]
+            )))
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['=', '$.....', 100]
+            )))
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+            ['>', ['and', ['or', ['not', ['<', ['>=', ['<=', ['in', ]]]]]]]]
+        )))
+
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['=', {}, ['>', '$missing....foo']]
+            )))

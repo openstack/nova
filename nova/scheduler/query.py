@@ -40,19 +40,23 @@ flags.DEFINE_string('default_query_engine',
                     'Which query engine to use for filtering hosts.')
 
 
-class Query:
+class Query(object):
     """Base class for query plug-ins."""
 
     def instance_type_to_query(self, instance_type):
         """Convert instance_type into a query for most common use-case."""
-        raise exception.BadSchedulerQueryDriver()
+        raise NotImplementedError()
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that fulfill the query."""
-        raise exception.BadSchedulerQueryDriver()
+        raise NotImplementedError()
+
+    def _full_name(self):
+        """module.classname of the Query object"""
+        return "%s.%s" % (self.__module__, self.__class__.__name__)
 
 
-class AllHostsQuery:
+class AllHostsQuery(Query):
     """NOP query plug-in. Returns all hosts in ZoneManager.
     This essentially does what the old Scheduler+Chance used
     to give us."""
@@ -60,7 +64,7 @@ class AllHostsQuery:
     def instance_type_to_query(self, instance_type):
         """Return anything to prevent base-class from raising
         exception."""
-        return (str(self.__class__), instance_type)
+        return (self._full_name(), instance_type)
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts from ZoneManager list."""
@@ -68,12 +72,12 @@ class AllHostsQuery:
                for host, services in zone_manager.service_states.iteritems()]
 
 
-class FlavorQuery:
+class FlavorQuery(Query):
     """Query plug-in hard-coded to work with flavors."""
 
     def instance_type_to_query(self, instance_type):
         """Use instance_type to filter hosts."""
-        return (str(self.__class__), instance_type)
+        return (self._full_name(), instance_type)
 
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts that can create instance_type."""
@@ -115,7 +119,7 @@ class FlavorQuery:
 #rxtx_cap = Column(Integer, nullable=False, default=0)
 
 
-class JsonQuery:
+class JsonQuery(Query):
     """Query plug-in to allow simple JSON-based grammar for selecting hosts."""
 
     def _equals(self, args):
@@ -175,14 +179,17 @@ class JsonQuery:
         return True
 
     def _not(self, args):
+        """Flip each of the arguments."""
         if len(args) == 0:
             return False
         return [not arg for arg in args]
 
     def _or(self, args):
+        """True if any arg is True."""
         return True in args
 
     def _and(self, args):
+        """True if all args are True."""
         return False not in args
 
     commands = {
@@ -205,7 +212,7 @@ class JsonQuery:
                     ['>=', '$compute.host_memory.free', required_ram],
                     ['>=', '$compute.disk.available', required_disk]
                 ]
-        return (str(self.__class__), json.dumps(query))
+        return (self._full_name(), json.dumps(query))
 
     def _parse_string(self, string, host, services):
         """Strings prefixed with $ are capability lookups in the
@@ -223,6 +230,7 @@ class JsonQuery:
         return services
 
     def _process_query(self, zone_manager, query, host, services):
+        """Recursively parse the query structure."""
         if len(query) == 0:
             return True
         cmd = query[0]
@@ -251,15 +259,18 @@ class JsonQuery:
         return hosts
 
 
-# Since the caller may specify which driver to use we need
-# to have an authoritative list of what is permissible.
 DRIVERS = [AllHostsQuery, FlavorQuery, JsonQuery]
 
 
 def choose_driver(driver_name=None):
+    """Since the caller may specify which driver to use we need
+       to have an authoritative list of what is permissible. This
+       function checks the driver name against a predefined set
+       of acceptable drivers."""
+   
     if not driver_name:
         driver_name = FLAGS.default_query_engine
     for driver in DRIVERS:
-        if str(driver) == driver_name:
-            return driver
+        if "%s.%s" % (driver.__module__, driver.__name__) == driver_name:
+            return driver()
     raise exception.SchedulerQueryDriverNotFound(driver_name=driver_name)
