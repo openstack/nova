@@ -16,6 +16,8 @@
 Tests For Scheduler Query Drivers
 """
 
+import json
+
 from nova import exception
 from nova import flags
 from nova import test
@@ -118,3 +120,27 @@ class QueryTestCase(test.TestCase):
         just_hosts.sort()
         self.assertEquals('host4', just_hosts[0])
         self.assertEquals('host9', just_hosts[5])
+
+        # Try some custom queries
+
+        raw  = ['or', 
+                    ['and', 
+                        ['<', '$compute.host_memory.free', 30],
+                        ['<', '$compute.disk.available', 300]
+                    ],
+                    ['and', 
+                        ['>', '$compute.host_memory.free', 70],
+                        ['>', '$compute.disk.available', 700]
+                    ]
+                ]
+        cooked = json.dumps(raw)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
+
+        self.assertEquals(5, len(hosts))
+        just_hosts = [host for host, caps in hosts]
+        just_hosts.sort()
+        self.assertEquals('host0', just_hosts[0])
+        self.assertEquals('host1', just_hosts[1])
+        self.assertEquals('host7', just_hosts[2])
+        self.assertEquals('host8', just_hosts[3])
+        self.assertEquals('host9', just_hosts[4])

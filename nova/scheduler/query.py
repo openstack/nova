@@ -19,6 +19,10 @@ Three plug-ins are included: AllHosts, Flavor & JSON. AllHosts just
 returns the full, unfiltered list of hosts. Flavor is a hard coded
 matching mechanism based on flavor criteria and JSON is an ad-hoc
 query grammar.
+
+Note: These are hard filters. All capabilities used  must be present
+or the host will excluded. If you want soft filters use the weighting
+mechanism which is intended for the more touchy-feely capabilities.
 """
 
 import json
@@ -61,7 +65,7 @@ class AllHostsQuery:
     def filter_hosts(self, zone_manager, query):
         """Return a list of hosts from ZoneManager list."""
         return [(host, services)
-               for host, services in zone_manager.service_state.iteritems()]
+               for host, services in zone_manager.service_states.iteritems()]
 
 
 class FlavorQuery:
@@ -174,9 +178,6 @@ class JsonQuery:
             return False
         return not args[0]
 
-    def _must(self, args):
-        return True
-
     def _or(self, args):
         return True in args
  
@@ -191,7 +192,6 @@ class JsonQuery:
         '<=': _less_than_equal,
         '>=': _greater_than_equal,
         'not': _not,
-        'must': _must,
         'or': _or,
         'and': _and,
     }
