@@ -524,7 +524,7 @@ class NetworkCommands(object):
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
-                              'required to create networks.')
+                    'required to create networks.')
             print msg
             raise TypeError(msg)
         if not num_networks:
