@@ -76,24 +76,22 @@ class Controller(common.OpenstackController):
         return self._items(req, is_detail=True)
 
     def _image_id_from_req_data(self, data):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _flavor_id_from_req_data(self, data):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _get_view_builder(self, req):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _limit_items(self, items, req):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _limit_items(self, items, req):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _action_rebuild(self, info, request, instance_id):
-        raise NotImplementedError
-
-
+        raise NotImplementedError()
 
     def _items(self, req, is_detail):
         """Returns a list of servers for a given user.

@@ -367,7 +367,7 @@ class CloudController(object):
         return g
 
     def _get_instance(instance_id):
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _revoke_rule_args_to_dict(self, context, to_port=None, from_port=None,
                                   ip_protocol=None, cidr_ip=None, user_id=None,
