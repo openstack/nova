@@ -759,7 +759,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
-        return self.driver.get_console_output(instance_ref)
+        output = self.driver.get_console_output(instance_ref)
+        return output.decode('utf-8', 'replace').encode('ascii', 'replace')
 
     @exception.wrap_exception
     def get_ajax_console(self, context, instance_id):
