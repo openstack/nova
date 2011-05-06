@@ -486,3 +486,12 @@ class HyperVConnection(driver.ComputeDriver):
     def update_available_resource(self, ctxt, host):
         """This method is supported only by libvirt."""
         return
+
+    def update_host_status(self):
+        """See xenapi_conn.py implementation."""
+        pass
+
+    def get_host_stats(self, refresh=False):
+        """See xenapi_conn.py implementation."""
+        pass
+

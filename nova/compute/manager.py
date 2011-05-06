@@ -1083,6 +1083,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         try:
+            self._report_driver_status()
+        except Exception as ex:
+            LOG.warning(_("Error during report_driver_status(): %s"),
+                        unicode(ex))
+            error_list.append(ex)
+
+        try:
             self._poll_instance_states(context)
         except Exception as ex:
             LOG.warning(_("Error during instance poll: %s"),
@@ -1090,6 +1097,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         return error_list
+
+    def _report_driver_status(self):
+        curr_time = time.time()
+        if curr_time - self._last_host_check > FLAGS.host_state_interval:
+            self._last_host_check = curr_time
+            LOG.info(_("Updating host status"))
+            # This will grab info about the host and queue it
+            # to be sent to the Schedulers.
+            self.update_service_capabilities(
+                self.driver.get_host_stats(refresh=True))
 
     def _poll_instance_states(self, context):
         vm_instances = self.driver.list_instances_detail()
