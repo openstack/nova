@@ -171,7 +171,7 @@ def _paths_from_ls(recs):
 def _run_command(cmd):
     """Abstracts out the basics of issuing system commands. If the command
     returns anything in stderr, a PluginError is raised with that information.
-    Otherwise, a tuple of (return code, stdout) is returned.
+    Otherwise, a tuple of (return code, stdout data) is returned.
     """
     pipe = subprocess.PIPE
     proc = subprocess.Popen(cmd, stdin=pipe, stdout=pipe, stderr=pipe,
