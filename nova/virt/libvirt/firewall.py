@@ -40,17 +40,14 @@ except ImportError:
 
 
 class FirewallDriver(object):
-
     def prepare_instance_filter(self, instance, network_info=None):
         """Prepare filters for the instance.
 
-        At this point, the instance isn't running yet.
-
-        """
+        At this point, the instance isn't running yet."""
         raise NotImplementedError()
 
     def unfilter_instance(self, instance):
-        """Stop filtering instance."""
+        """Stop filtering instance"""
         raise NotImplementedError()
 
     def apply_instance_filter(self, instance):
@@ -60,26 +57,21 @@ class FirewallDriver(object):
         appropriately. This method should as far as possible be a
         no-op. It's vastly preferred to get everything set up in
         prepare_instance_filter.
-
         """
         raise NotImplementedError()
 
     def refresh_security_group_rules(self, security_group_id):
-        """Refresh security group rules from data store.
+        """Refresh security group rules from data store
 
         Gets called when a rule has been added to or removed from
-        the security group.
-
-        """
+        the security group."""
         raise NotImplementedError()
 
     def refresh_security_group_members(self, security_group_id):
-        """Refresh security group members from data store.
+        """Refresh security group members from data store
 
         Gets called when an instance gets added to or removed from
-        the security group.
-
-        """
+        the security group."""
         raise NotImplementedError()
 
     def setup_basic_filtering(self, instance, network_info=None):
@@ -92,13 +84,12 @@ class FirewallDriver(object):
         raise NotImplementedError()
 
     def instance_filter_exists(self, instance):
-        """Check nova-instance-instance-xxx exists."""
+        """Check nova-instance-instance-xxx exists"""
         raise NotImplementedError()
 
 
 class NWFilterFirewall(FirewallDriver):
-    """Network filter firewall implementation.
-
+    """
     This class implements a network filtering mechanism versatile
     enough for EC2 style Security Group filtering by leveraging
     libvirt's nwfilter.
@@ -149,46 +140,46 @@ class NWFilterFirewall(FirewallDriver):
         self.handle_security_groups = False
 
     def apply_instance_filter(self, instance):
+        """No-op. Everything is done in prepare_instance_filter"""
         pass
 
     def _get_connection(self):
         return self._libvirt_get_connection()
-
     _conn = property(_get_connection)
 
     def nova_dhcp_filter(self):
-        """Defines nova DHCP filter.
+        """The standard allow-dhcp-server filter is an <ip> one, so it uses
+           ebtables to allow traffic through. Without a corresponding rule in
+           iptables, it'll get blocked anyway."""
 
-        The standard allow-dhcp-server filter is an <ip> one, so it uses
-        ebtables to allow traffic through. Without a corresponding rule in
-        iptables, it'll get blocked anyway.
-
-        """
         return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
                     <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
-                    <rule action='accept' direction='out' priority='100'>
-                        <udp srcipaddr='0.0.0.0'
-                             dstipaddr='255.255.255.255'
-                             srcportstart='68'
-                             dstportstart='67'/>
+                    <rule action='accept' direction='out'
+                          priority='100'>
+                      <udp srcipaddr='0.0.0.0'
+                           dstipaddr='255.255.255.255'
+                           srcportstart='68'
+                           dstportstart='67'/>
                     </rule>
-                    <rule action='accept' direction='in' priority='100'>
-                        <udp srcipaddr='$DHCPSERVER'
-                             srcportstart='67'
-                             dstportstart='68'/>
+                    <rule action='accept' direction='in'
+                          priority='100'>
+                      <udp srcipaddr='$DHCPSERVER'
+                           srcportstart='67'
+                           dstportstart='68'/>
                     </rule>
                   </filter>'''
 
     def nova_ra_filter(self):
         return '''<filter name='nova-allow-ra-server' chain='root'>
-                    <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
-                    <rule action='accept' direction='inout' priority='100'>
-                      <icmpv6 srcipaddr='$RASERVER'/>
-                    </rule>
-                  </filter>'''
+                            <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
+                              <rule action='accept' direction='inout'
+                                    priority='100'>
+                                <icmpv6 srcipaddr='$RASERVER'/>
+                              </rule>
+                            </filter>'''
 
     def setup_basic_filtering(self, instance, network_info=None):
-        """Set up basic filtering (MAC, IP, and ARP spoofing protection)."""
+        """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
         logging.info('called setup_basic_filtering in nwfilter')
 
         if not network_info:
@@ -296,18 +287,13 @@ class NWFilterFirewall(FirewallDriver):
         pass
 
     def prepare_instance_filter(self, instance, network_info=None):
-        """Creates an NWFilter for the given instance.
-
-        In the process, it makes sure the filters for the security groups as
-        well as the base filter are all in place.
-
+        """
+        Creates an NWFilter for the given instance. In the process,
+        it makes sure the filters for the security groups as well as
+        the base filter are all in place.
         """
         if not network_info:
             network_info = netutils.get_network_info(instance)
-        if instance['image_id'] == str(FLAGS.vpn_image_id):
-            base_filter = 'nova-vpn'
-        else:
-            base_filter = 'nova-base'
 
         ctxt = context.get_admin_context()
 
@@ -319,41 +305,59 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
 
+        if FLAGS.use_ipv6:
+            networks = [network for (network, _m) in network_info if
+                        network['gateway_v6']]
+
+            if networks:
+                instance_secgroup_filter_children.\
+                    append('nova-allow-ra-server')
+
         for security_group in \
                 db.security_group_get_by_instance(ctxt, instance['id']):
 
             self.refresh_security_group_rules(security_group['id'])
 
-            instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                    security_group['id'])]
+            instance_secgroup_filter_children.append('nova-secgroup-%s' %
+                                                    security_group['id'])
 
             self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
 
-        for (network, mapping) in network_info:
+        network_filters = self.\
+            _create_network_filters(instance, network_info,
+                                    instance_secgroup_filter_name)
+
+        for (name, children) in network_filters:
+            self._define_filters(name, children)
+
+    def _create_network_filters(self, instance, network_info,
+                               instance_secgroup_filter_name):
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
+            base_filter = 'nova-vpn'
+        else:
+            base_filter = 'nova-base'
+
+        result = []
+        for (_n, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
-            instance_filter_children = \
-                [base_filter, instance_secgroup_filter_name]
-
-            if FLAGS.use_ipv6:
-                gateway_v6 = network['gateway_v6']
-
-                if gateway_v6:
-                    instance_secgroup_filter_children += \
-                        ['nova-allow-ra-server']
+            instance_filter_children = [base_filter,
+                                        instance_secgroup_filter_name]
 
             if FLAGS.allow_project_net_traffic:
-                instance_filter_children += ['nova-project']
+                instance_filter_children.append('nova-project')
                 if FLAGS.use_ipv6:
-                    instance_filter_children += ['nova-project-v6']
+                    instance_filter_children.append('nova-project-v6')
 
-            self._define_filter(
-                    self._filter_container(instance_filter_name,
-                                           instance_filter_children))
+            result.append((instance_filter_name, instance_filter_children))
 
-        return
+        return result
+
+    def _define_filters(self, filter_name, filter_children):
+        self._define_filter(self._filter_container(filter_name,
+                                                   filter_children))
 
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
@@ -403,7 +407,7 @@ class NWFilterFirewall(FirewallDriver):
         return 'nova-instance-%s-%s' % (instance['name'], nic_id)
 
     def instance_filter_exists(self, instance):
-        """Check nova-instance-instance-xxx exists."""
+        """Check nova-instance-instance-xxx exists"""
         network_info = netutils.get_network_info(instance)
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
@@ -437,7 +441,7 @@ class IptablesFirewallDriver(FirewallDriver):
         return self.nwfilter.setup_basic_filtering(instance, network_info)
 
     def apply_instance_filter(self, instance):
-        """No-op. Everything is done in prepare_instance_filter."""
+        """No-op. Everything is done in prepare_instance_filter"""
         pass
 
     def unfilter_instance(self, instance):
@@ -455,40 +459,40 @@ class IptablesFirewallDriver(FirewallDriver):
         self.add_filters_for_instance(instance, network_info)
         self.iptables.apply()
 
-    def add_filters_for_instance(self, instance, network_info=None):
-        if not network_info:
-            network_info = netutils.get_network_info(instance)
-        chain_name = self._instance_chain_name(instance)
+    def _create_filter(self, ips, chain_name):
+        return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
-        self.iptables.ipv4['filter'].add_chain(chain_name)
+    def _filters_for_instance(self, chain_name, network_info):
+        ips_v4 = [ip['ip'] for (_n, mapping) in network_info
+                 for ip in mapping['ips']]
+        ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        ips_v4 = [ip['ip'] for (_, mapping) in network_info
-                            for ip in mapping['ips']]
-
-        for ipv4_address in ips_v4:
-            self.iptables.ipv4['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv4_address, chain_name))
-
+        ipv6_rules = []
         if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for (_, mapping) in network_info
-                                 for ip in mapping['ip6s']]
+            ips_v6 = [ip['ip'] for (_n, mapping) in network_info
+                     for ip in mapping['ip6s']]
+            ipv6_rules = self._create_filter(ips_v6, chain_name)
 
-            for ipv6_address in ips_v6:
-                self.iptables.ipv6['filter'].add_rule('local',
-                                                      '-d %s -j $%s' %
-                                                      (ipv6_address,
-                                                       chain_name))
+        return ipv4_rules, ipv6_rules
 
-        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-
+    def _add_filters(self, chain_name, ipv4_rules, ipv6_rules):
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def add_filters_for_instance(self, instance, network_info=None):
+        chain_name = self._instance_chain_name(instance)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_rules, ipv6_rules = self._filters_for_instance(chain_name,
+                                                            network_info)
+        self._add_filters('local', ipv4_rules, ipv6_rules)
+        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
+        self._add_filters(chain_name, ipv4_rules, ipv6_rules)
 
     def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
@@ -607,7 +611,7 @@ class IptablesFirewallDriver(FirewallDriver):
         return ipv4_rules, ipv6_rules
 
     def instance_filter_exists(self, instance):
-        """Check nova-instance-instance-xxx exists."""
+        """Check nova-instance-instance-xxx exists"""
         return self.nwfilter.instance_filter_exists(instance)
 
     def refresh_security_group_members(self, security_group):

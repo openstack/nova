@@ -32,6 +32,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.compute import power_state
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -501,14 +502,41 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    def rebuild(self, context, instance_id, image_id, metadata=None,
+                files_to_inject=None):
+        """Rebuild the given instance with the provided metadata."""
+        instance = db.api.instance_get(context, instance_id)
+
+        if instance["state"] == power_state.BUILDING:
+            msg = _("Instance already building")
+            raise exception.BuildInProgress(msg)
+
+        metadata = metadata or {}
+        self._check_metadata_properties_quota(context, metadata)
+
+        files_to_inject = files_to_inject or []
+        self._check_injected_file_quota(context, files_to_inject)
+
+        self.db.instance_update(context, instance_id, {"metadata": metadata})
+
+        rebuild_params = {
+            "image_id": image_id,
+            "injected_files": files_to_inject,
+        }
+
+        self._cast_compute_message('rebuild_instance',
+                                   context,
+                                   instance_id,
+                                   params=rebuild_params)
+
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.NotFound(_("No finished migrations found for "
-                    "instance"))
+            raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
+                                                      status='finished')
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context, instance_id,
@@ -522,8 +550,8 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.NotFound(_("No finished migrations found for "
-                    "instance"))
+            raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
+                                                      status='finished')
         instance_ref = self.db.instance_get(context, instance_id)
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context, instance_id,

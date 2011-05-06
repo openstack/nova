@@ -45,8 +45,7 @@ class VolumeOps(object):
         # Before we start, check that the VM exists
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.NotFound(_('Instance %s not found')
-                                      % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         # NOTE: No Resource Pool concept so far
         LOG.debug(_("Attach_volume: %(instance_name)s, %(device_path)s,"
                 " %(mountpoint)s") % locals())
@@ -98,8 +97,7 @@ class VolumeOps(object):
         # Before we start, check that the VM exists
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.NotFound(_('Instance %s not found')
-                                     % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         # Detach VBD from VM
         LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s")
                 % locals())

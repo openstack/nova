@@ -56,13 +56,12 @@ flags.DEFINE_string('input_chain', 'INPUT',
                     'chain to add nova_input to')
 flags.DEFINE_integer('dhcp_lease_time', 120,
                      'Lifetime of a DHCP lease')
-
 flags.DEFINE_string('dns_server', None,
                     'if set, uses specific dns server for dnsmasq')
 flags.DEFINE_string('dmz_cidr', '10.128.0.0/24',
                     'dmz range that should be accepted')
-
-
+flags.DEFINE_string('dnsmasq_config_file', "",
+                    'Override the default dnsmasq settings with this file')
 binary_name = os.path.basename(inspect.stack()[-1][1])
 
 
@@ -407,6 +406,10 @@ def ensure_vlan_forward(public_ip, port, private_ip):
                                           "-d %s -p udp "
                                           "--dport %s -j DNAT --to %s:1194" %
                                           (public_ip, port, private_ip))
+    iptables_manager.ipv4['nat'].add_rule("OUTPUT",
+                                          "-d %s -p udp "
+                                          "--dport %s -j DNAT --to %s:1194" %
+                                          (public_ip, port, private_ip))
     iptables_manager.apply()
 
 
@@ -678,7 +681,7 @@ def _dnsmasq_cmd(net):
     cmd = ['sudo', '-E', 'dnsmasq',
            '--strict-order',
            '--bind-interfaces',
-           '--conf-file=',
+           '--conf-file=%s' % FLAGS.dnsmasq_config_file,
            '--domain=%s' % FLAGS.dhcp_domain,
            '--pid-file=%s' % _dhcp_file(net['bridge'], 'pid'),
            '--listen-address=%s' % net['gateway'],

@@ -48,7 +48,7 @@ class Controller(common.OpenstackController):
         """We cannot depend on the db layer to check for admin access
            for the auth manager, so we do it here"""
         if not context.is_admin:
-            raise exception.NotAuthorized(_("Not admin user"))
+            raise exception.AdminRequired()
 
     def index(self, req):
         """Return all users in brief"""
