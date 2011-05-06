@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For Scheduler Query Drivers
+Tests For Scheduler Host Filter Drivers.
 """
 
 import json
@@ -21,7 +21,7 @@ import json
 from nova import exception
 from nova import flags
 from nova import test
-from nova.scheduler import query
+from nova.scheduler import host_filter
 
 FLAGS = flags.FLAGS
 
@@ -30,8 +30,8 @@ class FakeZoneManager:
     pass
 
 
-class QueryTestCase(test.TestCase):
-    """Test case for query drivers."""
+class HostFilterTestCase(test.TestCase):
+    """Test case for host filter drivers."""
 
     def _host_caps(self, multiplier):
         # Returns host capabilities in the following way:
@@ -57,8 +57,9 @@ class QueryTestCase(test.TestCase):
                 'host_name-label': 'xs-%s' % multiplier}
 
     def setUp(self):
-        self.old_flag = FLAGS.default_query_engine
-        FLAGS.default_query_engine = 'nova.scheduler.query.AllHostsQuery'
+        self.old_flag = FLAGS.default_host_filter_driver
+        FLAGS.default_host_filter_driver = \
+                            'nova.scheduler.host_filter.AllHostsFilter'
         self.instance_type = dict(name='tiny',
                 memory_mb=50,
                 vcpus=10,
@@ -75,37 +76,38 @@ class QueryTestCase(test.TestCase):
         self.zone_manager.service_states = states
 
     def tearDown(self):
-        FLAGS.default_query_engine = self.old_flag
+        FLAGS.default_host_filter_driver = self.old_flag
 
     def test_choose_driver(self):
         # Test default driver ...
-        driver = query.choose_driver()
+        driver = host_filter.choose_driver()
         self.assertEquals(driver._full_name(),
-                        'nova.scheduler.query.AllHostsQuery')
+                        'nova.scheduler.host_filter.AllHostsFilter')
         # Test valid driver ...
-        driver = query.choose_driver('nova.scheduler.query.FlavorQuery')
+        driver = host_filter.choose_driver(
+                        'nova.scheduler.host_filter.FlavorFilter')
         self.assertEquals(driver._full_name(),
-                        'nova.scheduler.query.FlavorQuery')
+                        'nova.scheduler.host_filter.FlavorFilter')
         # Test invalid driver ...
         try:
-            query.choose_driver('does not exist')
+            host_filter.choose_driver('does not exist')
             self.fail("Should not find driver")
-        except exception.SchedulerQueryDriverNotFound:
+        except exception.SchedulerHostFilterDriverNotFound:
             pass
 
     def test_all_host_driver(self):
-        driver = query.AllHostsQuery()
-        cooked = driver.instance_type_to_query(self.instance_type)
+        driver = host_filter.AllHostsFilter()
+        cooked = driver.instance_type_to_filter(self.instance_type)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(10, len(hosts))
         for host, capabilities in hosts:
             self.assertTrue(host.startswith('host'))
 
     def test_flavor_driver(self):
-        driver = query.FlavorQuery()
+        driver = host_filter.FlavorFilter()
         # filter all hosts that can support 50 ram and 500 disk
-        name, cooked = driver.instance_type_to_query(self.instance_type)
-        self.assertEquals('nova.scheduler.query.FlavorQuery', name)
+        name, cooked = driver.instance_type_to_filter(self.instance_type)
+        self.assertEquals('nova.scheduler.host_filter.FlavorFilter', name)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -114,10 +116,10 @@ class QueryTestCase(test.TestCase):
         self.assertEquals('host10', just_hosts[5])
 
     def test_json_driver(self):
-        driver = query.JsonQuery()
+        driver = host_filter.JsonFilter()
         # filter all hosts that can support 50 ram and 500 disk
-        name, cooked = driver.instance_type_to_query(self.instance_type)
-        self.assertEquals('nova.scheduler.query.JsonQuery', name)
+        name, cooked = driver.instance_type_to_filter(self.instance_type)
+        self.assertEquals('nova.scheduler.host_filter.JsonFilter', name)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]

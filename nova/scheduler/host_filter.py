@@ -14,14 +14,23 @@
 #    under the License.
 
 """
-Query is a plug-in mechanism for requesting instance resources.
-Three plug-ins are included: AllHosts, Flavor & JSON. AllHosts just
+Host Filter is a driver mechanism for requesting instance resources.
+Three drivers are included: AllHosts, Flavor & JSON. AllHosts just
 returns the full, unfiltered list of hosts. Flavor is a hard coded
 matching mechanism based on flavor criteria and JSON is an ad-hoc
-query grammar.
+filter grammar.
 
-Note: These are hard filters. All capabilities used  must be present
-or the host will excluded. If you want soft filters use the weighting
+Why JSON? The requests for instances may come in through the
+REST interface from a user or a parent Zone.
+Currently Flavors and/or InstanceTypes are used for
+specifing the type of instance desired. Specific Nova users have
+noted a need for a more expressive way of specifying instances.
+Since we don't want to get into building full DSL this is a simple
+form as an example of how this could be done. In reality, most
+consumers will use the more rigid filters such as FlavorFilter.
+
+Note: These are hard filters. All capabilities used must be present
+or the host will be excluded. If you want soft filters use the weighting
 mechanism which is intended for the more touchy-feely capabilities.
 """
 
@@ -32,36 +41,36 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 
-LOG = logging.getLogger('nova.scheduler.query')
+LOG = logging.getLogger('nova.scheduler.host_filter')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('default_query_engine',
-                    'nova.scheduler.query.AllHostsQuery',
-                    'Which query engine to use for filtering hosts.')
+flags.DEFINE_string('default_host_filter_driver',
+                    'nova.scheduler.host_filter.AllHostsFilter',
+                    'Which driver to use for filtering hosts.')
 
 
-class Query(object):
-    """Base class for query plug-ins."""
+class HostFilter(object):
+    """Base class for host filter drivers."""
 
-    def instance_type_to_query(self, instance_type):
-        """Convert instance_type into a query for most common use-case."""
+    def instance_type_to_filter(self, instance_type):
+        """Convert instance_type into a filter for most common use-case."""
         raise NotImplementedError()
 
     def filter_hosts(self, zone_manager, query):
-        """Return a list of hosts that fulfill the query."""
+        """Return a list of hosts that fulfill the filter."""
         raise NotImplementedError()
 
     def _full_name(self):
-        """module.classname of the Query object"""
+        """module.classname of the filter driver"""
         return "%s.%s" % (self.__module__, self.__class__.__name__)
 
 
-class AllHostsQuery(Query):
-    """NOP query plug-in. Returns all hosts in ZoneManager.
+class AllHostsFilter(HostFilter):
+    """NOP host filter driver. Returns all hosts in ZoneManager.
     This essentially does what the old Scheduler+Chance used
     to give us."""
 
-    def instance_type_to_query(self, instance_type):
+    def instance_type_to_filter(self, instance_type):
         """Return anything to prevent base-class from raising
         exception."""
         return (self._full_name(), instance_type)
@@ -72,10 +81,10 @@ class AllHostsQuery(Query):
                for host, services in zone_manager.service_states.iteritems()]
 
 
-class FlavorQuery(Query):
-    """Query plug-in hard-coded to work with flavors."""
+class FlavorFilter(HostFilter):
+    """HostFilter driver hard-coded to work with flavors."""
 
-    def instance_type_to_query(self, instance_type):
+    def instance_type_to_filter(self, instance_type):
         """Use instance_type to filter hosts."""
         return (self._full_name(), instance_type)
 
@@ -119,8 +128,9 @@ class FlavorQuery(Query):
 #rxtx_cap = Column(Integer, nullable=False, default=0)
 
 
-class JsonQuery(Query):
-    """Query plug-in to allow simple JSON-based grammar for selecting hosts."""
+class JsonFilter(HostFilter):
+    """Host Filter driver to allow simple JSON-based grammar for
+       selecting hosts."""
 
     def _equals(self, args):
         """First term is == all the other terms."""
@@ -204,8 +214,8 @@ class JsonQuery(Query):
         'and': _and,
     }
 
-    def instance_type_to_query(self, instance_type):
-        """Convert instance_type into JSON query object."""
+    def instance_type_to_filter(self, instance_type):
+        """Convert instance_type into JSON filter object."""
         required_ram = instance_type['memory_mb']
         required_disk = instance_type['local_gb']
         query = ['and',
@@ -229,7 +239,7 @@ class JsonQuery(Query):
                 return None
         return services
 
-    def _process_query(self, zone_manager, query, host, services):
+    def _process_filter(self, zone_manager, query, host, services):
         """Recursively parse the query structure."""
         if len(query) == 0:
             return True
@@ -238,7 +248,7 @@ class JsonQuery(Query):
         cooked_args = []
         for arg in query[1:]:
             if isinstance(arg, list):
-                arg = self._process_query(zone_manager, arg, host, services)
+                arg = self._process_filter(zone_manager, arg, host, services)
             elif isinstance(arg, basestring):
                 arg = self._parse_string(arg, host, services)
             if arg != None:
@@ -247,11 +257,11 @@ class JsonQuery(Query):
         return result
 
     def filter_hosts(self, zone_manager, query):
-        """Return a list of hosts that can fulfill query."""
+        """Return a list of hosts that can fulfill filter."""
         expanded = json.loads(query)
         hosts = []
         for host, services in zone_manager.service_states.iteritems():
-            r = self._process_query(zone_manager, expanded, host, services)
+            r = self._process_filter(zone_manager, expanded, host, services)
             if isinstance(r, list):
                 r = True in r
             if r:
@@ -259,7 +269,7 @@ class JsonQuery(Query):
         return hosts
 
 
-DRIVERS = [AllHostsQuery, FlavorQuery, JsonQuery]
+DRIVERS = [AllHostsFilter, FlavorFilter, JsonFilter]
 
 
 def choose_driver(driver_name=None):
@@ -267,10 +277,10 @@ def choose_driver(driver_name=None):
        to have an authoritative list of what is permissible. This
        function checks the driver name against a predefined set
        of acceptable drivers."""
-   
+
     if not driver_name:
-        driver_name = FLAGS.default_query_engine
+        driver_name = FLAGS.default_host_filter_driver
     for driver in DRIVERS:
         if "%s.%s" % (driver.__module__, driver.__name__) == driver_name:
             return driver()
-    raise exception.SchedulerQueryDriverNotFound(driver_name=driver_name)
+    raise exception.SchedulerHostFilterDriverNotFound(driver_name=driver_name)

@@ -457,8 +457,9 @@ class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
 
 
-class SchedulerQueryDriverNotFound(NotFound):
-    message = _("Scheduler Query Driver %(driver_name)s could not be found.")
+class SchedulerHostFilterDriverNotFound(NotFound):
+    message = _("Scheduler Host Filter Driver %(driver_name)s could"
+                " not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):
