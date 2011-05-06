@@ -313,18 +313,20 @@ class Volume(BASE, NovaBase):
 
 
 class Quota(BASE, NovaBase):
-    """Represents quota overrides for a project."""
+    """Represents a single quota override for a project.
+
+    If there is no row for a given project id and resource, then
+    the default for the deployment is used. If the row is present
+    but the limit is Null, then the resource is unlimited.
+    """
+
     __tablename__ = 'quotas'
     id = Column(Integer, primary_key=True)
 
-    project_id = Column(String(255))
+    project_id = Column(String(255), index=True)
 
-    instances = Column(Integer)
-    cores = Column(Integer)
-    volumes = Column(Integer)
-    gigabytes = Column(Integer)
-    floating_ips = Column(Integer)
-    metadata_items = Column(Integer)
+    resource = Column(String(255))
+    limit = Column(Integer, nullable=True)
 
 
 class ExportDevice(BASE, NovaBase):

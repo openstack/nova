@@ -1496,43 +1496,69 @@ def auth_token_create(_context, token):
 
 
 @require_admin_context
-def quota_get(context, project_id, session=None):
+def quota_get(context, project_id, resource, session=None):
     if not session:
         session = get_session()
-
     result = session.query(models.Quota).\
-                     filter_by(project_id=project_id).\
-                     filter_by(deleted=can_read_deleted(context)).\
-                     first()
+            filter_by(project_id=project_id).\
+            filter_by(resource=resource).\
+            filter_by(deleted=False).\
+            first()
     if not result:
         raise exception.ProjectQuotaNotFound(project_id=project_id)
-
     return result
 
 
 @require_admin_context
-def quota_create(context, values):
+def quota_get_all_by_project(context, project_id):
+    session = get_session()
+    result = {'project_id': project_id}
+    rows = session.query(models.Quota).\
+            filter_by(project_id=project_id).\
+            filter_by(deleted=False).\
+            all()
+    for row in rows:
+        result[row.resource] = row.limit
+    return result
+
+
+@require_admin_context
+def quota_create(context, project_id, resource, limit):
     quota_ref = models.Quota()
-    quota_ref.update(values)
+    quota_ref.project_id = project_id
+    quota_ref.resource = resource
+    quota_ref.limit = limit
     quota_ref.save()
     return quota_ref
 
 
 @require_admin_context
-def quota_update(context, project_id, values):
+def quota_update(context, project_id, resource, limit):
     session = get_session()
     with session.begin():
-        quota_ref = quota_get(context, project_id, session=session)
-        quota_ref.update(values)
+        quota_ref = quota_get(context, project_id, resource, session=session)
+        quota_ref.limit = limit
         quota_ref.save(session=session)
 
 
 @require_admin_context
-def quota_destroy(context, project_id):
+def quota_destroy(context, project_id, resource):
     session = get_session()
     with session.begin():
-        quota_ref = quota_get(context, project_id, session=session)
+        quota_ref = quota_get(context, project_id, resource, session=session)
         quota_ref.delete(session=session)
+
+
+@require_admin_context
+def quota_destroy_all_by_project(context, project_id):
+    session = get_session()
+    with session.begin():
+        quotas = session.query(models.Quota).\
+                filter_by(project_id=project_id).\
+                filter_by(deleted=False).\
+                all()
+        for quota_ref in quotas:
+            quota_ref.delete(session=session)
 
 
 ###################

@@ -52,26 +52,31 @@ def get_quota(context, project_id):
             'floating_ips': FLAGS.quota_floating_ips,
             'metadata_items': FLAGS.quota_metadata_items}
 
-    try:
-        quota = db.quota_get(context, project_id)
-        for key in rval.keys():
-            if quota[key] is not None:
-                rval[key] = quota[key]
-    except exception.NotFound:
-        pass
+    quota = db.quota_get_all_by_project(context, project_id)
+    for key in rval.keys():
+        if key in quota:
+            rval[key] = quota[key]
     return rval
+
+
+def _get_allowed_resources(requested, used, quota):
+    if quota is None:
+        return requested
+    return quota - used
 
 
 def allowed_instances(context, num_instances, instance_type):
     """Check quota and return min(num_instances, allowed_instances)."""
     project_id = context.project_id
     context = context.elevated()
+    num_cores = num_instances * instance_type['vcpus']
     used_instances, used_cores = db.instance_data_get_for_project(context,
                                                                   project_id)
     quota = get_quota(context, project_id)
-    allowed_instances = quota['instances'] - used_instances
-    allowed_cores = quota['cores'] - used_cores
-    num_cores = num_instances * instance_type['vcpus']
+    allowed_instances = _get_allowed_resources(num_instances, used_instances,
+                                               quota['instances'])
+    allowed_cores = _get_allowed_resources(num_cores, used_cores,
+                                           quota['cores'])
     allowed_instances = min(allowed_instances,
                             int(allowed_cores // instance_type['vcpus']))
     return min(num_instances, allowed_instances)
@@ -81,13 +86,15 @@ def allowed_volumes(context, num_volumes, size):
     """Check quota and return min(num_volumes, allowed_volumes)."""
     project_id = context.project_id
     context = context.elevated()
+    size = int(size)
+    num_gigabytes = num_volumes * size
     used_volumes, used_gigabytes = db.volume_data_get_for_project(context,
                                                                   project_id)
     quota = get_quota(context, project_id)
-    allowed_volumes = quota['volumes'] - used_volumes
-    allowed_gigabytes = quota['gigabytes'] - used_gigabytes
-    size = int(size)
-    num_gigabytes = num_volumes * size
+    allowed_volumes = _get_allowed_resources(num_volumes, used_volumes,
+                                             quota['volumes'])
+    allowed_gigabytes = _get_allowed_resources(num_gigabytes, used_gigabytes,
+                                               quota['gigabytes'])
     allowed_volumes = min(allowed_volumes,
                           int(allowed_gigabytes // size))
     return min(num_volumes, allowed_volumes)
@@ -99,7 +106,9 @@ def allowed_floating_ips(context, num_floating_ips):
     context = context.elevated()
     used_floating_ips = db.floating_ip_count_by_project(context, project_id)
     quota = get_quota(context, project_id)
-    allowed_floating_ips = quota['floating_ips'] - used_floating_ips
+    allowed_floating_ips = _get_allowed_resources(num_floating_ips,
+                                                  used_floating_ips,
+                                                  quota['floating_ips'])
     return min(num_floating_ips, allowed_floating_ips)
 
 
@@ -108,8 +117,9 @@ def allowed_metadata_items(context, num_metadata_items):
     project_id = context.project_id
     context = context.elevated()
     quota = get_quota(context, project_id)
-    num_allowed_metadata_items = quota['metadata_items']
-    return min(num_metadata_items, num_allowed_metadata_items)
+    allowed_metadata_items = _get_allowed_resources(num_metadata_items, 0,
+                                                    quota['metadata_items'])
+    return min(num_metadata_items, allowed_metadata_items)
 
 
 def allowed_injected_files(context):

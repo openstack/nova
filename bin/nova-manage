@@ -397,11 +397,10 @@ class ProjectCommands(object):
         arguments: project_id [key] [value]"""
         ctxt = context.get_admin_context()
         if key:
-            quo = {'project_id': project_id, key: value}
             try:
-                db.quota_update(ctxt, project_id, quo)
+                db.quota_update(ctxt, project_id, key, value)
             except exception.NotFound:
-                db.quota_create(ctxt, quo)
+                db.quota_create(ctxt, project_id, key, value)
         project_quota = quota.get_quota(ctxt, project_id)
         for key, value in project_quota.iteritems():
             print '%s: %s' % (key, value)

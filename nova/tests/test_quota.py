@@ -96,12 +96,11 @@ class QuotaTestCase(test.TestCase):
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 2)
-        db.quota_create(self.context, {'project_id': self.project.id,
-                                       'instances': 10})
+        db.quota_create(self.context, self.project.id, 'instances', 10)
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 4)
-        db.quota_update(self.context, self.project.id, {'cores': 100})
+        db.quota_create(self.context, self.project.id, 'cores', 100)
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 10)
@@ -111,13 +110,13 @@ class QuotaTestCase(test.TestCase):
         num_metadata_items = quota.allowed_metadata_items(self.context,
                                                           too_many_items)
         self.assertEqual(num_metadata_items, FLAGS.quota_metadata_items)
-        db.quota_update(self.context, self.project.id, {'metadata_items': 5})
+        db.quota_create(self.context, self.project.id, 'metadata_items', 5)
         num_metadata_items = quota.allowed_metadata_items(self.context,
                                                           too_many_items)
         self.assertEqual(num_metadata_items, 5)
 
         # Cleanup
-        db.quota_destroy(self.context, self.project.id)
+        db.quota_destroy_all_by_project(self.context, self.project.id)
 
     def test_too_many_instances(self):
         instance_ids = []
