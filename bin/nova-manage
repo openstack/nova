@@ -550,7 +550,6 @@ class NetworkCommands(object):
         except ValueError, e:
             print e
             raise e
-            
 
     def list(self):
         """List all created networks"""
