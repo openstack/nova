@@ -29,9 +29,11 @@ Since we don't want to get into building full DSL this is a simple
 form as an example of how this could be done. In reality, most
 consumers will use the more rigid filters such as FlavorFilter.
 
-Note: These are hard filters. All capabilities used must be present
-or the host will be excluded. If you want soft filters use the weighting
-mechanism which is intended for the more touchy-feely capabilities.
+Note: These are "required" capability filters. These capabilities
+used must be present or the host will be excluded. The hosts
+returned are then weighed by the Weighted Scheduler. Weights
+can take the more esoteric factors into consideration (such as
+server affinity and customer separation).
 """
 
 import json
