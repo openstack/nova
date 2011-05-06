@@ -35,6 +35,7 @@ import os
 import sys
 import traceback
 
+import nova
 from nova import flags
 from nova import version
 
@@ -63,6 +64,7 @@ flags.DEFINE_list('default_log_levels',
                    'eventlet.wsgi.server=WARN'],
                   'list of logger=LEVEL pairs')
 flags.DEFINE_bool('use_syslog', False, 'output to syslog')
+flags.DEFINE_bool('publish_errors', True, 'publish error events')
 flags.DEFINE_string('logfile', None, 'output to named file')
 
 
@@ -258,11 +260,18 @@ class NovaRootLogger(NovaLogger):
         else:
             self.removeHandler(self.filelog)
             self.addHandler(self.streamlog)
+        if FLAGS.publish_errors:
+            self.addHandler(PublishErrorsHandler(ERROR))
         if FLAGS.verbose:
             self.setLevel(DEBUG)
         else:
             self.setLevel(INFO)
 
+
+class PublishErrorsHandler(logging.Handler):
+    def emit(self, record):
+        nova.notifier.notify('error', record)
+    
 
 def handle_exception(type, value, tb):
     extra = {}
