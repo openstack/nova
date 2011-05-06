@@ -428,15 +428,16 @@ class VMOps(object):
 
         """
         # Need to uniquely identify this request.
-        transaction_id = str(uuid.uuid4())
+        key_init_transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
         dh = SimpleDH()
-        args = {'id': transaction_id, 'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, '', args)
+        key_init_args = {'id': key_init_transaction_id,
+                         'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', key_init_args)
         if resp is None:
             # No response from the agent
             return
-        resp_dict = json.loads(resp)
+        resp_dict = json.loads(json.loads(resp))
         # Successful return code from key_init is 'D0'
         if resp_dict['returncode'] != 'D0':
             # There was some sort of error; the message will contain
@@ -446,12 +447,13 @@ class VMOps(object):
         dh.compute_shared(agent_pub)
         enc_pass = dh.encrypt(new_pass)
         # Send the encrypted password
-        args['enc_pass'] = enc_pass
-        resp = self._make_agent_call('password', instance, '', args)
+        password_transaction_id = str(uuid.uuid4())
+        password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
+        resp = self._make_agent_call('password', instance, '', password_args)
         if resp is None:
             # No response from the agent
             return
-        resp_dict = json.loads(resp)
+        resp_dict = json.loads(json.loads(resp))
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])

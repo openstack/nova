@@ -59,12 +59,12 @@ def read_record(self, arg_dict):
     cmd = ["xenstore-read", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
     try:
         ret, result = _run_command(cmd)
-        return result.rstrip("\n")
+        return result.strip()
     except pluginlib.PluginError, e:
         if arg_dict.get("ignore_missing_path", False):
             cmd = ["xenstore-exists",
                    "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
-            ret, result = _run_command(cmd).strip()
+            ret, result = _run_command(cmd)
             # If the path exists, the cmd should return "0"
             if ret != 0:
                 # No such path, so ignore the error and return the
@@ -180,7 +180,7 @@ def _run_command(cmd):
     err = proc.stderr.read()
     if err:
         raise pluginlib.PluginError(err)
-    return proc.stdout.read()
+    return (ret, proc.stdout.read())
 
 
 if __name__ == "__main__":

@@ -80,7 +80,6 @@ def password(self, arg_dict):
     previous call to key_init. The encrypted password value should
     be passed as the value for the 'enc_pass' key in arg_dict.
     """
-    pub = int(arg_dict["pub"])
     enc_pass = arg_dict["enc_pass"]
     arg_dict["value"] = json.dumps({"name": "password", "value": enc_pass})
     request_id = arg_dict["id"]
