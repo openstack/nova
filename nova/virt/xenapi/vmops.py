@@ -162,7 +162,22 @@ class VMOps(object):
         vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
                                     use_pv_kernel)
 
-        VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+        # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
+        if disk_image_type == ImageType.DISK_ISO:
+            LOG.debug("detected ISO image type, going to create blank VM for "
+                  "install")
+            # device 0 reserved for RW disk, so use '1'
+            cd_vdi_ref = vdi_ref
+            VMHelper.create_cd_vbd(session=self._session, vm_ref=vm_ref,
+                    vdi_ref=cd_vdi_ref, userdevice=1, bootable=True)
+
+            vdi_ref = VMHelper.fetch_blank_disk(session=self._session,
+                        instance_type_id=instance.instance_type_id)
+
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                vdi_ref=vdi_ref, userdevice=0, bootable=False)
+        else:
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
 
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
