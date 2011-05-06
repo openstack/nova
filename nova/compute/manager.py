@@ -421,9 +421,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 continue
             else:
                 try:
-                    LOG.audit(_("Instance %s: Setting root password"),
-                                instance_ref["name"])
                     self.driver.set_admin_password(instance_ref, new_pass)
+                    LOG.audit(_("Instance %s: Root password set"),
+                                instance_ref["name"])
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.

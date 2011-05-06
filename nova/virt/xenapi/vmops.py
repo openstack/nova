@@ -437,7 +437,7 @@ class VMOps(object):
         if resp is None:
             # No response from the agent
             return
-        resp_dict = json.loads(json.loads(resp))
+        resp_dict = json.loads(resp)
         # Successful return code from key_init is 'D0'
         if resp_dict['returncode'] != 'D0':
             # There was some sort of error; the message will contain
@@ -453,7 +453,7 @@ class VMOps(object):
         if resp is None:
             # No response from the agent
             return
-        resp_dict = json.loads(json.loads(resp))
+        resp_dict = json.loads(resp)
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])

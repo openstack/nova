@@ -485,16 +485,16 @@ class API(base.Base):
     def _find_host(self, context, instance_id):
         """Find the host associated with an instance."""
         host = None
-        for count in xrange(10):
+        attempts = 10
+        while attempts:
             instance = self.get(context, instance_id)
             host = instance["host"]
             if host:
                 return host
-            elif count >= 10:
-                raise exception.Error(_("Unable to find host for Instance %s")
-                                        % instance_id)
-            else:
-                time.sleep(1)
+            attempts -= 1
+            time.sleep(1)
+        raise exception.Error(_("Unable to find host for Instance %s")
+                                % instance_id)
 
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
