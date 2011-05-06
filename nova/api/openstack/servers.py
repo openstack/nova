@@ -87,9 +87,6 @@ class Controller(common.OpenstackController):
     def _limit_items(self, items, req):
         raise NotImplementedError()
 
-    def _limit_items(self, items, req):
-        raise NotImplementedError()
-
     def _action_rebuild(self, info, request, instance_id):
         raise NotImplementedError()
 
