@@ -64,7 +64,7 @@ flags.DEFINE_list('default_log_levels',
                    'eventlet.wsgi.server=WARN'],
                   'list of logger=LEVEL pairs')
 flags.DEFINE_bool('use_syslog', False, 'output to syslog')
-flags.DEFINE_bool('publish_errors', True, 'publish error events')
+flags.DEFINE_bool('publish_errors', False, 'publish error events')
 flags.DEFINE_string('logfile', None, 'output to named file')
 
 

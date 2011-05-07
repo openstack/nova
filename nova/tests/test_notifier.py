@@ -18,13 +18,11 @@ import json
 import stubout
 
 import nova
-from nova import log as logging
+from nova import log
 from nova import flags
 from nova import notifier
 from nova.notifier import no_op_notifier
 from nova import test
-
-LOG = logging.getLogger('nova.compute.api')
 
 class NotifierTestCase(test.TestCase):
     """Test case for notifications"""
@@ -66,12 +64,17 @@ class NotifierTestCase(test.TestCase):
     def test_error_notification(self):
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
             'nova.notifier.rabbit_notifier.RabbitNotifier')
+        self.stubs.Set(nova.flags.FLAGS, 'publish_errors', True)
+        LOG = log.getLogger('nova')
+        LOG.setup_from_flags()
+
         msgs = []
         def mock_cast(context, topic, msg):
             data = json.loads(msg)
             msgs.append(data)
         self.stubs.Set(nova.rpc, 'cast', mock_cast) 
         LOG.error('foo');
+        self.assertEqual(1, len(msgs))
         msg = msgs[0]
         self.assertEqual(msg['event_name'], 'error')
         self.assertEqual(msg['model']['msg'], 'foo')
