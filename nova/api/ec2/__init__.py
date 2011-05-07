@@ -46,8 +46,6 @@ flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
-flags.DEFINE_list('lockout_memcached_servers', None,
-                  'Memcached servers or None for in process cache.')
 
 
 class RequestLogging(wsgi.Middleware):
@@ -107,11 +105,11 @@ class Lockout(wsgi.Middleware):
 
     def __init__(self, application):
         """middleware can use fake for testing."""
-        if FLAGS.lockout_memcached_servers:
+        if FLAGS.memcached_servers:
             import memcache
         else:
             from nova import fakememcache as memcache
-        self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
+        self.mc = memcache.Client(FLAGS.memcached_servers,
                                   debug=0)
         super(Lockout, self).__init__(application)
 

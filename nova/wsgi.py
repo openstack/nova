@@ -428,7 +428,7 @@ class Serializer(object):
         try:
             return handlers[content_type]
         except Exception:
-            raise exception.InvalidContentType()
+            raise exception.InvalidContentType(content_type=content_type)
 
     def serialize(self, data, content_type):
         """Serialize a dictionary into the specified content type."""
@@ -451,8 +451,7 @@ class Serializer(object):
         try:
             return handlers[content_type]
         except Exception:
-            raise exception.InvalidContentType(_('Invalid content type %s'
-                                                 % content_type))
+            raise exception.InvalidContentType(content_type=content_type)
 
     def _from_json(self, datastring):
         return utils.loads(datastring)

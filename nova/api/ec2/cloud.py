@@ -49,8 +49,6 @@ flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
 
-InvalidInputException = exception.InvalidInputException
-
 
 def _gen_key(context, user_id, key_name):
     """Generate a key
@@ -398,11 +396,11 @@ class CloudController(object):
             ip_protocol = str(ip_protocol)
 
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
-                raise InvalidInputException(_('%s is not a valid ipProtocol') %
-                                            (ip_protocol,))
+                raise exception.InvalidIpProtocol(protocol=ip_protocol)
             if ((min(from_port, to_port) < -1) or
                 (max(from_port, to_port) > 65535)):
-                raise InvalidInputException(_('Invalid port range'))
+                raise exception.InvalidPortRange(from_port=from_port,
+                                                 to_port=to_port)
 
             values['protocol'] = ip_protocol
             values['from_port'] = from_port

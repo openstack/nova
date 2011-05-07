@@ -735,6 +735,9 @@ class LibvirtConnection(driver.ComputeDriver):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    def get_host_ip_addr(self):
+        return FLAGS.my_ip
+
     @exception.wrap_exception
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
@@ -1049,8 +1052,7 @@ class LibvirtConnection(driver.ComputeDriver):
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                msg = _("Instance %s not found") % instance_name
-                raise exception.NotFound(msg)
+                raise exception.InstanceNotFound(instance_id=instance_name)
 
             msg = _("Error from libvirt while looking up %(instance_name)s: "
                     "[Error Code %(error_code)s] %(ex)s") % locals()
@@ -2009,10 +2011,12 @@ class IptablesFirewallDriver(FirewallDriver):
                  for ip in mapping['ips']]
         ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        ips_v6 = [ip['ip'] for (_n, mapping) in network_info
-                 for ip in mapping['ip6s']]
+        ipv6_rules = []
+        if FLAGS.use_ipv6:
+            ips_v6 = [ip['ip'] for (_n, mapping) in network_info
+                     for ip in mapping['ip6s']]
+            ipv6_rules = self._create_filter(ips_v6, chain_name)
 
-        ipv6_rules = self._create_filter(ips_v6, chain_name)
         return ipv4_rules, ipv6_rules
 
     def _add_filters(self, chain_name, ipv4_rules, ipv6_rules):
