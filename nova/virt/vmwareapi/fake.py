@@ -387,12 +387,11 @@ def _add_file(file_path):
 def _remove_file(file_path):
     """Removes a file reference from the db."""
     if _db_content.get("files") is None:
-        raise exception.NotFound(_("No files have been added yet"))
+        raise exception.NoFilesFound()
     # Check if the remove is for a single file object or for a folder
     if file_path.find(".vmdk") != -1:
         if file_path not in _db_content.get("files"):
-            raise exception.NotFound(_("File- '%s' is not there in the "
-                           "datastore") % file_path)
+            raise exception.FileNotFound(file_path=file_path)
         _db_content.get("files").remove(file_path)
     else:
         # Removes the files in the folder and the folder too from the db
@@ -579,7 +578,7 @@ class FakeVim(object):
         """Searches the datastore for a file."""
         ds_path = kwargs.get("datastorePath")
         if _db_content.get("files", None) is None:
-            raise exception.NotFound(_("No files have been added yet"))
+            raise exception.NoFilesFound()
         for file in _db_content.get("files"):
             if file.find(ds_path) != -1:
                 task_mdo = create_task(method, "success")
@@ -591,7 +590,7 @@ class FakeVim(object):
         """Creates a directory in the datastore."""
         ds_path = kwargs.get("name")
         if _db_content.get("files", None) is None:
-            raise exception.NotFound(_("No files have been added yet"))
+            raise exception.NoFilesFound()
         _db_content["files"].append(ds_path)
 
     def _set_power_state(self, method, vm_ref, pwr_state="poweredOn"):

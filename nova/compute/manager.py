@@ -40,6 +40,7 @@ import os
 import socket
 import sys
 import tempfile
+import time
 import functools
 
 from eventlet import greenthread
@@ -137,16 +138,32 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Initialization for a standalone compute service."""
         self.driver.init_host(host=self.host)
 
-    def _update_state(self, context, instance_id):
+    def _update_state(self, context, instance_id, state=None):
         """Update the state of an instance from the driver info."""
-        # FIXME(ja): include other fields from state?
         instance_ref = self.db.instance_get(context, instance_id)
-        try:
-            info = self.driver.get_info(instance_ref['name'])
-            state = info['state']
-        except exception.NotFound:
-            state = power_state.FAILED
+
+        if state is None:
+            try:
+                info = self.driver.get_info(instance_ref['name'])
+            except exception.NotFound:
+                info = None
+
+            if info is not None:
+                state = info['state']
+            else:
+                state = power_state.FAILED
+
         self.db.instance_set_state(context, instance_id, state)
+
+    def _update_launched_at(self, context, instance_id, launched_at=None):
+        """Update the launched_at parameter of the given instance."""
+        data = {'launched_at': launched_at or datetime.datetime.utcnow()}
+        self.db.instance_update(context, instance_id, data)
+
+    def _update_image_id(self, context, instance_id, image_id):
+        """Update the image_id for the given instance."""
+        data = {'image_id': image_id}
+        self.db.instance_update(context, instance_id, data)
 
     def get_console_topic(self, context, **kwargs):
         """Retrieves the console host for a project on this host.
@@ -231,24 +248,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                        instance_id)
 
         # TODO(vish) check to make sure the availability zone matches
-        self.db.instance_set_state(context,
-                                   instance_id,
-                                   power_state.NOSTATE,
-                                   'spawning')
+        self._update_state(context, instance_id, power_state.BUILDING)
 
         try:
             self.driver.spawn(instance_ref)
-            now = datetime.datetime.utcnow()
-            self.db.instance_update(context,
-                                    instance_id,
-                                    {'launched_at': now})
-        except Exception:  # pylint: disable=W0702
-            LOG.exception(_("Instance '%s' failed to spawn. Is virtualization"
-                            " enabled in the BIOS?"), instance_id,
-                                                     context=context)
-            self.db.instance_set_state(context,
-                                       instance_id,
-                                       power_state.SHUTDOWN)
+        except Exception as ex:  # pylint: disable=W0702
+            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                    "virtualization enabled in the BIOS? Details: "
+                    "%(ex)s") % locals()
+            LOG.exception(msg)
 
         if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
             public_ip = self.network_api.allocate_floating_ip(context)
@@ -262,6 +270,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                    floating_ip,
                                                    fixed_ip,
                                                    affect_auto_assigned=True)
+
+        self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
@@ -318,6 +328,33 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
+    def rebuild_instance(self, context, instance_id, image_id):
+        """Destroy and re-make this instance.
+
+        A 'rebuild' effectively purges all existing data from the system and
+        remakes the VM with given 'metadata' and 'personalities'.
+
+        :param context: `nova.RequestContext` object
+        :param instance_id: Instance identifier (integer)
+        :param image_id: Image identifier (integer)
+        """
+        context = context.elevated()
+
+        instance_ref = self.db.instance_get(context, instance_id)
+        LOG.audit(_("Rebuilding instance %s"), instance_id, context=context)
+
+        self._update_state(context, instance_id, power_state.BUILDING)
+
+        self.driver.destroy(instance_ref)
+        instance_ref.image_id = image_id
+        self.driver.spawn(instance_ref)
+
+        self._update_image_id(context, instance_id, image_id)
+        self._update_launched_at(context, instance_id)
+        self._update_state(context, instance_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
     def reboot_instance(self, context, instance_id):
         """Reboot an instance on this host."""
         context = context.elevated()
@@ -368,21 +405,30 @@ class ComputeManager(manager.SchedulerDependentManager):
     def set_admin_password(self, context, instance_id, new_pass=None):
         """Set the root/admin password for an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        instance_id = instance_ref['id']
-        instance_state = instance_ref['state']
-        expected_state = power_state.RUNNING
-        if instance_state != expected_state:
-            LOG.warn(_('trying to reset the password on a non-running '
-                    'instance: %(instance_id)s (state: %(instance_state)s '
-                    'expected: %(expected_state)s)') % locals())
-        LOG.audit(_('instance %s: setting admin password'),
-                instance_ref['name'])
+
         if new_pass is None:
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
-        self.driver.set_admin_password(instance_ref, new_pass)
-        self._update_state(context, instance_id)
+
+        while True:
+            instance_ref = self.db.instance_get(context, instance_id)
+            instance_id = instance_ref["id"]
+            instance_state = instance_ref["state"]
+            expected_state = power_state.RUNNING
+
+            if instance_state != expected_state:
+                time.sleep(5)
+                continue
+            else:
+                try:
+                    self.driver.set_admin_password(instance_ref, new_pass)
+                    LOG.audit(_("Instance %s: Root password set"),
+                                instance_ref["name"])
+                    break
+                except Exception, e:
+                    # Catch all here because this could be anything.
+                    LOG.exception(e)
+                    continue
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -713,7 +759,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         LOG.audit(_("Get console output for instance %s"), instance_id,
                   context=context)
-        return self.driver.get_console_output(instance_ref)
+        output = self.driver.get_console_output(instance_ref)
+        return output.decode('utf-8', 'replace').encode('ascii', 'replace')
 
     @exception.wrap_exception
     def get_ajax_console(self, context, instance_id):
@@ -829,7 +876,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         tmp_file = os.path.join(FLAGS.instances_path, filename)
         if not os.path.exists(tmp_file):
-            raise exception.NotFound(_('%s not found') % tmp_file)
+            raise exception.FileNotFound(file_path=tmp_file)
 
     @exception.wrap_exception
     def cleanup_shared_storage_test_file(self, context, filename):
@@ -869,8 +916,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Getting fixed ips
         fixed_ip = self.db.instance_get_fixed_address(context, instance_id)
         if not fixed_ip:
-            msg = _("%(instance_id)s(%(ec2_id)s) does not have fixed_ip.")
-            raise exception.NotFound(msg % locals())
+            raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
 
         # If any volume is mounted, prepare here.
         if not instance_ref['volumes']:
@@ -1073,8 +1119,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_instance is None:
                 # NOTE(justinsb): We have to be very careful here, because a
                 # concurrent operation could be in progress (e.g. a spawn)
-                if db_state == power_state.NOSTATE:
-                    # Assume that NOSTATE => spawning
+                if db_state == power_state.BUILDING:
                     # TODO(justinsb): This does mean that if we crash during a
                     # spawn, the machine will never leave the spawning state,
                     # but this is just the way nova is; this function isn't
@@ -1105,9 +1150,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if vm_state != db_state:
                 LOG.info(_("DB/VM state mismatch. Changing state from "
                            "'%(db_state)s' to '%(vm_state)s'") % locals())
-                self.db.instance_set_state(context,
-                                           db_instance['id'],
-                                           vm_state)
+                self._update_state(context, db_instance['id'], vm_state)
 
             # NOTE(justinsb): We no longer auto-remove SHUTOFF instances
             # It's quite hard to get them back when we do.

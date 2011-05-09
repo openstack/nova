@@ -75,7 +75,7 @@ def zone_get_all_db(context):
     ]
 
 
-def zone_capabilities(method, context, params):
+def zone_capabilities(method, context):
     return dict()
 
 

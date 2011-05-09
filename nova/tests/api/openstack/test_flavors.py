@@ -47,8 +47,8 @@ def return_instance_types(context, num=2):
     return instance_types
 
 
-def return_instance_type_not_found(context, flavorid):
-    raise exception.NotFound()
+def return_instance_type_not_found(context, flavor_id):
+    raise exception.InstanceTypeNotFound(flavor_id=flavor_id)
 
 
 class FlavorsTest(test.TestCase):
