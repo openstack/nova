@@ -21,19 +21,10 @@
 Handling of VM disk images.
 """
 
-import os.path
-import shutil
-import sys
-import time
-import urllib2
-import urlparse
-
 from nova import context
 from nova import flags
 from nova import log as logging
 from nova import utils
-from nova.auth import manager
-from nova.auth import signer
 
 
 FLAGS = flags.FLAGS
