@@ -79,6 +79,12 @@ class VolumeNotFound(NotFound):
         super(VolumeNotFound, self).__init__(message)
 
 
+class VolumeIsBusy(Error):
+    def __init__(self, message, volume_id):
+        self.volume_id = volume_id
+        super(Error, self).__init__(message)
+
+
 class SnapshotNotFound(NotFound):
     def __init__(self, message, snapshot_id):
         self.snapshot_id = snapshot_id
