@@ -118,6 +118,78 @@ class QuotaTestCase(test.TestCase):
         # Cleanup
         db.quota_destroy_all_by_project(self.context, self.project.id)
 
+    def test_unlimited_instances(self):
+        FLAGS.quota_instances = 2
+        FLAGS.quota_cores = 1000
+        instance_type = self._get_instance_type('m1.small')
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 2)
+        db.quota_create(self.context, self.project.id, 'instances', None)
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 100)
+        num_instances = quota.allowed_instances(self.context, 101,
+                                                instance_type)
+        self.assertEqual(num_instances, 101)
+
+    def test_unlimited_cores(self):
+        FLAGS.quota_instances = 1000
+        FLAGS.quota_cores = 2
+        instance_type = self._get_instance_type('m1.small')
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 2)
+        db.quota_create(self.context, self.project.id, 'cores', None)
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 100)
+        num_instances = quota.allowed_instances(self.context, 101,
+                                                instance_type)
+        self.assertEqual(num_instances, 101)
+
+    def test_unlimited_volumes(self):
+        FLAGS.quota_volumes = 10
+        FLAGS.quota_gigabytes = 1000
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 10)
+        db.quota_create(self.context, self.project.id, 'volumes', None)
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 100)
+        volumes = quota.allowed_volumes(self.context, 101, 1)
+        self.assertEqual(volumes, 101)
+
+    def test_unlimited_gigabytes(self):
+        FLAGS.quota_volumes = 1000
+        FLAGS.quota_gigabytes = 10
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 10)
+        db.quota_create(self.context, self.project.id, 'gigabytes', None)
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 100)
+        volumes = quota.allowed_volumes(self.context, 101, 1)
+        self.assertEqual(volumes, 101)
+
+    def test_unlimited_floating_ips(self):
+        FLAGS.quota_floating_ips = 10
+        floating_ips = quota.allowed_floating_ips(self.context, 100)
+        self.assertEqual(floating_ips, 10)
+        db.quota_create(self.context, self.project.id, 'floating_ips', None)
+        floating_ips = quota.allowed_floating_ips(self.context, 100)
+        self.assertEqual(floating_ips, 100)
+        floating_ips = quota.allowed_floating_ips(self.context, 101)
+        self.assertEqual(floating_ips, 101)
+
+    def test_unlimited_metadata_items(self):
+        FLAGS.quota_metadata_items = 10
+        items = quota.allowed_metadata_items(self.context, 100)
+        self.assertEqual(items, 10)
+        db.quota_create(self.context, self.project.id, 'metadata_items', None)
+        items = quota.allowed_metadata_items(self.context, 100)
+        self.assertEqual(items, 100)
+        items = quota.allowed_metadata_items(self.context, 101)
+        self.assertEqual(items, 101)
+
     def test_too_many_instances(self):
         instance_ids = []
         for i in range(FLAGS.quota_instances):
