@@ -13,12 +13,46 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+import json
+
 from nova import flags
 from nova import utils
 
 FLAGS = flags.FLAGS
 
-def notify(event_name, model):
-    """Sends a notification using the specified driver"""
+flags.DEFINE_string('default_notification_level', 'info',
+                    'Default notification level for outgoing notifications')
+
+WARN = 'WARN'
+INFO = 'INFO'
+ERROR = 'ERROR'
+CRITICAL = 'CRITICAL'
+DEBUG = 'DEBUG'
+
+log_levels = (DEBUG, WARN, INFO, ERROR, CRITICAL)
+
+def notify(event_name, publisher_id, event_type, priority, payload):
+    """
+    Sends a notification using the specified driver
+
+    Message format is as follows:
+
+    publisher_id - the source worker_type.host of the message
+    timestamp - the GMT timestamp the notification was sent at
+    event_type - the literal type of event (ex. Instance Creation)
+    priority - patterned after the enumeration of Python logging levels in
+               the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
+    payload - A python dictionary of attributes
+
+    The payload will be constructed as a dictionary of the above attributes,
+    and converted into a JSON dump, which will then be sent via the transport
+    mechanism defined by the driver.
+    """
     driver = utils.import_class(FLAGS.notification_driver)()
-    driver.notify(event_name, model)
+    message = dict(publisher_id=publisher_id,
+                   event_type=event_type,
+                   priority=priority,
+                   payload=payload,
+                   time=datetime.datetime.utcnow())
+    driver.notify(json.dumps(message))

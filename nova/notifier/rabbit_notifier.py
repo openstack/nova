@@ -25,13 +25,13 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('notification_topic', 'notifications', 
                     'RabbitMQ topic used for Nova notifications')
 
+
 class RabbitNotifier(object):
     """Sends notifications to a specific RabbitMQ server and topic"""
     pass
 
-    def notify(self, event_name, model):
+    def notify(self, payload):
         """Sends a notification to the RabbitMQ"""
         context = nova.context.get_admin_context()
         topic = FLAGS.notification_topic
-        msg = { 'event_name': event_name, 'model': model.__dict__ }
-        rpc.cast(context, topic, json.dumps(msg))
+        rpc.cast(context, topic, msg)
