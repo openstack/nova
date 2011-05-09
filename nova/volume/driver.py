@@ -153,8 +153,7 @@ class VolumeDriver(object):
                                             volume['name']))
         out = out.strip()
         if (out[0] == 'o') or (out[0] == 'O'):
-            raise exception.VolumeIsBusy(
-                _('deleting volume %s that has snapshot'), volume['name'])
+            raise exception.VolumeIsBusy(volume_name=volume['name'])
                 
         self._delete_volume(volume, volume['size'])
 

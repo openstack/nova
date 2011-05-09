@@ -1798,8 +1798,7 @@ def snapshot_get(context, snapshot_id, session=None):
                          filter_by(deleted=False).\
                          first()
     if not result:
-        raise exception.SnapshotNotFound(_('Snapshot %s not found') % snapshot_id,
-                                         snapshot_id)
+        raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
 
     return result
 
