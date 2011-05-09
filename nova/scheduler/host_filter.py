@@ -96,8 +96,8 @@ class FlavorFilter(HostFilter):
         selected_hosts = []
         for host, services in zone_manager.service_states.iteritems():
             capabilities = services.get('compute', {})
-            host_ram_mb = capabilities['host_memory']['free']
-            disk_bytes = capabilities['disk']['available']
+            host_ram_mb = capabilities['host_memory_free']
+            disk_bytes = capabilities['disk_available']
             if host_ram_mb >= instance_type['memory_mb'] and \
                 disk_bytes >= instance_type['local_gb']:
                     selected_hosts.append((host, capabilities))
@@ -106,10 +106,10 @@ class FlavorFilter(HostFilter):
 #host entries (currently) are like:
 #    {'host_name-description': 'Default install of XenServer',
 #    'host_hostname': 'xs-mini',
-#    'host_memory': {'total': 8244539392,
-#        'overhead': 184225792,
-#        'free': 3868327936,
-#        'free-computed': 3840843776},
+#    'host_memory_total': 8244539392,
+#    'host_memory_overhead': 184225792,
+#    'host_memory_free': 3868327936,
+#    'host_memory_free-computed': 3840843776},
 #    'host_other-config': {},
 #    'host_ip_address': '192.168.1.109',
 #    'host_cpu_info': {},
@@ -221,8 +221,8 @@ class JsonFilter(HostFilter):
         required_ram = instance_type['memory_mb']
         required_disk = instance_type['local_gb']
         query = ['and',
-                    ['>=', '$compute.host_memory.free', required_ram],
-                    ['>=', '$compute.disk.available', required_disk]
+                    ['>=', '$compute.host_memory_free', required_ram],
+                    ['>=', '$compute.disk_available', required_disk]
                 ]
         return (self._full_name(), json.dumps(query))
 

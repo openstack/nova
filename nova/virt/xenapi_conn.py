@@ -505,8 +505,8 @@ class HostState(object):
         data["disk_total"] = total
         data["disk_used"] = used
         data["disk_available"] = total - used
-        memory = data.get('host_memory', None)
-        if memory:
+        host_memory = data.get('host_memory', None)
+        if host_memory:
             data["host_memory_total"] = host_memory.get('total', 0)
             data["host_memory_overhead"] = host_memory.get('overhead', 0)
             data["host_memory_free"] = host_memory.get('free', 0)

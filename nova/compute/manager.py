@@ -130,6 +130,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_api = network.API()
+        self._last_host_check = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
