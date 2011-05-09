@@ -136,6 +136,12 @@ class RequestTest(test.TestCase):
         request.body = "asdf<br />"
         self.assertRaises(webob.exc.HTTPBadRequest, request.get_content_type)
 
+    def test_request_content_type_with_charset(self):
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Content-Type"] = "application/json; charset=UTF-8"
+        result = request.get_content_type()
+        self.assertEqual(result, "application/json")
+
     def test_content_type_from_accept_xml(self):
         request = wsgi.Request.blank('/tests/123')
         request.headers["Accept"] = "application/xml"

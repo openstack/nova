@@ -28,15 +28,14 @@ import webob
 from xml.dom.minidom import parseString
 
 from nova.api.openstack import limits
-from nova.api.openstack.limits import Limit
 
 
 TEST_LIMITS = [
-    Limit("GET", "/delayed", "^/delayed", 1, limits.PER_MINUTE),
-    Limit("POST", "*", ".*", 7, limits.PER_MINUTE),
-    Limit("POST", "/servers", "^/servers", 3, limits.PER_MINUTE),
-    Limit("PUT", "*", "", 10, limits.PER_MINUTE),
-    Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
+    limits.Limit("GET", "/delayed", "^/delayed", 1, limits.PER_MINUTE),
+    limits.Limit("POST", "*", ".*", 7, limits.PER_MINUTE),
+    limits.Limit("POST", "/servers", "^/servers", 3, limits.PER_MINUTE),
+    limits.Limit("PUT", "*", "", 10, limits.PER_MINUTE),
+    limits.Limit("PUT", "/servers", "^/servers", 5, limits.PER_MINUTE),
 ]
 
 
@@ -58,15 +57,15 @@ class BaseLimitTestSuite(unittest.TestCase):
         return self.time
 
 
-class LimitsControllerTest(BaseLimitTestSuite):
+class LimitsControllerV10Test(BaseLimitTestSuite):
     """
-    Tests for `limits.LimitsController` class.
+    Tests for `limits.LimitsControllerV10` class.
     """
 
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.LimitsController()
+        self.controller = limits.LimitsControllerV10()
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -81,8 +80,8 @@ class LimitsControllerTest(BaseLimitTestSuite):
     def _populate_limits(self, request):
         """Put limit info into a request."""
         _limits = [
-            Limit("GET", "*", ".*", 10, 60).display(),
-            Limit("POST", "*", ".*", 5, 60 * 60).display(),
+            limits.Limit("GET", "*", ".*", 10, 60).display(),
+            limits.Limit("POST", "*", ".*", 5, 60 * 60).display(),
         ]
         request.environ["nova.limits"] = _limits
         return request
@@ -171,6 +170,100 @@ class LimitsControllerTest(BaseLimitTestSuite):
         self.assertEqual(expected.toxml(), body.toxml())
 
 
+class LimitsControllerV11Test(BaseLimitTestSuite):
+    """
+    Tests for `limits.LimitsControllerV11` class.
+    """
+
+    def setUp(self):
+        """Run before each test."""
+        BaseLimitTestSuite.setUp(self)
+        self.controller = limits.LimitsControllerV11()
+
+    def _get_index_request(self, accept_header="application/json"):
+        """Helper to set routing arguments."""
+        request = webob.Request.blank("/")
+        request.accept = accept_header
+        request.environ["wsgiorg.routing_args"] = (None, {
+            "action": "index",
+            "controller": "",
+        })
+        return request
+
+    def _populate_limits(self, request):
+        """Put limit info into a request."""
+        _limits = [
+            limits.Limit("GET", "*", ".*", 10, 60).display(),
+            limits.Limit("POST", "*", ".*", 5, 60 * 60).display(),
+            limits.Limit("GET", "changes-since*", "changes-since",
+                         5, 60).display(),
+        ]
+        request.environ["nova.limits"] = _limits
+        return request
+
+    def test_empty_index_json(self):
+        """Test getting empty limit details in JSON."""
+        request = self._get_index_request()
+        response = request.get_response(self.controller)
+        expected = {
+            "limits": {
+                "rate": [],
+                "absolute": {},
+            },
+        }
+        body = json.loads(response.body)
+        self.assertEqual(expected, body)
+
+    def test_index_json(self):
+        """Test getting limit details in JSON."""
+        request = self._get_index_request()
+        request = self._populate_limits(request)
+        response = request.get_response(self.controller)
+        expected = {
+            "limits": {
+                "rate": [
+                    {
+                        "regex": ".*",
+                        "uri": "*",
+                        "limit": [
+                            {
+                                "verb": "GET",
+                                "next-available": 0,
+                                "unit": "MINUTE",
+                                "value": 10,
+                                "remaining": 10,
+                            },
+                            {
+                                "verb": "POST",
+                                "next-available": 0,
+                                "unit": "HOUR",
+                                "value": 5,
+                                "remaining": 5,
+                            },
+                        ],
+                    },
+                    {
+                        "regex": "changes-since",
+                        "uri": "changes-since*",
+                        "limit": [
+                            {
+                                "verb": "GET",
+                                "next-available": 0,
+                                "unit": "MINUTE",
+                                "value": 5,
+                                "remaining": 5,
+                            },
+                        ],
+                    },
+
+                ],
+                "absolute": {},
+            },
+        }
+        body = json.loads(response.body)
+        self.assertEqual(expected, body)
+
+
 class LimitMiddlewareTest(BaseLimitTestSuite):
     """
     Tests for the `limits.RateLimitingMiddleware` class.
@@ -185,7 +278,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         """Prepare middleware for use through fake WSGI app."""
         BaseLimitTestSuite.setUp(self)
         _limits = [
-            Limit("GET", "*", ".*", 1, 60),
+            limits.Limit("GET", "*", ".*", 1, 60),
         ]
         self.app = limits.RateLimitingMiddleware(self._empty_app, _limits)
 
@@ -238,7 +331,7 @@ class LimitTest(BaseLimitTestSuite):
 
     def test_GET_no_delay(self):
         """Test a limit handles 1 GET per second."""
-        limit = Limit("GET", "*", ".*", 1, 1)
+        limit = limits.Limit("GET", "*", ".*", 1, 1)
         delay = limit("GET", "/anything")
         self.assertEqual(None, delay)
         self.assertEqual(0, limit.next_request)
@@ -246,7 +339,7 @@ class LimitTest(BaseLimitTestSuite):
 
     def test_GET_delay(self):
         """Test two calls to 1 GET per second limit."""
-        limit = Limit("GET", "*", ".*", 1, 1)
+        limit = limits.Limit("GET", "*", ".*", 1, 1)
         delay = limit("GET", "/anything")
         self.assertEqual(None, delay)
 

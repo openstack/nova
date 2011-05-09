@@ -16,7 +16,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
+"""Base Manager class.
+
 Managers are responsible for a certain aspect of the sytem.  It is a logical
 grouping of code relating to a portion of the system.  In general other
 components should be using the manager to make changes to the components that
@@ -49,15 +50,18 @@ Managers will often provide methods for initial setup of a host or periodic
 tasksto a wrapping service.
 
 This module provides Manager, a base class for managers.
+
 """
 
-from nova import utils
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova.db import base
 from nova.scheduler import api
 
+
 FLAGS = flags.FLAGS
+
 
 LOG = logging.getLogger('nova.manager')
 
@@ -70,23 +74,29 @@ class Manager(base.Base):
         super(Manager, self).__init__(db_driver)
 
     def periodic_tasks(self, context=None):
-        """Tasks to be run at a periodic interval"""
+        """Tasks to be run at a periodic interval."""
         pass
 
     def init_host(self):
-        """Do any initialization that needs to be run if this is a standalone
-        service. Child classes should override this method."""
+        """Handle initialization if this is a standalone service.
+
+        Child classes should override this method.
+
+        """
         pass
 
 
 class SchedulerDependentManager(Manager):
     """Periodically send capability updates to the Scheduler services.
-       Services that need to update the Scheduler of their capabilities
-       should derive from this class. Otherwise they can derive from
-       manager.Manager directly. Updates are only sent after
-       update_service_capabilities is called with non-None values."""
 
-    def __init__(self, host=None, db_driver=None, service_name="undefined"):
+    Services that need to update the Scheduler of their capabilities
+    should derive from this class. Otherwise they can derive from
+    manager.Manager directly. Updates are only sent after
+    update_service_capabilities is called with non-None values.
+
+    """
+
+    def __init__(self, host=None, db_driver=None, service_name='undefined'):
         self.last_capabilities = None
         self.service_name = service_name
         super(SchedulerDependentManager, self).__init__(host, db_driver)
@@ -96,9 +106,9 @@ class SchedulerDependentManager(Manager):
         self.last_capabilities = capabilities
 
     def periodic_tasks(self, context=None):
-        """Pass data back to the scheduler at a periodic interval"""
+        """Pass data back to the scheduler at a periodic interval."""
         if self.last_capabilities:
-            LOG.debug(_("Notifying Schedulers of capabilities ..."))
+            LOG.debug(_('Notifying Schedulers of capabilities ...'))
             api.update_service_capabilities(context, self.service_name,
                                 self.host, self.last_capabilities)
 

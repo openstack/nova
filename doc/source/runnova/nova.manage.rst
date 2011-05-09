@@ -83,13 +83,13 @@ Nova User
 Nova Project
 ~~~~~~~~~~~~
 
-``nova-manage project add <projectname>``
+``nova-manage project add <projectname> <username>``
 
-    Add a nova project with the name <projectname> to the database.
+    Add a nova project with the name <projectname> to the database that will be administered by the named user.
 
-``nova-manage project create <projectname>``
+``nova-manage project create <projectname> <projectmanager>``
 
-    Create a new nova project with the name <projectname> (you still need to do nova-manage project add <projectname> to add it to the database).
+    Create a new nova project with the name <projectname> (you still need to do nova-manage project add <projectname> to add it to the database). The <projectmanager> username is the administrator of the project.
 
 ``nova-manage project delete <projectname>``
 
@@ -111,9 +111,9 @@ Nova Project
 
     Deletes the project with the name <projectname>.
 
-``nova-manage project zipfile``
+``nova-manage project zipfile <projectname> <username> <directory for credentials>``
 
-    Compresses all related files for a created project into a zip file nova.zip.
+    Compresses all related files for a created project into a named zip file such as nova.zip.
 
 Nova Role
 ~~~~~~~~~
@@ -226,7 +226,7 @@ Concept: Plugins
 Concept: IPC/RPC
 ----------------
 
-Rabbit!
+Rabbit is the main messaging queue, used for all communication between Nova components and it also does the remote procedure calls and inter-process communication. 
 
 
 Concept: Fakes

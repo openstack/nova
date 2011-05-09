@@ -14,33 +14,30 @@
 #    under the License.
 
 import base64
-import hashlib
 import traceback
 
 from webob import exc
 from xml.dom import minidom
 
 from nova import compute
-from nova import context
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import utils
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
+import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
 from nova.compute import instance_types
-from nova.compute import power_state
 import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
 
-LOG = logging.getLogger('server')
+LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
@@ -118,6 +115,8 @@ class Controller(common.OpenstackController):
 
         context = req.environ['nova.context']
 
+        password = self._get_server_admin_password(env['server'])
+
         key_name = None
         key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
@@ -127,20 +126,15 @@ class Controller(common.OpenstackController):
             key_data = key_pair['public_key']
 
         requested_image_id = self._image_id_from_req_data(env)
-        image_id = common.get_image_id_from_image_hash(self._image_service,
-            context, requested_image_id)
+        try:
+            image_id = common.get_image_id_from_image_hash(self._image_service,
+                context, requested_image_id)
+        except:
+            msg = _("Can not find requested image")
+            return faults.Fault(exc.HTTPBadRequest(msg))
+
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
-
-        # Metadata is a list, not a Dictionary, because we allow duplicate keys
-        # (even though JSON can't encode this)
-        # In future, we may not allow duplicate keys.
-        # However, the CloudServers API is not definitive on this front,
-        #  and we want to be compatible.
-        metadata = []
-        if env['server'].get('metadata'):
-            for k, v in env['server']['metadata'].items():
-                metadata.append({'key': k, 'value': v})
 
         personality = env['server'].get('personality')
         injected_files = []
@@ -170,7 +164,7 @@ class Controller(common.OpenstackController):
                 display_description=name,
                 key_name=key_name,
                 key_data=key_data,
-                metadata=metadata,
+                metadata=env['server'].get('metadata', {}),
                 injected_files=injected_files)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
@@ -180,7 +174,6 @@ class Controller(common.OpenstackController):
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        password = utils.generate_password(16)
         server['server']['adminPass'] = password
         self.compute_api.set_admin_password(context, server['server']['id'],
                                             password)
@@ -241,6 +234,10 @@ class Controller(common.OpenstackController):
             raise exc.HTTPBadRequest(explanation=expl)
         # if the original error is okay, just reraise it
         raise error
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
     def update(self, req, id):
@@ -320,9 +317,6 @@ class Controller(common.OpenstackController):
             return faults.Fault(exc.HTTPBadRequest())
         return exc.HTTPAccepted()
 
-    def _action_rebuild(self, input_dict, req, id):
-        return faults.Fault(exc.HTTPNotImplemented())
-
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
@@ -336,18 +330,20 @@ class Controller(common.OpenstackController):
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
             return faults.Fault(exc.HTTPBadRequest())
-        return faults.Fault(exc.HTTPAccepted())
+        return exc.HTTPAccepted()
 
     def _action_reboot(self, input_dict, req, id):
-        try:
+        if 'reboot' in input_dict and 'type' in input_dict['reboot']:
             reboot_type = input_dict['reboot']['type']
-        except Exception:
-            raise faults.Fault(exc.HTTPNotImplemented())
+        else:
+            LOG.exception(_("Missing argument 'type' for reboot"))
+            return faults.Fault(exc.HTTPUnprocessableEntity())
         try:
             # TODO(gundlach): pass reboot_type, support soft reboot in
             # virt driver
             self.compute_api.reboot(req.environ['nova.context'], id)
-        except:
+        except Exception, e:
+            LOG.exception(_("Error in reboot %s"), e)
             return faults.Fault(exc.HTTPUnprocessableEntity())
         return exc.HTTPAccepted()
 
@@ -561,9 +557,8 @@ class Controller(common.OpenstackController):
         """
         image_id = image_meta['id']
         if image_meta['status'] != 'active':
-            raise exception.Invalid(
-                _("Cannot build from image %(image_id)s, status not active") %
-                  locals())
+            raise exception.ImageUnacceptable(image_id=image_id,
+                                              reason=_("status is not active"))
 
         if image_meta.get('container_format') != 'ami':
             return None, None
@@ -571,14 +566,12 @@ class Controller(common.OpenstackController):
         try:
             kernel_id = image_meta['properties']['kernel_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Kernel not found for image %(image_id)s") % locals())
+            raise exception.KernelNotFoundForImage(image_id=image_id)
 
         try:
             ramdisk_id = image_meta['properties']['ramdisk_id']
         except KeyError:
-            raise exception.NotFound(
-                _("Ramdisk not found for image %(image_id)s") % locals())
+            raise exception.RamdiskNotFoundForImage(image_id=image_id)
 
         return kernel_id, ramdisk_id
 
@@ -595,19 +588,35 @@ class ControllerV10(Controller):
         return nova.api.openstack.views.servers.ViewBuilderV10(
             addresses_builder)
 
-    def _get_addresses_view_builder(self, req):
-        return nova.api.openstack.views.addresses.ViewBuilderV10(req)
-
     def _limit_items(self, items, req):
         return common.limited(items, req)
 
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            try:
-                self.compute_api.set_admin_password(context, server_id)
-            except exception.TimeoutException:
-                return exc.HTTPRequestTimeout()
+            self.compute_api.set_admin_password(context, server_id)
+
+    def _action_rebuild(self, info, request, instance_id):
+        context = request.environ['nova.context']
+        instance_id = int(instance_id)
+
+        try:
+            image_id = info["rebuild"]["imageId"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageId from request.")
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+        try:
+            self.compute_api.rebuild(context, instance_id, image_id)
+        except exception.BuildInProgress:
+            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
+
+        response = exc.HTTPAccepted()
+        response.empty_body = True
+        return response
 
 
 class ControllerV11(Controller):
@@ -629,9 +638,6 @@ class ControllerV11(Controller):
         return nova.api.openstack.views.servers.ViewBuilderV11(
             addresses_builder, flavor_builder, image_builder, base_url)
 
-    def _get_addresses_view_builder(self, req):
-        return nova.api.openstack.views.addresses.ViewBuilderV11(req)
-
     def _action_change_password(self, input_dict, req, id):
         context = req.environ['nova.context']
         if (not 'changePassword' in input_dict
@@ -647,6 +653,73 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def _validate_metadata(self, metadata):
+        """Ensure that we can work with the metadata given."""
+        try:
+            metadata.iteritems()
+        except AttributeError as ex:
+            msg = _("Unable to parse metadata key/value pairs.")
+            LOG.debug(msg)
+            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+    def _decode_personalities(self, personalities):
+        """Decode the Base64-encoded personalities."""
+        for personality in personalities:
+            try:
+                path = personality["path"]
+                contents = personality["contents"]
+            except (KeyError, TypeError):
+                msg = _("Unable to parse personality path/contents.")
+                LOG.info(msg)
+                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+            try:
+                personality["contents"] = base64.b64decode(contents)
+            except TypeError:
+                msg = _("Personality content could not be Base64 decoded.")
+                LOG.info(msg)
+                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+    def _action_rebuild(self, info, request, instance_id):
+        context = request.environ['nova.context']
+        instance_id = int(instance_id)
+
+        try:
+            image_ref = info["rebuild"]["imageRef"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageRef from request.")
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+        image_id = common.get_id_from_href(image_ref)
+        personalities = info["rebuild"].get("personality", [])
+        metadata = info["rebuild"].get("metadata", {})
+
+        self._validate_metadata(metadata)
+        self._decode_personalities(personalities)
+
+        try:
+            self.compute_api.rebuild(context, instance_id, image_id, metadata,
+                                     personalities)
+        except exception.BuildInProgress:
+            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
+
+        response = exc.HTTPAccepted()
+        response.empty_body = True
+        return response
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        password = server.get('adminPass')
+        if password is None:
+            return utils.generate_password(16)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(msg)
+        return password
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
