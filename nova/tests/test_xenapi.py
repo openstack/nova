@@ -673,24 +673,24 @@ class FakeXenApi(object):
 
     class FakeSR(object):
         def get_record(self, ref):
-            return {'virtual_allocation':10000,
-                    'physical_utilisation':20000}
+            return {'virtual_allocation': 10000,
+                    'physical_utilisation': 20000}
 
     SR = FakeSR()
 
 
 class FakeSession(object):
     """Fake Session class for HostState testing."""
-    
+
     def async_call_plugin(self, *args):
         return None
 
     def wait_for_task(self, *args):
-        vm = {'total':10,
-              'overhead':20,
-              'free':30,
-              'free-computed':40}
-        return json.dumps({'host_memory':vm})
+        vm = {'total': 10,
+              'overhead': 20,
+              'free': 30,
+              'free-computed': 40}
+        return json.dumps({'host_memory': vm})
 
     def get_xenapi(self):
         return FakeXenApi()
