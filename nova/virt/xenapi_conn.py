@@ -510,7 +510,7 @@ class HostState(object):
             data["host_memory_total"] = host_memory.get('total', 0)
             data["host_memory_overhead"] = host_memory.get('overhead', 0)
             data["host_memory_free"] = host_memory.get('free', 0)
-            data["host_memory_free-computed"] = \
+            data["host_memory_free_computed"] = \
                         host_memory.get('free-computed', 0)
             del data['host_memory']
         self._stats = data

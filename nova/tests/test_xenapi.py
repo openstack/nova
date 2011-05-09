@@ -714,4 +714,4 @@ class HostStateTestCase(test.TestCase):
         self.assertEquals(stats['host_memory_total'], 10)
         self.assertEquals(stats['host_memory_overhead'], 20)
         self.assertEquals(stats['host_memory_free'], 30)
-        self.assertEquals(stats['host_memory_free-computed'], 40)
+        self.assertEquals(stats['host_memory_free_computed'], 40)

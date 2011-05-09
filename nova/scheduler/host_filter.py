@@ -109,7 +109,7 @@ class FlavorFilter(HostFilter):
 #    'host_memory_total': 8244539392,
 #    'host_memory_overhead': 184225792,
 #    'host_memory_free': 3868327936,
-#    'host_memory_free-computed': 3840843776},
+#    'host_memory_free_computed': 3840843776},
 #    'host_other-config': {},
 #    'host_ip_address': '192.168.1.109',
 #    'host_cpu_info': {},
