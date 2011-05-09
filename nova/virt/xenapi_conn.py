@@ -57,6 +57,8 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 - suffix "_rec" for record objects
 """
 
+import json
+import random
 import sys
 import urlparse
 import xmlrpclib
@@ -67,10 +69,12 @@ from eventlet import timeout
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import utils
 from nova import flags
 from nova import log as logging
 from nova.virt import driver
+from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
