@@ -502,10 +502,17 @@ class HostState(object):
         sr_rec = self._session.get_xenapi().SR.get_record(sr_ref)
         total = int(sr_rec["virtual_allocation"])
         used = int(sr_rec["physical_utilisation"])
-        data["disk"] = dd = {}
-        dd["total"] = total
-        dd["used"] = used
-        dd["available"] = total - used
+        data["disk_total"] = total
+        data["disk_used"] = used
+        data["disk_available"] = total - used
+        memory = data.get('host_memory', None)
+        if memory:
+            data["host_memory_total"] = host_memory.get('total', 0)
+            data["host_memory_overhead"] = host_memory.get('overhead', 0)
+            data["host_memory_free"] = host_memory.get('free', 0)
+            data["host_memory_free-computed"] = \
+                        host_memory.get('free-computed', 0)
+            del data['host_memory']
         self._stats = data
 
 

@@ -686,7 +686,11 @@ class FakeSession(object):
         return None
 
     def wait_for_task(self, *args):
-        return json.dumps({})
+        vm = {'total':10,
+              'overhead':20,
+              'free':30,
+              'free-computed':40}
+        return json.dumps({'host_memory':vm})
 
     def get_xenapi(self):
         return FakeXenApi()
@@ -704,4 +708,10 @@ class HostStateTestCase(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(vm_utils, 'safe_find_sr', self._fake_safe_find_sr)
         host_state = xenapi_conn.HostState(FakeSession())
-
+        stats = host_state._stats
+        self.assertEquals('disk_total', 10000)
+        self.assertEquals('disk_used', 20000)
+        self.assertEquals('host_memory_total', 10)
+        self.assertEquals('host_memory_overhead', 20)
+        self.assertEquals('host_memory_free', 30)
+        self.assertEquals('host_memory_free-computed', 40)

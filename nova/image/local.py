@@ -102,7 +102,7 @@ class LocalImageService(service.BaseImageService):
                 image = cantidate
                 break
         if image is None:
-            raise exception.ImageNotFound(image_id=image_id)
+            raise exception.ImageNotFound(image_id=name)
         return image
 
     def get(self, context, image_id, data):
