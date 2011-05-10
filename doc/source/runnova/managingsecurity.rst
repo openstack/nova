@@ -18,8 +18,6 @@
 Security Considerations
 =======================
 
-.. todo:: This doc is vague and just high-level right now. Describe architecture that enables security.
-
 The goal of securing a cloud computing system involves both protecting the instances, data on the instances, and
 ensuring users are authenticated for actions and that borders are understood by the users and the system.
 Protecting the system from intrusion or attack involves authentication, network protections,  and

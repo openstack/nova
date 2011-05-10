@@ -6,7 +6,9 @@ function usage {
   echo ""
   echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
+  echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
+  echo "  -p, --pep8               Just run pep8"
   echo "  -h, --help               Print this usage message"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
@@ -21,6 +23,7 @@ function process_option {
     -V|--virtual-env) let always_venv=1; let never_venv=0;;
     -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
     -f|--force) let force=1;;
+    -p|--pep8) let just_pep8=1;;
     *) noseargs="$noseargs $1"
   esac
 }
@@ -32,6 +35,7 @@ never_venv=0
 force=0
 noseargs=
 wrapper=""
+just_pep8=0
 
 for arg in "$@"; do
   process_option $arg
@@ -52,6 +56,18 @@ function run_tests {
   fi
   return $RESULT
 }
+
+function run_pep8 {
+  echo "Running pep8 ..."
+  srcfiles=`find bin -type f ! -name "nova.conf*"`
+  srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
+  pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles}
+}
+
+if [ $just_pep8 -eq 1 ]; then
+    run_pep8
+    exit
+fi
 
 NOSETESTS="python run_tests.py $noseargs"
 
@@ -81,11 +97,9 @@ then
   fi
 fi
 
-if [ -z "$noseargs" ];
-then
-  srcfiles=`find bin -type f ! -name "nova.conf*"`
-  srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
-  run_tests && pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles} || exit 1
-else
-  run_tests
+run_tests || exit
+
+# Also run pep8 if no options were provided.
+if [ -z "$noseargs" ]; then
+  run_pep8
 fi
