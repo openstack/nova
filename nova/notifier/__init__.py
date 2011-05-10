@@ -32,6 +32,9 @@ DEBUG = 'DEBUG'
 
 log_levels = (DEBUG, WARN, INFO, ERROR, CRITICAL)
 
+class BadPriorityException(Exception):
+    pass
+
 def notify(event_name, publisher_id, event_type, priority, payload):
     """
     Sends a notification using the specified driver
@@ -58,6 +61,8 @@ def notify(event_name, publisher_id, event_type, priority, payload):
       'payload': {'instance_id': 12, ... }}
 
     """
+    if priority not in log_levels:
+        raise BadPriorityException('%s not in valid priorities' % priority)
     driver = utils.import_class(FLAGS.notification_driver)()
     message = dict(publisher_id=publisher_id,
                    event_type=event_type,

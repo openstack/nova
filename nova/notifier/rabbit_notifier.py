@@ -34,4 +34,4 @@ class RabbitNotifier(object):
         """Sends a notification to the RabbitMQ"""
         context = nova.context.get_admin_context()
         topic = FLAGS.notification_topic
-        rpc.cast(context, topic, msg)
+        rpc.cast(context, topic, payload)

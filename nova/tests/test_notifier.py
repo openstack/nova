@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 import nova
 
 from nova import flags
@@ -42,8 +44,26 @@ class NotifierTestCase(test.TestCase):
 
         class Mock(object):
             pass
-        notifier.notify('derp', Mock())
+        nova.notifier.notify('event_name', 'publisher_id', 'event_type',
+                nova.notifier.WARN, dict(a=3))
         self.assertEqual(self.notify_called, True)
+
+    def test_verify_message_format(self):
+        """A test to ensure changing the message format is prohibitively
+        annoying""" 
+        def message_assert(cls, blob):
+            message = json.loads(blob)
+            fields = [ ('publisher_id', 'publisher_id'),
+                       ('event_type', 'event_type'),
+                       ('priority', 'WARN'),
+                       ('payload', dict(a=3))]
+            for k, v in fields:
+                self.assertEqual(message[k], v)
+
+        self.stubs.Set(nova.notifier.no_op_notifier.NoopNotifier, 'notify',
+                message_assert)
+        nova.notifier.notify('event_name', 'publisher_id', 'event_type',
+                nova.notifier.WARN, dict(a=3))
 
     def test_send_rabbit_notification(self):
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
@@ -55,6 +75,22 @@ class NotifierTestCase(test.TestCase):
         class Mock(object):
             pass
         self.stubs.Set(nova.rpc, 'cast', mock_cast) 
-        notifier.notify('derp', Mock())
+        nova.notifier.notify('event_name', 'publisher_id', 'event_type',
+                nova.notifier.WARN, dict(a=3))
 
         self.assertEqual(self.mock_cast, True)
+
+    def test_invalid_priority(self):
+        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
+                'nova.notifier.rabbit_notifier.RabbitNotifier')
+        self.mock_cast = False
+        def mock_cast(cls, *args):
+            pass
+    
+        class Mock(object):
+            pass
+
+        self.stubs.Set(nova.rpc, 'cast', mock_cast) 
+        self.assertRaises(nova.notifier.BadPriorityException, 
+                nova.notifier.notify, 'event_name', 'publisher_id',
+                'event_type', 'not a priority', dict(a=3))
