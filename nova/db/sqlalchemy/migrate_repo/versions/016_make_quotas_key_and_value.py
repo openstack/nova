@@ -108,7 +108,7 @@ def convert_forward(migrate_engine, old_quotas, new_quotas):
     quotas = list(migrate_engine.execute(old_quotas.select()))
     for quota in quotas:
         for resource in resources:
-            limit = getattr(old_quotas, resource)
+            limit = getattr(quota, resource)
             if limit is None:
                 continue
             insert = new_quotas.insert().values(
