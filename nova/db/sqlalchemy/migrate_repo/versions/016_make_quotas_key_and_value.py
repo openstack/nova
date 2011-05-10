@@ -81,7 +81,10 @@ def existing_quotas_table(migrate_engine):
 
 def _assert_no_duplicate_project_ids(quotas):
     project_ids = set()
-    message = 'There are duplicate active quotas for project %s'
+    message = ('There are multiple active quotas for project "%s" '
+               '(among others, possibly). '
+               'Please resolve all ambiguous quotas before '
+               'reattempting the migration.')
     for quota in quotas:
         assert quota.project_id not in project_ids, message % quota.project_id
         project_ids.add(quota.project_id)
