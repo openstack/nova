@@ -28,29 +28,6 @@ def stubout_instance_snapshot(stubs):
     @classmethod
     def fake_fetch_image(cls, session, instance_id, image, user, project,
                          type):
-        # Stubout wait_for_task
-        def fake_wait_for_task(self, task, id):
-            class FakeEvent:
-
-                def send(self, value):
-                    self.rv = value
-
-                def wait(self):
-                    return self.rv
-
-            done = FakeEvent()
-            self._poll_task(id, task, done)
-            rv = done.wait()
-            return rv
-
-        def fake_loop(self):
-            pass
-
-        stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task',
-                  fake_wait_for_task)
-
-        stubs.Set(xenapi_conn.XenAPISession, '_stop_loop', fake_loop)
-
         from nova.virt.xenapi.fake import create_vdi
         name_label = "instance-%s" % instance_id
         #TODO: create fake SR record
@@ -62,11 +39,6 @@ def stubout_instance_snapshot(stubs):
         return vdi_uuid
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
-
-    def fake_parse_xmlrpc_value(val):
-        return val
-
-    stubs.Set(xenapi_conn, '_parse_xmlrpc_value', fake_parse_xmlrpc_value)
 
     def fake_wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                               original_parent_uuid):
