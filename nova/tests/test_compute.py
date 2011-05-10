@@ -355,10 +355,6 @@ class ComputeTestCase(test.TestCase):
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
-
-    def test_resize_instance(self):
-        """Ensure instance can be migrated/resized"""
-        instance_id = self._create_instance()
         context = self.context.elevated()
 
         self.compute.run_instance(self.context, instance_id)
