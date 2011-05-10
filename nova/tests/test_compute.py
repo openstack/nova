@@ -332,7 +332,8 @@ class ComputeTestCase(test.TestCase):
     def test_finish_resize(self):
         """Contrived test to ensure finish_resize doesn't raise anything"""
 
-        def fake(*args, **kwargs): pass
+        def fake(*args, **kwargs):
+            pass
 
         self.stubs.Set(self.compute.driver, 'finish_resize', fake)
         self.stubs.Set(self.compute.driver, 'finish_resize', fake)
@@ -350,10 +351,10 @@ class ComputeTestCase(test.TestCase):
             self.fail()
 
         self.compute.terminate_instance(self.context, instance_id)
-    
-     def test_resize_instance(self):
-         """Ensure instance can be migrated/resized"""
-         instance_id = self._create_instance()
+
+    def test_resize_instance(self):
+        """Ensure instance can be migrated/resized"""
+        instance_id = self._create_instance()
 
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
