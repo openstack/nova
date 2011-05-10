@@ -108,7 +108,7 @@ def convert_forward(migrate_engine, old_quotas, new_quotas):
     quotas = list(migrate_engine.execute(old_quotas.select()))
     for quota in quotas:
         for resource in resources:
-            limit = getattr(old_quota, resource)
+            limit = getattr(old_quotas, resource)
             if limit is None:
                 continue
             insert = new_quotas.insert().values(
@@ -120,6 +120,30 @@ def convert_forward(migrate_engine, old_quotas, new_quotas):
                 resource=resource,
                 limit=limit)
             migrate_engine.execute(insert)
+
+
+def earliest(date1, date2):
+    if date1 is None and date2 is None:
+        return None
+    if date1 is None:
+        return date2
+    if date2 is None:
+        return date1
+    if date1 < date2:
+        return date1
+    return date2
+
+
+def latest(date1, date2):
+    if date1 is None and date2 is None:
+        return None
+    if date1 is None:
+        return date2
+    if date2 is None:
+        return date1
+    if date1 > date2:
+        return date1
+    return date2
 
 
 def convert_backward(migrate_engine, old_quotas, new_quotas):
@@ -136,10 +160,10 @@ def convert_backward(migrate_engine, old_quotas, new_quotas):
                 quota.resource: quota.limit
             }
         else:
-            if quota.created_at < quotas[quota.project_id]['created_at']:
-                quotas[quota.project_id]['created_at'] = quota.created_at
-            if quota.updated_at > quotas[quota.project_id]['updated_at']:
-                quotas[quota.project_id]['updated_at'] = quota.updated_at
+            quotas[quota.project_id]['created_at'] = earliest(
+                quota.created_at, quotas[quota.project_id]['created_at'])
+            quotas[quota.project_id]['updated_at'] = latest(
+                quota.created_at, quotas[quota.project_id]['updated_at'])
             quotas[quota.project_id][quota.resource] = quota.limit
 
     for quota in quotas.itervalues():
