@@ -48,11 +48,20 @@ def notify(event_name, publisher_id, event_type, priority, payload):
     The payload will be constructed as a dictionary of the above attributes,
     and converted into a JSON dump, which will then be sent via the transport
     mechanism defined by the driver.
+
+    Message example:
+
+    { 'publisher_id': 'compute.host1',
+      'timestamp': '2011-05-09 22:00:14.621831',
+      'priority': 'WARN',
+      'event_type': 'compute.create_instance',
+      'payload': {'instance_id': 12, ... }}
+
     """
     driver = utils.import_class(FLAGS.notification_driver)()
     message = dict(publisher_id=publisher_id,
                    event_type=event_type,
                    priority=priority,
                    payload=payload,
-                   time=datetime.datetime.utcnow())
+                   time=str(datetime.datetime.utcnow()))
     driver.notify(json.dumps(message))
