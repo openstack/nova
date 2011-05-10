@@ -250,3 +250,28 @@ class GetFromPathTestCase(test.TestCase):
         input = {'a': [1, 2, {'b': 'b_1'}]}
         self.assertEquals([1, 2, {'b': 'b_1'}], f(input, "a"))
         self.assertEquals(['b_1'], f(input, "a/b"))
+
+
+class GenericUtilsTestCase(test.TestCase):
+    def test_parse_server_string(self):
+        result = utils.parse_server_string('::1')
+        self.assertEqual(('::1', ''), result)
+        result = utils.parse_server_string('[::1]:8773')
+        self.assertEqual(('::1', '8773'), result)
+        result = utils.parse_server_string('2001:db8::192.168.1.1')
+        self.assertEqual(('2001:db8::192.168.1.1', ''), result)
+        result = utils.parse_server_string('[2001:db8::192.168.1.1]:8773')
+        self.assertEqual(('2001:db8::192.168.1.1', '8773'), result)
+        result = utils.parse_server_string('192.168.1.1')
+        self.assertEqual(('192.168.1.1', ''), result)
+        result = utils.parse_server_string('192.168.1.2:8773')
+        self.assertEqual(('192.168.1.2', '8773'), result)
+        result = utils.parse_server_string('192.168.1.3')
+        self.assertEqual(('192.168.1.3', ''), result)
+        result = utils.parse_server_string('www.example.com:8443')
+        self.assertEqual(('www.example.com', '8443'), result)
+        result = utils.parse_server_string('www.example.com')
+        self.assertEqual(('www.example.com', ''), result)
+        # error case
+        result = utils.parse_server_string('www.exa:mple.com:8443')
+        self.assertEqual(('', ''), result)
