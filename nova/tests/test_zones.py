@@ -78,37 +78,31 @@ class ZoneManagerTestCase(test.TestCase):
 
     def test_service_capabilities(self):
         zm = zone_manager.ZoneManager()
-        caps = zm.get_zone_capabilities(self, None)
+        caps = zm.get_zone_capabilities(None)
         self.assertEquals(caps, {})
 
         zm.update_service_capabilities("svc1", "host1", dict(a=1, b=2))
-        caps = zm.get_zone_capabilities(self, None)
+        caps = zm.get_zone_capabilities(None)
         self.assertEquals(caps, dict(svc1_a=(1, 1), svc1_b=(2, 2)))
 
         zm.update_service_capabilities("svc1", "host1", dict(a=2, b=3))
-        caps = zm.get_zone_capabilities(self, None)
+        caps = zm.get_zone_capabilities(None)
         self.assertEquals(caps, dict(svc1_a=(2, 2), svc1_b=(3, 3)))
 
         zm.update_service_capabilities("svc1", "host2", dict(a=20, b=30))
-        caps = zm.get_zone_capabilities(self, None)
+        caps = zm.get_zone_capabilities(None)
         self.assertEquals(caps, dict(svc1_a=(2, 20), svc1_b=(3, 30)))
 
         zm.update_service_capabilities("svc10", "host1", dict(a=99, b=99))
-        caps = zm.get_zone_capabilities(self, None)
+        caps = zm.get_zone_capabilities(None)
         self.assertEquals(caps, dict(svc1_a=(2, 20), svc1_b=(3, 30),
                                      svc10_a=(99, 99), svc10_b=(99, 99)))
 
         zm.update_service_capabilities("svc1", "host3", dict(c=5))
-        caps = zm.get_zone_capabilities(self, None)
+        caps = zm.get_zone_capabilities(None)
         self.assertEquals(caps, dict(svc1_a=(2, 20), svc1_b=(3, 30),
                                      svc1_c=(5, 5), svc10_a=(99, 99),
                                      svc10_b=(99, 99)))
-
-        caps = zm.get_zone_capabilities(self, 'svc1')
-        self.assertEquals(caps, dict(svc1_a=(2, 20), svc1_b=(3, 30),
-                                     svc1_c=(5, 5)))
-        caps = zm.get_zone_capabilities(self, 'svc10')
-        self.assertEquals(caps, dict(svc10_a=(99, 99), svc10_b=(99, 99)))
 
     def test_refresh_from_db_replace_existing(self):
         zm = zone_manager.ZoneManager()

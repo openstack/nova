@@ -82,6 +82,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import version
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
@@ -150,7 +151,7 @@ class VpnCommands(object):
                     state = 'up'
                 print address,
                 print vpn['host'],
-                print vpn['ec2_id'],
+                print ec2utils.id_to_ec2_id(vpn['id']),
                 print vpn['state_description'],
                 print state
             else:
@@ -385,10 +386,10 @@ class ProjectCommands(object):
         with open(filename, 'w') as f:
             f.write(rc)
 
-    def list(self):
+    def list(self, username=None):
         """Lists all projects
-        arguments: <none>"""
-        for project in self.manager.get_projects():
+        arguments: [username]"""
+        for project in self.manager.get_projects(username):
             print project.name
 
     def quota(self, project_id, key=None, value=None):
@@ -758,6 +759,17 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class VersionCommands(object):
+    """Class for exposing the codebase version."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print _("%s (%s)") %\
+                (version.version_string(), version.version_string_with_vcs())
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -826,11 +838,17 @@ class InstanceTypeCommands(object):
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
         except exception.InvalidInputException:
-            print "Must supply valid parameters to create instance type"
+            print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
-        except exception.DBError, e:
-            print "DB Error: %s" % e
+        except exception.ApiError, e:
+            print "\n\n"
+            print "\n%s" % e
+            print "Please ensure instance_type name and flavorid are unique."
+            print "To complete remove a instance_type, use the --purge flag:"
+            print "\n     # nova-manage instance_type delete <name> --purge\n"
+            print "Currently defined instance_type names and flavorids:"
+            self.list("--all")
             sys.exit(2)
         except:
             print "Unknown error"
@@ -1043,7 +1061,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('version', VersionCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -1085,6 +1104,8 @@ def main():
 
     script_name = argv.pop(0)
     if len(argv) < 1:
+        print _("\nOpenStack Nova version: %s (%s)\n") %\
+                (version.version_string(), version.version_string_with_vcs())
         print script_name + " category action [<args>]"
         print _("Available categories:")
         for k, _v in CATEGORIES:
