@@ -59,7 +59,7 @@ def get_quota(context, project_id):
     return rval
 
 
-def _get_allowed_resources(requested, used, quota):
+def _get_request_allotment(requested, used, quota):
     if quota is None:
         return requested
     return quota - used
@@ -73,9 +73,9 @@ def allowed_instances(context, num_instances, instance_type):
     used_instances, used_cores = db.instance_data_get_for_project(context,
                                                                   project_id)
     quota = get_quota(context, project_id)
-    allowed_instances = _get_allowed_resources(num_instances, used_instances,
+    allowed_instances = _get_request_allotment(num_instances, used_instances,
                                                quota['instances'])
-    allowed_cores = _get_allowed_resources(num_cores, used_cores,
+    allowed_cores = _get_request_allotment(num_cores, used_cores,
                                            quota['cores'])
     allowed_instances = min(allowed_instances,
                             int(allowed_cores // instance_type['vcpus']))
@@ -91,9 +91,9 @@ def allowed_volumes(context, num_volumes, size):
     used_volumes, used_gigabytes = db.volume_data_get_for_project(context,
                                                                   project_id)
     quota = get_quota(context, project_id)
-    allowed_volumes = _get_allowed_resources(num_volumes, used_volumes,
+    allowed_volumes = _get_request_allotment(num_volumes, used_volumes,
                                              quota['volumes'])
-    allowed_gigabytes = _get_allowed_resources(num_gigabytes, used_gigabytes,
+    allowed_gigabytes = _get_request_allotment(num_gigabytes, used_gigabytes,
                                                quota['gigabytes'])
     allowed_volumes = min(allowed_volumes,
                           int(allowed_gigabytes // size))
@@ -106,7 +106,7 @@ def allowed_floating_ips(context, num_floating_ips):
     context = context.elevated()
     used_floating_ips = db.floating_ip_count_by_project(context, project_id)
     quota = get_quota(context, project_id)
-    allowed_floating_ips = _get_allowed_resources(num_floating_ips,
+    allowed_floating_ips = _get_request_allotment(num_floating_ips,
                                                   used_floating_ips,
                                                   quota['floating_ips'])
     return min(num_floating_ips, allowed_floating_ips)
@@ -117,7 +117,7 @@ def allowed_metadata_items(context, num_metadata_items):
     project_id = context.project_id
     context = context.elevated()
     quota = get_quota(context, project_id)
-    allowed_metadata_items = _get_allowed_resources(num_metadata_items, 0,
+    allowed_metadata_items = _get_request_allotment(num_metadata_items, 0,
                                                     quota['metadata_items'])
     return min(num_metadata_items, allowed_metadata_items)
 
