@@ -248,11 +248,18 @@ class API(base.Base):
             uid = context.user_id
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " instance %(instance_id)s") % locals())
+
+            # NOTE(sandy): For now we're just going to pass in the
+            # instance_type record to the scheduler. In a later phase
+            # we'll be ripping this whole for-loop out and deferring the
+            # creation of the Instance record. At that point all this will
+            # change.
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
+                               "instance_type": instance_type,
                                "availability_zone": availability_zone,
                                "injected_files": injected_files}})
 

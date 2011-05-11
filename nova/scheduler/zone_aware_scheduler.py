@@ -24,11 +24,12 @@ import operator
 
 from nova import log as logging
 from nova.scheduler import api
+from nova.scheduler import driver
 
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
 
 
-class ZoneAwareScheduler(object):
+class ZoneAwareScheduler(driver.Scheduler):
     """Base class for creating Zone Aware Schedulers."""
 
     def _call_zone_method(self, context, method, specs):
@@ -42,23 +43,29 @@ class ZoneAwareScheduler(object):
         anything about the children."""
         return self._schedule(context, "compute", *args, **kwargs)
 
-   def schedule(self, context, topic, *args, **kwargs):
+    def schedule(self, context, topic, *args, **kwargs):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
         res = self._schedule(context, topic, *args, **kwargs)
+        # TODO(sirp): should this be a host object rather than a weight-dict?
         return res[0]
 
     def _schedule(self, context, topic, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
+
+        #TODO(sandy): extract these from args.
+        num_instances = 1
+        specs = {}
+
         # Filter local hosts based on requirements ...
-        host_list = self.filter_hosts()
+        host_list = self.filter_hosts(num_instances, specs)
 
         # then weigh the selected hosts.
         # weighted = [ { 'weight':#, 'name':host, ...}, ]
-        weighted = self.weight_hosts(host_list)
+        weighted = self.weigh_hosts(num_instances, specs, host_list)
 
         # Next, tack on the best weights from the child zones ...
         child_results = self._call_zone_method(context, "select",
@@ -77,12 +84,12 @@ class ZoneAwareScheduler(object):
         weighted.sort(key=operator.itemgetter('weight'))
         return weighted
 
-   def filter_hosts(self):
-       """Derived classes must override this method and return
-          a list of hosts in [?] format."""
-          raise NotImplemented()
+    def filter_hosts(self, num, specs):
+        """Derived classes must override this method and return
+           a list of hosts in [?] format."""
+        raise NotImplemented()
 
-   def weigh_hosts(self, hosts):
-       """Derived classes must override this method and return
-          a lists of hosts in [?] format."""
-          raise NotImplemented()
+    def weigh_hosts(self, num, specs, hosts):
+        """Derived classes must override this method and return
+           a lists of hosts in [?] format."""
+        raise NotImplemented()
