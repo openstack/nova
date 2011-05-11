@@ -166,7 +166,7 @@ def convert_backward(migrate_engine, old_quotas, new_quotas):
             quotas[quota.project_id]['created_at'] = earliest(
                 quota.created_at, quotas[quota.project_id]['created_at'])
             quotas[quota.project_id]['updated_at'] = latest(
-                quota.created_at, quotas[quota.project_id]['updated_at'])
+                quota.updated_at, quotas[quota.project_id]['updated_at'])
             quotas[quota.project_id][quota.resource] = quota.limit
 
     for quota in quotas.itervalues():
