@@ -1554,9 +1554,9 @@ def quota_destroy_all_by_project(context, project_id):
     session = get_session()
     with session.begin():
         quotas = session.query(models.Quota).\
-                filter_by(project_id=project_id).\
-                filter_by(deleted=False).\
-                all()
+                         filter_by(project_id=project_id).\
+                         filter_by(deleted=False).\
+                         all()
         for quota_ref in quotas:
             quota_ref.delete(session=session)
 
