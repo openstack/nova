@@ -15,6 +15,7 @@
 
 import datetime
 import json
+import uuid
 
 from nova import flags
 from nova import utils
@@ -41,6 +42,7 @@ def notify(event_name, publisher_id, event_type, priority, payload):
 
     Message format is as follows:
 
+    message_id - a UUID representing the id for this notification
     publisher_id - the source worker_type.host of the message
     timestamp - the GMT timestamp the notification was sent at
     event_type - the literal type of event (ex. Instance Creation)
@@ -48,23 +50,25 @@ def notify(event_name, publisher_id, event_type, priority, payload):
                the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
     payload - A python dictionary of attributes
 
-    The payload will be constructed as a dictionary of the above attributes,
-    and converted into a JSON dump, which will then be sent via the transport
-    mechanism defined by the driver.
+    The message body will be constructed as a dictionary of the above
+    attributes, and converted into a JSON dump, which will then be sent
+    via the transport mechanism defined by the driver.
 
     Message example:
 
-    { 'publisher_id': 'compute.host1',
-      'timestamp': '2011-05-09 22:00:14.621831',
-      'priority': 'WARN',
-      'event_type': 'compute.create_instance',
-      'payload': {'instance_id': 12, ... }}
+    {'message_id': str(uuid.uuid4()),
+     'publisher_id': 'compute.host1',
+     'timestamp': datetime.datetime.utcnow(),
+     'priority': 'WARN',
+     'event_type': 'compute.create_instance',
+     'payload': {'instance_id': 12, ... }}
 
     """
     if priority not in log_levels:
         raise BadPriorityException('%s not in valid priorities' % priority)
     driver = utils.import_class(FLAGS.notification_driver)()
-    message = dict(publisher_id=publisher_id,
+    message = dict(message_id=str(uuid.uuid4()),
+                   publisher_id=publisher_id,
                    event_type=event_type,
                    priority=priority,
                    payload=payload,

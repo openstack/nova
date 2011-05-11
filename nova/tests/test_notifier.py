@@ -53,12 +53,13 @@ class NotifierTestCase(test.TestCase):
         annoying""" 
         def message_assert(cls, blob):
             message = json.loads(blob)
-            fields = [ ('publisher_id', 'publisher_id'),
-                       ('event_type', 'event_type'),
-                       ('priority', 'WARN'),
-                       ('payload', dict(a=3))]
+            fields = [('publisher_id', 'publisher_id'),
+                      ('event_type', 'event_type'),
+                      ('priority', 'WARN'),
+                      ('payload', dict(a=3))]
             for k, v in fields:
                 self.assertEqual(message[k], v)
+            self.assertTrue(len(message['message_id']) > 0)
 
         self.stubs.Set(nova.notifier.no_op_notifier.NoopNotifier, 'notify',
                 message_assert)
@@ -81,9 +82,6 @@ class NotifierTestCase(test.TestCase):
         self.assertEqual(self.mock_cast, True)
 
     def test_invalid_priority(self):
-        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
-                'nova.notifier.rabbit_notifier.RabbitNotifier')
-        self.mock_cast = False
         def mock_cast(cls, *args):
             pass
     
