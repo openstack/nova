@@ -43,16 +43,16 @@ class HostFilterTestCase(test.TestCase):
         # which means ... don't go above 10 hosts.
         return {'host_name-description': 'XenServer %s' % multiplier,
                 'host_hostname': 'xs-%s' % multiplier,
-                'host_memory': {'total': 100,
-                             'overhead': 10,
-                             'free': 10 + multiplier * 10,
-                             'free-computed': 10 + multiplier * 10},
+                'host_memory_total': 100,
+                'host_memory_overhead': 10,
+                'host_memory_free': 10 + multiplier * 10,
+                'host_memory_free-computed': 10 + multiplier * 10,
                 'host_other-config': {},
                 'host_ip_address': '192.168.1.%d' % (100 + multiplier),
                 'host_cpu_info': {},
-                'disk': {'available': 100 + multiplier * 100,
-                      'total': 1000,
-                      'used': 0},
+                'disk_available': 100 + multiplier * 100,
+                'disk_total': 1000,
+                'disk_used': 0,
                 'host_uuid': 'xxx-%d' % multiplier,
                 'host_name-label': 'xs-%s' % multiplier}
 
@@ -131,12 +131,12 @@ class HostFilterTestCase(test.TestCase):
 
         raw = ['or',
                    ['and',
-                       ['<', '$compute.host_memory.free', 30],
-                       ['<', '$compute.disk.available', 300]
+                       ['<', '$compute.host_memory_free', 30],
+                       ['<', '$compute.disk_available', 300]
                    ],
                    ['and',
-                       ['>', '$compute.host_memory.free', 70],
-                       ['>', '$compute.disk.available', 700]
+                       ['>', '$compute.host_memory_free', 70],
+                       ['>', '$compute.disk_available', 700]
                    ]
               ]
         cooked = json.dumps(raw)
@@ -149,7 +149,7 @@ class HostFilterTestCase(test.TestCase):
             self.assertEquals('host%02d' % index, host)
 
         raw = ['not',
-                  ['=', '$compute.host_memory.free', 30],
+                  ['=', '$compute.host_memory_free', 30],
               ]
         cooked = json.dumps(raw)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
@@ -160,7 +160,7 @@ class HostFilterTestCase(test.TestCase):
         for index, host in zip([1, 2, 4, 5, 6, 7, 8, 9, 10], just_hosts):
             self.assertEquals('host%02d' % index, host)
 
-        raw = ['in', '$compute.host_memory.free', 20, 40, 60, 80, 100]
+        raw = ['in', '$compute.host_memory_free', 20, 40, 60, 80, 100]
         cooked = json.dumps(raw)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
 

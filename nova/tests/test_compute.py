@@ -21,6 +21,7 @@ Tests For Compute
 
 import datetime
 import mox
+import stubout
 
 from nova import compute
 from nova import context
@@ -50,6 +51,10 @@ class FakeTime(object):
 
     def sleep(self, t):
         self.counter += t
+
+
+def nop_report_driver_status(self):
+    pass
 
 
 class ComputeTestCase(test.TestCase):
@@ -649,6 +654,10 @@ class ComputeTestCase(test.TestCase):
 
     def test_run_kill_vm(self):
         """Detect when a vm is terminated behind the scenes"""
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(compute_manager.ComputeManager,
+                '_report_driver_status', nop_report_driver_status)
+
         instance_id = self._create_instance()
 
         self.compute.run_instance(self.context, instance_id)
