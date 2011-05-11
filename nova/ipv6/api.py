@@ -24,11 +24,12 @@ flags.DEFINE_string('ipv6_backend',
                     'Backend to use for IPv6 generation')
 
 IMPL = utils.LazyPluggable(FLAGS['ipv6_backend'],
-                           rfc2462='nova.ipv6.rfc2462')
+                           rfc2462='nova.ipv6.rfc2462',
+                           account_identifier='nova.ipv6.account_identifier')
 
 
-def to_global(prefix, mac):
-    return IMPL.to_global(prefix, mac)
+def to_global(prefix, mac, project_id):
+    return IMPL.to_global(prefix, mac, project_id)
 
 def to_mac(ipv6_address):
     return IMPL.to_mac(ipv6_address)

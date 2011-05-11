@@ -975,7 +975,8 @@ def instance_get_fixed_address_v6(context, instance_id):
         network_ref = network_get_by_instance(context, instance_id)
         prefix = network_ref.cidr_v6
         mac = instance_ref.mac_address
-        return ipv6.to_global(prefix, mac)
+        project_id = instance_ref.project_id
+        return ipv6.to_global(prefix, mac, project_id)
 
 
 @require_context

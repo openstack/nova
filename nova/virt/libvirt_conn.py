@@ -185,8 +185,9 @@ def _get_network_info(instance):
         def ip6_dict():
             prefix = network['cidr_v6']
             mac = instance['mac_address']
+            project_id = instance['project_id']
             return  {
-                'ip': ipv6.to_global(prefix, mac),
+                'ip': ipv6.to_global(prefix, mac, project_id),
                 'netmask': network['netmask_v6'],
                 'enabled': '1'}
 
