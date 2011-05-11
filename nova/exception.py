@@ -244,6 +244,10 @@ class InstanceUnacceptable(Invalid):
     message = _("Instance %(instance_id)s is unacceptable") + ": %(reason)s"
 
 
+class InvalidEc2Id(Invalid):
+    message = _("Ec2 id %(ec2_id)s is unacceptable.")
+
+
 class NotFound(NovaException):
     message = _("Resource could not be found.")
 
