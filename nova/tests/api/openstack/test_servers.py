@@ -134,6 +134,10 @@ def fake_compute_api(cls, req, id):
     return True
 
 
+def find_host(self, context, instance_id):
+    return "nova"
+
+
 class ServersTest(test.TestCase):
 
     def setUp(self):
@@ -473,6 +477,7 @@ class ServersTest(test.TestCase):
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
         self.stubs.Set(nova.api.openstack.common,
             "get_image_id_from_image_hash", image_id_from_hash)
+        self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
     def _test_create_instance_helper(self):
         self._setup_for_create_instance()
@@ -767,6 +772,7 @@ class ServersTest(test.TestCase):
 
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
+        self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'

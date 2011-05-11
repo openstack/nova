@@ -75,6 +75,18 @@ class _BaseImageServiceTests(test.TestCase):
                           self.context,
                           'bad image id')
 
+    def test_create_and_show_non_existing_image_by_name(self):
+        fixture = self._make_fixture('test image')
+        num_images = len(self.service.index(self.context))
+
+        image_id = self.service.create(self.context, fixture)['id']
+
+        self.assertNotEquals(None, image_id)
+        self.assertRaises(exception.ImageNotFound,
+                          self.service.show_by_name,
+                          self.context,
+                          'bad image id')
+
     def test_update(self):
         fixture = self._make_fixture('test image')
         image_id = self.service.create(self.context, fixture)['id']
