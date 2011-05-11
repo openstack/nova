@@ -1582,6 +1582,14 @@ class LibvirtConnection(driver.ComputeDriver):
         """See comments of same method in firewall_driver."""
         self.firewall_driver.unfilter_instance(instance_ref)
 
+    def update_host_status(self):
+        """See xenapi_conn.py implementation."""
+        pass
+
+    def get_host_stats(self, refresh=False):
+        """See xenapi_conn.py implementation."""
+        pass
+
 
 class FirewallDriver(object):
     def prepare_instance_filter(self, instance, network_info=None):
