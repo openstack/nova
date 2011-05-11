@@ -98,7 +98,8 @@ class APIRouter(wsgi.Router):
             server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones", controller=zones.Controller(),
-                        collection={'detail': 'GET', 'info': 'GET'}),
+                        collection={'detail': 'GET', 'info': 'GET',
+                                    'select': 'GET',}),
 
             mapper.resource("user", "users", controller=users.Controller(),
                         collection={'detail': 'GET'})
