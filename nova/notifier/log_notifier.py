@@ -13,26 +13,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
-import nova.context
+import json
 
 from nova import flags
-from nova import rpc
+from nova import log as logging
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('notification_topic', 'notifications', 
-                    'RabbitMQ topic used for Nova notifications')
-
-
-class RabbitNotifier(object):
-    """Sends notifications to a specific RabbitMQ server and topic"""
+class LogNotifier(object):
+    """ log notifications using nova's default logging system """
 
     def notify(self, payload):
-        """Sends a notification to the RabbitMQ"""
-        context = nova.context.get_admin_context()
+        """Notifies the recipient of the desired event given the model"""
         priority = payload.get('priority',
                                FLAGS.default_notification_level)
         priority = priority.lower()
-        topic = '%s.%s' % (FLAGS.notification_topic, priority)
-        rpc.cast(context, topic, payload)
+        logger = logging.getLogger('nova.notification.%s' % payload['event_type'])
+        getattr(logger, priority)(json.dumps(payload))
+

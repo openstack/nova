@@ -14,7 +14,6 @@
 #    under the License.
 
 import datetime
-import json
 import uuid
 
 from nova import flags
@@ -22,7 +21,7 @@ from nova import utils
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('default_notification_level', 'info',
+flags.DEFINE_string('default_notification_level', 'INFO',
                     'Default notification level for outgoing notifications')
 
 WARN = 'WARN'
@@ -73,4 +72,4 @@ def notify(event_name, publisher_id, event_type, priority, payload):
                    priority=priority,
                    payload=payload,
                    time=str(datetime.datetime.utcnow()))
-    driver.notify(json.dumps(message))
+    driver.notify(message)
