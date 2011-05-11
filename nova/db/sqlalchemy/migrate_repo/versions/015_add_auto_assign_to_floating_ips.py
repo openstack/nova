@@ -15,13 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-from sqlalchemy.sql import text
-from migrate import *
-
+from sqlalchemy import Boolean, Column, MetaData, Table
+# from nova import log as loggingo
 
 meta = MetaData()
-
 
 c_auto_assigned = Column('auto_assigned', Boolean, default=False)
 

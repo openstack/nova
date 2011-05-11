@@ -15,14 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-from migrate import *
-
-from nova import log as logging
-
+from sqlalchemy import Column, Integer, MetaData, String, Table
+# from nova import log as logging
 
 meta = MetaData()
-
 
 networks = Table('networks', meta,
         Column('id', Integer(),  primary_key=True, nullable=False),
