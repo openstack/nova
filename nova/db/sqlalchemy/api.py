@@ -1500,10 +1500,10 @@ def quota_get(context, project_id, resource, session=None):
     if not session:
         session = get_session()
     result = session.query(models.Quota).\
-            filter_by(project_id=project_id).\
-            filter_by(resource=resource).\
-            filter_by(deleted=False).\
-            first()
+                     filter_by(project_id=project_id).\
+                     filter_by(resource=resource).\
+                     filter_by(deleted=False).\
+                     first()
     if not result:
         raise exception.ProjectQuotaNotFound(project_id=project_id)
     return result
@@ -1514,9 +1514,9 @@ def quota_get_all_by_project(context, project_id):
     session = get_session()
     result = {'project_id': project_id}
     rows = session.query(models.Quota).\
-            filter_by(project_id=project_id).\
-            filter_by(deleted=False).\
-            all()
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=False).\
+                   all()
     for row in rows:
         result[row.resource] = row.limit
     return result
