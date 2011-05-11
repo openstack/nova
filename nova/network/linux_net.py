@@ -728,7 +728,6 @@ def _stop_dnsmasq(network):
 
 def _dhcp_file(bridge, kind):
     """Return path to a pid, leases or conf file for a bridge."""
-
     if not os.path.exists(FLAGS.networks_path):
         os.makedirs(FLAGS.networks_path)
     return os.path.abspath('%s/nova-%s.%s' % (FLAGS.networks_path,
@@ -778,7 +777,6 @@ def _ra_pid_for(bridge):
 
 def _ip_bridge_cmd(action, params, device):
     """Build commands to add/del ips to bridges/devices."""
-
     cmd = ['sudo', 'ip', 'addr', action]
     cmd.extend(params)
     cmd.extend(['dev', device])

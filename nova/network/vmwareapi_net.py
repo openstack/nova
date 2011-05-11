@@ -42,9 +42,9 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     host_username = FLAGS.vmwareapi_host_username
     host_password = FLAGS.vmwareapi_host_password
     if not host_ip or host_username is None or host_password is None:
-        raise Exception(_('Must specify vmwareapi_host_ip,'
+        raise Exception(_('Must specify vmwareapi_host_ip, '
                           'vmwareapi_host_username '
-                          'and vmwareapi_host_password to use'
+                          'and vmwareapi_host_password to use '
                           'connection_type=vmwareapi'))
     session = VMWareAPISession(host_ip, host_username, host_password,
                                FLAGS.vmwareapi_api_retry_count)
