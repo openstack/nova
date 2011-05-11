@@ -49,6 +49,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         """
         res = self._schedule(context, topic, *args, **kwargs)
         # TODO(sirp): should this be a host object rather than a weight-dict?
+        if not res:
+            raise driver.NoValidHost(_('No hosts were available'))
         return res[0]
 
     def _schedule(self, context, topic, *args, **kwargs):
@@ -64,7 +66,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         host_list = self.filter_hosts(num_instances, specs)
 
         # then weigh the selected hosts.
-        # weighted = [ { 'weight':#, 'name':host, ...}, ]
+        # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, specs, host_list)
 
         # Next, tack on the best weights from the child zones ...
@@ -86,10 +88,10 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def filter_hosts(self, num, specs):
         """Derived classes must override this method and return
-           a list of hosts in [?] format."""
+           a list of hosts in [(hostname, capability_dict)] format."""
         raise NotImplemented()
 
     def weigh_hosts(self, num, specs, hosts):
         """Derived classes must override this method and return
-           a lists of hosts in [?] format."""
+           a lists of hosts in [(weight, hostname)] format."""
         raise NotImplemented()
