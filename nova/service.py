@@ -257,6 +257,21 @@ class ApiService(WsgiService):
         return service
 
 
+class PlatformApiService(WsgiService):
+    """Class for the Platform API Service"""
+    @classmethod
+    def create(cls, conf=None):
+        if not conf:
+            conf = wsgi.paste_config_file(FLAGS.platformapi_paste_config)
+            if not conf:
+                message = (_("No paste configuration found for: %s"),
+                           FLAGS.platformapi_paste_config)
+                raise exception.Error(message)
+        api_endpoints = ['dbaasapi']
+        service = cls(conf, api_endpoints)
+        return service
+
+
 def serve(*services):
     try:
         if not services:

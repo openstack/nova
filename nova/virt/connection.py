@@ -28,6 +28,7 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt import hyperv
 from nova.virt import libvirt_conn
+from nova.virt import openvz_conn
 from nova.virt import vmwareapi_conn
 from nova.virt import xenapi_conn
 
@@ -71,6 +72,8 @@ def get_connection(read_only=False):
         conn = hyperv.get_connection(read_only)
     elif t == 'vmwareapi':
         conn = vmwareapi_conn.get_connection(read_only)
+    elif t == 'openvz':
+	conn = openvz_conn.get_connection(read_only)
     else:
         raise Exception('Unknown connection type "%s"' % t)
 

@@ -29,6 +29,7 @@ sqlalchemy-migrate
 netaddr
 sphinx
 glance
+pexpect
 nova-adminclient
 suds==0.4
 coverage

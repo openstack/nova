@@ -210,6 +210,18 @@ class Publisher(messaging.Publisher):
     pass
 
 
+class TopicConsumer(Consumer):
+    """Consumes messages on a specific topic"""
+    exchange_type = "topic"
+
+    def __init__(self, connection=None, topic="broadcast"):
+        self.queue = topic
+        self.routing_key = topic
+        self.exchange = FLAGS.control_exchange
+        self.durable = False
+        super(TopicConsumer, self).__init__(connection=connection)
+
+
 class TopicAdapterConsumer(AdapterConsumer):
     """Consumes messages on a specific topic."""
 
@@ -414,6 +426,15 @@ def cast(context, topic, msg):
     publisher = TopicPublisher(connection=conn, topic=topic)
     publisher.send(msg)
     publisher.close()
+
+
+def cast_with_consumer(context, topic, msg):
+    """Creates the topic first and send a message on the topic"""
+    #TODO(rnirmal): Create a better way to do this without having to
+    # create the consumer first
+    conn = Connection.instance()
+    node = TopicConsumer(connection=conn, topic=topic)
+    cast(context, topic, msg)
 
 
 def fanout_cast(context, topic, msg):

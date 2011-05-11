@@ -358,6 +358,8 @@ DEFINE_string('volume_manager', 'nova.volume.manager.VolumeManager',
               'Manager for volume')
 DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
               'Manager for scheduler')
+DEFINE_string('guest_manager', 'nova.guest.manager.GuestManager',
+              'Manager for guest agent')
 
 # The service to use for image search and retrieval
 DEFINE_string('image_service', 'nova.image.local.LocalImageService',

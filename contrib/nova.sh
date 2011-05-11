@@ -47,6 +47,10 @@ else
     AUTH=dbdriver.DbDriver
 fi
 
+pkg_install () {
+    sudo DEBIAN_FRONTEND=noninteractive apt-get -y --allow-unauthenticated install $@
+}
+
 if [ "$CMD" == "branch" ]; then
     sudo apt-get install -y bzr
     if [ ! -e "$DIR/.bzr" ]; then
@@ -62,30 +66,30 @@ fi
 
 # You should only have to run this once
 if [ "$CMD" == "install" ]; then
-    sudo apt-get install -y python-software-properties
+    pkg_install python-software-properties
     sudo add-apt-repository ppa:nova-core/trunk
     sudo apt-get update
-    sudo apt-get install -y dnsmasq-base kpartx kvm gawk iptables ebtables
-    sudo apt-get install -y user-mode-linux kvm libvirt-bin
-    sudo apt-get install -y screen euca2ools vlan curl rabbitmq-server
-    sudo apt-get install -y lvm2 iscsitarget open-iscsi
-    sudo apt-get install -y socat unzip
+    pkg_install dnsmasq-base kpartx kvm gawk iptables ebtables
+    pkg_install user-mode-linux kvm libvirt-bin
+    pkg_install screen euca2ools vlan curl rabbitmq-server
+    pkg_install lvm2 iscsitarget open-iscsi
+    pkg_install socat unzip
     echo "ISCSITARGET_ENABLE=true" | sudo tee /etc/default/iscsitarget
     sudo /etc/init.d/iscsitarget restart
     sudo modprobe kvm
     sudo /etc/init.d/libvirt-bin restart
     sudo modprobe nbd
-    sudo apt-get install -y python-twisted python-mox python-ipy python-paste
-    sudo apt-get install -y python-migrate python-gflags python-greenlet
-    sudo apt-get install -y python-libvirt python-libxml2 python-routes
-    sudo apt-get install -y python-netaddr python-pastedeploy python-eventlet
-    sudo apt-get install -y python-novaclient python-glance python-cheetah
-    sudo apt-get install -y python-carrot python-tempita python-sqlalchemy
-    sudo apt-get install -y python-suds
+    pkg_install python-twisted python-mox python-ipy python-paste
+    pkg_install python-migrate python-gflags python-greenlet
+    pkg_install python-libvirt python-libxml2 python-routes
+    pkg_install python-netaddr python-pastedeploy python-eventlet
+    pkg_install python-novaclient python-glance python-cheetah
+    pkg_install python-carrot python-tempita python-sqlalchemy
+    pkg_install python-suds
 
 
     if [ "$USE_IPV6" == 1 ]; then
-        sudo apt-get install -y radvd
+        pkg_install radvd
         sudo bash -c "echo 1 > /proc/sys/net/ipv6/conf/all/forwarding"
         sudo bash -c "echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra"
     fi
@@ -96,7 +100,7 @@ mysql-server-5.1 mysql-server/root_password password $MYSQL_PASS
 mysql-server-5.1 mysql-server/root_password_again password $MYSQL_PASS
 mysql-server-5.1 mysql-server/start_on_boot boolean true
 MYSQL_PRESEED
-        apt-get install -y mysql-server python-mysqldb
+        pkg_install mysql-server python-mysqldb
     fi
     mkdir -p $DIR/images
     wget -c http://images.ansolabs.com/tty.tgz

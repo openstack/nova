@@ -1,0 +1,8 @@
+
+auto %(gateway_dev)s
+iface %(gateway_dev)s inet static
+        address %(address)s
+        netmask %(netmask)s
+        up /sbin/ip route add %(gateway)s dev %(gateway_dev)s
+        up /sbin/ip route add default via %(gateway)s
+
