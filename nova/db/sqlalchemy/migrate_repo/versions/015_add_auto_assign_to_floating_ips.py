@@ -16,7 +16,6 @@
 #    under the License.
 
 from sqlalchemy import Boolean, Column, MetaData, Table
-# from nova import log as loggingo
 
 meta = MetaData()
 
