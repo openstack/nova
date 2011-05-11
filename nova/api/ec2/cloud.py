@@ -907,7 +907,7 @@ class CloudController(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
-        except ValueError:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:
