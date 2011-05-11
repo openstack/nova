@@ -36,6 +36,24 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs)
 
+    def schedule_run_instance(self, context, topic='compute', specs=None,
+                                        *args, **kwargs):
+        """This method is called from nova.compute.api to provision
+        an instance. However we need to look at the parameters being
+        passed in to see if this is a request to:
+        1. Create a Build Plan and then provision, or
+        2. Use the Build Plan information in the request parameters
+           to simply create the instance (either in this zone or
+           a child zone)."""
+
+        if 'blob' in specs:
+            return self.provision_instance(context, topic, specs)
+
+        # Create build plan and provision ...
+        build_plan = self.select(context, specs)
+        for item in build_plan:
+            self.provision_instance(context, topic, item)
+
     def select(self, context, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
