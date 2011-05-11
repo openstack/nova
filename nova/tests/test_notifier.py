@@ -26,6 +26,7 @@ from nova import test
 
 import stubout
 
+
 class NotifierTestCase(test.TestCase):
     """Test case for notifications"""
     def setUp(self):
@@ -38,6 +39,7 @@ class NotifierTestCase(test.TestCase):
 
     def test_send_notification(self):
         self.notify_called = False
+
         def mock_notify(cls, *args):
             self.notify_called = True
 
@@ -52,7 +54,8 @@ class NotifierTestCase(test.TestCase):
 
     def test_verify_message_format(self):
         """A test to ensure changing the message format is prohibitively
-        annoying""" 
+        annoying"""
+
         def message_assert(cls, message):
             fields = [('publisher_id', 'publisher_id'),
                       ('event_type', 'event_type'),
@@ -72,12 +75,14 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
                 'nova.notifier.rabbit_notifier.RabbitNotifier')
         self.mock_cast = False
+
         def mock_cast(cls, *args):
             self.mock_cast = True
 
         class Mock(object):
             pass
-        self.stubs.Set(nova.rpc, 'cast', mock_cast) 
+
+        self.stubs.Set(nova.rpc, 'cast', mock_cast)
         notify('event_name', 'publisher_id', 'event_type',
                 nova.notifier.api.WARN, dict(a=3))
 
@@ -90,8 +95,8 @@ class NotifierTestCase(test.TestCase):
         class Mock(object):
             pass
 
-        self.stubs.Set(nova.rpc, 'cast', mock_cast) 
-        self.assertRaises(nova.notifier.api.BadPriorityException, 
+        self.stubs.Set(nova.rpc, 'cast', mock_cast)
+        self.assertRaises(nova.notifier.api.BadPriorityException,
                 notify, 'event_name', 'publisher_id',
                 'event_type', 'not a priority', dict(a=3))
 
@@ -106,8 +111,7 @@ class NotifierTestCase(test.TestCase):
         def mock_cast(context, topic, msg):
             self.test_topic = topic
 
-        self.stubs.Set(nova.rpc, 'cast', mock_cast) 
+        self.stubs.Set(nova.rpc, 'cast', mock_cast)
         notify('event_name', 'publisher_id',
                 'event_type', 'DEBUG', dict(a=3))
         self.assertEqual(self.test_topic, 'testnotify.debug')
-

@@ -13,7 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 class NoopNotifier(object):
+    """A notifier that doesn't actually do anything. Simply a placeholder"""
+
     def notify(self, payload):
         """Notifies the recipient of the desired event given the model"""
         pass

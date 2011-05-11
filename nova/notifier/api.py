@@ -32,8 +32,10 @@ DEBUG = 'DEBUG'
 
 log_levels = (DEBUG, WARN, INFO, ERROR, CRITICAL)
 
+
 class BadPriorityException(Exception):
     pass
+
 
 def notify(event_name, publisher_id, event_type, priority, payload):
     """

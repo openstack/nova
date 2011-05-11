@@ -21,7 +21,7 @@ from nova import rpc
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('notification_topic', 'notifications', 
+flags.DEFINE_string('notification_topic', 'notifications',
                     'RabbitMQ topic used for Nova notifications')
 
 

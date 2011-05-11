@@ -20,6 +20,7 @@ from nova import log as logging
 
 FLAGS = flags.FLAGS
 
+
 class LogNotifier(object):
     """ log notifications using nova's default logging system """
 
@@ -28,6 +29,6 @@ class LogNotifier(object):
         priority = payload.get('priority',
                                FLAGS.default_notification_level)
         priority = priority.lower()
-        logger = logging.getLogger('nova.notification.%s' % payload['event_type'])
+        logger = logging.getLogger(
+                'nova.notification.%s' % payload['event_type'])
         getattr(logger, priority)(json.dumps(payload))
-
