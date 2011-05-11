@@ -336,7 +336,6 @@ class ComputeTestCase(test.TestCase):
             pass
 
         self.stubs.Set(self.compute.driver, 'finish_resize', fake)
-        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
         context = self.context.elevated()
         instance_id = self._create_instance()
         self.compute.prep_resize(context, instance_id, 1)
