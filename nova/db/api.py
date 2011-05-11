@@ -772,7 +772,7 @@ def quota_get_all_by_project(context, project_id):
 
 
 def quota_update(context, project_id, resource, limit):
-    """Update a quota or raise if it does not exist"""
+    """Update a quota or raise if it does not exist."""
     return IMPL.quota_update(context, project_id, resource, limit)
 
 
