@@ -39,6 +39,7 @@ from nova import log as logging
 from nova import network
 from nova import utils
 from nova import volume
+from nova import ipv6
 from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.image import s3
@@ -718,7 +719,7 @@ class CloudController(object):
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
-                    i['dnsNameV6'] = utils.to_global_ipv6(
+                    i['dnsNameV6'] = ipv6.to_global(
                         instance['fixed_ip']['network']['cidr_v6'],
                         instance['mac_address'])
 

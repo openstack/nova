@@ -26,6 +26,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import utils
+from nova import ipv6
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -744,7 +745,7 @@ def fixed_ip_get_all_by_instance(context, instance_id):
 @require_context
 def fixed_ip_get_instance_v6(context, address):
     session = get_session()
-    mac = utils.to_mac(address)
+    mac = ipv6.to_mac(address)
 
     result = session.query(models.Instance).\
                      filter_by(mac_address=mac).\
@@ -974,7 +975,7 @@ def instance_get_fixed_address_v6(context, instance_id):
         network_ref = network_get_by_instance(context, instance_id)
         prefix = network_ref.cidr_v6
         mac = instance_ref.mac_address
-        return utils.to_global_ipv6(prefix, mac)
+        return ipv6.to_global(prefix, mac)
 
 
 @require_context

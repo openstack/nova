@@ -28,6 +28,7 @@ from nova import flags
 from nova import log as logging
 from nova import test
 from nova import utils
+from nova import ipv6
 from nova.auth import manager
 
 FLAGS = flags.FLAGS
@@ -117,15 +118,14 @@ class NetworkTestCase(test.TestCase):
                                                  context.get_admin_context(),
                                                  instance_ref['id'])
             self.assertEqual(instance_ref['mac_address'],
-                             utils.to_mac(address_v6))
+                             ipv6.to_mac(address_v6))
             instance_ref2 = db.fixed_ip_get_instance_v6(
                                                  context.get_admin_context(),
                                                  address_v6)
             self.assertEqual(instance_ref['id'], instance_ref2['id'])
             self.assertEqual(address_v6,
-                             utils.to_global_ipv6(
-                                                 network_ref['cidr_v6'],
-                                                 instance_ref['mac_address']))
+                             ipv6.to_global(network_ref['cidr_v6'],
+                                            instance_ref['mac_address']))
             self._deallocate_address(0, address)
             db.instance_destroy(context.get_admin_context(),
                                 instance_ref['id'])

@@ -60,6 +60,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova import vnc
+from nova import ipv6
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -185,7 +186,7 @@ def _get_network_info(instance):
             prefix = network['cidr_v6']
             mac = instance['mac_address']
             return  {
-                'ip': utils.to_global_ipv6(prefix, mac),
+                'ip': ipv6.to_global(prefix, mac),
                 'netmask': network['netmask_v6'],
                 'enabled': '1'}
 

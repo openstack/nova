@@ -34,6 +34,7 @@ from nova import log as logging
 from nova import exception
 from nova import utils
 from nova import flags
+from nova import ipv6
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -808,7 +809,7 @@ class VMOps(object):
 
             def ip6_dict():
                 return {
-                    "ip": utils.to_global_ipv6(network['cidr_v6'],
+                    "ip": ipv6.to_global(network['cidr_v6'],
                                                instance['mac_address']),
                     "netmask": network['netmask_v6'],
                     "enabled": "1"}
