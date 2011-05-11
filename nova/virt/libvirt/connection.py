@@ -930,7 +930,6 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-
     def _prepare_xml_info(self, instance, rescue=False, network_info=None):
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
@@ -1522,3 +1521,11 @@ class LibvirtConnection(driver.ComputeDriver):
     def unfilter_instance(self, instance_ref):
         """See comments of same method in firewall_driver."""
         self.firewall_driver.unfilter_instance(instance_ref)
+
+    def update_host_status(self):
+        """See xenapi_conn.py implementation."""
+        pass
+
+    def get_host_stats(self, refresh=False):
+        """See xenapi_conn.py implementation."""
+        pass
