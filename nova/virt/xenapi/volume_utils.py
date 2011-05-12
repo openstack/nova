@@ -204,13 +204,16 @@ def _get_volume_id(path_or_id):
     if isinstance(path_or_id, int):
         return path_or_id
     # n must contain at least the volume_id
-    # /vol- is for remote volumes
-    # -vol- is for local volumes
+    # :volume- is for remote volumes
+    # -volume- is for local volumes
     # see compute/manager->setup_compute_volume
-    volume_id = path_or_id[path_or_id.find('/vol-') + 1:]
+    volume_id = path_or_id[path_or_id.find(':volume-') + 1:]
     if volume_id == path_or_id:
         volume_id = path_or_id[path_or_id.find('-volume--') + 1:]
         volume_id = volume_id.replace('volume--', '')
+    else:
+        volume_id = volume_id.replace('volume-', '')
+        volume_id = volume_id[0:volume_id.find('-')]
     return int(volume_id)
 
 
