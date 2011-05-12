@@ -147,7 +147,7 @@ class RequestExtensionController(common.OpenstackController):
 
     def process(self, req, *args, **kwargs):
         res = req.get_response(self.application)
-        # currently response handlers are un-ordered
+        # currently request handlers are un-ordered
         for handler in self.handlers:
             res = handler(req, res)
         return res
