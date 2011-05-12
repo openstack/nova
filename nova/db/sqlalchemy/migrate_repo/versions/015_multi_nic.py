@@ -42,6 +42,14 @@ mac_addresses = Table('mac_addresses', meta,
         )
 
 
+# bridge_interface column to add to networks table
+interface = Column('bridge_interface',
+                   String(length=255, convert_unicode=False,
+                          assert_unicode=None, unicode_error=None,
+                          _warn_on_bytestring=False),
+                          nullable=True)
+
+
 def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
@@ -50,6 +58,13 @@ def upgrade(migrate_engine):
     fixed_ips = Table('fixed_ips', meta, autoload=True)
     networks = Table('networks', meta, autoload=True)
     c = instances.columns['mac_address']
+
+    # add interface column to networks table
+    try:
+        networks.create_column(interface)
+    except Exception as e:
+        logging.error(_("interface column not added to networks table"))
+        raise e
 
     # create mac_addresses table
     try:
@@ -72,7 +87,7 @@ def upgrade(migrate_engine):
         i.execute(join_list)
 
     # drop the mac_address column from instances
-    c.drop
+    c.drop()
 
 
 def downgrade(migrate_engine):

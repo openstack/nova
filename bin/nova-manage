@@ -517,11 +517,13 @@ class NetworkCommands(object):
     def create(self, fixed_range=None, num_networks=None,
                network_size=None, vlan_start=None,
                vpn_start=None, fixed_range_v6=None, label='public',
-               flat_network_bridge=None):
+               flat_network_bridge=None, bridge_interface=None):
         """Creates fixed ips for host by range
         arguments: fixed_range=FLAG, [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG],
+                   [label='public'], [flat_network_bridge=FLAG,
+                   [bridge_interface=FLAG]"""
         if not fixed_range:
             raise TypeError(_('Fixed range in the form of 10.0.0.0/8 is '
                               'required to create networks.'))
@@ -537,6 +539,8 @@ class NetworkCommands(object):
             fixed_range_v6 = FLAGS.fixed_range_v6
         if not flat_network_bridge:
             flat_network_bridge = FLAGS.flat_network_bridge
+        if not bridge_interface:
+            bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
         net_manager = utils.import_object(FLAGS.network_manager)
         net_manager.create_networks(context.get_admin_context(),
                                     cidr=fixed_range,
@@ -546,7 +550,8 @@ class NetworkCommands(object):
                                     vpn_start=int(vpn_start),
                                     cidr_v6=fixed_range_v6,
                                     label=label,
-                                    bridge=flat_network_bridge)
+                                    bridge=flat_network_bridge,
+                                    bridge_interface=bridge_interface)
 
     def list(self):
         """List all created networks"""

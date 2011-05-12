@@ -62,7 +62,6 @@ from nova import utils
 from nova import rpc
 from nova.network import api as network_api
 import random
-import random
 
 
 LOG = logging.getLogger("nova.network.manager")
@@ -78,8 +77,8 @@ flags.DEFINE_string('flat_interface', None,
 flags.DEFINE_string('flat_network_dhcp_start', '10.0.0.2',
                     'Dhcp start for FlatDhcp')
 flags.DEFINE_integer('vlan_start', 100, 'First VLAN for private networks')
-flags.DEFINE_string('vlan_interface', 'eth0',
-                    'network device for vlans')
+flags.DEFINE_string('vlan_interface', None,
+                    'vlans will bridge into this interface if set')
 flags.DEFINE_integer('num_networks', 1, 'Number of networks to support')
 flags.DEFINE_string('vpn_ip', '$my_ip',
                     'Public IP for the cloudpipe VPN servers')
@@ -488,11 +487,11 @@ class NetworkManager(manager.SchedulerDependentManager):
             #             means there will stale entries in the conf file
             #             the code below will update the file if necessary
             if FLAGS.update_dhcp_on_disassociate:
-                network_ref = self.db.fixed_ip_get_network(context, address)
-                self.driver.update_dhcp(context, network_ref['id'])
+                network = self.db.fixed_ip_get_network(context, address)
+                self.driver.update_dhcp(context, network['id'])
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, label, bridge, **kwargs):
+                        cidr_v6, label, bridge, bridge_interface, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
@@ -506,6 +505,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             project_net = IPy.IP(cidr)
             net = {}
             net['bridge'] = bridge
+            net['bridge_interface'] = bridge_interface
             net['dns'] = FLAGS.flat_network_dns
             net['cidr'] = cidr
             net['netmask'] = str(project_net.netmask())
@@ -539,10 +539,10 @@ class NetworkManager(manager.SchedulerDependentManager):
                 net['vpn_public_port'] = kwargs['vpn_start'] + index
 
             # None if network with cidr or cidr_v6 already exists
-            network_ref = self.db.network_create_safe(context, net)
+            network = self.db.network_create_safe(context, net)
 
-            if network_ref:
-                self._create_fixed_ips(context, network_ref['id'])
+            if network:
+                self._create_fixed_ips(context, network['id'])
             else:
                 raise ValueError(_('Network with cidr %s already exists') %
                                    cidr)
@@ -559,12 +559,12 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def _create_fixed_ips(self, context, network_id):
         """Create all fixed ips for network."""
-        network_ref = self.db.network_get(context, network_id)
+        network = self.db.network_get(context, network_id)
         # NOTE(vish): Should these be properties of the network as opposed
         #             to properties of the manager class?
         bottom_reserved = self._bottom_reserved_ips
         top_reserved = self._top_reserved_ips
-        project_net = IPy.IP(network_ref['cidr'])
+        project_net = IPy.IP(network['cidr'])
         num_ips = len(project_net)
         for index in range(num_ips):
             address = str(project_net[index])
@@ -674,7 +674,7 @@ class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
         networks = db.network_get_all_by_instance(context, instance_id)
         for network in networks:
             self.driver.ensure_bridge(network['bridge'],
-                                      FLAGS.flat_interface)
+                                      network['bridge_interface'])
 
     def allocate_fixed_ip(self, context, instance, network, **kwargs):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
@@ -690,10 +690,10 @@ class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
         net = {}
         net['dhcp_start'] = FLAGS.flat_network_dhcp_start
         self.db.network_update(context, network_id, net)
-        network_ref = db.network_get(context, network_id)
-        self.driver.ensure_bridge(network_ref['bridge'],
-                                  FLAGS.flat_interface,
-                                  network_ref)
+        network = db.network_get(context, network_id)
+        self.driver.ensure_bridge(network['bridge'],
+                                  network['bridge_interface'],
+                                  network)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network_id)
             if(FLAGS.use_ipv6):
@@ -749,8 +749,9 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
         """
         networks = self.db.network_get_all_by_instance(context, instance_id)
         for network in networks:
-            self.driver.ensure_vlan_bridge(network_ref['vlan'],
-                                           network_ref['bridge'])
+            self.driver.ensure_vlan_bridge(network['vlan'],
+                                           network['bridge'],
+                                           network['bridge_interface'])
 
     def _get_networks_for_instance(self, context, instance):
         """determine which networks an instance should connect to"""
@@ -781,24 +782,25 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
-        network_ref = self.db.network_get(context, network_id)
-        if not network_ref['vpn_public_address']:
+        network = self.db.network_get(context, network_id)
+        if not network['vpn_public_address']:
             net = {}
             address = FLAGS.vpn_ip
             net['vpn_public_address'] = address
             db.network_update(context, network_id, net)
         else:
-            address = network_ref['vpn_public_address']
-        self.driver.ensure_vlan_bridge(network_ref['vlan'],
-                                       network_ref['bridge'],
-                                       network_ref)
+            address = network['vpn_public_address']
+        self.driver.ensure_vlan_bridge(network['vlan'],
+                                       network['bridge'],
+                                       network['bridge_interface'],
+                                       network)
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
         if address == FLAGS.vpn_ip:
             self.driver.ensure_vlan_forward(FLAGS.vpn_ip,
-                                            network_ref['vpn_public_port'],
-                                            network_ref['vpn_private_address'])
+                                            network['vpn_public_port'],
+                                            network['vpn_private_address'])
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network_id)
             if(FLAGS.use_ipv6):

@@ -470,6 +470,7 @@ class Network(BASE, NovaBase):
     netmask_v6 = Column(String(255))
     netmask = Column(String(255))
     bridge = Column(String(255))
+    bridge_interface = Column(String(255))
     gateway = Column(String(255))
     broadcast = Column(String(255))
     dns = Column(String(255))

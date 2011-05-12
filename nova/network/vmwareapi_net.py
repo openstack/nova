@@ -35,7 +35,7 @@ flags.DEFINE_string('vlan_interface', 'vmnic0',
                     'vlan networking')
 
 
-def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
+def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
     """Create a vlan and bridge unless they already exist."""
     # Open vmwareapi session
     host_ip = FLAGS.vmwareapi_host_ip
@@ -48,7 +48,7 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
                         "connection_type=vmwareapi"))
     session = VMWareAPISession(host_ip, host_username, host_password,
                                FLAGS.vmwareapi_api_retry_count)
-    vlan_interface = FLAGS.vlan_interface
+    vlan_interface = bridge_interface
     # Check if the vlan_interface physical network adapter exists on the host
     if not network_utils.check_if_vlan_interface_exists(session,
                                                         vlan_interface):

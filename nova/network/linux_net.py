@@ -431,19 +431,19 @@ def floating_forward_rules(floating_ip, fixed_ip):
              "-s %s -j SNAT --to %s" % (fixed_ip, floating_ip))]
 
 
-def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
+def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
     """Create a vlan and bridge unless they already exist"""
-    interface = ensure_vlan(vlan_num)
+    interface = ensure_vlan(vlan_num, bridge_interface)
     ensure_bridge(bridge, interface, net_attrs)
 
 
-def ensure_vlan(vlan_num):
+def ensure_vlan(vlan_num, bridge_interface):
     """Create a vlan unless it already exists"""
     interface = "vlan%s" % vlan_num
     if not _device_exists(interface):
         LOG.debug(_("Starting VLAN inteface %s"), interface)
         _execute('sudo', 'vconfig', 'set_name_type', 'VLAN_PLUS_VID_NO_PAD')
-        _execute('sudo', 'vconfig', 'add', FLAGS.vlan_interface, vlan_num)
+        _execute('sudo', 'vconfig', 'add', bridge_interface, vlan_num)
         _execute('sudo', 'ip', 'link', 'set', interface, 'up')
     return interface
 
