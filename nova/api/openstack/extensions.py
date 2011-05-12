@@ -147,20 +147,9 @@ class RequestExtensionController(common.OpenstackController):
 
     def process(self, req, *args, **kwargs):
         res = req.get_response(self.application)
-        content_type = req.best_match_content_type()
         # currently response handlers are un-ordered
         for handler in self.handlers:
             res = handler(req, res)
-            try:
-                body = res.body
-                headers = res.headers
-            except AttributeError:
-                default_xmlns = None
-                body = self._serialize(res, content_type, default_xmlns)
-                headers = {"Content-Type": content_type}
-            res = webob.Response()
-            res.body = body
-            res.headers = headers
         return res
 
 

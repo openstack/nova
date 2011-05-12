@@ -203,7 +203,8 @@ class RequestExtensionTest(unittest.TestCase):
             # only handle JSON responses
             data = json.loads(res.body)
             data['flavor']['googoose'] = req.GET.get('chewing')
-            return data
+            res.body = json.dumps(data)
+            return res
 
         req_ext = extensions.RequestExtension('GET',
                                                 '/v1.1/flavors/:(id)',
