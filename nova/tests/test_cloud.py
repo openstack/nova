@@ -282,7 +282,7 @@ class CloudTestCase(test.TestCase):
     def test_deregister_image(self):
         deregister_image = self.cloud.deregister_image
 
-        def fake_delete(meh, context, id):
+        def fake_delete(self, context, id):
             return None
 
         self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
@@ -292,11 +292,11 @@ class CloudTestCase(test.TestCase):
         # invalid image
         self.stubs.UnsetAll()
 
-        def fake_detail_empty(meh, context):
+        def fake_detail_empty(self, context):
             return []
 
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
-        self.assertRaises(exception.NotFound, deregister_image,
+        self.assertRaises(exception.ImageNotFound, deregister_image,
                           self.context, 'ami-bad001')
 
     def test_console_output(self):
