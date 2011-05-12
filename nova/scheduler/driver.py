@@ -255,11 +255,9 @@ class Scheduler(object):
         mem_avail = mem_total - mem_used
         mem_inst = instance_ref['memory_mb']
         if mem_avail <= mem_inst:
-            raise exception.NotEmpty(_("Unable to migrate %(ec2_id)s "
-                                       "to destination: %(dest)s "
-                                       "(host:%(mem_avail)s "
-                                       "<= instance:%(mem_inst)s)")
-                                       % locals())
+            reason = _("Unable to migrate %(ec2_id)s to destination: %(dest)s "
+                       "(host:%(mem_avail)s <= instance:%(mem_inst)s)")
+            raise exception.MigrationError(reason=reason % locals())
 
     def mounted_on_same_shared_storage(self, context, instance_ref, dest):
         """Check if the src and dest host mount same shared storage.

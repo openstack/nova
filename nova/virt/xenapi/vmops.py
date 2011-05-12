@@ -127,8 +127,7 @@ class VMOps(object):
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is not None:
-            raise exception.Duplicate(_('Attempted to create'
-                    ' non-unique name %s') % instance_name)
+            raise exception.InstanceExists(name=instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
@@ -211,8 +210,6 @@ class VMOps(object):
         def _wait_for_boot():
             try:
                 state = self.get_info(instance_name)['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
@@ -220,11 +217,7 @@ class VMOps(object):
                     return True
             except Exception, exc:
                 LOG.warn(exc)
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance_name)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+                LOG.exception(_('Instance %s: failed to boot'), instance_name)
                 timer.stop()
                 return False
 
@@ -260,8 +253,7 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.NotFound(
-                            _('Instance not present %s') % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_obj.id)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -436,11 +428,12 @@ class VMOps(object):
 
         """
         # Need to uniquely identify this request.
-        transaction_id = str(uuid.uuid4())
+        key_init_transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
         dh = SimpleDH()
-        args = {'id': transaction_id, 'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, '', args)
+        key_init_args = {'id': key_init_transaction_id,
+                         'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', key_init_args)
         if resp is None:
             # No response from the agent
             return
@@ -454,8 +447,9 @@ class VMOps(object):
         dh.compute_shared(agent_pub)
         enc_pass = dh.encrypt(new_pass)
         # Send the encrypted password
-        args['enc_pass'] = enc_pass
-        resp = self._make_agent_call('password', instance, '', args)
+        password_transaction_id = str(uuid.uuid4())
+        password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
+        resp = self._make_agent_call('password', instance, '', password_args)
         if resp is None:
             # No response from the agent
             return
@@ -578,9 +572,8 @@ class VMOps(object):
 
         if not (instance.kernel_id and instance.ramdisk_id):
             # 2. We only have kernel xor ramdisk
-            raise exception.NotFound(
-                _("Instance %(instance_id)s has a kernel or ramdisk but not "
-                  "both" % locals()))
+            raise exception.InstanceUnacceptable(instance_id=instance_id,
+               reason=_("instance has a kernel or ramdisk but not both"))
 
         # 3. We have both kernel and ramdisk
         (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(self._session,
@@ -721,8 +714,7 @@ class VMOps(object):
                                         "%s-rescue" % instance.name)
 
         if not rescue_vm_ref:
-            raise exception.NotFound(_(
-                "Instance is not in Rescue Mode: %s" % instance.name))
+            raise exception.InstanceNotInRescueMode(instance_id=instance.id)
 
         original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False

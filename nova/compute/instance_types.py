@@ -37,11 +37,11 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
         try:
             int(option)
         except ValueError:
-            raise exception.InvalidInputException(
-                    _("create arguments must be positive integers"))
+            raise exception.InvalidInput(reason=_("create arguments must "
+                                                  "be positive integers"))
     if (int(memory) <= 0) or (int(vcpus) <= 0) or (int(local_gb) < 0):
-        raise exception.InvalidInputException(
-                _("create arguments must be positive integers"))
+        raise exception.InvalidInput(reason=_("create arguments must "
+                                              "be positive integers"))
 
     try:
         db.instance_type_create(
@@ -64,7 +64,7 @@ def create(name, memory, vcpus, local_gb, flavorid, swap=0,
 def destroy(name):
     """Marks instance types as deleted."""
     if name is None:
-        raise exception.InvalidInputException(_("No instance type specified"))
+        raise exception.InvalidInstanceType(instance_type=name)
     else:
         try:
             db.instance_type_destroy(context.get_admin_context(), name)
@@ -76,7 +76,7 @@ def destroy(name):
 def purge(name):
     """Removes instance types from database."""
     if name is None:
-        raise exception.InvalidInputException(_("No instance type specified"))
+        raise exception.InvalidInstanceType(instance_type=name)
     else:
         try:
             db.instance_type_purge(context.get_admin_context(), name)

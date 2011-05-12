@@ -60,7 +60,7 @@ def import_class(import_str):
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
         LOG.debug(_('Inner Exception: %s'), exc)
-        raise exception.NotFound(_('Class %s cannot be found') % class_str)
+        raise exception.ClassNotFound(class_name=class_str)
 
 
 def import_object(import_str):
@@ -232,9 +232,12 @@ def default_flagfile(filename='nova.conf'):
             # turn relative filename into an absolute path
             script_dir = os.path.dirname(inspect.stack()[-1][1])
             filename = os.path.abspath(os.path.join(script_dir, filename))
-        if os.path.exists(filename):
-            flagfile = ['--flagfile=%s' % filename]
-            sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
+        if not os.path.exists(filename):
+            filename = "./nova.conf"
+            if not os.path.exists(filename):
+                filename = '/etc/nova/nova.conf'
+        flagfile = ['--flagfile=%s' % filename]
+        sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
 
 
 def debug(arg):
@@ -709,3 +712,33 @@ def check_isinstance(obj, cls):
     raise Exception(_('Expected object of type: %s') % (str(cls)))
     # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack
+
+
+def parse_server_string(server_str):
+    """
+    Parses the given server_string and returns a list of host and port.
+    If it's not a combination of host part and port, the port element
+    is a null string. If the input is invalid expression, return a null
+    list.
+    """
+    try:
+        # First of all, exclude pure IPv6 address (w/o port).
+        if netaddr.valid_ipv6(server_str):
+            return (server_str, '')
+
+        # Next, check if this is IPv6 address with a port number combination.
+        if server_str.find("]:") != -1:
+            (address, port) = server_str.replace('[', '', 1).split(']:')
+            return (address, port)
+
+        # Third, check if this is a combination of an address and a port
+        if server_str.find(':') == -1:
+            return (server_str, '')
+
+        # This must be a combination of an address and a port
+        (address, port) = server_str.split(':')
+        return (address, port)
+
+    except:
+        LOG.debug(_('Invalid server_string: %s' % server_str))
+        return ('', '')

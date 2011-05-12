@@ -30,20 +30,23 @@ SHUTOFF = 0x05
 CRASHED = 0x06
 SUSPENDED = 0x07
 FAILED = 0x08
+BUILDING = 0x09
 
 # TODO(justinsb): Power state really needs to be a proper class,
 # so that we're not locked into the libvirt status codes and can put mapping
 # logic here rather than spread throughout the code
 _STATE_MAP = {
-        NOSTATE: 'pending',
-        RUNNING: 'running',
-        BLOCKED: 'blocked',
-        PAUSED: 'paused',
-        SHUTDOWN: 'shutdown',
-        SHUTOFF: 'shutdown',
-        CRASHED: 'crashed',
-        SUSPENDED: 'suspended',
-        FAILED: 'failed to spawn'}
+    NOSTATE: 'pending',
+    RUNNING: 'running',
+    BLOCKED: 'blocked',
+    PAUSED: 'paused',
+    SHUTDOWN: 'shutdown',
+    SHUTOFF: 'shutdown',
+    CRASHED: 'crashed',
+    SUSPENDED: 'suspended',
+    FAILED: 'failed to spawn',
+    BUILDING: 'building',
+}
 
 
 def name(code):
