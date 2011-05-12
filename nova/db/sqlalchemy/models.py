@@ -317,7 +317,7 @@ class Quota(BASE, NovaBase):
 
     If there is no row for a given project id and resource, then
     the default for the deployment is used. If the row is present
-    but the limit is Null, then the resource is unlimited.
+    but the hard limit is Null, then the resource is unlimited.
     """
 
     __tablename__ = 'quotas'
@@ -326,7 +326,7 @@ class Quota(BASE, NovaBase):
     project_id = Column(String(255), index=True)
 
     resource = Column(String(255))
-    limit = Column(Integer, nullable=True)
+    hard_limit = Column(Integer, nullable=True)
 
 
 class ExportDevice(BASE, NovaBase):

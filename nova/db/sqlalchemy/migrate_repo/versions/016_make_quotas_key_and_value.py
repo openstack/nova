@@ -71,7 +71,7 @@ def new_style_quotas_table(name):
                                assert_unicode=None, unicode_error=None,
                                _warn_on_bytestring=False),
                         nullable=False),
-                 Column('limit', Integer(), nullable=True),
+                 Column('hard_limit', Integer(), nullable=True),
                 )
 
 
@@ -111,8 +111,8 @@ def convert_forward(migrate_engine, old_quotas, new_quotas):
     quotas = list(migrate_engine.execute(old_quotas.select()))
     for quota in quotas:
         for resource in resources:
-            limit = getattr(quota, resource)
-            if limit is None:
+            hard_limit = getattr(quota, resource)
+            if hard_limit is None:
                 continue
             insert = new_quotas.insert().values(
                 created_at=quota.created_at,
@@ -121,7 +121,7 @@ def convert_forward(migrate_engine, old_quotas, new_quotas):
                 deleted=quota.deleted,
                 project_id=quota.project_id,
                 resource=resource,
-                limit=limit)
+                hard_limit=hard_limit)
             migrate_engine.execute(insert)
 
 
@@ -153,21 +153,21 @@ def convert_backward(migrate_engine, old_quotas, new_quotas):
     quotas = {}
     for quota in migrate_engine.execute(new_quotas.select()):
         if (quota.resource not in resources
-            or quota.limit is None or quota.deleted):
+            or quota.hard_limit is None or quota.deleted):
             continue
         if not quota.project_id in quotas:
             quotas[quota.project_id] = {
                 'project_id': quota.project_id,
                 'created_at': quota.created_at,
                 'updated_at': quota.updated_at,
-                quota.resource: quota.limit
+                quota.resource: quota.hard_limit
             }
         else:
             quotas[quota.project_id]['created_at'] = earliest(
                 quota.created_at, quotas[quota.project_id]['created_at'])
             quotas[quota.project_id]['updated_at'] = latest(
                 quota.updated_at, quotas[quota.project_id]['updated_at'])
-            quotas[quota.project_id][quota.resource] = quota.limit
+            quotas[quota.project_id][quota.resource] = quota.hard_limit
 
     for quota in quotas.itervalues():
         insert = old_quotas.insert().values(**quota)

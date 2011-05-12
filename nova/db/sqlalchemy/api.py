@@ -1518,7 +1518,7 @@ def quota_get_all_by_project(context, project_id):
                    filter_by(deleted=False).\
                    all()
     for row in rows:
-        result[row.resource] = row.limit
+        result[row.resource] = row.hard_limit
     return result
 
 
@@ -1527,7 +1527,7 @@ def quota_create(context, project_id, resource, limit):
     quota_ref = models.Quota()
     quota_ref.project_id = project_id
     quota_ref.resource = resource
-    quota_ref.limit = limit
+    quota_ref.hard_limit = limit
     quota_ref.save()
     return quota_ref
 
@@ -1537,7 +1537,7 @@ def quota_update(context, project_id, resource, limit):
     session = get_session()
     with session.begin():
         quota_ref = quota_get(context, project_id, resource, session=session)
-        quota_ref.limit = limit
+        quota_ref.hard_limit = limit
         quota_ref.save(session=session)
 
 
