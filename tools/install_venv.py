@@ -1,3 +1,4 @@
+
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2010 United States Government as represented by the
@@ -38,7 +39,7 @@ def die(message, *args):
   sys.exit(1)
 
 def check_python_version():
-  if sys.version_info < (2,6):
+  if sys.version_info < (2, 6):
     die("Need Python Version >= 2.6")
 
 def run_command(cmd, redirect_output=True, check_exit_code=True):
