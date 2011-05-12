@@ -50,13 +50,17 @@ class Error(Exception):
 
 class ApiError(Error):
     def __init__(self, message='Unknown', code=None):
-        self.message = message
+        self.msg = message
         self.code = code
         if code:
             outstr = '%s: %s' % (code, message)
         else:
             outstr = '%s' % message
         super(ApiError, self).__init__(outstr)
+
+
+class BuildInProgress(Error):
+    pass
 
 
 class DBError(Error):
@@ -238,6 +242,10 @@ class ImageUnacceptable(Invalid):
 
 class InstanceUnacceptable(Invalid):
     message = _("Instance %(instance_id)s is unacceptable") + ": %(reason)s"
+
+
+class InvalidEc2Id(Invalid):
+    message = _("Ec2 id %(ec2_id)s is unacceptable.")
 
 
 class NotFound(NovaException):
@@ -451,6 +459,11 @@ class FlavorNotFound(NotFound):
 
 class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
+
+
+class SchedulerHostFilterDriverNotFound(NotFound):
+    message = _("Scheduler Host Filter Driver %(driver_name)s could"
+                " not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):

@@ -317,10 +317,6 @@ class Controller(common.OpenstackController):
             return faults.Fault(exc.HTTPBadRequest())
         return exc.HTTPAccepted()
 
-    def _action_rebuild(self, input_dict, req, id):
-        LOG.debug(_("Rebuild server action is not implemented"))
-        return faults.Fault(exc.HTTPNotImplemented())
-
     def _action_resize(self, input_dict, req, id):
         """ Resizes a given instance to the flavor size requested """
         try:
@@ -598,10 +594,29 @@ class ControllerV10(Controller):
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            try:
-                self.compute_api.set_admin_password(context, server_id)
-            except exception.TimeoutException:
-                return exc.HTTPRequestTimeout()
+            self.compute_api.set_admin_password(context, server_id)
+
+    def _action_rebuild(self, info, request, instance_id):
+        context = request.environ['nova.context']
+        instance_id = int(instance_id)
+
+        try:
+            image_id = info["rebuild"]["imageId"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageId from request.")
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+        try:
+            self.compute_api.rebuild(context, instance_id, image_id)
+        except exception.BuildInProgress:
+            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
+
+        response = exc.HTTPAccepted()
+        response.empty_body = True
+        return response
 
 
 class ControllerV11(Controller):
@@ -638,6 +653,63 @@ class ControllerV11(Controller):
 
     def _limit_items(self, items, req):
         return common.limited_by_marker(items, req)
+
+    def _validate_metadata(self, metadata):
+        """Ensure that we can work with the metadata given."""
+        try:
+            metadata.iteritems()
+        except AttributeError as ex:
+            msg = _("Unable to parse metadata key/value pairs.")
+            LOG.debug(msg)
+            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+    def _decode_personalities(self, personalities):
+        """Decode the Base64-encoded personalities."""
+        for personality in personalities:
+            try:
+                path = personality["path"]
+                contents = personality["contents"]
+            except (KeyError, TypeError):
+                msg = _("Unable to parse personality path/contents.")
+                LOG.info(msg)
+                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+            try:
+                personality["contents"] = base64.b64decode(contents)
+            except TypeError:
+                msg = _("Personality content could not be Base64 decoded.")
+                LOG.info(msg)
+                raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+    def _action_rebuild(self, info, request, instance_id):
+        context = request.environ['nova.context']
+        instance_id = int(instance_id)
+
+        try:
+            image_ref = info["rebuild"]["imageRef"]
+        except (KeyError, TypeError):
+            msg = _("Could not parse imageRef from request.")
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+        image_id = common.get_id_from_href(image_ref)
+        personalities = info["rebuild"].get("personality", [])
+        metadata = info["rebuild"].get("metadata", {})
+
+        self._validate_metadata(metadata)
+        self._decode_personalities(personalities)
+
+        try:
+            self.compute_api.rebuild(context, instance_id, image_id, metadata,
+                                     personalities)
+        except exception.BuildInProgress:
+            msg = _("Instance %d is currently being rebuilt.") % instance_id
+            LOG.debug(msg)
+            return faults.Fault(exc.HTTPConflict(explanation=msg))
+
+        response = exc.HTTPAccepted()
+        response.empty_body = True
+        return response
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
