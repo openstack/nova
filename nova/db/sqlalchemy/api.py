@@ -1298,20 +1298,47 @@ def key_pair_get_all_by_user(context, user_id):
 
 
 @require_admin_context
-def network_associate(context, project_id):
+def network_associate(context, project_id, force=False):
+    """associate a project with a network
+
+    only associates projects with networks that have configured hosts
+
+    only associate if the project doesn't already have a network
+    or if force is True
+
+    force solves race condition where a fresh project has multiple instance
+    builds simultaneosly picked up by multiple network hosts which attempt
+    to associate the project with multiple networks
+    """
     session = get_session()
     with session.begin():
-        network_ref = session.query(models.Network).\
-                               filter_by(deleted=False).\
-                               filter_by(project_id=None).\
-                               with_lockmode('update').\
-                               first()
-        # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
-        #             then this has concurrency issues
-        if not network_ref:
-            raise db.NoMoreNetworks()
-        network_ref['project_id'] = project_id
-        session.add(network_ref)
+
+        def network_query(project_filter):
+            return session.query(models.Network).\
+                                 filter_by(deleted=False).\
+                                 filter(models.Network.host != None).\
+                                 filter_by(project_id=project_filter).\
+                                 with_lockmode('update').\
+                                 first()
+
+        if not force:
+            # find out if project has a network
+            network_ref = network_query(project_id)
+
+        if force or not network_ref:
+            # in force mode or project doesn't have a network so assocaite
+            # with a new network
+
+            # get new network
+            network_ref = network_query(None)
+            if not network_ref:
+                raise db.NoMoreNetworks()
+
+            # associate with network
+            # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
+            #             then this has concurrency issues
+            network_ref['project_id'] = project_id
+            session.add(network_ref)
     return network_ref
 
 
@@ -1493,6 +1520,16 @@ def network_get_all_by_instance(_context, instance_id):
 
 
 @require_admin_context
+def network_get_all_by_host(context, host):
+    session = get_session()
+    with session.begin():
+        return session.query(models.Network).\
+                       filter_by(deleted=False).\
+                       filter_by(host=host).\
+                       all()
+
+
+@require_admin_context
 def network_set_host(context, network_id, host_id):
     session = get_session()
     with session.begin():
@@ -1520,37 +1557,6 @@ def network_update(context, network_id, values):
         network_ref = network_get(context, network_id, session=session)
         network_ref.update(values)
         network_ref.save(session=session)
-
-
-###################
-
-
-@require_context
-def project_get_network(context, project_id, associate=True):
-    session = get_session()
-    result = session.query(models.Network).\
-                     filter_by(project_id=project_id).\
-                     filter_by(deleted=False).\
-                     first()
-    if not result:
-        if not associate:
-            return None
-        try:
-            return network_associate(context, project_id)
-        except IntegrityError:
-            # NOTE(vish): We hit this if there is a race and two
-            #             processes are attempting to allocate the
-            #             network at the same time
-            result = session.query(models.Network).\
-                             filter_by(project_id=project_id).\
-                             filter_by(deleted=False).\
-                             first()
-    return result
-
-
-@require_context
-def project_get_network_v6(context, project_id):
-    return project_get_network(context, project_id)
 
 
 ###################
@@ -2127,6 +2133,7 @@ def security_group_rule_destroy(context, security_group_rule_id):
 
 ###################
 
+
 @require_admin_context
 def user_get(context, id, session=None):
     if not session:
@@ -2189,6 +2196,73 @@ def user_get_all(context):
     return session.query(models.User).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
+
+
+def user_get_roles(context, user_id):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        return [role.role for role in user_ref['roles']]
+
+
+def user_get_roles_for_project(context, user_id, project_id):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserProjectRoleAssociation).\
+                   filter_by(user_id=user_id).\
+                   filter_by(project_id=project_id).\
+                   all()
+        return [association.role for association in res]
+
+
+def user_remove_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        session.query(models.UserProjectRoleAssociation).\
+                filter_by(user_id=user_id).\
+                filter_by(project_id=project_id).\
+                filter_by(role=role).\
+                delete()
+
+
+def user_remove_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        res = session.query(models.UserRoleAssociation).\
+                    filter_by(user_id=user_id).\
+                    filter_by(role=role).\
+                    all()
+        for role in res:
+            session.delete(role)
+
+
+def user_add_role(context, user_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        models.UserRoleAssociation(user=user_ref, role=role).\
+               save(session=session)
+
+
+def user_add_project_role(context, user_id, project_id, role):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        project_ref = project_get(context, project_id, session=session)
+        models.UserProjectRoleAssociation(user_id=user_ref['id'],
+                                          project_id=project_ref['id'],
+                                          role=role).save(session=session)
+
+
+def user_update(context, user_id, values):
+    session = get_session()
+    with session.begin():
+        user_ref = user_get(context, user_id, session=session)
+        user_ref.update(values)
+        user_ref.save(session=session)
+
+
+###################
 
 
 def project_create(_context, values):
@@ -2254,14 +2328,6 @@ def project_remove_member(context, project_id, user_id):
         project.save(session=session)
 
 
-def user_update(context, user_id, values):
-    session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        user_ref.update(values)
-        user_ref.save(session=session)
-
-
 def project_update(context, project_id, values):
     session = get_session()
     with session.begin():
@@ -2283,73 +2349,32 @@ def project_delete(context, id):
         session.delete(project_ref)
 
 
-def user_get_roles(context, user_id):
+@require_context
+def project_get_network(context, project_id, associate=True):
     session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        return [role.role for role in user_ref['roles']]
+    result = session.query(models.Network).\
+                     filter_by(project_id=project_id).\
+                     filter_by(deleted=False).\
+                     first()
+    if not result:
+        if not associate:
+            return None
+        try:
+            return network_associate(context, project_id)
+        except IntegrityError:
+            # NOTE(vish): We hit this if there is a race and two
+            #             processes are attempting to allocate the
+            #             network at the same time
+            result = session.query(models.Network).\
+                             filter_by(project_id=project_id).\
+                             filter_by(deleted=False).\
+                             first()
+    return result
 
 
-def user_get_roles_for_project(context, user_id, project_id):
-    session = get_session()
-    with session.begin():
-        res = session.query(models.UserProjectRoleAssociation).\
-                   filter_by(user_id=user_id).\
-                   filter_by(project_id=project_id).\
-                   all()
-        return [association.role for association in res]
-
-
-def user_remove_project_role(context, user_id, project_id, role):
-    session = get_session()
-    with session.begin():
-        session.query(models.UserProjectRoleAssociation).\
-                filter_by(user_id=user_id).\
-                filter_by(project_id=project_id).\
-                filter_by(role=role).\
-                delete()
-
-
-def user_remove_role(context, user_id, role):
-    session = get_session()
-    with session.begin():
-        res = session.query(models.UserRoleAssociation).\
-                    filter_by(user_id=user_id).\
-                    filter_by(role=role).\
-                    all()
-        for role in res:
-            session.delete(role)
-
-
-def user_add_role(context, user_id, role):
-    session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        models.UserRoleAssociation(user=user_ref, role=role).\
-               save(session=session)
-
-
-def user_add_project_role(context, user_id, project_id, role):
-    session = get_session()
-    with session.begin():
-        user_ref = user_get(context, user_id, session=session)
-        project_ref = project_get(context, project_id, session=session)
-        models.UserProjectRoleAssociation(user_id=user_ref['id'],
-                                          project_id=project_ref['id'],
-                                          role=role).save(session=session)
-
-
-###################
-
-
-@require_admin_context
-def host_get_networks(context, host):
-    session = get_session()
-    with session.begin():
-        return session.query(models.Network).\
-                       filter_by(deleted=False).\
-                       filter_by(host=host).\
-                       all()
+@require_context
+def project_get_network_v6(context, project_id):
+    return project_get_network(context, project_id)
 
 
 ###################

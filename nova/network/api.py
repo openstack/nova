@@ -37,17 +37,6 @@ LOG = logging.getLogger('nova.network')
 class API(base.Base):
     """API for interacting with the network manager."""
 
-    def get_network_topic(self, context):
-        """Retrieves the network host for a project on this host"""
-        if FLAGS.stub_network:
-            host = FLAGS.network_host
-        elif 'Flat' in FLAGS.network_manager:
-            return FLAGS.network_topic
-        else:
-            host = rpc.call(context, FLAGS.network_topic,
-                            {'method': 'get_network_host'})
-            return self.db.queue_get_for(context, FLAGS.network_topic, host)
-
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_("Quota exceeeded for %s, tried to allocate "
@@ -112,10 +101,8 @@ class API(base.Base):
         floating_ip = self.db.floating_ip_get_by_address(context, address)
         if not floating_ip.get('fixed_ip'):
             raise exception.ApiError('Address is not associated.')
-        # NOTE(vish): Get the topic from the host name of the network of
-        #             the associated fixed ip.
-        host = floating_ip['fixed_ip']['network']['host']
-        rpc.cast(context,
+        host = floating_ip['host']
+        rpc.call(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {"method": "disassociate_floating_ip",
                   "args": {"floating_address": floating_ip['address']}})
@@ -126,7 +113,7 @@ class API(base.Base):
         """
         args = kwargs
         args['instance'] = pickle.dumps(instance)
-        rval = rpc.call(context, self.get_network_topic(context),
+        rval = rpc.call(context, FLAGS.network_topic,
                         {'method': 'allocate_for_instance',
                          'args': args})
         return pickle.loads(rval)
@@ -137,7 +124,7 @@ class API(base.Base):
         """
         args = kwargs
         args['instance'] = pickle.dumps(instance)
-        rpc.cast(context, self.get_network_topic(context),
+        rpc.cast(context, FLAGS.network_topic,
                  {'method': 'deallocate_for_instance',
                   'args': args})
 
@@ -146,7 +133,7 @@ class API(base.Base):
         handles the args and return value serialization
         """
         args = {'instance': pickle.dumps(instance)}
-        rval = rpc.call(context, self.get_network_topic(context),
+        rval = rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_instance_nw_info',
                          'args': args})
         return pickle.loads(rval)

@@ -582,9 +582,9 @@ def key_pair_get_all_by_user(context, user_id):
 ####################
 
 
-def network_associate(context, project_id):
+def network_associate(context, project_id, force=False):
     """Associate a free network to a project."""
-    return IMPL.network_associate(context, project_id)
+    return IMPL.network_associate(context, project_id, force)
 
 
 def network_count(context):
@@ -677,6 +677,11 @@ def network_get_all_by_instance(context, instance_id):
     return IMPL.network_get_all_by_instance(context, instance_id)
 
 
+def network_get_all_by_host(context, host):
+    """All networks for which the given host is the network host."""
+    return IMPL.network_get_all_by_host(context, host)
+
+
 def network_get_index(context, network_id):
     """Get non-conflicting index for network."""
     return IMPL.network_get_index(context, network_id)
@@ -704,23 +709,6 @@ def network_update(context, network_id, values):
 
     """
     return IMPL.network_update(context, network_id, values)
-
-
-###################
-
-
-def project_get_network(context, project_id, associate=True):
-    """Return the network associated with the project.
-
-    If associate is true, it will attempt to associate a new
-    network if one is not found, otherwise it returns None.
-
-    """
-    return IMPL.project_get_network(context, project_id, associate)
-
-
-def project_get_network_v6(context, project_id):
-    return IMPL.project_get_network_v6(context, project_id)
 
 
 ###################
@@ -1049,6 +1037,9 @@ def user_update(context, user_id, values):
     return IMPL.user_update(context, user_id, values)
 
 
+###################
+
+
 def project_get(context, id):
     """Get project by id."""
     return IMPL.project_get(context, id)
@@ -1089,15 +1080,21 @@ def project_delete(context, project_id):
     return IMPL.project_delete(context, project_id)
 
 
+def project_get_network(context, project_id, associate=True):
+    """Return the network associated with the project.
+
+    If associate is true, it will attempt to associate a new
+    network if one is not found, otherwise it returns None.
+
+    """
+    return IMPL.project_get_network(context, project_id, associate)
+
+
+def project_get_network_v6(context, project_id):
+    return IMPL.project_get_network_v6(context, project_id)
+
+
 ###################
-
-
-def host_get_networks(context, host):
-    """All networks for which the given host is the network host."""
-    return IMPL.host_get_networks(context, host)
-
-
-##################
 
 
 def console_pool_create(context, values):
