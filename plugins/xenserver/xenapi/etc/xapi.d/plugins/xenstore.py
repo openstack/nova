@@ -56,16 +56,17 @@ def read_record(self, arg_dict):
     and boolean True, attempting to read a non-existent path will return
     the string 'None' instead of raising an exception.
     """
-    cmd = "xenstore-read /local/domain/%(dom_id)s/%(path)s" % arg_dict
+    cmd = ["xenstore-read", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
     try:
-        return _run_command(cmd).rstrip("\n")
+        ret, result = _run_command(cmd)
+        return result.strip()
     except pluginlib.PluginError, e:
         if arg_dict.get("ignore_missing_path", False):
-            cmd = "xenstore-exists /local/domain/%(dom_id)s/%(path)s; echo $?"
-            cmd = cmd % arg_dict
-            ret = _run_command(cmd).strip()
+            cmd = ["xenstore-exists",
+                   "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
+            ret, result = _run_command(cmd)
             # If the path exists, the cmd should return "0"
-            if ret != "0":
+            if ret != 0:
                 # No such path, so ignore the error and return the
                 # string 'None', since None can't be marshalled
                 # over RPC.
@@ -83,8 +84,9 @@ def write_record(self, arg_dict):
     you must specify a 'value' key, whose value must be a string. Typically,
     you can json-ify more complex values and store the json output.
     """
-    cmd = "xenstore-write /local/domain/%(dom_id)s/%(path)s '%(value)s'"
-    cmd = cmd % arg_dict
+    cmd = ["xenstore-write",
+           "/local/domain/%(dom_id)s/%(path)s" % arg_dict,
+           arg_dict["value"]]
     _run_command(cmd)
     return arg_dict["value"]
 
@@ -96,10 +98,10 @@ def list_records(self, arg_dict):
     path as the key and the stored value as the value. If the path
     doesn't exist, an empty dict is returned.
     """
-    cmd = "xenstore-ls /local/domain/%(dom_id)s/%(path)s" % arg_dict
-    cmd = cmd.rstrip("/")
+    dirpath = "/local/domain/%(dom_id)s/%(path)s" % arg_dict
+    cmd = ["xenstore-ls", dirpath.rstrip("/")]
     try:
-        recs = _run_command(cmd)
+        ret, recs = _run_command(cmd)
     except pluginlib.PluginError, e:
         if "No such file or directory" in "%s" % e:
             # Path doesn't exist.
@@ -128,8 +130,9 @@ def delete_record(self, arg_dict):
     """Just like it sounds: it removes the record for the specified
     VM and the specified path from xenstore.
     """
-    cmd = "xenstore-rm /local/domain/%(dom_id)s/%(path)s" % arg_dict
-    return _run_command(cmd)
+    cmd = ["xenstore-rm", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
+    ret, result = _run_command(cmd)
+    return result
 
 
 def _paths_from_ls(recs):
@@ -168,16 +171,16 @@ def _paths_from_ls(recs):
 def _run_command(cmd):
     """Abstracts out the basics of issuing system commands. If the command
     returns anything in stderr, a PluginError is raised with that information.
-    Otherwise, the output from stdout is returned.
+    Otherwise, a tuple of (return code, stdout data) is returned.
     """
     pipe = subprocess.PIPE
-    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
-            stderr=pipe, close_fds=True)
-    proc.wait()
+    proc = subprocess.Popen(cmd, stdin=pipe, stdout=pipe, stderr=pipe,
+            close_fds=True)
+    ret = proc.wait()
     err = proc.stderr.read()
     if err:
         raise pluginlib.PluginError(err)
-    return proc.stdout.read()
+    return (ret, proc.stdout.read())
 
 
 if __name__ == "__main__":

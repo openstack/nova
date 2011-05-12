@@ -68,6 +68,7 @@ from nova import flags
 from nova import log as logging
 from nova.auth import manager
 from nova.compute import power_state
+from nova.virt import driver
 from nova.virt import images
 
 wmi = None
@@ -108,8 +109,9 @@ def get_connection(_):
     return HyperVConnection()
 
 
-class HyperVConnection(object):
+class HyperVConnection(driver.ComputeDriver):
     def __init__(self):
+        super(HyperVConnection, self).__init__()
         self._conn = wmi.WMI(moniker='//./root/virtualization')
         self._cim_conn = wmi.WMI(moniker='//./root/cimv2')
 
@@ -124,12 +126,24 @@ class HyperVConnection(object):
                 for v in self._conn.Msvm_ComputerSystem(['ElementName'])]
         return vms
 
+    def list_instances_detail(self):
+        # TODO(justinsb): This is a terrible implementation (1+N)
+        instance_infos = []
+        for instance_name in self.list_instances():
+            info = self.get_info(instance_name)
+
+            state = info['state']
+
+            instance_info = driver.InstanceInfo(instance_name, state)
+            instance_infos.append(instance_info)
+
+        return instance_infos
+
     def spawn(self, instance):
         """ Create a new VM and start it."""
         vm = self._lookup(instance.name)
         if vm is not None:
-            raise exception.Duplicate(_('Attempt to create duplicate vm %s') %
-                    instance.name)
+            raise exception.InstanceExists(name=instance.name)
 
         user = manager.AuthManager().get_user(instance['user_id'])
         project = manager.AuthManager().get_project(instance['project_id'])
@@ -345,7 +359,7 @@ class HyperVConnection(object):
         newinst = cl.new()
         #Copy the properties from the original.
         for prop in wmi_obj._properties:
-            newinst.Properties_.Item(prop).Value =\
+            newinst.Properties_.Item(prop).Value = \
                     wmi_obj.Properties_.Item(prop).Value
         return newinst
 
@@ -353,7 +367,7 @@ class HyperVConnection(object):
         """Reboot the specified instance."""
         vm = self._lookup(instance.name)
         if vm is None:
-            raise exception.NotFound('instance not present %s' % instance.name)
+            raise exception.InstanceNotFound(instance_id=instance.id)
         self._set_vm_state(instance.name, 'Reboot')
 
     def destroy(self, instance):
@@ -397,7 +411,7 @@ class HyperVConnection(object):
         """Get information about the VM"""
         vm = self._lookup(instance_id)
         if vm is None:
-            raise exception.NotFound('instance not present %s' % instance_id)
+            raise exception.InstanceNotFound(instance_id=instance_id)
         vm = self._conn.Msvm_ComputerSystem(ElementName=instance_id)[0]
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = vm.associators(
@@ -459,11 +473,24 @@ class HyperVConnection(object):
     def attach_volume(self, instance_name, device_path, mountpoint):
         vm = self._lookup(instance_name)
         if vm is None:
-            raise exception.NotFound('Cannot attach volume to missing %s vm'
-                    % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
 
     def detach_volume(self, instance_name, mountpoint):
         vm = self._lookup(instance_name)
         if vm is None:
-            raise exception.NotFound('Cannot detach volume from missing %s '
-                    % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
+
+    def poll_rescued_instances(self, timeout):
+        pass
+
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
+    def update_host_status(self):
+        """See xenapi_conn.py implementation."""
+        pass
+
+    def get_host_stats(self, refresh=False):
+        """See xenapi_conn.py implementation."""
+        pass

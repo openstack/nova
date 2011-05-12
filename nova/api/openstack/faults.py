@@ -20,10 +20,10 @@ import webob.dec
 import webob.exc
 
 from nova import wsgi
+from nova.api.openstack import common
 
 
 class Fault(webob.exc.HTTPException):
-
     """An RS API fault response."""
 
     _fault_names = {
@@ -47,7 +47,7 @@ class Fault(webob.exc.HTTPException):
         """Generate a WSGI response based on the exception passed to ctor."""
         # Replace the body with fault details.
         code = self.wrapped_exc.status_int
-        fault_name = self._fault_names.get(code, "computeFault")
+        fault_name = self._fault_names.get(code, "cloudServersFault")
         fault_data = {
             fault_name: {
                 'code': code,
@@ -57,7 +57,48 @@ class Fault(webob.exc.HTTPException):
             fault_data[fault_name]['retryAfter'] = retry
         # 'code' is an attribute on the fault tag itself
         metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
-        serializer = wsgi.Serializer(metadata)
+        default_xmlns = common.XML_NS_V10
+        serializer = wsgi.Serializer(metadata, default_xmlns)
         content_type = req.best_match_content_type()
         self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
+        self.wrapped_exc.content_type = content_type
+        return self.wrapped_exc
+
+
+class OverLimitFault(webob.exc.HTTPException):
+    """
+    Rate-limited request response.
+    """
+
+    _serialization_metadata = {
+        "application/xml": {
+            "attributes": {
+                "overLimitFault": "code",
+            },
+        },
+    }
+
+    def __init__(self, message, details, retry_time):
+        """
+        Initialize new `OverLimitFault` with relevant information.
+        """
+        self.wrapped_exc = webob.exc.HTTPForbidden()
+        self.content = {
+            "overLimitFault": {
+                "code": self.wrapped_exc.status_int,
+                "message": message,
+                "details": details,
+            },
+        }
+
+    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    def __call__(self, request):
+        """
+        Return the wrapped exception with a serialized body conforming to our
+        error format.
+        """
+        serializer = wsgi.Serializer(self._serialization_metadata)
+        content_type = request.best_match_content_type()
+        content = serializer.serialize(self.content, content_type)
+        self.wrapped_exc.body = content
         return self.wrapped_exc

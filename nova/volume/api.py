@@ -82,7 +82,8 @@ class API(base.Base):
         self.db.volume_update(context, volume_id, fields)
 
     def get(self, context, volume_id):
-        return self.db.volume_get(context, volume_id)
+        rv = self.db.volume_get(context, volume_id)
+        return dict(rv.iteritems())
 
     def get_all(self, context):
         if context.is_admin:
@@ -102,3 +103,10 @@ class API(base.Base):
         # TODO(vish): abstract status checking?
         if volume['status'] == "available":
             raise exception.ApiError(_("Volume is already detached"))
+
+    def remove_from_compute(self, context, volume_id, host):
+        """Remove volume from specified compute host."""
+        rpc.call(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "remove_volume",
+                  "args": {'volume_id': volume_id}})

@@ -20,6 +20,7 @@
 
 import boto
 from boto.ec2 import regioninfo
+from boto.exception import EC2ResponseError
 import datetime
 import httplib
 import random
@@ -27,10 +28,12 @@ import StringIO
 import webob
 
 from nova import context
+from nova import exception
 from nova import test
 from nova.api import ec2
-from nova.api.ec2 import cloud
 from nova.api.ec2 import apirequest
+from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -100,6 +103,21 @@ class XmlConversionTestCase(test.TestCase):
         self.assertEqual(conv('-0'), 0)
 
 
+class Ec2utilsTestCase(test.TestCase):
+    def test_ec2_id_to_id(self):
+        self.assertEqual(ec2utils.ec2_id_to_id('i-0000001e'), 30)
+        self.assertEqual(ec2utils.ec2_id_to_id('ami-1d'), 29)
+
+    def test_bad_ec2_id(self):
+        self.assertRaises(exception.InvalidEc2Id,
+                          ec2utils.ec2_id_to_id,
+                          'badone')
+
+    def test_id_to_ec2_id(self):
+        self.assertEqual(ec2utils.id_to_ec2_id(30), 'i-0000001e')
+        self.assertEqual(ec2utils.id_to_ec2_id(29, 'ami-%08x'), 'ami-0000001d')
+
+
 class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
     def setUp(self):
@@ -124,7 +142,7 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.StubOutWithMock(self.ec2, 'new_http_connection')
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
-        # pylint: disable-msg=E1103
+        # pylint: disable=E1103
         self.ec2.new_http_connection(host, is_secure).AndReturn(self.http)
         return self.http
 
@@ -174,6 +192,17 @@ class ApiEc2TestCase(test.TestCase):
         user = self.manager.create_user('fake', 'fake', 'fake')
         project = self.manager.create_project('fake', 'fake', 'fake')
         self.assertEqual(self.ec2.get_all_instances(), [])
+        self.manager.delete_project(project)
+        self.manager.delete_user(user)
+
+    def test_terminate_invalid_instance(self):
+        """Attempt to terminate an invalid instance"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        self.assertRaises(EC2ResponseError, self.ec2.terminate_instances,
+                            "i-00000005")
         self.manager.delete_project(project)
         self.manager.delete_user(user)
 

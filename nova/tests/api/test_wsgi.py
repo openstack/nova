@@ -80,7 +80,7 @@ class ControllerTest(test.TestCase):
                     "attributes": {
                         "test": ["id"]}}}
 
-            def show(self, req, id):  # pylint: disable-msg=W0622,C0103
+            def show(self, req, id):  # pylint: disable=W0622,C0103
                 return {"test": {"id": id}}
 
         def __init__(self):
@@ -135,6 +135,12 @@ class RequestTest(test.TestCase):
         request.headers["Content-Type"] = "text/html"
         request.body = "asdf<br />"
         self.assertRaises(webob.exc.HTTPBadRequest, request.get_content_type)
+
+    def test_request_content_type_with_charset(self):
+        request = wsgi.Request.blank('/tests/123')
+        request.headers["Content-Type"] = "application/json; charset=UTF-8"
+        result = request.get_content_type()
+        self.assertEqual(result, "application/json")
 
     def test_content_type_from_accept_xml(self):
         request = wsgi.Request.blank('/tests/123')

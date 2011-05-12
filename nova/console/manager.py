@@ -15,9 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Console Proxy Service
-"""
+"""Console Proxy Service."""
 
 import functools
 import socket
@@ -28,6 +26,7 @@ from nova import log as logging
 from nova import manager
 from nova import rpc
 from nova import utils
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('console_driver',
@@ -41,9 +40,11 @@ flags.DEFINE_string('console_public_hostname',
 
 
 class ConsoleProxyManager(manager.Manager):
+    """Sets up and tears down any console proxy connections.
 
-    """ Sets up and tears down any proxy connections needed for accessing
-        instance consoles securely"""
+    Needed for accessing instance consoles securely.
+
+    """
 
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:
@@ -67,9 +68,9 @@ class ConsoleProxyManager(manager.Manager):
                                                       pool['id'],
                                                       instance_id)
         except exception.NotFound:
-            logging.debug(_("Adding console"))
+            logging.debug(_('Adding console'))
             if not password:
-                password = self.driver.generate_password()
+                password = utils.generate_password(8)
             if not port:
                 port = self.driver.get_port(context)
             console_data = {'instance_name': name,
@@ -115,8 +116,8 @@ class ConsoleProxyManager(manager.Manager):
                                  self.db.queue_get_for(context,
                                                    FLAGS.compute_topic,
                                                    instance_host),
-                       {"method": "get_console_pool_info",
-                        "args": {"console_type": console_type}})
+                       {'method': 'get_console_pool_info',
+                        'args': {'console_type': console_type}})
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host

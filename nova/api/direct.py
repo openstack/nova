@@ -38,19 +38,39 @@ import routes
 import webob
 
 from nova import context
+from nova import exception
 from nova import flags
 from nova import utils
 from nova import wsgi
 
 
+# Global storage for registering modules.
 ROUTES = {}
 
 
 def register_service(path, handle):
+    """Register a service handle at a given path.
+
+    Services registered in this way will be made available to any instances of
+    nova.api.direct.Router.
+
+    :param path: `routes` path, can be a basic string like "/path"
+    :param handle: an object whose methods will be made available via the api
+
+    """
     ROUTES[path] = handle
 
 
 class Router(wsgi.Router):
+    """A simple WSGI router configured via `register_service`.
+
+    This is a quick way to attach multiple services to a given endpoint.
+    It will automatically load the routes registered in the `ROUTES` global.
+
+    TODO(termie): provide a paste-deploy version of this.
+
+    """
+
     def __init__(self, mapper=None):
         if mapper is None:
             mapper = routes.Mapper()
@@ -65,6 +85,24 @@ class Router(wsgi.Router):
 
 
 class DelegatedAuthMiddleware(wsgi.Middleware):
+    """A simple and naive authentication middleware.
+
+    Designed mostly to provide basic support for alternative authentication
+    schemes, this middleware only desires the identity of the user and will
+    generate the appropriate nova.context.RequestContext for the rest of the
+    application. This allows any middleware above it in the stack to
+    authenticate however it would like while only needing to conform to a
+    minimal interface.
+
+    Expects two headers to determine identity:
+     - X-OpenStack-User
+     - X-OpenStack-Project
+
+    This middleware is tied to identity management and will need to be kept
+    in sync with any changes to the way identity is dealt with internally.
+
+    """
+
     def process_request(self, request):
         os_user = request.headers['X-OpenStack-User']
         os_project = request.headers['X-OpenStack-Project']
@@ -73,6 +111,20 @@ class DelegatedAuthMiddleware(wsgi.Middleware):
 
 
 class JsonParamsMiddleware(wsgi.Middleware):
+    """Middleware to allow method arguments to be passed as serialized JSON.
+
+    Accepting arguments as JSON is useful for accepting data that may be more
+    complex than simple primitives.
+
+    In this case we accept it as urlencoded data under the key 'json' as in
+    json=<urlencoded_json> but this could be extended to accept raw JSON
+    in the POST body.
+
+    Filters out the parameters `self`, `context` and anything beginning with
+    an underscore.
+
+    """
+
     def process_request(self, request):
         if 'json' not in request.params:
             return
@@ -91,6 +143,13 @@ class JsonParamsMiddleware(wsgi.Middleware):
 
 
 class PostParamsMiddleware(wsgi.Middleware):
+    """Middleware to allow method arguments to be passed as POST parameters.
+
+    Filters out the parameters `self`, `context` and anything beginning with
+    an underscore.
+
+    """
+
     def process_request(self, request):
         params_parsed = request.params
         params = {}
@@ -105,12 +164,21 @@ class PostParamsMiddleware(wsgi.Middleware):
 
 
 class Reflection(object):
-    """Reflection methods to list available methods."""
+    """Reflection methods to list available methods.
+
+    This is an object that expects to be registered via register_service.
+    These methods allow the endpoint to be self-describing. They introspect
+    the exposed methods and provide call signatures and documentation for
+    them allowing quick experimentation.
+
+    """
+
     def __init__(self):
         self._methods = {}
         self._controllers = {}
 
     def _gather_methods(self):
+        """Introspect available methods and generate documentation for them."""
         methods = {}
         controllers = {}
         for route, handler in ROUTES.iteritems():
@@ -184,6 +252,16 @@ class Reflection(object):
 
 
 class ServiceWrapper(wsgi.Controller):
+    """Wrapper to dynamically povide a WSGI controller for arbitrary objects.
+
+    With lightweight introspection allows public methods on the object to
+    be accesed via simple WSGI routing and parameters and serializes the
+    return values.
+
+    Automatically used be nova.api.direct.Router to wrap registered instances.
+
+    """
+
     def __init__(self, service_handle):
         self.service_handle = service_handle
 
@@ -205,14 +283,70 @@ class ServiceWrapper(wsgi.Controller):
         # NOTE(vish): make sure we have no unicode keys for py2.6.
         params = dict([(str(k), v) for (k, v) in params.iteritems()])
         result = method(context, **params)
-        if type(result) is dict or type(result) is list:
-            return self._serialize(result, req.best_match_content_type())
-        else:
+
+        if result is None or type(result) is str or type(result) is unicode:
             return result
+
+        try:
+            content_type = req.best_match_content_type()
+            default_xmlns = self.get_default_xmlns(req)
+            return self._serialize(result, content_type, default_xmlns)
+        except:
+            raise exception.Error("returned non-serializable type: %s"
+                                  % result)
+
+
+class Limited(object):
+    __notdoc = """Limit the available methods on a given object.
+
+    (Not a docstring so that the docstring can be conditionally overriden.)
+
+    Useful when defining a public API that only exposes a subset of an
+    internal API.
+
+    Expected usage of this class is to define a subclass that lists the allowed
+    methods in the 'allowed' variable.
+
+    Additionally where appropriate methods can be added or overwritten, for
+    example to provide backwards compatibility.
+
+    The wrapping approach has been chosen so that the wrapped API can maintain
+    its own internal consistency, for example if it calls "self.create" it
+    should get its own create method rather than anything we do here.
+
+    """
+
+    _allowed = None
+
+    def __init__(self, proxy):
+        self._proxy = proxy
+        if not self.__doc__:
+            self.__doc__ = proxy.__doc__
+        if not self._allowed:
+            self._allowed = []
+
+    def __getattr__(self, key):
+        """Only return methods that are named in self._allowed."""
+        if key not in self._allowed:
+            raise AttributeError()
+        return getattr(self._proxy, key)
+
+    def __dir__(self):
+        """Only return methods that are named in self._allowed."""
+        return [x for x in dir(self._proxy) if x in self._allowed]
 
 
 class Proxy(object):
-    """Pretend a Direct API endpoint is an object."""
+    """Pretend a Direct API endpoint is an object.
+
+    This is mostly useful in testing at the moment though it should be easily
+    extendable to provide a basic API library functionality.
+
+    In testing we use this to stub out internal objects to verify that results
+    from the API are serializable.
+
+    """
+
     def __init__(self, app, prefix=None):
         self.app = app
         self.prefix = prefix

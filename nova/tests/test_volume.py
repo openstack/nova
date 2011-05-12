@@ -20,6 +20,8 @@ Tests for Volume Code.
 
 """
 
+import cStringIO
+
 from nova import context
 from nova import exception
 from nova import db
@@ -104,7 +106,7 @@ class VolumeTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        inst['instance_type'] = 'm1.tiny'
+        inst['instance_type_id'] = '2'  # m1.tiny
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         instance_id = db.instance_create(self.context, inst)['id']
@@ -140,7 +142,7 @@ class VolumeTestCase(test.TestCase):
         self.assertEqual(vol['status'], "available")
 
         self.volume.delete_volume(self.context, volume_id)
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.VolumeNotFound,
                           db.volume_get,
                           self.context,
                           volume_id)
@@ -173,3 +175,197 @@ class VolumeTestCase(test.TestCase):
         # each of them having a different FLAG for storage_node
         # This will allow us to test cross-node interactions
         pass
+
+
+class DriverTestCase(test.TestCase):
+    """Base Test class for Drivers."""
+    driver_name = "nova.volume.driver.FakeAOEDriver"
+
+    def setUp(self):
+        super(DriverTestCase, self).setUp()
+        self.flags(volume_driver=self.driver_name,
+                   logging_default_format_string="%(message)s")
+        self.volume = utils.import_object(FLAGS.volume_manager)
+        self.context = context.get_admin_context()
+        self.output = ""
+
+        def _fake_execute(_command, *_args, **_kwargs):
+            """Fake _execute."""
+            return self.output, None
+        self.volume.driver._execute = _fake_execute
+        self.volume.driver._sync_execute = _fake_execute
+
+        log = logging.getLogger()
+        self.stream = cStringIO.StringIO()
+        log.addHandler(logging.StreamHandler(self.stream))
+
+        inst = {}
+        self.instance_id = db.instance_create(self.context, inst)['id']
+
+    def tearDown(self):
+        super(DriverTestCase, self).tearDown()
+
+    def _attach_volume(self):
+        """Attach volumes to an instance. This function also sets
+           a fake log message."""
+        return []
+
+    def _detach_volume(self, volume_id_list):
+        """Detach volumes from an instance."""
+        for volume_id in volume_id_list:
+            db.volume_detached(self.context, volume_id)
+            self.volume.delete_volume(self.context, volume_id)
+
+
+class AOETestCase(DriverTestCase):
+    """Test Case for AOEDriver"""
+    driver_name = "nova.volume.driver.AOEDriver"
+
+    def setUp(self):
+        super(AOETestCase, self).setUp()
+
+    def tearDown(self):
+        super(AOETestCase, self).tearDown()
+
+    def _attach_volume(self):
+        """Attach volumes to an instance. This function also sets
+           a fake log message."""
+        volume_id_list = []
+        for index in xrange(3):
+            vol = {}
+            vol['size'] = 0
+            volume_id = db.volume_create(self.context,
+                                         vol)['id']
+            self.volume.create_volume(self.context, volume_id)
+
+            # each volume has a different mountpoint
+            mountpoint = "/dev/sd" + chr((ord('b') + index))
+            db.volume_attached(self.context, volume_id, self.instance_id,
+                               mountpoint)
+
+            (shelf_id, blade_id) = db.volume_get_shelf_and_blade(self.context,
+                                                                 volume_id)
+            self.output += "%s %s eth0 /dev/nova-volumes/vol-foo auto run\n" \
+                      % (shelf_id, blade_id)
+
+            volume_id_list.append(volume_id)
+
+        return volume_id_list
+
+    def test_check_for_export_with_no_volume(self):
+        """No log message when no volume is attached to an instance."""
+        self.stream.truncate(0)
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+
+    def test_check_for_export_with_all_vblade_processes(self):
+        """No log message when all the vblade processes are running."""
+        volume_id_list = self._attach_volume()
+
+        self.stream.truncate(0)
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+
+        self._detach_volume(volume_id_list)
+
+    def test_check_for_export_with_vblade_process_missing(self):
+        """Output a warning message when some vblade processes aren't
+           running."""
+        volume_id_list = self._attach_volume()
+
+        # the first vblade process isn't running
+        self.output = self.output.replace("run", "down", 1)
+        (shelf_id, blade_id) = db.volume_get_shelf_and_blade(self.context,
+                                                             volume_id_list[0])
+
+        msg_is_match = False
+        self.stream.truncate(0)
+        try:
+            self.volume.check_for_export(self.context, self.instance_id)
+        except exception.ProcessExecutionError, e:
+            volume_id = volume_id_list[0]
+            msg = _("Cannot confirm exported volume id:%(volume_id)s. "
+                    "vblade process for e%(shelf_id)s.%(blade_id)s "
+                    "isn't running.") % locals()
+
+            msg_is_match = (0 <= e.message.find(msg))
+
+        self.assertTrue(msg_is_match)
+        self._detach_volume(volume_id_list)
+
+
+class ISCSITestCase(DriverTestCase):
+    """Test Case for ISCSIDriver"""
+    driver_name = "nova.volume.driver.ISCSIDriver"
+
+    def setUp(self):
+        super(ISCSITestCase, self).setUp()
+
+    def tearDown(self):
+        super(ISCSITestCase, self).tearDown()
+
+    def _attach_volume(self):
+        """Attach volumes to an instance. This function also sets
+           a fake log message."""
+        volume_id_list = []
+        for index in xrange(3):
+            vol = {}
+            vol['size'] = 0
+            vol_ref = db.volume_create(self.context, vol)
+            self.volume.create_volume(self.context, vol_ref['id'])
+            vol_ref = db.volume_get(self.context, vol_ref['id'])
+
+            # each volume has a different mountpoint
+            mountpoint = "/dev/sd" + chr((ord('b') + index))
+            db.volume_attached(self.context, vol_ref['id'], self.instance_id,
+                               mountpoint)
+            volume_id_list.append(vol_ref['id'])
+
+        return volume_id_list
+
+    def test_check_for_export_with_no_volume(self):
+        """No log message when no volume is attached to an instance."""
+        self.stream.truncate(0)
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+
+    def test_check_for_export_with_all_volume_exported(self):
+        """No log message when all the vblade processes are running."""
+        volume_id_list = self._attach_volume()
+
+        self.mox.StubOutWithMock(self.volume.driver, '_execute')
+        for i in volume_id_list:
+            tid = db.volume_get_iscsi_target_num(self.context, i)
+            self.volume.driver._execute("sudo", "ietadm", "--op", "show",
+                                        "--tid=%(tid)d" % locals())
+
+        self.stream.truncate(0)
+        self.mox.ReplayAll()
+        self.volume.check_for_export(self.context, self.instance_id)
+        self.assertEqual(self.stream.getvalue(), '')
+        self.mox.UnsetStubs()
+
+        self._detach_volume(volume_id_list)
+
+    def test_check_for_export_with_some_volume_missing(self):
+        """Output a warning message when some volumes are not recognied
+           by ietd."""
+        volume_id_list = self._attach_volume()
+
+        # the first vblade process isn't running
+        tid = db.volume_get_iscsi_target_num(self.context, volume_id_list[0])
+        self.mox.StubOutWithMock(self.volume.driver, '_execute')
+        self.volume.driver._execute("sudo", "ietadm", "--op", "show",
+                                    "--tid=%(tid)d" % locals()).AndRaise(
+                                            exception.ProcessExecutionError())
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.ProcessExecutionError,
+                          self.volume.check_for_export,
+                          self.context,
+                          self.instance_id)
+        msg = _("Cannot confirm exported volume id:%s.") % volume_id_list[0]
+        self.assertTrue(0 <= self.stream.getvalue().find(msg))
+        self.mox.UnsetStubs()
+
+        self._detach_volume(volume_id_list)

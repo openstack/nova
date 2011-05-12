@@ -15,16 +15,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-XVP (Xenserver VNC Proxy) driver.
-"""
+"""XVP (Xenserver VNC Proxy) driver."""
 
 import fcntl
 import os
 import signal
 import subprocess
 
-from Cheetah.Template import Template
+from Cheetah import Template
 
 from nova import context
 from nova import db
@@ -33,6 +31,8 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 
+
+FLAGS = flags.FLAGS
 flags.DEFINE_string('console_xvp_conf_template',
                     utils.abspath('console/xvp.conf.template'),
                     'XVP conf template')
@@ -47,12 +47,11 @@ flags.DEFINE_string('console_xvp_log',
                     'XVP log file')
 flags.DEFINE_integer('console_xvp_multiplex_port',
                      5900,
-                     "port for XVP to multiplex VNC connections on")
-FLAGS = flags.FLAGS
+                     'port for XVP to multiplex VNC connections on')
 
 
 class XVPConsoleProxy(object):
-    """Sets up XVP config, and manages xvp daemon"""
+    """Sets up XVP config, and manages XVP daemon."""
 
     def __init__(self):
         self.xvpconf_template = open(FLAGS.console_xvp_conf_template).read()
@@ -61,54 +60,51 @@ class XVPConsoleProxy(object):
 
     @property
     def console_type(self):
-        return "vnc+xvp"
+        return 'vnc+xvp'
 
     def get_port(self, context):
-        """get available port for consoles that need one"""
+        """Get available port for consoles that need one."""
         #TODO(mdragon): implement port selection for non multiplex ports,
         #               we are not using that, but someone else may want
         #               it.
         return FLAGS.console_xvp_multiplex_port
 
     def setup_console(self, context, console):
-        """Sets up actual proxies"""
+        """Sets up actual proxies."""
         self._rebuild_xvp_conf(context.elevated())
 
     def teardown_console(self, context, console):
-        """Tears down actual proxies"""
+        """Tears down actual proxies."""
         self._rebuild_xvp_conf(context.elevated())
 
     def init_host(self):
-        """Start up any config'ed consoles on start"""
+        """Start up any config'ed consoles on start."""
         ctxt = context.get_admin_context()
         self._rebuild_xvp_conf(ctxt)
 
     def fix_pool_password(self, password):
-        """Trim password to length, and encode"""
+        """Trim password to length, and encode."""
         return self._xvp_encrypt(password, is_pool_password=True)
 
     def fix_console_password(self, password):
-        """Trim password to length, and encode"""
+        """Trim password to length, and encode."""
         return self._xvp_encrypt(password)
 
-    def generate_password(self, length=8):
-        """Returns random console password"""
-        return os.urandom(length * 2).encode('base64')[:length]
-
     def _rebuild_xvp_conf(self, context):
-        logging.debug(_("Rebuilding xvp conf"))
+        logging.debug(_('Rebuilding xvp conf'))
         pools = [pool for pool in
                  db.console_pool_get_all_by_host_type(context, self.host,
                                                        self.console_type)
                   if pool['consoles']]
         if not pools:
-            logging.debug("No console pools!")
+            logging.debug('No console pools!')
             self._xvp_stop()
             return
         conf_data = {'multiplex_port': FLAGS.console_xvp_multiplex_port,
                      'pools': pools,
                      'pass_encode': self.fix_console_password}
-        config = str(Template(self.xvpconf_template, searchList=[conf_data]))
+        config = str(Template.Template(self.xvpconf_template,
+                                       searchList=[conf_data]))
         self._write_conf(config)
         self._xvp_restart()
 
@@ -118,7 +114,7 @@ class XVPConsoleProxy(object):
             cfile.write(config)
 
     def _xvp_stop(self):
-        logging.debug(_("Stopping xvp"))
+        logging.debug(_('Stopping xvp'))
         pid = self._xvp_pid()
         if not pid:
             return
@@ -131,19 +127,19 @@ class XVPConsoleProxy(object):
     def _xvp_start(self):
         if self._xvp_check_running():
             return
-        logging.debug(_("Starting xvp"))
+        logging.debug(_('Starting xvp'))
         try:
             utils.execute('xvp',
                           '-p', FLAGS.console_xvp_pid,
                           '-c', FLAGS.console_xvp_conf,
                           '-l', FLAGS.console_xvp_log)
         except exception.ProcessExecutionError, err:
-            logging.error(_("Error starting xvp: %s") % err)
+            logging.error(_('Error starting xvp: %s') % err)
 
     def _xvp_restart(self):
-        logging.debug(_("Restarting xvp"))
+        logging.debug(_('Restarting xvp'))
         if not self._xvp_check_running():
-            logging.debug(_("xvp not running..."))
+            logging.debug(_('xvp not running...'))
             self._xvp_start()
         else:
             pid = self._xvp_pid()
@@ -182,7 +178,9 @@ class XVPConsoleProxy(object):
 
         Note that xvp's obfuscation should not be considered 'real' encryption.
         It simply DES encrypts the passwords with static keys plainly viewable
-        in the xvp source code."""
+        in the xvp source code.
+
+        """
         maxlen = 8
         flag = '-e'
         if is_pool_password:

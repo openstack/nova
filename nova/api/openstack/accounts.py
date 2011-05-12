@@ -13,14 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import common
+import webob.exc
 
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
 
 from nova.auth import manager
+from nova.api.openstack import common
 from nova.api.openstack import faults
 
 FLAGS = flags.FLAGS
@@ -34,7 +34,7 @@ def _translate_keys(account):
                 manager=account.project_manager_id)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
 
     _serialization_metadata = {
         'application/xml': {
@@ -48,13 +48,13 @@ class Controller(wsgi.Controller):
         """We cannot depend on the db layer to check for admin access
            for the auth manager, so we do it here"""
         if not context.is_admin:
-            raise exception.NotAuthorized(_("Not admin user."))
+            raise exception.AdminRequired()
 
     def index(self, req):
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise faults.Fault(webob.exc.HTTPNotImplemented())
 
     def detail(self, req):
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise faults.Fault(webob.exc.HTTPNotImplemented())
 
     def show(self, req, id):
         """Return data about the given account id"""
@@ -69,7 +69,7 @@ class Controller(wsgi.Controller):
     def create(self, req):
         """We use update with create-or-update semantics
            because the id comes from an external source"""
-        raise faults.Fault(exc.HTTPNotImplemented())
+        raise faults.Fault(webob.exc.HTTPNotImplemented())
 
     def update(self, req, id):
         """This is really create or update."""

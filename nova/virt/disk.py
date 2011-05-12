@@ -26,6 +26,8 @@ import os
 import tempfile
 import time
 
+from nova import context
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -38,6 +40,9 @@ flags.DEFINE_integer('minimum_root_size', 1024 * 1024 * 1024 * 10,
                      'minimum size in bytes of root partition')
 flags.DEFINE_integer('block_size', 1024 * 1024 * 256,
                      'block_size to use for dd')
+flags.DEFINE_string('injected_network_template',
+                    utils.abspath('virt/interfaces.template'),
+                    'Template file for injected network')
 flags.DEFINE_integer('timeout_nbd', 10,
                      'time to wait for a NBD device coming up')
 flags.DEFINE_integer('max_nbd_devices', 16,
@@ -97,11 +102,7 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                                       % err)
 
             try:
-                if key:
-                    # inject key file
-                    _inject_key_into_fs(key, tmpdir)
-                if net:
-                    _inject_net_into_fs(net, tmpdir)
+                inject_data_into_fs(tmpdir, key, net, utils.execute)
             finally:
                 # unmount device
                 utils.execute('sudo', 'umount', mapped_device)
@@ -113,6 +114,41 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
                 utils.execute('sudo', 'kpartx', '-d', device)
     finally:
         _unlink_device(device, nbd)
+
+
+def setup_container(image, container_dir=None, nbd=False):
+    """Setup the LXC container.
+
+    It will mount the loopback image to the container directory in order
+    to create the root filesystem for the container.
+
+    LXC does not support qcow2 images yet.
+    """
+    try:
+        device = _link_device(image, nbd)
+        utils.execute('sudo', 'mount', device, container_dir)
+    except Exception, exn:
+        LOG.exception(_('Failed to mount filesystem: %s'), exn)
+        _unlink_device(device, nbd)
+
+
+def destroy_container(target, instance, nbd=False):
+    """Destroy the container once it terminates.
+
+    It will umount the container that is mounted, try to find the loopback
+    device associated with the container and delete it.
+
+    LXC does not support qcow2 images yet.
+    """
+    try:
+        container_dir = '%s/rootfs' % target
+        utils.execute('sudo', 'umount', container_dir)
+    finally:
+        out, err = utils.execute('sudo', 'losetup', '-a')
+        for loop in out.splitlines():
+            if instance['name'] in loop:
+                device = loop.split(loop, ':')
+                _unlink_device(device, nbd)
 
 
 def _link_device(image, nbd):
@@ -164,7 +200,18 @@ def _free_device(device):
     _DEVICES.append(device)
 
 
-def _inject_key_into_fs(key, fs):
+def inject_data_into_fs(fs, key, net, execute):
+    """Injects data into a filesystem already mounted by the caller.
+    Virt connections can call this directly if they mount their fs
+    in a different way to inject_data
+    """
+    if key:
+        _inject_key_into_fs(key, fs, execute=execute)
+    if net:
+        _inject_net_into_fs(net, fs, execute=execute)
+
+
+def _inject_key_into_fs(key, fs, execute=None):
     """Add the given public ssh key to root's authorized_keys.
 
     key is an ssh key string.
@@ -179,7 +226,7 @@ def _inject_key_into_fs(key, fs):
             process_input='\n' + key.strip() + '\n')
 
 
-def _inject_net_into_fs(net, fs):
+def _inject_net_into_fs(net, fs, execute=None):
     """Inject /etc/network/interfaces into the filesystem rooted at fs.
 
     net is the contents of /etc/network/interfaces.

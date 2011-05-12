@@ -112,6 +112,12 @@ class VolumeDriver(object):
             # If the volume isn't present, then don't attempt to delete
             return True
 
+        # zero out old volumes to prevent data leaking between users
+        # TODO(ja): reclaiming space should be done lazy and low priority
+        self._execute('sudo', 'dd', 'if=/dev/zero',
+                      'of=%s' % self.local_path(volume),
+                      'count=%d' % (volume['size'] * 1024),
+                      'bs=1M')
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
@@ -135,12 +141,16 @@ class VolumeDriver(object):
         """Removes an export for a logical volume."""
         raise NotImplementedError()
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
         raise NotImplementedError()
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host."""
+        raise NotImplementedError()
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
         raise NotImplementedError()
 
 
@@ -198,14 +208,44 @@ class AOEDriver(VolumeDriver):
         self._try_execute('sudo', 'vblade-persist', 'destroy',
                           shelf_id, blade_id)
 
-    def discover_volume(self, _volume):
+    def discover_volume(self, context, _volume):
         """Discover volume on a remote host."""
+        (shelf_id,
+         blade_id) = self.db.volume_get_shelf_and_blade(context,
+                                                        _volume['id'])
         self._execute('sudo', 'aoe-discover')
-        self._execute('sudo', 'aoe-stat', check_exit_code=False)
+        out, err = self._execute('sudo', 'aoe-stat', check_exit_code=False)
+        device_path = 'e%(shelf_id)d.%(blade_id)d' % locals()
+        if out.find(device_path) >= 0:
+            return "/dev/etherd/%s" % device_path
+        else:
+            return
 
     def undiscover_volume(self, _volume):
         """Undiscover volume on a remote host."""
         pass
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+        (shelf_id,
+         blade_id) = self.db.volume_get_shelf_and_blade(context,
+                                                        volume_id)
+        cmd = ('sudo', 'vblade-persist', 'ls', '--no-header')
+        out, _err = self._execute(*cmd)
+        exported = False
+        for line in out.split('\n'):
+            param = line.split(' ')
+            if len(param) == 6 and param[0] == str(shelf_id) \
+                    and param[1] == str(blade_id) and param[-1] == "run":
+                exported = True
+                break
+        if not exported:
+            # Instance will be terminated in this case.
+            desc = _("Cannot confirm exported volume id:%(volume_id)s. "
+                     "vblade process for e%(shelf_id)s.%(blade_id)s "
+                     "isn't running.") % locals()
+            raise exception.ProcessExecutionError(out, _err, cmd=cmd,
+                                                  description=desc)
 
 
 class FakeAOEDriver(AOEDriver):
@@ -284,8 +324,8 @@ class ISCSIDriver(VolumeDriver):
         iscsi_name = "%s%s" % (FLAGS.iscsi_target_prefix, volume['name'])
         volume_path = "/dev/%s/%s" % (FLAGS.volume_group, volume['name'])
         self._execute('sudo', 'ietadm', '--op', 'new',
-                      '--tid=%s --params Name=%s' %
-                      (iscsi_target, iscsi_name))
+                      '--tid=%s' % iscsi_target,
+                      '--params', 'Name=%s' % iscsi_name)
         self._execute('sudo', 'ietadm', '--op', 'new',
                       '--tid=%s' % iscsi_target,
                       '--lun=0', '--params',
@@ -388,26 +428,25 @@ class ISCSIDriver(VolumeDriver):
         return properties
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command):
-        command = ("sudo iscsiadm -m node -T %s -p %s %s" %
-                   (iscsi_properties['target_iqn'],
-                    iscsi_properties['target_portal'],
-                    iscsi_command))
-        (out, err) = self._execute(command)
+        (out, err) = self._execute('sudo', 'iscsiadm', '-m', 'node', '-T',
+                                   iscsi_properties['target_iqn'],
+                                   '-p', iscsi_properties['target_portal'],
+                                   iscsi_command)
         LOG.debug("iscsiadm %s: stdout=%s stderr=%s" %
                   (iscsi_command, out, err))
         return (out, err)
 
     def _iscsiadm_update(self, iscsi_properties, property_key, property_value):
-        iscsi_command = ("--op update -n %s -v %s" %
-                         (property_key, property_value))
+        iscsi_command = ('--op', 'update', '-n', property_key,
+                         '-v', property_value)
         return self._run_iscsiadm(iscsi_properties, iscsi_command)
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host."""
         iscsi_properties = self._get_iscsi_properties(volume)
 
         if not iscsi_properties['target_discovered']:
-            self._run_iscsiadm(iscsi_properties, "--op new")
+            self._run_iscsiadm(iscsi_properties, ('--op', 'new'))
 
         if iscsi_properties.get('auth_method'):
             self._iscsiadm_update(iscsi_properties,
@@ -459,7 +498,22 @@ class ISCSIDriver(VolumeDriver):
         iscsi_properties = self._get_iscsi_properties(volume)
         self._iscsiadm_update(iscsi_properties, "node.startup", "manual")
         self._run_iscsiadm(iscsi_properties, "--logout")
-        self._run_iscsiadm(iscsi_properties, "--op delete")
+        self._run_iscsiadm(iscsi_properties, ('--op', 'delete'))
+
+    def check_for_export(self, context, volume_id):
+        """Make sure volume is exported."""
+
+        tid = self.db.volume_get_iscsi_target_num(context, volume_id)
+        try:
+            self._execute('sudo', 'ietadm', '--op', 'show',
+                          '--tid=%(tid)d' % locals())
+        except exception.ProcessExecutionError, e:
+            # Instances remount read-only in this case.
+            # /etc/init.d/iscsitarget restart and rebooting nova-volume
+            # is better since ensure_export() works at boot time.
+            logging.error(_("Cannot confirm exported volume "
+                            "id:%(volume_id)s.") % locals())
+            raise
 
 
 class FakeISCSIDriver(ISCSIDriver):
@@ -503,13 +557,13 @@ class RBDDriver(VolumeDriver):
     def delete_volume(self, volume):
         """Deletes a logical volume."""
         self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
-                          'rm', voluname['name'])
+                          'rm', volume['name'])
 
     def local_path(self, volume):
         """Returns the path of the rbd volume."""
         # This is the same as the remote path
         # since qemu accesses it directly.
-        return self.discover_volume(volume)
+        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -523,7 +577,7 @@ class RBDDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
@@ -573,10 +627,81 @@ class SheepdogDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
         return "sheepdog:%s" % volume['name']
 
     def undiscover_volume(self, volume):
         """Undiscover volume on a remote host"""
         pass
+
+
+class LoggingVolumeDriver(VolumeDriver):
+    """Logs and records calls, for unit tests."""
+
+    def check_for_setup_error(self):
+        pass
+
+    def create_volume(self, volume):
+        self.log_action('create_volume', volume)
+
+    def delete_volume(self, volume):
+        self.log_action('delete_volume', volume)
+
+    def local_path(self, volume):
+        print "local_path not implemented"
+        raise NotImplementedError()
+
+    def ensure_export(self, context, volume):
+        self.log_action('ensure_export', volume)
+
+    def create_export(self, context, volume):
+        self.log_action('create_export', volume)
+
+    def remove_export(self, context, volume):
+        self.log_action('remove_export', volume)
+
+    def discover_volume(self, context, volume):
+        self.log_action('discover_volume', volume)
+
+    def undiscover_volume(self, volume):
+        self.log_action('undiscover_volume', volume)
+
+    def check_for_export(self, context, volume_id):
+        self.log_action('check_for_export', volume_id)
+
+    _LOGS = []
+
+    @staticmethod
+    def clear_logs():
+        LoggingVolumeDriver._LOGS = []
+
+    @staticmethod
+    def log_action(action, parameters):
+        """Logs the command."""
+        LOG.debug(_("LoggingVolumeDriver: %s") % (action))
+        log_dictionary = {}
+        if parameters:
+            log_dictionary = dict(parameters)
+        log_dictionary['action'] = action
+        LOG.debug(_("LoggingVolumeDriver: %s") % (log_dictionary))
+        LoggingVolumeDriver._LOGS.append(log_dictionary)
+
+    @staticmethod
+    def all_logs():
+        return LoggingVolumeDriver._LOGS
+
+    @staticmethod
+    def logs_like(action, **kwargs):
+        matches = []
+        for entry in LoggingVolumeDriver._LOGS:
+            if entry['action'] != action:
+                continue
+            match = True
+            for k, v in kwargs.iteritems():
+                if entry.get(k) != v:
+                    match = False
+                    break
+            if match:
+                matches.append(entry)
+        return matches

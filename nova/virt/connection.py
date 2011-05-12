@@ -23,10 +23,13 @@ import sys
 
 from nova import flags
 from nova import log as logging
+from nova import utils
+from nova.virt import driver
 from nova.virt import fake
-from nova.virt import libvirt_conn
-from nova.virt import xenapi_conn
 from nova.virt import hyperv
+from nova.virt import libvirt_conn
+from nova.virt import vmwareapi_conn
+from nova.virt import xenapi_conn
 
 
 LOG = logging.getLogger("nova.virt.connection")
@@ -66,10 +69,12 @@ def get_connection(read_only=False):
         conn = xenapi_conn.get_connection(read_only)
     elif t == 'hyperv':
         conn = hyperv.get_connection(read_only)
+    elif t == 'vmwareapi':
+        conn = vmwareapi_conn.get_connection(read_only)
     else:
         raise Exception('Unknown connection type "%s"' % t)
 
     if conn is None:
         LOG.error(_('Failed to open connection to the hypervisor'))
         sys.exit(1)
-    return conn
+    return utils.check_isinstance(conn, driver.ComputeDriver)

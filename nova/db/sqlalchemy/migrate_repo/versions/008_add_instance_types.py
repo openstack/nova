@@ -13,14 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-from migrate import *
-
-from nova import api
-from nova import db
+from sqlalchemy import Boolean, Column, DateTime, Integer
+from sqlalchemy import MetaData, String, Table
 from nova import log as logging
-
-import datetime
 
 meta = MetaData()
 
@@ -55,7 +50,7 @@ def upgrade(migrate_engine):
     try:
         instance_types.create()
     except Exception:
-        logging.info(repr(table))
+        logging.info(repr(instance_types))
         logging.exception('Exception while creating instance_types table')
         raise
 
@@ -72,11 +67,11 @@ def upgrade(migrate_engine):
             # FIXME(kpepple) should we be seeding created_at / updated_at ?
             # now = datetime.datatime.utcnow()
             i.execute({'name': name, 'memory_mb': values["memory_mb"],
-                        'vcpus': values["vcpus"], 'deleted': 0,
+                        'vcpus': values["vcpus"], 'deleted': False,
                         'local_gb': values["local_gb"],
                         'flavorid': values["flavorid"]})
     except Exception:
-        logging.info(repr(table))
+        logging.info(repr(instance_types))
         logging.exception('Exception while seeding instance_types table')
         raise
 

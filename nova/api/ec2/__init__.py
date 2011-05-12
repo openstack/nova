@@ -31,7 +31,7 @@ from nova import log as logging
 from nova import utils
 from nova import wsgi
 from nova.api.ec2 import apirequest
-from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -46,8 +46,6 @@ flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
-flags.DEFINE_list('lockout_memcached_servers', None,
-                  'Memcached servers or None for in process cache.')
 
 
 class RequestLogging(wsgi.Middleware):
@@ -61,10 +59,13 @@ class RequestLogging(wsgi.Middleware):
         return rv
 
     def log_request_completion(self, response, request, start):
-        controller = request.environ.get('ec2.controller', None)
-        if controller:
-            controller = controller.__class__.__name__
-        action = request.environ.get('ec2.action', None)
+        apireq = request.environ.get('ec2.request', None)
+        if apireq:
+            controller = apireq.controller
+            action = apireq.action
+        else:
+            controller = None
+            action = None
         ctxt = request.environ.get('ec2.context', None)
         delta = utils.utcnow() - start
         seconds = delta.seconds
@@ -75,7 +76,7 @@ class RequestLogging(wsgi.Middleware):
             microseconds,
             request.remote_addr,
             request.method,
-            request.path_info,
+            "%s%s" % (request.script_name, request.path_info),
             controller,
             action,
             response.status_int,
@@ -104,11 +105,11 @@ class Lockout(wsgi.Middleware):
 
     def __init__(self, application):
         """middleware can use fake for testing."""
-        if FLAGS.lockout_memcached_servers:
+        if FLAGS.memcached_servers:
             import memcache
         else:
             from nova import fakememcache as memcache
-        self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
+        self.mc = memcache.Client(FLAGS.memcached_servers,
                                   debug=0)
         super(Lockout, self).__init__(application)
 
@@ -319,13 +320,11 @@ class Executor(wsgi.Application):
         except exception.InstanceNotFound as ex:
             LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = cloud.id_to_ec2_id(ex.instance_id)
-            message = _('Instance %s not found') % ec2_id
-            return self._error(req, context, type(ex).__name__, message)
+            return self._error(req, context, type(ex).__name__, ex.message)
         except exception.VolumeNotFound as ex:
             LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = cloud.id_to_ec2_id(ex.volume_id, 'vol-%08x')
+            ec2_id = ec2utils.id_to_ec2_id(ex.volume_id, 'vol-%08x')
             message = _('Volume %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:

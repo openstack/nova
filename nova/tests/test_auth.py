@@ -80,10 +80,10 @@ class user_and_project_generator(object):
         self.manager.delete_project(self.project)
 
 
-class AuthManagerTestCase(object):
+class _AuthManagerBaseTestCase(test.TestCase):
     def setUp(self):
         FLAGS.auth_driver = self.auth_driver
-        super(AuthManagerTestCase, self).setUp()
+        super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(connection_type='fake')
         self.manager = manager.AuthManager(new=True)
 
@@ -101,9 +101,43 @@ class AuthManagerTestCase(object):
             self.assertEqual('private-party', u.access)
 
     def test_004_signature_is_valid(self):
-        #self.assertTrue(self.manager.authenticate(**boto.generate_url ...? ))
-        pass
-        #raise NotImplementedError
+        with user_generator(self.manager, name='admin', secret='admin',
+                            access='admin'):
+            with project_generator(self.manager, name="admin",
+                                   manager_user='admin'):
+                accesskey = 'admin:admin'
+                expected_result = (self.manager.get_user('admin'),
+                                   self.manager.get_project('admin'))
+                # captured sig and query string using boto 1.9b/euca2ools 1.2
+                sig = 'd67Wzd9Bwz8xid9QU+lzWXcF2Y3tRicYABPJgrqfrwM='
+                auth_params = {'AWSAccessKeyId': 'admin:admin',
+                               'Action': 'DescribeAvailabilityZones',
+                               'SignatureMethod': 'HmacSHA256',
+                               'SignatureVersion': '2',
+                               'Timestamp': '2011-04-22T11:29:29',
+                               'Version': '2009-11-30'}
+                self.assertTrue(expected_result, self.manager.authenticate(
+                        accesskey,
+                        sig,
+                        auth_params,
+                        'GET',
+                        '127.0.0.1:8773',
+                        '/services/Cloud/'))
+                # captured sig and query string using RightAWS 1.10.0
+                sig = 'ECYLU6xdFG0ZqRVhQybPJQNJ5W4B9n8fGs6+/fuGD2c='
+                auth_params = {'AWSAccessKeyId': 'admin:admin',
+                               'Action': 'DescribeAvailabilityZones',
+                               'SignatureMethod': 'HmacSHA256',
+                               'SignatureVersion': '2',
+                               'Timestamp': '2011-04-22T11:29:49.000Z',
+                               'Version': '2008-12-01'}
+                self.assertTrue(expected_result, self.manager.authenticate(
+                        accesskey,
+                        sig,
+                        auth_params,
+                        'GET',
+                        '127.0.0.1',
+                        '/services/Cloud'))
 
     def test_005_can_get_credentials(self):
         return
@@ -299,6 +333,13 @@ class AuthManagerTestCase(object):
                 self.assertEqual('test2', project.project_manager_id)
                 self.assertEqual('new desc', project.description)
 
+    def test_modify_project_adds_new_manager(self):
+        with user_and_project_generator(self.manager):
+            with user_generator(self.manager, name='test2'):
+                self.manager.modify_project('testproj', 'test2', 'new desc')
+                project = self.manager.get_project('testproj')
+                self.assertTrue('test2' in project.member_ids)
+
     def test_can_delete_project(self):
         with user_generator(self.manager):
             self.manager.create_project('testproj', 'test1')
@@ -324,11 +365,11 @@ class AuthManagerTestCase(object):
             self.assertTrue(user.is_admin())
 
 
-class AuthManagerLdapTestCase(AuthManagerTestCase, test.TestCase):
+class AuthManagerLdapTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.ldapdriver.FakeLdapDriver'
 
 
-class AuthManagerDbTestCase(AuthManagerTestCase, test.TestCase):
+class AuthManagerDbTestCase(_AuthManagerBaseTestCase):
     auth_driver = 'nova.auth.dbdriver.DbDriver'
 
 

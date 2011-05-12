@@ -22,12 +22,12 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 import os
 import pickle
 import re
+import tempfile
 import time
 import urllib
 import uuid
 from xml.dom import minidom
 
-from eventlet import event
 import glance.client
 from nova import exception
 from nova import flags
@@ -36,6 +36,7 @@ from nova import utils
 from nova.auth.manager import AuthManager
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.virt import disk
 from nova.virt import images
 from nova.virt.xenapi import HelperBase
 from nova.virt.xenapi.volume_utils import StorageError
@@ -45,6 +46,8 @@ LOG = logging.getLogger("nova.virt.xenapi.vm_utils")
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
+flags.DEFINE_integer('block_device_creation_timeout', 10,
+                     'time to wait for a block device to be created')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -97,8 +100,8 @@ class VMHelper(HelperBase):
             3. Using hardware virtualization
         """
 
-        instance_type = instance_types.\
-                                get_instance_type(instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
         vcpus = str(instance_type['vcpus'])
         rec = {
@@ -136,8 +139,7 @@ class VMHelper(HelperBase):
             'VCPUs_at_startup': vcpus,
             'VCPUs_max': vcpus,
             'VCPUs_params': {},
-            'xenstore_data': {}
-            }
+            'xenstore_data': {}}
 
         # Complete VM configuration record according to the image type
         # non-raw/raw with PV kernel/raw in HVM mode
@@ -166,8 +168,8 @@ class VMHelper(HelperBase):
 
     @classmethod
     def ensure_free_mem(cls, session, instance):
-        instance_type = instance_types.get_instance_type(
-            instance.instance_type)
+        inst_type_id = instance.instance_type_id
+        instance_type = instance_types.get_instance_type(inst_type_id)
         mem = long(instance_type['memory_mb']) * 1024 * 1024
         #get free memory from host
         host = session.get_xenapi_host()
@@ -202,13 +204,13 @@ class VMHelper(HelperBase):
     @classmethod
     def find_vbd_by_number(cls, session, vm_ref, number):
         """Get the VBD reference from the device number"""
-        vbds = session.get_xenapi().VM.get_VBDs(vm_ref)
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+                    vbd_rec = session.get_xenapi().VBD.get_record(vbd_ref)
                     if vbd_rec['userdevice'] == str(number):
-                        return vbd
+                        return vbd_ref
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
         raise StorageError(_('VBD not found in instance %s') % vm_ref)
@@ -234,18 +236,20 @@ class VMHelper(HelperBase):
             raise StorageError(_('Unable to destroy VBD %s') % vbd_ref)
 
     @classmethod
-    def create_vif(cls, session, vm_ref, network_ref, mac_address, dev="0"):
+    def create_vif(cls, session, vm_ref, network_ref, mac_address,
+                   dev, rxtx_cap=0):
         """Create a VIF record.  Returns a Deferred that gives the new
         VIF reference."""
         vif_rec = {}
-        vif_rec['device'] = dev
+        vif_rec['device'] = str(dev)
         vif_rec['network'] = network_ref
         vif_rec['VM'] = vm_ref
         vif_rec['MAC'] = mac_address
         vif_rec['MTU'] = '1500'
         vif_rec['other_config'] = {}
-        vif_rec['qos_algorithm_type'] = ''
-        vif_rec['qos_algorithm_params'] = {}
+        vif_rec['qos_algorithm_type'] = "ratelimit" if rxtx_cap else ''
+        vif_rec['qos_algorithm_params'] = \
+                {"kbps": str(rxtx_cap * 1024)} if rxtx_cap else {}
         LOG.debug(_('Creating VIF for VM %(vm_ref)s,'
                 ' network %(network_ref)s.') % locals())
         vif_ref = session.call_xenapi('VIF.create', vif_rec)
@@ -299,7 +303,6 @@ class VMHelper(HelperBase):
                 % locals())
 
         vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
-        vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
@@ -443,29 +446,29 @@ class VMHelper(HelperBase):
             vdi_size += MBR_SIZE_BYTES
 
         name_label = get_name_label_for_image(image)
-        vdi = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
+        vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
 
-        with_vdi_attached_here(session, vdi, False,
+        with_vdi_attached_here(session, vdi_ref, False,
                                lambda dev:
                                _stream_disk(dev, image_type,
                                             virtual_size, image_file))
         if image_type == ImageType.KERNEL_RAMDISK:
             #we need to invoke a plugin for copying VDI's
             #content into proper path
-            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi)
+            LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
             fn = "copy_kernel_vdi"
             args = {}
-            args['vdi-ref'] = vdi
+            args['vdi-ref'] = vdi_ref
             #let the plugin copy the correct number of bytes
             args['image-size'] = str(vdi_size)
             task = session.async_call_plugin('glance', fn, args)
             filename = session.wait_for_task(task, instance_id)
             #remove the VDI as it is not needed anymore
-            session.get_xenapi().VDI.destroy(vdi)
-            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi)
+            session.get_xenapi().VDI.destroy(vdi_ref)
+            LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
             return filename
         else:
-            return session.get_xenapi().VDI.get_uuid(vdi)
+            return session.get_xenapi().VDI.get_uuid(vdi_ref)
 
     @classmethod
     def determine_disk_image_type(cls, instance):
@@ -503,9 +506,7 @@ class VMHelper(HelperBase):
             try:
                 return glance_disk_format2nova_type[disk_format]
             except KeyError:
-                raise exception.NotFound(
-                    _("Unrecognized disk_format '%(disk_format)s'")
-                    % locals())
+                raise exception.InvalidDiskFormat(disk_format=disk_format)
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -633,39 +634,56 @@ class VMHelper(HelperBase):
         return is_pv
 
     @classmethod
-    def lookup(cls, session, i):
+    def lookup(cls, session, name_label):
         """Look the instance i up, and returns it if available"""
-        vms = session.get_xenapi().VM.get_by_name_label(i)
-        n = len(vms)
+        vm_refs = session.get_xenapi().VM.get_by_name_label(name_label)
+        n = len(vm_refs)
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') % i)
+            raise exception.InstanceExists(name=name_label)
         else:
-            return vms[0]
+            return vm_refs[0]
 
     @classmethod
-    def lookup_vm_vdis(cls, session, vm):
+    def lookup_vm_vdis(cls, session, vm_ref):
         """Look for the VDIs that are attached to the VM"""
         # Firstly we get the VBDs, then the VDIs.
         # TODO(Armando): do we leave the read-only devices?
-        vbds = session.get_xenapi().VM.get_VBDs(vm)
-        vdis = []
-        if vbds:
-            for vbd in vbds:
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        vdi_refs = []
+        if vbd_refs:
+            for vbd_ref in vbd_refs:
                 try:
-                    vdi = session.get_xenapi().VBD.get_VDI(vbd)
+                    vdi_ref = session.get_xenapi().VBD.get_VDI(vbd_ref)
                     # Test valid VDI
-                    record = session.get_xenapi().VDI.get_record(vdi)
+                    record = session.get_xenapi().VDI.get_record(vdi_ref)
                     LOG.debug(_('VDI %s is still available'), record['uuid'])
                 except cls.XenAPI.Failure, exc:
                     LOG.exception(exc)
                 else:
-                    vdis.append(vdi)
-            if len(vdis) > 0:
-                return vdis
+                    vdi_refs.append(vdi_ref)
+            if len(vdi_refs) > 0:
+                return vdi_refs
             else:
                 return None
+
+    @classmethod
+    def preconfigure_instance(cls, session, instance, vdi_ref, network_info):
+        """Makes alterations to the image before launching as part of spawn.
+        """
+
+        # As mounting the image VDI is expensive, we only want do do it once,
+        # if at all, so determine whether it's required first, and then do
+        # everything
+        mount_required = False
+        key, net = _prepare_injectables(instance, network_info)
+        mount_required = key or net
+        if not mount_required:
+            return
+
+        with_vdi_attached_here(session, vdi_ref, False,
+                               lambda dev: _mounted_processing(dev, key, net))
 
     @classmethod
     def lookup_kernel_ramdisk(cls, session, vm):
@@ -730,14 +748,14 @@ class VMHelper(HelperBase):
         session.call_xenapi('SR.scan', sr_ref)
 
 
-def get_rrd(host, uuid):
+def get_rrd(host, vm_uuid):
     """Return the VM RRD XML as a string"""
     try:
         xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
             FLAGS.xenapi_connection_username,
             FLAGS.xenapi_connection_password,
             host,
-            uuid))
+            vm_uuid))
         return xml.read()
     except IOError:
         return None
@@ -832,23 +850,23 @@ def safe_find_sr(session):
     """
     sr_ref = find_sr(session)
     if sr_ref is None:
-        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+        raise exception.StorageRepositoryNotFound()
     return sr_ref
 
 
 def find_sr(session):
     """Return the storage repository to hold VM images"""
     host = session.get_xenapi_host()
-    srs = session.get_xenapi().SR.get_all()
-    for sr in srs:
-        sr_rec = session.get_xenapi().SR.get_record(sr)
+    sr_refs = session.get_xenapi().SR.get_all()
+    for sr_ref in sr_refs:
+        sr_rec = session.get_xenapi().SR.get_record(sr_ref)
         if not ('i18n-key' in sr_rec['other_config'] and
                 sr_rec['other_config']['i18n-key'] == 'local-storage'):
             continue
-        for pbd in sr_rec['PBDs']:
-            pbd_rec = session.get_xenapi().PBD.get_record(pbd)
+        for pbd_ref in sr_rec['PBDs']:
+            pbd_rec = session.get_xenapi().PBD.get_record(pbd_ref)
             if pbd_rec['host'] == host:
-                return sr
+                return sr_ref
     return None
 
 
@@ -873,11 +891,21 @@ def remap_vbd_dev(dev):
     return remapped_dev
 
 
-def with_vdi_attached_here(session, vdi, read_only, f):
+def _wait_for_device(dev):
+    """Wait for device node to appear"""
+    for i in xrange(0, FLAGS.block_device_creation_timeout):
+        if os.path.exists('/dev/%s' % dev):
+            return
+        time.sleep(1)
+
+    raise StorageError(_('Timeout waiting for device %s to be created') % dev)
+
+
+def with_vdi_attached_here(session, vdi_ref, read_only, f):
     this_vm_ref = get_this_vm_ref(session)
     vbd_rec = {}
     vbd_rec['VM'] = this_vm_ref
-    vbd_rec['VDI'] = vdi
+    vbd_rec['VDI'] = vdi_ref
     vbd_rec['userdevice'] = 'autodetect'
     vbd_rec['bootable'] = False
     vbd_rec['mode'] = read_only and 'RO' or 'RW'
@@ -888,28 +916,33 @@ def with_vdi_attached_here(session, vdi, read_only, f):
     vbd_rec['qos_algorithm_type'] = ''
     vbd_rec['qos_algorithm_params'] = {}
     vbd_rec['qos_supported_algorithms'] = []
-    LOG.debug(_('Creating VBD for VDI %s ... '), vdi)
-    vbd = session.get_xenapi().VBD.create(vbd_rec)
-    LOG.debug(_('Creating VBD for VDI %s done.'), vdi)
+    LOG.debug(_('Creating VBD for VDI %s ... '), vdi_ref)
+    vbd_ref = session.get_xenapi().VBD.create(vbd_rec)
+    LOG.debug(_('Creating VBD for VDI %s done.'), vdi_ref)
     try:
-        LOG.debug(_('Plugging VBD %s ... '), vbd)
-        session.get_xenapi().VBD.plug(vbd)
-        LOG.debug(_('Plugging VBD %s done.'), vbd)
-        orig_dev = session.get_xenapi().VBD.get_device(vbd)
-        LOG.debug(_('VBD %(vbd)s plugged as %(orig_dev)s') % locals())
+        LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
+        session.get_xenapi().VBD.plug(vbd_ref)
+        LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
+        orig_dev = session.get_xenapi().VBD.get_device(vbd_ref)
+        LOG.debug(_('VBD %(vbd_ref)s plugged as %(orig_dev)s') % locals())
         dev = remap_vbd_dev(orig_dev)
         if dev != orig_dev:
-            LOG.debug(_('VBD %(vbd)s plugged into wrong dev, '
+            LOG.debug(_('VBD %(vbd_ref)s plugged into wrong dev, '
                         'remapping to %(dev)s') % locals())
+        if dev != 'autodetect':
+            # NOTE(johannes): Unit tests will end up with a device called
+            # 'autodetect' which obviously won't exist. It's not ideal,
+            # but the alternatives were much messier
+            _wait_for_device(dev)
         return f(dev)
     finally:
-        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi)
-        vbd_unplug_with_retry(session, vbd)
-        ignore_failure(session.get_xenapi().VBD.destroy, vbd)
-        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi)
+        LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
+        vbd_unplug_with_retry(session, vbd_ref)
+        ignore_failure(session.get_xenapi().VBD.destroy, vbd_ref)
+        LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
 
 
-def vbd_unplug_with_retry(session, vbd):
+def vbd_unplug_with_retry(session, vbd_ref):
     """Call VBD.unplug on the given VBD, with a retry if we get
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
@@ -917,7 +950,7 @@ def vbd_unplug_with_retry(session, vbd):
     # FIXME(sirp): We can use LoopingCall here w/o blocking sleep()
     while True:
         try:
-            session.get_xenapi().VBD.unplug(vbd)
+            session.get_xenapi().VBD.unplug(vbd_ref)
             LOG.debug(_('VBD.unplug successful first time.'))
             return
         except VMHelper.XenAPI.Failure, e:
@@ -925,6 +958,7 @@ def vbd_unplug_with_retry(session, vbd):
                 e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 LOG.debug(_('VBD.unplug rejected: retrying...'))
                 time.sleep(1)
+                LOG.debug(_('Not sleeping anymore!'))
             elif (len(e.details) > 0 and
                   e.details[0] == 'DEVICE_ALREADY_DETACHED'):
                 LOG.debug(_('VBD.unplug successful eventually.'))
@@ -979,7 +1013,6 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
 
 def _write_partition(virtual_size, dev):
     dest = '/dev/%s' % dev
-    mbr_last = MBR_SIZE_SECTORS - 1
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 
@@ -989,8 +1022,8 @@ def _write_partition(virtual_size, dev):
     def execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
-    execute('parted', '--script', dest, 'mklabel', 'msdos')
-    execute('parted', '--script', dest, 'mkpart', 'primary',
+    execute('sudo', 'parted', '--script', dest, 'mklabel', 'msdos')
+    execute('sudo', 'parted', '--script', dest, 'mkpart', 'primary',
             '%ds' % primary_first,
             '%ds' % primary_last)
 
@@ -1000,3 +1033,118 @@ def _write_partition(virtual_size, dev):
 def get_name_label_for_image(image):
     # TODO(sirp): This should eventually be the URI for the Glance image
     return _('Glance image %s') % image
+
+
+def _mount_filesystem(dev_path, dir):
+    """mounts the device specified by dev_path in dir"""
+    try:
+        out, err = utils.execute('sudo', 'mount',
+                                 '-t', 'ext2,ext3',
+                                 dev_path, dir)
+    except exception.ProcessExecutionError as e:
+        err = str(e)
+    return err
+
+
+def _find_guest_agent(base_dir, agent_rel_path):
+    """
+    tries to locate a guest agent at the path
+    specificed by agent_rel_path
+    """
+    agent_path = os.path.join(base_dir, agent_rel_path)
+    if os.path.isfile(agent_path):
+        # The presence of the guest agent
+        # file indicates that this instance can
+        # reconfigure the network from xenstore data,
+        # so manipulation of files in /etc is not
+        # required
+        LOG.info(_('XenServer tools installed in this '
+                'image are capable of network injection.  '
+                'Networking files will not be'
+                'manipulated'))
+        return True
+    xe_daemon_filename = os.path.join(base_dir,
+        'usr', 'sbin', 'xe-daemon')
+    if os.path.isfile(xe_daemon_filename):
+        LOG.info(_('XenServer tools are present '
+                'in this image but are not capable '
+                'of network injection'))
+    else:
+        LOG.info(_('XenServer tools are not '
+                'installed in this image'))
+    return False
+
+
+def _mounted_processing(device, key, net):
+    """Callback which runs with the image VDI attached"""
+
+    dev_path = '/dev/' + device + '1'  # NB: Partition 1 hardcoded
+    tmpdir = tempfile.mkdtemp()
+    try:
+        # Mount only Linux filesystems, to avoid disturbing NTFS images
+        err = _mount_filesystem(dev_path, tmpdir)
+        if not err:
+            try:
+                # This try block ensures that the umount occurs
+                if not _find_guest_agent(tmpdir, FLAGS.xenapi_agent_path):
+                    LOG.info(_('Manipulating interface files '
+                            'directly'))
+                    disk.inject_data_into_fs(tmpdir, key, net,
+                        utils.execute)
+            finally:
+                utils.execute('sudo', 'umount', dev_path)
+        else:
+            LOG.info(_('Failed to mount filesystem (expected for '
+                'non-linux instances): %s') % err)
+    finally:
+        # remove temporary directory
+        os.rmdir(tmpdir)
+
+
+def _prepare_injectables(inst, networks_info):
+    """
+    prepares the ssh key and the network configuration file to be
+    injected into the disk image
+    """
+    #do the import here - Cheetah.Template will be loaded
+    #only if injection is performed
+    from Cheetah import Template as t
+    template = t.Template
+    template_data = open(FLAGS.injected_network_template).read()
+
+    key = str(inst['key_data'])
+    net = None
+    if networks_info:
+        ifc_num = -1
+        interfaces_info = []
+        have_injected_networks = False
+        for (network_ref, info) in networks_info:
+            ifc_num += 1
+            if not network_ref['injected']:
+                continue
+
+            have_injected_networks = True
+            ip_v4 = ip_v6 = None
+            if 'ips' in info and len(info['ips']) > 0:
+                ip_v4 = info['ips'][0]
+            if 'ip6s' in info and len(info['ip6s']) > 0:
+                ip_v6 = info['ip6s'][0]
+            if len(info['dns']) > 0:
+                dns = info['dns'][0]
+            interface_info = {'name': 'eth%d' % ifc_num,
+                              'address': ip_v4 and ip_v4['ip'] or '',
+                              'netmask': ip_v4 and ip_v4['netmask'] or '',
+                              'gateway': info['gateway'],
+                              'broadcast': info['broadcast'],
+                              'dns': dns,
+                              'address_v6': ip_v6 and ip_v6['ip'] or '',
+                              'netmask_v6': ip_v6 and ip_v6['netmask'] or '',
+                              'gateway_v6': ip_v6 and info['gateway6'] or '',
+                              'use_ipv6': FLAGS.use_ipv6}
+            interfaces_info.append(interface_info)
+
+        if have_injected_networks:
+            net = str(template(template_data,
+                                searchList=[{'interfaces': interfaces_info,
+                                            'use_ipv6': FLAGS.use_ipv6}]))
+    return key, net

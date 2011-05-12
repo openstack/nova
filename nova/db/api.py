@@ -15,8 +15,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""
-Defines interface for DB access.
+
+"""Defines interface for DB access.
 
 The underlying driver is loaded as a :class:`LazyPluggable`.
 
@@ -30,6 +30,7 @@ The underlying driver is loaded as a :class:`LazyPluggable`.
 
 :enable_new_services:  when adding a new service to the database, is it in the
                        pool of available hardware (Default: True)
+
 """
 
 from nova import exception
@@ -71,6 +72,7 @@ class NoMoreTargets(exception.Error):
     """No more available blades"""
     pass
 
+
 ###################
 
 
@@ -85,11 +87,11 @@ def service_get(context, service_id):
 
 
 def service_get_by_host_and_topic(context, host, topic):
-    """Get a service by host it's on and topic it listens to"""
+    """Get a service by host it's on and topic it listens to."""
     return IMPL.service_get_by_host_and_topic(context, host, topic)
 
 
-def service_get_all(context, disabled=False):
+def service_get_all(context, disabled=None):
     """Get all services."""
     return IMPL.service_get_all(context, disabled)
 
@@ -104,10 +106,15 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
+def service_get_all_compute_by_host(context, host):
+    """Get all compute services for a given host."""
+    return IMPL.service_get_all_compute_by_host(context, host)
+
+
 def service_get_all_compute_sorted(context):
     """Get all compute services sorted by instance count.
 
-    Returns a list of (Service, instance_count) tuples.
+    :returns: a list of (Service, instance_count) tuples.
 
     """
     return IMPL.service_get_all_compute_sorted(context)
@@ -116,7 +123,7 @@ def service_get_all_compute_sorted(context):
 def service_get_all_network_sorted(context):
     """Get all network services sorted by network count.
 
-    Returns a list of (Service, network_count) tuples.
+    :returns: a list of (Service, network_count) tuples.
 
     """
     return IMPL.service_get_all_network_sorted(context)
@@ -125,7 +132,7 @@ def service_get_all_network_sorted(context):
 def service_get_all_volume_sorted(context):
     """Get all volume services sorted by volume count.
 
-    Returns a list of (Service, volume_count) tuples.
+    :returns: a list of (Service, volume_count) tuples.
 
     """
     return IMPL.service_get_all_volume_sorted(context)
@@ -148,6 +155,29 @@ def service_update(context, service_id, values):
 
     """
     return IMPL.service_update(context, service_id, values)
+
+
+###################
+
+
+def compute_node_get(context, compute_id, session=None):
+    """Get an computeNode or raise if it does not exist."""
+    return IMPL.compute_node_get(context, compute_id)
+
+
+def compute_node_create(context, values):
+    """Create a computeNode from the values dictionary."""
+    return IMPL.compute_node_create(context, values)
+
+
+def compute_node_update(context, compute_id, values):
+    """Set the given properties on an computeNode and update it.
+
+    Raises NotFound if computeNode does not exist.
+
+    """
+
+    return IMPL.compute_node_update(context, compute_id, values)
 
 
 ###################
@@ -186,7 +216,7 @@ def certificate_update(context, certificate_id, values):
     Raises NotFound if service does not exist.
 
     """
-    return IMPL.service_update(context, certificate_id, values)
+    return IMPL.certificate_update(context, certificate_id, values)
 
 
 ###################
@@ -212,7 +242,7 @@ def floating_ip_count_by_project(context, project_id):
 
 
 def floating_ip_deallocate(context, address):
-    """Deallocate an floating ip by address"""
+    """Deallocate an floating ip by address."""
     return IMPL.floating_ip_deallocate(context, address)
 
 
@@ -224,7 +254,7 @@ def floating_ip_destroy(context, address):
 def floating_ip_disassociate(context, address):
     """Disassociate an floating ip from a fixed ip by address.
 
-    Returns the address of the existing fixed ip.
+    :returns: the address of the existing fixed ip.
 
     """
     return IMPL.floating_ip_disassociate(context, address)
@@ -257,25 +287,35 @@ def floating_ip_get_by_address(context, address):
     return IMPL.floating_ip_get_by_address(context, address)
 
 
+def floating_ip_update(context, address, values):
+    """Update a floating ip by address or raise if it doesn't exist."""
+    return IMPL.floating_ip_update(context, address, values)
+
+
+def floating_ip_set_auto_assigned(context, address):
+    """Set auto_assigned flag to floating ip"""
+    return IMPL.floating_ip_set_auto_assigned(context, address)
+
 ####################
 
+
 def migration_update(context, id, values):
-    """Update a migration instance"""
+    """Update a migration instance."""
     return IMPL.migration_update(context, id, values)
 
 
 def migration_create(context, values):
-    """Create a migration record"""
+    """Create a migration record."""
     return IMPL.migration_create(context, values)
 
 
 def migration_get(context, migration_id):
-    """Finds a migration by the id"""
+    """Finds a migration by the id."""
     return IMPL.migration_get(context, migration_id)
 
 
 def migration_get_by_instance_and_status(context, instance_id, status):
-    """Finds a migration by the instance id its migrating"""
+    """Finds a migration by the instance id its migrating."""
     return IMPL.migration_get_by_instance_and_status(context, instance_id,
             status)
 
@@ -318,6 +358,11 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
 def fixed_ip_get_all(context):
     """Get all defined fixed ips."""
     return IMPL.fixed_ip_get_all(context)
+
+
+def fixed_ip_get_all_by_host(context, host):
+    """Get all defined fixed ips used by a host."""
+    return IMPL.fixed_ip_get_all_by_host(context, host)
 
 
 def fixed_ip_get_by_address(context, address):
@@ -416,11 +461,6 @@ def instance_get_project_vpn(context, project_id):
     return IMPL.instance_get_project_vpn(context, project_id)
 
 
-def instance_is_vpn(context, instance_id):
-    """True if instance is a vpn."""
-    return IMPL.instance_is_vpn(context, instance_id)
-
-
 def instance_set_state(context, instance_id, state, description=None):
     """Set the state of an instance."""
     return IMPL.instance_set_state(context, instance_id, state, description)
@@ -439,6 +479,27 @@ def instance_add_security_group(context, instance_id, security_group_id):
     """Associate the given security group with the given instance."""
     return IMPL.instance_add_security_group(context, instance_id,
                                             security_group_id)
+
+
+def instance_get_vcpu_sum_by_host_and_project(context, hostname, proj_id):
+    """Get instances.vcpus by host and project."""
+    return IMPL.instance_get_vcpu_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
+
+
+def instance_get_memory_sum_by_host_and_project(context, hostname, proj_id):
+    """Get amount of memory by host and project."""
+    return IMPL.instance_get_memory_sum_by_host_and_project(context,
+                                                            hostname,
+                                                            proj_id)
+
+
+def instance_get_disk_sum_by_host_and_project(context, hostname, proj_id):
+    """Get total amount of disk by host and project."""
+    return IMPL.instance_get_disk_sum_by_host_and_project(context,
+                                                          hostname,
+                                                          proj_id)
 
 
 def instance_action_create(context, values):
@@ -519,7 +580,9 @@ def network_create_safe(context, values):
 
 def network_delete_safe(context, network_id):
     """Delete network with key network_id.
+
     This method assumes that the network is not associated with any project
+
     """
     return IMPL.network_delete_safe(context, network_id)
 
@@ -549,7 +612,7 @@ def network_get_all(context):
     return IMPL.network_get_all(context)
 
 
-# pylint: disable-msg=C0103
+# pylint: disable=C0103
 def network_get_associated_fixed_ips(context, network_id):
     """Get all network's ips that have been associated."""
     return IMPL.network_get_associated_fixed_ips(context, network_id)
@@ -614,7 +677,6 @@ def project_get_network(context, project_id, associate=True):
     network if one is not found, otherwise it returns None.
 
     """
-
     return IMPL.project_get_network(context, project_id, associate)
 
 
@@ -662,7 +724,9 @@ def iscsi_target_create_safe(context, values):
 
     The device is not returned. If the create violates the unique
     constraints because the iscsi_target and host already exist,
-    no exception is raised."""
+    no exception is raised.
+
+    """
     return IMPL.iscsi_target_create_safe(context, values)
 
 
@@ -763,6 +827,11 @@ def volume_get_all(context):
 def volume_get_all_by_host(context, host):
     """Get all volumes belonging to a host."""
     return IMPL.volume_get_all_by_host(context, host)
+
+
+def volume_get_all_by_instance(context, instance_id):
+    """Get all volumes belonging to a instance."""
+    return IMPL.volume_get_all_by_instance(context, instance_id)
 
 
 def volume_get_all_by_project(context, project_id):
@@ -985,10 +1054,7 @@ def project_delete(context, project_id):
 
 
 def host_get_networks(context, host):
-    """Return all networks for which the given host is the designated
-    network host.
-
-    """
+    """All networks for which the given host is the network host."""
     return IMPL.host_get_networks(context, host)
 
 
@@ -1050,33 +1116,40 @@ def console_get(context, console_id, instance_id=None):
 
 
 def instance_type_create(context, values):
-    """Create a new instance type"""
+    """Create a new instance type."""
     return IMPL.instance_type_create(context, values)
 
 
-def instance_type_get_all(context, inactive=0):
-    """Get all instance types"""
+def instance_type_get_all(context, inactive=False):
+    """Get all instance types."""
     return IMPL.instance_type_get_all(context, inactive)
 
 
+def instance_type_get_by_id(context, id):
+    """Get instance type by id."""
+    return IMPL.instance_type_get_by_id(context, id)
+
+
 def instance_type_get_by_name(context, name):
-    """Get instance type by name"""
+    """Get instance type by name."""
     return IMPL.instance_type_get_by_name(context, name)
 
 
 def instance_type_get_by_flavor_id(context, id):
-    """Get instance type by name"""
+    """Get instance type by name."""
     return IMPL.instance_type_get_by_flavor_id(context, id)
 
 
 def instance_type_destroy(context, name):
-    """Delete a instance type"""
+    """Delete a instance type."""
     return IMPL.instance_type_destroy(context, name)
 
 
 def instance_type_purge(context, name):
-    """Purges (removes) an instance type from DB
-       Use instance_type_destroy for most cases
+    """Purges (removes) an instance type from DB.
+
+    Use instance_type_destroy for most cases
+
     """
     return IMPL.instance_type_purge(context, name)
 
@@ -1107,3 +1180,21 @@ def zone_get(context, zone_id):
 def zone_get_all(context):
     """Get all child Zones."""
     return IMPL.zone_get_all(context)
+
+
+####################
+
+
+def instance_metadata_get(context, instance_id):
+    """Get all metadata for an instance."""
+    return IMPL.instance_metadata_get(context, instance_id)
+
+
+def instance_metadata_delete(context, instance_id, key):
+    """Delete the given metadata item."""
+    IMPL.instance_metadata_delete(context, instance_id, key)
+
+
+def instance_metadata_update_or_create(context, instance_id, metadata):
+    """Create or update instance metadata."""
+    IMPL.instance_metadata_update_or_create(context, instance_id, metadata)

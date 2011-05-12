@@ -13,13 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import common
+from webob import exc
 
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
-
+from nova.api.openstack import common
+from nova.api.openstack import faults
 from nova.auth import manager
 
 FLAGS = flags.FLAGS
@@ -34,7 +34,7 @@ def _translate_keys(user):
                 admin=user.admin)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
 
     _serialization_metadata = {
         'application/xml': {
@@ -48,7 +48,7 @@ class Controller(wsgi.Controller):
         """We cannot depend on the db layer to check for admin access
            for the auth manager, so we do it here"""
         if not context.is_admin:
-            raise exception.NotAuthorized(_("Not admin user"))
+            raise exception.AdminRequired()
 
     def index(self, req):
         """Return all users in brief"""
@@ -63,7 +63,17 @@ class Controller(wsgi.Controller):
 
     def show(self, req, id):
         """Return data about the given user id"""
-        user = self.manager.get_user(id)
+
+        #NOTE(justinsb): The drivers are a little inconsistent in how they
+        #  deal with "NotFound" - some throw, some return None.
+        try:
+            user = self.manager.get_user(id)
+        except exception.NotFound:
+            user = None
+
+        if user is None:
+            raise faults.Fault(exc.HTTPNotFound())
+
         return dict(user=_translate_keys(user))
 
     def delete(self, req, id):

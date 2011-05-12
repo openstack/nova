@@ -49,20 +49,32 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
                              address for the nova-volume host
 :target_port:                iSCSI Target Port, 3260 Default
 :iqn_prefix:                 IQN Prefix, e.g. 'iqn.2010-10.org.openstack'
+
+**Variable Naming Scheme**
+
+- suffix "_ref" for opaque references
+- suffix "_uuid" for UUIDs
+- suffix "_rec" for record objects
 """
 
+import json
+import random
 import sys
 import urlparse
 import xmlrpclib
 
 from eventlet import event
 from eventlet import tpool
+from eventlet import timeout
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import utils
 from nova import flags
 from nova import log as logging
+from nova.virt import driver
+from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
@@ -100,8 +112,22 @@ flags.DEFINE_integer('xenapi_vhd_coalesce_max_attempts',
                      5,
                      'Max number of times to poll for VHD to coalesce.'
                      '  Used only if connection_type=xenapi.')
+flags.DEFINE_bool('xenapi_inject_image',
+                  True,
+                  'Specifies whether an attempt to inject network/key'
+                  '  data into the disk image should be made.'
+                  '  Used only if connection_type=xenapi.')
+flags.DEFINE_string('xenapi_agent_path',
+                    'usr/sbin/xe-update-networking',
+                    'Specifies the path in which the xenapi guest agent'
+                    '  should be located. If the agent is present,'
+                    '  network configuration is not injected into the image'
+                    '  Used only if connection_type=xenapi.'
+                    '  and xenapi_inject_image=True')
+
 flags.DEFINE_string('xenapi_sr_base_path', '/var/run/sr-mount',
                     'Base path to the storage repository')
+
 flags.DEFINE_string('target_host',
                     None,
                     'iSCSI Target Host')
@@ -119,6 +145,9 @@ flags.DEFINE_bool('xenapi_remap_vbd_dev', False,
 flags.DEFINE_string('xenapi_remap_vbd_dev_prefix', 'sd',
                     'Specify prefix to remap VBD dev to '
                     '(ex. /dev/xvdb -> /dev/sdb)')
+flags.DEFINE_integer('xenapi_login_timeout',
+                     10,
+                     'Timeout in seconds for XenAPI login.')
 
 
 def get_connection(_):
@@ -135,13 +164,21 @@ def get_connection(_):
     return XenAPIConnection(url, username, password)
 
 
-class XenAPIConnection(object):
+class XenAPIConnection(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform"""
 
     def __init__(self, url, user, pw):
+        super(XenAPIConnection, self).__init__()
         session = XenAPISession(url, user, pw)
         self._vmops = VMOps(session)
         self._volumeops = VolumeOps(session)
+        self._host_state = None
+
+    @property
+    def HostState(self):
+        if not self._host_state:
+            self._host_state = HostState(self.session)
+        return self._host_state
 
     def init_host(self, host):
         #FIXME(armando): implement this
@@ -154,23 +191,24 @@ class XenAPIConnection(object):
         """List VM instances"""
         return self._vmops.list_instances()
 
+    def list_instances_detail(self):
+        return self._vmops.list_instances_detail()
+
     def spawn(self, instance):
         """Create VM instance"""
         self._vmops.spawn(instance)
 
+    def revert_resize(self, instance):
+        """Reverts a resize, powering back on the instance"""
+        self._vmops.revert_resize(instance)
+
     def finish_resize(self, instance, disk_info):
         """Completes a resize, turning on the migrated instance"""
-        vdi_uuid = self._vmops.attach_disk(instance, disk_info['base_copy'],
-                disk_info['cow'])
-        self._vmops._spawn_with_disk(instance, vdi_uuid)
+        self._vmops.finish_resize(instance, disk_info)
 
     def snapshot(self, instance, image_id):
         """ Create snapshot from a running VM instance """
         self._vmops.snapshot(instance, image_id)
-
-    def resize(self, instance, flavor):
-        """Resize a VM instance"""
-        raise NotImplementedError()
 
     def reboot(self, instance):
         """Reboot VM instance"""
@@ -219,6 +257,10 @@ class XenAPIConnection(object):
         """Unrescue the specified instance"""
         self._vmops.unrescue(instance, callback)
 
+    def poll_rescued_instances(self, timeout):
+        """Poll for rescued instances"""
+        self._vmops.poll_rescued_instances(timeout)
+
     def reset_network(self, instance):
         """reset networking for specified instance"""
         self._vmops.reset_network(instance)
@@ -263,6 +305,37 @@ class XenAPIConnection(object):
                  'username': FLAGS.xenapi_connection_username,
                  'password': FLAGS.xenapi_connection_password}
 
+    def update_available_resource(self, ctxt, host):
+        """This method is supported only by libvirt."""
+        return
+
+    def compare_cpu(self, xml):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def ensure_filtering_rules_for_instance(self, instance_ref):
+        """This method is supported only libvirt."""
+        return
+
+    def live_migration(self, context, instance_ref, dest,
+                       post_method, recover_method):
+        """This method is supported only by libvirt."""
+        return
+
+    def unfilter_instance(self, instance_ref):
+        """This method is supported only by libvirt."""
+        raise NotImplementedError('This method is supported only by libvirt.')
+
+    def update_host_status(self):
+        """Update the status info of the host, and return those values
+            to the calling program."""
+        return self.HostState.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host. If 'refresh' is
+           True, run the update first."""
+        return self.HostState.get_host_stats(refresh=refresh)
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
@@ -270,7 +343,10 @@ class XenAPISession(object):
     def __init__(self, url, user, pw):
         self.XenAPI = self.get_imported_xenapi()
         self._session = self._create_session(url)
-        self._session.login_with_password(user, pw)
+        exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
+                            "(is the Dom0 disk full?)"))
+        with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
+            self._session.login_with_password(user, pw)
         self.loop = None
 
     def get_imported_xenapi(self):
@@ -379,6 +455,65 @@ class XenAPISession(object):
         except xmlrpclib.ProtocolError, exc:
             LOG.debug(_("Got exception: %s"), exc)
             raise
+
+
+class HostState(object):
+    """Manages information about the XenServer host this compute
+    node is running on.
+    """
+    def __init__(self, session):
+        super(HostState, self).__init__()
+        self._session = session
+        self._stats = {}
+        self.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host. If 'refresh' is
+        True, run the update first.
+        """
+        if refresh:
+            self.update_status()
+        return self._stats
+
+    def update_status(self):
+        """Since under Xenserver, a compute node runs on a given host,
+        we can get host status information using xenapi.
+        """
+        LOG.debug(_("Updating host stats"))
+        # Make it something unlikely to match any actual instance ID
+        task_id = random.randint(-80000, -70000)
+        task = self._session.async_call_plugin("xenhost", "host_data", {})
+        task_result = self._session.wait_for_task(task, task_id)
+        if not task_result:
+            task_result = json.dumps("")
+        try:
+            data = json.loads(task_result)
+        except ValueError as e:
+            # Invalid JSON object
+            LOG.error(_("Unable to get updated status: %s") % e)
+            return
+        # Get the SR usage
+        try:
+            sr_ref = vm_utils.safe_find_sr(self._session)
+        except exception.NotFound as e:
+            # No SR configured
+            LOG.error(_("Unable to get SR for this host: %s") % e)
+            return
+        sr_rec = self._session.get_xenapi().SR.get_record(sr_ref)
+        total = int(sr_rec["virtual_allocation"])
+        used = int(sr_rec["physical_utilisation"])
+        data["disk_total"] = total
+        data["disk_used"] = used
+        data["disk_available"] = total - used
+        host_memory = data.get('host_memory', None)
+        if host_memory:
+            data["host_memory_total"] = host_memory.get('total', 0)
+            data["host_memory_overhead"] = host_memory.get('overhead', 0)
+            data["host_memory_free"] = host_memory.get('free', 0)
+            data["host_memory_free_computed"] = \
+                        host_memory.get('free-computed', 0)
+            del data['host_memory']
+        self._stats = data
 
 
 def _parse_xmlrpc_value(val):

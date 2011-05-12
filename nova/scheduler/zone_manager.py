@@ -58,8 +58,9 @@ class ZoneState(object):
            child zone."""
         self.last_seen = datetime.now()
         self.attempt = 0
-        self.name = zone_metadata["name"]
-        self.capabilities = zone_metadata["capabilities"]
+        self.name = zone_metadata.get("name", "n/a")
+        self.capabilities = ", ".join(["%s=%s" % (k, v)
+                        for k, v in zone_metadata.iteritems() if k != 'name'])
         self.is_active = True
 
     def to_dict(self):
@@ -104,12 +105,34 @@ class ZoneManager(object):
     """Keeps the zone states updated."""
     def __init__(self):
         self.last_zone_db_check = datetime.min
-        self.zone_states = {}
+        self.zone_states = {}  # { <zone_id> : ZoneState }
+        self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
         self.green_pool = greenpool.GreenPool()
 
     def get_zone_list(self):
         """Return the list of zones we know about."""
         return [zone.to_dict() for zone in self.zone_states.values()]
+
+    def get_zone_capabilities(self, context):
+        """Roll up all the individual host info to generic 'service'
+           capabilities. Each capability is aggregated into
+           <cap>_min and <cap>_max values."""
+        hosts_dict = self.service_states
+
+        # TODO(sandy) - be smarter about fabricating this structure.
+        # But it's likely to change once we understand what the Best-Match
+        # code will need better.
+        combined = {}  # { <service>_<cap> : (min, max), ... }
+        for host, host_dict in hosts_dict.iteritems():
+            for service_name, service_dict in host_dict.iteritems():
+                for cap, value in service_dict.iteritems():
+                    key = "%s_%s" % (service_name, cap)
+                    min_value, max_value = combined.get(key, (value, value))
+                    min_value = min(min_value, value)
+                    max_value = max(max_value, value)
+                    combined[key] = (min_value, max_value)
+
+        return combined
 
     def _refresh_from_db(self, context):
         """Make our zone state map match the db."""
@@ -141,3 +164,11 @@ class ZoneManager(object):
             self.last_zone_db_check = datetime.now()
             self._refresh_from_db(context)
         self._poll_zones(context)
+
+    def update_service_capabilities(self, service_name, host, capabilities):
+        """Update the per-service capabilities based on this notification."""
+        logging.debug(_("Received %(service_name)s service update from "
+                            "%(host)s: %(capabilities)s") % locals())
+        service_caps = self.service_states.get(host, {})
+        service_caps[service_name] = capabilities
+        self.service_states[host] = service_caps
