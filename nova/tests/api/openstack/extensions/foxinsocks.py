@@ -89,6 +89,9 @@ class Foxinsocks(object):
         response_exts.append(resp_ext2)
         return response_exts
 
+    def get_request_extensions(self):
+        return []
+
     def _add_tweedle(self, input_dict, req, id):
 
         return "Tweedle Beetle Added."

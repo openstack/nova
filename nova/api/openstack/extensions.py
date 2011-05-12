@@ -165,6 +165,34 @@ class ResponseExtensionController(common.OpenstackController):
         return res
 
 
+class RequestExtensionController(common.OpenstackController):
+
+    def __init__(self, application):
+        self.application = application
+        self.handlers = []
+
+    def add_handler(self, handler):
+        self.handlers.append(handler)
+
+    def process(self, req, *args, **kwargs):
+        res = req.get_response(self.application)
+        content_type = req.best_match_content_type()
+        # currently response handlers are un-ordered
+        for handler in self.handlers:
+            res = handler(req, res)
+            try:
+                body = res.body
+                headers = res.headers
+            except AttributeError:
+                default_xmlns = None
+                body = self._serialize(res, content_type, default_xmlns)
+                headers = {"Content-Type": content_type}
+            res = webob.Response()
+            res.body = body
+            res.headers = headers
+        return res
+
+
 class ExtensionController(common.OpenstackController):
 
     def __init__(self, extension_manager):
@@ -245,6 +273,25 @@ class ExtensionMiddleware(wsgi.Middleware):
 
         return response_ext_controllers
 
+    def _request_ext_controllers(self, application, ext_mgr, mapper):
+        """Returns a dict of RequestExtensionController-s by collection."""
+        request_ext_controllers = {}
+        for req_ext in ext_mgr.get_request_extensions():
+            if not req_ext.key in request_ext_controllers.keys():
+                controller = RequestExtensionController(application)
+                mapper.connect(req_ext.url_route + '.:(format)',
+                                action='process',
+                                controller=controller,
+                                conditions=req_ext.conditions)
+
+                mapper.connect(req_ext.url_route,
+                                action='process',
+                                controller=controller,
+                                conditions=req_ext.conditions)
+                request_ext_controllers[req_ext.key] = controller
+
+        return request_ext_controllers
+
     def __init__(self, application, ext_mgr=None):
 
         if ext_mgr is None:
@@ -278,6 +325,14 @@ class ExtensionMiddleware(wsgi.Middleware):
             LOG.debug(_('Extended response: %s'), response_ext.key)
             controller = resp_controllers[response_ext.key]
             controller.add_handler(response_ext.handler)
+
+        # extended requests
+        req_controllers = self._request_ext_controllers(application, ext_mgr,
+                                                            mapper)
+        for request_ext in ext_mgr.get_request_extensions():
+            LOG.debug(_('Extended request: %s'), request_ext.key)
+            controller = req_controllers[request_ext.key]
+            controller.add_handler(request_ext.handler)
 
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           mapper)
@@ -359,6 +414,18 @@ class ExtensionManager(object):
                 pass
         return response_exts
 
+    def get_request_extensions(self):
+        """Returns a list of RequestExtension objects."""
+        request_exts = []
+        for alias, ext in self.extensions.iteritems():
+            try:
+                request_exts.extend(ext.get_request_extensions())
+            except AttributeError:
+                # NOTE(dprince): Extension aren't required to have request
+                # extensions
+                pass
+        return request_exts
+
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
         try:
@@ -424,6 +491,17 @@ class ExtensionManager(object):
 class ResponseExtension(object):
     """Add data to responses from core nova OpenStack API controllers."""
 
+    def __init__(self, method, url_route, handler):
+        self.url_route = url_route
+        self.handler = handler
+        self.conditions = dict(method=[method])
+        self.key = "%s-%s" % (method, url_route)
+
+
+class RequestExtension(object):
+    """Provide a way to handle custom request data that is sent to core
+       nova OpenStack API controllers.
+    """
     def __init__(self, method, url_route, handler):
         self.url_route = url_route
         self.handler = handler
