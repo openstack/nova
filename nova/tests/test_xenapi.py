@@ -16,6 +16,7 @@
 
 """Test suite for XenAPI."""
 
+import eventlet
 import functools
 import os
 import re
@@ -196,6 +197,28 @@ class XenAPIVMTestCase(test.TestCase):
         fake_utils.stub_out_utils_execute(self.stubs)
         self.context = context.RequestContext('fake', 'fake', False)
         self.conn = xenapi_conn.get_connection(False)
+
+    def test_parallel_builds(self):
+        stubs.stubout_loopingcall_delay(self.stubs)
+
+        def _do_build(id, proj, user, *args):
+            values = {
+                'id': id,
+                'project_id': proj,
+                'user_id': user,
+                'image_id': 1,
+                'kernel_id': 2,
+                'ramdisk_id': 3,
+                'instance_type_id': '3',  # m1.large
+                'mac_address': 'aa:bb:cc:dd:ee:ff',
+                'os_type': 'linux'}
+            instance = db.instance_create(self.context, values)
+            self.conn.spawn(instance)
+
+        gt1 = eventlet.spawn(_do_build, 1, self.project.id, self.user.id)
+        gt2 = eventlet.spawn(_do_build, 2, self.project.id, self.user.id)
+        gt1.wait()
+        gt2.wait()
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
