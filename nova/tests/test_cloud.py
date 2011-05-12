@@ -227,7 +227,7 @@ class CloudTestCase(test.TestCase):
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
-            raise exception.NotFound
+            raise exception.ImageNotFound
 
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
         # list all
@@ -245,7 +245,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.UnsetAll()
         self.stubs.Set(local.LocalImageService, 'show', fake_show_none)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show_none)
-        self.assertRaises(exception.NotFound, describe_images,
+        self.assertRaises(exception.ImageNotFound, describe_images,
                           self.context, ['ami-fake'])
 
     def test_describe_image_attribute(self):

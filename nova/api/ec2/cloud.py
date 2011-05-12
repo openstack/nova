@@ -823,8 +823,7 @@ class CloudController(object):
             kwargs['ramdisk_id'] = ramdisk['id']
         image = self._get_image(context, kwargs['image_id'])
         if not image:
-            raise exception.NotFound(_('Image %s not found') %
-                                     kwargs['image_id'])
+            raise exception.ImageNotFound(kwargs['image_id'])
         try:
             available = (image['properties']['image_state'] == 'available')
         except KeyError:
