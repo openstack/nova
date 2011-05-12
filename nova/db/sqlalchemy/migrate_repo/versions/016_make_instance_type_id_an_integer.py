@@ -12,7 +12,7 @@ def upgrade(migrate_engine):
     for instance in migrate_engine.execute(instances.select()):
         try:
             types[instance.id] = int(instance.instance_type_id)
-        except ValueError:
+        except (ValueError, TypeError):
             types[instance.id] = None
 
     integer_column = Column('instance_type_id_int', Integer(), nullable=True)
