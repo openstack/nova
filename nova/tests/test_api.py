@@ -28,10 +28,12 @@ import StringIO
 import webob
 
 from nova import context
+from nova import exception
 from nova import test
 from nova.api import ec2
-from nova.api.ec2 import cloud
 from nova.api.ec2 import apirequest
+from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -99,6 +101,21 @@ class XmlConversionTestCase(test.TestCase):
         self.assertEqual(conv('-0x57'), -0x57)
         self.assertEqual(conv('-'), '-')
         self.assertEqual(conv('-0'), 0)
+
+
+class Ec2utilsTestCase(test.TestCase):
+    def test_ec2_id_to_id(self):
+        self.assertEqual(ec2utils.ec2_id_to_id('i-0000001e'), 30)
+        self.assertEqual(ec2utils.ec2_id_to_id('ami-1d'), 29)
+
+    def test_bad_ec2_id(self):
+        self.assertRaises(exception.InvalidEc2Id,
+                          ec2utils.ec2_id_to_id,
+                          'badone')
+
+    def test_id_to_ec2_id(self):
+        self.assertEqual(ec2utils.id_to_ec2_id(30), 'i-0000001e')
+        self.assertEqual(ec2utils.id_to_ec2_id(29, 'ami-%08x'), 'ami-0000001d')
 
 
 class ApiEc2TestCase(test.TestCase):
