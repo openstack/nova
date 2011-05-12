@@ -45,11 +45,9 @@ class StubController(nova.wsgi.Controller):
 
 class StubExtensionManager(object):
 
-    def __init__(self, resource_ext=None, action_ext=None, response_ext=None,
-                 request_ext=None):
+    def __init__(self, resource_ext=None, action_ext=None, request_ext=None):
         self.resource_ext = resource_ext
         self.action_ext = action_ext
-        self.response_ext = response_ext
         self.request_ext = request_ext
 
     def get_name(self):
@@ -72,12 +70,6 @@ class StubExtensionManager(object):
         if self.action_ext:
             action_exts.append(self.action_ext)
         return action_exts
-
-    def get_response_extensions(self):
-        response_exts = []
-        if self.response_ext:
-            response_exts.append(self.response_ext)
-        return response_exts
 
     def get_request_extensions(self):
         request_extensions = []
@@ -191,59 +183,6 @@ class ActionExtensionTest(unittest.TestCase):
         self.assertEqual(404, response.status_int)
 
 
-class ResponseExtensionTest(unittest.TestCase):
-
-    def setUp(self):
-        super(ResponseExtensionTest, self).setUp()
-        self.stubs = stubout.StubOutForTesting()
-        fakes.FakeAuthManager.reset_fake_data()
-        fakes.FakeAuthDatabase.data = {}
-        fakes.stub_out_auth(self.stubs)
-        self.context = context.get_admin_context()
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(ResponseExtensionTest, self).tearDown()
-
-    def test_get_resources_with_stub_mgr(self):
-
-        test_resp = "Gooey goo for chewy chewing!"
-
-        def _resp_handler(res):
-            # only handle JSON responses
-            data = json.loads(res.body)
-            data['flavor']['googoose'] = test_resp
-            return data
-
-        resp_ext = extensions.ResponseExtension('GET',
-                                                '/v1.1/flavors/:(id)',
-                                                _resp_handler)
-
-        manager = StubExtensionManager(None, None, resp_ext)
-        app = fakes.wsgi_app()
-        ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/v1.1/flavors/1")
-        request.environ['api.version'] = '1.1'
-        response = request.get_response(ext_midware)
-        self.assertEqual(200, response.status_int)
-        response_data = json.loads(response.body)
-        self.assertEqual(test_resp, response_data['flavor']['googoose'])
-
-    def test_get_resources_with_mgr(self):
-
-        test_resp = "Gooey goo for chewy chewing!"
-
-        app = fakes.wsgi_app()
-        ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/v1.1/flavors/1")
-        request.environ['api.version'] = '1.1'
-        response = request.get_response(ext_midware)
-        self.assertEqual(200, response.status_int)
-        response_data = json.loads(response.body)
-        self.assertEqual(test_resp, response_data['flavor']['googoose'])
-        self.assertEqual("Pig Bands!", response_data['big_bands'])
-
-
 class RequestExtensionTest(unittest.TestCase):
 
     def setUp(self):
@@ -258,24 +197,36 @@ class RequestExtensionTest(unittest.TestCase):
         self.stubs.UnsetAll()
         super(RequestExtensionTest, self).tearDown()
 
-    def test_post_request_extension_with_stub_mgr(self):
+    def test_get_resources_with_stub_mgr(self):
 
         def _req_handler(req, res):
             # only handle JSON responses
             data = json.loads(res.body)
-            data['flavor']['googoose'] = req.GET.get('test_param')
+            data['flavor']['googoose'] = req.GET.get('chewing')
             return data
 
-        resp_ext = extensions.RequestExtension('GET',
+        req_ext = extensions.RequestExtension('GET',
                                                 '/v1.1/flavors/:(id)',
                                                 _req_handler)
 
-        manager = StubExtensionManager(None, None, None, resp_ext)
+        manager = StubExtensionManager(None, None, req_ext)
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/v1.1/flavors/1?test_param=foo")
+        request = webob.Request.blank("/v1.1/flavors/1?chewing=bluegoo")
         request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
-        self.assertEqual('foo', response_data['flavor']['googoose'])
+        self.assertEqual('bluegoo', response_data['flavor']['googoose'])
+
+    def test_get_resources_with_mgr(self):
+
+        app = fakes.wsgi_app()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        request = webob.Request.blank("/v1.1/flavors/1?chewing=newblue")
+        request.environ['api.version'] = '1.1'
+        response = request.get_response(ext_midware)
+        self.assertEqual(200, response.status_int)
+        response_data = json.loads(response.body)
+        self.assertEqual('newblue', response_data['flavor']['googoose'])
+        self.assertEqual("Pig Bands!", response_data['big_bands'])
