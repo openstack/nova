@@ -232,9 +232,12 @@ def default_flagfile(filename='nova.conf'):
             # turn relative filename into an absolute path
             script_dir = os.path.dirname(inspect.stack()[-1][1])
             filename = os.path.abspath(os.path.join(script_dir, filename))
-        if os.path.exists(filename):
-            flagfile = ['--flagfile=%s' % filename]
-            sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
+        if not os.path.exists(filename):
+            filename = "./nova.conf"
+            if not os.path.exists(filename):
+                filename = '/etc/nova/nova.conf'
+        flagfile = ['--flagfile=%s' % filename]
+        sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
 
 
 def debug(arg):
