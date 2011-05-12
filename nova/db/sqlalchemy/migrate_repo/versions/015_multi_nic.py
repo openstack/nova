@@ -50,6 +50,13 @@ interface = Column('bridge_interface',
                           nullable=True)
 
 
+# mac_address column to add to fixed_ips table
+mac_address = Column('mac_address_id',
+                     Integer(),
+                     ForeignKey('mac_addresses.id'),
+                     nullable=False)
+
+
 def upgrade(migrate_engine):
     meta.bind = migrate_engine
 
@@ -60,6 +67,7 @@ def upgrade(migrate_engine):
     c = instances.columns['mac_address']
 
     # add interface column to networks table
+    # values will have to be set manually before running nova
     try:
         networks.create_column(interface)
     except Exception as e:
@@ -73,18 +81,32 @@ def upgrade(migrate_engine):
         logging.error(_("Table |%s| not created!"), repr(mac_addresses))
         raise e
 
+    # add mac_address column to fixed_ips table
+    try:
+        fixed_ips.create_column(mac_address)
+    except Exception as e:
+        logging.error(_("mac_address column not added to fixed_ips table"))
+        raise e
+
+    # populate the mac_addresses table
     # extract data from existing instance and fixed_ip tables
     s = select([instances.c.id, instances.c.mac_address,
                 fixed_ips.c.network_id],
                fixed_ips.c.instance_id == instances.c.id)
     keys = ('instance_id', 'address', 'network_id')
     join_list = [dict(zip(keys, row)) for row in s.execute()]
-    logging.debug(_("join list for moving mac_addressse |%s|"), join_list)
+    logging.debug(_("join list for moving mac_addresses |%s|"), join_list)
 
     # insert data into the table
     if join_list:
         i = mac_addresses.insert()
         i.execute(join_list)
+
+    # populate the fixed_ips mac_address column
+    s = select([mac_addresses.c.id],
+               mac_addresses.c.address == instances.c.address)
+    u = fixed_ips.update().values(mac_address_id=s)
+    u.execute()
 
     # drop the mac_address column from instances
     c.drop()

@@ -588,13 +588,17 @@ class AuthManager(object):
         not been allocated for user.
         """
 
-        network_ref = db.project_get_network(context.get_admin_context(),
-                                             Project.safe_id(project), False)
-
-        if not network_ref:
+        networks = db.project_get_networks(context.get_admin_context(),
+                                           Project.safe_id(project), False)
+        if not networks:
             return (None, None)
-        return (network_ref['vpn_public_address'],
-                network_ref['vpn_public_port'])
+
+        # TODO(tr3buchet): not sure what you guys plan on doing with this
+        # but it's possible for a project to have multiple sets of vpn data
+        # for now I'm just returning the first one
+        network = networks[0]
+        return (network['vpn_public_address'],
+                network['vpn_public_port'])
 
     def delete_project(self, project):
         """Deletes a project"""

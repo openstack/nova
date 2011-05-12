@@ -410,7 +410,12 @@ class NetworkManager(manager.SchedulerDependentManager):
         address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                   network['id'],
                                                   instance['id'])
-        self.db.fixed_ip_update(context, address, {'allocated': True})
+        mac = self.db.mac_address_get_by_instance_and_network(context,
+                                                              instance['id'],
+                                                              network['id'])
+        values = {'allocated': True,
+                  'mac_address_id': mac['id']}
+        self.db.fixed_ip_update(context, address, values)
         return address
 
     def deallocate_fixed_ip(self, context, address, **kwargs):
@@ -738,7 +743,12 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
             address = self.db.fixed_ip_associate_pool(context,
                                                       network['id'],
                                                       instance['id'])
-        self.db.fixed_ip_update(context, address, {'allocated': True})
+        mac = self.db.mac_address_get_by_instance_and_network(context,
+                                                              instance['id'],
+                                                              network['id'])
+        values = {'allocated': True,
+                  'mac_address_id': mac['id']}
+        self.db.fixed_ip_update(context, address, values)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network['id'])
 
@@ -756,9 +766,8 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
     def _get_networks_for_instance(self, context, instance):
         """determine which networks an instance should connect to"""
         # get networks associated with project
-        # TODO(tr3buchet): currently there can be only one, but this should
-        # change. when it does this should be project_get_networks
-        networks = self.db.project_get_network(context, instance['project_id'])
+        networks = self.db.project_get_networks(context,
+                                                instance['project_id'])
 
         # return only networks which have host set
         return [network for network in networks if network['host']]

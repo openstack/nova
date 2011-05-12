@@ -171,17 +171,23 @@ class VpnCommands(object):
     def change(self, project_id, ip, port):
         """Change the ip and port for a vpn.
 
+        this will update all networks associated with a project
+        not sure if that's the desired behavior or not, patches accepted
+
         args: project, ip, port"""
+        # TODO(tr3buchet): perhaps this shouldn't update all networks
+        # associated with a project in the future
         project = self.manager.get_project(project_id)
         if not project:
             print 'No project %s' % (project_id)
             return
-        admin = context.get_admin_context()
-        network_ref = db.project_get_network(admin, project_id)
-        db.network_update(admin,
-                          network_ref['id'],
-                          {'vpn_public_address': ip,
-                           'vpn_public_port': int(port)})
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_update(admin_context,
+                              network['id'],
+                              {'vpn_public_address': ip,
+                               'vpn_public_port': int(port)})
 
 
 class ShellCommands(object):
@@ -413,12 +419,13 @@ class ProjectCommands(object):
     def scrub(self, project_id):
         """Deletes data associated with project
         arguments: project_id"""
-        ctxt = context.get_admin_context()
-        network_ref = db.project_get_network(ctxt, project_id)
-        db.network_disassociate(ctxt, network_ref['id'])
-        groups = db.security_group_get_by_project(ctxt, project_id)
+        admin_context = context.get_admin_context()
+        networks = db.project_get_networks(admin_context, project_id)
+        for network in networks:
+            db.network_disassociate(admin_context, network['id'])
+        groups = db.security_group_get_by_project(admin_context, project_id)
         for group in groups:
-            db.security_group_destroy(ctxt, group['id'])
+            db.security_group_destroy(admin_context, group['id'])
 
     def zipfile(self, project_id, user_id, filename='nova.zip'):
         """Exports credentials for project to a zip file

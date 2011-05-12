@@ -481,10 +481,7 @@ class Network(BASE, NovaBase):
     vpn_private_address = Column(String(255))
     dhcp_start = Column(String(255))
 
-    # NOTE(vish): The unique constraint below helps avoid a race condition
-    #             when associating a network, but it also means that we
-    #             can't associate two networks with one project.
-    project_id = Column(String(255), unique=True)
+    project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
@@ -496,6 +493,9 @@ class FixedIp(BASE, NovaBase):
     address = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
+    mac_address_id = Column(Integer, ForeignKey('mac_addresses.id'),
+                                                nullable=True)
+    mac_address = relationship(MacAddress, backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('fixed_ips'),

@@ -645,6 +645,7 @@ def fixed_ip_disassociate(context, address):
                                                address,
                                                session=session)
         fixed_ip_ref.instance = None
+        fixed_ip_ref.mac_address = None
         fixed_ip_ref.save(session=session)
 
 
@@ -660,6 +661,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.instance_id != None).\
                      filter_by(allocated=0).\
                      update({'instance_id': None,
+                             'mac_address_id': None,
                              'leased': 0,
                              'updated_at': datetime.datetime.utcnow()},
                              synchronize_session='fetch')
@@ -838,6 +840,21 @@ def mac_address_get_all_by_instance(context, instance_id):
                                    options(joinedload('instance')).\
                                    all()
         return mac_address_refs
+
+
+@require_context
+def mac_address_get_by_instance_and_network(context, instance_id,
+                                                     network_id):
+    """gets mac address for instance that's associated with network"""
+    session = get_session()
+    with session.begin():
+        mac_address_ref = session.query(models.MacAddress).\
+                                   filter_by(instance_id=instance_id).\
+                                   filter_by(network_id=network_id).\
+                                   options(joinedload('network')).\
+                                   options(joinedload('instance')).\
+                                   first()
+        return mac_address_ref
 
 
 @require_admin_context
@@ -2350,31 +2367,21 @@ def project_delete(context, id):
 
 
 @require_context
-def project_get_network(context, project_id, associate=True):
+def project_get_networks(context, project_id, associate=True):
     session = get_session()
     result = session.query(models.Network).\
                      filter_by(project_id=project_id).\
-                     filter_by(deleted=False).\
-                     first()
+                     filter_by(deleted=False)
     if not result:
         if not associate:
-            return None
-        try:
-            return network_associate(context, project_id)
-        except IntegrityError:
-            # NOTE(vish): We hit this if there is a race and two
-            #             processes are attempting to allocate the
-            #             network at the same time
-            result = session.query(models.Network).\
-                             filter_by(project_id=project_id).\
-                             filter_by(deleted=False).\
-                             first()
+            return []
+        return [network_associate(context, project_id)]
     return result
 
 
 @require_context
-def project_get_network_v6(context, project_id):
-    return project_get_network(context, project_id)
+def project_get_networks_v6(context, project_id):
+    return project_get_networks(context, project_id)
 
 
 ###################

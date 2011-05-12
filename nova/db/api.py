@@ -413,6 +413,12 @@ def mac_address_get_all_by_instance(context, instance_id):
     return IMPL.mac_address_get_all_by_instance(context, instance_id)
 
 
+def mac_address_get_by_instance_and_network(context, instance_id, network_id):
+    """gets all mac addresses for instance"""
+    return IMPL.mac_address_get_by_instance_and_network(context, instance_id,
+                                                                 network_id)
+
+
 def mac_address_get_all_by_network(context, network_id):
     """gets all mac addresses for instance"""
     return IMPL.mac_address_get_all_by_network(context, network_id)
@@ -1080,18 +1086,18 @@ def project_delete(context, project_id):
     return IMPL.project_delete(context, project_id)
 
 
-def project_get_network(context, project_id, associate=True):
+def project_get_networks(context, project_id, associate=True):
     """Return the network associated with the project.
 
     If associate is true, it will attempt to associate a new
     network if one is not found, otherwise it returns None.
 
     """
-    return IMPL.project_get_network(context, project_id, associate)
+    return IMPL.project_get_networks(context, project_id, associate)
 
 
-def project_get_network_v6(context, project_id):
-    return IMPL.project_get_network_v6(context, project_id)
+def project_get_networks_v6(context, project_id):
+    return IMPL.project_get_networks_v6(context, project_id)
 
 
 ###################
