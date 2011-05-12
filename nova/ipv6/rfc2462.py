@@ -22,7 +22,7 @@
 import netaddr
 
 
-def to_global(prefix, mac):
+def to_global(prefix, mac, project_id):
     try:
         mac64 = netaddr.EUI(mac).eui64().words
         int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
