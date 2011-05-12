@@ -35,11 +35,11 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import utils
 from nova import volume
-from nova import ipv6
 from nova.api.ec2 import ec2utils
 from nova.compute import instance_types
 from nova.image import s3

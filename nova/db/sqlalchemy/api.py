@@ -25,8 +25,8 @@ import warnings
 from nova import db
 from nova import exception
 from nova import flags
-from nova import utils
 from nova import ipv6
+from nova import utils
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_

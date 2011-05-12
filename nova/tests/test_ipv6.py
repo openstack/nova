@@ -16,8 +16,8 @@
 
 """Test suite for IPv6."""
 
-from nova import ipv6
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import test
 
