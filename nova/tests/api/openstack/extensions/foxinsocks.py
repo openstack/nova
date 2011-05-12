@@ -64,7 +64,7 @@ class Foxinsocks(object):
         return actions
 
     def get_request_extensions(self):
-        response_exts = []
+        request_exts = []
 
         def _goose_handler(req, res):
             #NOTE: This only handles JSON responses.
@@ -74,9 +74,9 @@ class Foxinsocks(object):
             res.body = json.dumps(data)
             return res
 
-        resp_ext = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
+        req_ext1 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
                                                 _goose_handler)
-        response_exts.append(resp_ext)
+        request_exts.append(req_ext1)
 
         def _bands_handler(req, res):
             #NOTE: This only handles JSON responses.
@@ -86,10 +86,10 @@ class Foxinsocks(object):
             res.body = json.dumps(data)
             return res
 
-        resp_ext2 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
+        req_ext2 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
                                                 _bands_handler)
-        response_exts.append(resp_ext2)
-        return response_exts
+        request_exts.append(req_ext2)
+        return request_exts
 
     def _add_tweedle(self, input_dict, req, id):
 
