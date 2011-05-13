@@ -91,6 +91,7 @@ GLOBAL_BUILD_PLAN = [
 def zone_select(context, specs):
     return GLOBAL_BUILD_PLAN
 
+
 class ZonesTest(test.TestCase):
     def setUp(self):
         super(ZonesTest, self).setUp()
@@ -202,7 +203,7 @@ class ZonesTest(test.TestCase):
         self.assertEqual(res_dict['zone']['name'], 'darksecret')
         self.assertEqual(res_dict['zone']['cap1'], 'a;b')
         self.assertEqual(res_dict['zone']['cap2'], 'c;d')
-        
+
     def test_zone_select(self):
         FLAGS.build_plan_encryption_key = 'c286696d887c9aa0611bbb3e2025a45a'
         self.stubs.Set(api, 'select', zone_select)
