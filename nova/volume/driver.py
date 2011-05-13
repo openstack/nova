@@ -113,12 +113,20 @@ class VolumeDriver(object):
         # TODO(ja): reclaiming space should be done lazy and low priority
         self._copy_volume('/dev/zero', self.local_path(volume), size_in_g)
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
-                          (FLAGS.volume_group, volume['name']))
+                          (FLAGS.volume_group,
+                           self._escape_snapshot(volume['name'])))
         
     def _sizestr(self, size_in_g):
         if int(size_in_g) == 0:
             return '100M'
         return '%sG' % size_in_g
+
+    # Linux LVM reserves name that starts with snapshot, so that
+    # such volume name can't be created. Mangle it.
+    def _escape_snapshot(self, snapshot_name):
+        if not snapshot_name.startswith('snapshot'):
+            return snapshot_name
+        return '_' + snapshot_name
 
     def create_volume(self, volume):
         """Creates a logical volume. Can optionally return a Dictionary of
@@ -130,20 +138,41 @@ class VolumeDriver(object):
         if self._volume_not_present(volume['name']):
             # If the volume isn't present, then don't attempt to delete
             return True
+
+        # TODO(yamahata): lvm can't delete origin volume only without
+        # deleting derived snapshots. Can we do something fancy?
+        out, err = self._execute('sudo', 'lvdisplay', '--noheading',
+                                 '-C', '-o', 'Attr',
+                                 '%s/%s' % (FLAGS.volume_group,
+                                            volume['name']))
+        out = out.strip()
+        if (out[0] == 'o') or (out[0] == 'O'):
+            raise exception.VolumeIsBusy(volume_name=volume['name'])
+                
         self._delete_volume(volume, volume['size'])
 
     def create_snapshot(self, snapshot):
         """Creates a snapshot."""
-        raise NotImplementedError()
+        orig_lv_name = "%s/%s" % (FLAGS.volume_group, snapshot['volume_name'])
+        self._try_execute('sudo', 'lvcreate', '-L',
+                          self._sizestr(snapshot['volume_size']),
+                          '--name', self._escape_snapshot(snapshot['name']),
+                          '--snapshot', orig_lv_name)
 
     def delete_snapshot(self, snapshot):
         """Deletes a snapshot."""
-        raise NotImplementedError()
+        if self._volume_not_present(self._escape_snapshot(snapshot['name'])):
+            # If the snapshot isn't present, then don't attempt to delete
+            return True
+
+        # TODO(yamahata): zeroing out the whole snapshot triggers COW.
+        # it's quite slow.
+        self._delete_volume(snapshot, snapshot['volume_size'])
 
     def local_path(self, volume):
         # NOTE(vish): stops deprecation warning
         escaped_group = FLAGS.volume_group.replace('-', '--')
-        escaped_name = volume['name'].replace('-', '--')
+        escaped_name = self._escape_snapshot(volume['name']).replace('-', '--')
         return "/dev/mapper/%s-%s" % (escaped_group, escaped_name)
 
     def ensure_export(self, context, volume):

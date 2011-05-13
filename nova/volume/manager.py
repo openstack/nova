@@ -142,6 +142,12 @@ class VolumeManager(manager.SchedulerDependentManager):
             self.driver.remove_export(context, volume_ref)
             LOG.debug(_("volume %s: deleting"), volume_ref['name'])
             self.driver.delete_volume(volume_ref)
+        except exception.VolumeIsBusy, e:
+            LOG.debug(_("volume %s: volume is busy"), volume_ref['name'])
+            self.driver.ensure_export(context, volume_ref)
+            self.db.volume_update(context, volume_ref['id'],
+                                  {'status': 'available'})
+            return True
         except Exception:
             self.db.volume_update(context,
                                   volume_ref['id'],
