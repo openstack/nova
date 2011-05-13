@@ -25,6 +25,7 @@ import operator
 from nova import log as logging
 from nova.scheduler import api
 from nova.scheduler import driver
+from nova.scheduler import host_filter
 
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
 
@@ -36,7 +37,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs)
 
-    def schedule_run_instance(self, context, topic='compute', specs={},
+    def schedule_run_instance(self, context, instance_id, instance_type,
                                         *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
@@ -45,6 +46,9 @@ class ZoneAwareScheduler(driver.Scheduler):
         2. Use the Build Plan information in the request parameters
            to simply create the instance (either in this zone or
            a child zone)."""
+
+        # TODO(sandy): We'll have to look for richer specs at some point.
+        specs = instance_type
 
         if 'blob' in specs:
             return self.provision_instance(context, topic, specs)
@@ -58,7 +62,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Create the requested instance in this Zone or a child zone."""
         pass
 
-    def select(self, context, *args, **kwargs):
+    def select(self, context, specs, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
@@ -80,9 +84,13 @@ class ZoneAwareScheduler(driver.Scheduler):
         ordered by their fitness.
         """
 
-        #TODO(sandy): extract these from args.
+        if topic != "compute":
+            raise NotImplemented(_("Zone Aware Scheduler only understands "
+                                   "Compute nodes (for now)"))
+
+        specs = args['instance_type']
+        #TODO(sandy): how to infer this from OS API params?
         num_instances = 1
-        specs = {}
 
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, specs)

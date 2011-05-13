@@ -286,3 +286,21 @@ def choose_driver(driver_name=None):
         if "%s.%s" % (driver.__module__, driver.__name__) == driver_name:
             return driver()
     raise exception.SchedulerHostFilterDriverNotFound(driver_name=driver_name)
+
+
+class HostFilterScheduler(ZoneAwareScheduler):
+    """The HostFilterScheduler uses the HostFilter drivers to filter
+    hosts for weighing. The particular driver used may be passed in
+    as an argument or the default will be used."""
+
+    def filter_hosts(self, num, specs):
+        """Filter the full host list (from the ZoneManager)"""
+        driver_name = specs.get("filter_driver", None)
+        driver = host_filter.choose_driver(driver_name)
+
+        # TODO(sandy): We're only using InstanceType-based specs
+        # currently. Later we'll need to snoop for more detailed
+        # host filter requests.
+        instance_type = specs['instance_type']
+        query = driver.instance_type_to_filter(query)
+        return driver.filter_hosts(self.zone_manager, query)
