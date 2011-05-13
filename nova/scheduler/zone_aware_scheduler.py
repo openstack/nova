@@ -36,7 +36,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs)
 
-    def schedule_run_instance(self, context, topic='compute', specs=None,
+    def schedule_run_instance(self, context, topic='compute', specs={},
                                         *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
@@ -53,6 +53,10 @@ class ZoneAwareScheduler(driver.Scheduler):
         build_plan = self.select(context, specs)
         for item in build_plan:
             self.provision_instance(context, topic, item)
+
+    def provision_instance(context, topic, item):
+        """Create the requested instance in this Zone or a child zone."""
+        pass
 
     def select(self, context, *args, **kwargs):
         """Select returns a list of weights and zone/host information
@@ -111,5 +115,5 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def weigh_hosts(self, num, specs, hosts):
         """Derived classes must override this method and return
-           a lists of hosts in [(weight, hostname)] format."""
+           a lists of hosts in [{weight, hostname}] format."""
         raise NotImplemented()
