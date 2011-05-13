@@ -608,6 +608,18 @@ class RBDDriver(VolumeDriver):
         self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
                           'rm', volume['name'])
 
+    def create_snapshot(self, snapshot):
+        """Creates an rbd snapshot"""
+        self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
+                          'snap', 'create', '--snap', snapshot['name'],
+                          snapshot['volume_name'])
+
+    def delete_snapshot(self, snapshot):
+        """Deletes an rbd snapshot"""
+        self._try_execute('rbd', '--pool', FLAGS.rbd_pool,
+                          'snap', 'rm', '--snap', snapshot['name'],
+                          snapshot['volume_name'])
+
     def local_path(self, volume):
         """Returns the path of the rbd volume."""
         # This is the same as the remote path
