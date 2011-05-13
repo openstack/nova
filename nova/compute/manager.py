@@ -77,7 +77,8 @@ flags.DEFINE_integer("rescue_timeout", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_bool('auto_assign_floating_ip', False,
                   'Autoassigning floating ip to VM')
-
+flags.DEFINE_integer('host_state_interval', 120,
+                     'Interval in seconds for querying the host status')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -131,6 +132,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_api = network.API()
+        self._last_host_check = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -424,6 +426,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self.driver.set_admin_password(instance_ref, new_pass)
                     LOG.audit(_("Instance %s: Root password set"),
                                 instance_ref["name"])
+                    break
+                except NotImplementedError:
+                    # NOTE(dprince): if the driver doesn't implement
+                    # set_admin_password we break to avoid a loop
+                    LOG.warn(_('set_admin_password is not implemented '
+                            'by this driver.'))
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
@@ -1094,6 +1102,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         try:
+            self._report_driver_status()
+        except Exception as ex:
+            LOG.warning(_("Error during report_driver_status(): %s"),
+                        unicode(ex))
+            error_list.append(ex)
+
+        try:
             self._poll_instance_states(context)
         except Exception as ex:
             LOG.warning(_("Error during instance poll: %s"),
@@ -1101,6 +1116,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         return error_list
+
+    def _report_driver_status(self):
+        curr_time = time.time()
+        if curr_time - self._last_host_check > FLAGS.host_state_interval:
+            self._last_host_check = curr_time
+            LOG.info(_("Updating host status"))
+            # This will grab info about the host and queue it
+            # to be sent to the Schedulers.
+            self.update_service_capabilities(
+                self.driver.get_host_stats(refresh=True))
 
     def _poll_instance_states(self, context):
         vm_instances = self.driver.list_instances_detail()

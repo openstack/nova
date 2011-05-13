@@ -18,6 +18,7 @@
 
 import eventlet
 import functools
+import json
 import os
 import re
 import stubout
@@ -688,3 +689,52 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_VHD
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_VHD)
+
+
+class FakeXenApi(object):
+    """Fake XenApi for testing HostState."""
+
+    class FakeSR(object):
+        def get_record(self, ref):
+            return {'virtual_allocation': 10000,
+                    'physical_utilisation': 20000}
+
+    SR = FakeSR()
+
+
+class FakeSession(object):
+    """Fake Session class for HostState testing."""
+
+    def async_call_plugin(self, *args):
+        return None
+
+    def wait_for_task(self, *args):
+        vm = {'total': 10,
+              'overhead': 20,
+              'free': 30,
+              'free-computed': 40}
+        return json.dumps({'host_memory': vm})
+
+    def get_xenapi(self):
+        return FakeXenApi()
+
+
+class HostStateTestCase(test.TestCase):
+    """Tests HostState, which holds metrics from XenServer that get
+    reported back to the Schedulers."""
+
+    def _fake_safe_find_sr(self, session):
+        """None SR ref since we're ignoring it in FakeSR."""
+        return None
+
+    def test_host_state(self):
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(vm_utils, 'safe_find_sr', self._fake_safe_find_sr)
+        host_state = xenapi_conn.HostState(FakeSession())
+        stats = host_state._stats
+        self.assertEquals(stats['disk_total'], 10000)
+        self.assertEquals(stats['disk_used'], 20000)
+        self.assertEquals(stats['host_memory_total'], 10)
+        self.assertEquals(stats['host_memory_overhead'], 20)
+        self.assertEquals(stats['host_memory_free'], 30)
+        self.assertEquals(stats['host_memory_free_computed'], 40)
