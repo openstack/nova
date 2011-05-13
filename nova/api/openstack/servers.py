@@ -14,7 +14,6 @@
 #    under the License.
 
 import base64
-import eventlet
 import traceback
 
 from webob import exc
@@ -176,9 +175,8 @@ class Controller(common.OpenstackController):
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = password
-        # We don't want this to block
-        eventlet.spawn(self.compute_api.set_admin_password(
-            context, server['server']['id'], password))
+        self.compute_api.set_admin_password(context, server['server']['id'],
+                                            password)
         return server
 
     def _deserialize_create(self, request):

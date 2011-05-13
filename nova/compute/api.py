@@ -19,6 +19,7 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import datetime
+import eventlet
 import re
 import time
 
@@ -495,6 +496,15 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
+    def _set_admin_password(self, context, instance_id, password):
+        """Set the root/admin password for the given instance."""
+        host = self._find_host(context, instance_id)
+
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "set_admin_password",
+                  "args": {"instance_id": instance_id, "new_pass": password}})
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -648,12 +658,8 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        host = self._find_host(context, instance_id)
-
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "set_admin_password",
-                  "args": {"instance_id": instance_id, "new_pass": password}})
+        eventlet.spawn_n(self._set_admin_password(context, instance_id,
+                                                  password))
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""
