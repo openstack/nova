@@ -16,17 +16,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import test
 from nova import exception
 
 
-def ec2_id_to_id(ec2_id):
-    """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
-    try:
-        return int(ec2_id.split('-')[-1], 16)
-    except ValueError:
-        raise exception.InvalidEc2Id(ec2_id=ec2_id)
-
-
-def id_to_ec2_id(instance_id, template='i-%08x'):
-    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
-    return template % instance_id
+class ApiErrorTestCase(test.TestCase):
+    def test_return_valid_error(self):
+        # without 'code' arg
+        err = exception.ApiError('fake error')
+        self.assertEqual(err.__str__(), 'fake error')
+        self.assertEqual(err.code, None)
+        self.assertEqual(err.msg, 'fake error')
+        # with 'code' arg
+        err = exception.ApiError('fake error', 'blah code')
+        self.assertEqual(err.__str__(), 'blah code: fake error')
+        self.assertEqual(err.code, 'blah code')
+        self.assertEqual(err.msg, 'fake error')

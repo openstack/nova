@@ -31,3 +31,6 @@ sphinx
 glance
 nova-adminclient
 suds==0.4
+coverage
+nosexcover
+GitPython

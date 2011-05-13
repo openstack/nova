@@ -113,6 +113,13 @@ class API(base.Base):
         if volume['status'] == "available":
             raise exception.ApiError(_("Volume is already detached"))
 
+    def remove_from_compute(self, context, volume_id, host):
+        """Remove volume from specified compute host."""
+        rpc.call(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "remove_volume",
+                  "args": {'volume_id': volume_id}})
+
     def create_snapshot(self, context, volume_id, name, description):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":

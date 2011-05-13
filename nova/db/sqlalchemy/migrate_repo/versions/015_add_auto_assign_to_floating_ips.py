@@ -1,8 +1,7 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# Copyright 2011 OpenStack LLC.
+# Copyright 2011 Grid Dynamics
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,17 +15,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
+from sqlalchemy import Boolean, Column, MetaData, Table
+
+meta = MetaData()
+
+c_auto_assigned = Column('auto_assigned', Boolean, default=False)
 
 
-def ec2_id_to_id(ec2_id):
-    """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
-    try:
-        return int(ec2_id.split('-')[-1], 16)
-    except ValueError:
-        raise exception.InvalidEc2Id(ec2_id=ec2_id)
+def upgrade(migrate_engine):
+    # Upgrade operations go here. Don't create your own engine;
+    # bind migrate_engine to your metadata
+    meta.bind = migrate_engine
 
+    floating_ips = Table('floating_ips',
+                         meta,
+                         autoload=True,
+                         autoload_with=migrate_engine)
 
-def id_to_ec2_id(instance_id, template='i-%08x'):
-    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
-    return template % instance_id
+    floating_ips.create_column(c_auto_assigned)
