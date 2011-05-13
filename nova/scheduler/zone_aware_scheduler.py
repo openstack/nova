@@ -89,6 +89,8 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
+        # TODO(sirp): weigh_hosts should also be a function of 'topic' or
+        # resources, so that we can apply different objective functions to it
         weighted = self.weigh_hosts(num_instances, specs, host_list)
 
         # Next, tack on the best weights from the child zones ...
