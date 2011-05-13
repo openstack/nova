@@ -44,7 +44,9 @@ def _concurrency(wait, done, target):
     done.send()
 
 
-def _create_network_info(count=1):
+def _create_network_info(count=1, ipv6=None):
+    if ipv6 is None:
+        ipv6 = FLAGS.use_ipv6
     fake = 'fake'
     fake_ip = '0.0.0.0/0'
     fake_ip_2 = '0.0.0.1/0'
@@ -55,8 +57,11 @@ def _create_network_info(count=1):
                'cidr': fake_ip,
                'cidr_v6': fake_ip}
     mapping = {'mac': fake,
-               'ips': [{'ip': fake_ip}, {'ip': fake_ip}],
-               'ip6s': [{'ip': fake_ip}, {'ip': fake_ip_2}, {'ip': fake_ip_3}]}
+               'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
+    if ipv6:
+        mapping['ip6s'] = [{'ip': fake_ip},
+                           {'ip': fake_ip_2},
+                           {'ip': fake_ip_3}]
     return [(network, mapping) for x in xrange(0, count)]
 
 
@@ -641,6 +646,11 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.assertTrue(count)
 
+    def test_get_host_ip_addr(self):
+        conn = libvirt_conn.LibvirtConnection(False)
+        ip = conn.get_host_ip_addr()
+        self.assertEquals(ip, FLAGS.my_ip)
+
     def tearDown(self):
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
@@ -825,11 +835,19 @@ class IptablesFirewallTestCase(test.TestCase):
                         "TCP port 80/81 acceptance rule wasn't added")
         db.instance_destroy(admin_ctxt, instance_ref['id'])
 
-    def test_filters_for_instance(self):
+    def test_filters_for_instance_with_ip_v6(self):
+        self.flags(use_ipv6=True)
         network_info = _create_network_info()
         rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 3)
+
+    def test_filters_for_instance_without_ip_v6(self):
+        self.flags(use_ipv6=False)
+        network_info = _create_network_info()
+        rulesv4, rulesv6 = self.fw._filters_for_instance("fake", network_info)
+        self.assertEquals(len(rulesv4), 2)
+        self.assertEquals(len(rulesv6), 0)
 
     def multinic_iptables_test(self):
         ipv4_rules_per_network = 2

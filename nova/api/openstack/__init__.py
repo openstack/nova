@@ -112,9 +112,6 @@ class APIRouter(wsgi.Router):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        _limits = limits.LimitsController()
-        mapper.resource("limit", "limits", controller=_limits)
-
         super(APIRouter, self).__init__(mapper)
 
 
@@ -144,6 +141,9 @@ class APIRouterV10(APIRouter):
                         controller=backup_schedules.Controller(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+        mapper.resource("limit", "limits",
+                        controller=limits.LimitsControllerV10())
 
         mapper.resource("ip", "ips", controller=ips.Controller(),
                         collection=dict(public='GET', private='GET'),
@@ -178,3 +178,6 @@ class APIRouterV11(APIRouter):
         mapper.resource("flavor", "flavors",
                         controller=flavors.ControllerV11(),
                         collection={'detail': 'GET'})
+
+        mapper.resource("limit", "limits",
+                        controller=limits.LimitsControllerV11())

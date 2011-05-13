@@ -151,7 +151,7 @@ class VpnCommands(object):
                     state = 'up'
                 print address,
                 print vpn['host'],
-                print vpn['ec2_id'],
+                print ec2utils.id_to_ec2_id(vpn['id']),
                 print vpn['state_description'],
                 print state
             else:
@@ -972,7 +972,7 @@ class ImageCommands(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(old_image_id)
             image = self.image_service.show(context, internal_id)
-        except exception.NotFound:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             image = self.image_service.show_by_name(context, old_image_id)
         return image['id']
 

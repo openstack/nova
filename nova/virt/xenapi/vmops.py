@@ -210,8 +210,6 @@ class VMOps(object):
         def _wait_for_boot():
             try:
                 state = self.get_info(instance_name)['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
@@ -219,11 +217,7 @@ class VMOps(object):
                     return True
             except Exception, exc:
                 LOG.warn(exc)
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance_name)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+                LOG.exception(_('Instance %s: failed to boot'), instance_name)
                 timer.stop()
                 return False
 
@@ -434,11 +428,12 @@ class VMOps(object):
 
         """
         # Need to uniquely identify this request.
-        transaction_id = str(uuid.uuid4())
+        key_init_transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
         dh = SimpleDH()
-        args = {'id': transaction_id, 'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, '', args)
+        key_init_args = {'id': key_init_transaction_id,
+                         'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', key_init_args)
         if resp is None:
             # No response from the agent
             return
@@ -452,8 +447,9 @@ class VMOps(object):
         dh.compute_shared(agent_pub)
         enc_pass = dh.encrypt(new_pass)
         # Send the encrypted password
-        args['enc_pass'] = enc_pass
-        resp = self._make_agent_call('password', instance, '', args)
+        password_transaction_id = str(uuid.uuid4())
+        password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
+        resp = self._make_agent_call('password', instance, '', password_args)
         if resp is None:
             # No response from the agent
             return
