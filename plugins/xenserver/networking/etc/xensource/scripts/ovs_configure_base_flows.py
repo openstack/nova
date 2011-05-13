@@ -27,32 +27,35 @@ import sys
 from novalib import execute, execute_get_output
 
 
-def main(phys_dev_name, bridge_name):
-    pnic_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get', 'Interface',
-                                     phys_dev_name, 'ofport')
+def main(command, phys_dev_name, bridge_name):
     ovs_ofctl = lambda *rule: execute('/usr/bin/ovs-ofctl', *rule)
 
-    # clear all flows
+    # always clear all flows first
     ovs_ofctl('del-flows', bridge_name)
 
-    # these flows are lower priority than all VM-specific flows.
+    if command in ('online', 'reset'):
+        pnic_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get', 'Interface',
+                                         phys_dev_name, 'ofport')
 
-    # allow all traffic from the physical NIC, as it is trusted (i.e., from a
-    # filtered vif, or from the physical infrastructure
-    ovs_ofctl('add-flow', bridge_name,
-              "priority=2,in_port=%s,actions=normal" % pnic_ofport)
+        # these flows are lower priority than all VM-specific flows.
 
-    # default drop
-    ovs_ofctl('add-flow', bridge_name, 'priority=1,actions=drop')
+        # allow all traffic from the physical NIC, as it is trusted (i.e., from a
+        # filtered vif, or from the physical infrastructure
+        ovs_ofctl('add-flow', bridge_name,
+                  "priority=2,in_port=%s,actions=normal" % pnic_ofport)
+
+        # default drop
+        ovs_ofctl('add-flow', bridge_name, 'priority=1,actions=drop')
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4 or sys.argv[1] not in ('online', 'offline', 'reset'):
+        print sys.argv
         script_name = os.path.basename(sys.argv[0])
         print "This script configures base ovs flows."
-        print "usage: %s phys-dev-name bridge-name" % script_name
-        print "   ex: %s eth0 xenbr0" % script_name
+        print "usage: %s [online|offline|reset] phys-dev-name bridge-name" % script_name
+        print "   ex: %s online eth0 xenbr0" % script_name
         sys.exit(1)
     else:
-        phys_dev_name, bridge_name = sys.argv[1:3]
-        main(phys_dev_name, bridge_name)
+        command, phys_dev_name, bridge_name = sys.argv[1:4]
+        main(command, phys_dev_name, bridge_name)
