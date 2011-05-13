@@ -618,6 +618,7 @@ class FloatingIp(BASE, NovaBase):
                                 'FloatingIp.deleted == False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    auto_assigned = Column(Boolean, default=False, nullable=False)
 
 
 class ConsolePool(BASE, NovaBase):

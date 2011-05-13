@@ -29,11 +29,12 @@ from nova.utils import parse_mailmap, str_dict_replace
 class ProjectTestCase(test.TestCase):
     def test_authors_up_to_date(self):
         topdir = os.path.normpath(os.path.dirname(__file__) + '/../../')
+        missing = set()
+        contributors = set()
+        mailmap = parse_mailmap(os.path.join(topdir, '.mailmap'))
+        authors_file = open(os.path.join(topdir, 'Authors'), 'r').read()
+
         if os.path.exists(os.path.join(topdir, '.bzr')):
-            contributors = set()
-
-            mailmap = parse_mailmap(os.path.join(topdir, '.mailmap'))
-
             import bzrlib.workingtree
             tree = bzrlib.workingtree.WorkingTree.open(topdir)
             tree.lock_read()
@@ -47,22 +48,36 @@ class ProjectTestCase(test.TestCase):
                     for r in revs:
                         for author in r.get_apparent_authors():
                             email = author.split(' ')[-1]
-                            contributors.add(str_dict_replace(email, mailmap))
-
-                authors_file = open(os.path.join(topdir, 'Authors'),
-                                    'r').read()
-
-                missing = set()
-                for contributor in contributors:
-                    if contributor == 'nova-core':
-                        continue
-                    if not contributor in authors_file:
-                        missing.add(contributor)
-
-                self.assertTrue(len(missing) == 0,
-                                '%r not listed in Authors' % missing)
+                            contributors.add(str_dict_replace(email,
+                                                              mailmap))
             finally:
                 tree.unlock()
+
+        elif os.path.exists(os.path.join(topdir, '.git')):
+            import git
+            repo = git.Repo(topdir)
+            for commit in repo.head.commit.iter_parents():
+                email = commit.author.email
+                if email is None:
+                    email = commit.author.name
+                if 'nova-core' in email:
+                    continue
+                if email.split(' ')[-1] == '<>':
+                    email = email.split(' ')[-2]
+                email = '<' + email + '>'
+                contributors.add(str_dict_replace(email, mailmap))
+
+        else:
+            return
+
+        for contributor in contributors:
+            if contributor == 'nova-core':
+                continue
+            if not contributor in authors_file:
+                missing.add(contributor)
+
+        self.assertTrue(len(missing) == 0,
+                        '%r not listed in Authors' % missing)
 
 
 class LockTestCase(test.TestCase):
