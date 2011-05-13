@@ -17,9 +17,9 @@
 import os
 import tempfile
 
+from nova import exception
 from nova import test
 from nova import utils
-from nova import exception
 
 
 class ExecuteTestCase(test.TestCase):
