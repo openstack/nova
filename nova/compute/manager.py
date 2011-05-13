@@ -426,6 +426,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     LOG.audit(_("Instance %s: Root password set"),
                                 instance_ref["name"])
                     break
+                except NotImplementedError:
+                    # NOTE(dprince): if the driver doesn't implement
+                    # set_admin_password we break to avoid a loop
+                    LOG.warn(_('set_admin_password is not implemented '
+                            'by this driver.'))
+                    break
                 except Exception, e:
                     # Catch all here because this could be anything.
                     LOG.exception(e)
