@@ -371,6 +371,11 @@ def fixed_ip_get_all_by_instance(context, instance_id):
     return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
 
 
+def fixed_ip_get_all_by_mac_address(context, mac_address_id):
+    """Get fixed ips by mac_address or raise if none exist."""
+    return IMPL.fixed_ip_get_all_by_mac_address(context, mac_address_id)
+
+
 def fixed_ip_get_instance(context, address):
     """Get an instance for a fixed ip by address."""
     return IMPL.fixed_ip_get_instance(context, address)
@@ -406,6 +411,11 @@ def mac_address_get(context, mac_address_id):
 def mac_address_get_by_address(context, address):
     """gets a mac address from the table"""
     return IMPL.mac_address_get_by_address(context, address)
+
+
+def mac_address_get_by_fixed_ip(context, fixed_ip_id):
+    """gets a mac address for a fixed_ip"""
+    return IMPL.mac_address_get_by_fixed_ip(context, fixed_ip_id)
 
 
 def mac_address_get_all_by_instance(context, instance_id):

@@ -733,6 +733,19 @@ def fixed_ip_get_all_by_instance(context, instance_id):
 
 
 @require_context
+def fixed_ip_get_all_by_mac_address(context, mac_address_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(mac_address_id=mac_address_id).\
+                 filter_by(deleted=False).\
+                 all()
+    if not rv:
+        raise exception.NotFound(_('No fixed_ips for mac_address_id %s') %
+                                                              instance_id)
+    return rv
+
+
+@require_context
 def fixed_ip_get_instance_v6(context, address):
     session = get_session()
 
@@ -819,6 +832,24 @@ def mac_address_get_by_address(context, address):
     with session.begin():
         mac_address_ref = session.query(models.MacAddress).\
                                   filter_by(address=address).\
+                                  options(joinedload('network')).\
+                                  options(joinedload('instance')).\
+                                  first()
+        return mac_address_ref
+
+
+@require_context
+def mac_address_get_by_fixed_ip(context, fixed_ip_id):
+    """gets a mac address for a fixed_ip
+
+    context = request context object
+    fixed_ip_id = id of the fixed_ip you're looking to get mac for
+    """
+    session = get_session()
+    with session.begin():
+        mac_address_ref = session.query(models.MacAddress).\
+                                  filter_by(fixed_ip_id=fixed_ip_id).\
+                                  options(joinedload('fixed_ips')).\
                                   options(joinedload('network')).\
                                   options(joinedload('instance')).\
                                   first()
