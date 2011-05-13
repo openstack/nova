@@ -90,37 +90,47 @@ class VolumeDriver(object):
             raise exception.Error(_("volume group %s doesn't exist")
                                   % FLAGS.volume_group)
 
+    def _create_volume(self, volume_name, sizestr):
+        self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
+                          volume_name, FLAGS.volume_group)
+
+    def _copy_volume(self, srcstr, deststr, size_in_g):
+        self._execute('sudo', 'dd', 'if=%s' % srcstr, 'of=%s' % deststr,
+                      'count=%d' % (size_in_g * 1024), 'bs=1M')
+        
+    def _volume_not_present(self, volume_name):
+        path_name = '%s/%s' % (FLAGS.volume_group, volume_name)
+        try:
+            self._try_execute('sudo', 'lvdisplay', path_name)
+        except Exception as e:
+            # If the volume isn't present
+            return True
+        return False
+
+    def _delete_volume(self, volume, size_in_g):
+        """Deletes a logical volume."""
+        # zero out old volumes to prevent data leaking between users
+        # TODO(ja): reclaiming space should be done lazy and low priority
+        self._copy_volume('/dev/zero', self.local_path(volume), size_in_g)
+        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
+                          (FLAGS.volume_group, volume['name']))
+        
+    def _sizestr(self, size_in_g):
+        if int(size_in_g) == 0:
+            return '100M'
+        return '%sG' % size_in_g
+
     def create_volume(self, volume):
         """Creates a logical volume. Can optionally return a Dictionary of
         changes to the volume object to be persisted."""
-        if int(volume['size']) == 0:
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % volume['size']
-        self._try_execute('sudo', 'lvcreate', '-L', sizestr, '-n',
-                           volume['name'],
-                           FLAGS.volume_group)
+        self._create_volume(volume['name'], self._sizestr(volume['size']))
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
-        try:
-            self._try_execute('sudo', 'lvdisplay',
-                              '%s/%s' %
-                              (FLAGS.volume_group,
-                               volume['name']))
-        except Exception as e:
+        if self._volume_not_present(volume['name']):
             # If the volume isn't present, then don't attempt to delete
             return True
-
-        # zero out old volumes to prevent data leaking between users
-        # TODO(ja): reclaiming space should be done lazy and low priority
-        self._execute('sudo', 'dd', 'if=/dev/zero',
-                      'of=%s' % self.local_path(volume),
-                      'count=%d' % (volume['size'] * 1024),
-                      'bs=1M')
-        self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
-                          (FLAGS.volume_group,
-                           volume['name']))
+        self._delete_volume(volume, volume['size'])
 
     def create_snapshot(self, snapshot):
         """Creates a snapshot."""
@@ -608,13 +618,9 @@ class SheepdogDriver(VolumeDriver):
 
     def create_volume(self, volume):
         """Creates a sheepdog volume"""
-        if int(volume['size']) == 0:
-            sizestr = '100M'
-        else:
-            sizestr = '%sG' % volume['size']
         self._try_execute('qemu-img', 'create',
                           "sheepdog:%s" % volume['name'],
-                          sizestr)
+                          self._sizestr(volume['size']))
 
     def delete_volume(self, volume):
         """Deletes a logical volume"""
