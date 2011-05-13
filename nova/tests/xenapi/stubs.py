@@ -116,6 +116,7 @@ def stubout_loopingcall_start(stubs):
         self.f(*self.args, **self.kw)
     stubs.Set(utils.LoopingCall, 'start', fake_start)
 
+
 def stubout_loopingcall_delay(stubs):
     def fake_start(self, interval, now=True):
         self._running = True
@@ -124,6 +125,7 @@ def stubout_loopingcall_delay(stubs):
         # This would fail before parallel xenapi calls were fixed
         assert self._running == False
     stubs.Set(utils.LoopingCall, 'start', fake_start)
+
 
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
