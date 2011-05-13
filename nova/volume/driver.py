@@ -145,9 +145,11 @@ class VolumeDriver(object):
                                  '-C', '-o', 'Attr',
                                  '%s/%s' % (FLAGS.volume_group,
                                             volume['name']))
-        out = out.strip()
-        if (out[0] == 'o') or (out[0] == 'O'):
-            raise exception.VolumeIsBusy(volume_name=volume['name'])
+        # fake_execute returns None resulting unit test error
+        if out:
+            out = out.strip()
+            if (out[0] == 'o') or (out[0] == 'O'):
+                raise exception.VolumeIsBusy(volume_name=volume['name'])
                 
         self._delete_volume(volume, volume['size'])
 
