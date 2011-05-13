@@ -971,7 +971,7 @@ class ImageCommands(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(old_image_id)
             image = self.image_service.show(context, internal_id)
-        except exception.NotFound:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             image = self.image_service.show_by_name(context, old_image_id)
         return image['id']
 

@@ -244,6 +244,10 @@ class InstanceUnacceptable(Invalid):
     message = _("Instance %(instance_id)s is unacceptable") + ": %(reason)s"
 
 
+class InvalidEc2Id(Invalid):
+    message = _("Ec2 id %(ec2_id)s is unacceptable.")
+
+
 class NotFound(NovaException):
     message = _("Resource could not be found.")
 
@@ -455,6 +459,11 @@ class FlavorNotFound(NotFound):
 
 class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
+
+
+class SchedulerHostFilterDriverNotFound(NotFound):
+    message = _("Scheduler Host Filter Driver %(driver_name)s could"
+                " not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):

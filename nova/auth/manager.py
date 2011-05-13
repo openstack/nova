@@ -305,9 +305,9 @@ class AuthManager(object):
         if check_type == 's3':
             sign = signer.Signer(user.secret.encode())
             expected_signature = sign.s3_authorization(headers, verb, path)
-            LOG.debug('user.secret: %s', user.secret)
-            LOG.debug('expected_signature: %s', expected_signature)
-            LOG.debug('signature: %s', signature)
+            LOG.debug(_('user.secret: %s'), user.secret)
+            LOG.debug(_('expected_signature: %s'), expected_signature)
+            LOG.debug(_('signature: %s'), signature)
             if signature != expected_signature:
                 LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.InvalidSignature(signature=signature,
@@ -317,10 +317,20 @@ class AuthManager(object):
             #             secret isn't unicode
             expected_signature = signer.Signer(user.secret.encode()).generate(
                     params, verb, server_string, path)
-            LOG.debug('user.secret: %s', user.secret)
-            LOG.debug('expected_signature: %s', expected_signature)
-            LOG.debug('signature: %s', signature)
+            LOG.debug(_('user.secret: %s'), user.secret)
+            LOG.debug(_('expected_signature: %s'), expected_signature)
+            LOG.debug(_('signature: %s'), signature)
             if signature != expected_signature:
+                (addr_str, port_str) = utils.parse_server_string(server_string)
+                # If the given server_string contains port num, try without it.
+                if port_str != '':
+                    host_only_signature = signer.Signer(
+                        user.secret.encode()).generate(params, verb,
+                                                       addr_str, path)
+                    LOG.debug(_('host_only_signature: %s'),
+                              host_only_signature)
+                    if signature == host_only_signature:
+                        return (user, project)
                 LOG.audit(_("Invalid signature for user %s"), user.name)
                 raise exception.InvalidSignature(signature=signature,
                                                  user=user)

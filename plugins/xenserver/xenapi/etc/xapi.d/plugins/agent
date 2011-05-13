@@ -53,7 +53,6 @@ class TimeoutError(StandardError):
     pass
 
 
-@jsonify
 def key_init(self, arg_dict):
     """Handles the Diffie-Hellman key exchange with the agent to
     establish the shared secret key used to encrypt/decrypt sensitive
@@ -72,7 +71,6 @@ def key_init(self, arg_dict):
     return resp
 
 
-@jsonify
 def password(self, arg_dict):
     """Writes a request to xenstore that tells the agent to set
     the root password for the given VM. The password should be
@@ -80,7 +78,6 @@ def password(self, arg_dict):
     previous call to key_init. The encrypted password value should
     be passed as the value for the 'enc_pass' key in arg_dict.
     """
-    pub = int(arg_dict["pub"])
     enc_pass = arg_dict["enc_pass"]
     arg_dict["value"] = json.dumps({"name": "password", "value": enc_pass})
     request_id = arg_dict["id"]
