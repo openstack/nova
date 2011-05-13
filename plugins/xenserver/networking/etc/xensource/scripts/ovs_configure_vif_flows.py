@@ -45,7 +45,14 @@ class OvsFlow(object):
         execute(OVS_OFCTL, 'del-flows', self.bridge, "in_port=%s" % ofport)
 
 
-def main(dom_id, command, net_type, only_this_vif=None):
+def main(command, vif_raw, net_type):
+    if command not in ('online', 'offline'):
+        return
+
+    vif_name, dom_id, vif_index = vif_raw.split('-')
+    vif = "%s%s.%s" % (vif_name, dom_id, vif_index)
+    bridge = "xenbr%s" % vif_index
+    
     xsls = execute_get_output('/usr/bin/xenstore-ls',
                               '/local/domain/%s/vm-data/networking' % dom_id)
     macs = [line.split("=")[0].strip() for line in xsls.splitlines()]
@@ -56,13 +63,11 @@ def main(dom_id, command, net_type, only_this_vif=None):
                                     (dom_id, mac))
         data = json.loads(xsread)
         if data["label"] == "public":
-            vif = "vif%s.0" % dom_id
-            bridge = "xenbr0"
+            this_vif = "vif%s.0" % dom_id
         else:
-            vif = "vif%s.1" % dom_id
-            bridge = "xenbr1"
+            this_vif = "vif%s.1" % dom_id
 
-        if (only_this_vif is None) or (vif == only_this_vif):
+        if vif == this_vif:
             vif_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
                                             'Interface', vif, 'ofport')
 
@@ -72,11 +77,11 @@ def main(dom_id, command, net_type, only_this_vif=None):
 
             ovs = OvsFlow(bridge, params)
 
-            if command in ('offline', 'reset'):
+            if command == 'offline':
                 # I haven't found a way to clear only IPv4 or IPv6 rules.
                 ovs.clear_flows(vif_ofport)
 
-            if command in ('online', 'reset'):
+            if command == 'online':
                 if net_type in ('ipv4', 'all') and 'ips' in data:
                     for ip4 in data['ips']:
                         ovs.params.update({'IPV4_ADDR': ip4['ip']})
@@ -167,10 +172,9 @@ def apply_ovs_ipv6_flows(ovs, bridge, params):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print "usage: %s dom_id online|offline|reset ipv4|ipv6|all [vif]" % \
+        print "usage: %s [online|offline] vif-domid-idx ipv4|ipv6|all " % \
                os.path.basename(sys.argv[0])
         sys.exit(1)
     else:
-        dom_id, command, net_type = sys.argv[1:4]
-        vif_name = len(sys.argv) == 5 and sys.argv[4] or None
-        main(dom_id, command, net_type, vif_name)
+        command, vif_raw, net_type = sys.argv[1:4]
+        main(command, vif_raw, net_type)
