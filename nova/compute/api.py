@@ -42,6 +42,8 @@ LOG = logging.getLogger('nova.compute.api')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
+flags.DEFINE_integer('find_host_timeout', 30,
+                     'Timeout after NN seconds when looking for a host.')
 
 
 def generate_default_hostname(instance_id):
@@ -484,7 +486,7 @@ class API(base.Base):
 
     def _find_host(self, context, instance_id):
         """Find the host associated with an instance."""
-        for attempts in xrange(30):
+        for attempts in xrange(FLAGS.find_host_timeout):
             instance = self.get(context, instance_id)
             host = instance["host"]
             if host:
