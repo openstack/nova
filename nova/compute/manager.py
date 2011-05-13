@@ -77,7 +77,8 @@ flags.DEFINE_integer("rescue_timeout", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_bool('auto_assign_floating_ip', False,
                   'Autoassigning floating ip to VM')
-
+flags.DEFINE_integer('host_state_interval', 120,
+                     'Interval in seconds for querying the host status')
 
 LOG = logging.getLogger('nova.compute.manager')
 
