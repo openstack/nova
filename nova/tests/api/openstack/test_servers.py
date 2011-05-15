@@ -183,7 +183,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['id'], 1)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
-    def test_get_server_by_id_v11(self):
+    def test_get_server_by_id_v1_1(self):
         req = webob.Request.blank('/v1.1/servers/1')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -246,7 +246,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(len(addresses["private"]), 1)
         self.assertEqual(addresses["private"][0], private)
 
-    def test_get_server_addresses_V10(self):
+    def test_get_server_addresses_v1_0(self):
         private = '192.168.0.3'
         public = ['1.2.3.4']
         new_return_server = return_server_with_addresses(private, public)
@@ -257,7 +257,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict, {
             'addresses': {'public': public, 'private': [private]}})
 
-    def test_get_server_addresses_xml_V10(self):
+    def test_get_server_addresses_xml_v1_0(self):
         private_expected = "192.168.0.3"
         public_expected = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private_expected,
@@ -276,7 +276,7 @@ class ServersTest(test.TestCase):
         (ip,) = private.getElementsByTagName('ip')
         self.assertEquals(ip.getAttribute('addr'), private_expected)
 
-    def test_get_server_addresses_public_V10(self):
+    def test_get_server_addresses_public_v1_0(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
@@ -286,7 +286,7 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict, {'public': public})
 
-    def test_get_server_addresses_private_V10(self):
+    def test_get_server_addresses_private_v1_0(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
@@ -296,7 +296,7 @@ class ServersTest(test.TestCase):
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict, {'private': [private]})
 
-    def test_get_server_addresses_public_xml_V10(self):
+    def test_get_server_addresses_public_xml_v1_0(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
@@ -310,7 +310,7 @@ class ServersTest(test.TestCase):
         (ip,) = public_node.getElementsByTagName('ip')
         self.assertEquals(ip.getAttribute('addr'), public[0])
 
-    def test_get_server_addresses_private_xml_V10(self):
+    def test_get_server_addresses_private_xml_v1_0(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
@@ -324,7 +324,7 @@ class ServersTest(test.TestCase):
         (ip,) = private_node.getElementsByTagName('ip')
         self.assertEquals(ip.getAttribute('addr'), private)
 
-    def test_get_server_by_id_with_addresses_v11(self):
+    def test_get_server_by_id_with_addresses_v1_1(self):
         private = "192.168.0.3"
         public = ["1.2.3.4"]
         new_return_server = return_server_with_addresses(private, public)
@@ -354,7 +354,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
-    def test_get_server_list_v11(self):
+    def test_get_server_list_v1_1(self):
         req = webob.Request.blank('/v1.1/servers')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
@@ -576,7 +576,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_create_instance_v11(self):
+    def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
         imageRef = 'http://localhost/v1.1/images/2'
@@ -609,7 +609,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(imageRef, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
-    def test_create_instance_v11_bad_href(self):
+    def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
 
         imageRef = 'http://localhost/v1.1/images/asdf'
@@ -625,7 +625,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_create_instance_v11_local_href(self):
+    def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
         imageRef = 'http://localhost/v1.1/images/2'
@@ -652,7 +652,7 @@ class ServersTest(test.TestCase):
         self.assertEqual(imageRef, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
-    def test_create_instance_with_admin_pass_v10(self):
+    def test_create_instance_with_admin_pass_v1_0(self):
         self._setup_for_create_instance()
 
         body = {
@@ -673,7 +673,7 @@ class ServersTest(test.TestCase):
         self.assertNotEqual(res['server']['adminPass'],
                             body['server']['adminPass'])
 
-    def test_create_instance_with_admin_pass_v11(self):
+    def test_create_instance_with_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
         imageRef = 'http://localhost/v1.1/images/2'
@@ -695,7 +695,7 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(server['adminPass'], body['server']['adminPass'])
 
-    def test_create_instance_with_empty_admin_pass_v11(self):
+    def test_create_instance_with_empty_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
         imageRef = 'http://localhost/v1.1/images/2'
@@ -758,7 +758,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_update_server_v10(self):
+    def test_update_server_v1_0(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
 
@@ -781,7 +781,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 204)
 
-    def test_update_server_adminPass_ignored_v11(self):
+    def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
         self.body = json.dumps(dict(server=inst_dict))
 
@@ -822,7 +822,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 501)
 
-    def test_server_backup_schedule_deprecated_v11(self):
+    def test_server_backup_schedule_deprecated_v1_1(self):
         req = webob.Request.blank('/v1.1/servers/1/backup_schedule')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
@@ -1113,7 +1113,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_accepted_minimum_v11(self):
+    def test_server_rebuild_accepted_minimum_v1_1(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -1128,7 +1128,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
-    def test_server_rebuild_rejected_when_building_v11(self):
+    def test_server_rebuild_rejected_when_building_v1_1(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -1147,7 +1147,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 409)
 
-    def test_server_rebuild_accepted_with_metadata_v11(self):
+    def test_server_rebuild_accepted_with_metadata_v1_1(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -1165,7 +1165,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 202)
 
-    def test_server_rebuild_accepted_with_bad_metadata_v11(self):
+    def test_server_rebuild_accepted_with_bad_metadata_v1_1(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -1181,7 +1181,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_bad_entity_v11(self):
+    def test_server_rebuild_bad_entity_v1_1(self):
         body = {
             "rebuild": {
                 "imageId": 2,
@@ -1196,7 +1196,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_bad_personality_v11(self):
+    def test_server_rebuild_bad_personality_v1_1(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
@@ -1215,7 +1215,7 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
 
-    def test_server_rebuild_personality_v11(self):
+    def test_server_rebuild_personality_v1_1(self):
         body = {
             "rebuild": {
                 "imageRef": "http://localhost/images/2",
