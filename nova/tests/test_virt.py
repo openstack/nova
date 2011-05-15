@@ -320,8 +320,9 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
         properties = {'instance_id': instance_ref['id'],
                       'user_id': str(self.context.user_id)}
-        sent_meta = {'name': 'test-snap', 'is_public': False,
-                     'properties': properties}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
         recv_meta = image_service.create(context, sent_meta)
@@ -335,6 +336,11 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_conn.LibvirtConnection(False)
         conn.snapshot(instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
