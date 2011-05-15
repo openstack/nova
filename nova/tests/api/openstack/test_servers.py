@@ -579,13 +579,13 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        imageRef = 'http://localhost/v1.1/images/2'
-        flavorRef = 'http://localhost/v1.1/flavors/3'
+        image_ref = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': imageRef,
-                'flavorRef': flavorRef,
+                'imageRef': image_ref,
+                'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
@@ -605,17 +605,17 @@ class ServersTest(test.TestCase):
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
-        self.assertEqual(flavorRef, server['flavorRef'])
-        self.assertEqual(imageRef, server['imageRef'])
+        self.assertEqual(flavor_ref, server['flavorRef'])
+        self.assertEqual(image_ref, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
 
-        imageRef = 'http://localhost/v1.1/images/asdf'
-        flavorRef = 'http://localhost/v1.1/flavors/3'
+        image_ref = 'http://localhost/v1.1/images/asdf'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = dict(server=dict(
-            name='server_test', imageRef=imageRef, flavorRef=flavorRef,
+            name='server_test', imageRef=image_ref, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = webob.Request.blank('/v1.1/servers')
@@ -628,14 +628,14 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
-        imageRef = 'http://localhost/v1.1/images/2'
-        imageRefLocal = '2'
-        flavorRef = 'http://localhost/v1.1/flavors/3'
+        image_ref = 'http://localhost/v1.1/images/2'
+        image_ref_local = '2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': imageRefLocal,
-                'flavorRef': flavorRef,
+                'imageRef': image_ref_local,
+                'flavorRef': flavor_ref,
             },
         }
 
@@ -648,8 +648,8 @@ class ServersTest(test.TestCase):
 
         server = json.loads(res.body)['server']
         self.assertEqual(1, server['id'])
-        self.assertEqual(flavorRef, server['flavorRef'])
-        self.assertEqual(imageRef, server['imageRef'])
+        self.assertEqual(flavor_ref, server['flavorRef'])
+        self.assertEqual(image_ref, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v1_0(self):
@@ -676,13 +676,13 @@ class ServersTest(test.TestCase):
     def test_create_instance_with_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
-        imageRef = 'http://localhost/v1.1/images/2'
-        flavorRef = 'http://localhost/v1.1/flavors/3'
+        image_ref = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': imageRef,
-                'flavorRef': flavorRef,
+                'imageRef': image_ref,
+                'flavorRef': flavor_ref,
                 'adminPass': 'testpass',
             },
         }
@@ -698,13 +698,13 @@ class ServersTest(test.TestCase):
     def test_create_instance_with_empty_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
-        imageRef = 'http://localhost/v1.1/images/2'
-        flavorRef = 'http://localhost/v1.1/flavors/3'
+        image_ref = 'http://localhost/v1.1/images/2'
+        flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': imageRef,
-                'flavorRef': flavorRef,
+                'imageRef': image_ref,
+                'flavorRef': flavor_ref,
                 'adminPass': '',
             },
         }
