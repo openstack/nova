@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 from sqlalchemy import *
 from migrate import *
 
@@ -22,8 +24,10 @@ meta = MetaData()
 
 # mac address table to add to DB
 mac_addresses = Table('mac_addresses', meta,
-        Column('created_at', DateTime(timezone=False)),
-        Column('updated_at', DateTime(timezone=False)),
+        Column('created_at', DateTime(timezone=False),
+               default=datetime.datetime.utcnow),
+        Column('updated_at', DateTime(timezone=False),
+               onupdate=datetime.datetime.utcnow),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(),  primary_key=True, nullable=False),
@@ -54,7 +58,7 @@ interface = Column('bridge_interface',
 mac_address = Column('mac_address_id',
                      Integer(),
                      ForeignKey('mac_addresses.id'),
-                     nullable=False)
+                     nullable=True)
 
 
 def upgrade(migrate_engine):
@@ -103,10 +107,16 @@ def upgrade(migrate_engine):
         i.execute(join_list)
 
     # populate the fixed_ips mac_address column
-    s = select([mac_addresses.c.id],
-               mac_addresses.c.address == instances.c.address)
-    u = fixed_ips.update().values(mac_address_id=s)
-    u.execute()
+    s = select([fixed_ips.c.id, fixed_ips.c.instance_id],
+               fixed_ips.c.instance_id != None)
+
+    for row in s.execute():
+        m = select([mac_addresses.c.id].\
+            where(mac_addresses.c.instance_id == row['instance_id']).\
+            as_scalar()
+        u = fixed_ips.update().values(mac_address_id=m).\
+            where(fixed_ips.c.id == row['id'])
+        u.execute()
 
     # drop the mac_address column from instances
     c.drop()
