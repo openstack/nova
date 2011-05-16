@@ -791,17 +791,8 @@ def mac_address_create(context, values):
     mac_address_ref = models.MacAddress()
     mac_address_ref.update(values)
     mac_address_ref.save()
-#    instance_id = values['instance_id']
-#    network_id = values['network_id']
-#
-#    session = get_session()
-#    with session.begin():
-#        instance = instance_get(context, instance_id, session=session)
-#        network = network_get(context, network_id, session=session)
-#        mac_address.instance = instance
-#        mac_address.network = network
-#        mac_address_ref.save(session=session)
-#    return mac_address_ref
+
+    return mac_address_ref
 
 
 @require_context
@@ -912,10 +903,12 @@ def mac_address_delete(context, address):
     context = request context object
     instance_id = instance to remove macs for
     """
-    ref = mac_address_get_by_address(address)
+    mac_address = mac_address_get_by_address(address)
     session = get_session()
     with session.begin():
-        ref.delete(session=session)
+        for fixed_ip in mac_address['fixed_ips']:
+            fixed_ip.mac_address = None
+        session.delete(mac_address)
 
 
 @require_context
@@ -927,10 +920,8 @@ def mac_address_delete_by_instance(context, instance_id):
     instance_id = instance to remove macs for
     """
     refs = mac_address_get_all_by_instance(instance_id)
-    session = get_session()
-    with session.begin():
-        for ref in refs:
-            ref.delete(session=session)
+    for ref in refs:
+        self.mac_address_delete(ref)
 
 
 ###################
