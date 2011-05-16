@@ -27,6 +27,7 @@ FLAGS = flags.FLAGS
 
 import sys
 
+
 class IPv6RFC2462TestCase(test.TestCase):
     """Unit tests for IPv6 rfc2462 backend operations."""
     def setUp(self):
