@@ -176,6 +176,33 @@ class VolumeTestCase(test.TestCase):
         # This will allow us to test cross-node interactions
         pass
 
+    @staticmethod
+    def _create_snapshot(volume_id, size='0'):
+        """Create a snapshot object."""
+        snap = {}
+        snap['volume_size'] = size
+        snap['user_id'] = 'fake'
+        snap['project_id'] = 'fake'
+        snap['volume_id'] = volume_id
+        snap['status'] = "creating"
+        return db.snapshot_create(context.get_admin_context(), snap)['id']
+
+    def test_create_delete_snapshot(self):
+        """Test snapshot can be created and deleted."""
+        volume_id = self._create_volume()
+        self.volume.create_volume(self.context, volume_id)
+        snapshot_id = self._create_snapshot(volume_id)
+        self.volume.create_snapshot(self.context, volume_id, snapshot_id)
+        self.assertEqual(snapshot_id, db.snapshot_get(context.get_admin_context(),
+                         snapshot_id).id)
+
+        self.volume.delete_snapshot(self.context, snapshot_id)
+        self.assertRaises(exception.NotFound,
+                          db.snapshot_get,
+                          self.context,
+                          snapshot_id)
+        self.volume.delete_volume(self.context, volume_id)
+
 
 class DriverTestCase(test.TestCase):
     """Base Test class for Drivers."""
