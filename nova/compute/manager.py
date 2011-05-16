@@ -77,7 +77,8 @@ flags.DEFINE_integer("rescue_timeout", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_bool('auto_assign_floating_ip', False,
                   'Autoassigning floating ip to VM')
-
+flags.DEFINE_integer('host_state_interval', 120,
+                     'Interval in seconds for querying the host status')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -425,6 +426,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                     self.driver.set_admin_password(instance_ref, new_pass)
                     LOG.audit(_("Instance %s: Root password set"),
                                 instance_ref["name"])
+                    break
+                except NotImplementedError:
+                    # NOTE(dprince): if the driver doesn't implement
+                    # set_admin_password we break to avoid a loop
+                    LOG.warn(_('set_admin_password is not implemented '
+                            'by this driver.'))
                     break
                 except Exception, e:
                     # Catch all here because this could be anything.
