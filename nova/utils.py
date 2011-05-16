@@ -442,6 +442,8 @@ class LoopingCall(object):
             try:
                 while self._running:
                     self.f(*self.args, **self.kw)
+                    if not self._running:
+                        break
                     greenthread.sleep(interval)
             except LoopingCallDone, e:
                 self.stop()
