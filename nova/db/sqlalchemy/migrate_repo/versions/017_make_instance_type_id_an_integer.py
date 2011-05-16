@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, MetaData, String, Table
+from nova import log as logging
 
 meta = MetaData()
 
@@ -10,9 +11,14 @@ def upgrade(migrate_engine):
 
     types = {}
     for instance in migrate_engine.execute(instances.select()):
+        if instance.instance_type_id is None:
+            types[instance.id] = None
         try:
             types[instance.id] = int(instance.instance_type_id)
-        except (ValueError, TypeError):
+        except ValueError:
+            logging.warn("Instance %s did not have instance_type_id "
+                         "converted to an integer because its value is %s" %
+                          (instance.id, instance.instance_type_id))
             types[instance.id] = None
 
     integer_column = Column('instance_type_id_int', Integer(), nullable=True)
