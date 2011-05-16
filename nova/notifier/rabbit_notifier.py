@@ -28,11 +28,11 @@ flags.DEFINE_string('notification_topic', 'notifications',
 class RabbitNotifier(object):
     """Sends notifications to a specific RabbitMQ server and topic"""
 
-    def notify(self, payload):
+    def notify(self, message):
         """Sends a notification to the RabbitMQ"""
         context = nova.context.get_admin_context()
-        priority = payload.get('priority',
+        priority = message.get('priority',
                                FLAGS.default_notification_level)
         priority = priority.lower()
         topic = '%s.%s' % (FLAGS.notification_topic, priority)
-        rpc.cast(context, topic, payload)
+        rpc.cast(context, topic, message)

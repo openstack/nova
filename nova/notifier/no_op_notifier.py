@@ -17,6 +17,6 @@
 class NoopNotifier(object):
     """A notifier that doesn't actually do anything. Simply a placeholder"""
 
-    def notify(self, payload):
+    def notify(self, message):
         """Notifies the recipient of the desired event given the model"""
         pass

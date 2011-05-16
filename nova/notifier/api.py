@@ -37,7 +37,7 @@ class BadPriorityException(Exception):
     pass
 
 
-def notify(event_name, publisher_id, event_type, priority, payload):
+def notify(event_name, publisher_id, event_type, priority, message):
     """
     Sends a notification using the specified driver
 
@@ -49,11 +49,11 @@ def notify(event_name, publisher_id, event_type, priority, payload):
     event_type - the literal type of event (ex. Instance Creation)
     priority - patterned after the enumeration of Python logging levels in
                the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
-    payload - A python dictionary of attributes
+    message - A python dictionary of attributes
 
-    The message body will be constructed as a dictionary of the above
-    attributes, and converted into a JSON dump, which will then be sent
-    via the transport mechanism defined by the driver.
+    The message payload will be constructed as a dictionary of the above
+    attributes, which will then be sent via the transport mechanism defined
+    by the driver.
 
     Message example:
 
@@ -62,16 +62,17 @@ def notify(event_name, publisher_id, event_type, priority, payload):
      'timestamp': datetime.datetime.utcnow(),
      'priority': 'WARN',
      'event_type': 'compute.create_instance',
-     'payload': {'instance_id': 12, ... }}
+     'message': {'instance_id': 12, ... }}
 
     """
     if priority not in log_levels:
-        raise BadPriorityException('%s not in valid priorities' % priority)
+        raise BadPriorityException(
+                 _('%s not in valid priorities' % priority))
     driver = utils.import_class(FLAGS.notification_driver)()
-    message = dict(message_id=str(uuid.uuid4()),
+    msg = dict(message_id=str(uuid.uuid4()),
                    publisher_id=publisher_id,
                    event_type=event_type,
                    priority=priority,
-                   payload=payload,
+                   message=message,
                    timestamp=str(datetime.datetime.utcnow()))
-    driver.notify(message)
+    driver.notify(msg)

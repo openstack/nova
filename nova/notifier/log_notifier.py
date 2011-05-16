@@ -22,13 +22,13 @@ FLAGS = flags.FLAGS
 
 
 class LogNotifier(object):
-    """ log notifications using nova's default logging system """
+    """Log notifications using nova's default logging system"""
 
-    def notify(self, payload):
+    def notify(self, message):
         """Notifies the recipient of the desired event given the model"""
-        priority = payload.get('priority',
+        priority = message.get('priority',
                                FLAGS.default_notification_level)
         priority = priority.lower()
         logger = logging.getLogger(
-                'nova.notification.%s' % payload['event_type'])
-        getattr(logger, priority)(json.dumps(payload))
+                'nova.notification.%s' % message['event_type'])
+        getattr(logger, priority)(json.dumps(message))

@@ -279,6 +279,26 @@ class CloudTestCase(test.TestCase):
                                            user_group=['all'])
         self.assertEqual(True, result['is_public'])
 
+    def test_deregister_image(self):
+        deregister_image = self.cloud.deregister_image
+
+        def fake_delete(self, context, id):
+            return None
+
+        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
+        # valid image
+        result = deregister_image(self.context, 'ami-00000001')
+        self.assertEqual(result['imageId'], 'ami-00000001')
+        # invalid image
+        self.stubs.UnsetAll()
+
+        def fake_detail_empty(self, context):
+            return []
+
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
+        self.assertRaises(exception.ImageNotFound, deregister_image,
+                          self.context, 'ami-bad001')
+
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1

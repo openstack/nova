@@ -60,7 +60,7 @@ class NotifierTestCase(test.TestCase):
             fields = [('publisher_id', 'publisher_id'),
                       ('event_type', 'event_type'),
                       ('priority', 'WARN'),
-                      ('payload', dict(a=3))]
+                      ('message', dict(a=3))]
             for k, v in fields:
                 self.assertEqual(message[k], v)
             self.assertTrue(len(message['message_id']) > 0)
