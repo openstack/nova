@@ -385,7 +385,7 @@ class ProjectCommands(object):
         except exception.UserNotFound, e:
             print e
             raise
-        
+
     def delete(self, name):
         """Deletes an existing project
         arguments: name"""
