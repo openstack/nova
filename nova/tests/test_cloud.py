@@ -358,41 +358,6 @@ class CloudTestCase(test.TestCase):
         self._create_key('test')
         self.cloud.delete_key_pair(self.context, 'test')
 
-    def test_run_instances(self):
-        if FLAGS.connection_type == 'fake':
-            LOG.debug(_("Can't test instances without a real virtual env."))
-            return
-        image_id = FLAGS.default_image
-        instance_type = FLAGS.default_instance_type
-        max_count = 1
-        kwargs = {'image_id': image_id,
-                  'instance_type': instance_type,
-                  'max_count': max_count}
-        rv = self.cloud.run_instances(self.context, **kwargs)
-        # TODO: check for proper response
-        instance_id = rv['reservationSet'][0].keys()[0]
-        instance = rv['reservationSet'][0][instance_id][0]
-        LOG.debug(_("Need to watch instance %s until it's running..."),
-                  instance['instance_id'])
-        while True:
-            greenthread.sleep(1)
-            info = self.cloud._get_instance(instance['instance_id'])
-            LOG.debug(info['state'])
-            if info['state'] == power_state.RUNNING:
-                break
-        self.assert_(rv)
-
-        if FLAGS.connection_type != 'fake':
-            time.sleep(45)  # Should use boto for polling here
-        for reservations in rv['reservationSet']:
-            # for res_id in reservations.keys():
-            #     LOG.debug(reservations[res_id])
-            # for instance in reservations[res_id]:
-            for instance in reservations[reservations.keys()[0]]:
-                instance_id = instance['instance_id']
-                LOG.debug(_("Terminating instance %s"), instance_id)
-                rv = self.compute.terminate_instance(instance_id)
-
     def test_terminate_instances(self):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_id': 1,
