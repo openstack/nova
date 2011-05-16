@@ -594,10 +594,7 @@ class ControllerV10(Controller):
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
             update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            try:
-                self.compute_api.set_admin_password(context, server_id)
-            except exception.TimeoutException:
-                return exc.HTTPRequestTimeout()
+            self.compute_api.set_admin_password(context, server_id)
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
