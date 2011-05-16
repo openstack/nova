@@ -37,7 +37,7 @@ class BadPriorityException(Exception):
     pass
 
 
-def notify(publisher_id, event_type, priority, message):
+def notify(publisher_id, event_type, priority, payload):
     """
     Sends a notification using the specified driver
 
@@ -47,7 +47,7 @@ def notify(publisher_id, event_type, priority, message):
     event_type - the literal type of event (ex. Instance Creation)
     priority - patterned after the enumeration of Python logging levels in
                the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
-    message - A python dictionary of attributes
+    payload - A python dictionary of attributes
 
     Outgoing message format includes the above parameters, and appends the
     following:
@@ -77,6 +77,6 @@ def notify(publisher_id, event_type, priority, message):
                    publisher_id=publisher_id,
                    event_type=event_type,
                    priority=priority,
-                   payload=message,
+                   payload=payload,
                    timestamp=str(datetime.datetime.utcnow()))
     driver.notify(msg)
