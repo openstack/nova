@@ -61,6 +61,8 @@ function run_pep8 {
   echo "Running pep8 ..."
   srcfiles=`find bin -type f ! -name "nova.conf*"`
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
+  srcfiles+=" tools/clean-vlans tools/esx/guest_tool.py tools/euca-get-ajax-console"
+  srcfiles+=" tools/install_venv.py tools/nova-debug"
   pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles}
 }
 
