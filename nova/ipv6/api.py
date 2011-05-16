@@ -27,8 +27,8 @@ flags.DEFINE_string('ipv6_backend',
 def reset_backend():
     global IMPL
     IMPL = utils.LazyPluggable(FLAGS['ipv6_backend'],
-                               rfc2462='nova.ipv6.rfc2462',
-                               account_identifier='nova.ipv6.account_identifier')
+                rfc2462='nova.ipv6.rfc2462',
+                account_identifier='nova.ipv6.account_identifier')
 
 
 def to_global(prefix, mac, project_id):
