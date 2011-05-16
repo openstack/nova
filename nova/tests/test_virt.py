@@ -1045,3 +1045,45 @@ class NWFilterTestCase(test.TestCase):
                                                  network_info,
                                                  "fake")
         self.assertEquals(len(result), 3)
+
+    def test_unfilter_instance_undefines_nwfilters(self):
+        class FakeNWFilter:
+            def __init__(self):
+                self.undefine_call_count = 0
+
+            def undefine(self):
+                self.undefine_call_count += 1
+                pass
+
+        fakefilter = FakeNWFilter()
+
+        def _nwfilterLookupByName(ignore):
+            return fakefilter
+
+        def _filterDefineXMLMock(xml):
+            return True
+
+        admin_ctxt = context.get_admin_context()
+
+        self.fw._conn.nwfilterDefineXML = _filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = _nwfilterLookupByName
+
+        instance_ref = self._create_instance()
+        inst_id = instance_ref['id']
+        instance = db.instance_get(self.context, inst_id)
+
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
+        self.fw.setup_basic_filtering(instance)
+        self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
+        self.fw.unfilter_instance(instance)
+
+        # should attempt to undefine 2 filters: instance and instance-secgroup
+        self.assertEquals(fakefilter.undefine_call_count, 2)
+
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
