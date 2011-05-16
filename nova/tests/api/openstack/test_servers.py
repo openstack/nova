@@ -1654,6 +1654,19 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         request = self.deserializer.deserialize(serial_request)
         self.assertEqual(request, expected)
 
+    def test_request_xmlser_with_flavor_image_ref(self):
+        serial_request = """
+                <server xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test"
+                    imageRef="http://localhost:8774/v1.1/images/1"
+                    flavorRef="http://localhost:8774/v1.1/flavors/1">
+                </server>"""
+        request = self.deserializer.deserialize(serial_request)
+        self.assertEquals(request["server"]["flavorRef"],
+                          "http://localhost:8774/v1.1/flavors/1")
+        self.assertEquals(request["server"]["imageRef"],
+                          "http://localhost:8774/v1.1/images/1")
+
 
 class TestServerInstanceCreation(test.TestCase):
 

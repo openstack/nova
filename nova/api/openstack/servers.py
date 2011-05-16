@@ -758,8 +758,9 @@ class ServerCreateRequestXMLDeserializer(object):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId"]:
-            server[attr] = server_node.getAttribute(attr)
+        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
         metadata = self._extract_metadata(server_node)
         if metadata is not None:
             server["metadata"] = metadata
