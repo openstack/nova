@@ -422,31 +422,6 @@ class NetworkManager(manager.SchedulerDependentManager):
         """Returns a fixed ip to the pool."""
         self.db.fixed_ip_update(context, address, {'allocated': False})
 
-    def _get_mac_addr_for_fixed_ip(self, context, fixed_ip):
-        """returns a mac_address if the fixed_ip object has an instance
-           and that instance has a mac_address belonging to the same network
-           as the fixed_ip object
-           else
-           returns None
-
-        called by lease_fixed_ip and release_fixed_ip
-        """
-        instance = fixed_ip.get('instance')
-        if not instance:
-            return None
-
-        mac_addresses = self.db.mac_address_get_all_by_instance(context,
-                                                         instance['id'])
-        # determine the mac_address the instance has for the network
-        # that the fixed ip address belongs to
-        for mac_addr in mac_addresses:
-            if mac_addr['network_id'] == fixed_ip['network_id']:
-                # return it since there can be only one
-                return mac_addr['address']
-
-        # instance doesn't have a mac address for the fixed_ip's network
-        return None
-
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
         LOG.debug(_("Leasing IP %s"), address, context=context)
@@ -455,7 +430,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not instance_ref:
             raise exception.Error(_("IP %s leased that isn't associated") %
                                   address)
-        mac_address = self._get_mac_addr_for_fixed_ip(context, fixed_ip_ref)
+        mac_address = fixed_ip_ref['mac_address']['address']
         if mac_address != mac:
             raise exception.Error(_("IP %(address)s leased to bad"
                     " mac %(mac_address)s vs %(mac)s") % locals())
@@ -476,7 +451,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not instance_ref:
             raise exception.Error(_("IP %s released that isn't associated") %
                                   address)
-        mac_address = self._get_mac_addr_for_fixed_ip(context, fixed_ip_ref)
+        mac_address = fixed_ip_ref['mac_address']['address']
         if mac_address != mac:
             raise exception.Error(_("IP %(address)s released from"
                     " bad mac %(mac_address)s vs %(mac)s") % locals())
