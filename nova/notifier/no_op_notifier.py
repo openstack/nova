@@ -14,9 +14,6 @@
 #    under the License.
 
 
-class NoopNotifier(object):
-    """A notifier that doesn't actually do anything. Simply a placeholder"""
-
-    def notify(self, message):
-        """Notifies the recipient of the desired event given the model"""
-        pass
+def notify(message):
+    """Notifies the recipient of the desired event given the model"""
+    pass

@@ -37,21 +37,25 @@ class BadPriorityException(Exception):
     pass
 
 
-def notify(event_name, publisher_id, event_type, priority, message):
+def notify(publisher_id, event_type, priority, message):
     """
     Sends a notification using the specified driver
 
-    Message format is as follows:
+    Notify parameters:
 
-    message_id - a UUID representing the id for this notification
     publisher_id - the source worker_type.host of the message
-    timestamp - the GMT timestamp the notification was sent at
     event_type - the literal type of event (ex. Instance Creation)
     priority - patterned after the enumeration of Python logging levels in
                the set (DEBUG, WARN, INFO, ERROR, CRITICAL)
     message - A python dictionary of attributes
 
-    The message payload will be constructed as a dictionary of the above
+    Outgoing message format includes the above parameters, and appends the
+    following:
+
+    message_id - a UUID representing the id for this notification
+    timestamp - the GMT timestamp the notification was sent at
+
+    The composite message will be constructed as a dictionary of the above
     attributes, which will then be sent via the transport mechanism defined
     by the driver.
 
@@ -62,17 +66,17 @@ def notify(event_name, publisher_id, event_type, priority, message):
      'timestamp': datetime.datetime.utcnow(),
      'priority': 'WARN',
      'event_type': 'compute.create_instance',
-     'message': {'instance_id': 12, ... }}
+     'payload': {'instance_id': 12, ... }}
 
     """
     if priority not in log_levels:
         raise BadPriorityException(
                  _('%s not in valid priorities' % priority))
-    driver = utils.import_class(FLAGS.notification_driver)()
+    driver = utils.import_object(FLAGS.notification_driver)
     msg = dict(message_id=str(uuid.uuid4()),
                    publisher_id=publisher_id,
                    event_type=event_type,
                    priority=priority,
-                   message=message,
+                   payload=message,
                    timestamp=str(datetime.datetime.utcnow()))
     driver.notify(msg)

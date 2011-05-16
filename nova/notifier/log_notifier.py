@@ -21,14 +21,13 @@ from nova import log as logging
 FLAGS = flags.FLAGS
 
 
-class LogNotifier(object):
-    """Log notifications using nova's default logging system"""
+def notify(message):
+    """Notifies the recipient of the desired event given the model.
+    Log notifications using nova's default logging system"""
 
-    def notify(self, message):
-        """Notifies the recipient of the desired event given the model"""
-        priority = message.get('priority',
-                               FLAGS.default_notification_level)
-        priority = priority.lower()
-        logger = logging.getLogger(
-                'nova.notification.%s' % message['event_type'])
-        getattr(logger, priority)(json.dumps(message))
+    priority = message.get('priority',
+                           FLAGS.default_notification_level)
+    priority = priority.lower()
+    logger = logging.getLogger(
+            'nova.notification.%s' % message['event_type'])
+    getattr(logger, priority)(json.dumps(message))
