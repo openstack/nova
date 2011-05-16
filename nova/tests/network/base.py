@@ -125,7 +125,8 @@ class NetworkTestCase(test.TestCase):
             self.assertEqual(instance_ref['id'], instance_ref2['id'])
             self.assertEqual(address_v6,
                              ipv6.to_global(network_ref['cidr_v6'],
-                                            instance_ref['mac_address']))
+                                            instance_ref['mac_address'],
+                                            'test'))
             self._deallocate_address(0, address)
             db.instance_destroy(context.get_admin_context(),
                                 instance_ref['id'])
