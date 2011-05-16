@@ -259,7 +259,12 @@ class API(base.Base):
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
-                               "instance_type": instance_type,
+                               "request_spec": {
+                                        'instance_type': instance_type,
+                                        'filter_driver':
+                                            'nova.scheduler.host_filter.'
+                                            'InstanceTypeFilter'
+                                    },
                                "availability_zone": availability_zone,
                                "injected_files": injected_files}})
 

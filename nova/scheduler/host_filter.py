@@ -42,6 +42,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.scheduler import zone_aware_scheduler
 
 LOG = logging.getLogger('nova.scheduler.host_filter')
 
@@ -83,8 +84,8 @@ class AllHostsFilter(HostFilter):
                for host, services in zone_manager.service_states.iteritems()]
 
 
-class FlavorFilter(HostFilter):
-    """HostFilter driver hard-coded to work with flavors."""
+class InstanceTypeFilter(HostFilter):
+    """HostFilter driver hard-coded to work with InstanceType records."""
 
     def instance_type_to_filter(self, instance_type):
         """Use instance_type to filter hosts."""
@@ -271,7 +272,7 @@ class JsonFilter(HostFilter):
         return hosts
 
 
-DRIVERS = [AllHostsFilter, FlavorFilter, JsonFilter]
+DRIVERS = [AllHostsFilter, InstanceTypeFilter, JsonFilter]
 
 
 def choose_driver(driver_name=None):
@@ -288,19 +289,19 @@ def choose_driver(driver_name=None):
     raise exception.SchedulerHostFilterDriverNotFound(driver_name=driver_name)
 
 
-class HostFilterScheduler(ZoneAwareScheduler):
+class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     """The HostFilterScheduler uses the HostFilter drivers to filter
     hosts for weighing. The particular driver used may be passed in
     as an argument or the default will be used."""
 
-    def filter_hosts(self, num, specs):
+    def filter_hosts(self, num, request_spec):
         """Filter the full host list (from the ZoneManager)"""
-        driver_name = specs.get("filter_driver", None)
-        driver = host_filter.choose_driver(driver_name)
+        driver_name = request_spec.get("filter_driver", None)
+        driver = choose_driver(driver_name)
 
         # TODO(sandy): We're only using InstanceType-based specs
         # currently. Later we'll need to snoop for more detailed
         # host filter requests.
-        instance_type = specs['instance_type']
-        query = driver.instance_type_to_filter(query)
+        instance_type = request_spec['instance_type']
+        query = driver.instance_type_to_filter(instance_type)
         return driver.filter_hosts(self.zone_manager, query)

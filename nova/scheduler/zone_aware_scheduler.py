@@ -25,7 +25,6 @@ import operator
 from nova import log as logging
 from nova.scheduler import api
 from nova.scheduler import driver
-from nova.scheduler import host_filter
 
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
 
@@ -37,7 +36,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs)
 
-    def schedule_run_instance(self, context, instance_id, instance_type,
+    def schedule_run_instance(self, context, instance_id, request_spec,
                                         *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
@@ -48,13 +47,12 @@ class ZoneAwareScheduler(driver.Scheduler):
            a child zone)."""
 
         # TODO(sandy): We'll have to look for richer specs at some point.
-        specs = instance_type
 
-        if 'blob' in specs:
-            return self.provision_instance(context, topic, specs)
+        if 'blob' in request_spec:
+            return self.provision_instance(context, topic, request_spec)
 
         # Create build plan and provision ...
-        build_plan = self.select(context, specs)
+        build_plan = self.select(context, request_spec)
         for item in build_plan:
             self.provision_instance(context, topic, item)
 
@@ -62,24 +60,24 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Create the requested instance in this Zone or a child zone."""
         pass
 
-    def select(self, context, specs, *args, **kwargs):
+    def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
         anything about the children."""
-        return self._schedule(context, "compute", *args, **kwargs)
+        return self._schedule(context, "compute", request_spec, *args, **kwargs)
 
-    def schedule(self, context, topic, *args, **kwargs):
+    def schedule(self, context, topic, request_spec, *args, **kwargs):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
-        res = self._schedule(context, topic, *args, **kwargs)
+        res = self._schedule(context, topic, request_spec, *args, **kwargs)
         # TODO(sirp): should this be a host object rather than a weight-dict?
         if not res:
             raise driver.NoValidHost(_('No hosts were available'))
         return res[0]
 
-    def _schedule(self, context, topic, *args, **kwargs):
+    def _schedule(self, context, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
@@ -88,20 +86,20 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise NotImplemented(_("Zone Aware Scheduler only understands "
                                    "Compute nodes (for now)"))
 
-        specs = args['instance_type']
+        LOG.debug("specs = %s, ARGS = %s" % (request_spec, args, ))
         #TODO(sandy): how to infer this from OS API params?
         num_instances = 1
 
         # Filter local hosts based on requirements ...
-        host_list = self.filter_hosts(num_instances, specs)
+        host_list = self.filter_hosts(num_instances, request_spec)
 
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
-        weighted = self.weigh_hosts(num_instances, specs, host_list)
+        weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
         # Next, tack on the best weights from the child zones ...
         child_results = self._call_zone_method(context, "select",
-                specs=specs)
+                specs=request_spec)
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to
@@ -116,12 +114,12 @@ class ZoneAwareScheduler(driver.Scheduler):
         weighted.sort(key=operator.itemgetter('weight'))
         return weighted
 
-    def filter_hosts(self, num, specs):
+    def filter_hosts(self, num, request_spec):
         """Derived classes must override this method and return
            a list of hosts in [(hostname, capability_dict)] format."""
         raise NotImplemented()
 
-    def weigh_hosts(self, num, specs, hosts):
+    def weigh_hosts(self, num, request_spec, hosts):
         """Derived classes must override this method and return
            a lists of hosts in [{weight, hostname}] format."""
         raise NotImplemented()
