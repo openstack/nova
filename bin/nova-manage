@@ -364,8 +364,8 @@ class ProjectCommands(object):
         arguments: project_id user_id"""
         try:
             self.manager.add_to_project(user_id, project_id)
-        except exception.UserNotFound, e:
-            print e
+        except exception.UserNotFound as ex:
+            print ex
             raise
 
     def create(self, name, project_manager, description=None):
@@ -373,8 +373,8 @@ class ProjectCommands(object):
         arguments: name project_manager [description]"""
         try:
             self.manager.create_project(name, project_manager, description)
-        except exception.UserNotFound, e:
-            print e
+        except exception.UserNotFound as ex:
+            print ex
             raise
 
     def modify(self, name, project_manager, description=None):
@@ -382,8 +382,8 @@ class ProjectCommands(object):
         arguments: name project_manager [description]"""
         try:
             self.manager.modify_project(name, project_manager, description)
-        except exception.UserNotFound, e:
-            print e
+        except exception.UserNotFound as ex:
+            print ex
             raise
 
     def delete(self, name):
@@ -391,8 +391,8 @@ class ProjectCommands(object):
         arguments: name"""
         try:
             self.manager.delete_project(name)
-        except exception.ProjectNotFound, e:
-            print e
+        except exception.ProjectNotFound as ex:
+            print ex
             raise
 
     def environment(self, project_id, user_id, filename='novarc'):
@@ -400,8 +400,8 @@ class ProjectCommands(object):
         arguments: project_id user_id [filename='novarc]"""
         try:
             rc = self.manager.get_environment_rc(user_id, project_id)
-        except (exception.UserNotFound, exception.ProjectNotFound), e:
-            print e
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
             raise
         with open(filename, 'w') as f:
             f.write(rc)
@@ -431,8 +431,8 @@ class ProjectCommands(object):
         arguments: project_id user_id"""
         try:
             self.manager.remove_from_project(user_id, project_id)
-        except (exception.UserNotFound, exception.ProjectNotFound), e:
-            print e
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
             raise
 
     def scrub(self, project_id):
@@ -452,8 +452,8 @@ class ProjectCommands(object):
             zip_file = self.manager.get_credentials(user_id, project_id)
             with open(filename, 'w') as f:
                 f.write(zip_file)
-        except (exception.UserNotFound, exception.ProjectNotFound), e:
-            print e
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
             raise
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
