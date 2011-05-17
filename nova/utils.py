@@ -726,6 +726,11 @@ def parse_server_string(server_str):
         return ('', '')
 
 
+def is_int(x):
+    """ Return if passed in variable is integer or not """
+    return re.match(r'\d+$', str(x))
+
+
 def parse_image_ref(image_ref):
     """
     Parse an imageRef and return (id, host, port)
@@ -757,18 +762,18 @@ def get_image_service(image_ref=None):
 
     image_ref - image ref/id for an image
     """
-    ImageService = utils.import_class(FLAGS.image_service)
+    ImageService = import_class(FLAGS.image_service)
 
     if not image_ref:
-        return (ImageService(), -1)
+        return (ImageService(), None)
     
     (image_id, host, port) = parse_image_ref(image_ref)
 
     image_service = None
 
     if host:
-        GlanceImageService = utils.import_class(FLAGS.glance_image_service)
-        GlanceClient = utils.import_class('glance.client.Client')
+        GlanceImageService = import_class(FLAGS.glance_image_service)
+        GlanceClient = import_class('glance.client.Client')
 
         glance_client = GlanceClient(host, port)
         image_service = GlanceImageService(glance_client)
