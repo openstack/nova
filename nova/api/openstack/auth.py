@@ -17,7 +17,6 @@
 
 import datetime
 import hashlib
-import json
 import time
 
 import webob.exc
@@ -25,11 +24,9 @@ import webob.dec
 
 from nova import auth
 from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import manager
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
@@ -102,11 +99,13 @@ class AuthMiddleware(wsgi.Middleware):
         token, user = self._authorize_user(username, key, req)
         if user and token:
             res = webob.Response()
-            res.headers['X-Auth-Token'] = token.token_hash
+            res.headers['X-Auth-Token'] = token['token_hash']
+            # NOTE(vish): the apparrent typo in manageent is actually how it
+            #             is in the db
             res.headers['X-Server-Management-Url'] = \
-                token.server_management_url
-            res.headers['X-Storage-Url'] = token.storage_url
-            res.headers['X-CDN-Management-Url'] = token.cdn_management_url
+                token['server_manageent_url']
+            res.headers['X-Storage-Url'] = token['storage_url']
+            res.headers['X-CDN-Management-Url'] = token['cdn_management_url']
             res.content_type = 'text/plain'
             res.status = '204'
             LOG.debug(_("Successfully authenticated '%s'") % username)
@@ -130,11 +129,11 @@ class AuthMiddleware(wsgi.Middleware):
         except exception.NotFound:
             return None
         if token:
-            delta = datetime.datetime.now() - token.created_at
+            delta = datetime.datetime.utcnow() - token['created_at']
             if delta.days >= 2:
-                self.db.auth_token_destroy(ctxt, token.token_hash)
+                self.db.auth_token_destroy(ctxt, token['token_hash'])
             else:
-                return self.auth.get_user(token.user_id)
+                return self.auth.get_user(token['user_id'])
         return None
 
     def _authorize_user(self, username, key, req):
@@ -159,7 +158,7 @@ class AuthMiddleware(wsgi.Middleware):
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
             os_url = req.url
-            token_dict['server_management_url'] = os_url
+            token_dict['server_manageent_url'] = os_url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)
