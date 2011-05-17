@@ -56,12 +56,9 @@ class LimitsController(common.OpenstackController):
             "attributes": {
                 "limit": ["verb", "URI", "uri", "regex", "value", "unit",
                     "resetTime", "next-available", "remaining", "name"],
-                "absolute_limit": ["maxTotalRAMSize", "maxTotalInstances",
-                "maxTotalCores"],
             },
             "plurals": {
                 "rate": "limit",
-                "absolute": "absolute_limit",
             },
         },
     }
