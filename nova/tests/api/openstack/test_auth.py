@@ -150,7 +150,7 @@ class TestFunctional(test.TestCase):
         tok = db.auth_token_create(ctx, dict(
                 token_hash='test_token_hash',
                 cdn_management_url='',
-                server_manageent_url='',
+                server_management_url='',
                 storage_url='',
                 user_id='user1',
                 ))

@@ -100,10 +100,8 @@ class AuthMiddleware(wsgi.Middleware):
         if user and token:
             res = webob.Response()
             res.headers['X-Auth-Token'] = token['token_hash']
-            # NOTE(vish): the apparrent typo in manageent is actually how it
-            #             is in the db
             res.headers['X-Server-Management-Url'] = \
-                token['server_manageent_url']
+                token['server_management_url']
             res.headers['X-Storage-Url'] = token['storage_url']
             res.headers['X-CDN-Management-Url'] = token['cdn_management_url']
             res.content_type = 'text/plain'
@@ -158,7 +156,7 @@ class AuthMiddleware(wsgi.Middleware):
             token_dict['token_hash'] = token_hash
             token_dict['cdn_management_url'] = ''
             os_url = req.url
-            token_dict['server_manageent_url'] = os_url
+            token_dict['server_management_url'] = os_url
             token_dict['storage_url'] = ''
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)
