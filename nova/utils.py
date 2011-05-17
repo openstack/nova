@@ -750,12 +750,17 @@ def parse_image_ref(image_ref):
     return (id, host, port)
 
 
-def get_image_service(image_ref):
+def get_image_service(image_ref=None):
     """
     Get the proper image_service for an image_id
+    Returns (image_service, image_id)
 
     image_ref - image ref/id for an image
     """
+    ImageService = utils.import_class(FLAGS.image_service)
+
+    if not image_ref:
+        return (ImageService(), -1)
     
     (image_id, host, port) = parse_image_ref(image_ref)
 
@@ -768,7 +773,6 @@ def get_image_service(image_ref):
         glance_client = GlanceClient(host, port)
         image_service = GlanceImageService(glance_client)
     else:
-        ImageService = utils.import_class(FLAGS.image_service)
         image_service = ImageService()
 
-    return (image_id, image_service)
+    return (image_service, id)

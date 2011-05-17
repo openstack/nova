@@ -82,15 +82,12 @@ class Controller(common.OpenstackController):
         :param id: Image identifier (integer)
         """
         context = req.environ['nova.context']
+        image_id = id
 
         try:
-            image_id = int(id)
-        except ValueError:
-            explanation = _("Image not found.")
-            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
-
-        try:
-            image = self._image_service.show(context, image_id)
+            (image_service, service_image_id) = utils.get_image_service(
+                image_id)
+            image = image_service.show(context, service_image_id)
         except exception.NotFound:
             explanation = _("Image '%d' not found.") % (image_id)
             raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
@@ -105,7 +102,8 @@ class Controller(common.OpenstackController):
         """
         image_id = id
         context = req.environ['nova.context']
-        self._image_service.delete(context, image_id)
+        (image_service, service_image_id) = utils.get_image_service(image_id)
+        image_service.delete(context, service_image_id)
         return webob.exc.HTTPNoContent()
 
     def create(self, req):
