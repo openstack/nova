@@ -80,7 +80,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             LOG.debug(_("Casted to compute %(host)s for run_instance")
                                 % locals())
         else:
-            # TODO(sandy) Provision in child zone ... 
+            # TODO(sandy) Provision in child zone ...
             LOG.warning(_("Provision to Child Zone not supported (yet)")
                                 % locals())
             pass
@@ -117,11 +117,11 @@ class ZoneAwareScheduler(driver.Scheduler):
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
-        # then weigh the selected hosts.
-        # weighted = [{weight=weight, name=hostname}, ...]
-
         # TODO(sirp): weigh_hosts should also be a function of 'topic' or
         # resources, so that we can apply different objective functions to it
+
+        # then weigh the selected hosts.
+        # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
         # Next, tack on the best weights from the child zones ...
@@ -145,8 +145,9 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Derived classes must override this method and return
            a list of hosts in [(hostname, capability_dict)] format."""
         # NOTE(sirp): The default logic is the equivalent to AllHostsFilter
+        service_states = self.zone_manager.service_states
         return [(host, services)
-                for host, services in self.zone_manager.service_states.iteritems()]
+                for host, services in service_states.iteritems()]
 
     def weigh_hosts(self, num, request_spec, hosts):
         """Derived classes may override this to provide more sophisticated

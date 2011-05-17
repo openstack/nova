@@ -30,6 +30,7 @@ class FakeHost(object):
         self.free_ram = free_ram
         self.io = io
 
+
 class WeightedSumTestCase(test.TestCase):
     def test_empty_domain(self):
         domain = []
@@ -50,20 +51,22 @@ class WeightedSumTestCase(test.TestCase):
             (2, lambda h: h.io),  # Avoid high I/O
         ]
 
-        costs = least_cost.weighted_sum(domain=hosts, weighted_fns=weighted_fns)
+        costs = least_cost.weighted_sum(
+            domain=hosts, weighted_fns=weighted_fns)
 
         # Each 256 MB unit of free-ram contributes 0.5 points by way of:
         #   cost = weight * (score/max_score) = 1 * (256/512) = 0.5
         # Each 100 iops of IO adds 0.5 points by way of:
         #   cost = 2 * (100/400) = 2 * 0.25 = 0.5
         expected = [1.5, 2.5, 1.5]
-        self.assertEqual(expected, costs) 
+        self.assertEqual(expected, costs)
 
 
 # TODO(sirp): unify this with test_host_filter tests? possibility of sharing
 # test setup code
 class FakeZoneManager:
     pass
+
 
 class LeastCostSchedulerTestCase(test.TestCase):
     def _host_caps(self, multiplier):
@@ -116,7 +119,6 @@ class LeastCostSchedulerTestCase(test.TestCase):
         #FLAGS.default_host_filter_driver = self.old_flag
         super(LeastCostSchedulerTestCase, self).tearDown()
 
-
     def assertWeights(self, expected, num, request_spec, hosts):
         weighted = self.sched.weigh_hosts(num, request_spec, hosts)
         self.assertDictListMatch(weighted, expected, approx_equal=True)
@@ -138,8 +140,9 @@ class LeastCostSchedulerTestCase(test.TestCase):
         num = 1
         request_spec = {}
         hosts = self.sched.filter_hosts(num, request_spec)
-        
-        expected = [ dict(weight=1, hostname=hostname) for hostname, caps in hosts]
+
+        expected = [dict(weight=1, hostname=hostname)
+                    for hostname, caps in hosts]
         self.assertWeights(expected, num, request_spec, hosts)
 
     def test_cost_fn_weights(self):
@@ -152,7 +155,8 @@ class LeastCostSchedulerTestCase(test.TestCase):
         request_spec = {}
         hosts = self.sched.filter_hosts(num, request_spec)
 
-        expected = [ dict(weight=2, hostname=hostname) for hostname, caps in hosts]
+        expected = [dict(weight=2, hostname=hostname)
+                    for hostname, caps in hosts]
         self.assertWeights(expected, num, request_spec, hosts)
 
     def test_fill_first_cost_fn(self):
@@ -164,7 +168,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
         num = 1
         request_spec = {}
         hosts = self.sched.filter_hosts(num, request_spec)
-       
+
         expected = []
         for idx, (hostname, caps) in enumerate(hosts):
             # Costs are normalized so over 10 hosts, each host with increasing

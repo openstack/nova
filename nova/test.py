@@ -212,9 +212,10 @@ class TestCase(unittest.TestCase):
         for key in d1keys:
             d1value = d1[key]
             d2value = d2[key]
-            
+
             try:
-                within_tolerance = abs(float(d1value) - float(d2value)) < tolerance
+                error = abs(float(d1value) - float(d2value))
+                within_tolerance = error <= tolerance
             except ValueError:
                 # If both values aren't convertable to float, just ignore
                 within_tolerance = False

@@ -13,16 +13,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Helpful docstring here
+Least Cost Scheduler is a mechanism for choosing which host machines to
+provision a set of resources to. The input of the least-cost-scheduler is a
+set of objective-functions, called the 'cost-functions', a weight for each
+cost-function, and a list of candidate hosts (gathered via FilterHosts).
+
+The cost-function and weights are tabulated, and the host with the least cost
+is then selected for provisioning.
 """
 
 import collections
 
 from nova import flags
 from nova import log as logging
-# TODO(sirp): this should be just `zone_aware` to match naming scheme
-# TODO(sirp): perhaps all zone-aware stuff should go under a `zone_aware`
-# module
 from nova.scheduler import zone_aware_scheduler
 from nova import utils
 
@@ -38,6 +41,8 @@ flags.DEFINE_list('least_cost_scheduler_cost_functions',
 # cost_functions.py file (perhaps in a least_cost_scheduler directory)
 flags.DEFINE_integer('noop_cost_fn_weight', 1,
                      'How much weight to give the noop cost function')
+
+
 def noop_cost_fn(host):
     """Return a pre-weight cost of 1 for each host"""
     return 1
@@ -45,6 +50,8 @@ def noop_cost_fn(host):
 
 flags.DEFINE_integer('fill_first_cost_fn_weight', 1,
                      'How much weight to give the fill-first cost function')
+
+
 def fill_first_cost_fn(host):
     """Prefer hosts that have less ram available, filter_hosts will exclude
     hosts that don't have enough ram"""
@@ -68,7 +75,7 @@ class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
             except exception.ClassNotFound:
                 raise exception.SchedulerCostFunctionNotFound(
                     cost_fn_str=cost_fn_str)
-          
+
             try:
                 weight = getattr(FLAGS, "%s_weight" % cost_fn.__name__)
             except AttributeError:
@@ -82,17 +89,22 @@ class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     def weigh_hosts(self, num, request_spec, hosts):
         """Returns a list of dictionaries of form:
             [ {weight: weight, hostname: hostname} ]"""
+
         # FIXME(sirp): weigh_hosts should handle more than just instances
-        hostnames = [hostname for hostname, _ in hosts]
+        hostnames = [hostname for hostname, caps in hosts]
 
         cost_fns = self.get_cost_fns()
         costs = weighted_sum(domain=hosts, weighted_fns=cost_fns)
-        
+
         weighted = []
+        weight_log = []
         for cost, hostname in zip(costs, hostnames):
+            weight_log.append("%s: %s" % (hostname, "%.2f" % cost))
             weight_dict = dict(weight=cost, hostname=hostname)
             weighted.append(weight_dict)
-        return weighted 
+
+        LOG.debug(_("Weighted Costs => %s") % weight_log)
+        return weighted
 
 
 def normalize_list(L):
@@ -110,7 +122,7 @@ def weighted_sum(domain, weighted_fns, normalize=True):
     """Use the weighted-sum method to compute a score for an array of objects.
     Normalize the results of the objective-functions so that the weights are
     meaningful regardless of objective-function's range.
-    
+
     domain - input to be scored
     weighted_fns - list of weights and functions like:
         [(weight, objective-functions)]
