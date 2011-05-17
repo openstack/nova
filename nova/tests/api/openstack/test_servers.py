@@ -138,6 +138,16 @@ def find_host(self, context, instance_id):
     return "nova"
 
 
+class MockSetAdminPassword(object):
+    def __init__(self):
+        self.instance_id = None
+        self.password = None
+
+    def __call__(self, context, instance_id, password):
+        self.instance_id = instance_id
+        self.password = password
+
+
 class ServersTest(test.TestCase):
 
     def setUp(self):
@@ -773,6 +783,8 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'instance_update',
             server_update)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
+        mock_method = MockSetAdminPassword()
+        self.stubs.Set(nova.compute.api.API, '_set_admin_password', mock_method)
 
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
@@ -780,6 +792,8 @@ class ServersTest(test.TestCase):
         req.body = self.body
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 204)
+        self.assertEqual(mock_method.instance_id, '1')
+        self.assertEqual(mock_method.password, 'bacon')
 
     def test_update_server_adminPass_ignored_v1_1(self):
         inst_dict = dict(name='server_test', adminPass='bacon')
@@ -996,16 +1010,6 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 501)
 
     def test_server_change_password_v1_1(self):
-
-        class MockSetAdminPassword(object):
-            def __init__(self):
-                self.instance_id = None
-                self.password = None
-
-            def __call__(self, context, instance_id, password):
-                self.instance_id = instance_id
-                self.password = password
-
         mock_method = MockSetAdminPassword()
         self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
         body = {'changePassword': {'adminPass': '1234pass'}}
