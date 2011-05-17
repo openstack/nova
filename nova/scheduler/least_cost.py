@@ -34,11 +34,23 @@ flags.DEFINE_list('least_cost_scheduler_cost_functions',
                   'Which cost functions the LeastCostScheduler should use.')
 
 
+# TODO(sirp): Once we have enough of these rules, we can break them out into a
+# cost_functions.py file (perhaps in a least_cost_scheduler directory)
 flags.DEFINE_integer('noop_cost_fn_weight', 1,
                      'How much weight to give the noop cost function')
 def noop_cost_fn(host):
     """Return a pre-weight cost of 1 for each host"""
     return 1
+
+
+flags.DEFINE_integer('fill_first_cost_fn_weight', 1,
+                     'How much weight to give the fill-first cost function')
+def fill_first_cost_fn(host):
+    """Prefer hosts that have less ram available, filter_hosts will exclude
+    hosts that don't have enough ram"""
+    hostname, caps = host
+    free_mem = caps['compute']['host_memory_free']
+    return free_mem
 
 
 class LeastCostScheduler(zone_aware_scheduler.ZoneAwareScheduler):

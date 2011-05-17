@@ -119,7 +119,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
     def assertWeights(self, expected, num, request_spec, hosts):
         weighted = self.sched.weigh_hosts(num, request_spec, hosts)
-        self.assertDictListMatch(weighted, expected)
+        self.assertDictListMatch(weighted, expected, approx_equal=True)
 
     def test_no_hosts(self):
         num = 1
@@ -137,12 +137,41 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
         num = 1
         request_spec = {}
-
         hosts = self.sched.filter_hosts(num, request_spec)
         
         expected = [ dict(weight=1, hostname=hostname) for hostname, caps in hosts]
         self.assertWeights(expected, num, request_spec, hosts)
 
+    def test_cost_fn_weights(self):
+        FLAGS.least_cost_scheduler_cost_functions = [
+            'nova.scheduler.least_cost.noop_cost_fn'
+        ]
         FLAGS.noop_cost_fn_weight = 2
+
+        num = 1
+        request_spec = {}
+        hosts = self.sched.filter_hosts(num, request_spec)
+
         expected = [ dict(weight=2, hostname=hostname) for hostname, caps in hosts]
+        self.assertWeights(expected, num, request_spec, hosts)
+
+    def test_fill_first_cost_fn(self):
+        FLAGS.least_cost_scheduler_cost_functions = [
+            'nova.scheduler.least_cost.fill_first_cost_fn'
+        ]
+        FLAGS.fill_first_cost_fn_weight = 1
+
+        num = 1
+        request_spec = {}
+        hosts = self.sched.filter_hosts(num, request_spec)
+       
+        expected = []
+        for idx, (hostname, caps) in enumerate(hosts):
+            # Costs are normalized so over 10 hosts, each host with increasing
+            # free ram will cost 1/N more. Since the lowest cost host has some
+            # free ram, we add in the 1/N for the base_cost
+            weight = 0.1 + (0.1 * idx)
+            weight_dict = dict(weight=weight, hostname=hostname)
+            expected.append(weight_dict)
+
         self.assertWeights(expected, num, request_spec, hosts)

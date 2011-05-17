@@ -181,7 +181,7 @@ class TestCase(unittest.TestCase):
         wsgi.Server.start = _wrapped_start
 
     # Useful assertions
-    def assertDictMatch(self, d1, d2):
+    def assertDictMatch(self, d1, d2, approx_equal=False, tolerance=0.001):
         """Assert two dicts are equivalent.
 
         This is a 'deep' match in the sense that it handles nested
@@ -212,15 +212,24 @@ class TestCase(unittest.TestCase):
         for key in d1keys:
             d1value = d1[key]
             d2value = d2[key]
+            
+            try:
+                within_tolerance = abs(float(d1value) - float(d2value)) < tolerance
+            except ValueError:
+                # If both values aren't convertable to float, just ignore
+                within_tolerance = False
+
             if hasattr(d1value, 'keys') and hasattr(d2value, 'keys'):
                 self.assertDictMatch(d1value, d2value)
             elif 'DONTCARE' in (d1value, d2value):
+                continue
+            elif approx_equal and within_tolerance:
                 continue
             elif d1value != d2value:
                 raise_assertion("d1['%(key)s']=%(d1value)s != "
                                 "d2['%(key)s']=%(d2value)s" % locals())
 
-    def assertDictListMatch(self, L1, L2):
+    def assertDictListMatch(self, L1, L2, approx_equal=False, tolerance=0.001):
         """Assert a list of dicts are equivalent."""
         def raise_assertion(msg):
             L1str = str(L1)
@@ -236,4 +245,5 @@ class TestCase(unittest.TestCase):
                             'len(L2)=%(L2count)d' % locals())
 
         for d1, d2 in zip(L1, L2):
-            self.assertDictMatch(d1, d2)
+            self.assertDictMatch(d1, d2, approx_equal=approx_equal,
+                                 tolerance=tolerance)
