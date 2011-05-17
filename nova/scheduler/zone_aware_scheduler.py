@@ -78,7 +78,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             LOG.debug(_("Casted to compute %(host)s for run_instance")
                                 % locals())
         else:
-            # TODO(sandy) Provision in child zone ... 
+            # TODO(sandy) Provision in child zone ...
             LOG.warning(_("Provision to Child Zone not supported (yet)")
                                 % locals())
             pass
