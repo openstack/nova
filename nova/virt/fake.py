@@ -82,20 +82,21 @@ class FakeConnection(driver.ComputeDriver):
 
     def __init__(self):
         self.instances = {}
-        self.host_status = {'host_name-description': 'Fake Host',
+        self.host_status = {
+          'host_name-description': 'Fake Host',
           'host_hostname': 'fake-mini',
           'host_memory_total': 8000000000,
           'host_memory_overhead': 10000000,
           'host_memory_free': 7900000000,
           'host_memory_free_computed': 7900000000,
-          'host_other-config': {},
+          'host_other_config': {},
           'host_ip_address': '192.168.1.109',
           'host_cpu_info': {},
           'disk_available': 500000000000,
           'disk_total': 600000000000,
           'disk_used': 100000000000,
           'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
-          'host_name-label': 'fake-mini'}
+          'host_name_label': 'fake-mini'}
 
     @classmethod
     def instance(cls):

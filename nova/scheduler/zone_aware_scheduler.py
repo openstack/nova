@@ -22,6 +22,8 @@ across zones. There are two expansion points to this class for:
 
 import operator
 
+from nova import db
+from nova import rpc
 from nova import log as logging
 from nova.scheduler import api
 from nova.scheduler import driver
@@ -49,7 +51,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         # TODO(sandy): We'll have to look for richer specs at some point.
 
         if 'blob' in request_spec:
-            return self.provision_instance(context, topic, request_spec)
+            return self.provision_resource(context, request_spec,
+                                instance_id, kwargs)
 
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)
@@ -57,14 +60,28 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise driver.NoValidHost(_('No hosts were available'))
 
         for item in build_plan:
-            self.provision_instance(context, topic, item)
+            self.provision_resource(context, item, instance_id, kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
         return None
 
-    def provision_instance(context, topic, item):
-        """Create the requested instance in this Zone or a child zone."""
+    def provision_resource(self, context, item, instance_id, kwargs):
+        """Create the requested resource in this Zone or a child zone."""
+        if "hostname" in item:
+            host = item['hostname']
+            kwargs['instance_id'] = instance_id
+            rpc.cast(context,
+                     db.queue_get_for(context, "compute", host),
+                     {"method": "run_instance",
+                      "args": kwargs})
+            LOG.debug(_("Casted to compute %(host)s for run_instance")
+                                % locals())
+        else:
+            # TODO(sandy) Provision in child zone ... 
+            LOG.warning(_("Provision to Child Zone not supported (yet)")
+                                % locals())
+            pass
         return None
 
     def select(self, context, request_spec, *args, **kwargs):
@@ -93,7 +110,6 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise NotImplemented(_("Zone Aware Scheduler only understands "
                                    "Compute nodes (for now)"))
 
-        LOG.debug("specs = %s, ARGS = %s" % (request_spec, args, ))
         #TODO(sandy): how to infer this from OS API params?
         num_instances = 1
 

@@ -99,9 +99,10 @@ class InstanceTypeFilter(HostFilter):
             capabilities = services.get('compute', {})
             host_ram_mb = capabilities['host_memory_free']
             disk_bytes = capabilities['disk_available']
-            if host_ram_mb >= instance_type['memory_mb'] and \
-                disk_bytes >= instance_type['local_gb']:
-                    selected_hosts.append((host, capabilities))
+            spec_ram = instance_type['memory_mb']
+            spec_disk = instance_type['local_gb']
+            if host_ram_mb >= spec_ram and disk_bytes >= spec_disk:
+                selected_hosts.append((host, capabilities))
         return selected_hosts
 
 #host entries (currently) are like:
@@ -110,15 +111,15 @@ class InstanceTypeFilter(HostFilter):
 #    'host_memory_total': 8244539392,
 #    'host_memory_overhead': 184225792,
 #    'host_memory_free': 3868327936,
-#    'host_memory_free_computed': 3840843776},
-#    'host_other-config': {},
+#    'host_memory_free_computed': 3840843776,
+#    'host_other_config': {},
 #    'host_ip_address': '192.168.1.109',
 #    'host_cpu_info': {},
 #    'disk_available': 32954957824,
 #    'disk_total': 50394562560,
-#    'disk_used': 17439604736},
+#    'disk_used': 17439604736,
 #    'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
-#    'host_name-label': 'xs-mini'}
+#    'host_name_label': 'xs-mini'}
 
 # instance_type table has:
 #name = Column(String(255), unique=True)
@@ -307,10 +308,10 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
         # currently. Later we'll need to snoop for more detailed
         # host filter requests.
         instance_type = request_spec['instance_type']
-        query = driver.instance_type_to_filter(instance_type)
+        name, query = driver.instance_type_to_filter(instance_type)
         return driver.filter_hosts(self.zone_manager, query)
 
     def weigh_hosts(self, num, request_spec, hosts):
         """Derived classes must override this method and return
            a lists of hosts in [{weight, hostname}] format."""
-        return [dict(weight=1, hostname=hostname) for host, caps in hosts]
+        return [dict(weight=1, hostname=host) for host, caps in hosts]
