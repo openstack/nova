@@ -209,7 +209,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    instance_type_id = Column(String(255))
+    instance_type_id = Column(Integer)
 
     user_data = Column(Text)
 
