@@ -156,7 +156,8 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        image = self.image_service.show(context, image_id)
+        (image_service, service_image_id) = utils.get_image_service(image_id)
+        image = image_service.show(context, service_image_id)
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
@@ -176,9 +177,9 @@ class API(base.Base):
         logging.debug("Using Kernel=%s, Ramdisk=%s" %
                        (kernel_id, ramdisk_id))
         if kernel_id:
-            self.image_service.show(context, kernel_id)
+            image_service.show(context, kernel_id)
         if ramdisk_id:
-            self.image_service.show(context, ramdisk_id)
+            image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -515,6 +516,8 @@ class API(base.Base):
                       'user_id': str(context.user_id)}
         sent_meta = {'name': name, 'is_public': False,
                      'properties': properties}
+        # TODO(wwolf): not sure if we need to use
+        # utils.get_image_service() here ?
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
