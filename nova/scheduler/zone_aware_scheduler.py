@@ -51,8 +51,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         # TODO(sandy): We'll have to look for richer specs at some point.
 
         if 'blob' in request_spec:
-            return self.provision_resource(context, request_spec,
-                                instance_id, kwargs)
+            self.provision_resource(context, request_spec, instance_id, kwargs)
+            return None
 
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)
@@ -82,7 +82,6 @@ class ZoneAwareScheduler(driver.Scheduler):
             LOG.warning(_("Provision to Child Zone not supported (yet)")
                                 % locals())
             pass
-        return None
 
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
