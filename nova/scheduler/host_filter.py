@@ -313,8 +313,3 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
         instance_type = request_spec['instance_type']
         name, query = driver.instance_type_to_filter(instance_type)
         return driver.filter_hosts(self.zone_manager, query)
-
-    def weigh_hosts(self, num, request_spec, hosts):
-        """Derived classes must override this method and return
-           a lists of hosts in [{weight, hostname}] format."""
-        return [dict(weight=1, hostname=host) for host, caps in hosts]
