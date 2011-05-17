@@ -53,9 +53,11 @@ class LimitsController(common.OpenstackController):
             "attributes": {
                 "limit": ["verb", "URI", "uri", "regex", "value", "unit",
                     "resetTime", "next-available", "remaining", "name"],
+                "absolute_limit": ["limit", "value"],
             },
             "plurals": {
                 "rate": "limit",
+                "absolute": "absolute_limit",
             },
         },
     }
@@ -64,6 +66,9 @@ class LimitsController(common.OpenstackController):
         """
         Return all global and rate limit information.
         """
+        # TODO(alex.meade) make this work
+        #project_quota = quota.get_project_quota(...)
+        #abs_limits = project_quota.limits
         abs_limits = {}
         rate_limits = req.environ.get("nova.limits", [])
 
