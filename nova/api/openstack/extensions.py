@@ -410,8 +410,11 @@ class ExtensionManager(object):
 
 
 class RequestExtension(object):
-    """Provide a way to handle custom request data that is sent to core
-       nova OpenStack API controllers.
+    """Extend requests and responses of core nova OpenStack API controllers.
+
+    Provide a way to add data to responses and handle custom request data
+    that is sent to core nova OpenStack API controllers.
+
     """
     def __init__(self, method, url_route, handler):
         self.url_route = url_route
