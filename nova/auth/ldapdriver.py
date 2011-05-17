@@ -182,7 +182,7 @@ class LdapDriver(object):
     @sanitize
     def get_user_from_access_key(self, access):
         """Retrieve user by access key"""
-        cache_key = 'uak_dn_%s'%(access,)
+        cache_key = 'uak_dn_%s' % (access,)
         user_dn = self.mc.get(cache_key)
         if user_dn:
             user = self.__to_user(
@@ -205,7 +205,8 @@ class LdapDriver(object):
     def get_project(self, pid):
         """Retrieve project by id"""
         dn = self.__project_to_dn(pid, search=False)
-        attr = self.__find_object(dn, LdapDriver.project_pattern, scope=self.ldap.SCOPE_BASE)
+        attr = self.__find_object(dn, LdapDriver.project_pattern,
+                                  scope=self.ldap.SCOPE_BASE)
         return self.__to_project(attr)
 
     @sanitize
