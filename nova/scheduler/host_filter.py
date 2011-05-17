@@ -42,6 +42,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.scheduler import zone_aware_scheduler
+from nova import utils
 
 LOG = logging.getLogger('nova.scheduler.host_filter')
 
@@ -283,11 +284,13 @@ def choose_driver(driver_name=None):
 
     if not driver_name:
         driver_name = FLAGS.default_host_filter_driver
-    # FIXME(sirp): use utils.import_class here
-    for driver in DRIVERS:
-        if "%s.%s" % (driver.__module__, driver.__name__) == driver_name:
-            return driver()
-    raise exception.SchedulerHostFilterDriverNotFound(driver_name=driver_name)
+
+    try:
+        driver = utils.import_object(driver_name)
+        return driver
+    except exception.ClassNotFound:
+        raise exception.SchedulerHostFilterDriverNotFound(
+            driver_name=driver_name)
 
 
 class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
