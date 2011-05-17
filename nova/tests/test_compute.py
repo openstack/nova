@@ -334,6 +334,28 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_finish_resize(self):
+        """Contrived test to ensure finish_resize doesn't raise anything"""
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+        try:
+            self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+        except KeyError, e:
+            # Only catch key errors. We want other reasons for the test to
+            # fail to actually error out so we don't obscure anything
+            self.fail()
+
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
