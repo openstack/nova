@@ -13,6 +13,7 @@ def upgrade(migrate_engine):
     for instance in migrate_engine.execute(instances.select()):
         if instance.instance_type_id is None:
             types[instance.id] = None
+            continue
         try:
             types[instance.id] = int(instance.instance_type_id)
         except ValueError:
