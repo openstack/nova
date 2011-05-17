@@ -41,7 +41,7 @@ import json
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import utils
+from nova.scheduler import zone_aware_scheduler
 
 LOG = logging.getLogger('nova.scheduler.host_filter')
 
@@ -83,8 +83,8 @@ class AllHostsFilter(HostFilter):
                for host, services in zone_manager.service_states.iteritems()]
 
 
-class FlavorFilter(HostFilter):
-    """HostFilter driver hard-coded to work with flavors."""
+class InstanceTypeFilter(HostFilter):
+    """HostFilter driver hard-coded to work with InstanceType records."""
 
     def instance_type_to_filter(self, instance_type):
         """Use instance_type to filter hosts."""
@@ -98,9 +98,10 @@ class FlavorFilter(HostFilter):
             capabilities = services.get('compute', {})
             host_ram_mb = capabilities['host_memory_free']
             disk_bytes = capabilities['disk_available']
-            if host_ram_mb >= instance_type['memory_mb'] and \
-                disk_bytes >= instance_type['local_gb']:
-                    selected_hosts.append((host, capabilities))
+            spec_ram = instance_type['memory_mb']
+            spec_disk = instance_type['local_gb']
+            if host_ram_mb >= spec_ram and disk_bytes >= spec_disk:
+                selected_hosts.append((host, capabilities))
         return selected_hosts
 
 #host entries (currently) are like:
@@ -109,15 +110,15 @@ class FlavorFilter(HostFilter):
 #    'host_memory_total': 8244539392,
 #    'host_memory_overhead': 184225792,
 #    'host_memory_free': 3868327936,
-#    'host_memory_free_computed': 3840843776},
-#    'host_other-config': {},
+#    'host_memory_free_computed': 3840843776,
+#    'host_other_config': {},
 #    'host_ip_address': '192.168.1.109',
 #    'host_cpu_info': {},
 #    'disk_available': 32954957824,
 #    'disk_total': 50394562560,
-#    'disk_used': 17439604736},
+#    'disk_used': 17439604736,
 #    'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
-#    'host_name-label': 'xs-mini'}
+#    'host_name_label': 'xs-mini'}
 
 # instance_type table has:
 #name = Column(String(255), unique=True)
@@ -271,7 +272,7 @@ class JsonFilter(HostFilter):
         return hosts
 
 
-DRIVERS = [AllHostsFilter, FlavorFilter, JsonFilter]
+DRIVERS = [AllHostsFilter, InstanceTypeFilter, JsonFilter]
 
 
 def choose_driver(driver_name=None):
@@ -282,7 +283,35 @@ def choose_driver(driver_name=None):
 
     if not driver_name:
         driver_name = FLAGS.default_host_filter_driver
+    # FIXME(sirp): use utils.import_class here
     for driver in DRIVERS:
         if "%s.%s" % (driver.__module__, driver.__name__) == driver_name:
             return driver()
     raise exception.SchedulerHostFilterDriverNotFound(driver_name=driver_name)
+
+
+class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
+    """The HostFilterScheduler uses the HostFilter drivers to filter
+    hosts for weighing. The particular driver used may be passed in
+    as an argument or the default will be used.
+
+    request_spec = {'filter_driver': <Filter Driver name>,
+                    'instance_type': <InstanceType dict>}
+    """
+
+    def filter_hosts(self, num, request_spec):
+        """Filter the full host list (from the ZoneManager)"""
+        driver_name = request_spec.get('filter_driver', None)
+        driver = choose_driver(driver_name)
+
+        # TODO(sandy): We're only using InstanceType-based specs
+        # currently. Later we'll need to snoop for more detailed
+        # host filter requests.
+        instance_type = request_spec['instance_type']
+        name, query = driver.instance_type_to_filter(instance_type)
+        return driver.filter_hosts(self.zone_manager, query)
+
+    def weigh_hosts(self, num, request_spec, hosts):
+        """Derived classes must override this method and return
+           a lists of hosts in [{weight, hostname}] format."""
+        return [dict(weight=1, hostname=host) for host, caps in hosts]
