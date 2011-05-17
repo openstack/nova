@@ -25,7 +25,6 @@ import M2Crypto
 import os
 import pickle
 import subprocess
-import tempfile
 import uuid
 
 from nova import context
@@ -1163,18 +1162,17 @@ class SimpleDH(object):
         return mpi
 
     def _run_ssl(self, text, which):
-        base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
-                '-a -pass pass:%(shared)s -nosalt %(dec_flag)s')
+        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
+                '-nosalt %(dec_flag)s')
         if which.lower()[0] == 'd':
             dec_flag = ' -d'
         else:
             dec_flag = ''
-        fd, tmpfile = tempfile.mkstemp()
-        os.close(fd)
-        file(tmpfile, 'w').write(text)
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
+        proc.stdin.write(text)
+        proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
