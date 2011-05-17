@@ -46,8 +46,8 @@ flags.DEFINE_integer('quota_max_injected_file_path_bytes', 255,
                      'number of bytes allowed per injected file path')
 
 
-def get_quota(context, project_id):
-    rval = {
+def _get_default_quota():
+    defaults = {
         'instances': FLAGS.quota_instances,
         'cores': FLAGS.quota_cores,
         'ram': FLAGS.quota_ram,
@@ -56,7 +56,15 @@ def get_quota(context, project_id):
         'floating_ips': FLAGS.quota_floating_ips,
         'metadata_items': FLAGS.quota_metadata_items,
     }
+    # -1 in the quota flags means unlimited
+    for key in defaults.keys():
+        if defaults[key] == -1:
+            defaults[key] = None
+    return defaults
 
+
+def get_quota(context, project_id):
+    rval = _get_default_quota()
     quota = db.quota_get_all_by_project(context, project_id)
     for key in rval.keys():
         if key in quota:
