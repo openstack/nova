@@ -28,6 +28,8 @@ flags.DEFINE_integer('quota_instances', 10,
                      'number of instances allowed per project')
 flags.DEFINE_integer('quota_cores', 20,
                      'number of instance cores allowed per project')
+flags.DEFINE_integer('quota_ram', 50 * 1024,
+                     'megabytes of instance ram allowed per project')
 flags.DEFINE_integer('quota_volumes', 10,
                      'number of volumes allowed per project')
 flags.DEFINE_integer('quota_gigabytes', 1000,
@@ -44,14 +46,25 @@ flags.DEFINE_integer('quota_max_injected_file_path_bytes', 255,
                      'number of bytes allowed per injected file path')
 
 
-def get_quota(context, project_id):
-    rval = {'instances': FLAGS.quota_instances,
-            'cores': FLAGS.quota_cores,
-            'volumes': FLAGS.quota_volumes,
-            'gigabytes': FLAGS.quota_gigabytes,
-            'floating_ips': FLAGS.quota_floating_ips,
-            'metadata_items': FLAGS.quota_metadata_items}
+def _get_default_quota():
+    defaults = {
+        'instances': FLAGS.quota_instances,
+        'cores': FLAGS.quota_cores,
+        'ram': FLAGS.quota_ram,
+        'volumes': FLAGS.quota_volumes,
+        'gigabytes': FLAGS.quota_gigabytes,
+        'floating_ips': FLAGS.quota_floating_ips,
+        'metadata_items': FLAGS.quota_metadata_items,
+    }
+    # -1 in the quota flags means unlimited
+    for key in defaults.keys():
+        if defaults[key] == -1:
+            defaults[key] = None
+    return defaults
 
+
+def get_quota(context, project_id):
+    rval = _get_default_quota()
     quota = db.quota_get_all_by_project(context, project_id)
     for key in rval.keys():
         if key in quota:
@@ -70,15 +83,18 @@ def allowed_instances(context, num_instances, instance_type):
     project_id = context.project_id
     context = context.elevated()
     num_cores = num_instances * instance_type['vcpus']
-    used_instances, used_cores = db.instance_data_get_for_project(context,
-                                                                  project_id)
+    num_ram = num_instances * instance_type['memory_mb']
+    usage = db.instance_data_get_for_project(context, project_id)
+    used_instances, used_cores, used_ram = usage
     quota = get_quota(context, project_id)
     allowed_instances = _get_request_allotment(num_instances, used_instances,
                                                quota['instances'])
     allowed_cores = _get_request_allotment(num_cores, used_cores,
                                            quota['cores'])
+    allowed_ram = _get_request_allotment(num_ram, used_ram, quota['ram'])
     allowed_instances = min(allowed_instances,
-                            int(allowed_cores // instance_type['vcpus']))
+                            allowed_cores // instance_type['vcpus'],
+                            allowed_ram // instance_type['memory_mb'])
     return min(num_instances, allowed_instances)
 
 

@@ -802,12 +802,13 @@ def instance_create(context, values):
 def instance_data_get_for_project(context, project_id):
     session = get_session()
     result = session.query(func.count(models.Instance.id),
-                           func.sum(models.Instance.vcpus)).\
+                           func.sum(models.Instance.vcpus),
+                           func.sum(models.Instance.memory_mb)).\
                      filter_by(project_id=project_id).\
                      filter_by(deleted=False).\
                      first()
     # NOTE(vish): convert None to 0
-    return (result[0] or 0, result[1] or 0)
+    return (result[0] or 0, result[1] or 0, result[2] or 0)
 
 
 @require_context
