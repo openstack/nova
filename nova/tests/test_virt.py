@@ -642,7 +642,7 @@ class LibvirtConnTestCase(test.TestCase):
         try:
             conn.spawn(instance, network_info)
         except Exception, e:
-            count = (0 <= e.message.find('Unexpected method call'))
+            count = (0 <= str(e.message).find('Unexpected method call'))
 
         self.assertTrue(count)
 

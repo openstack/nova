@@ -53,6 +53,9 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)
+        if not build_plan:
+            raise driver.NoValidHost(_('No hosts were available'))
+
         for item in build_plan:
             self.provision_instance(context, topic, item)
 
@@ -67,15 +70,14 @@ class ZoneAwareScheduler(driver.Scheduler):
         anything about the children."""
         return self._schedule(context, "compute", request_spec, *args, **kwargs)
 
+    # TODO(sandy): We're only focused on compute instances right now,
+    # so we don't implement the default "schedule()" method required
+    # of Schedulers. 
     def schedule(self, context, topic, request_spec, *args, **kwargs):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
-        res = self._schedule(context, topic, request_spec, *args, **kwargs)
-        # TODO(sirp): should this be a host object rather than a weight-dict?
-        if not res:
-            raise driver.NoValidHost(_('No hosts were available'))
-        return res[0]
+        raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):
         """Returns a list of hosts that meet the required specs,

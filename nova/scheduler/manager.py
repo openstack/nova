@@ -83,11 +83,15 @@ class SchedulerManager(manager.Manager):
         except AttributeError:
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
+        if not host:
+            LOG.debug(_("%(topic)s %(method)s handled in Scheduler") % locals())
+            return
+
         rpc.cast(context,
                  db.queue_get_for(context, topic, host),
                  {"method": method,
                   "args": kwargs})
-        LOG.debug(_("Casting to %(topic)s %(host)s for %(method)s") % locals())
+        LOG.debug(_("Casted to %(topic)s %(host)s for %(method)s") % locals())
 
     # NOTE (masumotok) : This method should be moved to nova.api.ec2.admin.
     #                    Based on bexar design summit discussion,
