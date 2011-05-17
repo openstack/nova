@@ -85,9 +85,9 @@ class HostFilterTestCase(test.TestCase):
                         'nova.scheduler.host_filter.AllHostsFilter')
         # Test valid driver ...
         driver = host_filter.choose_driver(
-                        'nova.scheduler.host_filter.FlavorFilter')
+                        'nova.scheduler.host_filter.InstanceTypeFilter')
         self.assertEquals(driver._full_name(),
-                        'nova.scheduler.host_filter.FlavorFilter')
+                        'nova.scheduler.host_filter.InstanceTypeFilter')
         # Test invalid driver ...
         try:
             host_filter.choose_driver('does not exist')
@@ -103,11 +103,12 @@ class HostFilterTestCase(test.TestCase):
         for host, capabilities in hosts:
             self.assertTrue(host.startswith('host'))
 
-    def test_flavor_driver(self):
-        driver = host_filter.FlavorFilter()
+    def test_instance_type_driver(self):
+        driver = host_filter.InstanceTypeFilter()
         # filter all hosts that can support 50 ram and 500 disk
         name, cooked = driver.instance_type_to_filter(self.instance_type)
-        self.assertEquals('nova.scheduler.host_filter.FlavorFilter', name)
+        self.assertEquals('nova.scheduler.host_filter.InstanceTypeFilter',
+                          name)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]

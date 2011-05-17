@@ -59,20 +59,25 @@ class ZoneAwareScheduler(driver.Scheduler):
         for item in build_plan:
             self.provision_instance(context, topic, item)
 
+        # Returning None short-circuits the routing to Compute (since
+        # we've already done it here)
+        return None
+
     def provision_instance(context, topic, item):
         """Create the requested instance in this Zone or a child zone."""
-        pass
+        return None
 
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
         anything about the children."""
-        return self._schedule(context, "compute", request_spec, *args, **kwargs)
+        return self._schedule(context, "compute", request_spec,
+                              *args, **kwargs)
 
     # TODO(sandy): We're only focused on compute instances right now,
     # so we don't implement the default "schedule()" method required
-    # of Schedulers. 
+    # of Schedulers.
     def schedule(self, context, topic, request_spec, *args, **kwargs):
         """The schedule() contract requires we return the one
         best-suited host for this request.

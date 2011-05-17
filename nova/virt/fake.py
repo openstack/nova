@@ -478,5 +478,3 @@ class FakeConnection(driver.ComputeDriver):
     def get_host_stats(self, refresh=False):
         """Return fake Host Status of ram, disk, network."""
         return self.host_status
-
-

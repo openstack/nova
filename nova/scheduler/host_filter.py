@@ -292,11 +292,15 @@ def choose_driver(driver_name=None):
 class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     """The HostFilterScheduler uses the HostFilter drivers to filter
     hosts for weighing. The particular driver used may be passed in
-    as an argument or the default will be used."""
+    as an argument or the default will be used.
+
+    request_spec = {'filter_driver': <Filter Driver name>,
+                    'instance_type': <InstanceType dict>}
+    """
 
     def filter_hosts(self, num, request_spec):
         """Filter the full host list (from the ZoneManager)"""
-        driver_name = request_spec.get("filter_driver", None)
+        driver_name = request_spec.get('filter_driver', None)
         driver = choose_driver(driver_name)
 
         # TODO(sandy): We're only using InstanceType-based specs
@@ -309,4 +313,4 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     def weigh_hosts(self, num, request_spec, hosts):
         """Derived classes must override this method and return
            a lists of hosts in [{weight, hostname}] format."""
-        return []
+        return [dict(weight=1, hostname=hostname) for host, caps in hosts]

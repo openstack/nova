@@ -84,7 +84,8 @@ class SchedulerManager(manager.Manager):
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         if not host:
-            LOG.debug(_("%(topic)s %(method)s handled in Scheduler") % locals())
+            LOG.debug(_("%(topic)s %(method)s handled in Scheduler")
+                        % locals())
             return
 
         rpc.cast(context,
