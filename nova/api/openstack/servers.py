@@ -142,7 +142,10 @@ class Controller(common.OpenstackController):
 
         requested_image_id = self._image_id_from_req_data(env)
         try:
-            image_id = common.get_image_id_from_image_hash(self._image_service,
+            (image_service, service_image_id) = utils.get_image_service(
+                requested_image_id)
+
+            image_id = common.get_image_id_from_image_hash(image_service,
                 context, requested_image_id)
         except:
             msg = _("Can not find requested image")
@@ -556,7 +559,8 @@ class Controller(common.OpenstackController):
         associated kernel and ramdisk image IDs.
         """
         context = req.environ['nova.context']
-        image_meta = self._image_service.show(context, image_id)
+        (image_service, service_image_id) = utils.get_image_service(image_id)
+        image_meta = image_service.show(context, service_image_id)
         # NOTE(sirp): extracted to a separate method to aid unit-testing, the
         # new method doesn't need a request obj or an ImageService stub
         kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
