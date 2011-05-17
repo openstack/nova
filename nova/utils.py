@@ -724,3 +724,51 @@ def parse_server_string(server_str):
     except:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
+
+
+def parse_image_ref(image_ref):
+    """
+    Parse an imageRef and return (id, host, port)
+
+    If the image_ref passed in is an integer, it will
+    return (image_ref, None, None), otherwise it will
+    return (id, host, port)
+
+    image_ref - imageRef for an image
+
+    """
+
+    if is_int(image_ref):
+        return (image_ref, None, None)
+
+    o = urlparse(image_ref)
+    # Default to port 80 if not passed, should this be 9292?
+    port = o.port or 80
+    host = o.netloc.split(':', 1)[0]
+    id = o.path.split('/')[-1]
+
+    return (id, host, port)
+
+
+def get_image_service(image_ref):
+    """
+    Get the proper image_service for an image_id
+
+    image_ref - image ref/id for an image
+    """
+    
+    (image_id, host, port) = parse_image_ref(image_ref)
+
+    image_service = None
+
+    if host:
+        GlanceImageService = utils.import_class(FLAGS.glance_image_service)
+        GlanceClient = utils.import_class('glance.client.Client')
+
+        glance_client = GlanceClient(host, port)
+        image_service = GlanceImageService(glance_client)
+    else:
+        ImageService = utils.import_class(FLAGS.image_service)
+        image_service = ImageService()
+
+    return (image_id, image_service)
