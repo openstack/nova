@@ -110,7 +110,7 @@ class FlagValues(gflags.FlagValues):
         return name in self.__dict__['__dirty']
 
     def ClearDirty(self):
-        self.__dict__['__is_dirty'] = []
+        self.__dict__['__dirty'] = []
 
     def WasAlreadyParsed(self):
         return self.__dict__['__was_already_parsed']
