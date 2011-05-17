@@ -232,9 +232,12 @@ def default_flagfile(filename='nova.conf'):
             # turn relative filename into an absolute path
             script_dir = os.path.dirname(inspect.stack()[-1][1])
             filename = os.path.abspath(os.path.join(script_dir, filename))
-        if os.path.exists(filename):
-            flagfile = ['--flagfile=%s' % filename]
-            sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
+        if not os.path.exists(filename):
+            filename = "./nova.conf"
+            if not os.path.exists(filename):
+                filename = '/etc/nova/nova.conf'
+        flagfile = ['--flagfile=%s' % filename]
+        sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
 
 
 def debug(arg):
@@ -301,26 +304,6 @@ def  get_my_linklocal(interface):
     except Exception as ex:
         raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
                                 " :%(ex)s") % locals())
-
-
-def to_global_ipv6(prefix, mac):
-    try:
-        mac64 = netaddr.EUI(mac).eui64().words
-        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-        mac64_addr = netaddr.IPAddress(int_addr)
-        maskIP = netaddr.IPNetwork(prefix).ip
-        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
-                                                                    format()
-    except TypeError:
-        raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
-
-
-def to_mac(ipv6_address):
-    address = netaddr.IPAddress(ipv6_address)
-    mask1 = netaddr.IPAddress('::ffff:ffff:ffff:ffff')
-    mask2 = netaddr.IPAddress('::0200:0:0:0')
-    mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
-    return ':'.join(['%02x' % i for i in mac64[0:3] + mac64[5:8]])
 
 
 def utcnow():
@@ -459,6 +442,8 @@ class LoopingCall(object):
             try:
                 while self._running:
                     self.f(*self.args, **self.kw)
+                    if not self._running:
+                        break
                     greenthread.sleep(interval)
             except LoopingCallDone, e:
                 self.stop()

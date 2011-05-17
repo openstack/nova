@@ -57,6 +57,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import utils
 from nova import vnc
@@ -184,8 +185,9 @@ def _get_network_info(instance):
         def ip6_dict():
             prefix = network['cidr_v6']
             mac = instance['mac_address']
+            project_id = instance['project_id']
             return  {
-                'ip': utils.to_global_ipv6(prefix, mac),
+                'ip': ipv6.to_global(prefix, mac, project_id),
                 'netmask': network['netmask_v6'],
                 'enabled': '1'}
 

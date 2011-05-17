@@ -1,8 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
-# All Rights Reserved.
+# Copyright (c) 2011 Openstack, LLC.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -16,17 +14,28 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
+from nova import flags
+from nova import utils
 
 
-def ec2_id_to_id(ec2_id):
-    """Convert an ec2 ID (i-[base 16 number]) to an instance id (int)"""
-    try:
-        return int(ec2_id.split('-')[-1], 16)
-    except ValueError:
-        raise exception.InvalidEc2Id(ec2_id=ec2_id)
+FLAGS = flags.FLAGS
+flags.DEFINE_string('ipv6_backend',
+                    'rfc2462',
+                    'Backend to use for IPv6 generation')
 
 
-def id_to_ec2_id(instance_id, template='i-%08x'):
-    """Convert an instance ID (int) to an ec2 ID (i-[base 16 number])"""
-    return template % instance_id
+def reset_backend():
+    global IMPL
+    IMPL = utils.LazyPluggable(FLAGS['ipv6_backend'],
+                rfc2462='nova.ipv6.rfc2462',
+                account_identifier='nova.ipv6.account_identifier')
+
+
+def to_global(prefix, mac, project_id):
+    return IMPL.to_global(prefix, mac, project_id)
+
+
+def to_mac(ipv6_address):
+    return IMPL.to_mac(ipv6_address)
+
+reset_backend()
