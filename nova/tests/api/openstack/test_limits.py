@@ -199,6 +199,9 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                          5, 60).display(),
         ]
         request.environ["nova.limits"] = _limits
+        #set absolute limits here
+        limits.TEST_ABSOLUTE_LIMITS = {"ram": 512, "instances": 5}
+
         return request
 
     def test_empty_index_json(self):
@@ -208,7 +211,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         expected = {
             "limits": {
                 "rate": [],
-                "absolute": [],
+                "absolute": {},
             },
         }
         body = json.loads(response.body)
@@ -257,7 +260,10 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                     },
 
                 ],
-                "absolute": [],
+                "absolute": {
+                    "maxTotalRAMSize": 512,
+                    "maxTotalInstances": 5,
+                    },
             },
         }
         body = json.loads(response.body)

@@ -42,6 +42,9 @@ PER_MINUTE = 60
 PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
 
+#TODO remove when mark catches up
+TEST_ABSOLUTE_LIMITS = {}
+
 
 class LimitsController(common.OpenstackController):
     """
@@ -53,7 +56,8 @@ class LimitsController(common.OpenstackController):
             "attributes": {
                 "limit": ["verb", "URI", "uri", "regex", "value", "unit",
                     "resetTime", "next-available", "remaining", "name"],
-                "absolute_limit": ["limit", "value"],
+                "absolute_limit": ["maxTotalRAMSize", "maxTotalInstances",
+                "maxTotalCores"],
             },
             "plurals": {
                 "rate": "limit",
@@ -69,7 +73,8 @@ class LimitsController(common.OpenstackController):
         # TODO(alex.meade) make this work
         #project_quota = quota.get_project_quota(...)
         #abs_limits = project_quota.limits
-        abs_limits = {}
+        #TODO remove when mark catches up
+        abs_limits = TEST_ABSOLUTE_LIMITS
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)

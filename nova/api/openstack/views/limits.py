@@ -112,25 +112,19 @@ class ViewBuilderV11(ViewBuilder):
         For example: {"ram": 512, "gigabytes": 1024}.
 
         """
-        limits = []
+        limits = {}
         #loops through absolute limits and their values
         for absolute_limit_key, absolute_limit_value \
             in absolute_limits.items():
-            _abs_limit = None
 
-            # check for existing key
-            for limit in limits:
-                if limit["limit"] == absolute_limit_key:
-                    _abs_limit = limit
-                    break
+            _abs_limit_map = {
+                "ram": "maxTotalRAMSize",
+                "instances": "maxTotalInstances",
+                "cores": "maxTotalCores",
+            }
 
-            # ensure we have a key if we didn't find one
-            if not _abs_limit:
-                _abs_limit = {
-                    "limit": absolute_limit_key,
-                    "value": absolute_limit_value,
-                }
-
-            limits.append(_abs_limit)
+            if not absolute_limit_value is None:
+                    limits[_abs_limit_map[absolute_limit_key]] \
+                    = absolute_limit_value
 
         return limits
