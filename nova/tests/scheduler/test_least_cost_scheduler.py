@@ -63,15 +63,13 @@ class WeightedSumTestCase(test.TestCase):
         self.assertEqual(expected, costs)
 
 
-# TODO(sirp): unify this with test_host_filter tests? possibility of sharing
-# test setup code
-class FakeZoneManager:
-    pass
-
-
 class LeastCostSchedulerTestCase(test.TestCase):
     def setUp(self):
         super(LeastCostSchedulerTestCase, self).setUp()
+
+        class FakeZoneManager:
+            pass
+
         zone_manager = FakeZoneManager()
 
         states = test_zone_aware_scheduler.fake_zone_manager_service_states(

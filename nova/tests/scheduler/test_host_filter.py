@@ -27,10 +27,6 @@ from nova.tests.scheduler import test_zone_aware_scheduler
 FLAGS = flags.FLAGS
 
 
-class FakeZoneManager:
-    pass
-
-
 class HostFilterTestCase(test.TestCase):
     """Test case for host filter drivers."""
 
@@ -47,6 +43,9 @@ class HostFilterTestCase(test.TestCase):
                 swap=500,
                 rxtx_quota=30000,
                 rxtx_cap=200)
+
+        class FakeZoneManager:
+            pass
 
         self.zone_manager = FakeZoneManager()
 
