@@ -208,7 +208,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         expected = {
             "limits": {
                 "rate": [],
-                "absolute": {},
+                "absolute": [],
             },
         }
         body = json.loads(response.body)
@@ -257,7 +257,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                     },
 
                 ],
-                "absolute": {},
+                "absolute": [],
             },
         }
         body = json.loads(response.body)

@@ -36,6 +36,15 @@ class ViewBuilder(object):
 
         return output
 
+    def _build_absolute_limits(self, absolute_limits):
+        raise NotImplementedError()
+
+    def _build_rate_limits(self, rate_limits):
+        raise NotImplementedError()
+
+    def _build_rate_limit(self, rate_limit):
+        raise NotImplementedError()
+
 
 class ViewBuilderV10(ViewBuilder):
     """Openstack API v1.0 limits view builder."""
@@ -96,5 +105,32 @@ class ViewBuilderV11(ViewBuilder):
             "next-available": rate_limit["resetTime"],
         }
 
-    def _build_absolute_limits(self, absolute_limit):
-        return {}
+    def _build_absolute_limits(self, absolute_limits):
+        """Builder for absolute limits
+
+        absolute_limits should be given as a dict of limits.
+        For example: {"ram": 512, "gigabytes": 1024}.
+
+        """
+        limits = []
+        #loops through absolute limits and their values
+        for absolute_limit_key, absolute_limit_value \
+            in absolute_limits.items():
+            _abs_limit = None
+
+            # check for existing key
+            for limit in limits:
+                if limit["limit"] == absolute_limit_key:
+                    _abs_limit = limit
+                    break
+
+            # ensure we have a key if we didn't find one
+            if not _abs_limit:
+                _abs_limit = {
+                    "limit": absolute_limit_key,
+                    "value": absolute_limit_value,
+                }
+
+            limits.append(_abs_limit)
+
+        return limits
