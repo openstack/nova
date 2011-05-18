@@ -21,6 +21,7 @@ across zones. There are two expansion points to this class for:
 """
 
 import operator
+import M2Crypto
 
 from nova import db
 from nova import rpc
@@ -51,7 +52,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         # TODO(sandy): We'll have to look for richer specs at some point.
 
         if 'blob' in request_spec:
-            self.provision_resource(context, request_spec, instance_id, kwargs)
+            self.provision_resource(context, request_spec, instance_id,
+                                    request_spec, kwargs)
             return None
 
         # Create build plan and provision ...
@@ -60,29 +62,96 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise driver.NoValidHost(_('No hosts were available'))
 
         for item in build_plan:
-            self.provision_resource(context, item, instance_id, kwargs)
+            self.provision_resource(context, item, instance_id, request_spec,
+                                    kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
         return None
 
-    def provision_resource(self, context, item, instance_id, kwargs):
+    def provision_resource(self, context, item, instance_id, request_spec,
+                           kwargs):
         """Create the requested resource in this Zone or a child zone."""
         if "hostname" in item:
-            host = item['hostname']
-            kwargs['instance_id'] = instance_id
-            rpc.cast(context,
-                     db.queue_get_for(context, "compute", host),
-                     {"method": "run_instance",
-                      "args": kwargs})
-            LOG.debug(_("Casted to compute %(host)s for run_instance")
-                                % locals())
-        else:
-            # TODO(sandy) Provision in child zone ...
-            LOG.warning(_("Provision to Child Zone not supported (yet)")
-                                % locals())
+            self._provision_resource_locally(context, item, instance_id,
+                            kwargs)
+           return
+        
+        self._provision_resource_in_child_zone(context, item, instance_id,
+                                               request_spec, kwargs)
+
+    def _provision_resource_locally(self, context, item, instance_id, kwargs):
+        """Create the requested resource in this Zone."""
+        host = item['hostname']
+        kwargs['instance_id'] = instance_id
+        rpc.cast(context,
+                 db.queue_get_for(context, "compute", host),
+                 {"method": "run_instance",
+                  "args": kwargs})
+        LOG.debug(_("Casted to compute %(host)s for run_instance")
+                            % locals())
+
+    def _provision_resource_in_child_zone(self, context, item, instance_id,
+                                          request_spec, kwargs):
+        """Create the requested resource in a child zone."""
+        # Start by attempting to decrypt the blob to see if this
+        # request is:
+        # 1. valid, 
+        # 2. intended for this zone or a child zone.
+        # if 2 ... forward call to child zone.
+        blob = item['blob']
+        decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
+        host_info = None
+        try:
+            json_entry = decryptor(blob)
+            host_info = json.dumps(entry)
+        except M2Crypto.EVP.EVPError:
             pass
 
+        if not host_info:
+            raise exception.Invalid(_("Ill-formed or incorrectly "
+                            "routed 'blob' data sent "
+                            "to instance create request.") % locals())
+
+        # Valid data ... is it for us?
+        if 'child_zone' in host_info and 'child_blob' in host_info:
+            self._ask_child_zone_to_create_instance(context, host_info,
+                                                    request_spec, kwargs)
+        else:
+            self._provision_resource_locally(context, host_info,
+                                             instance_id, kwargs)
+
+    def _ask_child_zone_to_create_instance(self, zone_info, request_spec,
+                                           kwargs):
+
+        # Note: we have to reverse engineer from our args to get back the
+        # image, flavor, ipgroup, etc. since the original call could have
+        # come in from EC2 (which doesn't use these things).
+        instance_type = request_spec['instance_type']
+        instance_properties = request_spec['instance_properties']
+
+        name = instance_properties['display_name']
+        image_id = instance_properties['image_id'])
+        flavor_id = instance_type['flavor_id']
+        meta = instance_type['metadata']
+
+        files = kwargs['injected_files']
+        ipgroup = None  # Not supported in OS API ... yet
+        
+        child_zone = zone_info['child_zone']
+        child_blob = zone_info['child_blob']
+        zone = db.zone_get(child_zone)
+        url = zone.api_url
+        nova = None
+        try:
+            nova = novaclient.OpenStack(zone.username, zone.password, url)
+            nova.authenticate()
+        except novaclient.exceptions.BadRequest, e:
+             raise exception.NotAuthorized(_("Bad credentials attempting "
+                            "to talk to zone at %(url)s.") % locals())
+                            
+        nova.servers.create(name, image, flavor, ipgroup, meta, files)
+        
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any

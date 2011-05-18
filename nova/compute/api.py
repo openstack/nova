@@ -134,7 +134,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None):
+               injected_files=None, zone_blob=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
@@ -263,11 +263,13 @@ class API(base.Base):
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
                                "request_spec": {
-                                        'instance_type': instance_type,
-                                        'filter_driver':
-                                            'nova.scheduler.host_filter.'
-                                            'InstanceTypeFilter'
-                                    },
+                                   'instance_properties': instance,
+                                   'instance_type': instance_type,
+                                   'filter_driver':
+                                       'nova.scheduler.host_filter.'
+                                       'InstanceTypeFilter',
+                                   'blob': zone_blob
+                                },
                                "availability_zone": availability_zone,
                                "injected_files": injected_files}})
 
