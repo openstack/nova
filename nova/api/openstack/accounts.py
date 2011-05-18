@@ -20,8 +20,9 @@ from nova import flags
 from nova import log as logging
 
 from nova.auth import manager
-from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
+
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.api.openstack')
@@ -34,12 +35,7 @@ def _translate_keys(account):
                 manager=account.project_manager_id)
 
 
-class Controller(common.OpenstackController):
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "account": ["id", "name", "description", "manager"]}}}
+class Controller(object):
 
     def __init__(self):
         self.manager = manager.AuthManager()
@@ -66,20 +62,33 @@ class Controller(common.OpenstackController):
         self.manager.delete_project(id)
         return {}
 
-    def create(self, req):
+    def create(self, req, body):
         """We use update with create-or-update semantics
            because the id comes from an external source"""
         raise faults.Fault(webob.exc.HTTPNotImplemented())
 
-    def update(self, req, id):
+    def update(self, req, id, body):
         """This is really create or update."""
         self._check_admin(req.environ['nova.context'])
-        env = self._deserialize(req.body, req.get_content_type())
-        description = env['account'].get('description')
-        manager = env['account'].get('manager')
+        description = body['account'].get('description')
+        manager = body['account'].get('manager')
         try:
             account = self.manager.get_project(id)
             self.manager.modify_project(id, manager, description)
         except exception.NotFound:
             account = self.manager.create_project(id, manager, description)
         return dict(account=_translate_keys(account))
+
+
+def resource_factory():
+    metadata = {
+        "attributes": {
+            "account": ["id", "name", "description", "manager"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLSerializer(metadata=metadata),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

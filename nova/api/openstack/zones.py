@@ -17,6 +17,7 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
+from nova.api.openstack import wsgi
 from nova.scheduler import api
 
 
@@ -41,12 +42,7 @@ def _scrub_zone(zone):
                     'deleted', 'deleted_at', 'updated_at'))
 
 
-class Controller(common.OpenstackController):
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "zone": ["id", "api_url", "name", "capabilities"]}}}
+class Controller(object):
 
     def index(self, req):
         """Return all zones in brief"""
@@ -85,15 +81,28 @@ class Controller(common.OpenstackController):
         api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
-    def create(self, req):
+    def create(self, req, body):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
-        zone = api.zone_create(context, env["zone"])
+        zone = api.zone_create(context, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def update(self, req, id):
+    def update(self, req, id, body):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
-        zone = api.zone_update(context, zone_id, env["zone"])
+        zone = api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
+
+
+def resource_factory():
+    metadata = {
+        "attributes": {
+            "zone": ["id", "api_url", "name", "capabilities"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLSerializer(xmlns=wsgi.XMLNS_V10,
+                                              metadata=metadata),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

@@ -23,24 +23,15 @@ from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
+from nova.api.openstack import wsgi
 
 
 LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """Base `wsgi.Controller` for retrieving/displaying images."""
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "image": ["id", "name", "updated", "created", "status",
-                          "serverId", "progress"],
-                "link": ["rel", "type", "href"],
-            },
-        },
-    }
 
     def __init__(self, image_service=None, compute_service=None):
         """Initialize new `ImageController`.
@@ -153,3 +144,30 @@ class ControllerV11(Controller):
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
+
+
+def resource_factory(version='1.0'):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
+
+    xmlns = {
+        '1.0': wsgi.XMLNS_V10,
+        '1.1': wsgi.XMLNS_V11,
+    }[version]
+
+    metadata = {
+        "attributes": {
+            "image": ["id", "name", "updated", "created", "status",
+                      "serverId", "progress"],
+            "link": ["rel", "type", "href"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLSerializer(xmlns=xmlns,
+                                              metadata=metadata),
+    }
+
+    return wsgi.Resource(controller, serializers=serializers)

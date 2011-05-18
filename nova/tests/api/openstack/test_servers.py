@@ -207,7 +207,6 @@ class ServersTest(test.TestCase):
             },
         ]
 
-        print res_dict['server']
         self.assertEqual(res_dict['server']['links'], expected_links)
 
     def test_get_server_by_id_with_addresses_xml(self):
@@ -831,7 +830,6 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers/detail')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         dom = minidom.parseString(res.body)
         for i, server in enumerate(dom.getElementsByTagName('server')):
             self.assertEqual(server.getAttribute('id'), str(i))

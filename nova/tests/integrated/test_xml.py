@@ -32,7 +32,7 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
     """"Some basic XML sanity checks."""
 
     def test_namespace_limits(self):
-        """/limits should have v1.0 namespace (hasn't changed in 1.1)."""
+        """/limits should have v1.1 namespace (has changed in 1.1)."""
         headers = {}
         headers['Accept'] = 'application/xml'
 
@@ -40,7 +40,7 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
         data = response.read()
         LOG.debug("data: %s" % data)
 
-        prefix = '<limits xmlns="%s"' % common.XML_NS_V10
+        prefix = '<limits xmlns="%s"' % common.XML_NS_V11
         self.assertTrue(data.startswith(prefix))
 
     def test_namespace_servers(self):
