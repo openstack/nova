@@ -157,12 +157,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        try:
-            image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
-        except ValueError:
-            # not really an ec2_id here
-            image_ec2_id = instance_ref['image_id']
-
+        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -907,7 +902,12 @@ class CloudController(object):
     def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
-        return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        try:
+            return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        except ValueError:
+            #TODO(wwolf): once we have ec2_id -> glance_id mapping
+            # in place, this wont be necessary
+            return "ami-00000000"
 
     def _get_image(self, context, ec2_id):
         try:
