@@ -71,7 +71,11 @@ class MetadataRequestHandler(wsgi.Application):
         remote_address = req.remote_addr
         if FLAGS.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
-        meta_data = cc.get_metadata(remote_address)
+        try:
+            meta_data = cc.get_metadata(remote_address)
+        except Exception:
+            LOG.exception(_('Failed to get metadata for ip: %s'), remote_address)
+            raise
         if meta_data is None:
             LOG.error(_('Failed to get metadata for ip: %s'), remote_address)
             raise webob.exc.HTTPNotFound()
