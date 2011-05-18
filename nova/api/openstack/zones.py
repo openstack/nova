@@ -18,6 +18,7 @@ import urlparse
 
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
@@ -54,7 +55,7 @@ def _scrub_zone(zone):
 def check_encryption_key(func):
     def wrapped(*args, **kwargs):
         if not FLAGS.build_plan_encryption_key:
-            raise exception.Error(_("--build_plan_encryption_key not set"))
+            raise exception.FlagNotSet(flag='build_plan_encryption_key')
         return func(*args, **kwargs)
     return wrapped
 
