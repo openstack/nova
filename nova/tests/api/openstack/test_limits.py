@@ -27,6 +27,7 @@ import webob
 
 from xml.dom.minidom import parseString
 
+import nova.context
 from nova.api.openstack import limits
 
 
@@ -75,6 +76,8 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
             "action": "index",
             "controller": "",
         })
+        context = nova.context.RequestContext('testuser', 'testproject')
+        request.environ["nova.context"] = context
         return request
 
     def _populate_limits(self, request):
@@ -179,6 +182,10 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
         self.controller = limits.LimitsControllerV11()
+        self.absolute_limits = {}
+        def stub_get_quota(context, project_id):
+            return self.absolute_limits
+        self.stubs.Set(nova.quota, "get_quota", stub_get_quota)
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -188,6 +195,8 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
             "action": "index",
             "controller": "",
         })
+        context = nova.context.RequestContext('testuser', 'testproject')
+        request.environ["nova.context"] = context
         return request
 
     def _populate_limits(self, request):
@@ -199,9 +208,6 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                          5, 60).display(),
         ]
         request.environ["nova.limits"] = _limits
-        #set absolute limits here
-        limits.TEST_ABSOLUTE_LIMITS = {"ram": 512, "instances": 5}
-
         return request
 
     def test_empty_index_json(self):
@@ -221,6 +227,11 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         """Test getting limit details in JSON."""
         request = self._get_index_request()
         request = self._populate_limits(request)
+        self.absolute_limits = {
+            'ram': 512,
+            'instances': 5,
+            'cores': 21,
+        }
         response = request.get_response(self.controller)
         expected = {
             "limits": {
@@ -263,11 +274,38 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                 "absolute": {
                     "maxTotalRAMSize": 512,
                     "maxTotalInstances": 5,
+                    "maxTotalCores": 21,
                     },
             },
         }
         body = json.loads(response.body)
         self.assertEqual(expected, body)
+
+    def _test_index_absolute_limits_json(self, expected):
+        request = self._get_index_request()
+        response = request.get_response(self.controller)
+        body = json.loads(response.body)
+        self.assertEqual(expected, body['limits']['absolute'])
+
+    def test_index_ignores_extra_absolute_limits_json(self):
+        self.absolute_limits = {'unknown_limit': 9001}
+        self._test_index_absolute_limits_json({})
+
+    def test_index_absolute_ram_json(self):
+        self.absolute_limits = {'ram': 1024}
+        self._test_index_absolute_limits_json({'maxTotalRAMSize': 1024})
+
+    def test_index_absolute_cores_json(self):
+        self.absolute_limits = {'cores': 17}
+        self._test_index_absolute_limits_json({'maxTotalCores': 17})
+
+    def test_index_absolute_instances_json(self):
+        self.absolute_limits = {'instances': 19}
+        self._test_index_absolute_limits_json({'maxTotalInstances': 19})
+
+    def test_index_absolute_metadata_json(self):
+        self.absolute_limits = {'metadata_items': 23}
+        self._test_index_absolute_limits_json({'maxServerMeta': 23})
 
 
 class LimitMiddlewareTest(BaseLimitTestSuite):

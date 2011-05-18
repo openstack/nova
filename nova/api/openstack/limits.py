@@ -30,6 +30,7 @@ from collections import defaultdict
 
 from webob.dec import wsgify
 
+from nova import quota
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
@@ -41,9 +42,6 @@ PER_SECOND = 1
 PER_MINUTE = 60
 PER_HOUR = 60 * 60
 PER_DAY = 60 * 60 * 24
-
-#TODO remove when mark catches up
-TEST_ABSOLUTE_LIMITS = {}
 
 
 class LimitsController(common.OpenstackController):
@@ -67,11 +65,8 @@ class LimitsController(common.OpenstackController):
         """
         Return all global and rate limit information.
         """
-        # TODO(alex.meade) make this work
-        #project_quota = quota.get_project_quota(...)
-        #abs_limits = project_quota.limits
-        #TODO remove when mark catches up
-        abs_limits = TEST_ABSOLUTE_LIMITS
+        context = req.environ['nova.context']
+        abs_limits = quota.get_quota(context, context.project_id) 
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)

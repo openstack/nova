@@ -112,19 +112,14 @@ class ViewBuilderV11(ViewBuilder):
         For example: {"ram": 512, "gigabytes": 1024}.
 
         """
+        limit_names = {
+            "ram": "maxTotalRAMSize",
+            "instances": "maxTotalInstances",
+            "cores": "maxTotalCores",
+            "metadata_items": "maxServerMeta",
+        }
         limits = {}
-        #loops through absolute limits and their values
-        for absolute_limit_key, absolute_limit_value \
-            in absolute_limits.items():
-
-            _abs_limit_map = {
-                "ram": "maxTotalRAMSize",
-                "instances": "maxTotalInstances",
-                "cores": "maxTotalCores",
-            }
-
-            if not absolute_limit_value is None:
-                    limits[_abs_limit_map[absolute_limit_key]] \
-                    = absolute_limit_value
-
+        for name, value in absolute_limits.iteritems():
+            if name in limit_names and value is not None:
+                limits[limit_names[name]] = value
         return limits

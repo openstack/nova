@@ -1496,7 +1496,7 @@ def auth_token_create(_context, token):
 ###################
 
 
-@require_admin_context
+@require_context
 def quota_get(context, project_id, resource, session=None):
     if not session:
         session = get_session()
@@ -1510,7 +1510,7 @@ def quota_get(context, project_id, resource, session=None):
     return result
 
 
-@require_admin_context
+@require_context
 def quota_get_all_by_project(context, project_id):
     session = get_session()
     result = {'project_id': project_id}
