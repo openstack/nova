@@ -464,6 +464,8 @@ class ServersTest(test.TestCase):
         def image_id_from_hash(*args, **kwargs):
             return 2
 
+
+        FLAGS.glance_image_service = 'nova.image.fake.FakeImageService'
         self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
