@@ -784,7 +784,7 @@ class ServersTest(test.TestCase):
             server_update)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
         mock_method = MockSetAdminPassword()
-        self.stubs.Set(nova.compute.api.API, '_set_admin_password', mock_method)
+        self.stubs.Set(nova.compute.api.API, 'set_admin_password', mock_method)
 
         req = webob.Request.blank('/v1.0/servers/1')
         req.method = 'PUT'
