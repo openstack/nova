@@ -183,8 +183,10 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         BaseLimitTestSuite.setUp(self)
         self.controller = limits.LimitsControllerV11()
         self.absolute_limits = {}
+
         def stub_get_quota(context, project_id):
             return self.absolute_limits
+
         self.stubs.Set(nova.quota, "get_quota", stub_get_quota)
 
     def _get_index_request(self, accept_header="application/json"):
@@ -304,8 +306,14 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         self._test_index_absolute_limits_json({'maxTotalInstances': 19})
 
     def test_index_absolute_metadata_json(self):
+        # NOTE: both server metadata and image metadata are overloaded
+        # into metadata_items
         self.absolute_limits = {'metadata_items': 23}
-        self._test_index_absolute_limits_json({'maxServerMeta': 23})
+        expected = {
+            'maxServerMeta': 23,
+            'maxImageMeta': 23,
+        }
+        self._test_index_absolute_limits_json(expected)
 
 
 class LimitMiddlewareTest(BaseLimitTestSuite):

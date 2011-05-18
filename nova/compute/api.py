@@ -95,14 +95,15 @@ class API(base.Base):
         """
         if injected_files is None:
             return
-        limit = quota.allowed_injected_files(context)
+        limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
         path_limit = quota.allowed_injected_file_path_bytes(context)
-        content_limit = quota.allowed_injected_file_content_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            content_limit = quota.allowed_injected_file_content_bytes(
+                                                    context, len(content))
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 

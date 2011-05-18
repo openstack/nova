@@ -66,7 +66,7 @@ class LimitsController(common.OpenstackController):
         Return all global and rate limit information.
         """
         context = req.environ['nova.context']
-        abs_limits = quota.get_quota(context, context.project_id) 
+        abs_limits = quota.get_quota(context, context.project_id)
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)

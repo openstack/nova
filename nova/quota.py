@@ -55,6 +55,9 @@ def _get_default_quota():
         'gigabytes': FLAGS.quota_gigabytes,
         'floating_ips': FLAGS.quota_floating_ips,
         'metadata_items': FLAGS.quota_metadata_items,
+        'injected_files': FLAGS.quota_max_injected_files,
+        'injected_file_content_bytes':
+            FLAGS.quota_max_injected_file_content_bytes,
     }
     # -1 in the quota flags means unlimited
     for key in defaults.keys():
@@ -128,24 +131,29 @@ def allowed_floating_ips(context, num_floating_ips):
     return min(num_floating_ips, allowed_floating_ips)
 
 
+def _calculate_simple_quota(context, resource, requested):
+    """Check quota for resource; return min(requested, allowed)."""
+    quota = get_quota(context, context.project_id)
+    allowed = _get_request_allotment(requested, 0, quota[resource])
+    return min(requested, allowed)
+
+
 def allowed_metadata_items(context, num_metadata_items):
-    """Check quota; return min(num_metadata_items,allowed_metadata_items)."""
-    project_id = context.project_id
-    context = context.elevated()
-    quota = get_quota(context, project_id)
-    allowed_metadata_items = _get_request_allotment(num_metadata_items, 0,
-                                                    quota['metadata_items'])
-    return min(num_metadata_items, allowed_metadata_items)
+    """Return the number of metadata items allowed."""
+    return _calculate_simple_quota(context, 'metadata_items',
+                                   num_metadata_items)
 
 
-def allowed_injected_files(context):
+def allowed_injected_files(context, num_injected_files):
     """Return the number of injected files allowed."""
-    return FLAGS.quota_max_injected_files
+    return _calculate_simple_quota(context, 'injected_files',
+                                   num_injected_files)
 
 
-def allowed_injected_file_content_bytes(context):
+def allowed_injected_file_content_bytes(context, num_bytes):
     """Return the number of bytes allowed per injected file content."""
-    return FLAGS.quota_max_injected_file_content_bytes
+    resource = 'injected_file_content_bytes'
+    return _calculate_simple_quota(context, resource, num_bytes)
 
 
 def allowed_injected_file_path_bytes(context):

@@ -113,13 +113,14 @@ class ViewBuilderV11(ViewBuilder):
 
         """
         limit_names = {
-            "ram": "maxTotalRAMSize",
-            "instances": "maxTotalInstances",
-            "cores": "maxTotalCores",
-            "metadata_items": "maxServerMeta",
+            "ram": ["maxTotalRAMSize"],
+            "instances": ["maxTotalInstances"],
+            "cores": ["maxTotalCores"],
+            "metadata_items": ["maxServerMeta", "maxImageMeta"],
         }
         limits = {}
         for name, value in absolute_limits.iteritems():
             if name in limit_names and value is not None:
-                limits[limit_names[name]] = value
+                for name in limit_names[name]:
+                    limits[name] = value
         return limits
