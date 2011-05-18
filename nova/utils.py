@@ -746,7 +746,7 @@ def parse_image_ref(image_ref):
         return (int(image_ref), None, None)
 
     o = urlparse(image_ref)
-    port = o.port
+    port = o.port or 80
     host = o.netloc.split(':', 1)[0]
     image_id = o.path.split('/')[-1]
 
