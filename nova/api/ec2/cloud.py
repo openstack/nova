@@ -157,7 +157,12 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        try:
+            image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        except ValueError:
+            # not really an ec2_id here
+            image_ec2_id = instance_ref['image_id']
+
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
