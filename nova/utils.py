@@ -749,11 +749,9 @@ def parse_image_ref(image_ref):
     port = o.port
     host = o.netloc.split(':', 1)[0]
     image_id = o.path.split('/')[-1]
+
     if is_int(image_id):
         image_id = int(image_id)
-    else:
-        raise exception.ImageNotFound(
-            _('image_ref [%s] is missing a proper id') % image_ref)
 
     return (image_id, host, port)
 

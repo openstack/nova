@@ -362,7 +362,7 @@ DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
 # The service to use for image search and retrieval
 DEFINE_string('image_service', 'nova.image.local.LocalImageService',
               'The service to use for retrieving and searching for images.')
-DEFINE_string('glance_image_service', 'nova.image.local.LocalImageService',
+DEFINE_string('glance_image_service', 'nova.image.glance.GlanceImageService',
               'The service to use for retrieving and searching for ' + 
               'glance images.')
 

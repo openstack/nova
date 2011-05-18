@@ -40,7 +40,7 @@ class FakeImageService(service.BaseImageService):
         # NOTE(justinsb): The OpenStack API can't upload an image?
         # So, make sure we've got one..
         timestamp = datetime.datetime(2011, 01, 01, 01, 02, 03)
-        image = {'id': '123456',
+        image1 = {'id': '123456',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -49,7 +49,18 @@ class FakeImageService(service.BaseImageService):
                  'disk_format': 'raw',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
-        self.create(None, image)
+
+        image2 = {'id': 'fake',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
+        self.create(None, image1)
+        self.create(None, image2)
         super(FakeImageService, self).__init__()
 
     def index(self, context):
@@ -66,7 +77,6 @@ class FakeImageService(service.BaseImageService):
         Returns a dict containing image data for the given opaque image id.
 
         """
-        image_id = int(image_id)
         image = self.images.get(image_id)
         if image:
             return copy.deepcopy(image)
@@ -80,7 +90,7 @@ class FakeImageService(service.BaseImageService):
         :raises: Duplicate if the image already exist.
 
         """
-        image_id = int(data['id'])
+        image_id = data['id']
         if self.images.get(image_id):
             raise exception.Duplicate()
 
