@@ -23,6 +23,7 @@ import webob.exc
 
 from nova import log as logging
 from nova import flags
+from nova import utils
 from nova import wsgi
 from nova.api.ec2 import cloud
 
@@ -75,7 +76,12 @@ class MetadataRequestHandler(wsgi.Application):
             meta_data = cc.get_metadata(remote_address)
         except Exception:
             LOG.exception(_('Failed to get metadata for ip: %s'), remote_address)
-            raise
+            resp = webob.Response()
+            resp.status = 500
+            message = _('An unknown error has occurred. '
+                        'Please try your request again.')
+            resp.body = str(utils.utf8(message))
+            return resp
         if meta_data is None:
             LOG.error(_('Failed to get metadata for ip: %s'), remote_address)
             raise webob.exc.HTTPNotFound()
