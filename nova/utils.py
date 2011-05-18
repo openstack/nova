@@ -776,6 +776,7 @@ def get_image_service(image_ref):
         return (get_default_image_service(), int(image_ref))
 
     (image_id, host, port) = parse_image_ref(image_ref)
-    glance_client = nova.image.glance.GlanceClient(host, port)
-    image_service = nova.image.glance.GlanceImageService(glance_client)
+    glance_client = import_class('nova.image.glance.GlanceClient')(host, 
+                                                                   port)
+    image_service = import_class(FLAGS.glance_image_service)(glance_client)
     return (image_service, image_id)

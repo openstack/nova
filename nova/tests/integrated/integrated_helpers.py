@@ -185,6 +185,7 @@ class _IntegratedTestBase(test.TestCase):
         """An opportunity to setup flags, before the services are started."""
         f = {}
         f['image_service'] = 'nova.image.fake.FakeImageService'
+        f['glance_image_service'] = 'nova.image.fake.FakeImageService'
         f['fake_network'] = True
         return f
 
@@ -200,9 +201,6 @@ class _IntegratedTestBase(test.TestCase):
             # NOTE(justinsb): The imageRef code hasn't yet landed
             LOG.warning("imageRef not yet in images output")
             image_ref = image['id']
-
-            # TODO(justinsb): This is FUBAR
-            image_ref = abs(hash(image_ref))
 
             image_ref = 'http://fake.server/%s' % image_ref
 
