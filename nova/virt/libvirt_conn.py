@@ -36,6 +36,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 """
 
+import hashlib
 import multiprocessing
 import os
 import random
@@ -843,7 +844,9 @@ class LibvirtConnection(driver.ComputeDriver):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            fname = '%08x' % int(disk_images['kernel_id'])
+            fname_hash = hashlib.sha1()
+            fname_hash.update(disk_images['kernel_id'])
+            fname = fname_hash.hexdigest()
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
                               fname=fname,
@@ -851,7 +854,9 @@ class LibvirtConnection(driver.ComputeDriver):
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
-                fname = '%08x' % int(disk_images['ramdisk_id'])
+                fname_hash = hashlib.sha1()
+                fname_hash.update(disk_images['ramdisk_id'])
+                fname = fname_hash.hexdigest()
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
                                   fname=fname,
@@ -859,7 +864,10 @@ class LibvirtConnection(driver.ComputeDriver):
                                   user=user,
                                   project=project)
 
-        root_fname = '%08x' % int(disk_images['image_id'])
+        fname_hash = hashlib.sha1()
+        fname_hash.update(disk_images['image_id'])
+        root_fname = fname_hash.hexdigest()
+
         size = FLAGS.minimum_root_size
 
         inst_type_id = inst['instance_type_id']
