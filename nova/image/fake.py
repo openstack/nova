@@ -59,8 +59,30 @@ class FakeImageService(service.BaseImageService):
                  'disk_format': 'raw',
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel}}
+
+        image3 = {'id': '2',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
+
+        image4 = {'id': '1',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
         self.create(None, image1)
         self.create(None, image2)
+        self.create(None, image3)
+        self.create(None, image4)
         super(FakeImageService, self).__init__()
 
     def index(self, context):

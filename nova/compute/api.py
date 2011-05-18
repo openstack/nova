@@ -132,7 +132,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None):
+               injected_files=None, image_ref=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
@@ -154,7 +154,8 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        (image_service, service_image_id) = utils.get_image_service(image_id)
+        (image_service, service_image_id) = utils.get_image_service(
+            image_ref or image_id)
         image = image_service.show(context, service_image_id)
 
         os_type = None
@@ -198,7 +199,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'image_id': image_id,
+            'image_id': image_ref or image_id,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,
