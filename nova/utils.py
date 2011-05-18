@@ -752,7 +752,8 @@ def parse_image_ref(image_ref):
     if is_int(image_id):
         image_id = int(image_id)
     else:
-        raise Exception(_('image_ref [%s] is missing a proper id') % image_ref)
+        raise exception.ImageNotFound(
+            _('image_ref [%s] is missing a proper id') % image_ref)
 
     return (image_id, host, port)
 

@@ -88,7 +88,7 @@ class Controller(common.OpenstackController):
                 image_id)
             image = image_service.show(context, service_image_id)
         except exception.NotFound:
-            explanation = _("Image '%d' not found.") % (image_id)
+            explanation = _("Image not found.")
             raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
 
         return dict(image=self.get_builder(req).build(image, detail=True))
