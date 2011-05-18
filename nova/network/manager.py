@@ -16,8 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Network Hosts are responsible for allocating ips and setting up network.
+"""Network Hosts are responsible for allocating ips and setting up network.
 
 There are multiple backend drivers that handle specific types of networking
 topologies.  All of the network commands are issued to a subclass of
@@ -61,6 +60,8 @@ from nova import rpc
 
 
 LOG = logging.getLogger("nova.network.manager")
+
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
@@ -111,7 +112,9 @@ class NetworkManager(manager.SchedulerDependentManager):
     """Implements common network manager functionality.
 
     This class must be subclassed to support specific topologies.
+
     """
+
     timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
@@ -122,9 +125,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                 *args, **kwargs)
 
     def init_host(self):
-        """Do any initialization that needs to be run if this is a
-        standalone service.
-        """
+        """Do any initialization for a standalone service."""
         self.driver.init_host()
         self.driver.ensure_metadata_ip()
         # Set up networking for the projects for which we're already
@@ -154,11 +155,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                                self.host,
                                                                time)
             if num:
-                LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
+                LOG.debug(_('Dissassociated %s stale fixed ip(s)'), num)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
-        LOG.debug(_("setting network host"), context=context)
+        LOG.debug(_('setting network host'), context=context)
         host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
@@ -224,39 +225,39 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_("Leasing IP %s"), address, context=context)
+        LOG.debug(_('Leasing IP %s'), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error(_("IP %s leased that isn't associated") %
+            raise exception.Error(_('IP %s leased that is not associated') %
                                   address)
         if instance_ref['mac_address'] != mac:
             inst_addr = instance_ref['mac_address']
-            raise exception.Error(_("IP %(address)s leased to bad"
-                    " mac %(inst_addr)s vs %(mac)s") % locals())
+            raise exception.Error(_('IP %(address)s leased to bad mac'
+                                    ' %(inst_addr)s vs %(mac)s') % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
                                 {'leased': True,
                                  'updated_at': now})
         if not fixed_ip_ref['allocated']:
-            LOG.warn(_("IP %s leased that was already deallocated"), address,
+            LOG.warn(_('IP %s leased that was already deallocated'), address,
                      context=context)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_("Releasing IP %s"), address, context=context)
+        LOG.debug(_('Releasing IP %s'), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error(_("IP %s released that isn't associated") %
+            raise exception.Error(_('IP %s released that is not associated') %
                                   address)
         if instance_ref['mac_address'] != mac:
             inst_addr = instance_ref['mac_address']
-            raise exception.Error(_("IP %(address)s released from"
-                    " bad mac %(inst_addr)s vs %(mac)s") % locals())
+            raise exception.Error(_('IP %(address)s released from bad mac'
+                                    ' %(inst_addr)s vs %(mac)s') % locals())
         if not fixed_ip_ref['leased']:
-            LOG.warn(_("IP %s released that was not leased"), address,
+            LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -286,8 +287,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                 return self.set_network_host(context, network_ref['id'])
             host = rpc.call(context,
                             FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
+                            {'method': 'set_network_host',
+                             'args': {'network_id': network_ref['id']}})
         return host
 
     def create_networks(self, context, cidr, num_networks, network_size,
@@ -302,7 +303,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             start = index * network_size
             start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
-            cidr = "%s/%s" % (fixed_net[start], significant_bits)
+            cidr = '%s/%s' % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
             net = {}
             net['bridge'] = FLAGS.flat_network_bridge
@@ -313,13 +314,13 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['broadcast'] = str(project_net.broadcast())
             net['dhcp_start'] = str(project_net[2])
             if num_networks > 1:
-                net['label'] = "%s_%d" % (label, count)
+                net['label'] = '%s_%d' % (label, count)
             else:
                 net['label'] = label
             count += 1
 
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
                 project_net_v6 = IPy.IP(cidr_v6)
@@ -386,13 +387,13 @@ class FlatManager(NetworkManager):
     Metadata forwarding must be handled by the gateway, and since nova does
     not do any setup in this mode, it must be done manually.  Requests to
     169.254.169.254 port 80 will need to be forwarded to the api server.
+
     """
+
     timeout_fixed_ips = False
 
     def init_host(self):
-        """Do any initialization that needs to be run if this is a
-        standalone service.
-        """
+        """Do any initialization for a standalone service."""
         #Fix for bug 723298 - do not call init_host on superclass
         #Following code has been copied for NetworkManager.init_host
         ctxt = context.get_admin_context()
@@ -433,12 +434,11 @@ class FlatDHCPManager(NetworkManager):
     FlatDHCPManager will start up one dhcp server to give out addresses.
     It never injects network settings into the guest. Otherwise it behaves
     like FlatDHCPManager.
+
     """
 
     def init_host(self):
-        """Do any initialization that needs to be run if this is a
-        standalone service.
-        """
+        """Do any initialization for a standalone service."""
         super(FlatDHCPManager, self).init_host()
         self.driver.metadata_forward()
 
@@ -490,12 +490,11 @@ class VlanManager(NetworkManager):
     A dhcp server is run for each subnet, so each project will have its own.
     For this mode to be useful, each project will need a vpn to access the
     instances in its subnet.
+
     """
 
     def init_host(self):
-        """Do any initialization that needs to be run if this is a
-        standalone service.
-        """
+        """Do any initialization for a standalone service."""
         super(VlanManager, self).init_host()
         self.driver.metadata_forward()
 
@@ -566,7 +565,7 @@ class VlanManager(NetworkManager):
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
             if(FLAGS.use_ipv6):
-                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
 
@@ -600,8 +599,8 @@ class VlanManager(NetworkManager):
                 return self.set_network_host(context, network_ref['id'])
             host = rpc.call(context,
                             FLAGS.network_topic,
-                            {"method": "set_network_host",
-                             "args": {"network_id": network_ref['id']}})
+                            {'method': 'set_network_host',
+                             'args': {'network_id': network_ref['id']}})
 
         return host
 
