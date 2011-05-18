@@ -448,7 +448,7 @@ class LibvirtConnection(driver.ComputeDriver):
         to support this command.
 
         """
-        image_service = utils.import_object(FLAGS.image_service)
+        image_service = utils.get_default_image_service()
         virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 

@@ -35,6 +35,7 @@ import struct
 import sys
 import time
 import types
+from urlparse import urlparse
 from xml.sax import saxutils
 
 from eventlet import event
@@ -42,6 +43,7 @@ from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
 
+import nova
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -727,57 +729,53 @@ def parse_server_string(server_str):
 
 
 def is_int(x):
-    """ Return if passed in variable is integer or not """
     return re.match(r'\d+$', str(x))
 
 
 def parse_image_ref(image_ref):
-    """
-    Parse an imageRef and return (id, host, port)
+    """Parse an image href into composite parts.
 
     If the image_ref passed in is an integer, it will
     return (image_ref, None, None), otherwise it will
-    return (id, host, port)
+    return (image_id, host, port)
 
-    image_ref - imageRef for an image
+    :param image_ref: href or id of an image
 
     """
-
     if is_int(image_ref):
-        return (image_ref, None, None)
+        return (int(image_ref), None, None)
 
     o = urlparse(image_ref)
-    # Default to port 80 if not passed, should this be 9292?
-    port = o.port or 80
+    port = o.port
     host = o.netloc.split(':', 1)[0]
-    id = o.path.split('/')[-1]
-
-    return (id, host, port)
-
-
-def get_image_service(image_ref=None):
-    """
-    Get the proper image_service for an image_id
-    Returns (image_service, image_id)
-
-    image_ref - image ref/id for an image
-    """
-    ImageService = import_class(FLAGS.image_service)
-
-    if not image_ref:
-        return (ImageService(), None)
-    
-    (image_id, host, port) = parse_image_ref(image_ref)
-
-    image_service = None
-
-    if host:
-        GlanceImageService = import_class(FLAGS.glance_image_service)
-        GlanceClient = import_class('glance.client.Client')
-
-        glance_client = GlanceClient(host, port)
-        image_service = GlanceImageService(glance_client)
+    image_id = o.path.split('/')[-1]
+    if is_int(image_id):
+        image_id = int(image_id)
     else:
-        image_service = ImageService()
+        raise Exception(_('image_ref [%s] is missing a proper id') % image_ref)
 
-    return (image_service, id)
+    return (image_id, host, port)
+
+
+def get_default_image_service():
+    ImageService = import_class(FLAGS.image_service)
+    return ImageService()
+
+def get_image_service(image_ref):
+    """Get the proper image_service and id for the given image_ref.
+
+    The image_ref param can be an href of the form
+    http://myglanceserver:9292/images/42, or just an int such as 42. If the
+    image_ref is an int, then the default image service is returned.
+
+    :param image_ref: image ref/id for an image
+    :returns: a tuple of the form (image_service, image_id)
+
+    """
+    if is_int(image_ref):
+        return (get_default_image_service(), int(image_ref))
+
+    (image_id, host, port) = parse_image_ref(image_ref)
+    glance_client = nova.image.glance.GlanceClient(host, port)
+    image_service = nova.image.glance.GlanceImageService(glance_client)
+    return (image_service, image_id)

@@ -47,11 +47,10 @@ class Controller(common.OpenstackController):
 
         :param compute_service: `nova.compute.api:API`
         :param image_service: `nova.image.service:BaseImageService`
-        """
-        _default_service = utils.import_object(flags.FLAGS.image_service)
 
+        """
         self._compute_service = compute_service or compute.API()
-        self._image_service = image_service or _default_service
+        self._image_service = image_service or utils.get_default_image_service()
 
     def index(self, req):
         """Return an index listing of images available to the request.

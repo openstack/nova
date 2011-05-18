@@ -628,13 +628,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
-        image_ref_local = '2'
+        image_ref = 2
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref_local,
+                'imageRef': image_ref,
                 'flavorRef': flavor_ref,
             },
         }
@@ -852,7 +851,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['flavorId'], 1)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
@@ -866,7 +865,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
+            self.assertEqual(s['imageRef'], 10)
             self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
@@ -898,7 +897,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['flavorId'], 1)
 
     def test_server_pause(self):

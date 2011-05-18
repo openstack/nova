@@ -64,7 +64,6 @@ class Controller(common.OpenstackController):
 
     def __init__(self):
         self.compute_api = compute.API()
-        self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -75,7 +74,7 @@ class Controller(common.OpenstackController):
         """ Returns a list of server details for a given user """
         return self._items(req, is_detail=True)
 
-    def _image_id_from_req_data(self, data):
+    def _image_ref_from_req_data(self, data):
         raise NotImplementedError()
 
     def _flavor_id_from_req_data(self, data):
@@ -140,13 +139,13 @@ class Controller(common.OpenstackController):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
-        requested_image_id = self._image_id_from_req_data(env)
+        image_ref = self._image_ref_from_req_data(env)
         try:
-            (image_service, service_image_id) = utils.get_image_service(
-                requested_image_id)
+            (image_service, image_id) = utils.get_image_service( image_ref)
 
-            image_id = common.get_image_id_from_image_hash(image_service,
-                context, requested_image_id)
+            #TODO: need to assert image exists a better way
+            #image_id = common.get_image_id_from_image_hash(image_service,
+                #context, image_ref)
         except:
             msg = _("Can not find requested image")
             return faults.Fault(exc.HTTPBadRequest(msg))
@@ -188,7 +187,7 @@ class Controller(common.OpenstackController):
             self._handle_quota_error(error)
 
         inst['instance_type'] = inst_type
-        inst['image_id'] = requested_image_id
+        inst['image_id'] = image_ref
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
@@ -596,7 +595,7 @@ class Controller(common.OpenstackController):
 
 
 class ControllerV10(Controller):
-    def _image_id_from_req_data(self, data):
+    def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
     def _flavor_id_from_req_data(self, data):
@@ -639,9 +638,8 @@ class ControllerV10(Controller):
 
 
 class ControllerV11(Controller):
-    def _image_id_from_req_data(self, data):
-        href = data['server']['imageRef']
-        return common.get_id_from_href(href)
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageRef']
 
     def _flavor_id_from_req_data(self, data):
         href = data['server']['flavorRef']

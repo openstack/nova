@@ -45,7 +45,7 @@ def fetch(image_id, path, _user, _project):
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
     #             checked before we got here.
-    image_service = utils.import_object(FLAGS.image_service)
+    image_service = utils.get_default_image_service()
     with open(path, "wb") as image_file:
         elevated = context.get_admin_context()
         metadata = image_service.get(elevated, image_id, image_file)

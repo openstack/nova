@@ -58,9 +58,7 @@ class API(base.Base):
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
-        if not image_service:
-            image_service = utils.import_object(FLAGS.image_service)
-        self.image_service = image_service
+        self.image_service = image_service or utils.get_default_image_service()
         if not network_api:
             network_api = network.API()
         self.network_api = network_api

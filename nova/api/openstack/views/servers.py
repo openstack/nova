@@ -113,7 +113,7 @@ class ViewBuilderV10(ViewBuilder):
 
     def _build_image(self, response, inst):
         if 'image_id' in dict(inst):
-            response['imageId'] = inst['image_id']
+            response['imageId'] = int(inst['image_id'])
 
     def _build_flavor(self, response, inst):
         if 'instance_type' in dict(inst):
@@ -130,9 +130,11 @@ class ViewBuilderV11(ViewBuilder):
         self.base_url = base_url
 
     def _build_image(self, response, inst):
-        if "image_id" in dict(inst):
-            image_id = inst.get("image_id")
-            response["imageRef"] = self.image_builder.generate_href(image_id)
+        if 'image_id' in dict(inst):
+            image_id = inst['image_id']
+            if utils.is_int(image_id):
+                image_id = int(image_id)
+            response['imageRef'] = image_id
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):

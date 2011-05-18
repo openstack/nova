@@ -32,7 +32,7 @@ class Controller(common.OpenstackController):
     """The image metadata API controller for the Openstack API"""
 
     def __init__(self):
-        self.image_service = utils.import_object(FLAGS.image_service)
+        self.image_service = utils.get_default_image_service()
         super(Controller, self).__init__()
 
     def _get_metadata(self, context, image_id, image=None):
