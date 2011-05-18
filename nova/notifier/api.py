@@ -19,6 +19,7 @@ import uuid
 from nova import flags
 from nova import utils
 
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('default_notification_level', 'INFO',

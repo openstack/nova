@@ -18,6 +18,7 @@ import json
 from nova import flags
 from nova import log as logging
 
+
 FLAGS = flags.FLAGS
 
 

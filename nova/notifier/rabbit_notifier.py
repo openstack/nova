@@ -19,6 +19,7 @@ import nova.context
 from nova import flags
 from nova import rpc
 
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_string('notification_topic', 'notifications',
