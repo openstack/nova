@@ -121,17 +121,6 @@ class ZonesTest(test.TestCase):
         FLAGS.zone_capabilities = self.old_zone_capabilities
         super(ZonesTest, self).tearDown()
 
-    def test_check_encryption_key(self):
-        @zones.check_encryption_key
-        def test_func():
-            return 42
-
-        self.assertRaises(exception.FlagNotSet, test_func)
-
-        FLAGS.build_plan_encryption_key = "something"
-        ret = test_func()
-        self.assertEqual(ret, 42)
-
     def test_get_zone_list_scheduler(self):
         self.stubs.Set(api, '_call_scheduler', zone_get_all_scheduler)
         req = webob.Request.blank('/v1.0/zones')
