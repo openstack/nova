@@ -363,7 +363,7 @@ DEFINE_string('scheduler_manager', 'nova.scheduler.manager.SchedulerManager',
 DEFINE_string('image_service', 'nova.image.local.LocalImageService',
               'The service to use for retrieving and searching for images.')
 DEFINE_string('glance_image_service', 'nova.image.glance.GlanceImageService',
-              'The service to use for retrieving and searching for ' + 
+              'The service to use for retrieving and searching for ' +
               'glance images.')
 
 DEFINE_string('host', socket.gethostname(),

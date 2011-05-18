@@ -188,7 +188,6 @@ class Controller(common.OpenstackController):
             msg = _("Can not find requested image")
             return faults.Fault(exc.HTTPBadRequest(msg))
 
-
         inst['instance_type'] = inst_type
         inst['image_id'] = image_ref
 
