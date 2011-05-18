@@ -77,7 +77,7 @@ class FakeImageService(service.BaseImageService):
         Returns a dict containing image data for the given opaque image id.
 
         """
-        image = self.images.get(image_id)
+        image = self.images.get(str(image_id))
         if image:
             return copy.deepcopy(image)
         LOG.warn('Unable to find image id %s.  Have images: %s',
@@ -90,7 +90,7 @@ class FakeImageService(service.BaseImageService):
         :raises: Duplicate if the image already exist.
 
         """
-        image_id = data['id']
+        image_id = str(data['id'])
         if self.images.get(image_id):
             raise exception.Duplicate()
 

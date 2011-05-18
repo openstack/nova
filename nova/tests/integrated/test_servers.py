@@ -51,14 +51,14 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Without an imageRef, this throws 500.
         # TODO(justinsb): Check whatever the spec says should be thrown here
-        #self.assertRaises(client.OpenStackApiException,
-                          #self.api.post_server, post)
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
 
         # With an invalid imageRef, this throws 500.
         server['imageRef'] = self.user.get_invalid_image()
         # TODO(justinsb): Check whatever the spec says should be thrown here
-        #self.assertRaises(client.OpenStackApiException,
-                          #self.api.post_server, post)
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
 
         # Add a valid imageId/imageRef
         server['imageId'] = good_server.get('imageId')
@@ -66,8 +66,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Without flavorId, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
-        #self.assertRaises(client.OpenStackApiException,
-                          #self.api.post_server, post)
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
 
         # Set a valid flavorId/flavorRef
         server['flavorRef'] = good_server.get('flavorRef')
@@ -75,8 +75,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Without a name, this throws 500
         # TODO(justinsb): Check whatever the spec says should be thrown here
-        #self.assertRaises(client.OpenStackApiException,
-                          #self.api.post_server, post)
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server, post)
 
         # Set a valid server name
         server['name'] = good_server['name']
@@ -85,7 +85,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         LOG.debug("created_server: %s" % created_server)
         self.assertTrue(created_server['id'])
         created_server_id = created_server['id']
-        return
 
         # Check it's there
         found_server = self.api.get_server(created_server_id)
