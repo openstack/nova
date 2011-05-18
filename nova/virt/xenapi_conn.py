@@ -169,15 +169,15 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def __init__(self, url, user, pw):
         super(XenAPIConnection, self).__init__()
-        session = XenAPISession(url, user, pw)
-        self._vmops = VMOps(session)
-        self._volumeops = VolumeOps(session)
+        self._session = XenAPISession(url, user, pw)
+        self._vmops = VMOps(self._session)
+        self._volumeops = VolumeOps(self._session)
         self._host_state = None
 
     @property
     def HostState(self):
         if not self._host_state:
-            self._host_state = HostState(self.session)
+            self._host_state = HostState(self._session)
         return self._host_state
 
     def init_host(self, host):
