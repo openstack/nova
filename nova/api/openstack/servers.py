@@ -184,6 +184,10 @@ class Controller(common.OpenstackController):
                 injected_files=injected_files)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
+        except exception.ImageNotFound as error:
+            msg = _("Can not find requested image")
+            return faults.Fault(exc.HTTPBadRequest(msg))
+
 
         inst['instance_type'] = inst_type
         inst['image_id'] = image_ref
