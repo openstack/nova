@@ -773,6 +773,7 @@ def get_image_service(image_ref):
     :returns: a tuple of the form (image_service, image_id)
 
     """
+    image_ref = image_ref or 0
     if is_int(image_ref):
         return (get_default_image_service(), int(image_ref))
 
