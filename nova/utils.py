@@ -306,26 +306,6 @@ def  get_my_linklocal(interface):
                                 " :%(ex)s") % locals())
 
 
-def to_global_ipv6(prefix, mac):
-    try:
-        mac64 = netaddr.EUI(mac).eui64().words
-        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-        mac64_addr = netaddr.IPAddress(int_addr)
-        maskIP = netaddr.IPNetwork(prefix).ip
-        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
-                                                                    format()
-    except TypeError:
-        raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
-
-
-def to_mac(ipv6_address):
-    address = netaddr.IPAddress(ipv6_address)
-    mask1 = netaddr.IPAddress('::ffff:ffff:ffff:ffff')
-    mask2 = netaddr.IPAddress('::0200:0:0:0')
-    mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
-    return ':'.join(['%02x' % i for i in mac64[0:3] + mac64[5:8]])
-
-
 def utcnow():
     """Overridable version of datetime.datetime.utcnow."""
     if utcnow.override_time:
