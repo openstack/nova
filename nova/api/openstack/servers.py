@@ -144,10 +144,8 @@ class Controller(common.OpenstackController):
             (image_service, image_id) = utils.get_image_service(image_ref)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                 req, image_id)
-
-            #TODO: need to assert image exists a better way
-            #image_id = common.get_image_id_from_image_hash(image_service,
-                #context, image_ref)
+            image_set = set([x['id'] for x in image_service.index(context)])
+            assert image_id in image_set
         except:
             msg = _("Can not find requested image")
             return faults.Fault(exc.HTTPBadRequest(msg))
