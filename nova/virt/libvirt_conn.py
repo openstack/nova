@@ -844,9 +844,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            fname_hash = hashlib.sha1()
-            fname_hash.update(disk_images['kernel_id'])
-            fname = fname_hash.hexdigest()
+            fname = hashlib.sha1(disk_images['kernel_id']).hexdigest()
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
                               fname=fname,
@@ -854,9 +852,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
-                fname_hash = hashlib.sha1()
-                fname_hash.update(disk_images['ramdisk_id'])
-                fname = fname_hash.hexdigest()
+                fname = hashlib.sha1(disk_images['ramdisk_id']).hexdigest()
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
                                   fname=fname,
@@ -864,9 +860,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                   user=user,
                                   project=project)
 
-        fname_hash = hashlib.sha1()
-        fname_hash.update(disk_images['image_id'])
-        root_fname = fname_hash.hexdigest()
+        fname = hashlib.sha1(disk_images['image_id']).hexdigest()
 
         size = FLAGS.minimum_root_size
 

@@ -50,8 +50,7 @@ class Controller(common.OpenstackController):
 
         """
         self._compute_service = compute_service or compute.API()
-        self._image_service = image_service or \
-            utils.get_default_image_service()
+        self._image_service = image_service or utils.get_default_image_service()
 
     def index(self, req):
         """Return an index listing of images available to the request.
@@ -75,14 +74,13 @@ class Controller(common.OpenstackController):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def show(self, req, id):
+    def show(self, req, image_id):
         """Return detailed information about a specific image.
 
         :param req: `wsgi.Request` object
-        :param id: Image identifier (integer)
+        :param image_id: Image identifier (integer)
         """
         context = req.environ['nova.context']
-        image_id = id
 
         try:
             (image_service, service_image_id) = utils.get_image_service(
