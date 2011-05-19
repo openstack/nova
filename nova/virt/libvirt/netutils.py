@@ -26,6 +26,7 @@ import IPy
 from nova import context
 from nova import db
 from nova import flags
+from nova import ipv6
 from nova import utils
 
 
@@ -45,6 +46,7 @@ def get_net_and_prefixlen(cidr):
 def get_ip_version(cidr):
     net = IPy.IP(cidr)
     return int(net.version())
+
 
 def get_network_info(instance):
     # TODO(adiantum) If we will keep this function
@@ -93,5 +95,3 @@ def get_network_info(instance):
 
         network_info.append((network, mapping))
     return network_info
-
-

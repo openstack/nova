@@ -57,7 +57,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
-from nova import ipv6
 from nova import log as logging
 from nova import utils
 from nova import vnc
@@ -85,7 +84,7 @@ flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
 flags.DEFINE_string('libvirt_xml_template',
-                    utils.abspath('virt/libvirt/libvirt.xml.template'),
+                    utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
 flags.DEFINE_string('libvirt_type',
                     'kvm',
@@ -108,7 +107,7 @@ flags.DEFINE_string('firewall_driver',
                     'nova.virt.libvirt.firewall.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
 flags.DEFINE_string('cpuinfo_xml_template',
-                    utils.abspath('virt/libvirt/cpuinfo.xml.template'),
+                    utils.abspath('virt/cpuinfo.xml.template'),
                     'CpuInfo XML Template (Used only live migration now)')
 flags.DEFINE_string('live_migration_uri',
                     "qemu+tcp://%s/system",

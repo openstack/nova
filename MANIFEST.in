@@ -24,7 +24,8 @@ include nova/console/xvp.conf.template
 include nova/db/sqlalchemy/migrate_repo/migrate.cfg
 include nova/db/sqlalchemy/migrate_repo/README
 include nova/virt/interfaces.template
-include nova/virt/libvirt/*.template
+include nova/virt/libvirt*.xml.template
+include nova/virt/cpuinfo.xml.template
 include nova/tests/CA/
 include nova/tests/CA/cacert.pem
 include nova/tests/CA/private/
