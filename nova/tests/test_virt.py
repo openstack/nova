@@ -657,6 +657,21 @@ class LibvirtConnTestCase(test.TestCase):
         super(LibvirtConnTestCase, self).tearDown()
 
 
+class FakeNWFilter:
+    def __init__(self):
+        self.undefine_call_count = 0
+
+    def undefine(self):
+        self.undefine_call_count += 1
+        pass
+
+    def _nwfilterLookupByName(self, ignore):
+        return self
+
+    def _filterDefineXMLMock(self, xml):
+        return True
+
+
 class IptablesFirewallTestCase(test.TestCase):
     def setUp(self):
         super(IptablesFirewallTestCase, self).setUp()
@@ -869,6 +884,35 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(ipv6_network_rules,
                           ipv6_rules_per_network * networks_count)
 
+    def test_unfilter_instance_undefines_nwfilters(self):
+        admin_ctxt = context.get_admin_context()
+
+        fakefilter = FakeNWFilter()
+        self.fw.nwfilter._conn.nwfilterDefineXML =\
+                               fakefilter._filterDefineXMLMock
+        self.fw.nwfilter._conn.nwfilterLookupByName =\
+                               fakefilter._nwfilterLookupByName
+
+        instance_ref = self._create_instance_ref()
+        inst_id = instance_ref['id']
+        instance = db.instance_get(self.context, inst_id)
+
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
+        self.fw.setup_basic_filtering(instance)
+        self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
+        self.fw.unfilter_instance(instance)
+
+        # should attempt to undefine just the instance filter
+        self.assertEquals(fakefilter.undefine_call_count, 1)
+
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
+
 
 class NWFilterTestCase(test.TestCase):
     def setUp(self):
@@ -1047,26 +1091,11 @@ class NWFilterTestCase(test.TestCase):
         self.assertEquals(len(result), 3)
 
     def test_unfilter_instance_undefines_nwfilters(self):
-        class FakeNWFilter:
-            def __init__(self):
-                self.undefine_call_count = 0
-
-            def undefine(self):
-                self.undefine_call_count += 1
-                pass
-
-        fakefilter = FakeNWFilter()
-
-        def _nwfilterLookupByName(ignore):
-            return fakefilter
-
-        def _filterDefineXMLMock(xml):
-            return True
-
         admin_ctxt = context.get_admin_context()
 
-        self.fw._conn.nwfilterDefineXML = _filterDefineXMLMock
-        self.fw._conn.nwfilterLookupByName = _nwfilterLookupByName
+        fakefilter = FakeNWFilter()
+        self.fw._conn.nwfilterDefineXML = fakefilter._filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter._nwfilterLookupByName
 
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
