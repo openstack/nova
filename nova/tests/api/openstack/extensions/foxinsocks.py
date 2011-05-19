@@ -17,12 +17,10 @@
 
 import json
 
-from nova import wsgi
-
 from nova.api.openstack import extensions
 
 
-class FoxInSocksController(wsgi.Controller):
+class FoxInSocksController(object):
 
     def index(self, req):
         return "Try to say this Mr. Knox, sir..."

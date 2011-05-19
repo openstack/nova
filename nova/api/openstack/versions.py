@@ -18,13 +18,27 @@
 import webob
 import webob.dec
 
-from nova import wsgi
+from nova import wsgi as base_wsgi
 import nova.api.openstack.views.versions
+from nova.api.openstack import wsgi
 
 
-class Versions(wsgi.Application):
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, req):
+class Versions(wsgi.Resource, base_wsgi.Application):
+    def __init__(self):
+        metadata = {
+            "attributes": {
+                "version": ["status", "id"],
+                "link": ["rel", "href"],
+            }
+        }
+
+        serializers = {
+            'application/xml': wsgi.XMLSerializer(metadata=metadata),
+        }
+
+        super(Versions, self).__init__(None, serializers=serializers)
+
+    def dispatch(self, request, *args):
         """Respond to a request for all OpenStack API versions."""
         version_objs = [
             {
@@ -37,24 +51,6 @@ class Versions(wsgi.Application):
             },
         ]
 
-        builder = nova.api.openstack.views.versions.get_view_builder(req)
+        builder = nova.api.openstack.views.versions.get_view_builder(request)
         versions = [builder.build(version) for version in version_objs]
-        response = dict(versions=versions)
-
-        metadata = {
-            "application/xml": {
-                "attributes": {
-                    "version": ["status", "id"],
-                    "link": ["rel", "href"],
-                }
-            }
-        }
-
-        content_type = req.best_match_content_type()
-        body = wsgi.Serializer(metadata).serialize(response, content_type)
-
-        response = webob.Response()
-        response.content_type = content_type
-        response.body = body
-
-        return response
+        return dict(versions=versions)

@@ -26,15 +26,15 @@ from nova import flags
 from nova.api import openstack
 from nova.api.openstack import extensions
 from nova.api.openstack import flavors
+from nova.api.openstack import wsgi
 from nova.tests.api.openstack import fakes
-import nova.wsgi
 
 FLAGS = flags.FLAGS
 
 response_body = "Try to say this Mr. Knox, sir..."
 
 
-class StubController(nova.wsgi.Controller):
+class StubController(object):
 
     def __init__(self, body):
         self.body = body

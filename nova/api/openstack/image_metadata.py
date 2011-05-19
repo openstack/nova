@@ -20,7 +20,6 @@ from webob import exc
 from nova import flags
 from nova import quota
 from nova import utils
-from nova import wsgi
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 

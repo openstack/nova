@@ -31,7 +31,7 @@ FLAGS = flags.FLAGS
 
 
 class Controller(object):
-    """Base `wsgi.Controller` for retrieving/displaying images."""
+    """Base controller for retrieving/displaying images."""
 
     def __init__(self, image_service=None, compute_service=None):
         """Initialize new `ImageController`.
@@ -99,21 +99,20 @@ class Controller(object):
         self._image_service.delete(context, image_id)
         return webob.exc.HTTPNoContent()
 
-    def create(self, req):
+    def create(self, req, body):
         """Snapshot a server instance and save the image.
 
         :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
         content_type = req.get_content_type()
-        image = self._deserialize(req.body, content_type)
 
-        if not image:
+        if not body:
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = image["image"]["serverId"]
-            image_name = image["image"]["name"]
+            server_id = body["image"]["serverId"]
+            image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 

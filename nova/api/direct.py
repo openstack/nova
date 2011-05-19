@@ -42,6 +42,7 @@ from nova import exception
 from nova import flags
 from nova import utils
 from nova import wsgi
+import nova.api.openstack.wsgi
 
 
 # Global storage for registering modules.
@@ -251,7 +252,7 @@ class Reflection(object):
         return self._methods[method]
 
 
-class ServiceWrapper(wsgi.Controller):
+class ServiceWrapper(object):
     """Wrapper to dynamically povide a WSGI controller for arbitrary objects.
 
     With lightweight introspection allows public methods on the object to
@@ -265,7 +266,7 @@ class ServiceWrapper(wsgi.Controller):
     def __init__(self, service_handle):
         self.service_handle = service_handle
 
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
+    @webob.dec.wsgify(RequestClass=nova.api.openstack.wsgi.Request)
     def __call__(self, req):
         arg_dict = req.environ['wsgiorg.routing_args'][1]
         action = arg_dict['action']
@@ -289,8 +290,11 @@ class ServiceWrapper(wsgi.Controller):
 
         try:
             content_type = req.best_match_content_type()
-            default_xmlns = self.get_default_xmlns(req)
-            return self._serialize(result, content_type, default_xmlns)
+            serializer = {
+                'application/xml': nova.api.openstack.wsgi.XMLSerializer(),
+                'application/json': nova.api.openstack.wsgi.JSONSerializer(),
+            }[content_type]
+            return serializer.serialize(result)
         except:
             raise exception.Error("returned non-serializable type: %s"
                                   % result)

@@ -44,11 +44,10 @@ def _translate_detail_keys(cons):
 
 
 class Controller(object):
-    """The Consoles Controller for the Openstack API"""
+    """The Consoles controller for the Openstack API"""
 
     def __init__(self):
         self.console_api = console.API()
-        super(Controller, self).__init__()
 
     def index(self, req, server_id):
         """Returns a list of consoles for this instance"""

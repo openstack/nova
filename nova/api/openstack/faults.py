@@ -19,8 +19,7 @@
 import webob.dec
 import webob.exc
 
-from nova import wsgi
-from nova.api.openstack import common
+from nova.api.openstack import wsgi
 
 
 class Fault(webob.exc.HTTPException):
@@ -55,13 +54,21 @@ class Fault(webob.exc.HTTPException):
         if code == 413:
             retry = self.wrapped_exc.headers['Retry-After']
             fault_data[fault_name]['retryAfter'] = retry
+
         # 'code' is an attribute on the fault tag itself
-        metadata = {'application/xml': {'attributes': {fault_name: 'code'}}}
-        default_xmlns = common.XML_NS_V10
-        serializer = wsgi.Serializer(metadata, default_xmlns)
+        metadata = {'attributes': {fault_name: 'code'}}
+
         content_type = req.best_match_content_type()
-        self.wrapped_exc.body = serializer.serialize(fault_data, content_type)
+
+        serializer = {
+            'application/xml': wsgi.XMLSerializer(metadata=metadata,
+                                                  xmlns=wsgi.XMLNS_V10),
+            'application/json': wsgi.JSONSerializer(),
+        }[content_type]
+
+        self.wrapped_exc.body = serializer.serialize(fault_data)
         self.wrapped_exc.content_type = content_type
+
         return self.wrapped_exc
 
 
@@ -69,14 +76,6 @@ class OverLimitFault(webob.exc.HTTPException):
     """
     Rate-limited request response.
     """
-
-    _serialization_metadata = {
-        "application/xml": {
-            "attributes": {
-                "overLimitFault": "code",
-            },
-        },
-    }
 
     def __init__(self, message, details, retry_time):
         """
@@ -97,8 +96,16 @@ class OverLimitFault(webob.exc.HTTPException):
         Return the wrapped exception with a serialized body conforming to our
         error format.
         """
-        serializer = wsgi.Serializer(self._serialization_metadata)
         content_type = request.best_match_content_type()
-        content = serializer.serialize(self.content, content_type)
+        metadata = {"attributes": {"overLimitFault": "code"}}
+
+        serializer = {
+            'application/xml': wsgi.XMLSerializer(metadata=metadata,
+                                                  xmlns=wsgi.XMLNS_V10),
+            'application/json': wsgi.JSONSerializer(),
+        }[content_type]
+
+        content = serializer.serialize(self.content)
         self.wrapped_exc.body = content
+
         return self.wrapped_exc

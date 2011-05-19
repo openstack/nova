@@ -206,8 +206,7 @@ class Resource(object):
         except exception.InvalidContentType:
             return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
 
-        controller_method = getattr(self.controller, action)
-        result = controller_method(req=request, **action_args)
+        result = self.dispatch(request, action, action_args)
 
         response = self.serialize_response(accept, result)
 
@@ -221,6 +220,10 @@ class Resource(object):
         LOG.debug(msg)
 
         return response
+
+    def dispatch(self, request, action, action_args):
+        controller_method = getattr(self.controller, action)
+        return controller_method(req=request, **action_args)
 
     def serialize_response(self, content_type, response_body):
         """Serialize a dict into a string and wrap in a wsgi.Request object.
@@ -253,7 +256,7 @@ class Resource(object):
 
         """
         action_args = self.get_action_args(request.environ)
-        action = action_args.pop('action')
+        action = action_args.pop('action', None)
 
         if request.method.lower() in ('post', 'put'):
             if len(request.body) == 0:
@@ -275,14 +278,18 @@ class Resource(object):
         return request.best_match_content_type()
 
     def get_action_args(self, request_environment):
-        args = request_environment['wsgiorg.routing_args'][1].copy()
+        try:
+            args = request_environment['wsgiorg.routing_args'][1].copy()
 
-        del args['controller']
+            del args['controller']
 
-        if 'format' in args:
-            del args['format']
+            if 'format' in args:
+                del args['format']
 
-        return args
+            return args
+
+        except KeyError:
+            return {}
 
     def get_deserializer(self, content_type):
         try:
