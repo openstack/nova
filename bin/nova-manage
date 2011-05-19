@@ -403,7 +403,7 @@ class ProjectCommands(object):
                 db.quota_update(ctxt, project_id, key, value)
             except exception.NotFound:
                 db.quota_create(ctxt, project_id, key, value)
-        project_quota = quota.get_quota(ctxt, project_id)
+        project_quota = quota.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
             if value is None:
                 value = 'unlimited'

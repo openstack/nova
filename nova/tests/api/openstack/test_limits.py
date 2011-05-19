@@ -184,10 +184,11 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         self.controller = limits.LimitsControllerV11()
         self.absolute_limits = {}
 
-        def stub_get_quota(context, project_id):
+        def stub_get_project_quotas(context, project_id):
             return self.absolute_limits
 
-        self.stubs.Set(nova.quota, "get_quota", stub_get_quota)
+        self.stubs.Set(nova.quota, "get_project_quotas",
+                       stub_get_project_quotas)
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
