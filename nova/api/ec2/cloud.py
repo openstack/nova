@@ -35,6 +35,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import utils
@@ -718,9 +719,10 @@ class CloudController(object):
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
-                    i['dnsNameV6'] = utils.to_global_ipv6(
+                    i['dnsNameV6'] = ipv6.to_global(
                         instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'])
+                        instance['mac_address'],
+                        instance['project_id'])
 
             i['privateDnsName'] = fixed_addr
             i['privateIpAddress'] = fixed_addr
@@ -906,7 +908,7 @@ class CloudController(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
-        except ValueError:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:

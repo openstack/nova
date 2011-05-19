@@ -23,6 +23,15 @@ from nova.api.openstack import common
 class ViewBuilder(object):
     """Openstack API base limits view builder."""
 
+    def _build_rate_limits(self, rate_limits):
+        raise NotImplementedError()
+
+    def _build_rate_limit(self, rate_limit):
+        raise NotImplementedError()
+
+    def _build_absolute_limits(self, absolute_limit):
+        raise NotImplementedError()
+
     def build(self, rate_limits, absolute_limits):
         rate_limits = self._build_rate_limits(rate_limits)
         absolute_limits = self._build_absolute_limits(absolute_limits)

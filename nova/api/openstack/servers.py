@@ -75,6 +75,21 @@ class Controller(common.OpenstackController):
         """ Returns a list of server details for a given user """
         return self._items(req, is_detail=True)
 
+    def _image_id_from_req_data(self, data):
+        raise NotImplementedError()
+
+    def _flavor_id_from_req_data(self, data):
+        raise NotImplementedError()
+
+    def _get_view_builder(self, req):
+        raise NotImplementedError()
+
+    def _limit_items(self, items, req):
+        raise NotImplementedError()
+
+    def _action_rebuild(self, info, request, instance_id):
+        raise NotImplementedError()
+
     def _items(self, req, is_detail):
         """Returns a list of servers for a given user.
 
@@ -743,8 +758,9 @@ class ServerCreateRequestXMLDeserializer(object):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId"]:
-            server[attr] = server_node.getAttribute(attr)
+        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
         metadata = self._extract_metadata(server_node)
         if metadata is not None:
             server["metadata"] = metadata

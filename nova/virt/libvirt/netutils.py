@@ -46,7 +46,6 @@ def get_ip_version(cidr):
     net = IPy.IP(cidr)
     return int(net.version())
 
-
 def get_network_info(instance):
     # TODO(adiantum) If we will keep this function
     # we should cache network_info
@@ -73,8 +72,9 @@ def get_network_info(instance):
         def ip6_dict():
             prefix = network['cidr_v6']
             mac = instance['mac_address']
+            project_id = instance['project_id']
             return  {
-                'ip': utils.to_global_ipv6(prefix, mac),
+                'ip': ipv6.to_global(prefix, mac, project_id),
                 'netmask': network['netmask_v6'],
                 'enabled': '1'}
 
@@ -93,3 +93,5 @@ def get_network_info(instance):
 
         network_info.append((network, mapping))
     return network_info
+
+
