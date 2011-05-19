@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-from migrate import *
+from sqlalchemy import Column, Table, MetaData
+from sqlalchemy import Integer, DateTime, Boolean, String
 
 from nova import log as logging
 
