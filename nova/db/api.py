@@ -884,27 +884,27 @@ def volume_update(context, volume_id, values):
 
 
 def snapshot_create(context, values):
-    """Create a volume from the values dictionary."""
+    """Create a snapshot from the values dictionary."""
     return IMPL.snapshot_create(context, values)
 
 
 def snapshot_destroy(context, snapshot_id):
-    """Create a volume from the values dictionary."""
+    """Destroy the snapshot or raise if it does not exist."""
     return IMPL.snapshot_destroy(context, snapshot_id)
 
 
 def snapshot_get(context, snapshot_id):
-    """Get a volume or raise if it does not exist."""
+    """Get a snapshot or raise if it does not exist."""
     return IMPL.snapshot_get(context, snapshot_id)
 
 
 def snapshot_get_all(context):
-    """Get all volumes."""
+    """Get all snapshots."""
     return IMPL.snapshot_get_all(context)
 
 
 def snapshot_get_all_by_project(context, project_id):
-    """Get all volumes belonging to a project."""
+    """Get all snapshots belonging to a project."""
     return IMPL.snapshot_get_all_by_project(context, project_id)
 
 
