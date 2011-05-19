@@ -844,7 +844,7 @@ class LibvirtConnection(driver.ComputeDriver):
                            'ramdisk_id': inst['ramdisk_id']}
 
         if disk_images['kernel_id']:
-            fname = hashlib.sha1(disk_images['kernel_id']).hexdigest()
+            fname = disk_images['kernel_id']
             self._cache_image(fn=self._fetch_image,
                               target=basepath('kernel'),
                               fname=fname,
@@ -852,7 +852,7 @@ class LibvirtConnection(driver.ComputeDriver):
                               user=user,
                               project=project)
             if disk_images['ramdisk_id']:
-                fname = hashlib.sha1(disk_images['ramdisk_id']).hexdigest()
+                fname = disk_images['ramdisk_id']
                 self._cache_image(fn=self._fetch_image,
                                   target=basepath('ramdisk'),
                                   fname=fname,
