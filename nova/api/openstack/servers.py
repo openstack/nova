@@ -707,7 +707,7 @@ class ControllerV11(Controller):
         return common.XML_NS_V11
 
 
-class ServerCreateRequestXMLDeserializer(object):
+class ServerXMLDeserializer(wsgi.XMLDeserializer):
     """
     Deserializer to handle xml-formatted server create requests.
 
@@ -715,7 +715,7 @@ class ServerCreateRequestXMLDeserializer(object):
     and personality attributes
     """
 
-    def deserialize(self, string):
+    def create(self, string):
         """Deserialize an xml-formatted server create request"""
         dom = minidom.parseString(string)
         server = self._extract_server(dom)
@@ -812,14 +812,13 @@ def resource_factory(version='1.0'):
     }[version]
 
     serializers = {
-        'application/xml': wsgi.XMLSerializer(metadata=metadata,
-                                              xmlns=xmlns),
+        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                  xmlns=xmlns),
     }
 
     deserializers = {
-        'application/xml': ServerCreateRequestXMLDeserializer(),
+        'application/xml': ServerXMLDeserializer(),
     }
 
     return wsgi.Resource(controller, serializers=serializers,
                          deserializers=deserializers)
-

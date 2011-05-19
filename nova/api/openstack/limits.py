@@ -95,8 +95,8 @@ def resource_factory(version='1.0'):
     }
 
     serializers = {
-        'application/xml': wsgi.XMLSerializer(xmlns=xmlns,
-                                              metadata=metadata)
+        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
+                                                  metadata=metadata)
     }
 
     return wsgi.Resource(controller, serializers=serializers)

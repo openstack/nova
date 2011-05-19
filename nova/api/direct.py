@@ -291,8 +291,8 @@ class ServiceWrapper(object):
         try:
             content_type = req.best_match_content_type()
             serializer = {
-                'application/xml': nova.api.openstack.wsgi.XMLSerializer(),
-                'application/json': nova.api.openstack.wsgi.JSONSerializer(),
+              'application/xml': nova.api.openstack.wsgi.XMLDictSerializer(),
+              'application/json': nova.api.openstack.wsgi.JSONDictSerializer(),
             }[content_type]
             return serializer.serialize(result)
         except:

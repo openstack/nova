@@ -61,9 +61,9 @@ class Fault(webob.exc.HTTPException):
         content_type = req.best_match_content_type()
 
         serializer = {
-            'application/xml': wsgi.XMLSerializer(metadata=metadata,
-                                                  xmlns=wsgi.XMLNS_V10),
-            'application/json': wsgi.JSONSerializer(),
+            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                      xmlns=wsgi.XMLNS_V10),
+            'application/json': wsgi.JSONDictSerializer(),
         }[content_type]
 
         self.wrapped_exc.body = serializer.serialize(fault_data)
@@ -100,9 +100,9 @@ class OverLimitFault(webob.exc.HTTPException):
         metadata = {"attributes": {"overLimitFault": "code"}}
 
         serializer = {
-            'application/xml': wsgi.XMLSerializer(metadata=metadata,
-                                                  xmlns=wsgi.XMLNS_V10),
-            'application/json': wsgi.JSONSerializer(),
+            'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                      xmlns=wsgi.XMLNS_V10),
+            'application/json': wsgi.JSONDictSerializer(),
         }[content_type]
 
         content = serializer.serialize(self.content)

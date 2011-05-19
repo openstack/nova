@@ -6,6 +6,7 @@ from xml.dom import minidom
 from nova import exception
 from nova import log as logging
 from nova import utils
+from nova import wsgi
 
 
 XMLNS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
@@ -15,17 +16,17 @@ LOG = logging.getLogger('nova.api.openstack.wsgi')
 
 
 class Request(webob.Request):
-    def best_match_content_type(self, supported=None):
-        """Determine the requested content-type.
+    """Add some Openstack API-specific logic to the base webob.Request."""
+
+    def best_match_content_type(self):
+        """Determine the requested response content-type.
 
         Based on the query extension then the Accept header.
 
-        :param supported: list of content-types to override defaults
-
         """
-        supported = supported or ['application/json', 'application/xml']
-        parts = self.path.rsplit('.', 1)
+        supported = ('application/json', 'application/xml')
 
+        parts = self.path.rsplit('.', 1)
         if len(parts) > 1:
             ctype = 'application/{0}'.format(parts[1])
             if ctype in supported:
@@ -33,32 +34,52 @@ class Request(webob.Request):
 
         bm = self.accept.best_match(supported)
 
+        # default to application/json if we don't find a preference
         return bm or 'application/json'
 
     def get_content_type(self):
+        """Determine content type of the request body.
+
+        Does not do any body introspection, only checks header
+
+        """
         if not "Content-Type" in self.headers:
             raise exception.InvalidContentType(content_type=None)
 
         allowed_types = ("application/xml", "application/json")
-        type = self.content_type
+        content_type = self.content_type
 
-        if type not in allowed_types:
-            raise exception.InvalidContentType(content_type=type)
+        if content_type not in allowed_types:
+            raise exception.InvalidContentType(content_type=content_type)
         else:
-            return type
+            return content_type
 
 
-class JSONDeserializer(object):
-    def deserialize(self, datastring):
+class TextDeserializer(object):
+    """Custom request body deserialization based on controller action name."""
+
+    def deserialize(self, datastring, action=None):
+        """Find local deserialization method and parse request body."""
+        try:
+            action_method = getattr(self, action)
+        except Exception:
+            action_method = self.default
+
+        return action_method(datastring)
+
+    def default(self, datastring):
+        """Default deserialization code should live here"""
+        raise NotImplementedError()
+
+
+class JSONDeserializer(TextDeserializer):
+
+    def default(self, datastring):
         return utils.loads(datastring)
 
 
-class JSONSerializer(object):
-    def serialize(self, data):
-        return utils.dumps(data)
+class XMLDeserializer(TextDeserializer):
 
-
-class XMLDeserializer(object):
     def __init__(self, metadata=None):
         """
         :param metadata: information needed to deserialize xml into
@@ -67,8 +88,7 @@ class XMLDeserializer(object):
         super(XMLDeserializer, self).__init__()
         self.metadata = metadata or {}
 
-    def deserialize(self, datastring):
-        """XML deserialization entry point."""
+    def default(self, datastring):
         plurals = set(self.metadata.get('plurals', {}))
         node = minidom.parseString(datastring).childNodes[0]
         return {node.nodeName: self._from_xml_node(node, plurals)}
@@ -95,18 +115,111 @@ class XMLDeserializer(object):
             return result
 
 
-class XMLSerializer(object):
+class RequestDeserializer(object):
+    """Break up a Request object into more useful pieces."""
+
+    def __init__(self, deserializers=None):
+        """
+        :param deserializers: dictionary of content-type-specific deserializers
+
+        """
+        self.deserializers = {
+            'application/xml': XMLDeserializer(),
+            'application/json': JSONDeserializer(),
+        }
+
+        self.deserializers.update(deserializers or {})
+
+    def deserialize(self, request):
+        """Extract necessary pieces of the request.
+
+        :param request: Request object
+        :returns tuple of expected controller action name, dictionary of
+                 keyword arguments to pass to the controller, the expected
+                 content type of the response
+
+        """
+        action_args = self.get_action_args(request.environ)
+        action = action_args.pop('action', None)
+
+        if request.method.lower() in ('post', 'put'):
+            if len(request.body) == 0:
+                action_args['body'] = None
+            else:
+                content_type = request.get_content_type()
+                deserializer = self.get_deserializer(content_type)
+
+                try:
+                    body = deserializer.deserialize(request.body, action)
+                    action_args['body'] = body
+                except exception.InvalidContentType:
+                    action_args['body'] = None
+
+        accept = self.get_expected_content_type(request)
+
+        return (action, action_args, accept)
+
+    def get_deserializer(self, content_type):
+        try:
+            return self.deserializers[content_type]
+        except Exception:
+            raise exception.InvalidContentType(content_type=content_type)
+
+    def get_expected_content_type(self, request):
+        return request.best_match_content_type()
+
+    def get_action_args(self, request_environment):
+        """Parse dictionary created by routes library."""
+        try:
+            args = request_environment['wsgiorg.routing_args'][1].copy()
+
+            del args['controller']
+
+            if 'format' in args:
+                del args['format']
+
+            return args
+
+        except KeyError:
+            return {}
+
+
+class DictSerializer(object):
+    """Custom response body serialization based on controller action name."""
+
+    def serialize(self, data, action=None):
+        """Find local serialization method and encode response body."""
+        try:
+            action_method = getattr(self, action)
+        except Exception:
+            action_method = self.default
+
+        return action_method(data)
+
+    def default(self, data):
+        """Default serialization code should live here"""
+        raise NotImplementedError()
+
+
+class JSONDictSerializer(DictSerializer):
+
+    def default(self, data):
+        return utils.dumps(data)
+
+
+class XMLDictSerializer(DictSerializer):
+
     def __init__(self, metadata=None, xmlns=None):
         """
         :param metadata: information needed to deserialize xml into
                          a dictionary.
         :param xmlns: XML namespace to include with serialized xml
         """
-        super(XMLSerializer, self).__init__()
+        super(XMLDictSerializer, self).__init__()
         self.metadata = metadata or {}
         self.xmlns = xmlns
 
-    def serialize(self, data):
+    def default(self, data):
         # We expect data to contain a single key which is the XML root.
         root_key = data.keys()[0]
         doc = minidom.Document()
@@ -171,44 +284,84 @@ class XMLSerializer(object):
         return result
 
 
-class Resource(object):
-    """WSGI app that dispatched to methods.
+class ResponseSerializer(object):
+    """Encode the necessary pieces into a response object"""
 
-    WSGI app that reads routing information supplied by RoutesMiddleware
-    and calls the requested action method upon itself.  All action methods
-    must, in addition to their normal parameters, accept a 'req' argument
-    which is the incoming wsgi.Request.  They raise a webob.exc exception,
-    or return a dict which will be serialized by requested content type.
+    def __init__(self, serializers=None):
+        """
+        :param serializers: dictionary of content-type-specific serializers
 
-    """
-    def __init__(self, controller, serializers=None, deserializers=None):
+        """
         self.serializers = {
-            'application/xml': XMLSerializer(),
-            'application/json': JSONSerializer(),
+            'application/xml': XMLDictSerializer(),
+            'application/json': JSONDictSerializer(),
         }
         self.serializers.update(serializers or {})
 
-        self.deserializers = {
-            'application/xml': XMLDeserializer(),
-            'application/json': JSONDeserializer(),
-        }
-        self.deserializers.update(deserializers or {})
+    def serialize(self, response_data, content_type):
+        """Serialize a dict into a string and wrap in a wsgi.Request object.
 
+        :param response_data: dict produced by the Controller
+        :param content_type: expected mimetype of serialized response body
+
+        """
+        response = webob.Response()
+        response.headers['Content-Type'] = content_type
+
+        serializer = self.get_serializer(content_type)
+        response.body = serializer.serialize(response_data)
+
+        return response
+
+    def get_serializer(self, content_type):
+        try:
+            return self.serializers[content_type]
+        except Exception:
+            raise exception.InvalidContentType(content_type=content_type)
+
+
+class Resource(wsgi.Application):
+    """WSGI app that handles (de)serialization and controller dispatch.
+
+    WSGI app that reads routing information supplied by RoutesMiddleware
+    and calls the requested action method upon its controller.  All
+    controller action methods must accept a 'req' argument, which is the
+    incoming wsgi.Request. If the operation is a PUT or POST, the controller
+    method must also accept a 'body' argument (the deserialized request body).
+    They may raise a webob.exc exception or return a dict, which will be
+    serialized by requested content type.
+
+    """
+    def __init__(self, controller, serializers=None, deserializers=None):
+        """
+        :param controller: object that implement methods created by routes lib
+        :param serializers: dict of content-type specific text serializers
+        :param deserializers: dict of content-type specific text deserializers
+
+        """
         self.controller = controller
+        self.serializer = ResponseSerializer(serializers)
+        self.deserializer = RequestDeserializer(deserializers)
 
     @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, request):
-        """Call the method specified in req.environ by RoutesMiddleware."""
+        """WSGI method that controls (de)serialization and method dispatch."""
+
         LOG.debug("%s %s" % (request.method, request.url))
 
         try:
-            action, action_args, accept = self.deserialize_request(request)
+            action, action_args, accept = self.deserializer.deserialize(
+                                                                      request)
         except exception.InvalidContentType:
             return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
 
-        result = self.dispatch(request, action, action_args)
+        action_result = self.dispatch(request, action, action_args)
 
-        response = self.serialize_response(accept, result)
+        #TODO(bcwaldon): find a more elegant way to pass through non-dict types
+        if type(action_result) is dict:
+            response = self.serializer.serialize(action_result, accept)
+        else:
+            response = action_result
 
         try:
             msg_dict = dict(url=request.url, status=response.status_int)
@@ -222,77 +375,7 @@ class Resource(object):
         return response
 
     def dispatch(self, request, action, action_args):
+        """Find action-spefic method on controller and call it."""
+
         controller_method = getattr(self.controller, action)
         return controller_method(req=request, **action_args)
-
-    def serialize_response(self, content_type, response_body):
-        """Serialize a dict into a string and wrap in a wsgi.Request object.
-
-        :param content_type: expected mimetype of serialized response body
-        :param response_body: dict produced by the Controller
-
-        """
-        if not type(response_body) is dict:
-            return response_body
-
-        response = webob.Response()
-        response.headers['Content-Type'] = content_type
-
-        serializer = self.get_serializer(content_type)
-        response.body = serializer.serialize(response_body)
-
-        return response
-
-    def get_serializer(self, content_type):
-        try:
-            return self.serializers[content_type]
-        except Exception:
-            raise exception.InvalidContentType(content_type=content_type)
-
-    def deserialize_request(self, request):
-        """Parse a wsgi request into a set of params we care about.
-
-        :param request: wsgi.Request object
-
-        """
-        action_args = self.get_action_args(request.environ)
-        action = action_args.pop('action', None)
-
-        if request.method.lower() in ('post', 'put'):
-            if len(request.body) == 0:
-                action_args['body'] = None
-            else:
-                content_type = request.get_content_type()
-                deserializer = self.get_deserializer(content_type)
-
-                try:
-                    action_args['body'] = deserializer.deserialize(request.body)
-                except exception.InvalidContentType:
-                    action_args['body'] = None
-
-        accept = self.get_expected_content_type(request)
-
-        return (action, action_args, accept)
-
-    def get_expected_content_type(self, request):
-        return request.best_match_content_type()
-
-    def get_action_args(self, request_environment):
-        try:
-            args = request_environment['wsgiorg.routing_args'][1].copy()
-
-            del args['controller']
-
-            if 'format' in args:
-                del args['format']
-
-            return args
-
-        except KeyError:
-            return {}
-
-    def get_deserializer(self, content_type):
-        try:
-            return self.deserializers[content_type]
-        except Exception:
-            raise exception.InvalidContentType(content_type=content_type)

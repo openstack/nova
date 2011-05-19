@@ -76,26 +76,56 @@ class RequestTest(test.TestCase):
         self.assertEqual(result, "application/json")
 
 
-class SerializationTest(test.TestCase):
+class DictSerializerTest(test.TestCase):
+    def test_dispatch(self):
+        serializer = wsgi.DictSerializer()
+        serializer.create = lambda x: 'pants'
+        serializer.default = lambda x: 'trousers'
+        self.assertEqual(serializer.serialize({}, 'create'), 'pants')
+
+    def test_dispatch_default(self):
+        serializer = wsgi.DictSerializer()
+        serializer.create = lambda x: 'pants'
+        serializer.default = lambda x: 'trousers'
+        self.assertEqual(serializer.serialize({}, 'update'), 'trousers')
+
+
+class XMLDictSerializerTest(test.TestCase):
     def test_xml(self):
         input_dict = dict(servers=dict(a=(2, 3)))
         expected_xml = '<serversxmlns="asdf"><a>(2,3)</a></servers>'
         xmlns = "testing xmlns"
-        serializer = wsgi.XMLSerializer(xmlns="asdf")
+        serializer = wsgi.XMLDictSerializer(xmlns="asdf")
         result = serializer.serialize(input_dict)
         result = result.replace('\n', '').replace(' ', '')
         self.assertEqual(result, expected_xml)
 
+
+class JSONDictSerializerTest(test.TestCase):
     def test_json(self):
         input_dict = dict(servers=dict(a=(2, 3)))
         expected_json = '{"servers":{"a":[2,3]}}'
-        serializer = wsgi.JSONSerializer()
+        serializer = wsgi.JSONDictSerializer()
         result = serializer.serialize(input_dict)
         result = result.replace('\n', '').replace(' ', '')
         self.assertEqual(result, expected_json)
 
 
-class DeserializationTest(test.TestCase):
+class TextDeserializerTest(test.TestCase):
+    def test_dispatch(self):
+        deserializer = wsgi.TextDeserializer()
+        deserializer.create = lambda x: 'pants'
+        deserializer.default = lambda x: 'trousers'
+        self.assertEqual(deserializer.deserialize({}, 'create'), 'pants')
+
+    def test_dispatch_default(self):
+        deserializer = wsgi.TextDeserializer()
+        deserializer.create = lambda x: 'pants'
+        deserializer.default = lambda x: 'trousers'
+        self.assertEqual(deserializer.deserialize({}, 'update'), 'trousers')
+
+
+class JSONDeserializerTest(test.TestCase):
     def test_json(self):
         data = """{"a": {
                 "a1": "1",
@@ -112,6 +142,8 @@ class DeserializationTest(test.TestCase):
         deserializer = wsgi.JSONDeserializer()
         self.assertEqual(deserializer.deserialize(data), as_dict)
 
+
+class XMLDeserializerTest(test.TestCase):
     def test_xml(self):
         xml = """
             <a a1="1" a2="2">
@@ -137,7 +169,7 @@ class DeserializationTest(test.TestCase):
         self.assertEqual(deserializer.deserialize(xml), as_dict)
 
 
-class ResourceSerializerTest(test.TestCase):
+class ResponseSerializerTest(test.TestCase):
     def setUp(self):
         class JSONSerializer(object):
             def serialize(self, data):
@@ -152,40 +184,32 @@ class ResourceSerializerTest(test.TestCase):
             'application/XML': XMLSerializer(),
         }
 
-        self.resource = wsgi.Resource(None, serializers=self.serializers)
+        self.serializer = wsgi.ResponseSerializer(serializers=self.serializers)
 
     def tearDown(self):
         pass
 
     def test_get_serializer(self):
-        self.assertEqual(self.resource.get_serializer('application/json'),
+        self.assertEqual(self.serializer.get_serializer('application/json'),
                          self.serializers['application/json'])
 
     def test_get_serializer_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
-                          self.resource.get_serializer,
+                          self.serializer.get_serializer,
                           'application/unknown')
 
-    def test_serialize_response_dict(self):
-        response = self.resource.serialize_response('application/json', {})
+    def test_serialize_response(self):
+        response = self.serializer.serialize({}, 'application/json')
         self.assertEqual(response.headers['Content-Type'], 'application/json')
         self.assertEqual(response.body, 'pew_json')
 
-    def test_serialize_response_non_dict(self):
-        response = self.resource.serialize_response('application/json', 'a')
-        self.assertEqual(response, 'a')
-
     def test_serialize_response_dict_to_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
-                          self.resource.serialize_response,
+                          self.serializer.serialize,
                           'application/unknown', {})
 
-    def test_serialize_response_non_dict_to_unknown_content_type(self):
-        response = self.resource.serialize_response('application/unknown', 'a')
-        self.assertEqual(response, 'a')
 
-
-class ResourceDeserializerTest(test.TestCase):
+class RequestDeserializerTest(test.TestCase):
     def setUp(self):
         class JSONDeserializer(object):
             def deserialize(self, data):
@@ -200,24 +224,25 @@ class ResourceDeserializerTest(test.TestCase):
             'application/XML': XMLDeserializer(),
         }
 
-        self.resource = wsgi.Resource(None, deserializers=self.deserializers)
+        self.deserializer = wsgi.RequestDeserializer(
+                                            deserializers=self.deserializers)
 
     def tearDown(self):
         pass
 
     def test_get_deserializer(self):
-        self.assertEqual(self.resource.get_deserializer('application/json'),
-                         self.deserializers['application/json'])
+        expected = self.deserializer.get_deserializer('application/json')
+        self.assertEqual(expected, self.deserializers['application/json'])
 
     def test_get_deserializer_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
-                          self.resource.get_deserializer,
+                          self.deserializer.get_deserializer,
                           'application/unknown')
 
     def test_get_expected_content_type(self):
         request = wsgi.Request.blank('/')
         request.headers['Accept'] = 'application/json'
-        self.assertEqual(self.resource.get_expected_content_type(request),
+        self.assertEqual(self.deserializer.get_expected_content_type(request),
                          'application/json')
 
     def test_get_action_args(self):
@@ -232,17 +257,38 @@ class ResourceDeserializerTest(test.TestCase):
 
         expected = {'action': 'update', 'id': 12}
 
-        self.assertEqual(self.resource.get_action_args(env), expected)
+        self.assertEqual(self.deserializer.get_action_args(env), expected)
 
-    def test_deserialize_request(self):
+    def test_deserialize(self):
         def fake_get_routing_args(request):
             return {'action': 'create'}
-        self.resource.get_action_args = fake_get_routing_args
+        self.deserializer.get_action_args = fake_get_routing_args
 
         request = wsgi.Request.blank('/')
         request.headers['Accept'] = 'application/xml'
 
-        deserialized = self.resource.deserialize_request(request)
+        deserialized = self.deserializer.deserialize(request)
         expected = ('create', {}, 'application/xml')
 
         self.assertEqual(expected, deserialized)
+
+
+class ResourceTest(test.TestCase):
+    def test_dispatch(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        resource = wsgi.Resource(Controller())
+        actual = resource.dispatch(None, 'index', {'pants': 'off'})
+        expected = 'off'
+        self.assertEqual(actual, expected)
+
+    def test_dispatch_unknown_controller_action(self):
+        class Controller(object):
+            def index(self, req, pants=None):
+                return pants
+
+        resource = wsgi.Resource(Controller())
+        self.assertRaises(AttributeError, resource.dispatch,
+                          None, 'create', {})

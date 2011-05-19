@@ -165,8 +165,8 @@ class ResponseExtensionController(object):
             except AttributeError:
                 default_xmlns = None
                 serializer = {
-                    'application/xml': wsgi.XMLSerializer(),
-                    'application/json': wsgi.JSONSerializer(),
+                    'application/xml': wsgi.XMLDictSerializer(),
+                    'application/json': wsgi.JSONDictSerializer(),
                 }[content_type]
                 body = serializer.serialize(res)
                 headers = {"Content-Type": content_type}
@@ -229,7 +229,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         return _factory
 
     def _action_ext_resources(self, application, ext_mgr, mapper):
-        """Return a dict of ActionExtensionResource objects by collection."""
+        """Return a dict of ActionExtensionResource-s by collection."""
         action_resources = {}
         for action in ext_mgr.get_actions():
             if not action.collection in action_resources.keys():
@@ -248,7 +248,7 @@ class ExtensionMiddleware(base_wsgi.Middleware):
         return action_resources
 
     def _response_ext_resources(self, application, ext_mgr, mapper):
-        """Returns a dict of ResponseExtensionResource objects by collection."""
+        """Returns a dict of ResponseExtensionResource-s by collection."""
         response_ext_resources = {}
         for resp_ext in ext_mgr.get_response_extensions():
             if not resp_ext.key in response_ext_resources.keys():

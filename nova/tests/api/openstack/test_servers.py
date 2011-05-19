@@ -993,6 +993,14 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 501)
 
+    def test_server_change_password_xml(self):
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/xml'
+        req.body = '<changePassword adminPass="1234pass">'
+#        res = req.get_response(fakes.wsgi_app())
+#        self.assertEqual(res.status_int, 501)
+
     def test_server_change_password_v1_1(self):
 
         class MockSetAdminPassword(object):
@@ -1375,13 +1383,13 @@ class ServersTest(test.TestCase):
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def setUp(self):
-        self.deserializer = servers.ServerCreateRequestXMLDeserializer()
+        self.deserializer = servers.ServerXMLDeserializer()
 
     def test_minimal_request(self):
         serial_request = """
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1"/>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1395,7 +1403,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
  name="new-server-test" imageId="1" flavorId="1">
     <metadata/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1410,7 +1418,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
  name="new-server-test" imageId="1" flavorId="1">
     <personality/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1426,7 +1434,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
     <metadata/>
     <personality/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1443,7 +1451,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
     <personality/>
     <metadata/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1461,7 +1469,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <file path="/etc/conf">aabbccdd</file>
     </personality>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1471,7 +1479,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf">aabbccdd</file>
 <file path="/etc/sudoers">abcd</file></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"},
                     {"path": "/etc/sudoers", "contents": "abcd"}]
         self.assertEquals(request["server"]["personality"], expected)
@@ -1487,7 +1495,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <file path="/etc/ignoreme">anything</file>
     </personality>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1496,7 +1504,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file>aabbccdd</file></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1505,7 +1513,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf"></file></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": ""}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1514,7 +1522,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf"/></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": ""}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1526,7 +1534,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="alpha">beta</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "beta"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1539,7 +1547,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="foo">bar</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "beta", "foo": "bar"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1551,7 +1559,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="alpha"></meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": ""}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1564,7 +1572,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="delta"/>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "", "delta": ""}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1576,7 +1584,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta>beta</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"": "beta"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1589,7 +1597,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta>gamma</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"": "gamma"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1602,7 +1610,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="foo">baz</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"foo": "baz"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1649,7 +1657,7 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
                 },
             ],
         }}
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         self.assertEqual(request, expected)
 
     def test_request_xmlser_with_flavor_image_ref(self):
@@ -1659,7 +1667,7 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
                     imageRef="http://localhost:8774/v1.1/images/1"
                     flavorRef="http://localhost:8774/v1.1/flavors/1">
                 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         self.assertEquals(request["server"]["flavorRef"],
                           "http://localhost:8774/v1.1/flavors/1")
         self.assertEquals(request["server"]["imageRef"],

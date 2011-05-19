@@ -18,12 +18,11 @@
 import webob
 import webob.dec
 
-from nova import wsgi as base_wsgi
 import nova.api.openstack.views.versions
 from nova.api.openstack import wsgi
 
 
-class Versions(wsgi.Resource, base_wsgi.Application):
+class Versions(wsgi.Resource):
     def __init__(self):
         metadata = {
             "attributes": {
@@ -33,7 +32,7 @@ class Versions(wsgi.Resource, base_wsgi.Application):
         }
 
         serializers = {
-            'application/xml': wsgi.XMLSerializer(metadata=metadata),
+            'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
         }
 
         super(Versions, self).__init__(None, serializers=serializers)
