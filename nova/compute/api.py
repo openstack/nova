@@ -150,9 +150,13 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
-            raise quota.QuotaError(_("Instance quota exceeded. You can only "
-                                     "run %s more instances of this type.") %
-                                   num_instances, "InstanceLimitExceeded")
+            if num_instances <= 0:
+                message = _("Instance quota exceeded. You cannot run any "
+                            "more instances of this type.")
+            else:
+                message = _("Instance quota exceeded. You can only run %s "
+                            "more instances of this type.") % num_instances
+            raise quota.QuotaError(message, "InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
