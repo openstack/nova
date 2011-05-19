@@ -362,7 +362,6 @@ class NetworkManager(manager.SchedulerDependentManager):
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
-                'gateway6': network['gateway_v6'],
                 'broadcast': network['broadcast'],
                 'mac': mac_address['address'],
                 'rxtx_cap': flavor['rxtx_cap'],

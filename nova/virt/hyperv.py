@@ -158,7 +158,12 @@ class HyperVConnection(driver.ComputeDriver):
             self._create_vm(instance)
 
             self._create_disk(instance['name'], vhdfile)
-            self._create_nic(instance['name'], instance['mac_address'])
+
+            mac_address = None
+            if instance['mac_addresses']:
+                mac_address = instance['mac_addresses'][0]['address']
+
+            self._create_nic(instance['name'], mac_address)
 
             LOG.debug(_('Starting VM %s '), instance.name)
             self._set_vm_state(instance['name'], 'Enabled')

@@ -1159,17 +1159,15 @@ def instance_get_fixed_addresses_v6(context, instance_id):
 
 @require_context
 def instance_get_floating_address(context, instance_id):
-    session = get_session()
-    with session.begin():
-        instance_ref = instance_get(context, instance_id, session=session)
-        if not instance_ref.fixed_ip:
-            return None
-        # NOTE(tr3buchet): this only gets the first fixed_ip
-        # won't find floating ips associated with other fixed_ips
-        if not instance_ref.fixed_ip.floating_ips:
-            return None
-        # NOTE(vish): this just returns the first floating ip
-        return instance_ref.fixed_ip.floating_ips[0]['address']
+    fixed_ip_refs = fixed_ip_get_all_by_instance(context, instance_id)
+    if not fixed_ip_refs:
+        return None
+    # NOTE(tr3buchet): this only gets the first fixed_ip
+    # won't find floating ips associated with other fixed_ips
+    if not fixed_ip_refs[0].floating_ips:
+        return None
+    # NOTE(vish): this just returns the first floating ip
+    return fixed_ip_ref[0].floating_ips[0]['address']
 
 
 @require_admin_context
