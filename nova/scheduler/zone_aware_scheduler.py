@@ -150,7 +150,8 @@ class ZoneAwareScheduler(driver.Scheduler):
              raise exception.NotAuthorized(_("Bad credentials attempting "
                             "to talk to zone at %(url)s.") % locals())
                             
-        nova.servers.create(name, image, flavor, ipgroup, meta, files)
+        nova.servers.create(name, image, flavor, ipgroup, meta, files,
+                            child_blob)
         
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
