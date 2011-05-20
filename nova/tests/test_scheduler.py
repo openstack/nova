@@ -912,7 +912,8 @@ class SimpleDriverTestCase(test.TestCase):
 
 
 class FakeZone(object):
-    def __init__(self, api_url, username, password):
+    def __init__(self, id, api_url, username, password):
+        self.id = id
         self.api_url = api_url
         self.username = username
         self.password = password
@@ -920,7 +921,7 @@ class FakeZone(object):
 
 def zone_get_all(context):
     return [
-                FakeZone('http://example.com', 'bob', 'xxx'),
+                FakeZone(1, 'http://example.com', 'bob', 'xxx'),
            ]
 
 
@@ -1037,7 +1038,7 @@ class FakeNovaClient(object):
 
 class DynamicNovaClientTest(test.TestCase):
     def test_issue_novaclient_command_found(self):
-        zone = FakeZone('http://example.com', 'bob', 'xxx')
+        zone = FakeZone(1, 'http://example.com', 'bob', 'xxx')
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeServerCollection()),
                     zone, "servers", "get", 100).a, 10)
@@ -1051,7 +1052,7 @@ class DynamicNovaClientTest(test.TestCase):
                     zone, "servers", "pause", 100), None)
 
     def test_issue_novaclient_command_not_found(self):
-        zone = FakeZone('http://example.com', 'bob', 'xxx')
+        zone = FakeZone(1, 'http://example.com', 'bob', 'xxx')
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
                     zone, "servers", "get", 100), None)
@@ -1063,3 +1064,55 @@ class DynamicNovaClientTest(test.TestCase):
         self.assertEquals(api._issue_novaclient_command(
                     FakeNovaClient(FakeEmptyServerCollection()),
                     zone, "servers", "any", "name"), None)
+
+
+class FakeZonesProxy(object):
+    def do_something(*args, **kwargs):
+        return 42
+
+    def raises_exception(*args, **kwargs):
+        raise Exception('testing')
+
+
+class FakeNovaClientOpenStack(object):
+    def __init__(self, *args, **kwargs):
+        self.zones = FakeZonesProxy()
+
+    def authenticate(self):
+        pass
+
+
+class CallZoneMethodTest(test.TestCase):
+    def setUp(self):
+        super(CallZoneMethodTest, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(db, 'zone_get_all', zone_get_all)
+        self.stubs.Set(novaclient, 'OpenStack', FakeNovaClientOpenStack)
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(CallZoneMethodTest, self).tearDown()
+
+    def test_call_zone_method(self):
+        context = {}
+        method = 'do_something'
+        results = api.call_zone_method(context, method)
+        expected = [(1, 42)]
+        self.assertEqual(expected, results)
+
+    def test_call_zone_method_not_present(self):
+        context = {}
+        method = 'not_present'
+        self.assertRaises(AttributeError, api.call_zone_method,
+                          context, method)
+
+    def test_call_zone_method_generates_exception(self):
+        context = {}
+        method = 'raises_exception'
+        results = api.call_zone_method(context, method)
+
+        # FIXME(sirp): for now the _error_trap code is catching errors and
+        # converting them to a ("ERROR", "string") tuples. The code (and this
+        # test) should eventually handle real exceptions.
+        expected = [(1, ('ERROR', 'testing'))]
+        self.assertEqual(expected, results)
