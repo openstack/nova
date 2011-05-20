@@ -42,6 +42,7 @@ def fetch(image_id, path, _user, _project):
         metadata = image_service.get(elevated, image_id, image_file)
     return metadata
 
+
 # TODO(vish): xenapi should use the glance client code directly instead
 #             of retrieving the image using this method.
 def image_url(image):
