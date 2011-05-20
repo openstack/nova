@@ -96,6 +96,18 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         request.environ["nova.limits"] = _limits
         return request
 
+    def _setup_absolute_limits(self):
+        self.absolute_limits = {
+            'instances': 5,
+            'cores': 8,
+            'ram': 2**13,
+            'volumes': 21,
+            'gigabytes': 34,
+            'metadata_items': 55,
+            'injected_files': 89,
+            'injected_file_content_bytes': 144,
+        }
+
     def test_empty_index_json(self):
         """Test getting empty limit details in JSON."""
         request = self._get_index_request()
@@ -113,7 +125,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         """Test getting limit details in JSON."""
         request = self._get_index_request()
         request = self._populate_limits(request)
-        self.absolute_limits = {'ram': 51200, 'instances': 20}
+        self._setup_absolute_limits()
         response = request.get_response(self.controller)
         expected = {
             "limits": {
@@ -136,8 +148,13 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
                     "unit": "HOUR",
                 }],
                 "absolute": {
-                    "maxTotalRAMSize": 51200,
-                    "maxTotalInstances": 20,
+                    "maxTotalInstances": 5,
+                    "maxTotalCores": 8,
+                    "maxTotalRAMSize": 2**13,
+                    "maxServerMeta": 55,
+                    "maxImageMeta": 55,
+                    "maxPersonality": 89,
+                    "maxPersonalitySize": 144,
                 },
             },
         }
