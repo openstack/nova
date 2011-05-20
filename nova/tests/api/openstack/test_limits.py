@@ -48,6 +48,13 @@ class BaseLimitTestSuite(unittest.TestCase):
         self.time = 0.0
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        self.absolute_limits = {}
+
+        def stub_get_project_quotas(context, project_id):
+            return self.absolute_limits
+
+        self.stubs.Set(nova.quota, "get_project_quotas",
+                       stub_get_project_quotas)
 
     def tearDown(self):
         """Run after each test."""
@@ -106,6 +113,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         """Test getting limit details in JSON."""
         request = self._get_index_request()
         request = self._populate_limits(request)
+        self.absolute_limits = {'ram': 51200, 'instances': 20}
         response = request.get_response(self.controller)
         expected = {
             "limits": {
@@ -127,7 +135,10 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
                     "remaining": 5,
                     "unit": "HOUR",
                 }],
-                "absolute": {},
+                "absolute": {
+                    "maxTotalRAMSize": 51200,
+                    "maxTotalInstances": 20,
+                },
             },
         }
         body = json.loads(response.body)
@@ -182,13 +193,6 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
         self.controller = limits.LimitsControllerV11()
-        self.absolute_limits = {}
-
-        def stub_get_project_quotas(context, project_id):
-            return self.absolute_limits
-
-        self.stubs.Set(nova.quota, "get_project_quotas",
-                       stub_get_project_quotas)
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -313,6 +317,17 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         expected = {
             'maxServerMeta': 23,
             'maxImageMeta': 23,
+        }
+        self._test_index_absolute_limits_json(expected)
+
+    def test_index_absolute_injected_files(self):
+        self.absolute_limits = {
+            'injected_files': 17,
+            'injected_file_content_bytes': 86753,
+        }
+        expected = {
+            'maxPersonality': 17,
+            'maxPersonalitySize': 86753,
         }
         self._test_index_absolute_limits_json(expected)
 
