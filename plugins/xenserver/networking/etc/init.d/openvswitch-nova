@@ -2,7 +2,7 @@
 #
 # openvswitch-nova
 #
-# chkconfig: 2345 10 89
+# chkconfig: 2345 96 89
 # description: Apply initial OVS flows for Nova
 
 # Copyright 2011 OpenStack LLC.
