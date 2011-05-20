@@ -40,6 +40,7 @@ import os
 import socket
 import sys
 import tempfile
+import time
 import functools
 
 from eventlet import greenthread
@@ -76,7 +77,8 @@ flags.DEFINE_integer("rescue_timeout", 0,
                      " Set to 0 to disable.")
 flags.DEFINE_bool('auto_assign_floating_ip', False,
                   'Autoassigning floating ip to VM')
-
+flags.DEFINE_integer('host_state_interval', 120,
+                     'Interval in seconds for querying the host status')
 
 LOG = logging.getLogger('nova.compute.manager')
 
@@ -130,6 +132,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_api = network.API()
+        self._last_host_check = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -404,21 +407,36 @@ class ComputeManager(manager.SchedulerDependentManager):
     def set_admin_password(self, context, instance_id, new_pass=None):
         """Set the root/admin password for an instance on this host."""
         context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
-        instance_id = instance_ref['id']
-        instance_state = instance_ref['state']
-        expected_state = power_state.RUNNING
-        if instance_state != expected_state:
-            LOG.warn(_('trying to reset the password on a non-running '
-                    'instance: %(instance_id)s (state: %(instance_state)s '
-                    'expected: %(expected_state)s)') % locals())
-        LOG.audit(_('instance %s: setting admin password'),
-                instance_ref['name'])
+
         if new_pass is None:
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
-        self.driver.set_admin_password(instance_ref, new_pass)
-        self._update_state(context, instance_id)
+
+        while True:
+            instance_ref = self.db.instance_get(context, instance_id)
+            instance_id = instance_ref["id"]
+            instance_state = instance_ref["state"]
+            expected_state = power_state.RUNNING
+
+            if instance_state != expected_state:
+                time.sleep(5)
+                continue
+            else:
+                try:
+                    self.driver.set_admin_password(instance_ref, new_pass)
+                    LOG.audit(_("Instance %s: Root password set"),
+                                instance_ref["name"])
+                    break
+                except NotImplementedError:
+                    # NOTE(dprince): if the driver doesn't implement
+                    # set_admin_password we break to avoid a loop
+                    LOG.warn(_('set_admin_password is not implemented '
+                            'by this driver.'))
+                    break
+                except Exception, e:
+                    # Catch all here because this could be anything.
+                    LOG.exception(e)
+                    continue
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -610,7 +628,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['new_flavor_id'])
         self.db.instance_update(context, instance_id,
-               dict(instance_type=instance_type['name'],
+               dict(instance_type_id=instance_type['id'],
                     memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))
@@ -1084,6 +1102,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         try:
+            self._report_driver_status()
+        except Exception as ex:
+            LOG.warning(_("Error during report_driver_status(): %s"),
+                        unicode(ex))
+            error_list.append(ex)
+
+        try:
             self._poll_instance_states(context)
         except Exception as ex:
             LOG.warning(_("Error during instance poll: %s"),
@@ -1091,6 +1116,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             error_list.append(ex)
 
         return error_list
+
+    def _report_driver_status(self):
+        curr_time = time.time()
+        if curr_time - self._last_host_check > FLAGS.host_state_interval:
+            self._last_host_check = curr_time
+            LOG.info(_("Updating host status"))
+            # This will grab info about the host and queue it
+            # to be sent to the Schedulers.
+            self.update_service_capabilities(
+                self.driver.get_host_stats(refresh=True))
 
     def _poll_instance_states(self, context):
         vm_instances = self.driver.list_instances_detail()

@@ -57,6 +57,8 @@ reactor thread if the VM.get_by_name_label or VM.get_record calls block.
 - suffix "_rec" for record objects
 """
 
+import json
+import random
 import sys
 import urlparse
 import xmlrpclib
@@ -67,10 +69,12 @@ from eventlet import timeout
 
 from nova import context
 from nova import db
+from nova import exception
 from nova import utils
 from nova import flags
 from nova import log as logging
 from nova.virt import driver
+from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi.vmops import VMOps
 from nova.virt.xenapi.volumeops import VolumeOps
 
@@ -165,9 +169,16 @@ class XenAPIConnection(driver.ComputeDriver):
 
     def __init__(self, url, user, pw):
         super(XenAPIConnection, self).__init__()
-        session = XenAPISession(url, user, pw)
-        self._vmops = VMOps(session)
-        self._volumeops = VolumeOps(session)
+        self._session = XenAPISession(url, user, pw)
+        self._vmops = VMOps(self._session)
+        self._volumeops = VolumeOps(self._session)
+        self._host_state = None
+
+    @property
+    def HostState(self):
+        if not self._host_state:
+            self._host_state = HostState(self._session)
+        return self._host_state
 
     def init_host(self, host):
         #FIXME(armando): implement this
@@ -315,6 +326,16 @@ class XenAPIConnection(driver.ComputeDriver):
         """This method is supported only by libvirt."""
         raise NotImplementedError('This method is supported only by libvirt.')
 
+    def update_host_status(self):
+        """Update the status info of the host, and return those values
+            to the calling program."""
+        return self.HostState.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host. If 'refresh' is
+           True, run the update first."""
+        return self.HostState.get_host_stats(refresh=refresh)
+
 
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls"""
@@ -326,7 +347,6 @@ class XenAPISession(object):
                             "(is the Dom0 disk full?)"))
         with timeout.Timeout(FLAGS.xenapi_login_timeout, exception):
             self._session.login_with_password(user, pw)
-        self.loop = None
 
     def get_imported_xenapi(self):
         """Stubout point. This can be replaced with a mock xenapi module."""
@@ -363,56 +383,51 @@ class XenAPISession(object):
 
     def wait_for_task(self, task, id=None):
         """Return the result of the given task. The task is polled
-        until it completes. Not re-entrant."""
+        until it completes."""
         done = event.Event()
-        self.loop = utils.LoopingCall(self._poll_task, id, task, done)
-        self.loop.start(FLAGS.xenapi_task_poll_interval, now=True)
-        rv = done.wait()
-        self.loop.stop()
-        return rv
+        loop = utils.LoopingCall(f=None)
 
-    def _stop_loop(self):
-        """Stop polling for task to finish."""
-        #NOTE(sandy-walsh) Had to break this call out to support unit tests.
-        if self.loop:
-            self.loop.stop()
+        def _poll_task():
+            """Poll the given XenAPI task, and return the result if the
+            action was completed successfully or not.
+            """
+            try:
+                name = self._session.xenapi.task.get_name_label(task)
+                status = self._session.xenapi.task.get_status(task)
+                if id:
+                    action = dict(
+                        instance_id=int(id),
+                        action=name[0:255],  # Ensure action is never > 255
+                        error=None)
+                if status == "pending":
+                    return
+                elif status == "success":
+                    result = self._session.xenapi.task.get_result(task)
+                    LOG.info(_("Task [%(name)s] %(task)s status:"
+                            " success    %(result)s") % locals())
+                    done.send(_parse_xmlrpc_value(result))
+                else:
+                    error_info = self._session.xenapi.task.get_error_info(task)
+                    action["error"] = str(error_info)
+                    LOG.warn(_("Task [%(name)s] %(task)s status:"
+                            " %(status)s    %(error_info)s") % locals())
+                    done.send_exception(self.XenAPI.Failure(error_info))
+
+                if id:
+                    db.instance_action_create(context.get_admin_context(),
+                            action)
+            except self.XenAPI.Failure, exc:
+                LOG.warn(exc)
+                done.send_exception(*sys.exc_info())
+            loop.stop()
+
+        loop.f = _poll_task
+        loop.start(FLAGS.xenapi_task_poll_interval, now=True)
+        return done.wait()
 
     def _create_session(self, url):
         """Stubout point. This can be replaced with a mock session."""
         return self.XenAPI.Session(url)
-
-    def _poll_task(self, id, task, done):
-        """Poll the given XenAPI task, and fire the given action if we
-        get a result.
-        """
-        try:
-            name = self._session.xenapi.task.get_name_label(task)
-            status = self._session.xenapi.task.get_status(task)
-            if id:
-                action = dict(
-                    instance_id=int(id),
-                    action=name[0:255],  # Ensure action is never > 255
-                    error=None)
-            if status == "pending":
-                return
-            elif status == "success":
-                result = self._session.xenapi.task.get_result(task)
-                LOG.info(_("Task [%(name)s] %(task)s status:"
-                        " success    %(result)s") % locals())
-                done.send(_parse_xmlrpc_value(result))
-            else:
-                error_info = self._session.xenapi.task.get_error_info(task)
-                action["error"] = str(error_info)
-                LOG.warn(_("Task [%(name)s] %(task)s status:"
-                        " %(status)s    %(error_info)s") % locals())
-                done.send_exception(self.XenAPI.Failure(error_info))
-
-            if id:
-                db.instance_action_create(context.get_admin_context(), action)
-        except self.XenAPI.Failure, exc:
-            LOG.warn(exc)
-            done.send_exception(*sys.exc_info())
-        self._stop_loop()
 
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
         """Parse exception details"""
@@ -434,6 +449,65 @@ class XenAPISession(object):
         except xmlrpclib.ProtocolError, exc:
             LOG.debug(_("Got exception: %s"), exc)
             raise
+
+
+class HostState(object):
+    """Manages information about the XenServer host this compute
+    node is running on.
+    """
+    def __init__(self, session):
+        super(HostState, self).__init__()
+        self._session = session
+        self._stats = {}
+        self.update_status()
+
+    def get_host_stats(self, refresh=False):
+        """Return the current state of the host. If 'refresh' is
+        True, run the update first.
+        """
+        if refresh:
+            self.update_status()
+        return self._stats
+
+    def update_status(self):
+        """Since under Xenserver, a compute node runs on a given host,
+        we can get host status information using xenapi.
+        """
+        LOG.debug(_("Updating host stats"))
+        # Make it something unlikely to match any actual instance ID
+        task_id = random.randint(-80000, -70000)
+        task = self._session.async_call_plugin("xenhost", "host_data", {})
+        task_result = self._session.wait_for_task(task, task_id)
+        if not task_result:
+            task_result = json.dumps("")
+        try:
+            data = json.loads(task_result)
+        except ValueError as e:
+            # Invalid JSON object
+            LOG.error(_("Unable to get updated status: %s") % e)
+            return
+        # Get the SR usage
+        try:
+            sr_ref = vm_utils.safe_find_sr(self._session)
+        except exception.NotFound as e:
+            # No SR configured
+            LOG.error(_("Unable to get SR for this host: %s") % e)
+            return
+        sr_rec = self._session.get_xenapi().SR.get_record(sr_ref)
+        total = int(sr_rec["virtual_allocation"])
+        used = int(sr_rec["physical_utilisation"])
+        data["disk_total"] = total
+        data["disk_used"] = used
+        data["disk_available"] = total - used
+        host_memory = data.get('host_memory', None)
+        if host_memory:
+            data["host_memory_total"] = host_memory.get('total', 0)
+            data["host_memory_overhead"] = host_memory.get('overhead', 0)
+            data["host_memory_free"] = host_memory.get('free', 0)
+            data["host_memory_free_computed"] = \
+                        host_memory.get('free-computed', 0)
+            del data['host_memory']
+        self._stats = data
 
 
 def _parse_xmlrpc_value(val):

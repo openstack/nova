@@ -397,11 +397,10 @@ class ProjectCommands(object):
         arguments: project_id [key] [value]"""
         ctxt = context.get_admin_context()
         if key:
-            quo = {'project_id': project_id, key: value}
             try:
-                db.quota_update(ctxt, project_id, quo)
+                db.quota_update(ctxt, project_id, key, value)
             except exception.NotFound:
-                db.quota_create(ctxt, quo)
+                db.quota_create(ctxt, project_id, key, value)
         project_quota = quota.get_quota(ctxt, project_id)
         for key, value in project_quota.iteritems():
             print '%s: %s' % (key, value)
@@ -523,8 +522,10 @@ class NetworkCommands(object):
                    [network_size=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
-            raise TypeError(_('Fixed range in the form of 10.0.0.0/8 is '
-                              'required to create networks.'))
+            msg = _('Fixed range in the form of 10.0.0.0/8 is '
+                    'required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
@@ -536,14 +537,18 @@ class NetworkCommands(object):
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
-        net_manager.create_networks(context.get_admin_context(),
-                                    cidr=fixed_range,
-                                    num_networks=int(num_networks),
-                                    network_size=int(network_size),
-                                    vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start),
-                                    cidr_v6=fixed_range_v6,
-                                    label=label)
+        try:
+            net_manager.create_networks(context.get_admin_context(),
+                                        cidr=fixed_range,
+                                        num_networks=int(num_networks),
+                                        network_size=int(network_size),
+                                        vlan_start=int(vlan_start),
+                                        vpn_start=int(vpn_start),
+                                        cidr_v6=fixed_range_v6,
+                                        label=label)
+        except ValueError, e:
+            print e
+            raise e
 
     def list(self):
         """List all created networks"""
@@ -972,7 +977,7 @@ class ImageCommands(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(old_image_id)
             image = self.image_service.show(context, internal_id)
-        except exception.NotFound:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             image = self.image_service.show_by_name(context, old_image_id)
         return image['id']
 
