@@ -50,7 +50,8 @@ class Controller(common.OpenstackController):
 
         """
         self._compute_service = compute_service or compute.API()
-        self._image_service = image_service or utils.get_default_image_service()
+        self._image_service = image_service or \
+                utils.get_default_image_service()
 
     def index(self, req):
         """Return an index listing of images available to the request.
