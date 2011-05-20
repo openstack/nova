@@ -748,11 +748,7 @@ def parse_image_ref(image_ref):
     o = urlparse(image_ref)
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
-    image_id = o.path.split('/')[-1]
-
-    if is_int(image_id):
-        image_id = int(image_id)
-
+    image_id = int(o.path.split('/')[-1])
     return (image_id, host, port)
 
 
@@ -776,8 +772,10 @@ def get_image_service(image_ref):
     if is_int(image_ref):
         return (get_default_image_service(), int(image_ref))
 
-    (image_id, host, port) = parse_image_ref(image_ref)
-    glance_client = import_class('nova.image.glance.GlanceClient')(host,
-                                                                   port)
-    image_service = import_class(FLAGS.glance_image_service)(glance_client)
+    try:
+        (image_id, host, port) = parse_image_ref(image_ref)
+    except:
+        raise exception.InvalidImageRef(image_ref=image_ref)
+    glance_client = nova.image.glance.GlanceClient(host, port)
+    image_service = nova.image.glance.GlanceImageService(glance_client)
     return (image_service, image_id)

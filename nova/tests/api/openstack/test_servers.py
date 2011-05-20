@@ -29,6 +29,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import test
+from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.compute.api
@@ -37,6 +38,7 @@ from nova.compute import power_state
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
+import nova.image.fake
 import nova.rpc
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
@@ -464,7 +466,12 @@ class ServersTest(test.TestCase):
         def image_id_from_hash(*args, **kwargs):
             return 2
 
-        FLAGS.glance_image_service = 'nova.image.fake.FakeImageService'
+        def fake_image_service(*args):
+            return nova.image.fake.FakeImageService()
+
+        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+        self.stubs.Set(
+            nova.image.glance, 'GlanceImageService', fake_image_service)
         self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
@@ -476,8 +483,6 @@ class ServersTest(test.TestCase):
             fake_method)
         self.stubs.Set(nova.api.openstack.servers.Controller,
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
-        self.stubs.Set(nova.api.openstack.common,
-            "get_image_id_from_image_hash", image_id_from_hash)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
     def _test_create_instance_helper(self):
@@ -1707,11 +1712,10 @@ class TestServerInstanceCreation(test.TestCase):
             return stub_method
 
         compute_api = MockComputeAPI()
+        FLAGS.image_service = 'nova.image.fake.FakeImageService'
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
         self.stubs.Set(nova.api.openstack.servers.Controller,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
-        self.stubs.Set(nova.api.openstack.common,
-            'get_image_id_from_image_hash', make_stub_method(2))
         return compute_api
 
     def _create_personality_request_dict(self, personality_files):

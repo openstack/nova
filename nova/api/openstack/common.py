@@ -100,34 +100,6 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     return items[start_index:range_end]
 
 
-def get_image_id_from_image_hash(image_service, context, image_hash):
-    """Given an Image ID Hash, return an objectstore Image ID.
-
-    image_service - reference to objectstore compatible image service.
-    context - security context for image service requests.
-    image_hash - hash of the image ID.
-    """
-
-    # FIX(sandy): This is terribly inefficient. It pulls all images
-    # from objectstore in order to find the match. ObjectStore
-    # should have a numeric counterpart to the string ID.
-    try:
-        items = image_service.detail(context)
-    except NotImplementedError:
-        items = image_service.index(context)
-    for image in items:
-        image_id = image['id']
-        try:
-            if abs(hash(image_id)) == int(image_hash):
-                return image_id
-        except ValueError:
-            msg = _("Requested image_id has wrong format: %s,"
-                    "should have numerical format") % image_id
-            LOG.error(msg)
-            raise Exception(msg)
-    raise exception.ImageNotFound(image_id=image_hash)
-
-
 def get_id_from_href(href):
     """Return the id portion of a url as an int.
 

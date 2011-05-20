@@ -27,6 +27,7 @@ from nova import flags
 from nova import service
 from nova import test  # For the flags
 from nova.auth import manager
+import nova.image.glance
 from nova.log import logging
 from nova.tests.integrated.api import client
 
@@ -151,6 +152,11 @@ class _IntegratedTestBase(test.TestCase):
         f = self._get_flags()
         self.flags(**f)
 
+        def fake_image_service(*args):
+            return nova.image.fake.FakeImageService()
+        self.stubs.Set(
+            nova.image.glance, 'GlanceImageService', fake_image_service)
+
         # set up services
         self.start_service('compute')
         self.start_service('volume')
@@ -185,7 +191,6 @@ class _IntegratedTestBase(test.TestCase):
         """An opportunity to setup flags, before the services are started."""
         f = {}
         f['image_service'] = 'nova.image.fake.FakeImageService'
-        f['glance_image_service'] = 'nova.image.fake.FakeImageService'
         f['fake_network'] = True
         return f
 

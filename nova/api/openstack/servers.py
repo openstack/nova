@@ -144,10 +144,10 @@ class Controller(common.OpenstackController):
             (image_service, image_id) = utils.get_image_service(image_ref)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                 req, image_id)
-            image_set = set([x['id'] for x in image_service.index(context)])
-            assert image_id in image_set
+            images = set([str(x['id']) for x in image_service.index(context)])
+            assert str(image_id) in images
         except:
-            msg = _("Can not find requested image")
+            msg = _("Cannot find requested image %s") % image_ref
             return faults.Fault(exc.HTTPBadRequest(msg))
 
         personality = env['server'].get('personality')

@@ -279,6 +279,10 @@ class DiskNotFound(NotFound):
     message = _("No disk at %(location)s")
 
 
+class InvalidImageRef(Invalid):
+    message = _("Invalid image ref %(image_ref)s.")
+
+
 class ImageNotFound(NotFound):
     message = _("Image %(image_id)s could not be found.")
 
