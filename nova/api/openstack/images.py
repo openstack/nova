@@ -74,7 +74,7 @@ class Controller(common.OpenstackController):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def show(self, req, image_id):
+    def show(self, req, id):
         """Return detailed information about a specific image.
 
         :param req: `wsgi.Request` object
@@ -84,9 +84,12 @@ class Controller(common.OpenstackController):
 
         try:
             (image_service, service_image_id) = utils.get_image_service(
-                image_id)
+                id)
             image = image_service.show(context, service_image_id)
         except exception.NotFound:
+            explanation = _("Image not found.")
+            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
+        except exception.InvalidImageRef:
             explanation = _("Image not found.")
             raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
 
