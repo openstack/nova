@@ -659,6 +659,7 @@ class LibvirtConnTestCase(test.TestCase):
 
 class FakeNWFilter:
     def __init__(self):
+        
         self.filters = {}
 
     def _nwfilterLookupByName(self, name):
@@ -947,7 +948,7 @@ class IptablesFirewallTestCase(test.TestCase):
         original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance)
 
-        # should attempt to undefine just the instance filter
+        # should undefine just the instance filter
         self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
@@ -1160,7 +1161,7 @@ class NWFilterTestCase(test.TestCase):
         self.fw.unfilter_instance(instance)
 
         print fakefilter.filters.keys()
-        # should attempt to undefine 2 filters: instance and instance-secgroup
+        # should undefine 2 filters: instance and instance-secgroup
         self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
