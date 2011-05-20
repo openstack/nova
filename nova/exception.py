@@ -255,6 +255,10 @@ class NotFound(NovaException):
         super(NotFound, self).__init__(**kwargs)
 
 
+class FlagNotSet(NotFound):
+    message = _("Required flag %(flag)s not set.")
+
+
 class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 
