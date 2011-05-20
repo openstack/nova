@@ -515,11 +515,11 @@ class NetworkCommands(object):
     """Class for managing networks."""
 
     def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None,
+               network_size=None, vlan_start=None, project_id=None,
                vpn_start=None, fixed_range_v6=None, label='public'):
         """Creates fixed ips for host by range
         arguments: fixed_range=FLAG, [num_networks=FLAG],
-                   [network_size=FLAG], [vlan_start=FLAG],
+                   [network_size=FLAG], [vlan_start=FLAG], [project_id=None],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
@@ -545,7 +545,8 @@ class NetworkCommands(object):
                                         vlan_start=int(vlan_start),
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
-                                        label=label)
+                                        label=label,
+                                        project_id=project_id)
         except ValueError, e:
             print e
             raise e

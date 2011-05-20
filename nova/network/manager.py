@@ -564,6 +564,8 @@ class VlanManager(NetworkManager):
             net['dhcp_start'] = str(project_net[3])
             net['vlan'] = vlan
             net['bridge'] = 'br%s' % vlan
+            if kwargs.has_key('project_id'):
+                net['project_id'] = kwargs['project_id']
             if(FLAGS.use_ipv6):
                 cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
