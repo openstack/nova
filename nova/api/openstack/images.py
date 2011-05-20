@@ -141,9 +141,6 @@ class ControllerV11(Controller):
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
 
-    def get_default_xmlns(self, req):
-        return common.XML_NS_V11
-
 
 def create_resource(version='1.0'):
     controller = {

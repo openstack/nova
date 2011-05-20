@@ -94,7 +94,6 @@ class XMLDictSerializerTest(test.TestCase):
     def test_xml(self):
         input_dict = dict(servers=dict(a=(2, 3)))
         expected_xml = '<serversxmlns="asdf"><a>(2,3)</a></servers>'
-        xmlns = "testing xmlns"
         serializer = wsgi.XMLDictSerializer(xmlns="asdf")
         result = serializer.serialize(input_dict)
         result = result.replace('\n', '').replace(' ', '')

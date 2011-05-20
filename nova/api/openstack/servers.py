@@ -703,9 +703,6 @@ class ControllerV11(Controller):
             raise exc.HTTPBadRequest(msg)
         return password
 
-    def get_default_xmlns(self, req):
-        return common.XML_NS_V11
-
 
 class ServerXMLDeserializer(wsgi.XMLDeserializer):
     """
