@@ -75,7 +75,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         if "hostname" in item:
             self._provision_resource_locally(context, item, instance_id,
                             kwargs)
-           return
+            return
         
         self._provision_resource_in_child_zone(context, item, instance_id,
                                                request_spec, kwargs)
@@ -131,7 +131,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
 
         name = instance_properties['display_name']
-        image_id = instance_properties['image_id'])
+        image_id = instance_properties['image_id']
         flavor_id = instance_type['flavor_id']
         meta = instance_type['metadata']
 
