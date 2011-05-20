@@ -67,7 +67,7 @@ class QuotaTestCase(test.TestCase):
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
-        inst['instance_type'] = 'm1.large'
+        inst['instance_type_id'] = '3'  # m1.large
         inst['vcpus'] = cores
         inst['mac_address'] = utils.generate_mac()
         return db.instance_create(self.context, inst)['id']
@@ -96,12 +96,11 @@ class QuotaTestCase(test.TestCase):
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 2)
-        db.quota_create(self.context, {'project_id': self.project.id,
-                                       'instances': 10})
+        db.quota_create(self.context, self.project.id, 'instances', 10)
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 4)
-        db.quota_update(self.context, self.project.id, {'cores': 100})
+        db.quota_create(self.context, self.project.id, 'cores', 100)
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 10)
@@ -111,24 +110,97 @@ class QuotaTestCase(test.TestCase):
         num_metadata_items = quota.allowed_metadata_items(self.context,
                                                           too_many_items)
         self.assertEqual(num_metadata_items, FLAGS.quota_metadata_items)
-        db.quota_update(self.context, self.project.id, {'metadata_items': 5})
+        db.quota_create(self.context, self.project.id, 'metadata_items', 5)
         num_metadata_items = quota.allowed_metadata_items(self.context,
                                                           too_many_items)
         self.assertEqual(num_metadata_items, 5)
 
         # Cleanup
-        db.quota_destroy(self.context, self.project.id)
+        db.quota_destroy_all_by_project(self.context, self.project.id)
+
+    def test_unlimited_instances(self):
+        FLAGS.quota_instances = 2
+        FLAGS.quota_cores = 1000
+        instance_type = self._get_instance_type('m1.small')
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 2)
+        db.quota_create(self.context, self.project.id, 'instances', None)
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 100)
+        num_instances = quota.allowed_instances(self.context, 101,
+                                                instance_type)
+        self.assertEqual(num_instances, 101)
+
+    def test_unlimited_cores(self):
+        FLAGS.quota_instances = 1000
+        FLAGS.quota_cores = 2
+        instance_type = self._get_instance_type('m1.small')
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 2)
+        db.quota_create(self.context, self.project.id, 'cores', None)
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 100)
+        num_instances = quota.allowed_instances(self.context, 101,
+                                                instance_type)
+        self.assertEqual(num_instances, 101)
+
+    def test_unlimited_volumes(self):
+        FLAGS.quota_volumes = 10
+        FLAGS.quota_gigabytes = 1000
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 10)
+        db.quota_create(self.context, self.project.id, 'volumes', None)
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 100)
+        volumes = quota.allowed_volumes(self.context, 101, 1)
+        self.assertEqual(volumes, 101)
+
+    def test_unlimited_gigabytes(self):
+        FLAGS.quota_volumes = 1000
+        FLAGS.quota_gigabytes = 10
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 10)
+        db.quota_create(self.context, self.project.id, 'gigabytes', None)
+        volumes = quota.allowed_volumes(self.context, 100, 1)
+        self.assertEqual(volumes, 100)
+        volumes = quota.allowed_volumes(self.context, 101, 1)
+        self.assertEqual(volumes, 101)
+
+    def test_unlimited_floating_ips(self):
+        FLAGS.quota_floating_ips = 10
+        floating_ips = quota.allowed_floating_ips(self.context, 100)
+        self.assertEqual(floating_ips, 10)
+        db.quota_create(self.context, self.project.id, 'floating_ips', None)
+        floating_ips = quota.allowed_floating_ips(self.context, 100)
+        self.assertEqual(floating_ips, 100)
+        floating_ips = quota.allowed_floating_ips(self.context, 101)
+        self.assertEqual(floating_ips, 101)
+
+    def test_unlimited_metadata_items(self):
+        FLAGS.quota_metadata_items = 10
+        items = quota.allowed_metadata_items(self.context, 100)
+        self.assertEqual(items, 10)
+        db.quota_create(self.context, self.project.id, 'metadata_items', None)
+        items = quota.allowed_metadata_items(self.context, 100)
+        self.assertEqual(items, 100)
+        items = quota.allowed_metadata_items(self.context, 101)
+        self.assertEqual(items, 101)
 
     def test_too_many_instances(self):
         instance_ids = []
         for i in range(FLAGS.quota_instances):
             instance_id = self._create_instance()
             instance_ids.append(instance_id)
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small',
+                                            instance_type=inst_type,
                                             image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
@@ -137,11 +209,12 @@ class QuotaTestCase(test.TestCase):
         instance_ids = []
         instance_id = self._create_instance(cores=4)
         instance_ids.append(instance_id)
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small',
+                                            instance_type=inst_type,
                                             image_id=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
@@ -192,11 +265,12 @@ class QuotaTestCase(test.TestCase):
         metadata = {}
         for i in range(FLAGS.quota_metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         self.assertRaises(quota.QuotaError, compute.API().create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
-                                            instance_type='m1.small',
+                                            instance_type=inst_type,
                                             image_id='fake',
                                             metadata=metadata)
 
@@ -207,13 +281,15 @@ class QuotaTestCase(test.TestCase):
 
     def _create_with_injected_files(self, files):
         api = compute.API(image_service=self.StubImageService())
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
         api.create(self.context, min_count=1, max_count=1,
-                instance_type='m1.small', image_id='fake',
+                instance_type=inst_type, image_id='fake',
                 injected_files=files)
 
     def test_no_injected_files(self):
         api = compute.API(image_service=self.StubImageService())
-        api.create(self.context, instance_type='m1.small', image_id='fake')
+        inst_type = instance_types.get_instance_type_by_name('m1.small')
+        api.create(self.context, instance_type=inst_type, image_id='fake')
 
     def test_max_injected_files(self):
         files = []

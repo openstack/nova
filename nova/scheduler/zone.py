@@ -52,5 +52,8 @@ class ZoneScheduler(driver.Scheduler):
         zone = _kwargs.get('availability_zone')
         hosts = self.hosts_up_with_zone(context, topic, zone)
         if not hosts:
-            raise driver.NoValidHost(_("No hosts found"))
+            raise driver.NoValidHost(_("Scheduler was unable to locate a host"
+                                       " for this request. Is the appropriate"
+                                       " service running?"))
+
         return hosts[int(random.random() * len(hosts))]

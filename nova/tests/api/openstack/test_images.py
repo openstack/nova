@@ -75,6 +75,18 @@ class _BaseImageServiceTests(test.TestCase):
                           self.context,
                           'bad image id')
 
+    def test_create_and_show_non_existing_image_by_name(self):
+        fixture = self._make_fixture('test image')
+        num_images = len(self.service.index(self.context))
+
+        image_id = self.service.create(self.context, fixture)['id']
+
+        self.assertNotEquals(None, image_id)
+        self.assertRaises(exception.ImageNotFound,
+                          self.service.show_by_name,
+                          self.context,
+                          'bad image id')
+
     def test_update(self):
         fixture = self._make_fixture('test image')
         image_id = self.service.create(self.context, fixture)['id']
@@ -146,7 +158,7 @@ class LocalImageServiceTest(_BaseImageServiceTests):
         for x in [1, 2, 3]:
             tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
         # create some valid image directories names
-        for x in ["1485baed", "1a60f0ee",  "3123a73d"]:
+        for x in ["1485baed", "1a60f0ee", "3123a73d"]:
             os.makedirs(os.path.join(self.tempdir, x))
         found_image_ids = self.service._ids()
         self.assertEqual(True, isinstance(found_image_ids, list))
@@ -263,7 +275,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     {'id': 124, 'name': 'queued backup'},
                     {'id': 125, 'name': 'saving backup'},
                     {'id': 126, 'name': 'active backup'},
-                    {'id': 127, 'name': 'killed backup'}]
+                    {'id': 127, 'name': 'killed backup'},
+                    {'id': 129, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
 
@@ -334,7 +347,27 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     name="public image"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
-                    status="ACTIVE" />
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
+        """ % (locals()))
+
+        self.assertEqual(expected_image.toxml(), actual_image.toxml())
+
+    def test_get_image_xml_no_name(self):
+        request = webob.Request.blank('/v1.0/images/129')
+        request.accept = "application/xml"
+        response = request.get_response(fakes.wsgi_app())
+
+        actual_image = minidom.parseString(response.body.replace("  ", ""))
+
+        expected_now = self.NOW_API_FORMAT
+        expected_image = minidom.parseString("""
+            <image id="129"
+                    name="None"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
@@ -353,7 +386,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 name="public image"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE">
+                status="ACTIVE"
+                xmlns="http://docs.openstack.org/compute/api/v1.1">
             <links>
                 <link href="%(expected_href)s" rel="self"/>
                 <link href="%(expected_href)s" rel="bookmark"
@@ -389,7 +423,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(404, response.status_int)
 
         expected = minidom.parseString("""
-            <itemNotFound code="404">
+            <itemNotFound code="404"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <message>
                     Image not found.
                 </message>
@@ -422,8 +457,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
+        # NOTE(justinsb): I believe this should still use the v1.0 XSD,
+        # because the element hasn't changed definition
         expected = minidom.parseString("""
-            <itemNotFound code="404">
+            <itemNotFound code="404"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <message>
                     Image not found.
                 </message>
@@ -512,10 +550,18 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup', 'serverId': 42,
+            'name': 'killed backup',
+            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
+        },
+        {
+            'id': 129,
+            'name': None,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
         }]
 
         self.assertDictListMatch(expected, response_list)
@@ -551,7 +597,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
-            'serverId': 42,
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -573,7 +619,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
-            'serverId': 42,
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -596,7 +642,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
-            'serverId': 42,
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -617,7 +663,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup', 'serverId': 42,
+            'name': 'killed backup',
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -635,7 +682,29 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 "type": "application/xml",
                 "href": "http://localhost/v1.1/images/127",
             }],
-        }]
+        },
+        {
+            'id': 129,
+            'name': None,
+            'updated': self.NOW_API_FORMAT,
+            'created': self.NOW_API_FORMAT,
+            'status': 'ACTIVE',
+            "links": [{
+                "rel": "self",
+                "href": "http://localhost/v1.1/images/129",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/json",
+                "href": "http://localhost/v1.1/images/129",
+            },
+            {
+                "rel": "bookmark",
+                "type": "application/xml",
+                "href": "http://localhost/v1.1/images/129",
+            }],
+        },
+        ]
 
         self.assertDictListMatch(expected, response_list)
 
@@ -692,6 +761,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         other_backup_properties = {'instance_id': '43', 'user_id': '2'}
         add_fixture(id=image_id, name='someone elses backup', is_public=False,
                     status='active', properties=other_backup_properties)
+        image_id += 1
+
+        # Image without a name
+        add_fixture(id=image_id, is_public=True, status='active',
+                    properties={})
         image_id += 1
 
         return fixtures

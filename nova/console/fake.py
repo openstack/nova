@@ -15,9 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Fake ConsoleProxy driver for tests.
-"""
+"""Fake ConsoleProxy driver for tests."""
 
 from nova import exception
 
@@ -27,32 +25,32 @@ class FakeConsoleProxy(object):
 
     @property
     def console_type(self):
-        return "fake"
+        return 'fake'
 
     def setup_console(self, context, console):
-        """Sets up actual proxies"""
+        """Sets up actual proxies."""
         pass
 
     def teardown_console(self, context, console):
-        """Tears down actual proxies"""
+        """Tears down actual proxies."""
         pass
 
     def init_host(self):
-        """Start up any config'ed consoles on start"""
+        """Start up any config'ed consoles on start."""
         pass
 
     def generate_password(self, length=8):
-        """Returns random console password"""
-        return "fakepass"
+        """Returns random console password."""
+        return 'fakepass'
 
     def get_port(self, context):
-        """get available port for consoles that need one"""
+        """Get available port for consoles that need one."""
         return 5999
 
     def fix_pool_password(self, password):
-        """Trim password to length, and any other massaging"""
+        """Trim password to length, and any other massaging."""
         return password
 
     def fix_console_password(self, password):
-        """Trim password to length, and any other massaging"""
+        """Trim password to length, and any other massaging."""
         return password

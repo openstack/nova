@@ -15,9 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-VMRC console drivers.
-"""
+"""VMRC console drivers."""
 
 import base64
 import json
@@ -27,14 +25,14 @@ from nova import flags
 from nova import log as logging
 from nova.virt.vmwareapi import vim_util
 
+
+FLAGS = flags.FLAGS
 flags.DEFINE_integer('console_vmrc_port',
                      443,
                      "port for VMware VMRC connections")
 flags.DEFINE_integer('console_vmrc_error_retries',
                      10,
                      "number of retries for retrieving VMRC information")
-
-FLAGS = flags.FLAGS
 
 
 class VMRCConsole(object):
@@ -69,34 +67,33 @@ class VMRCConsole(object):
         return password
 
     def generate_password(self, vim_session, pool, instance_name):
-        """
-        Returns VMRC Connection credentials.
+        """Returns VMRC Connection credentials.
 
         Return string is of the form '<VM PATH>:<ESX Username>@<ESX Password>'.
+
         """
         username, password = pool['username'], pool['password']
-        vms = vim_session._call_method(vim_util, "get_objects",
-                    "VirtualMachine", ["name", "config.files.vmPathName"])
+        vms = vim_session._call_method(vim_util, 'get_objects',
+                    'VirtualMachine', ['name', 'config.files.vmPathName'])
         vm_ds_path_name = None
         vm_ref = None
         for vm in vms:
             vm_name = None
             ds_path_name = None
             for prop in vm.propSet:
-                if prop.name == "name":
+                if prop.name == 'name':
                     vm_name = prop.val
-                elif prop.name == "config.files.vmPathName":
+                elif prop.name == 'config.files.vmPathName':
                     ds_path_name = prop.val
             if vm_name == instance_name:
                 vm_ref = vm.obj
                 vm_ds_path_name = ds_path_name
                 break
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance_name)
-        json_data = json.dumps({"vm_id": vm_ds_path_name,
-                    "username": username,
-                    "password": password})
+            raise exception.InstanceNotFound(instance_id=instance_name)
+        json_data = json.dumps({'vm_id': vm_ds_path_name,
+                    'username': username,
+                    'password': password})
         return base64.b64encode(json_data)
 
     def is_otp(self):
@@ -115,28 +112,27 @@ class VMRCSessionConsole(VMRCConsole):
         return 'vmrc+session'
 
     def generate_password(self, vim_session, pool, instance_name):
-        """
-        Returns a VMRC Session.
+        """Returns a VMRC Session.
 
         Return string is of the form '<VM MOID>:<VMRC Ticket>'.
+
         """
-        vms = vim_session._call_method(vim_util, "get_objects",
-                    "VirtualMachine", ["name"])
-        vm_ref = None
+        vms = vim_session._call_method(vim_util, 'get_objects',
+                    'VirtualMachine', ['name'])
+        vm_ref = NoneV
         for vm in vms:
             if vm.propSet[0].val == instance_name:
                 vm_ref = vm.obj
         if vm_ref is None:
-            raise exception.NotFound(_("instance - %s not present") %
-                                     instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         virtual_machine_ticket = \
                         vim_session._call_method(
             vim_session._get_vim(),
-            "AcquireCloneTicket",
+            'AcquireCloneTicket',
             vim_session._get_vim().get_service_content().sessionManager)
-        json_data = json.dumps({"vm_id": str(vm_ref.value),
-                     "username": virtual_machine_ticket,
-                     "password": virtual_machine_ticket})
+        json_data = json.dumps({'vm_id': str(vm_ref.value),
+                     'username': virtual_machine_ticket,
+                     'password': virtual_machine_ticket})
         return base64.b64encode(json_data)
 
     def is_otp(self):
