@@ -100,7 +100,8 @@ class APIRouter(base_wsgi.Router):
 
             mapper.resource("zone", "zones",
                         controller=zones.create_resource(),
-                        collection={'detail': 'GET', 'info': 'GET'}),
+                        collection={'detail': 'GET', 'info': 'GET',
+                                    'select': 'GET'})
 
             mapper.resource("user", "users",
                         controller=users.create_resource(),

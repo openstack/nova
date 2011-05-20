@@ -106,15 +106,14 @@ class ExtensionDescriptor(object):
         actions = []
         return actions
 
-    def get_response_extensions(self):
-        """List of extensions.ResponseExtension extension objects.
+    def get_request_extensions(self):
+        """List of extensions.RequestException extension objects.
 
-        Response extensions are used to insert information into existing
-        response data.
+        Request extensions are used to handle custom request data.
 
         """
-        response_exts = []
-        return response_exts
+        request_exts = []
+        return request_exts
 
 
 class ActionExtensionController(object):
@@ -144,7 +143,7 @@ class ActionExtensionResource(wsgi.Resource):
         self.controller.add_action(action_name, handler)
 
 
-class ResponseExtensionController(object):
+class RequestExtensionController(object):
 
     def __init__(self, application):
         self.application = application
@@ -155,38 +154,23 @@ class ResponseExtensionController(object):
 
     def process(self, req, *args, **kwargs):
         res = req.get_response(self.application)
-        content_type = req.best_match_content_type()
-        # currently response handlers are un-ordered
+        # currently request handlers are un-ordered
         for handler in self.handlers:
-            res = handler(res)
-            try:
-                body = res.body
-                headers = res.headers
-            except AttributeError:
-                default_xmlns = None
-                serializer = {
-                    'application/xml': wsgi.XMLDictSerializer(),
-                    'application/json': wsgi.JSONDictSerializer(),
-                }[content_type]
-                body = serializer.serialize(res)
-                headers = {"Content-Type": content_type}
-            res = webob.Response()
-            res.body = body
-            res.headers = headers
+            res = handler(req, res)
         return res
 
 
-class ResponseExtensionResource(wsgi.Resource):
+class RequestExtensionResource(wsgi.Resource):
 
     def __init__(self, application):
-        controller = ResponseExtensionController(application)
-        super(ResponseExtensionResource, self).__init__(controller)
+        controller = RequestExtensionController(application)
+        super(RequestExtensionResource, self).__init__(controller)
 
     def add_handler(self, handler):
         self.controller.add_handler(handler)
 
 
-class ExtensionController(object):
+class ExtensionsResource(wsgi.Resource):
 
     def __init__(self, extension_manager):
         self.extension_manager = extension_manager
@@ -247,24 +231,24 @@ class ExtensionMiddleware(base_wsgi.Middleware):
 
         return action_resources
 
-    def _response_ext_resources(self, application, ext_mgr, mapper):
-        """Returns a dict of ResponseExtensionResource-s by collection."""
-        response_ext_resources = {}
-        for resp_ext in ext_mgr.get_response_extensions():
-            if not resp_ext.key in response_ext_resources.keys():
-                resource = ResponseExtensionResource(application)
-                mapper.connect(resp_ext.url_route + '.:(format)',
+    def _request_ext_resources(self, application, ext_mgr, mapper):
+        """Returns a dict of RequestExtensionResource-s by collection."""
+        request_ext_resources = {}
+        for req_ext in ext_mgr.get_request_extensions():
+            if not req_ext.key in request_ext_resources.keys():
+                resource = RequestExtensionResource(application)
+                mapper.connect(req_ext.url_route + '.:(format)',
                                 action='process',
                                 controller=resource,
-                                conditions=resp_ext.conditions)
+                                conditions=req_ext.conditions)
 
-                mapper.connect(resp_ext.url_route,
+                mapper.connect(req_ext.url_route,
                                 action='process',
                                 controller=resource,
-                                conditions=resp_ext.conditions)
-                response_ext_resources[resp_ext.key] = resource
+                                conditions=req_ext.conditions)
+                request_ext_resources[req_ext.key] = resource
 
-        return response_ext_resources
+        return request_ext_resources
 
     def __init__(self, application, ext_mgr=None):
 
@@ -292,13 +276,13 @@ class ExtensionMiddleware(base_wsgi.Middleware):
             resource = action_resources[action.collection]
             resource.add_action(action.action_name, action.handler)
 
-        # extended responses
-        resp_controllers = self._response_ext_resources(application, ext_mgr,
-                                                            mapper)
-        for response_ext in ext_mgr.get_response_extensions():
-            LOG.debug(_('Extended response: %s'), response_ext.key)
-            controller = resp_controllers[response_ext.key]
-            controller.add_handler(response_ext.handler)
+        # extended requests
+        req_controllers = self._request_ext_resources(application, ext_mgr,
+                                                      mapper)
+        for request_ext in ext_mgr.get_request_extensions():
+            LOG.debug(_('Extended request: %s'), request_ext.key)
+            controller = req_controllers[request_ext.key]
+            controller.add_handler(request_ext.handler)
 
         self._router = routes.middleware.RoutesMiddleware(self._dispatch,
                                                           mapper)
@@ -346,7 +330,7 @@ class ExtensionManager(object):
         """Returns a list of ResourceExtension objects."""
         resources = []
         resources.append(ResourceExtension('extensions',
-                                            ExtensionController(self)))
+                                            ExtensionsResource(self)))
         for alias, ext in self.extensions.iteritems():
             try:
                 resources.extend(ext.get_resources())
@@ -368,17 +352,17 @@ class ExtensionManager(object):
                 pass
         return actions
 
-    def get_response_extensions(self):
-        """Returns a list of ResponseExtension objects."""
-        response_exts = []
+    def get_request_extensions(self):
+        """Returns a list of RequestExtension objects."""
+        request_exts = []
         for alias, ext in self.extensions.iteritems():
             try:
-                response_exts.extend(ext.get_response_extensions())
+                request_exts.extend(ext.get_request_extensions())
             except AttributeError:
-                # NOTE(dprince): Extension aren't required to have response
+                # NOTE(dprince): Extension aren't required to have request
                 # extensions
                 pass
-        return response_exts
+        return request_exts
 
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
@@ -442,9 +426,13 @@ class ExtensionManager(object):
         self.extensions[alias] = ext
 
 
-class ResponseExtension(object):
-    """Add data to responses from core nova OpenStack API resources."""
+class RequestExtension(object):
+    """Extend requests and responses of core nova OpenStack API resources.
 
+    Provide a way to add data to responses and handle custom request data
+    that is sent to core nova OpenStack API controllers.
+
+    """
     def __init__(self, method, url_route, handler):
         self.url_route = url_route
         self.handler = handler
