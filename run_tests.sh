@@ -59,7 +59,13 @@ function run_tests {
 
 function run_pep8 {
   echo "Running pep8 ..."
+  # Opt-out files from pep8
+  ignore_scripts="*.sh:*nova-debug:*clean-vlans"
+  ignore_files="*eventlet-patch:*pip-requires"
+  ignore_dirs="*ajaxterm*"
+  GLOBIGNORE="$ignore_scripts:$ignore_files:$ignore_dirs"
   srcfiles=`find bin -type f ! -name "nova.conf*"`
+  srcfiles+=" `find tools/*`"
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
   pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles}
 }

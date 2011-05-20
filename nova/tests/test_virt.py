@@ -642,7 +642,7 @@ class LibvirtConnTestCase(test.TestCase):
         try:
             conn.spawn(instance, network_info)
         except Exception, e:
-            count = (0 <= e.message.find('Unexpected method call'))
+            count = (0 <= str(e.message).find('Unexpected method call'))
 
         self.assertTrue(count)
 
@@ -864,7 +864,7 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(len(rulesv4), 2)
         self.assertEquals(len(rulesv6), 0)
 
-    def multinic_iptables_test(self):
+    def test_multinic_iptables(self):
         ipv4_rules_per_network = 2
         ipv6_rules_per_network = 3
         networks_count = 5
@@ -884,7 +884,17 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(ipv6_network_rules,
                           ipv6_rules_per_network * networks_count)
 
-    def test_unfilter_instance_undefines_nwfilters(self):
+    def test_do_refresh_security_group_rules(self):
+        instance_ref = self._create_instance_ref()
+        self.mox.StubOutWithMock(self.fw,
+                                 'add_filters_for_instance',
+                                 use_mock_anything=True)
+        self.fw.add_filters_for_instance(instance_ref, mox.IgnoreArg())
+        self.fw.instances[instance_ref['id']] = instance_ref
+        self.mox.ReplayAll()
+        self.fw.do_refresh_security_group_rules("fake")
+
+    def test_unfilter_instance_undefines_nwfilter(self):
         admin_ctxt = context.get_admin_context()
 
         fakefilter = FakeNWFilter()
