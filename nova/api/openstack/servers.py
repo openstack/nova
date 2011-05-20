@@ -162,7 +162,7 @@ class Controller(common.OpenstackController):
             msg = _("Server name is not defined")
             return exc.HTTPBadRequest(msg)
 
-        zone_blob = env.get('blob', None)
+        zone_blob = env['server'].get('blob')
         name = env['server']['name']
         self._validate_server_name(name)
         name = name.strip()
