@@ -45,10 +45,10 @@ class StubController(nova.wsgi.Controller):
 
 class StubExtensionManager(object):
 
-    def __init__(self, resource_ext=None, action_ext=None, response_ext=None):
+    def __init__(self, resource_ext=None, action_ext=None, request_ext=None):
         self.resource_ext = resource_ext
         self.action_ext = action_ext
-        self.response_ext = response_ext
+        self.request_ext = request_ext
 
     def get_name(self):
         return "Tweedle Beetle Extension"
@@ -71,11 +71,11 @@ class StubExtensionManager(object):
             action_exts.append(self.action_ext)
         return action_exts
 
-    def get_response_extensions(self):
-        response_exts = []
-        if self.response_ext:
-            response_exts.append(self.response_ext)
-        return response_exts
+    def get_request_extensions(self):
+        request_extensions = []
+        if self.request_ext:
+            request_extensions.append(self.request_ext)
+        return request_extensions
 
 
 class ExtensionControllerTest(unittest.TestCase):
@@ -183,10 +183,10 @@ class ActionExtensionTest(unittest.TestCase):
         self.assertEqual(404, response.status_int)
 
 
-class ResponseExtensionTest(unittest.TestCase):
+class RequestExtensionTest(unittest.TestCase):
 
     def setUp(self):
-        super(ResponseExtensionTest, self).setUp()
+        super(RequestExtensionTest, self).setUp()
         self.stubs = stubout.StubOutForTesting()
         fakes.FakeAuthManager.reset_fake_data()
         fakes.FakeAuthDatabase.data = {}
@@ -195,42 +195,39 @@ class ResponseExtensionTest(unittest.TestCase):
 
     def tearDown(self):
         self.stubs.UnsetAll()
-        super(ResponseExtensionTest, self).tearDown()
+        super(RequestExtensionTest, self).tearDown()
 
     def test_get_resources_with_stub_mgr(self):
 
-        test_resp = "Gooey goo for chewy chewing!"
-
-        def _resp_handler(res):
+        def _req_handler(req, res):
             # only handle JSON responses
             data = json.loads(res.body)
-            data['flavor']['googoose'] = test_resp
-            return data
+            data['flavor']['googoose'] = req.GET.get('chewing')
+            res.body = json.dumps(data)
+            return res
 
-        resp_ext = extensions.ResponseExtension('GET',
+        req_ext = extensions.RequestExtension('GET',
                                                 '/v1.1/flavors/:(id)',
-                                                _resp_handler)
+                                                _req_handler)
 
-        manager = StubExtensionManager(None, None, resp_ext)
+        manager = StubExtensionManager(None, None, req_ext)
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app, manager)
-        request = webob.Request.blank("/v1.1/flavors/1")
+        request = webob.Request.blank("/v1.1/flavors/1?chewing=bluegoo")
         request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
-        self.assertEqual(test_resp, response_data['flavor']['googoose'])
+        self.assertEqual('bluegoo', response_data['flavor']['googoose'])
 
     def test_get_resources_with_mgr(self):
 
-        test_resp = "Gooey goo for chewy chewing!"
-
         app = fakes.wsgi_app()
         ext_midware = extensions.ExtensionMiddleware(app)
-        request = webob.Request.blank("/v1.1/flavors/1")
+        request = webob.Request.blank("/v1.1/flavors/1?chewing=newblue")
         request.environ['api.version'] = '1.1'
         response = request.get_response(ext_midware)
         self.assertEqual(200, response.status_int)
         response_data = json.loads(response.body)
-        self.assertEqual(test_resp, response_data['flavor']['googoose'])
+        self.assertEqual('newblue', response_data['flavor']['googoose'])
         self.assertEqual("Pig Bands!", response_data['big_bands'])
