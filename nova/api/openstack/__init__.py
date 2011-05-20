@@ -99,19 +99,19 @@ class APIRouter(base_wsgi.Router):
             server_members['inject_network_info'] = 'POST'
 
             mapper.resource("zone", "zones",
-                        controller=zones.resource_factory(),
+                        controller=zones.create_resource(),
                         collection={'detail': 'GET', 'info': 'GET'}),
 
             mapper.resource("user", "users",
-                        controller=users.resource_factory(),
+                        controller=users.create_resource(),
                         collection={'detail': 'GET'})
 
             mapper.resource("account", "accounts",
-                            controller=accounts.resource_factory(),
+                            controller=accounts.create_resource(),
                             collection={'detail': 'GET'})
 
         mapper.resource("console", "consoles",
-                        controller=consoles.resource_factory(),
+                        controller=consoles.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
@@ -124,31 +124,31 @@ class APIRouterV10(APIRouter):
     def _setup_routes(self, mapper):
         super(APIRouterV10, self)._setup_routes(mapper)
         mapper.resource("server", "servers",
-                        controller=servers.resource_factory('1.0'),
+                        controller=servers.create_resource('1.0'),
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
         mapper.resource("image", "images",
-                        controller=images.resource_factory('1.0'),
+                        controller=images.create_resource('1.0'),
                         collection={'detail': 'GET'})
 
         mapper.resource("flavor", "flavors",
-                        controller=flavors.resource_factory('1.0'),
+                        controller=flavors.create_resource('1.0'),
                         collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
                         collection={'detail': 'GET'},
-                        controller=shared_ip_groups.resource_factory())
+                        controller=shared_ip_groups.create_resource())
 
         mapper.resource("backup_schedule", "backup_schedule",
-                        controller=backup_schedules.resource_factory(),
+                        controller=backup_schedules.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
         mapper.resource("limit", "limits",
-                        controller=limits.resource_factory('1.0'))
+                        controller=limits.create_resource('1.0'))
 
-        mapper.resource("ip", "ips", controller=ips.resource_factory(),
+        mapper.resource("ip", "ips", controller=ips.create_resource(),
                         collection=dict(public='GET', private='GET'),
                         parent_resource=dict(member_name='server',
                                              collection_name='servers'))
@@ -160,27 +160,27 @@ class APIRouterV11(APIRouter):
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper)
         mapper.resource("server", "servers",
-                        controller=servers.resource_factory('1.1'),
+                        controller=servers.create_resource('1.1'),
                         collection={'detail': 'GET'},
                         member=self.server_members)
 
         mapper.resource("image", "images",
-                        controller=images.resource_factory('1.1'),
+                        controller=images.create_resource('1.1'),
                         collection={'detail': 'GET'})
 
         mapper.resource("image_meta", "meta",
-                        controller=image_metadata.resource_factory(),
+                        controller=image_metadata.create_resource(),
                         parent_resource=dict(member_name='image',
                         collection_name='images'))
 
         mapper.resource("server_meta", "meta",
-                        controller=server_metadata.resource_factory(),
+                        controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
         mapper.resource("flavor", "flavors",
-                        controller=flavors.resource_factory('1.1'),
+                        controller=flavors.create_resource('1.1'),
                         collection={'detail': 'GET'})
 
         mapper.resource("limit", "limits",
-                        controller=limits.resource_factory('1.1'))
+                        controller=limits.create_resource('1.1'))

@@ -80,7 +80,7 @@ class Controller(object):
         return dict(account=_translate_keys(account))
 
 
-def resource_factory():
+def create_resource():
     metadata = {
         "attributes": {
             "account": ["id", "name", "description", "manager"],

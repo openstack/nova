@@ -93,7 +93,7 @@ class Controller(object):
         return dict(zone=_scrub_zone(zone))
 
 
-def resource_factory():
+def create_resource():
     metadata = {
         "attributes": {
             "zone": ["id", "api_url", "name", "capabilities"],

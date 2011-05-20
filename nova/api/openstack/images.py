@@ -145,7 +145,7 @@ class ControllerV11(Controller):
         return common.XML_NS_V11
 
 
-def resource_factory(version='1.0'):
+def create_resource(version='1.0'):
     controller = {
         '1.0': ControllerV10,
         '1.1': ControllerV11,

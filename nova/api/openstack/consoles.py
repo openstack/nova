@@ -89,7 +89,7 @@ class Controller(object):
         return exc.HTTPAccepted()
 
 
-def resource_factory():
+def create_resource():
     metadata = {
         'attributes': {
             'console': [],

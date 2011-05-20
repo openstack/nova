@@ -91,7 +91,7 @@ class Controller(object):
         raise error
 
 
-def resource_factory():
+def create_resource():
     serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
     }

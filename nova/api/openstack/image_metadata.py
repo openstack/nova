@@ -102,7 +102,7 @@ class Controller(object):
         self.image_service.update(context, image_id, img, None)
 
 
-def resource_factory():
+def create_resource():
     serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
     }

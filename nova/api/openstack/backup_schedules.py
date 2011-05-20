@@ -52,7 +52,7 @@ class Controller(object):
         return faults.Fault(exc.HTTPNotImplemented())
 
 
-def resource_factory():
+def create_resource():
     metadata = {
         'attributes': {
             'backupSchedule': [],

@@ -49,5 +49,5 @@ class Controller(object):
         raise faults.Fault(exc.HTTPNotImplemented())
 
 
-def resource_factory():
+def create_resource():
     return wsgi.Resource(Controller())

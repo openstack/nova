@@ -63,7 +63,7 @@ class Controller(object):
         return faults.Fault(exc.HTTPNotImplemented())
 
 
-def resource_factory():
+def create_resource():
     metadata = {
         'list_collections': {
             'public':  {'item_name': 'ip', 'item_key': 'addr'},

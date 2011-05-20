@@ -65,7 +65,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.resource_factory('1.0')
+        self.controller = limits.create_resource('1.0')
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""
@@ -178,7 +178,7 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
     def setUp(self):
         """Run before each test."""
         BaseLimitTestSuite.setUp(self)
-        self.controller = limits.resource_factory('1.1')
+        self.controller = limits.create_resource('1.1')
 
     def _get_index_request(self, accept_header="application/json"):
         """Helper to set routing arguments."""

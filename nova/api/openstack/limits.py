@@ -73,7 +73,7 @@ class LimitsControllerV11(LimitsController):
         return limits_views.ViewBuilderV11()
 
 
-def resource_factory(version='1.0'):
+def create_resource(version='1.0'):
     controller = {
         '1.0': LimitsControllerV10,
         '1.1': LimitsControllerV11,

@@ -784,7 +784,7 @@ class ServerXMLDeserializer(wsgi.XMLDeserializer):
         return ""
 
 
-def resource_factory(version='1.0'):
+def create_resource(version='1.0'):
     controller = {
         '1.0': ControllerV10,
         '1.1': ControllerV11,

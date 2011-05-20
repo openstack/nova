@@ -98,7 +98,7 @@ class Controller(object):
         return dict(user=_translate_keys(self.manager.get_user(id)))
 
 
-def resource_factory():
+def create_resource():
     metadata = {
         "attributes": {
             "user": ["id", "name", "access", "secret", "admin"],
