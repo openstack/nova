@@ -659,16 +659,26 @@ class LibvirtConnTestCase(test.TestCase):
 
 class FakeNWFilter:
     def __init__(self):
-        self.undefine_call_count = 0
+        self.filters = {}
 
-    def undefine(self):
-        self.undefine_call_count += 1
-        pass
-
-    def _nwfilterLookupByName(self, ignore):
-        return self
+    def _nwfilterLookupByName(self, name):
+        if name in self.filters:
+            return self.filters[name]
+        raise libvirt.libvirtError('Filter Not Found')
 
     def _filterDefineXMLMock(self, xml):
+        class FakeNWFilterInternal:
+            def __init__(self, parent, name):
+                self.name = name
+                self.parent = parent
+
+            def undefine(self):
+                del self.parent.filters[self.name]
+                pass
+        tree = xml_to_tree(xml)
+        name = tree.get('name')
+        if name not in self.filters:
+            self.filters[name] = FakeNWFilterInternal(self, name)
         return True
 
 
@@ -688,6 +698,20 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fake_libvirt_connection = FakeLibvirtConnection()
         self.fw = libvirt_conn.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
+
+    def lazy_load_library_exists(self):
+        """check if libvirt is available."""
+        # try to connect libvirt. if fail, skip test.
+        try:
+            import libvirt
+            import libxml2
+        except ImportError:
+            return False
+        global libvirt
+        libvirt = __import__('libvirt')
+        libvirt_conn.libvirt = __import__('libvirt')
+        libvirt_conn.libxml2 = __import__('libxml2')
+        return True
 
     def tearDown(self):
         self.manager.delete_project(self.project)
@@ -895,6 +919,10 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_unfilter_instance_undefines_nwfilter(self):
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
         admin_ctxt = context.get_admin_context()
 
         fakefilter = FakeNWFilter()
@@ -916,10 +944,11 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fw.setup_basic_filtering(instance)
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
+        original_filter_count = len(fakefilter.filters)
         self.fw.unfilter_instance(instance)
 
         # should attempt to undefine just the instance filter
-        self.assertEquals(fakefilter.undefine_call_count, 1)
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
 
@@ -1109,6 +1138,12 @@ class NWFilterTestCase(test.TestCase):
 
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
+
+        self.security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group(self.context, inst_id,
+                                       self.security_group.id)
+
         instance = db.instance_get(self.context, inst_id)
 
         ip = '10.11.12.13'
@@ -1120,9 +1155,12 @@ class NWFilterTestCase(test.TestCase):
         self.fw.setup_basic_filtering(instance)
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
+        original_filter_count = len(fakefilter.filters)
+        print fakefilter.filters.keys()
         self.fw.unfilter_instance(instance)
 
+        print fakefilter.filters.keys()
         # should attempt to undefine 2 filters: instance and instance-secgroup
-        self.assertEquals(fakefilter.undefine_call_count, 2)
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])

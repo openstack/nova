@@ -1838,7 +1838,7 @@ class NWFilterFirewall(FirewallDriver):
         # execute in a native thread and block current greenthread until done
         tpool.execute(self._conn.nwfilterDefineXML, xml)
 
-    def unfilter_instance(self, instance, remove_secgroup=True):
+    def unfilter_instance(self, instance):
         """Clear out the nwfilter rules."""
         network_info = _get_network_info(instance)
         instance_name = instance.name
@@ -1856,13 +1856,12 @@ class NWFilterFirewall(FirewallDriver):
         instance_secgroup_filter_name =\
             '%s-secgroup' % (self._instance_filter_name(instance))
 
-        if remove_secgroup:
-            try:
-                self._conn.nwfilterLookupByName(instance_secgroup_filter_name)\
-                                                .undefine()
-            except libvirt.libvirtError:
-                LOG.debug(_('The nwfilter(%(instance_secgroup_filter_name)s) '
-                            'for %(instance_name)s is not found.') % locals())
+        try:
+            self._conn.nwfilterLookupByName(instance_secgroup_filter_name)\
+                                            .undefine()
+        except libvirt.libvirtError:
+            LOG.debug(_('The nwfilter(%(instance_secgroup_filter_name)s) '
+                        'for %(instance_name)s is not found.') % locals())
 
     def prepare_instance_filter(self, instance, network_info=None):
         """
@@ -2028,7 +2027,7 @@ class IptablesFirewallDriver(FirewallDriver):
         if self.instances.pop(instance['id'], None):
             self.remove_filters_for_instance(instance)
             self.iptables.apply()
-            self.nwfilter.unfilter_instance(instance, False)
+            self.nwfilter.unfilter_instance(instance)
         else:
             LOG.info(_('Attempted to unfilter instance %s which is not '
                      'filtered'), instance['id'])
