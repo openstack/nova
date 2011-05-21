@@ -35,7 +35,7 @@ FLAGS = flags.FLAGS
 class FakeImageService(service.BaseImageService):
     """Mock (fake) image service for unit testing."""
 
-    def __init__(self, client=None):
+    def __init__(self):
         self.images = {}
         # NOTE(justinsb): The OpenStack API can't upload an image?
         # So, make sure we've got one..

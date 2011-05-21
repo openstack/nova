@@ -861,7 +861,6 @@ class LibvirtConnection(driver.ComputeDriver):
                                   project=project)
 
         root_fname = hashlib.sha1(disk_images['image_id']).hexdigest()
-
         size = FLAGS.minimum_root_size
 
         inst_type_id = inst['instance_type_id']

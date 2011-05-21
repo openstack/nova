@@ -84,8 +84,7 @@ class Controller(common.OpenstackController):
         context = req.environ['nova.context']
 
         try:
-            (image_service, service_image_id) = utils.get_image_service(
-                id)
+            (image_service, service_image_id) = utils.get_image_service(id)
             image = image_service.show(context, service_image_id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")

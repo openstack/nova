@@ -141,7 +141,7 @@ class Controller(common.OpenstackController):
 
         image_ref = self._image_ref_from_req_data(env)
         try:
-            (image_service, image_id) = utils.get_image_service(image_ref)
+            image_service, image_id = utils.get_image_service(image_ref)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                 req, image_id)
             images = set([str(x['id']) for x in image_service.index(context)])
@@ -559,7 +559,7 @@ class Controller(common.OpenstackController):
         associated kernel and ramdisk image IDs.
         """
         context = req.environ['nova.context']
-        (image_service, service_image_id) = utils.get_image_service(image_id)
+        image_service, service_image_id = utils.get_image_service(image_id)
         image_meta = image_service.show(context, service_image_id)
         # NOTE(sirp): extracted to a separate method to aid unit-testing, the
         # new method doesn't need a request obj or an ImageService stub
