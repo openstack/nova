@@ -132,7 +132,7 @@ class ViewBuilderV11(ViewBuilder):
     def _build_image(self, response, inst):
         if 'image_id' in dict(inst):
             image_id = inst['image_id']
-            if utils.is_int(image_id):
+            if str(image_id).isdigit():
                 image_id = int(image_id)
             response['imageRef'] = image_id
 

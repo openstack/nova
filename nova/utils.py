@@ -728,10 +728,6 @@ def parse_server_string(server_str):
         return ('', '')
 
 
-def is_int(x):
-    return re.match(r'\d+$', str(x))
-
-
 def parse_image_ref(image_ref):
     """Parse an image href into composite parts.
 
@@ -742,7 +738,7 @@ def parse_image_ref(image_ref):
     :param image_ref: href or id of an image
 
     """
-    if is_int(image_ref):
+    if str(image_ref).isdigit():
         return (int(image_ref), None, None)
 
     o = urlparse(image_ref)
@@ -769,7 +765,7 @@ def get_image_service(image_ref):
 
     """
     image_ref = image_ref or 0
-    if is_int(image_ref):
+    if str(image_ref).isdigit():
         return (get_default_image_service(), int(image_ref))
 
     try:
