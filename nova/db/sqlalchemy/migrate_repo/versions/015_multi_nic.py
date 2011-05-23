@@ -48,12 +48,21 @@ mac_addresses = Table('mac_addresses', meta,
 # Don't autoload this table since sqlite will have issues when
 # adding the column
 fixed_ips = Table('fixed_ips', meta,
+        Column('created_at', DateTime(timezone=False),
+               default=datetime.datetime.utcnow),
+        Column('updated_at', DateTime(timezone=False),
+               onupdate=datetime.datetime.utcnow),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(), primary_key=True),
         Column('address', String(255)),
         Column('network_id', Integer(), ForeignKey('networks.id'),
                nullable=True),
         Column('instance_id', Integer(), ForeignKey('instances.id'),
                nullable=True),
+        Column('allocated', Boolean(), default=False),
+        Column('leased', Boolean(), default=False),
+        Column('reserved', Boolean(), default=False),
         )
 
 # bridge_interface column to add to networks table
