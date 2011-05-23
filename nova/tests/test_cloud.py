@@ -126,7 +126,8 @@ class CloudTestCase(test.TestCase):
         inst = db.instance_create(self.context, {'host': self.compute.host})
         networks = db.network_get_all(self.context)
         print networks
-        print self.network.allocate_for_instance(self.context, inst)
+        print self.network.allocate_for_instance(self.context, inst['id'],
+                                                 inst['instance_type_id'])
 
         fixed = self.network.allocate_fixed_ip(self.context, inst,
                                                networks[0])

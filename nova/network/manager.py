@@ -258,7 +258,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 # return so worker will only grab 1 (to help scale flatter)
                 return self.set_network_host(context, network['id'])
 
-    def _get_networks_for_instance(self, context, instance=None):
+    def _get_networks_for_instance(self, context, project_id=None):
         """determine which networks an instance should connect to"""
         # TODO(tr3buchet) maybe this needs to be updated in the future if
         #                 there is a better way to determine which networks
@@ -269,7 +269,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         return [network for network in networks if
                 not network['vlan'] and network['host']]
 
-    def allocate_for_instance(self, context, instance_id, **kwargs):
+    def allocate_for_instance(self, context, instance_id, instance_type_id,
+                              project_id=None, **kwargs):
         """handles allocating the various network resources for an instance
 
         rpc.called by network_api
@@ -277,13 +278,14 @@ class NetworkManager(manager.SchedulerDependentManager):
         LOG.debug(_("network allocations for instance %s"), instance_id,
                                                             context=context)
         admin_context = context.elevated()
-        networks = self._get_networks_for_instance(admin_context, instance)
+        networks = self._get_networks_for_instance(admin_context, project_id)
 
         network_ids = [n['id'] for n in networks]
         self._allocate_mac_addresses(context, instance_id, network_ids)
         self._allocate_fixed_ips(admin_context, instance_id, network_ids,
                                  **kwargs)
-        return self._create_nw_info(admin_context, instance)
+        return self._create_nw_info(admin_context, instance_id,
+                                    instance_type_id)
 
     def deallocate_for_instance(self, context, instance_id, **kwargs):
         """handles deallocating various network resources for an instance in 
@@ -760,11 +762,10 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                                            network['bridge'],
                                            network['bridge_interface'])
 
-    def _get_networks_for_instance(self, context, instance):
+    def _get_networks_for_instance(self, context, project_id):
         """determine which networks an instance should connect to"""
         # get networks associated with project
-        networks = self.db.project_get_networks(context,
-                                                instance['project_id'])
+        networks = self.db.project_get_networks(context, project_id)
 
         # return only networks which have host set
         return [network for network in networks if network['host']]

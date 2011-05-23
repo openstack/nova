@@ -111,6 +111,8 @@ class API(base.Base):
         """
         args = kwargs
         args['instance_id'] = instance['id']
+        args['instance_type_id'] = instance['instance_type_id']
+        args['project_id'] = instance['project_id']
         return rpc.call(context, FLAGS.network_topic,
                         {'method': 'allocate_for_instance',
                          'args': args})
