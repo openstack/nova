@@ -18,6 +18,7 @@ import urlparse
 
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
@@ -49,14 +50,6 @@ def _exclude_keys(item, keys):
 def _scrub_zone(zone):
     return _exclude_keys(zone, ('username', 'password', 'created_at',
                     'deleted', 'deleted_at', 'updated_at'))
-
-
-def check_encryption_key(func):
-    def wrapped(*args, **kwargs):
-        if not FLAGS.build_plan_encryption_key:
-            raise exception.Error(_("--build_plan_encryption_key not set"))
-        return func(*args, **kwargs)
-    return wrapped
 
 
 class Controller(common.OpenstackController):
@@ -116,7 +109,6 @@ class Controller(common.OpenstackController):
         zone = api.zone_update(context, zone_id, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    @check_encryption_key
     def select(self, req):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
@@ -137,6 +129,9 @@ class Controller(common.OpenstackController):
         """Remove all the confidential data and return a sanitized
         version of the build plan. Include an encrypted full version
         of the weighting entry so we can get back to it later."""
+        if not FLAGS.build_plan_encryption_key:
+            raise exception.FlagNotSet(flag='build_plan_encryption_key')
+
         encryptor = crypto.encryptor(FLAGS.build_plan_encryption_key)
         cooked = []
         for entry in build_plan:

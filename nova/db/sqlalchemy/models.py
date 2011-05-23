@@ -209,7 +209,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    instance_type_id = Column(String(255))
+    instance_type_id = Column(Integer)
 
     user_data = Column(Text)
 
@@ -495,7 +495,7 @@ class AuthToken(BASE, NovaBase):
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
     user_id = Column(String(255))
-    server_manageent_url = Column(String(255))
+    server_management_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
 
