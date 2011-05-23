@@ -45,6 +45,9 @@ class Controller(common.OpenstackController):
         items = self._get_flavors(req, is_detail=True)
         return dict(flavors=items)
 
+    def _get_view_builder(self, req):
+        raise NotImplementedError()
+
     def _get_flavors(self, req, is_detail=True):
         """Helper function that returns a list of flavor dicts."""
         ctxt = req.environ['nova.context']
