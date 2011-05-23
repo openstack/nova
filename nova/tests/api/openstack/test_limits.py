@@ -263,6 +263,57 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         body = json.loads(response.body)
         self.assertEqual(expected, body)
 
+    def _populate_limits_diff_regex(self, request):
+        """Put limit info into a request."""
+        _limits = [
+            limits.Limit("GET", "*", ".*", 10, 60).display(),
+            limits.Limit("GET", "*", "*.*", 10, 60).display(),
+        ]
+        request.environ["nova.limits"] = _limits
+        return request
+
+    def test_index_diff_regex(self):
+        """Test getting limit details in JSON."""
+        request = self._get_index_request()
+        request = self._populate_limits_diff_regex(request)
+        response = request.get_response(self.controller)
+        expected = {
+            "limits": {
+                "rate": [
+                    {
+                        "regex": ".*",
+                        "uri": "*",
+                        "limit": [
+                            {
+                                "verb": "GET",
+                                "next-available": 0,
+                                "unit": "MINUTE",
+                                "value": 10,
+                                "remaining": 10,
+                            },
+                        ],
+                    },
+                    {
+                        "regex": "*.*",
+                        "uri": "*",
+                        "limit": [
+                            {
+                                "verb": "GET",
+                                "next-available": 0,
+                                "unit": "MINUTE",
+                                "value": 10,
+                                "remaining": 10,
+                            },
+                        ],
+                    },
+
+                ],
+                "absolute": {},
+            },
+        }
+        body = json.loads(response.body)
+        self.assertEqual(expected, body)
+
 
 class LimitMiddlewareTest(BaseLimitTestSuite):
     """
