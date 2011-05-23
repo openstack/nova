@@ -18,6 +18,7 @@ import urlparse
 
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
@@ -25,11 +26,6 @@ from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('build_plan_encryption_key',
-        None,
-        '128bit (hex) encryption key for scheduler build plans.')
-
-
 LOG = logging.getLogger('nova.api.openstack.zones')
 
 

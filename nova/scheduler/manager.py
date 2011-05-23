@@ -80,7 +80,9 @@ class SchedulerManager(manager.Manager):
         try:
             host = getattr(self.driver, driver_method)(elevated, *args,
                                                        **kwargs)
-        except AttributeError:
+        except AttributeError, e:
+            LOG.exception(_("Driver Method %(driver_method)s missing: %(e)s")
+                                % locals())
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         if not host:

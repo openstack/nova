@@ -23,12 +23,16 @@ across zones. There are two expansion points to this class for:
 import operator
 import M2Crypto
 
+from nova import crypto
 from nova import db
-from nova import rpc
+from nova import flags
 from nova import log as logging
+from nova import rpc
+
 from nova.scheduler import api
 from nova.scheduler import driver
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
 
 
@@ -51,7 +55,8 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
-        if 'blob' in request_spec:
+        blob = request_spec['blob']
+        if blob:
             self.provision_resource(context, request_spec, instance_id,
                                     request_spec, kwargs)
             return None
@@ -99,6 +104,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         # 1. valid, 
         # 2. intended for this zone or a child zone.
         # if 2 ... forward call to child zone.
+        LOG.debug(_("****** PROVISION IN CHILD %(item)s") % locals())
+
         blob = item['blob']
         decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
         host_info = None
@@ -182,16 +189,21 @@ class ZoneAwareScheduler(driver.Scheduler):
         #TODO(sandy): how to infer this from OS API params?
         num_instances = 1
 
+        LOG.debug(_("XXXXXXX - 1 -  _SCHEDULE"))
+
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
+        LOG.debug(_("XXXXXXX - 2 -  _SCHEDULE"))
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
+        LOG.debug(_("XXXXXXX - 3 -  _SCHEDULE"))
         # Next, tack on the best weights from the child zones ...
         child_results = self._call_zone_method(context, "select",
                 specs=request_spec)
+        LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE - CHILD RESULTS %(child_results)s") % locals())
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to
@@ -203,6 +215,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                         "child_blob": weighting["blob"]}
                 weighted.append(host_dict)
 
+        LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE"))
         weighted.sort(key=operator.itemgetter('weight'))
         return weighted
 
