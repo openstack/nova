@@ -109,20 +109,21 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        (primary_vdi_uuid, swap_vdi_uuid) = VMHelper.fetch_image(self._session,
-                instance.id, instance.image_id, user, project, disk_image_type)
-        return (primary_vdi_uuid, swap_vdi_uuid)
+        vdi_uuids = VMHelper.fetch_image(self._session,
+                instance.id, instance.image_id, user, project,
+                disk_image_type)
+        return vdi_uuids
 
     def spawn(self, instance, network_info=None):
-        vdi_uuid, swap_uuid = self._create_disk(instance)
-        vm_ref = self._create_vm(instance, vdi_uuid, swap_uuid, network_info)
+        vdi_uuids = self._create_disk(instance)
+        vm_ref = self._create_vm(instance, vdi_uuids, network_info)
         self._spawn(instance, vm_ref)
 
     def spawn_rescue(self, instance):
         """Spawn a rescue instance."""
         self.spawn(instance)
 
-    def _create_vm(self, instance, vdi_uuid, swap_vdi_uuid=None, network_info=None):
+    def _create_vm(self, instance, vdi_uuids, network_info=None):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -142,30 +143,37 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
 
         # Are we building from a pre-existing disk?
-        vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+        primary_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                vdi_uuids['primary_vdi_uuid'])
+        swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid', None)
         if swap_vdi_uuid:
             swap_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', swap_vdi_uuid)
+        else:
+            swap_vdi_ref = None
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
 
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
-                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)[0]
+                    instance.kernel_id, user, project,
+                    ImageType.KERNEL_RAMDISK)
 
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)[0]
+                    instance.ramdisk_id, user, project,
+                    ImageType.KERNEL_RAMDISK)
 
-        use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
-            vdi_ref, disk_image_type, instance.os_type)
-        vm_ref = VMHelper.create_vm(self._session, instance, kernel, ramdisk,
-                                    use_pv_kernel)
+        use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                instance.id, primary_vdi_ref, disk_image_type,
+                instance.os_type)
+        vm_ref = VMHelper.create_vm(self._session, instance, kernel,
+                ramdisk, use_pv_kernel)
 
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                vdi_ref=vdi_ref, userdevice=0, bootable=True)
-	if swap_vdi_uuid:
+                vdi_ref=primary_vdi_ref, userdevice=0, bootable=True)
+        if swap_vdi_ref:
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                     vdi_ref=swap_vdi_ref, userdevice=0, bootable=False)
 
@@ -177,7 +185,7 @@ class VMOps(object):
         # Alter the image before VM start for, e.g. network injection
         if FLAGS.xenapi_inject_image:
             VMHelper.preconfigure_instance(self._session, instance,
-                                           vdi_ref, network_info)
+                                           primary_vdi_ref, network_info)
 
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, network_info, vm_ref)

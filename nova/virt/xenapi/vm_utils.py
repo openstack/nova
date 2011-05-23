@@ -410,7 +410,7 @@ class VMHelper(HelperBase):
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
         vdi_uuids = session.wait_for_task(task, instance_id)
         primary_vdi_uuid = vdi_uuids.get('primary_vdi_uuid')
-        swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid')
+        swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid', None)
 
         cls.scan_sr(session, instance_id, sr_ref)
 
@@ -419,13 +419,14 @@ class VMHelper(HelperBase):
         primary_name_label = get_name_label_for_image(image)
         session.get_xenapi().VDI.set_name_label(primary_vdi_ref, primary_name_label)
 
-        LOG.debug(_("xapi 'download_vhd' returned VDI UUID %(primary_vdi_uuid)s")
-                  % locals())
+        LOG.debug(_("xapi 'download_vhd' returned VDI UUID "
+                "%(primary_vdi_uuid)s") % locals())
+        if swap_vdi_uuid:
+            LOG.debug(_("xapi 'download_vhd' returned SWAP VDI UUID "
+                    "%(swap_vdi_uuid)s") % locals())
 
-	LOG.debug("=" * 100)
-        LOG.debug(rimary_vdi_uuid)
-        LOG.debug(swap_vdi_uuid)
-        return (primary_vdi_uuid, swap_vdi_uuid)
+        LOG.debug("=" * 100)
+        return vdi_uuids
 
     @classmethod
     def _fetch_image_glance_disk(cls, session, instance_id, image, access,
@@ -482,7 +483,8 @@ class VMHelper(HelperBase):
             LOG.debug(_("Kernel/Ramdisk VDI %s destroyed"), vdi_ref)
             return filename
         else:
-            return session.get_xenapi().VDI.get_uuid(vdi_ref)
+            vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
+            return {'primary_vdi_uuid': vdi_uuid}
 
     @classmethod
     def determine_disk_image_type(cls, instance):

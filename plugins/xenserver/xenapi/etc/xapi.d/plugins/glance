@@ -178,15 +178,19 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
         assert_vhd_not_hidden(base_copy_path)
 
     # If we find a swap.vhd, go ahead and copy it into the SR
-    swap_uuid = None
+    swap_vdi_uuid = None
     orig_swap_path = os.path.join(staging_path, 'swap.vhd')
     if os.path.exists(orig_swap_path):
-        swap_path, swap_uuid = rename_with_uuid(orig_swap_path)
+        swap_path, swap_vdi_uuid = rename_with_uuid(orig_swap_path)
         move_into_sr(swap_path)
 
-    move_into_sr(base_copy_path)
-    return dict(primary_vdi_uuid=vdi_uuid, swap_vdi_uuid=swap_uuid)
+    vdi_uuids = {}
+    vdi_uuids['primary_vdi_uuid'] = vdi_uuid
+    if swap_vdi_uuid:
+        vdi_uuids['swap_vdi_uuid'] = swap_vdi_uuid
 
+    move_into_sr(base_copy_path)
+    return vdi_uuids
 
 def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
     """Hard-link VHDs into staging area with appropriate filename
