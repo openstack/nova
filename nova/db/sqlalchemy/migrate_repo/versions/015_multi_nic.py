@@ -45,6 +45,16 @@ mac_addresses = Table('mac_addresses', meta,
                nullable=False),
         )
 
+# Don't autoload this table since sqlite will have issues when
+# adding the column
+fixed_ips = Table('fixed_ips', meta,
+        Column('id', Integer(), primary_key=True),
+        Column('address', String(255)),
+        Column('network_id', Integer(), ForeignKey('networks.id'),
+               nullable=True),
+        Column('instance_id', Integer(), ForeignKey('instances.id'),
+               nullable=True),
+        )
 
 # bridge_interface column to add to networks table
 interface = Column('bridge_interface',
@@ -66,7 +76,6 @@ def upgrade(migrate_engine):
 
     # grab tables and (column for dropping later)
     instances = Table('instances', meta, autoload=True)
-    fixed_ips = Table('fixed_ips', meta, autoload=True)
     networks = Table('networks', meta, autoload=True)
     c = instances.columns['mac_address']
 
