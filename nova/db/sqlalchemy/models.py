@@ -485,6 +485,17 @@ class Network(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
+class MacAddress(BASE, NovaBase):
+    """Represents a mac address used by an instance"""
+    __tablename__ = 'mac_addresses'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255), unique=True)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
+    network = relationship(Network, backref=backref('mac_addresses'))
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance, backref=backref('mac_addresses'))
+
+
 # TODO(vish): can these both come from the same baseclass?
 class FixedIp(BASE, NovaBase):
     """Represents a fixed ip for an instance."""
@@ -522,17 +533,6 @@ class FloatingIp(BASE, NovaBase):
                                 'FloatingIp.deleted == False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
-
-
-class MacAddress(BASE, NovaBase):
-    """Represents a mac address used by an instance"""
-    __tablename__ = 'mac_addresses'
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255), unique=True)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
-    network = relationship(Network, backref=backref('mac_addresses'))
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
-    instance = relationship(Instance, backref=backref('mac_addresses'))
 
 
 class AuthToken(BASE, NovaBase):
