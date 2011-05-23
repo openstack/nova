@@ -606,7 +606,6 @@ class ServersTest(test.TestCase):
 
         res = req.get_response(fakes.wsgi_app())
 
-        print "RES BODY:", res.body
         server = json.loads(res.body)['server']
         self.assertEqual(16, len(server['adminPass']))
         self.assertEqual('server_test', server['name'])
