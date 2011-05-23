@@ -895,7 +895,7 @@ def mac_address_delete_by_instance(context, instance_id):
     context = request context object
     instance_id = instance to remove macs for
     """
-    refs = mac_address_get_all_by_instance(instance_id)
+    refs = mac_address_get_all_by_instance(context, instance_id)
     session = get_session()
     with session.begin():
         for ref in refs:

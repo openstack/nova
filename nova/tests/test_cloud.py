@@ -70,7 +70,7 @@ class CloudTestCase(test.TestCase):
         self.project = self.manager.create_project('proj', 'admin', 'proj')
         self.context = context.RequestContext(user=self.user,
                                               project=self.project)
-        host = self.network.get_network_host(self.context.elevated())
+        host = self.network.host
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
@@ -80,9 +80,9 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
-        network_ref = db.project_get_network(self.context,
-                                             self.project.id)
-        db.network_disassociate(self.context, network_ref['id'])
+        networks = db.project_get_networks(self.context, self.project.id)
+        for network in networks:
+            db.network_disassociate(self.context, network['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         self.compute.kill()
@@ -124,7 +124,12 @@ class CloudTestCase(test.TestCase):
                                'host': self.network.host})
         self.cloud.allocate_address(self.context)
         inst = db.instance_create(self.context, {'host': self.compute.host})
-        fixed = self.network.allocate_fixed_ip(self.context, inst['id'])
+        networks = db.network_get_all(self.context)
+        print networks
+        print self.network.allocate_for_instance(self.context, inst)
+
+        fixed = self.network.allocate_fixed_ip(self.context, inst,
+                                               networks[0])
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,

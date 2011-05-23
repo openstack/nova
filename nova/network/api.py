@@ -20,8 +20,6 @@
 Handles all requests relating to instances (guest vms).
 """
 
-import pickle
-
 from nova import db
 from nova import exception
 from nova import flags
@@ -112,18 +110,17 @@ class API(base.Base):
         handles args and return value serialization
         """
         args = kwargs
-        args['instance'] = pickle.dumps(instance)
-        rval = rpc.call(context, FLAGS.network_topic,
+        args['instance_id'] = instance['id']
+        return rpc.call(context, FLAGS.network_topic,
                         {'method': 'allocate_for_instance',
                          'args': args})
-        return pickle.loads(rval)
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """rpc.casts network manager allocate_for_instance
         handles argument serialization
         """
         args = kwargs
-        args['instance'] = pickle.dumps(instance)
+        args['instance_id'] = instance['id']
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'deallocate_for_instance',
                   'args': args})
@@ -132,8 +129,8 @@ class API(base.Base):
         """rpc.calls network manager get_instance_nw_info
         handles the args and return value serialization
         """
-        args = {'instance': pickle.dumps(instance)}
-        rval = rpc.call(context, FLAGS.network_topic,
+        args = {'instance_id': instance['id'],
+                'instance_type_id': instance['instance_type_id']}
+        return rpc.call(context, FLAGS.network_topic,
                         {'method': 'get_instance_nw_info',
                          'args': args})
-        return pickle.loads(rval)
