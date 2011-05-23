@@ -91,7 +91,7 @@ class VMOps(object):
     def finish_resize(self, instance, disk_info):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
-        vm_ref = self._create_vm(instance, vdi_uuid)
+        vm_ref = self._create_vm(instance, {'primary_vdi_uuid': vdi_uuid})
         self.resize_instance(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
@@ -144,7 +144,7 @@ class VMOps(object):
 
         # Are we building from a pre-existing disk?
         primary_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                vdi_uuids['primary_vdi_uuid'])
+                vdi_uuids.get('primary_vdi_uuid'))
         swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid', None)
         if swap_vdi_uuid:
             swap_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', swap_vdi_uuid)

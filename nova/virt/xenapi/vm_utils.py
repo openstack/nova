@@ -19,6 +19,7 @@ Helper methods for operations related to the management of VM records and
 their attributes like VDIs, VIFs, as well as their lookup functions.
 """
 
+import json
 import os
 import pickle
 import re
@@ -408,7 +409,8 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-        vdi_uuids = session.wait_for_task(task, instance_id)
+        result = session.wait_for_task(task, instance_id)
+        vdi_uuids = json.loads(result)
         primary_vdi_uuid = vdi_uuids.get('primary_vdi_uuid')
         swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid', None)
 
@@ -571,6 +573,8 @@ class VMHelper(HelperBase):
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
         uuid = session.wait_for_task(task, instance_id)
+        if image_type != ImageType.KERNEL_RAMDISK:
+            return {'primary_vdi_uuid': uuid}
         return uuid
 
     @classmethod

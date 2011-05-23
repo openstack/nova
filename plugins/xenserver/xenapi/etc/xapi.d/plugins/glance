@@ -22,6 +22,10 @@
 #
 
 import httplib
+try:
+    import json
+except ImportError:
+    import simplejson as json
 import os
 import os.path
 import pickle
@@ -335,7 +339,7 @@ def download_vhd(session, args):
     try:
         _download_tarball(sr_path, staging_path, image_id, glance_host,
                           glance_port)
-        return _fixup_vhds(sr_path, staging_path, uuid_stack)
+        return json.dumps(_fixup_vhds(sr_path, staging_path, uuid_stack))
     finally:
         _cleanup_staging_area(staging_path)
 
