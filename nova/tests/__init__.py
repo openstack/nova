@@ -53,14 +53,16 @@ def setup():
         os.unlink(testdb)
     migration.db_sync()
     ctxt = context.get_admin_context()
-    network_manager.VlanManager().create_networks(ctxt,
-                                                  FLAGS.fixed_range,
-                                                  FLAGS.num_networks,
-                                                  FLAGS.network_size,
-                                                  FLAGS.fixed_range_v6,
-                                                  FLAGS.vlan_start,
-                                                  FLAGS.vpn_start,
-                                                  )
-
+    network = network_manager.VlanManager()
+    bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
+    network.create_networks(ctxt, cidr=FLAGS.fixed_range,
+                            num_networks=FLAGS.num_networks,
+                            network_size=FLAGS.network_size,
+                            cidr_v6=FLAGS.fixed_range_v6,
+                            label='test',
+                            bridge=FLAGS.flat_network_bridge,
+                            bridge_interface=bridge_interface,
+                            vpn_start=FLAGS.vpn_start,
+                            vlan_start=FLAGS.vlan_start)
     cleandb = os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db)
     shutil.copyfile(testdb, cleandb)
