@@ -240,6 +240,10 @@ class WsgiService(object):
     def wait(self):
         self.wsgi_app.wait()
 
+    def get_socket_info(self, api_name):
+        """Returns the (host, port) that an API was started on."""
+        return self.wsgi_app.socket_info[api_name]
+
 
 class ApiService(WsgiService):
     """Class for our nova-api service."""
@@ -318,8 +322,10 @@ def _run_wsgi(paste_config_file, apis):
         logging.debug(_('App Config: %(api)s\n%(config)r') % locals())
         logging.info(_('Running %s API'), api)
         app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app, getattr(FLAGS, '%s_listen_port' % api),
-                     getattr(FLAGS, '%s_listen' % api)))
+        apps.append((app,
+                     getattr(FLAGS, '%s_listen_port' % api),
+                     getattr(FLAGS, '%s_listen' % api),
+                     api))
     if len(apps) == 0:
         logging.error(_('No known API applications configured in %s.'),
                       paste_config_file)
