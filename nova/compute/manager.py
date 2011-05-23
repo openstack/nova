@@ -128,6 +128,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.error(_("Unable to load the virtualization driver: %s") % (e))
             sys.exit(1)
 
+        self.dns_manager = utils.import_object(FLAGS.dns_manager)
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
         self.network_api = network.API()
@@ -258,6 +259,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                     "%(ex)s") % locals()
             LOG.exception(msg)
 
+        if not FLAGS.stub_network:
+            self.dns_manager.create_instance_entry(instance_ref, address)
+
         if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
             public_ip = self.network_api.allocate_floating_ip(context)
 
@@ -305,6 +309,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                          True)
 
             address = fixed_ip['address']
+            self.dns_manager.delete_instance_entry(instance_ref, address)
             if address:
                 LOG.debug(_("Deallocating address %s"), address,
                           context=context)
