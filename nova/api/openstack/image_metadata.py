@@ -18,6 +18,7 @@
 from webob import exc
 
 from nova import flags
+from nova import image
 from nova import quota
 from nova import utils
 from nova import wsgi
@@ -32,7 +33,7 @@ class Controller(common.OpenstackController):
     """The image metadata API controller for the Openstack API"""
 
     def __init__(self):
-        self.image_service = utils.get_default_image_service()
+        self.image_service = image.get_default_image_service()
         super(Controller, self).__init__()
 
     def _get_metadata(self, context, image_id, image=None):

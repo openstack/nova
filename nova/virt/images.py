@@ -23,6 +23,7 @@ Handling of VM disk images.
 
 from nova import context
 from nova import flags
+from nova import image
 from nova import log as logging
 from nova import utils
 
@@ -36,7 +37,7 @@ def fetch(image_id, path, _user, _project):
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
     #             checked before we got here.
-    (image_service, service_image_id) = utils.get_image_service(image_id)
+    (image_service, service_image_id) = image.get_image_service(image_id)
     with open(path, "wb") as image_file:
         elevated = context.get_admin_context()
         metadata = image_service.get(elevated, service_image_id, image_file)

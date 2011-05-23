@@ -58,6 +58,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import ipv6
 from nova import log as logging
 from nova import utils
@@ -449,11 +450,12 @@ class LibvirtConnection(driver.ComputeDriver):
         to support this command.
 
         """
-        image_service = utils.get_default_image_service()
         virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
-        base = image_service.show(elevated, instance['image_id'])
+        (image_service, service_image_id) = nova.image.get_image_service(
+            instance['image_id'])
+        base = image_service.show(elevated, service_image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],

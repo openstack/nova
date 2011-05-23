@@ -26,6 +26,7 @@ import time
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import network
 from nova import quota
@@ -58,7 +59,9 @@ class API(base.Base):
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
-        self.image_service = image_service or utils.get_default_image_service()
+        self.image_service = image_service or \
+                nova.image.get_default_image_service()
+
         if not network_api:
             network_api = network.API()
         self.network_api = network_api
@@ -154,7 +157,7 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        (image_service, service_image_id) = utils.get_image_service(
+        (image_service, service_image_id) = nova.image.get_image_service(
             image_ref or image_id)
         image = image_service.show(context, service_image_id)
 

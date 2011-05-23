@@ -31,6 +31,7 @@ import eventlet
 from nova import crypto
 from nova import exception
 from nova import flags
+from nova import image
 from nova import utils
 from nova.auth import manager
 from nova.image import service
@@ -46,7 +47,7 @@ class S3ImageService(service.BaseImageService):
     """Wraps an existing image service to support s3 based register."""
 
     def __init__(self, service=None, *args, **kwargs):
-        self.service = service or utils.get_default_image_service()
+        self.service = service or image.get_default_image_service()
         self.service.__init__(*args, **kwargs)
 
     def create(self, context, metadata, data=None):

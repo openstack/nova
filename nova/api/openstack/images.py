@@ -18,6 +18,7 @@ import webob.exc
 from nova import compute
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log
 from nova import utils
 from nova.api.openstack import common
@@ -51,7 +52,7 @@ class Controller(common.OpenstackController):
         """
         self._compute_service = compute_service or compute.API()
         self._image_service = image_service or \
-                utils.get_default_image_service()
+                nova.image.get_default_image_service()
 
     def index(self, req):
         """Return an index listing of images available to the request.
@@ -84,7 +85,8 @@ class Controller(common.OpenstackController):
         context = req.environ['nova.context']
 
         try:
-            (image_service, service_image_id) = utils.get_image_service(id)
+            (image_service, service_image_id) = nova.image.get_image_service(
+                id)
             image = image_service.show(context, service_image_id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
@@ -100,7 +102,8 @@ class Controller(common.OpenstackController):
         """
         image_id = id
         context = req.environ['nova.context']
-        (image_service, service_image_id) = utils.get_image_service(image_id)
+        (image_service, service_image_id) = nova.image.get_image_service(
+            image_id)
         image_service.delete(context, service_image_id)
         return webob.exc.HTTPNoContent()
 
