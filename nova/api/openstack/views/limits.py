@@ -79,7 +79,7 @@ class ViewBuilderV11(ViewBuilder):
             # check for existing key
             for limit in limits:
                 if limit["uri"] == rate_limit["URI"] and \
-                   limit["regex"] == limit["regex"]:
+                   limit["regex"] == rate_limit["regex"]:
                     _rate_limit_key = limit
                     break
 
