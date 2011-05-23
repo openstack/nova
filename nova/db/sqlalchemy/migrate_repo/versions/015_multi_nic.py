@@ -112,7 +112,7 @@ def upgrade(migrate_engine):
 
     for row in s.execute():
         m = select([mac_addresses.c.id].\
-            where(mac_addresses.c.instance_id == row['instance_id']).\
+            where(mac_addresses.c.instance_id == row['instance_id'])).\
             as_scalar()
         u = fixed_ips.update().values(mac_address_id=m).\
             where(fixed_ips.c.id == row['id'])
