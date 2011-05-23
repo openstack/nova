@@ -28,19 +28,13 @@ from nova import flags
 FLAGS = flags.FLAGS
 
 
-def parse_image_ref(image_ref):
+def _parse_image_ref(image_ref):
     """Parse an image href into composite parts.
 
-    If the image_ref passed in is an integer, it will
-    return (image_ref, None, None), otherwise it will
-    return (image_id, host, port)
-
-    :param image_ref: href or id of an image
+    :param image_ref: href of an image
+    :returns: a tuple of the form (image_id, host, port)
 
     """
-    if str(image_ref).isdigit():
-        return (int(image_ref), None, None)
-
     o = urlparse(image_ref)
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
@@ -69,7 +63,7 @@ def get_image_service(image_ref):
         return (get_default_image_service(), int(image_ref))
 
     try:
-        (image_id, host, port) = parse_image_ref(image_ref)
+        (image_id, host, port) = _parse_image_ref(image_ref)
     except:
         raise exception.InvalidImageRef(image_ref=image_ref)
     glance_client = nova.image.glance.GlanceClient(host, port)
