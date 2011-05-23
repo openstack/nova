@@ -57,6 +57,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import utils
 from nova import vnc
@@ -184,8 +185,9 @@ def _get_network_info(instance):
         def ip6_dict():
             prefix = network['cidr_v6']
             mac = instance['mac_address']
+            project_id = instance['project_id']
             return  {
-                'ip': utils.to_global_ipv6(prefix, mac),
+                'ip': ipv6.to_global(prefix, mac, project_id),
                 'netmask': network['netmask_v6'],
                 'enabled': '1'}
 
@@ -1613,7 +1615,9 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group_rules(self, security_group_id):
+    def refresh_security_group_rules(self,
+                                     security_group_id,
+                                     network_info=None):
         """Refresh security group rules from data store
 
         Gets called when a rule has been added to or removed from
@@ -1912,7 +1916,9 @@ class NWFilterFirewall(FirewallDriver):
         self._define_filter(self._filter_container(filter_name,
                                                    filter_children))
 
-    def refresh_security_group_rules(self, security_group_id):
+    def refresh_security_group_rules(self,
+                                     security_group_id,
+                                     network_info=None):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
 
@@ -2170,15 +2176,19 @@ class IptablesFirewallDriver(FirewallDriver):
     def refresh_security_group_members(self, security_group):
         pass
 
-    def refresh_security_group_rules(self, security_group):
-        self.do_refresh_security_group_rules(security_group)
+    def refresh_security_group_rules(self, security_group, network_info=None):
+        self.do_refresh_security_group_rules(security_group, network_info)
         self.iptables.apply()
 
     @utils.synchronized('iptables', external=True)
-    def do_refresh_security_group_rules(self, security_group):
+    def do_refresh_security_group_rules(self,
+                                        security_group,
+                                        network_info=None):
         for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
-            self.add_filters_for_instance(instance)
+            if not network_info:
+                network_info = _get_network_info(instance)
+            self.add_filters_for_instance(instance, network_info)
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)

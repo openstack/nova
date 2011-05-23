@@ -332,6 +332,51 @@ def mkcacert(subject='nova', years=1):
     return cert, pk, pkey
 
 
+def _build_cipher(key, iv, encode=True):
+    """Make a 128bit AES CBC encode/decode Cipher object.
+       Padding is handled internally."""
+    operation = 1 if encode else 0
+    return M2Crypto.EVP.Cipher(alg='aes_128_cbc', key=key, iv=iv, op=operation)
+
+
+def encryptor(key, iv=None):
+    """Simple symmetric key encryption."""
+    key = base64.b64decode(key)
+    if iv is None:
+        iv = '\0' * 16
+    else:
+        iv = base64.b64decode(iv)
+
+    def encrypt(data):
+        cipher = _build_cipher(key, iv, encode=True)
+        v = cipher.update(data)
+        v = v + cipher.final()
+        del cipher
+        v = base64.b64encode(v)
+        return v
+
+    return encrypt
+
+
+def decryptor(key, iv=None):
+    """Simple symmetric key decryption."""
+    key = base64.b64decode(key)
+    if iv is None:
+        iv = '\0' * 16
+    else:
+        iv = base64.b64decode(iv)
+
+    def decrypt(data):
+        data = base64.b64decode(data)
+        cipher = _build_cipher(key, iv, encode=False)
+        v = cipher.update(data)
+        v = v + cipher.final()
+        del cipher
+        return v
+
+    return decrypt
+
+
 # Copyright (c) 2006-2009 Mitch Garnaat http://garnaat.org/
 #
 # Permission is hereby granted, free of charge, to any person obtaining a

@@ -27,6 +27,8 @@ import datetime
 import IPy
 import os
 import urllib
+import tempfile
+import shutil
 
 from nova import compute
 from nova import context
@@ -35,6 +37,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import utils
@@ -314,6 +317,27 @@ class CloudController(object):
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
+
+    def import_public_key(self, context, key_name, public_key,
+                         fingerprint=None):
+        LOG.audit(_("Import key %s"), key_name, context=context)
+        key = {}
+        key['user_id'] = context.user_id
+        key['name'] = key_name
+        key['public_key'] = public_key
+        if fingerprint is None:
+            tmpdir = tempfile.mkdtemp()
+            pubfile = os.path.join(tmpdir, 'temp.pub')
+            fh = open(pubfile, 'w')
+            fh.write(public_key)
+            fh.close()
+            (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
+                                       '%s' % (pubfile))
+            fingerprint = out.split(' ')[1]
+            shutil.rmtree(tmpdir)
+        key['fingerprint'] = fingerprint
+        db.key_pair_create(context, key)
+        return True
 
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
@@ -718,9 +742,10 @@ class CloudController(object):
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
-                    i['dnsNameV6'] = utils.to_global_ipv6(
+                    i['dnsNameV6'] = ipv6.to_global(
                         instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'])
+                        instance['mac_address'],
+                        instance['project_id'])
 
             i['privateDnsName'] = fixed_addr
             i['privateIpAddress'] = fixed_addr

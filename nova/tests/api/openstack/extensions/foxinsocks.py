@@ -63,31 +63,33 @@ class Foxinsocks(object):
                                                     self._delete_tweedle))
         return actions
 
-    def get_response_extensions(self):
-        response_exts = []
+    def get_request_extensions(self):
+        request_exts = []
 
-        def _goose_handler(res):
+        def _goose_handler(req, res):
             #NOTE: This only handles JSON responses.
             # You can use content type header to test for XML.
             data = json.loads(res.body)
-            data['flavor']['googoose'] = "Gooey goo for chewy chewing!"
-            return data
+            data['flavor']['googoose'] = req.GET.get('chewing')
+            res.body = json.dumps(data)
+            return res
 
-        resp_ext = extensions.ResponseExtension('GET', '/v1.1/flavors/:(id)',
+        req_ext1 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
                                                 _goose_handler)
-        response_exts.append(resp_ext)
+        request_exts.append(req_ext1)
 
-        def _bands_handler(res):
+        def _bands_handler(req, res):
             #NOTE: This only handles JSON responses.
             # You can use content type header to test for XML.
             data = json.loads(res.body)
             data['big_bands'] = 'Pig Bands!'
-            return data
+            res.body = json.dumps(data)
+            return res
 
-        resp_ext2 = extensions.ResponseExtension('GET', '/v1.1/flavors/:(id)',
+        req_ext2 = extensions.RequestExtension('GET', '/v1.1/flavors/:(id)',
                                                 _bands_handler)
-        response_exts.append(resp_ext2)
-        return response_exts
+        request_exts.append(req_ext2)
+        return request_exts
 
     def _add_tweedle(self, input_dict, req, id):
 
