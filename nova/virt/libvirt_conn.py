@@ -442,7 +442,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
-    def snapshot(self, instance, image_id):
+    def snapshot(self, instance, image_ref):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+, the qemu_img flag is
@@ -453,14 +453,14 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
-        (image_service, service_image_id) = nova.image.get_image_service(
+        (image_service, image_id) = nova.image.get_image_service(
             instance['image_id'])
-        base = image_service.show(elevated, service_image_id)
+        base = image_service.show(elevated, image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
                     'is_public': False,
-                    'name': '%s.%s' % (base['name'], image_id),
+                    'name': '%s.%s' % (base['name'], image_ref),
                     'properties': {'architecture': base['architecture'],
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
@@ -503,7 +503,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # Upload that image to the image service
         with open(out_path) as image_file:
             image_service.update(elevated,
-                                 image_id,
+                                 image_ref,
                                  metadata,
                                  image_file)
 

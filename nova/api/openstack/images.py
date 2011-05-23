@@ -85,9 +85,8 @@ class Controller(common.OpenstackController):
         context = req.environ['nova.context']
 
         try:
-            (image_service, service_image_id) = nova.image.get_image_service(
-                id)
-            image = image_service.show(context, service_image_id)
+            (image_service, image_id) = nova.image.get_image_service(id)
+            image = image_service.show(context, image_id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
             raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
@@ -100,11 +99,9 @@ class Controller(common.OpenstackController):
         :param req: `wsgi.Request` object
         :param id: Image identifier (integer)
         """
-        image_id = id
         context = req.environ['nova.context']
-        (image_service, service_image_id) = nova.image.get_image_service(
-            image_id)
-        image_service.delete(context, service_image_id)
+        (image_service, image_id) = nova.image.get_image_service(id)
+        image_service.delete(context, image_id)
         return webob.exc.HTTPNoContent()
 
     def create(self, req):

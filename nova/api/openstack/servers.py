@@ -560,9 +560,8 @@ class Controller(common.OpenstackController):
         associated kernel and ramdisk image IDs.
         """
         context = req.environ['nova.context']
-        image_service, service_image_id = nova.image.get_image_service(
-            image_id)
-        image = image_service.show(context, service_image_id)
+        image_service, _ = nova.image.get_image_service(image_id)
+        image = image_service.show(context, image_id)
         # NOTE(sirp): extracted to a separate method to aid unit-testing, the
         # new method doesn't need a request obj or an ImageService stub
         kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(

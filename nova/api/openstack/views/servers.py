@@ -131,10 +131,10 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_image(self, response, inst):
         if 'image_id' in dict(inst):
-            image_id = inst['image_id']
-            if str(image_id).isdigit():
-                image_id = int(image_id)
-            response['imageRef'] = image_id
+            image_ref = inst['image_id']
+            if str(image_ref).isdigit():
+                image_ref = int(image_ref)
+            response['imageRef'] = image_ref
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):

@@ -157,9 +157,9 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        (image_service, service_image_id) = nova.image.get_image_service(
+        (image_service, image_id) = nova.image.get_image_service(
             image_ref or image_id)
-        image = image_service.show(context, service_image_id)
+        image = image_service.show(context, image_id)
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:

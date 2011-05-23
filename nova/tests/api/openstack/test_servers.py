@@ -29,7 +29,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import test
-from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.compute.api

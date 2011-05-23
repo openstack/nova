@@ -35,7 +35,6 @@ import struct
 import sys
 import time
 import types
-from urlparse import urlparse
 from xml.sax import saxutils
 
 from eventlet import event
@@ -43,7 +42,6 @@ from eventlet import greenthread
 from eventlet import semaphore
 from eventlet.green import subprocess
 
-import nova
 from nova import exception
 from nova import flags
 from nova import log as logging
