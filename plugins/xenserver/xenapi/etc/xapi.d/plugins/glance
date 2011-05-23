@@ -177,8 +177,15 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
     else:
         assert_vhd_not_hidden(base_copy_path)
 
+    # If we find a swap.vhd, go ahead and copy it into the SR
+    swap_uuid = None
+    orig_swap_path = os.path.join(staging_path, 'swap.vhd')
+    if os.path.exists(orig_swap_path):
+        swap_path, swap_uuid = rename_with_uuid(orig_swap_path)
+        move_into_sr(swap_path)
+
     move_into_sr(base_copy_path)
-    return vdi_uuid
+    return dict(primary_vdi_uuid=vdi_uuid, swap_vdi_uuid=swap_uuid)
 
 
 def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
@@ -324,8 +331,7 @@ def download_vhd(session, args):
     try:
         _download_tarball(sr_path, staging_path, image_id, glance_host,
                           glance_port)
-        vdi_uuid = _fixup_vhds(sr_path, staging_path, uuid_stack)
-        return vdi_uuid
+        return _fixup_vhds(sr_path, staging_path, uuid_stack)
     finally:
         _cleanup_staging_area(staging_path)
 

@@ -408,18 +408,24 @@ class VMHelper(HelperBase):
 
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
-        vdi_uuid = session.wait_for_task(task, instance_id)
+        vdi_uuids = session.wait_for_task(task, instance_id)
+        primary_vdi_uuid = vdi_uuids.get('primary_vdi_uuid')
+        swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid')
 
         cls.scan_sr(session, instance_id, sr_ref)
 
         # Set the name-label to ease debugging
-        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
-        name_label = get_name_label_for_image(image)
-        session.get_xenapi().VDI.set_name_label(vdi_ref, name_label)
+        primary_vdi_ref = session.get_xenapi().VDI.get_by_uuid(primary_vdi_uuid)
+        primary_name_label = get_name_label_for_image(image)
+        session.get_xenapi().VDI.set_name_label(primary_vdi_ref, primary_name_label)
 
-        LOG.debug(_("xapi 'download_vhd' returned VDI UUID %(vdi_uuid)s")
+        LOG.debug(_("xapi 'download_vhd' returned VDI UUID %(primary_vdi_uuid)s")
                   % locals())
-        return vdi_uuid
+
+	LOG.debug("=" * 100)
+        LOG.debug(rimary_vdi_uuid)
+        LOG.debug(swap_vdi_uuid)
+        return (primary_vdi_uuid, swap_vdi_uuid)
 
     @classmethod
     def _fetch_image_glance_disk(cls, session, instance_id, image, access,

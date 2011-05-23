@@ -37,7 +37,7 @@ def stubout_instance_snapshot(stubs):
                              sr_ref=sr_ref, sharable=False)
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         vdi_uuid = vdi_rec['uuid']
-        return vdi_uuid
+        return dict(primary_vdi_uuid=vdi_uuid, swap_vdi_uuid=None)
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
 

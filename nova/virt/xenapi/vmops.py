@@ -109,20 +109,20 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        vdi_uuid = VMHelper.fetch_image(self._session, instance.id,
-                instance.image_id, user, project, disk_image_type)
-        return vdi_uuid
+        (primary_vdi_uuid, swap_vdi_uuid) = VMHelper.fetch_image(self._session,
+                instance.id, instance.image_id, user, project, disk_image_type)
+        return (primary_vdi_uuid, swap_vdi_uuid)
 
     def spawn(self, instance, network_info=None):
-        vdi_uuid = self._create_disk(instance)
-        vm_ref = self._create_vm(instance, vdi_uuid, network_info)
+        vdi_uuid, swap_uuid = self._create_disk(instance)
+        vm_ref = self._create_vm(instance, vdi_uuid, swap_uuid, network_info)
         self._spawn(instance, vm_ref)
 
     def spawn_rescue(self, instance):
         """Spawn a rescue instance."""
         self.spawn(instance)
 
-    def _create_vm(self, instance, vdi_uuid, network_info=None):
+    def _create_vm(self, instance, vdi_uuid, swap_vdi_uuid=None, network_info=None):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -143,18 +143,20 @@ class VMOps(object):
 
         # Are we building from a pre-existing disk?
         vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
+        if swap_vdi_uuid:
+            swap_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', swap_vdi_uuid)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
 
         kernel = None
         if instance.kernel_id:
             kernel = VMHelper.fetch_image(self._session, instance.id,
-                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)
+                instance.kernel_id, user, project, ImageType.KERNEL_RAMDISK)[0]
 
         ramdisk = None
         if instance.ramdisk_id:
             ramdisk = VMHelper.fetch_image(self._session, instance.id,
-                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)
+                instance.ramdisk_id, user, project, ImageType.KERNEL_RAMDISK)[0]
 
         use_pv_kernel = VMHelper.determine_is_pv(self._session, instance.id,
             vdi_ref, disk_image_type, instance.os_type)
@@ -163,6 +165,9 @@ class VMOps(object):
 
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
                 vdi_ref=vdi_ref, userdevice=0, bootable=True)
+	if swap_vdi_uuid:
+            VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
+                    vdi_ref=swap_vdi_ref, userdevice=0, bootable=False)
 
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
         # create it now. This goes away once nova-multi-nic hits.
