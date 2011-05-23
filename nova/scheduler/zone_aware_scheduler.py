@@ -23,12 +23,16 @@ across zones. There are two expansion points to this class for:
 import operator
 import M2Crypto
 
+from nova import crypto
 from nova import db
-from nova import rpc
+from nova import flags
 from nova import log as logging
+from nova import rpc
+
 from nova.scheduler import api
 from nova.scheduler import driver
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
 
 
@@ -75,7 +79,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         if "hostname" in item:
             self._provision_resource_locally(context, item, instance_id,
                             kwargs)
-           return
+            return
         
         self._provision_resource_in_child_zone(context, item, instance_id,
                                                request_spec, kwargs)
@@ -99,6 +103,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         # 1. valid, 
         # 2. intended for this zone or a child zone.
         # if 2 ... forward call to child zone.
+        LOG.debug(_("****** PROVISION IN CHILD %(item)s") % locals())
         blob = item['blob']
         decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
         host_info = None
@@ -131,7 +136,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
 
         name = instance_properties['display_name']
-        image_id = instance_properties['image_id'])
+        image_id = instance_properties['image_id']
         flavor_id = instance_type['flavor_id']
         meta = instance_type['metadata']
 
