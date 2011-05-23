@@ -1459,7 +1459,7 @@ def network_get(context, network_id, session=None):
 def network_get_all(context):
     session = get_session()
     result = session.query(models.Network).\
-                 filter_by(deleted=False)
+                 filter_by(deleted=False).all()
     if not result:
         raise exception.NotFound(_('No networks defined'))
     return result
