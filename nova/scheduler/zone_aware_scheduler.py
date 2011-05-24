@@ -23,6 +23,7 @@ across zones. There are two expansion points to this class for:
 import operator
 import json
 import M2Crypto
+import novaclient
 
 from nova import crypto
 from nova import db
@@ -105,16 +106,24 @@ class ZoneAwareScheduler(driver.Scheduler):
         # 1. valid, 
         # 2. intended for this zone or a child zone.
         # if 2 ... forward call to child zone.
+        # Note: If we have "blob" that means the request was passed
+        # into us. If we have "child_blob" that means we just asked
+        # the child zone for the weight info.
         LOG.debug(_("****** PROVISION IN CHILD %(item)s") % locals())
 
-        blob = item['blob']
-        decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
-        host_info = None
-        try:
-            json_entry = decryptor(blob)
-            host_info = json.dumps(entry)
-        except M2Crypto.EVP.EVPError:
-            pass
+        if "blob" in item:
+            # Request was passed in from above. Is it for us?
+            blob = item['blob']
+            decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
+            host_info = None
+            try:
+                json_entry = decryptor(blob)
+                host_info = json.dumps(entry)
+            except M2Crypto.EVP.EVPError:
+                pass
+        elif "child_blob" in item:
+            # Our immediate child zone provided this info ...
+            host_info = item
 
         if not host_info:
             raise exception.Invalid(_("Ill-formed or incorrectly "
@@ -129,26 +138,27 @@ class ZoneAwareScheduler(driver.Scheduler):
             self._provision_resource_locally(context, host_info,
                                              instance_id, kwargs)
 
-    def _ask_child_zone_to_create_instance(self, zone_info, request_spec,
-                                           kwargs):
+    def _ask_child_zone_to_create_instance(self, context, zone_info,
+                                           request_spec, kwargs):
 
         # Note: we have to reverse engineer from our args to get back the
         # image, flavor, ipgroup, etc. since the original call could have
         # come in from EC2 (which doesn't use these things).
+        LOG.debug(_("****** ASK CHILD %(zone_info)s ** %(request_spec)s") % locals())
         instance_type = request_spec['instance_type']
         instance_properties = request_spec['instance_properties']
 
         name = instance_properties['display_name']
         image_id = instance_properties['image_id']
-        flavor_id = instance_type['flavor_id']
-        meta = instance_type['metadata']
+        meta = instance_properties['metadata']
+        flavor_id = instance_type['flavorid']
 
         files = kwargs['injected_files']
         ipgroup = None  # Not supported in OS API ... yet
         
         child_zone = zone_info['child_zone']
         child_blob = zone_info['child_blob']
-        zone = db.zone_get(child_zone)
+        zone = db.zone_get(context, child_zone)
         url = zone.api_url
         nova = None
         try:
@@ -158,7 +168,7 @@ class ZoneAwareScheduler(driver.Scheduler):
              raise exception.NotAuthorized(_("Bad credentials attempting "
                             "to talk to zone at %(url)s.") % locals())
                             
-        nova.servers.create(name, image, flavor, ipgroup, meta, files,
+        nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
                             child_blob)
         
     def select(self, context, request_spec, *args, **kwargs):
@@ -211,10 +221,9 @@ class ZoneAwareScheduler(driver.Scheduler):
                 # Remember the child_zone so we can get back to
                 # it later if needed. This implicitly builds a zone
                 # path structure.
-                host_dict = {
-                        "weight": weighting["weight"],
-                        "child_zone": child_zone,
-                        "child_blob": weighting["blob"]}
+                host_dict = {"weight": weighting["weight"],
+                             "child_zone": child_zone,
+                             "child_blob": weighting["blob"]}
                 weighted.append(host_dict)
 
         LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE"))
