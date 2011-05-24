@@ -190,7 +190,7 @@ class Controller(common.OpenstackController):
         inst['image_id'] = requested_image_id
 
         # TODO(sandy): REMOVE THIS
-        LOG.debug(_("***** INST = %(inst)s") % locals()) #pep8
+        LOG.debug(_("***** API.OPENSTACK.SERVER.CREATE = %(inst)s") % locals()) #pep8
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)

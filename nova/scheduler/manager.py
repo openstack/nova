@@ -73,14 +73,13 @@ class SchedulerManager(manager.Manager):
     def select(self, context=None, *args, **kwargs):
         """Select a list of hosts best matching the provided specs."""
         return self.driver.select(context, *args, **kwargs)
-                   
+
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
 
         Falls back to schedule(context, topic) if method doesn't exist.
         """
         driver_method = 'schedule_%s' % method
-        LOG.debug(_("CALLING %(driver_method)s handled in Scheduler") % locals()) # nuke
         elevated = context.elevated()
         try:
             host = getattr(self.driver, driver_method)(elevated, *args,

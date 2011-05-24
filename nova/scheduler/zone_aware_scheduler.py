@@ -64,7 +64,6 @@ class ZoneAwareScheduler(driver.Scheduler):
             return None
 
         # Create build plan and provision ...
-        LOG.debug(_("****** SCHEDULE RUN INSTANCE") % locals())
         build_plan = self.select(context, request_spec)
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
@@ -84,7 +83,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             self._provision_resource_locally(context, item, instance_id,
                             kwargs)
             return
-        
+
         self._provision_resource_in_child_zone(context, item, instance_id,
                                                request_spec, kwargs)
 
@@ -104,13 +103,12 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Create the requested resource in a child zone."""
         # Start by attempting to decrypt the blob to see if this
         # request is:
-        # 1. valid, 
+        # 1. valid,
         # 2. intended for this zone or a child zone.
         # if 2 ... forward call to child zone.
         # Note: If we have "blob" that means the request was passed
         # into us. If we have "child_blob" that means we just asked
         # the child zone for the weight info.
-        LOG.debug(_("****** PROVISION IN CHILD %(item)s") % locals())
 
         if "blob" in item:
             # Request was passed in from above. Is it for us?
@@ -156,7 +154,7 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         files = kwargs['injected_files']
         ipgroup = None  # Not supported in OS API ... yet
-        
+
         child_zone = zone_info['child_zone']
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
@@ -166,18 +164,17 @@ class ZoneAwareScheduler(driver.Scheduler):
             nova = novaclient.OpenStack(zone.username, zone.password, url)
             nova.authenticate()
         except novaclient.exceptions.BadRequest, e:
-             raise exception.NotAuthorized(_("Bad credentials attempting "
+            raise exception.NotAuthorized(_("Bad credentials attempting "
                             "to talk to zone at %(url)s.") % locals())
-                            
+
         nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
                             child_blob)
-        
+
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
-        anything about the children.""" 
-        LOG.debug(_("XXXXXXX - SELECT %(request_spec)s") % locals()) # nuke this !!!
+        anything about the children."""
         return self._schedule(context, "compute", request_spec,
                               *args, **kwargs)
 
@@ -188,7 +185,6 @@ class ZoneAwareScheduler(driver.Scheduler):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
-        LOG.debug(_("XXXXXXX - DEFAULT SCHEDULE %(request_spec)s") % locals()) # nuke this !!!
         raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):
@@ -203,22 +199,17 @@ class ZoneAwareScheduler(driver.Scheduler):
         #TODO(sandy): how to infer this from OS API params?
         num_instances = 1
 
-        LOG.debug(_("XXXXXXX - 1 -  _SCHEDULE"))
-
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
-        LOG.debug(_("XXXXXXX - 2 -  _SCHEDULE"))
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
-        LOG.debug(_("XXXXXXX - 3 -  _SCHEDULE >> %s") % request_spec)
         # Next, tack on the best weights from the child zones ...
         json_spec = json.dumps(request_spec)
         child_results = self._call_zone_method(context, "select",
                 specs=json_spec)
-        LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE - CHILD RESULTS %(child_results)s") % locals())
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to
@@ -229,7 +220,6 @@ class ZoneAwareScheduler(driver.Scheduler):
                              "child_blob": weighting["blob"]}
                 weighted.append(host_dict)
 
-        LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE"))
         weighted.sort(key=operator.itemgetter('weight'))
         return weighted
 
