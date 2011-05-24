@@ -665,7 +665,7 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        eventlet.spawn_n(self._set_admin_password(context, instance_id,
+        eventlet.spawn_n(self._set_admin_password, (context, instance_id,
                                                   password))
 
     def inject_file(self, context, instance_id):
