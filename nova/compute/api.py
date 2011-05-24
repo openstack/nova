@@ -525,8 +525,7 @@ class API(base.Base):
                       'user_id': str(context.user_id)}
         sent_meta = {'name': name, 'is_public': False,
                      'properties': properties}
-        # TODO(wwolf): not sure if we need to use
-        # utils.get_image_service() here ?
+
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
