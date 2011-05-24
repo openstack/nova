@@ -708,6 +708,15 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         self.assertDictListMatch(expected, response_list)
 
+    def test_get_image_request_filters(self):
+        request =\
+        webob.Request.blank('/v1.1/images/detail?status=ACTIVE&name=testname')
+        filters = images.Controller()._get_filters(request)
+        expected = {'status': 'ACTIVE',
+                    'name': 'testname',
+                    }
+        self.assertDictMatch(expected, filters)
+
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')
         res = req.get_response(fakes.wsgi_app())
