@@ -70,6 +70,10 @@ class SchedulerManager(manager.Manager):
         self.zone_manager.update_service_capabilities(service_name,
                             host, capabilities)
 
+    def select(self, context=None, *args, **kwargs):
+        """Select a list of hosts best matching the provided specs."""
+        return self.driver.select(context, *args, **kwargs)
+                   
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
 

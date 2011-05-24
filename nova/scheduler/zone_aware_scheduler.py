@@ -21,6 +21,7 @@ across zones. There are two expansion points to this class for:
 """
 
 import operator
+import json
 import M2Crypto
 
 from nova import crypto
@@ -199,10 +200,11 @@ class ZoneAwareScheduler(driver.Scheduler):
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
-        LOG.debug(_("XXXXXXX - 3 -  _SCHEDULE"))
+        LOG.debug(_("XXXXXXX - 3 -  _SCHEDULE >> %s") % request_spec)
         # Next, tack on the best weights from the child zones ...
+        json_spec = json.dumps(request_spec)
         child_results = self._call_zone_method(context, "select",
-                specs=request_spec)
+                specs=json_spec)
         LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE - CHILD RESULTS %(child_results)s") % locals())
         for child_zone, result in child_results:
             for weighting in result:
