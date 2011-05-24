@@ -122,6 +122,7 @@ class FlagValues(gflags.FlagValues):
         for k in self.FlagDict().iterkeys():
             new_flags[k] = gflags.FlagValues.__getitem__(self, k)
 
+        new_flags.Reset()
         new_flags(self.__dict__['__stored_argv'])
         for k in new_flags.FlagDict().iterkeys():
             setattr(self, k, getattr(new_flags, k))
