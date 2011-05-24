@@ -80,7 +80,7 @@ class Controller(common.OpenstackController):
         """Return detailed information about a specific image.
 
         :param req: `wsgi.Request` object
-        :param image_id: Image identifier (integer)
+        :param id: Image identifier
         """
         context = req.environ['nova.context']
 
