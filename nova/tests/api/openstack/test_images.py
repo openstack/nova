@@ -127,7 +127,7 @@ class _BaseImageServiceTests(test.TestCase):
 
     @staticmethod
     def _make_fixture(name):
-        fixture = {'name': 'test image',
+        fixture = {'name': name,
                    'updated': None,
                    'created': None,
                    'status': None,
