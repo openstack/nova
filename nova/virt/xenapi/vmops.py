@@ -1177,7 +1177,7 @@ class SimpleDH(object):
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return proc.stdout.read().strip('\n')
 
     def encrypt(self, text):
         return self._run_ssl(text, 'enc')
