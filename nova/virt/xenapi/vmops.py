@@ -175,7 +175,7 @@ class VMOps(object):
                 vdi_ref=primary_vdi_ref, userdevice=0, bootable=True)
         if swap_vdi_ref:
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                    vdi_ref=swap_vdi_ref, userdevice=1, bootable=False)
+                    vdi_ref=swap_vdi_ref, userdevice=2, bootable=False)
 
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
         # create it now. This goes away once nova-multi-nic hits.
@@ -711,7 +711,7 @@ class VMOps(object):
         vbd_ref = self._session.get_xenapi().VM.get_VBDs(vm_ref)[0]
         vdi_ref = self._session.get_xenapi().VBD.get_record(vbd_ref)["VDI"]
         rescue_vbd_ref = VMHelper.create_vbd(self._session, rescue_vm_ref,
-                                             vdi_ref, 2, False)
+                                             vdi_ref, 1, False)
 
         self._session.call_xenapi("Async.VBD.plug", rescue_vbd_ref)
 
