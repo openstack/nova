@@ -1,0 +1,183 @@
+#!/usr/bin/env python
+
+# Copyright 2011 OpenStack LLC.
+# Copyright 2011 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+#
+# XenAPI plugin for reading/writing information to xenstore
+#
+
+try:
+    import json
+except ImportError:
+    import simplejson as json
+import os
+import random
+import re
+import subprocess
+import tempfile
+import time
+
+import XenAPIPlugin
+
+from pluginlib_nova import *
+configure_logging("xenhost")
+
+host_data_pattern = re.compile(r"\s*(\S+) \([^\)]+\) *: ?(.*)")
+
+
+def jsonify(fnc):
+    def wrapper(*args, **kwargs):
+        return json.dumps(fnc(*args, **kwargs))
+    return wrapper
+
+
+class TimeoutError(StandardError):
+    pass
+
+
+def _run_command(cmd):
+    """Abstracts out the basics of issuing system commands. If the command
+    returns anything in stderr, a PluginError is raised with that information.
+    Otherwise, the output from stdout is returned.
+    """
+    pipe = subprocess.PIPE
+    proc = subprocess.Popen([cmd], shell=True, stdin=pipe, stdout=pipe,
+            stderr=pipe, close_fds=True)
+    proc.wait()
+    err = proc.stderr.read()
+    if err:
+        raise pluginlib.PluginError(err)
+    return proc.stdout.read()
+
+
+@jsonify
+def host_data(self, arg_dict):
+    """Runs the commands on the xenstore host to return the current status
+    information.
+    """
+    cmd = "xe host-list | grep uuid"
+    resp = _run_command(cmd)
+    host_uuid = resp.split(":")[-1].strip()
+    cmd = "xe host-param-list uuid=%s" % host_uuid
+    resp = _run_command(cmd)
+    parsed_data = parse_response(resp)
+    # We have the raw dict of values. Extract those that we need,
+    # and convert the data types as needed.
+    ret_dict = cleanup(parsed_data)
+    return ret_dict
+
+
+def parse_response(resp):
+    data = {}
+    for ln in resp.splitlines():
+        if not ln:
+            continue
+        mtch = host_data_pattern.match(ln.strip())
+        try:
+            k, v = mtch.groups()
+            data[k] = v
+        except AttributeError:
+            # Not a valid line; skip it
+            continue
+    return data
+
+
+def cleanup(dct):
+    """Take the raw KV pairs returned and translate them into the
+    appropriate types, discarding any we don't need.
+    """
+    def safe_int(val):
+        """Integer values will either be string versions of numbers,
+        or empty strings. Convert the latter to nulls.
+        """
+        try:
+            return int(val)
+        except ValueError:
+            return None
+
+    def strip_kv(ln):
+        return [val.strip() for val in ln.split(":", 1)]
+
+    out = {}
+
+#    sbs = dct.get("supported-bootloaders", "")
+#    out["host_supported-bootloaders"] = sbs.split("; ")
+#    out["host_suspend-image-sr-uuid"] = dct.get("suspend-image-sr-uuid", "")
+#    out["host_crash-dump-sr-uuid"] = dct.get("crash-dump-sr-uuid", "")
+#    out["host_local-cache-sr"] = dct.get("local-cache-sr", "")
+    out["host_memory"] = omm = {}
+    omm["total"] = safe_int(dct.get("memory-total", ""))
+    omm["overhead"] = safe_int(dct.get("memory-overhead", ""))
+    omm["free"] = safe_int(dct.get("memory-free", ""))
+    omm["free-computed"] = safe_int(
+            dct.get("memory-free-computed", ""))
+
+#    out["host_API-version"] = avv = {}
+#    avv["vendor"] = dct.get("API-version-vendor", "")
+#    avv["major"] = safe_int(dct.get("API-version-major", ""))
+#    avv["minor"] = safe_int(dct.get("API-version-minor", ""))
+
+    out["host_uuid"] = dct.get("uuid", None)
+    out["host_name-label"] = dct.get("name-label", "")
+    out["host_name-description"] = dct.get("name-description", "")
+#    out["host_host-metrics-live"] = dct.get(
+#            "host-metrics-live", "false") == "true"
+    out["host_hostname"] = dct.get("hostname", "")
+    out["host_ip_address"] = dct.get("address", "")
+    oc = dct.get("other-config", "")
+    out["host_other-config"] = ocd = {}
+    if oc:
+        for oc_fld in oc.split("; "):
+            ock, ocv = strip_kv(oc_fld)
+            ocd[ock] = ocv
+#    out["host_capabilities"] = dct.get("capabilities", "").split("; ")
+#    out["host_allowed-operations"] = dct.get(
+#            "allowed-operations", "").split("; ")
+#    lsrv = dct.get("license-server", "")
+#    out["host_license-server"] = ols = {}
+#    if lsrv:
+#        for lspart in lsrv.split("; "):
+#            lsk, lsv = lspart.split(": ")
+#            if lsk == "port":
+#                ols[lsk] = safe_int(lsv)
+#            else:
+#                ols[lsk] = lsv
+#    sv = dct.get("software-version", "")
+#    out["host_software-version"] = osv = {}
+#    if sv:
+#        for svln in sv.split("; "):
+#            svk, svv = strip_kv(svln)
+#            osv[svk] = svv
+    cpuinf = dct.get("cpu_info", "")
+    out["host_cpu_info"] = ocp = {}
+    if cpuinf:
+        for cpln in cpuinf.split("; "):
+            cpk, cpv = strip_kv(cpln)
+            if cpk in ("cpu_count", "family", "model", "stepping"):
+                ocp[cpk] = safe_int(cpv)
+            else:
+                ocp[cpk] = cpv
+#    out["host_edition"] = dct.get("edition", "")
+#    out["host_external-auth-service-name"] = dct.get(
+#            "external-auth-service-name", "")
+    return out
+
+
+if __name__ == "__main__":
+    XenAPIPlugin.dispatch(
+        {"host_data": host_data})

@@ -369,6 +369,9 @@ DEFINE_string('host', socket.gethostname(),
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
+DEFINE_string('notification_driver',
+              'nova.notifier.no_op_notifier',
+              'Default driver for sending notifications')
 DEFINE_list('memcached_servers', None,
             'Memcached servers or None for in process cache.')
 

@@ -64,6 +64,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             return None
 
         # Create build plan and provision ...
+        LOG.debug(_("****** SCHEDULE RUN INSTANCE") % locals())
         build_plan = self.select(context, request_spec)
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
@@ -175,7 +176,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
-        anything about the children."""
+        anything about the children.""" 
+        LOG.debug(_("XXXXXXX - SELECT %(request_spec)s") % locals()) # nuke this !!!
         return self._schedule(context, "compute", request_spec,
                               *args, **kwargs)
 
@@ -186,6 +188,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
+        LOG.debug(_("XXXXXXX - DEFAULT SCHEDULE %(request_spec)s") % locals()) # nuke this !!!
         raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):

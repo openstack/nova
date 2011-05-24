@@ -132,7 +132,9 @@ class Service(object):
         self.service_id = service_ref['id']
 
     def __getattr__(self, key):
+        logging.warn(_('SERVICE __GETATTR__ %s') % (key, ))
         manager = self.__dict__.get('manager', None)
+        logging.warn(_('SERVICE MANAGER %s') % (manager, ))
         return getattr(manager, key)
 
     @classmethod

@@ -117,15 +117,10 @@ class Controller(common.OpenstackController):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        qs = req.environ['QUERY_STRING']
-        param_dict = urlparse.parse_qs(qs)
-        param_dict.pop("fresh", None)
-        # parse_qs returns a dict where the values are lists,
-        # since query strings can have multiple values for the
-        # same key. We need to convert that to single values.
-        for key in param_dict:
-            param_dict[key] = param_dict[key][0]
-        build_plan = api.select(ctx, specs=param_dict)
+        json_specs = json.loads(req.body)
+        specs = json.loads(json_specs)
+        LOG.debug("INCOMING SELECT '%s'" % specs)
+        build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
 

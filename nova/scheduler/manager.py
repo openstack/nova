@@ -80,6 +80,7 @@ class SchedulerManager(manager.Manager):
         Falls back to schedule(context, topic) if method doesn't exist.
         """
         driver_method = 'schedule_%s' % method
+        LOG.debug(_("CALLING %(driver_method)s handled in Scheduler") % locals()) # nuke
         elevated = context.elevated()
         try:
             host = getattr(self.driver, driver_method)(elevated, *args,
