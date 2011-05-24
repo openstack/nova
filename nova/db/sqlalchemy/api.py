@@ -782,6 +782,7 @@ def mac_address_create(context, values):
         mac_address_ref = models.MacAddress()
         mac_address_ref.update(values)
         mac_address_ref.save(session=session)
+    return mac_address_ref
 #    instance_id = values['instance_id']
 #    network_id = values['network_id']
 #
