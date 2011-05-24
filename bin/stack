@@ -65,7 +65,7 @@ def format_help(d):
         indent = MAX_INDENT - 6
 
     out = []
-    for k, v in d.iteritems():
+    for k, v in sorted(d.iteritems()):
         if (len(k) + 6) > MAX_INDENT:
             out.extend(['   %s' % k])
             initial_indent = ' ' * (indent + 6)

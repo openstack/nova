@@ -873,6 +873,7 @@ def instance_get_all(context):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
@@ -885,6 +886,7 @@ def instance_get_all_by_user(context, user_id):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(deleted=can_read_deleted(context)).\
                    filter_by(user_id=user_id).\
