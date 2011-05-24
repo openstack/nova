@@ -618,18 +618,27 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context,
                                           {'user_id': 'fake',
                                           'project_id': 'fake',
-                                          'mac_address': '56:12:12:12:12:12',
                                           'instance_type_id': 1})
         ip = '10.11.12.13'
 
-        network_ref = db.project_get_network(self.context,
-                                             'fake')
+        # NOTE(jkoelker): This just takes the first network and runs with it
+        #                 Should probably do something more inteligent
+        networks_ref = db.project_get_network(self.context,
+                                              'fake',
+                                              associate=False)[0]
+
+        mac_address = {'address': '56:12:12:12:12:12',
+                       'network_id': network_ref['id'],
+                       'instance_id': instance_ref['id']}
+        mac_ref = db.mac_address_create(self.context, mac_address)
 
         fixed_ip = {'address': ip,
-                    'network_id': network_ref['id']}
+                    'network_id': network_ref['id'],
+                    'mac_address_id': mac_ref['id']}
 
         admin_ctxt = context.get_admin_context()
         db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.mac_address_create(
         db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
                                             'instance_id': instance_ref['id']})
 
