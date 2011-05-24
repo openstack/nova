@@ -226,7 +226,7 @@ class CloudTestCase(test.TestCase):
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
-            raise exception.ImageNotFound
+            raise exception.ImageNotFound('bad_image_id')
 
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
         # list all
