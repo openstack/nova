@@ -625,10 +625,11 @@ class IptablesFirewallTestCase(test.TestCase):
         #                 Should probably do something more inteligent
         networks_ref = db.project_get_networks(self.context,
                                                'fake',
-                                               associate=False)[0]
+                                               associate=False)
+        print networks_ref
 
         mac_address = {'address': '56:12:12:12:12:12',
-                       'network_id': network_ref['id'],
+                       'network_id': networks_ref['id'],
                        'instance_id': instance_ref['id']}
         mac_ref = db.mac_address_create(self.context, mac_address)
 
