@@ -153,3 +153,25 @@ class ControllerV11(Controller):
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
+
+    def index(self, req):
+        """Return an index listing of images available to the request.
+
+        :param req: `wsgi.Request` object
+        """
+        context = req.environ['nova.context']
+        images = self._image_service.index(context)
+        images = common.limited_by_marker(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=False) for image in images])
+
+    def detail(self, req):
+        """Return a detailed index listing of images available to the request.
+
+        :param req: `wsgi.Request` object.
+        """
+        context = req.environ['nova.context']
+        images = self._image_service.detail(context)
+        images = common.limited_by_marker(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=True) for image in images])
