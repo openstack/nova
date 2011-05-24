@@ -1171,13 +1171,13 @@ class SimpleDH(object):
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
-        proc.stdin.write(text)
+        proc.stdin.write(text + '\n')
         proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return proc.stdout.read().strip('\n')
 
     def encrypt(self, text):
         return self._run_ssl(text, 'enc')
