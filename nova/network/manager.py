@@ -281,6 +281,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self._get_networks_for_instance(admin_context, project_id)
 
         network_ids = [n['id'] for n in networks]
+
         self._allocate_mac_addresses(context, instance_id, network_ids)
         self._allocate_fixed_ips(admin_context, instance_id, network_ids,
                                  **kwargs)
@@ -369,7 +370,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
-            network_info.append((network, info))
+            network_info.append(info)
         return network_info
 
     def _allocate_mac_addresses(self, context, instance_id, network_ids):
@@ -650,7 +651,7 @@ class FlatManager(NetworkManager):
         self.db.network_update(context, network_id, net)
 
 
-class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
+class FlatDHCPManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     """Flat networking with dhcp.
 
     FlatDHCPManager will start up one dhcp server to give out addresses.
@@ -665,7 +666,7 @@ class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
         self.driver.init_host()
         self.driver.ensure_metadata_ip()
 
-        super(FlatDHCPManager, self).init_host()
+        NetworkManager.init_host(self)
         self.init_host_floating_ips()
 
         self.driver.metadata_forward()
@@ -682,10 +683,9 @@ class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
 
     def allocate_fixed_ip(self, context, instance_id, network_id, **kwargs):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
-        address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
-                                                                 instance_id,
-                                                                 network_id,
-                                                                 **kwargs)
+        address = NetworkManager.allocate_fixed_ip(self, context,
+                                                   instance_id, network_id,
+                                                   **kwargs)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network_id)
 
@@ -785,7 +785,7 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
                   '%(num_networks)s. Network size is %(network_size)s') %
                   kwargs)
 
-        super(VlanManager, self).create_networks(context, vpn=True, **kwargs)
+        NetworkManager.create_networks(self, context, vpn=True, **kwargs)
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""

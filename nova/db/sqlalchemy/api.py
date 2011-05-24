@@ -26,6 +26,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import utils
+from nova import log as logging
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -37,6 +38,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.db.sqlalchemy")
 
 
 def is_admin_context(context):
@@ -775,9 +777,11 @@ def mac_address_create(context, values):
     context = request context object
     values = dict containing column values
     """
-    mac_address_ref = models.MacAddress()
-    mac_address_ref.update(values)
-    mac_address_ref.save()
+    session = get_session()
+    with session.begin():
+        mac_address_ref = models.MacAddress()
+        mac_address_ref.update(values)
+        mac_address_ref.save(session=session)
 #    instance_id = values['instance_id']
 #    network_id = values['network_id']
 #
@@ -2371,7 +2375,8 @@ def project_get_networks(context, project_id, associate=True):
     session = get_session()
     result = session.query(models.Network).\
                      filter_by(project_id=project_id).\
-                     filter_by(deleted=False)
+                     filter_by(deleted=False).all()
+                     
     if not result:
         if not associate:
             return []

@@ -80,7 +80,8 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
     def tearDown(self):
-        networks = db.project_get_networks(self.context, self.project.id)
+        networks = db.project_get_networks(self.context, self.project.id,
+                                           associate=False)
         for network in networks:
             db.network_disassociate(self.context, network['id'])
         self.manager.delete_project(self.project)
@@ -123,14 +124,25 @@ class CloudTestCase(test.TestCase):
                               {'address': address,
                                'host': self.network.host})
         self.cloud.allocate_address(self.context)
-        inst = db.instance_create(self.context, {'host': self.compute.host})
+        # TODO(jkoelker) Probably need to query for instance_type_id and
+        #                make sure we get a valid one
+        inst = db.instance_create(self.context, {'host': self.compute.host,
+                                                 'instance_type_id': 1})
         networks = db.network_get_all(self.context)
-        print networks
-        print self.network.allocate_for_instance(self.context, inst['id'],
-                                                 inst['instance_type_id'])
+        for network in networks:
+            self.network.set_network_host(self.context, network['id'])
+        project_id = self.context.project_id
+        ips = self.network.allocate_for_instance(self.context, inst['id'],
+                                                 inst['instance_type_id'],
+                                                 project_id=project_id)
+        # TODO(jkoelker) Make this mas bueno
+        self.assertTrue(ips)
+        self.assertTrue('ips' in ips[0])
+        self.assertTrue(ips[0]['ips'])
+        self.assertTrue('ip' in ips[0]['ips'][0])
 
-        fixed = self.network.allocate_fixed_ip(self.context, inst,
-                                               networks[0])
+        fixed = ips[0]['ips'][0]['ip']
+
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
