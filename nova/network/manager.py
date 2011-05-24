@@ -16,8 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Network Hosts are responsible for allocating ips and setting up network.
+"""Network Hosts are responsible for allocating ips and setting up network.
 
 There are multiple backend drivers that handle specific types of networking
 topologies.  All of the network commands are issued to a subclass of
@@ -58,6 +57,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import manager
+from nova import quota
 from nova import utils
 from nova import rpc
 from nova.network import api as network_api
@@ -65,6 +65,8 @@ import random
 
 
 LOG = logging.getLogger("nova.network.manager")
+
+
 FLAGS = flags.FLAGS
 flags.DEFINE_string('flat_network_bridge', 'br100',
                     'Bridge for simple network instances')
@@ -117,7 +119,7 @@ class RPCAllocateFixedIP(object):
     used since they share code to RPC.call allocate_fixed_ip on the
     correct network host to configure dnsmasq
     """
-    def _allocate_fixed_ips(self, context, instance, networks, **kwargs):
+    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """calls allocate_fixed_ip once for each network"""
         green_pool = greenpool.GreenPool()
         for network in networks:
@@ -126,32 +128,33 @@ class RPCAllocateFixedIP(object):
                 topic = self.db.queue_get_for(context, FLAGS.network_topic,
                                                            network['host'])
                 args = kwargs
-                args['instance'] = pickle.dumps(instance)
-                args['network'] = pickle.dumps(network)
+                args['instance_id'] = instance_id
+                args['network_id'] = network_id
 
                 green_pool.spawn_n(rpc.call, context, topic,
                                    {'method': '_rpc_allocate_fixed_ip',
                                     'args': args})
             else:
                 # i am the correct host, run here
-                self.allocate_fixed_ip(context, instance, network, **kwargs)
+                self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
         # wait for all of the allocates (if any) to finish
         green_pool.waitall()
 
-    def _rpc_allocate_fixed_ip(self, context, instance, network, **kwargs):
+    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id,
+                                                           **kwargs):
         """sits in between _allocate_fixed_ips and allocate_fixed_ip to
-        perform pickling for rpc
+        perform network lookup on the far side of rpc
         """
-        instance = pickle.loads(instance)
-        network = pickle.loads(network)
-        self.allocate_fixed_ip(context, instance, network, **kwargs)
+        network = self.db.network_get(context, network_id)
+        self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
 
 class FloatingIP(object):
     """mixin class for adding floating IP functionality to a manager"""
     def init_host_floating_ips(self):
         """configures floating ips owned by host"""
+
         admin_context = context.get_admin_context()
         floating_ips = self.db.floating_ip_get_all_by_host(admin_context,
                                                            self.host)
@@ -164,8 +167,76 @@ class FloatingIP(object):
                 self.driver.ensure_floating_forward(floating_ip['address'],
                                                     fixed_address)
 
+    def allocate_for_instance(self, context, **kwargs):
+        """handles allocating the floating IP resources for an instance
+        calls super class allocate_for_instance() as well
+
+        rpc.called by network_api
+        """
+        instance_id = kwargs.get('instance_id')
+        project_id = kwargs.get('project_id')
+        LOG.debug(_("floating IP allocation for instance |%s|"), instance_id,
+                                                               context=context)
+        # call the next inherited class's allocate_for_instance()
+        # which is currently the NetworkManager version
+        # do this first so fixed ip is already allocated
+        super(FloatingIP, self).allocate_for_instance(context, **kwargs)
+        if FLAGS.auto_assign_floating_ip:
+            # allocate a floating ip (public_ip is just the address string)
+            public_ip = self.allocate_floating_ip(context, project_id)
+            # set auto_assigned column to true for the floating ip
+            self.db.floating_ip_set_auto_assigned(context, public_ip)
+            # get the floating ip object from public_ip string
+            floating_ip = self.db.floating_ip_get_by_address(context,
+                                                             public_ip)
+
+            # get the first fixed_ip belonging to the instance
+            fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
+                                                             instance_id)
+            fixed_ip = fixed_ips[0] if fixed_ips else None
+
+            # call to correct network host to associate the floating ip
+            network_api.associate_floating_ip(context,
+                                              floating_ip,
+                                              fixed_ip,
+                                              affect_auto_assigned=True)
+
+    def deallocate_for_instance(self, context, **kwargs):
+        """handles deallocating floating IP resources for an instance
+        calls super class deallocate_for_instance() as well
+
+        rpc.called by network_api
+        """
+        instance_id = kwargs.get('instance_id')
+        LOG.debug(_("floating IP deallocation for instance |%s|"), instance_id,
+                                                               context=context)
+
+        fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
+                                                         instance_id)
+        # add to kwargs so we can pass to super to save a db lookup there
+        kwargs['fixed_ips'] = fixed_ips
+        for fixed_ip in fixed_ips:
+            # disassociate floating ips related to fixed_ip
+            for floating_ip in fixed_ip.floating_ips:
+                address = floating_ip['address']
+                network_api.disassociate_floating_ip(context, address)
+                # deallocate if auto_assigned
+                if floating_ip['auto_assigned']:
+                    network_api.release_floating_ip(context, address, True)
+
+        # call the next inherited class's deallocate_for_instance()
+        # which is currently the NetworkManager version
+        # call this after so floating IPs are handled first
+        super(FloatingIP, self).deallocate_for_instance(context, **kwargs)
+
     def allocate_floating_ip(self, context, project_id):
         """Gets an floating ip from the pool."""
+        if quota.allowed_floating_ips(context, 1) < 1:
+            LOG.warn(_('Quota exceeeded for %s, tried to allocate '
+                       'address'),
+                     context.project_id)
+            raise quota.QuotaError(_('Address quota exceeded. You cannot '
+                                     'allocate any more addresses'))
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
                                                     self.host,
@@ -203,6 +274,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         as the hosts pick them up one at time during their periodic task.
         The one at a time part is to flatten the layout to help scale
     """
+
     timeout_fixed_ips = True
 
     def __init__(self, network_driver=None, *args, **kwargs):
@@ -233,14 +305,14 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                                self.host,
                                                                time)
             if num:
-                LOG.debug(_("Dissassociated %s stale fixed ip(s)"), num)
+                LOG.debug(_('Dissassociated %s stale fixed ip(s)'), num)
 
         # setup any new networks which have been created
         self.set_network_hosts(context)
 
     def set_network_host(self, context, network_id):
         """Safely sets the host of the network."""
-        LOG.debug(_("setting network host"), context=context)
+        LOG.debug(_('setting network host'), context=context)
         host = self.db.network_set_host(context,
                                         network_id,
                                         self.host)
@@ -257,7 +329,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 # return so worker will only grab 1 (to help scale flatter)
                 return self.set_network_host(context, network['id'])
 
-    def _get_networks_for_instance(self, context, instance=None):
+    def _get_networks_for_instance(self, context, instance_id, project_id):
         """determine which networks an instance should connect to"""
         # TODO(tr3buchet) maybe this needs to be updated in the future if
         #                 there is a better way to determine which networks
@@ -268,73 +340,58 @@ class NetworkManager(manager.SchedulerDependentManager):
         return [network for network in networks if
                 not network['vlan'] and network['host']]
 
-    def allocate_for_instance(self, context, instance, **kwargs):
+    def allocate_for_instance(self, context, **kwargs):
         """handles allocating the various network resources for an instance
 
         rpc.called by network_api
-        instance expected to be pickled
-        return value is also pickled
         """
-        instance = pickle.loads(instance)
-        LOG.debug(_("network allocations for instance %s"), instance['id'],
-                                                            context=context)
+        instance_id = kwargs.get('instance_id')
+        project_id = kwargs.get('project_id')
+        type_id = kwargs.get('instance_type_id')
         admin_context = context.elevated()
-        networks = self._get_networks_for_instance(admin_context, instance)
-        self._allocate_mac_addresses(context, instance, networks)
-        self._allocate_fixed_ips(admin_context, instance, networks, **kwargs)
-        return pickle.dumps(self._create_nw_info(admin_context, instance))
+        LOG.debug(_("network allocations for instance %s"), instance_id,
+                                                            context=context)
+        networks = self._get_networks_for_instance(admin_context, instance_id,
+                                                                  project_id)
+        self._allocate_mac_addresses(context, instance_id, networks)
+        self._allocate_fixed_ips(admin_context, instance_id, networks,
+                                                             **kwargs)
+        return self.get_instance_nw_info(context, instance_id, type_id)
 
-    def deallocate_for_instance(self, context, instance, **kwargs):
+    def deallocate_for_instance(self, context, **kwargs):
         """handles deallocating various network resources for an instance
 
         rpc.called by network_api
-        instance is expected to be pickled
+        kwargs can contain fixed_ips to circumvent another db lookup
         """
-        instance = pickle.loads(instance)
-        LOG.debug(_("network deallocation for instance |%s|"), instance['id'],
+        instance_id = kwargs.get('instance_id')
+        fixed_ips = kwargs.get('fixed_ips') or \
+                  self.db.fixed_ip_get_all_by_instance(context, instance_id)
+        LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
-
         # deallocate mac addresses
         self.db.mac_address_delete_by_instance(context, instance_id)
 
         # deallocate fixed ips
-        for fixed_ip in self.db.fixed_ip_get_all_by_instance(context,
-                                                             instance['id']):
-            # disassociate floating ips related to fixed_ip
-            for floating_ip in fixed_ip.floating_ips:
-                network_api.disassociate_floating_ip(context,
-                                                     floating_ip['address'])
-            # then deallocate fixed_ip
+        for fixed_ip in fixed_ips:
             self.deallocate_fixed_ip(context, fixed_ip['address'], **kwargs)
 
-    def get_instance_nw_info(self, context, instance):
-        """unpickles instance and calls _create_nw_info
-           then pickles its return for passing through rpc
-
-        rpc.called by network_api
-        instance is expected to be pickled
-        return value is also pickled
-        """
-        instance = pickle.loads(instance)
-        LOG.debug(_("getting network info for instance |%s|"), instance['id'])
-        admin_context = context.elevated()
-        return pickle.dumps(self._create_nw_info(admin_context, instance))
-
-    def _create_nw_info(self, context, instance):
+    def get_instance_nw_info(self, context, instance_id, instance_type_id):
         """creates network info list for instance
 
-        called by allocate_for_instance and get_instance_nw_info
+        called by allocate_for_instance and netowrk_api
         context needs to be elevated
         returns network info list [(network,info),(network,info)...]
-        where network is a db object and info is a dict
+        where network = dict containing pertinent data from a network db object
+        and info = dict containing pertinent networking data
         """
         # TODO(tr3buchet) should handle floating IPs as well?
         fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
-                                                         instance['id'])
+                                                         instance_id)
         mac_addresses = self.db.mac_address_get_all_by_instance(context,
-                                                                instance['id'])
+                                                                instance_id)
         flavor = self.db.instance_type_get_by_id(context,
-                                                 instance['instance_type_id'])
+                                                 instance_type_id)
         network_info = []
         # a mac_address contains address, instance_id, network_id
         # it is also joined to the instance and network given by those IDs
@@ -358,7 +415,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                                                mac_address['address']),
                     "netmask": network['netmask_v6'],
                     "enabled": "1"}
-
+            network_dict = {
+                'bridge': network['bridge']}
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
@@ -372,14 +430,14 @@ class NetworkManager(manager.SchedulerDependentManager):
             # TODO(tr3buchet): handle ip6 routes here as well
             if network['gateway_v6']:
                 info['gateway6'] = network['gateway_v6']
-            network_info.append((network, info))
+            network_info.append((network_dict, info))
         return network_info
 
-    def _allocate_mac_addresses(self, context, instance, networks):
+    def _allocate_mac_addresses(self, context, instance_id, networks):
         """generates and stores mac addresses"""
         for network in networks:
             mac_address = {'address': self.generate_mac_address(),
-                           'instance_id': instance['id'],
+                           'instance_id': instance_id,
                            'network_id': network['id']}
             # try 5 times to create a unique mac_address
             for i in range(5):
@@ -400,7 +458,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                random.randint(0x00, 0xff)]
         return ':'.join(map(lambda x: "%02x" % x, mac))
 
-    def allocate_fixed_ip(self, context, instance, network, **kwargs):
+    def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
         # TODO(vish): when this is called by compute, we can associate compute
         #             with a network, or a cluster of computes with a network
@@ -408,9 +466,9 @@ class NetworkManager(manager.SchedulerDependentManager):
         #             network_get_by_compute_host
         address = self.db.fixed_ip_associate_pool(context.elevated(),
                                                   network['id'],
-                                                  instance['id'])
+                                                  instance_id)
         mac = self.db.mac_address_get_by_instance_and_network(context,
-                                                              instance['id'],
+                                                              instance_id,
                                                               network['id'])
         values = {'allocated': True,
                   'mac_address_id': mac['id']}
@@ -423,39 +481,39 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_("Leasing IP %s"), address, context=context)
+        LOG.debug(_('Leasing IP %s'), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error(_("IP %s leased that isn't associated") %
+            raise exception.Error(_('IP %s leased that is not associated') %
                                   address)
         mac_address = fixed_ip_ref['mac_address']['address']
         if mac_address != mac:
-            raise exception.Error(_("IP %(address)s leased to bad"
-                    " mac %(mac_address)s vs %(mac)s") % locals())
+            raise exception.Error(_('IP %(address)s leased to bad'
+                    ' mac %(mac_address)s vs %(mac)s') % locals())
         now = datetime.datetime.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
                                 {'leased': True,
                                  'updated_at': now})
         if not fixed_ip_ref['allocated']:
-            LOG.warn(_("IP %s leased that was already deallocated"), address,
+            LOG.warn(_('IP %s leased that was already deallocated'), address,
                      context=context)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_("Releasing IP %s"), address, context=context)
+        LOG.debug(_('Releasing IP %s'), address, context=context)
         fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
         instance_ref = fixed_ip_ref['instance']
         if not instance_ref:
-            raise exception.Error(_("IP %s released that isn't associated") %
+            raise exception.Error(_('IP %s released that is not associated') %
                                   address)
         mac_address = fixed_ip_ref['mac_address']['address']
         if mac_address != mac:
-            raise exception.Error(_("IP %(address)s released from"
-                    " bad mac %(mac_address)s vs %(mac)s") % locals())
+            raise exception.Error(_('IP %(address)s released from'
+                    ' bad mac %(mac_address)s vs %(mac)s') % locals())
         if not fixed_ip_ref['leased']:
-            LOG.warn(_("IP %s released that was not leased"), address,
+            LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
@@ -480,7 +538,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             start = index * network_size
             start_v6 = index * network_size_v6
             significant_bits = 32 - int(math.log(network_size, 2))
-            cidr = "%s/%s" % (fixed_net[start], significant_bits)
+            cidr = '%s/%s' % (fixed_net[start], significant_bits)
             project_net = IPy.IP(cidr)
             net = {}
             net['bridge'] = bridge
@@ -492,12 +550,12 @@ class NetworkManager(manager.SchedulerDependentManager):
             net['broadcast'] = str(project_net.broadcast())
             net['dhcp_start'] = str(project_net[2])
             if num_networks > 1:
-                net['label'] = "%s_%d" % (label, index)
+                net['label'] = '%s_%d' % (label, index)
             else:
                 net['label'] = label
 
             if FLAGS.use_ipv6:
-                cidr_v6 = "%s/%s" % (fixed_net_v6[start_v6],
+                cidr_v6 = '%s/%s' % (fixed_net_v6[start_v6],
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
                 project_net_v6 = IPy.IP(cidr_v6)
@@ -555,7 +613,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                               'address': address,
                                               'reserved': reserved})
 
-    def _allocate_fixed_ips(self, context, instance, networks, **kwargs):
+    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """calls allocate_fixed_ip once for each network"""
         raise NotImplementedError()
 
@@ -596,13 +654,15 @@ class FlatManager(NetworkManager):
     Metadata forwarding must be handled by the gateway, and since nova does
     not do any setup in this mode, it must be done manually.  Requests to
     169.254.169.254 port 80 will need to be forwarded to the api server.
+
     """
+
     timeout_fixed_ips = False
 
-    def _allocate_fixed_ips(self, context, instance, networks, **kwargs):
+    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """calls allocate_fixed_ip once for each network"""
         for network in networks:
-            self.allocate_fixed_ip(context, instance, network, **kwargs)
+            self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
     def deallocate_fixed_ip(self, context, address, **kwargs):
         """Returns a fixed ip to the pool."""
@@ -612,8 +672,7 @@ class FlatManager(NetworkManager):
 
     def setup_compute_network(self, context, instance_id):
         """Network is created manually.
-        this code is run on and by the compute host, not on network
-        hosts
+        this code is run on and by the compute host, not on network hosts
         """
         pass
 
@@ -625,12 +684,13 @@ class FlatManager(NetworkManager):
         self.db.network_update(context, network_id, net)
 
 
-class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
+class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
     """Flat networking with dhcp.
 
     FlatDHCPManager will start up one dhcp server to give out addresses.
     It never injects network settings into the guest. Otherwise it behaves
     like FlatDHCPManager.
+
     """
 
     def init_host(self):
@@ -647,18 +707,17 @@ class FlatDHCPManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching networks for compute hosts.
-        this code is run on and by the compute host, not on network
-        hosts
+        this code is run on and by the compute host, not on network hosts
         """
         networks = db.network_get_all_by_instance(context, instance_id)
         for network in networks:
             self.driver.ensure_bridge(network['bridge'],
                                       network['bridge_interface'])
 
-    def allocate_fixed_ip(self, context, instance, network, **kwargs):
+    def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
         address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
-                                                                 instance,
+                                                                 instance_id,
                                                                  network,
                                                                  **kwargs)
         if not FLAGS.fake_network:
@@ -691,6 +750,7 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
     A dhcp server is run for each subnet, so each project will have its own.
     For this mode to be useful, each project will need a vpn to access the
     instances in its subnet.
+
     """
 
     def init_host(self):
@@ -706,19 +766,19 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
 
         self.driver.metadata_forward()
 
-    def allocate_fixed_ip(self, context, instance, network, **kwargs):
+    def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
         if kwargs.get('vpn', None):
             address = network['vpn_private_address']
             self.db.fixed_ip_associate(context,
                                        address,
-                                       instance['id'])
+                                       instance_id)
         else:
             address = self.db.fixed_ip_associate_pool(context,
                                                       network['id'],
-                                                      instance['id'])
+                                                      instance_id)
         mac = self.db.mac_address_get_by_instance_and_network(context,
-                                                              instance['id'],
+                                                              instance_id,
                                                               network['id'])
         values = {'allocated': True,
                   'mac_address_id': mac['id']}
@@ -728,8 +788,7 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts.
-        this code is run on and by the compute host, not on network
-        hosts
+        this code is run on and by the compute host, not on network hosts
         """
         networks = self.db.network_get_all_by_instance(context, instance_id)
         for network in networks:
@@ -737,11 +796,10 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
                                            network['bridge'],
                                            network['bridge_interface'])
 
-    def _get_networks_for_instance(self, context, instance):
+    def _get_networks_for_instance(self, context, instance_id, project_id):
         """determine which networks an instance should connect to"""
         # get networks associated with project
-        networks = self.db.project_get_networks(context,
-                                                instance['project_id'])
+        networks = self.db.project_get_networks(context, project_id)
 
         # return only networks which have host set
         return [network for network in networks if network['host']]

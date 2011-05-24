@@ -266,7 +266,7 @@ class AdminController(object):
     def _vpn_for(self, context, project_id):
         """Get the VPN instance for a project ID."""
         for instance in db.instance_get_all_by_project(context, project_id):
-            if (instance['image_id'] == FLAGS.vpn_image_id
+            if (instance['image_id'] == str(FLAGS.vpn_image_id)
                 and not instance['state_description'] in
                     ['shutting_down', 'shutdown']):
                 return instance

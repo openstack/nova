@@ -292,7 +292,12 @@ def floating_ip_update(context, address, values):
     return IMPL.floating_ip_update(context, address, values)
 
 
+def floating_ip_set_auto_assigned(context, address):
+    """Set auto_assigned flag to floating ip"""
+    return IMPL.floating_ip_set_auto_assigned(context, address)
+
 ####################
+
 
 def migration_update(context, id, values):
     """Update a migration instance."""
@@ -509,11 +514,6 @@ def instance_get_floating_address(context, instance_id):
 def instance_get_project_vpn(context, project_id):
     """Get a vpn instance by project or return None."""
     return IMPL.instance_get_project_vpn(context, project_id)
-
-
-def instance_is_vpn(context, instance_id):
-    """True if instance is a vpn."""
-    return IMPL.instance_is_vpn(context, instance_id)
 
 
 def instance_set_state(context, instance_id, state, description=None):
@@ -799,24 +799,34 @@ def auth_token_create(context, token):
 ###################
 
 
-def quota_create(context, values):
-    """Create a quota from the values dictionary."""
-    return IMPL.quota_create(context, values)
+def quota_create(context, project_id, resource, limit):
+    """Create a quota for the given project and resource."""
+    return IMPL.quota_create(context, project_id, resource, limit)
 
 
-def quota_get(context, project_id):
+def quota_get(context, project_id, resource):
     """Retrieve a quota or raise if it does not exist."""
-    return IMPL.quota_get(context, project_id)
+    return IMPL.quota_get(context, project_id, resource)
 
 
-def quota_update(context, project_id, values):
-    """Update a quota from the values dictionary."""
-    return IMPL.quota_update(context, project_id, values)
+def quota_get_all_by_project(context, project_id):
+    """Retrieve all quotas associated with a given project."""
+    return IMPL.quota_get_all_by_project(context, project_id)
 
 
-def quota_destroy(context, project_id):
+def quota_update(context, project_id, resource, limit):
+    """Update a quota or raise if it does not exist."""
+    return IMPL.quota_update(context, project_id, resource, limit)
+
+
+def quota_destroy(context, project_id, resource):
     """Destroy the quota or raise if it does not exist."""
-    return IMPL.quota_destroy(context, project_id)
+    return IMPL.quota_destroy(context, project_id, resource)
+
+
+def quota_destroy_all_by_project(context, project_id):
+    """Destroy all quotas associated with a given project."""
+    return IMPL.quota_get_all_by_project(context, project_id)
 
 
 ###################

@@ -102,12 +102,16 @@ class Request(webob.Request):
         return bm or 'application/json'
 
     def get_content_type(self):
-        try:
-            ct = self.headers['Content-Type']
-            assert ct in ('application/xml', 'application/json')
-            return ct
-        except Exception:
-            raise webob.exc.HTTPBadRequest('Invalid content type')
+        allowed_types = ("application/xml", "application/json")
+        if not "Content-Type" in self.headers:
+            msg = _("Missing Content-Type")
+            LOG.debug(msg)
+            raise webob.exc.HTTPBadRequest(msg)
+        type = self.content_type
+        if type in allowed_types:
+            return type
+        LOG.debug(_("Wrong Content-Type: %s") % type)
+        raise webob.exc.HTTPBadRequest("Invalid content type")
 
 
 class Application(object):
@@ -424,7 +428,7 @@ class Serializer(object):
         try:
             return handlers[content_type]
         except Exception:
-            raise exception.InvalidContentType()
+            raise exception.InvalidContentType(content_type=content_type)
 
     def serialize(self, data, content_type):
         """Serialize a dictionary into the specified content type."""
@@ -447,8 +451,7 @@ class Serializer(object):
         try:
             return handlers[content_type]
         except Exception:
-            raise exception.InvalidContentType(_('Invalid content type %s'
-                                                 % content_type))
+            raise exception.InvalidContentType(content_type=content_type)
 
     def _from_json(self, datastring):
         return utils.loads(datastring)

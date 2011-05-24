@@ -279,6 +279,26 @@ class CloudTestCase(test.TestCase):
                                            user_group=['all'])
         self.assertEqual(True, result['is_public'])
 
+    def test_deregister_image(self):
+        deregister_image = self.cloud.deregister_image
+
+        def fake_delete(self, context, id):
+            return None
+
+        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
+        # valid image
+        result = deregister_image(self.context, 'ami-00000001')
+        self.assertEqual(result['imageId'], 'ami-00000001')
+        # invalid image
+        self.stubs.UnsetAll()
+
+        def fake_detail_empty(self, context):
+            return []
+
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
+        self.assertRaises(exception.ImageNotFound, deregister_image,
+                          self.context, 'ami-bad001')
+
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1
@@ -290,7 +310,7 @@ class CloudTestCase(test.TestCase):
         instance_id = rv['instancesSet'][0]['instanceId']
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
-        self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE OUTPUT')
+        self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE?OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
         greenthread.sleep(0.3)
@@ -337,41 +357,6 @@ class CloudTestCase(test.TestCase):
     def test_delete_key_pair(self):
         self._create_key('test')
         self.cloud.delete_key_pair(self.context, 'test')
-
-    def test_run_instances(self):
-        if FLAGS.connection_type == 'fake':
-            LOG.debug(_("Can't test instances without a real virtual env."))
-            return
-        image_id = FLAGS.default_image
-        instance_type = FLAGS.default_instance_type
-        max_count = 1
-        kwargs = {'image_id': image_id,
-                  'instance_type': instance_type,
-                  'max_count': max_count}
-        rv = self.cloud.run_instances(self.context, **kwargs)
-        # TODO: check for proper response
-        instance_id = rv['reservationSet'][0].keys()[0]
-        instance = rv['reservationSet'][0][instance_id][0]
-        LOG.debug(_("Need to watch instance %s until it's running..."),
-                  instance['instance_id'])
-        while True:
-            greenthread.sleep(1)
-            info = self.cloud._get_instance(instance['instance_id'])
-            LOG.debug(info['state'])
-            if info['state'] == power_state.RUNNING:
-                break
-        self.assert_(rv)
-
-        if FLAGS.connection_type != 'fake':
-            time.sleep(45)  # Should use boto for polling here
-        for reservations in rv['reservationSet']:
-            # for res_id in reservations.keys():
-            #     LOG.debug(reservations[res_id])
-            # for instance in reservations[res_id]:
-            for instance in reservations[reservations.keys()[0]]:
-                instance_id = instance['instance_id']
-                LOG.debug(_("Terminating instance %s"), instance_id)
-                rv = self.compute.terminate_instance(instance_id)
 
     def test_terminate_instances(self):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
