@@ -84,7 +84,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                             kwargs)
             return
 
-        self._provision_resource_in_child_zone(context, item, instance_id,
+        self._provision_resource_from_blob(context, item, instance_id,
                                                request_spec, kwargs)
 
     def _provision_resource_locally(self, context, item, instance_id, kwargs):
@@ -95,20 +95,24 @@ class ZoneAwareScheduler(driver.Scheduler):
                  db.queue_get_for(context, "compute", host),
                  {"method": "run_instance",
                   "args": kwargs})
-        LOG.debug(_("Casted to compute %(host)s for run_instance")
+        LOG.debug(_("Provisioning locally via compute node %(host)s")
                             % locals())
 
-    def _provision_resource_in_child_zone(self, context, item, instance_id,
+    def _provision_resource_from_blob(self, context, item, instance_id,
                                           request_spec, kwargs):
-        """Create the requested resource in a child zone."""
-        # Start by attempting to decrypt the blob to see if this
-        # request is:
-        # 1. valid,
-        # 2. intended for this zone or a child zone.
-        # if 2 ... forward call to child zone.
-        # Note: If we have "blob" that means the request was passed
-        # into us. If we have "child_blob" that means we just asked
-        # the child zone for the weight info.
+        """Create the requested resource locally or in a child zone
+           based on what is stored in the zone blob info.
+
+           Attempt to decrypt the blob to see if this request is:
+           1. valid, and
+           2. intended for this zone or a child zone.
+
+           Note: If we have "blob" that means the request was passed
+           into us from a parent zone. If we have "child_blob" that
+           means we gathered the info from one of our children.
+           It's possible that, when we decrypt the 'blob' field, it
+           contains "child_blob" data. In which case we forward the
+           request."""
 
         if "blob" in item:
             # Request was passed in from above. Is it for us?
@@ -139,11 +143,14 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def _ask_child_zone_to_create_instance(self, context, zone_info,
                                            request_spec, kwargs):
+        """Once we have determined that the request should go to one
+        of our children, we need to fabricate a new POST /servers/
+        call with the same parameters that were passed into us.
 
-        # Note: we have to reverse engineer from our args to get back the
-        # image, flavor, ipgroup, etc. since the original call could have
-        # come in from EC2 (which doesn't use these things).
-        LOG.debug(_("****** ASK CHILD %(zone_info)s ** %(request_spec)s") % locals())
+        Note that we have to reverse engineer from our args to get back the
+        image, flavor, ipgroup, etc. since the original call could have
+        come in from EC2 (which doesn't use these things)."""
+
         instance_type = request_spec['instance_type']
         instance_properties = request_spec['instance_properties']
 
@@ -159,6 +166,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
         url = zone.api_url
+        LOG.debug(_("Forwarding instance create call to child zone %(url)s")
+                    % locals())
         nova = None
         try:
             nova = novaclient.OpenStack(zone.username, zone.password, url)

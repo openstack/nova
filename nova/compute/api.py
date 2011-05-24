@@ -264,7 +264,6 @@ class API(base.Base):
                 'filter_driver': filter_driver,
                 'blob': zone_blob
             }
-            LOG.debug(_("**** REQUEST SPEC: %(request_spec)s") % locals())
 
             rpc.cast(context,
                      FLAGS.scheduler_topic,

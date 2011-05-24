@@ -18,7 +18,6 @@ Handles all requests relating to schedulers.
 """
 
 import novaclient
-import traceback #nuke
 
 from nova import db
 from nova import exception
@@ -125,7 +124,6 @@ def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
             nova = novaclient.OpenStack(zone.username, zone.password,
                     zone.api_url)
             nova.authenticate()
-            LOG.warn(_("*** AUTHENTICATED") % locals())#asdads
         except novaclient.exceptions.BadRequest, e:
             url = zone.api_url
             LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
@@ -137,13 +135,11 @@ def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
 
         def _error_trap(*args, **kwargs):
             try:
-                LOG.warn(_("*** CALLING ZONE %(args)s ^^ %(kwargs)s") % locals())#asdads
                 return zone_method(*args, **kwargs)
             except Exception as e:
                 if type(e) in errors_to_ignore:
                     return None
                 ex = traceback.format_exc(e)
-                LOG.warn(_("*** CAUGHT EXCEPTION %(ex)s") % locals())#asdads
                 # TODO (dabo) - want to be able to re-raise here.
                 # Returning a string now; raising was causing issues.
                 # raise e
