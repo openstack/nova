@@ -623,9 +623,9 @@ class IptablesFirewallTestCase(test.TestCase):
 
         # NOTE(jkoelker): This just takes the first network and runs with it
         #                 Should probably do something more inteligent
-        networks_ref = db.project_get_network(self.context,
-                                              'fake',
-                                              associate=False)[0]
+        networks_ref = db.project_get_networks(self.context,
+                                               'fake',
+                                               associate=False)[0]
 
         mac_address = {'address': '56:12:12:12:12:12',
                        'network_id': network_ref['id'],
