@@ -68,12 +68,12 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
     area.
     """
     conn = httplib.HTTPConnection(glance_host, glance_port)
-    conn.request('GET', '/images/%s' % image_id)
+    conn.request('GET', '/v1/images/%s' % image_id)
     resp = conn.getresponse()
     if resp.status == httplib.NOT_FOUND:
         raise Exception("Image '%s' not found in Glance" % image_id)
     elif resp.status != httplib.OK:
-        raise Exception("Unexpected response from Glance %i" % res.status)
+        raise Exception("Unexpected response from Glance %i" % resp.status)
 
     tar_cmd = "tar -zx --directory=%(staging_path)s" % locals()
     tar_proc = _make_subprocess(tar_cmd, stderr=True, stdin=True)

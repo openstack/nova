@@ -27,6 +27,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from IPy import IP
 
 
 LOG = logging.getLogger("nova.linux_net")
@@ -449,6 +450,7 @@ def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
     ensure_bridge(bridge, interface, net_attrs)
 
 
+@utils.synchronized('ensure_vlan', external=True)
 def ensure_vlan(vlan_num, bridge_interface):
     """Create a vlan unless it already exists"""
     interface = 'vlan%s' % vlan_num
@@ -698,6 +700,7 @@ def _dnsmasq_cmd(net):
            '--listen-address=%s' % net['gateway'],
            '--except-interface=lo',
            '--dhcp-range=%s,static,120s' % net['dhcp_start'],
+           '--dhcp-lease-max=%s' % IP(net['cidr']).len(),
            '--dhcp-hostsfile=%s' % _dhcp_file(net['bridge'], 'conf'),
            '--dhcp-script=%s' % FLAGS.dhcpbridge,
            '--leasefile-ro']
