@@ -21,6 +21,7 @@ Tests For Compute
 
 import datetime
 import mox
+import stubout
 
 from nova import compute
 from nova import context
@@ -50,6 +51,10 @@ class FakeTime(object):
 
     def sleep(self, t):
         self.counter += t
+
+
+def nop_report_driver_status(self):
+    pass
 
 
 class ComputeTestCase(test.TestCase):
@@ -325,6 +330,28 @@ class ComputeTestCase(test.TestCase):
         self.compute.unlock_instance(self.context, instance_id)
         ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
         self.assertEqual(ret_val, None)
+
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_finish_resize(self):
+        """Contrived test to ensure finish_resize doesn't raise anything"""
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+        try:
+            self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+        except KeyError, e:
+            # Only catch key errors. We want other reasons for the test to
+            # fail to actually error out so we don't obscure anything
+            self.fail()
 
         self.compute.terminate_instance(self.context, instance_id)
 
@@ -648,6 +675,10 @@ class ComputeTestCase(test.TestCase):
 
     def test_run_kill_vm(self):
         """Detect when a vm is terminated behind the scenes"""
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(compute_manager.ComputeManager,
+                '_report_driver_status', nop_report_driver_status)
+
         instance_id = self._create_instance()
 
         self.compute.run_instance(self.context, instance_id)

@@ -48,6 +48,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
 flags.DEFINE_integer('block_device_creation_timeout', 10,
                      'time to wait for a block device to be created')
+flags.DEFINE_integer('max_kernel_ramdisk_size', 16 * 1024 * 1024,
+                     'maximum size in bytes of kernel or ramdisk images')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -444,6 +446,12 @@ class VMHelper(HelperBase):
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
+        elif image_type == ImageType.KERNEL_RAMDISK and \
+             vdi_size > FLAGS.max_kernel_ramdisk_size:
+            max_size = FLAGS.max_kernel_ramdisk_size
+            raise exception.Error(
+                _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
+                  "max %(max_size)d bytes") % locals())
 
         name_label = get_name_label_for_image(image)
         vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
@@ -506,9 +514,7 @@ class VMHelper(HelperBase):
             try:
                 return glance_disk_format2nova_type[disk_format]
             except KeyError:
-                raise exception.NotFound(
-                    _("Unrecognized disk_format '%(disk_format)s'")
-                    % locals())
+                raise exception.InvalidDiskFormat(disk_format=disk_format)
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -643,8 +649,7 @@ class VMHelper(HelperBase):
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') %
-                                        name_label)
+            raise exception.InstanceExists(name=name_label)
         else:
             return vm_refs[0]
 
@@ -853,7 +858,7 @@ def safe_find_sr(session):
     """
     sr_ref = find_sr(session)
     if sr_ref is None:
-        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+        raise exception.StorageRepositoryNotFound()
     return sr_ref
 
 

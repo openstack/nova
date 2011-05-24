@@ -184,6 +184,9 @@ class Instance(BASE, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
+    #TODO{tr3buchet): i don't like this shim.....
+    # prevents breaking ec2 api
+    # should go away with zones when ec2 api doesn't have compute db access
     @property
     def fixed_ip(self):
         return self.fixed_ips[0] if self.fixed_ips else None
@@ -214,7 +217,7 @@ class Instance(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
     # aka flavor_id
-    instance_type_id = Column(String(255))
+    instance_type_id = Column(Integer)
 
     user_data = Column(Text)
 
@@ -317,18 +320,20 @@ class Volume(BASE, NovaBase):
 
 
 class Quota(BASE, NovaBase):
-    """Represents quota overrides for a project."""
+    """Represents a single quota override for a project.
+
+    If there is no row for a given project id and resource, then
+    the default for the deployment is used. If the row is present
+    but the hard limit is Null, then the resource is unlimited.
+    """
+
     __tablename__ = 'quotas'
     id = Column(Integer, primary_key=True)
 
-    project_id = Column(String(255))
+    project_id = Column(String(255), index=True)
 
-    instances = Column(Integer)
-    cores = Column(Integer)
-    volumes = Column(Integer)
-    gigabytes = Column(Integer)
-    floating_ips = Column(Integer)
-    metadata_items = Column(Integer)
+    resource = Column(String(255))
+    hard_limit = Column(Integer, nullable=True)
 
 
 class ExportDevice(BASE, NovaBase):
@@ -533,6 +538,7 @@ class FloatingIp(BASE, NovaBase):
                                 'FloatingIp.deleted == False)')
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
+    auto_assigned = Column(Boolean, default=False, nullable=False)
 
 
 class AuthToken(BASE, NovaBase):
