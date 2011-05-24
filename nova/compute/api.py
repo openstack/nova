@@ -19,6 +19,7 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import datetime
+import eventlet
 import re
 import time
 
@@ -32,6 +33,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import instance_types
+from nova.compute import power_state
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -41,6 +43,8 @@ LOG = logging.getLogger('nova.compute.api')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
+flags.DEFINE_integer('find_host_timeout', 30,
+                     'Timeout after NN seconds when looking for a host.')
 
 
 def generate_default_hostname(instance_id):
@@ -102,19 +106,40 @@ class API(base.Base):
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
+    def _check_metadata_properties_quota(self, context, metadata={}):
+        """Enforce quota limits on metadata properties."""
+        num_metadata = len(metadata)
+        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
+        if quota_metadata < num_metadata:
+            pid = context.project_id
+            msg = _("Quota exceeeded for %(pid)s, tried to set "
+                    "%(num_metadata)s metadata properties") % locals()
+            LOG.warn(msg)
+            raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
+        # Because metadata is stored in the DB, we hard-code the size limits
+        # In future, we may support more variable length strings, so we act
+        #  as if this is quota-controlled for forwards compatibility
+        for k, v in metadata.iteritems():
+            if len(k) > 255 or len(v) > 255:
+                pid = context.project_id
+                msg = _("Quota exceeeded for %(pid)s, metadata property "
+                        "key or value too long") % locals()
+                LOG.warn(msg)
+                raise quota.QuotaError(msg, "MetadataLimitExceeded")
+
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
-               availability_zone=None, user_data=None, metadata=[],
+               availability_zone=None, user_data=None, metadata={},
                injected_files=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
 
         """
-
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 
@@ -128,30 +153,7 @@ class API(base.Base):
                                      "run %s more instances of this type.") %
                                    num_instances, "InstanceLimitExceeded")
 
-        num_metadata = len(metadata)
-        quota_metadata = quota.allowed_metadata_items(context, num_metadata)
-        if quota_metadata < num_metadata:
-            pid = context.project_id
-            msg = (_("Quota exceeeded for %(pid)s,"
-                     " tried to set %(num_metadata)s metadata properties")
-                   % locals())
-            LOG.warn(msg)
-            raise quota.QuotaError(msg, "MetadataLimitExceeded")
-
-        # Because metadata is stored in the DB, we hard-code the size limits
-        # In future, we may support more variable length strings, so we act
-        #  as if this is quota-controlled for forwards compatibility
-        for metadata_item in metadata:
-            k = metadata_item['key']
-            v = metadata_item['value']
-            if len(k) > 255 or len(v) > 255:
-                pid = context.project_id
-                msg = (_("Quota exceeeded for %(pid)s,"
-                         " metadata property key or value too long")
-                       % locals())
-                LOG.warn(msg)
-                raise quota.QuotaError(msg, "MetadataLimitExceeded")
-
+        self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
         image = self.image_service.show(context, image_id)
@@ -239,7 +241,7 @@ class API(base.Base):
             # Set sane defaults if not specified
             updates = dict(hostname=self.hostname_factory(instance_id))
             if (not hasattr(instance, 'display_name') or
-                    instance.display_name == None):
+                    instance.display_name is None):
                 updates['display_name'] = "Server %s" % instance_id
 
             instance = self.update(context, instance_id, **updates)
@@ -249,11 +251,18 @@ class API(base.Base):
             uid = context.user_id
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " instance %(instance_id)s") % locals())
+
+            # NOTE(sandy): For now we're just going to pass in the
+            # instance_type record to the scheduler. In a later phase
+            # we'll be ripping this whole for-loop out and deferring the
+            # creation of the Instance record. At that point all this will
+            # change.
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
+                               "instance_type": instance_type,
                                "availability_zone": availability_zone,
                                "injected_files": injected_files}})
 
@@ -483,6 +492,26 @@ class API(base.Base):
         """Generic handler for RPC calls to the scheduler."""
         rpc.cast(context, FLAGS.scheduler_topic, args)
 
+    def _find_host(self, context, instance_id):
+        """Find the host associated with an instance."""
+        for attempts in xrange(FLAGS.find_host_timeout):
+            instance = self.get(context, instance_id)
+            host = instance["host"]
+            if host:
+                return host
+            time.sleep(1)
+        raise exception.Error(_("Unable to find host for Instance %s")
+                                % instance_id)
+
+    def _set_admin_password(self, context, instance_id, password):
+        """Set the root/admin password for the given instance."""
+        host = self._find_host(context, instance_id)
+
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "set_admin_password",
+                  "args": {"instance_id": instance_id, "new_pass": password}})
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -503,14 +532,41 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
+    def rebuild(self, context, instance_id, image_id, metadata=None,
+                files_to_inject=None):
+        """Rebuild the given instance with the provided metadata."""
+        instance = db.api.instance_get(context, instance_id)
+
+        if instance["state"] == power_state.BUILDING:
+            msg = _("Instance already building")
+            raise exception.BuildInProgress(msg)
+
+        metadata = metadata or {}
+        self._check_metadata_properties_quota(context, metadata)
+
+        files_to_inject = files_to_inject or []
+        self._check_injected_file_quota(context, files_to_inject)
+
+        self.db.instance_update(context, instance_id, {"metadata": metadata})
+
+        rebuild_params = {
+            "image_id": image_id,
+            "injected_files": files_to_inject,
+        }
+
+        self._cast_compute_message('rebuild_instance',
+                                   context,
+                                   instance_id,
+                                   params=rebuild_params)
+
     def revert_resize(self, context, instance_id):
         """Reverts a resize, deleting the 'new' instance in the process."""
         context = context.elevated()
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.NotFound(_("No finished migrations found for "
-                    "instance"))
+            raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
+                                                      status='finished')
 
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('revert_resize', context, instance_id,
@@ -524,8 +580,8 @@ class API(base.Base):
         migration_ref = self.db.migration_get_by_instance_and_status(context,
                 instance_id, 'finished')
         if not migration_ref:
-            raise exception.NotFound(_("No finished migrations found for "
-                    "instance"))
+            raise exception.MigrationNotFoundByStatus(instance_id=instance_id,
+                                                      status='finished')
         instance_ref = self.db.instance_get(context, instance_id)
         params = {'migration_id': migration_ref['id']}
         self._cast_compute_message('confirm_resize', context, instance_id,
@@ -609,8 +665,8 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message(
-                'set_admin_password', context, instance_id, password)
+        eventlet.spawn_n(self._set_admin_password(context, instance_id,
+                                                  password))
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""
@@ -722,5 +778,8 @@ class API(base.Base):
     def update_or_create_instance_metadata(self, context, instance_id,
                                             metadata):
         """Updates or creates instance metadata."""
+        combined_metadata = self.get_instance_metadata(context, instance_id)
+        combined_metadata.update(metadata)
+        self._check_metadata_properties_quota(context, combined_metadata)
         self.db.instance_metadata_update_or_create(context, instance_id,
                                                     metadata)

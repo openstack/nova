@@ -58,7 +58,6 @@ import gettext
 import glob
 import json
 import os
-import re
 import sys
 import time
 
@@ -66,11 +65,11 @@ import IPy
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
+POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir,
                                    os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
+if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
+    sys.path.insert(0, POSSIBLE_TOPDIR)
 
 gettext.install('nova', unicode=1)
 
@@ -83,6 +82,7 @@ from nova import log as logging
 from nova import quota
 from nova import rpc
 from nova import utils
+from nova import version
 from nova.api.ec2 import ec2utils
 from nova.auth import manager
 from nova.cloudpipe import pipelib
@@ -151,7 +151,7 @@ class VpnCommands(object):
                     state = 'up'
                 print address,
                 print vpn['host'],
-                print vpn['ec2_id'],
+                print ec2utils.id_to_ec2_id(vpn['id']),
                 print vpn['state_description'],
                 print state
             else:
@@ -362,34 +362,54 @@ class ProjectCommands(object):
     def add(self, project_id, user_id):
         """Adds user to project
         arguments: project_id user_id"""
-        self.manager.add_to_project(user_id, project_id)
+        try:
+            self.manager.add_to_project(user_id, project_id)
+        except exception.UserNotFound as ex:
+            print ex
+            raise
 
     def create(self, name, project_manager, description=None):
         """Creates a new project
         arguments: name project_manager [description]"""
-        self.manager.create_project(name, project_manager, description)
+        try:
+            self.manager.create_project(name, project_manager, description)
+        except exception.UserNotFound as ex:
+            print ex
+            raise
 
     def modify(self, name, project_manager, description=None):
         """Modifies a project
         arguments: name project_manager [description]"""
-        self.manager.modify_project(name, project_manager, description)
+        try:
+            self.manager.modify_project(name, project_manager, description)
+        except exception.UserNotFound as ex:
+            print ex
+            raise
 
     def delete(self, name):
         """Deletes an existing project
         arguments: name"""
-        self.manager.delete_project(name)
+        try:
+            self.manager.delete_project(name)
+        except exception.ProjectNotFound as ex:
+            print ex
+            raise
 
     def environment(self, project_id, user_id, filename='novarc'):
         """Exports environment variables to an sourcable file
         arguments: project_id user_id [filename='novarc]"""
-        rc = self.manager.get_environment_rc(user_id, project_id)
+        try:
+            rc = self.manager.get_environment_rc(user_id, project_id)
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
+            raise
         with open(filename, 'w') as f:
             f.write(rc)
 
-    def list(self):
+    def list(self, username=None):
         """Lists all projects
-        arguments: <none>"""
-        for project in self.manager.get_projects():
+        arguments: [username]"""
+        for project in self.manager.get_projects(username):
             print project.name
 
     def quota(self, project_id, key=None, value=None):
@@ -397,11 +417,10 @@ class ProjectCommands(object):
         arguments: project_id [key] [value]"""
         ctxt = context.get_admin_context()
         if key:
-            quo = {'project_id': project_id, key: value}
             try:
-                db.quota_update(ctxt, project_id, quo)
-            except exception.NotFound:
-                db.quota_create(ctxt, quo)
+                db.quota_update(ctxt, project_id, key, value)
+            except exception.ProjectQuotaNotFound:
+                db.quota_create(ctxt, project_id, key, value)
         project_quota = quota.get_quota(ctxt, project_id)
         for key, value in project_quota.iteritems():
             print '%s: %s' % (key, value)
@@ -409,7 +428,11 @@ class ProjectCommands(object):
     def remove(self, project_id, user_id):
         """Removes user from project
         arguments: project_id user_id"""
-        self.manager.remove_from_project(user_id, project_id)
+        try:
+            self.manager.remove_from_project(user_id, project_id)
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
+            raise
 
     def scrub(self, project_id):
         """Deletes data associated with project
@@ -428,6 +451,9 @@ class ProjectCommands(object):
             zip_file = self.manager.get_credentials(user_id, project_id)
             with open(filename, 'w') as f:
                 f.write(zip_file)
+        except (exception.UserNotFound, exception.ProjectNotFound) as ex:
+            print ex
+            raise
         except db.api.NoMoreNetworks:
             print _('No more networks available. If this is a new '
                     'installation, you need\nto call something like this:\n\n'
@@ -449,7 +475,7 @@ class FixedIpCommands(object):
         ctxt = context.get_admin_context()
 
         try:
-            if host == None:
+            if host is None:
                 fixed_ips = db.fixed_ip_get_all(ctxt)
             else:
                 fixed_ips = db.fixed_ip_get_all_by_host(ctxt, host)
@@ -499,7 +525,7 @@ class FloatingIpCommands(object):
         """Lists all floating ips (optionally by host)
         arguments: [host]"""
         ctxt = context.get_admin_context()
-        if host == None:
+        if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
         else:
             floating_ips = db.floating_ip_get_all_by_host(ctxt, host)
@@ -523,8 +549,10 @@ class NetworkCommands(object):
                    [network_size=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
         if not fixed_range:
-            raise TypeError(_('Fixed range in the form of 10.0.0.0/8 is '
-                              'required to create networks.'))
+            msg = _('Fixed range in the form of 10.0.0.0/8 is '
+                    'required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not num_networks:
             num_networks = FLAGS.num_networks
         if not network_size:
@@ -536,14 +564,18 @@ class NetworkCommands(object):
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
         net_manager = utils.import_object(FLAGS.network_manager)
-        net_manager.create_networks(context.get_admin_context(),
-                                    cidr=fixed_range,
-                                    num_networks=int(num_networks),
-                                    network_size=int(network_size),
-                                    vlan_start=int(vlan_start),
-                                    vpn_start=int(vpn_start),
-                                    cidr_v6=fixed_range_v6,
-                                    label=label)
+        try:
+            net_manager.create_networks(context.get_admin_context(),
+                                        cidr=fixed_range,
+                                        num_networks=int(num_networks),
+                                        network_size=int(network_size),
+                                        vlan_start=int(vlan_start),
+                                        vpn_start=int(vpn_start),
+                                        cidr_v6=fixed_range_v6,
+                                        label=label)
+        except ValueError, e:
+            print e
+            raise e
 
     def list(self):
         """List all created networks"""
@@ -591,7 +623,7 @@ class VmCommands(object):
             _('zone'),
             _('index'))
 
-        if host == None:
+        if host is None:
             instances = db.instance_get_all(context.get_admin_context())
         else:
             instances = db.instance_get_all_by_host(
@@ -759,6 +791,17 @@ class DbCommands(object):
         print migration.db_version()
 
 
+class VersionCommands(object):
+    """Class for exposing the codebase version."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print _("%s (%s)") %\
+                (version.version_string(), version.version_string_with_vcs())
+
+
 class VolumeCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
@@ -809,11 +852,11 @@ class VolumeCommands(object):
 class InstanceTypeCommands(object):
     """Class for managing instance types / flavors."""
 
-    def _print_instance_types(self, n, val):
+    def _print_instance_types(self, name, val):
         deleted = ('', ', inactive')[val["deleted"] == 1]
         print ("%s: Memory: %sMB, VCPUS: %s, Storage: %sGB, FlavorID: %s, "
             "Swap: %sGB, RXTX Quota: %sGB, RXTX Cap: %sMB%s") % (
-            n, val["memory_mb"], val["vcpus"], val["local_gb"],
+            name, val["memory_mb"], val["vcpus"], val["local_gb"],
             val["flavorid"], val["swap"], val["rxtx_quota"],
             val["rxtx_cap"], deleted)
 
@@ -827,11 +870,17 @@ class InstanceTypeCommands(object):
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
         except exception.InvalidInputException:
-            print "Must supply valid parameters to create instance type"
+            print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
-        except exception.DBError, e:
-            print "DB Error: %s" % e
+        except exception.ApiError, e:
+            print "\n\n"
+            print "\n%s" % e
+            print "Please ensure instance_type name and flavorid are unique."
+            print "To complete remove a instance_type, use the --purge flag:"
+            print "\n     # nova-manage instance_type delete <name> --purge\n"
+            print "Currently defined instance_type names and flavorids:"
+            self.list("--all")
             sys.exit(2)
         except:
             print "Unknown error"
@@ -864,7 +913,7 @@ class InstanceTypeCommands(object):
         """Lists all active or specific instance types / flavors
         arguments: [name]"""
         try:
-            if name == None:
+            if name is None:
                 inst_types = instance_types.get_all_types()
             elif name == "--all":
                 inst_types = instance_types.get_all_types(True)
@@ -955,7 +1004,7 @@ class ImageCommands(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(old_image_id)
             image = self.image_service.show(context, internal_id)
-        except exception.NotFound:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             image = self.image_service.show_by_name(context, old_image_id)
         return image['id']
 
@@ -1009,7 +1058,7 @@ class ImageCommands(object):
         if (FLAGS.image_service == 'nova.image.local.LocalImageService'
             and directory == os.path.abspath(FLAGS.images_path)):
             new_dir = "%s_bak" % directory
-            os.move(directory, new_dir)
+            os.rename(directory, new_dir)
             os.mkdir(directory)
             directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
@@ -1021,7 +1070,7 @@ class ImageCommands(object):
                     machine_images[image_path] = image_metadata
                 else:
                     other_images[image_path] = image_metadata
-            except Exception as exc:
+            except Exception:
                 print _("Failed to load %(fn)s.") % locals()
         # NOTE(vish): do kernels and ramdisks first so images
         self._convert_images(other_images)
@@ -1044,7 +1093,8 @@ CATEGORIES = [
     ('volume', VolumeCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands)]
+    ('flavor', InstanceTypeCommands),
+    ('version', VersionCommands)]
 
 
 def lazy_match(name, key_value_tuples):
@@ -1086,6 +1136,8 @@ def main():
 
     script_name = argv.pop(0)
     if len(argv) < 1:
+        print _("\nOpenStack Nova version: %s (%s)\n") %\
+                (version.version_string(), version.version_string_with_vcs())
         print script_name + " category action [<args>]"
         print _("Available categories:")
         for k, _v in CATEGORIES:

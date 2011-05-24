@@ -17,7 +17,6 @@
 
 import datetime
 import hashlib
-import json
 import time
 
 import webob.exc
@@ -25,11 +24,9 @@ import webob.dec
 
 from nova import auth
 from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import manager
 from nova import utils
 from nova import wsgi
 from nova.api.openstack import faults
@@ -55,6 +52,9 @@ class AuthMiddleware(wsgi.Middleware):
         user = self.get_user_by_authentication(req)
         accounts = self.auth.get_projects(user=user)
         if not user:
+            token = req.headers["X-Auth-Token"]
+            msg = _("%(user)s could not be found with token '%(token)s'")
+            LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         if accounts:
@@ -66,6 +66,8 @@ class AuthMiddleware(wsgi.Middleware):
 
         if not self.auth.is_admin(user) and \
            not self.auth.is_project_member(user, account):
+            msg = _("%(user)s must be an admin or a member of %(account)s")
+            LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         req.environ['nova.context'] = context.RequestContext(user, account)
@@ -82,24 +84,29 @@ class AuthMiddleware(wsgi.Middleware):
         # honor it
         path_info = req.path_info
         if len(path_info) > 1:
-            return faults.Fault(webob.exc.HTTPUnauthorized())
+            msg = _("Authentication requests must be made against a version "
+                    "root (e.g. /v1.0 or /v1.1).")
+            LOG.warn(msg)
+            return faults.Fault(webob.exc.HTTPUnauthorized(explanation=msg))
 
         try:
             username = req.headers['X-Auth-User']
             key = req.headers['X-Auth-Key']
-        except KeyError:
+        except KeyError as ex:
+            LOG.warn(_("Could not find %s in request.") % ex)
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
         token, user = self._authorize_user(username, key, req)
         if user and token:
             res = webob.Response()
-            res.headers['X-Auth-Token'] = token.token_hash
+            res.headers['X-Auth-Token'] = token['token_hash']
             res.headers['X-Server-Management-Url'] = \
-                token.server_management_url
-            res.headers['X-Storage-Url'] = token.storage_url
-            res.headers['X-CDN-Management-Url'] = token.cdn_management_url
+                token['server_management_url']
+            res.headers['X-Storage-Url'] = token['storage_url']
+            res.headers['X-CDN-Management-Url'] = token['cdn_management_url']
             res.content_type = 'text/plain'
             res.status = '204'
+            LOG.debug(_("Successfully authenticated '%s'") % username)
             return res
         else:
             return faults.Fault(webob.exc.HTTPUnauthorized())
@@ -120,11 +127,11 @@ class AuthMiddleware(wsgi.Middleware):
         except exception.NotFound:
             return None
         if token:
-            delta = datetime.datetime.now() - token.created_at
+            delta = datetime.datetime.utcnow() - token['created_at']
             if delta.days >= 2:
-                self.db.auth_token_destroy(ctxt, token.token_hash)
+                self.db.auth_token_destroy(ctxt, token['token_hash'])
             else:
-                return self.auth.get_user(token.user_id)
+                return self.auth.get_user(token['user_id'])
         return None
 
     def _authorize_user(self, username, key, req):
@@ -139,6 +146,7 @@ class AuthMiddleware(wsgi.Middleware):
         try:
             user = self.auth.get_user_from_access_key(key)
         except exception.NotFound:
+            LOG.warn(_("User not found with provided API key."))
             user = None
 
         if user and user.name == username:
@@ -153,4 +161,9 @@ class AuthMiddleware(wsgi.Middleware):
             token_dict['user_id'] = user.id
             token = self.db.auth_token_create(ctxt, token_dict)
             return token, user
+        elif user and user.name != username:
+            msg = _("Provided API key is valid, but not for user "
+                    "'%(username)s'") % locals()
+            LOG.warn(msg)
+
         return None, None
