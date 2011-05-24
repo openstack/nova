@@ -201,7 +201,7 @@ class QuotaTestCase(test.TestCase):
                                             min_count=1,
                                             max_count=1,
                                             instance_type=inst_type,
-                                            image_id=1)
+                                            image_ref=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -215,7 +215,7 @@ class QuotaTestCase(test.TestCase):
                                             min_count=1,
                                             max_count=1,
                                             instance_type=inst_type,
-                                            image_id=1)
+                                            image_ref=1)
         for instance_id in instance_ids:
             db.instance_destroy(self.context, instance_id)
 
@@ -271,7 +271,7 @@ class QuotaTestCase(test.TestCase):
                                             min_count=1,
                                             max_count=1,
                                             instance_type=inst_type,
-                                            image_id='fake',
+                                            image_ref='fake',
                                             metadata=metadata)
 
     def test_allowed_injected_files(self):
@@ -284,14 +284,14 @@ class QuotaTestCase(test.TestCase):
         api = compute.API(image_service=self.StubImageService())
         inst_type = instance_types.get_instance_type_by_name('m1.small')
         api.create(self.context, min_count=1, max_count=1,
-                instance_type=inst_type, image_id='3',
+                instance_type=inst_type, image_ref='3',
                 injected_files=files)
 
     def test_no_injected_files(self):
         FLAGS.image_service = 'nova.image.fake.FakeImageService'
         api = compute.API(image_service=self.StubImageService())
         inst_type = instance_types.get_instance_type_by_name('m1.small')
-        api.create(self.context, instance_type=inst_type, image_id='3')
+        api.create(self.context, instance_type=inst_type, image_ref='3')
 
     def test_max_injected_files(self):
         files = []

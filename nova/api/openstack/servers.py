@@ -172,8 +172,7 @@ class Controller(common.OpenstackController):
             (inst,) = self.compute_api.create(
                 context,
                 inst_type,
-                image_id,
-                image_ref=image_ref,
+                image_ref,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
                 display_name=name,

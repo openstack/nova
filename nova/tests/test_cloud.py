@@ -302,7 +302,7 @@ class CloudTestCase(test.TestCase):
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1
-        kwargs = {'image_id': 'ami-1',
+        kwargs = {'image_ref': 'ami-1',
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
@@ -318,7 +318,7 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
 
     def test_ajax_console(self):
-        kwargs = {'image_id': 'ami-1'}
+        kwargs = {'image_ref': 'ami-1'}
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
         greenthread.sleep(0.3)
