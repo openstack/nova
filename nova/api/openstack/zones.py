@@ -117,8 +117,9 @@ class Controller(common.OpenstackController):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        LOG.debug("INCOMING SELECT '%s'" % req.environ)
-        specs = json.loads(req.body)
+        json_specs = json.loads(req.body)
+        specs = json.loads(json_specs)
+        LOG.debug("INCOMING SELECT '%s'" % specs)
         build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}

@@ -137,7 +137,7 @@ def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
 
         def _error_trap(*args, **kwargs):
             try:
-                LOG.warn(_("*** CALLING ZONE") % locals())#asdads
+                LOG.warn(_("*** CALLING ZONE %(args)s ^^ %(kwargs)s") % locals())#asdads
                 return zone_method(*args, **kwargs)
             except Exception as e:
                 if type(e) in errors_to_ignore:
