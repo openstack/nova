@@ -55,12 +55,14 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
-        if 'blob' in request_spec:
+        blob = request_spec['blob']
+        if blob:
             self.provision_resource(context, request_spec, instance_id,
                                     request_spec, kwargs)
             return None
 
         # Create build plan and provision ...
+        LOG.debug(_("****** SCHEDULE RUN INSTANCE") % locals())
         build_plan = self.select(context, request_spec)
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
@@ -162,7 +164,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
-        anything about the children."""
+        anything about the children.""" 
+        LOG.debug(_("XXXXXXX - SELECT %(request_spec)s") % locals()) # nuke this !!!
         return self._schedule(context, "compute", request_spec,
                               *args, **kwargs)
 
@@ -173,6 +176,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         """The schedule() contract requires we return the one
         best-suited host for this request.
         """
+        LOG.debug(_("XXXXXXX - DEFAULT SCHEDULE %(request_spec)s") % locals()) # nuke this !!!
         raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):
@@ -187,16 +191,21 @@ class ZoneAwareScheduler(driver.Scheduler):
         #TODO(sandy): how to infer this from OS API params?
         num_instances = 1
 
+        LOG.debug(_("XXXXXXX - 1 -  _SCHEDULE"))
+
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
+        LOG.debug(_("XXXXXXX - 2 -  _SCHEDULE"))
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
+        LOG.debug(_("XXXXXXX - 3 -  _SCHEDULE"))
         # Next, tack on the best weights from the child zones ...
         child_results = self._call_zone_method(context, "select",
                 specs=request_spec)
+        LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE - CHILD RESULTS %(child_results)s") % locals())
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to
@@ -208,6 +217,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                         "child_blob": weighting["blob"]}
                 weighted.append(host_dict)
 
+        LOG.debug(_("XXXXXXX - 4 -  _SCHEDULE"))
         weighted.sort(key=operator.itemgetter('weight'))
         return weighted
 

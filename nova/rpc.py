@@ -194,6 +194,7 @@ class AdapterConsumer(Consumer):
         node_func = getattr(self.proxy, str(method))
         node_args = dict((str(k), v) for k, v in args.iteritems())
         # NOTE(vish): magic is fun!
+        logging.exception('CALLING %s on SCHEDULER with %s' % (node_func, node_args))
         try:
             rval = node_func(context=ctxt, **node_args)
             if msg_id:

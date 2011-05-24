@@ -257,19 +257,21 @@ class API(base.Base):
             # we'll be ripping this whole for-loop out and deferring the
             # creation of the Instance record. At that point all this will
             # change.
+            filter_driver = 'nova.scheduler.host_filter.InstanceTypeFilter'
+            request_spec = {
+                'instance_properties': base_options,
+                'instance_type': instance_type,
+                'filter_driver': filter_driver,
+                'blob': zone_blob
+            }
+            LOG.debug(_("**** REQUEST SPEC: %(request_spec)s") % locals())
+
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
-                               "request_spec": {
-                                   'instance_properties': instance,
-                                   'instance_type': instance_type,
-                                   'filter_driver':
-                                       'nova.scheduler.host_filter.'
-                                       'InstanceTypeFilter',
-                                   'blob': zone_blob
-                                },
+                               "request_spec": request_spec,
                                "availability_zone": availability_zone,
                                "injected_files": injected_files}})
 

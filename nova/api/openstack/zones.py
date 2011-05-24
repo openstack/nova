@@ -18,6 +18,7 @@ import urlparse
 
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
@@ -25,11 +26,6 @@ from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('build_plan_encryption_key',
-        None,
-        '128bit (hex) encryption key for scheduler build plans.')
-
-
 LOG = logging.getLogger('nova.api.openstack.zones')
 
 
@@ -121,15 +117,9 @@ class Controller(common.OpenstackController):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        qs = req.environ['QUERY_STRING']
-        param_dict = urlparse.parse_qs(qs)
-        param_dict.pop("fresh", None)
-        # parse_qs returns a dict where the values are lists,
-        # since query strings can have multiple values for the
-        # same key. We need to convert that to single values.
-        for key in param_dict:
-            param_dict[key] = param_dict[key][0]
-        build_plan = api.select(ctx, specs=param_dict)
+        LOG.debug("INCOMING SELECT '%s'" % req.environ)
+        specs = json.loads(req.body)
+        build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
 
