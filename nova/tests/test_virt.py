@@ -638,7 +638,6 @@ class IptablesFirewallTestCase(test.TestCase):
 
         admin_ctxt = context.get_admin_context()
         db.fixed_ip_create(admin_ctxt, fixed_ip)
-        db.mac_address_create(
         db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
                                             'instance_id': instance_ref['id']})
 
