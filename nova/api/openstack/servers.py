@@ -144,7 +144,7 @@ class Controller(common.OpenstackController):
         try:
             image_service, image_id = nova.image.get_image_service(image_ref)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-                req, image_id)
+                req, image_service, image_id)
             images = set([str(x['id']) for x in image_service.index(context)])
             assert str(image_id) in images
         except:
@@ -554,18 +554,15 @@ class Controller(common.OpenstackController):
                 error=item.error))
         return dict(actions=actions)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
+    def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
         """Fetch an image from the ImageService, then if present, return the
         associated kernel and ramdisk image IDs.
         """
         context = req.environ['nova.context']
-        image_service, _ = nova.image.get_image_service(image_id)
-        image = image_service.show(context, image_id)
+        image_meta = image_service.show(context, image_id)
         # NOTE(sirp): extracted to a separate method to aid unit-testing, the
         # new method doesn't need a request obj or an ImageService stub
-        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
-            image)
-        return kernel_id, ramdisk_id
+        return self._do_get_kernel_ramdisk_from_image(image_meta)
 
     @staticmethod
     def  _do_get_kernel_ramdisk_from_image(image_meta):
