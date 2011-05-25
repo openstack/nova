@@ -138,12 +138,13 @@ class CloudTestCase(test.TestCase):
                                                  instance_type_id=type_id,
                                                  project_id=project_id)
         # TODO(jkoelker) Make this mas bueno
+        print ips
         self.assertTrue(ips)
-        self.assertTrue('ips' in ips[0])
-        self.assertTrue(ips[0]['ips'])
-        self.assertTrue('ip' in ips[0]['ips'][0])
+        self.assertTrue('ips' in ips[0][1])
+        self.assertTrue(ips[0][1]['ips'])
+        self.assertTrue('ip' in ips[0][1]['ips'][0])
 
-        fixed = ips[0]['ips'][0]['ip']
+        fixed = ips[0][1]['ips'][0]['ip']
 
         ec2_id = ec2utils.id_to_ec2_id(inst['id'])
         self.cloud.associate_address(self.context,
