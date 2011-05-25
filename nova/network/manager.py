@@ -232,6 +232,7 @@ class FloatingIP(object):
 
     def allocate_floating_ip(self, context, project_id):
         """Gets an floating ip from the pool."""
+        LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_('Quota exceeeded for %s, tried to allocate '
                        'address'),
