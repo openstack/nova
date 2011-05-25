@@ -673,7 +673,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata, InstanceTypesMetadata, Migration)
+              InstanceMetadata, InstanceTypeMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
