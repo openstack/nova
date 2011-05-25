@@ -28,6 +28,7 @@ import shutil
 import tempfile
 import xml.dom.minidom as minidom
 
+import mox
 import stubout
 import webob
 
@@ -709,14 +710,20 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_request_filters(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE',
+                   'name': 'testname',
+                   'property-test': '3'}
+        image_service.detail(context, filters).AndReturn([])
+        mocker.ReplayAll()
         request = webob.Request.blank(
             '/v1.1/images/detail?status=ACTIVE&name=testname&property-test=3')
-        filters = images.Controller()._get_filters(request)
-        expected = {'status': 'ACTIVE',
-                    'name': 'testname',
-                    'property-test': '3',
-                    }
-        self.assertDictMatch(expected, filters)
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
 
     def test_get_image_request_filters_not_supported(self):
         request = webob.Request.blank(
