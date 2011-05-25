@@ -138,7 +138,6 @@ class CloudTestCase(test.TestCase):
                                                  instance_type_id=type_id,
                                                  project_id=project_id)
         # TODO(jkoelker) Make this mas bueno
-        print ips
         self.assertTrue(ips)
         self.assertTrue('ips' in ips[0][1])
         self.assertTrue(ips[0][1]['ips'])
