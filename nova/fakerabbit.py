@@ -78,10 +78,6 @@ class Queue(object):
 
 
 class Backend(base.BaseBackend):
-    def __init__(self, connection, **kwargs):
-        super(Backend, self).__init__(connection, **kwargs)
-        self.consumers = {}
-
     def queue_declare(self, queue, **kwargs):
         global QUEUES
         if queue not in QUEUES:

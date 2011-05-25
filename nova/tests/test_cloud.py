@@ -87,8 +87,6 @@ class CloudTestCase(test.TestCase):
         db.network_disassociate(self.context, network_ref['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
-        #self.compute.kill()
-        #self.network.kill()
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
@@ -314,7 +312,6 @@ class CloudTestCase(test.TestCase):
         rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_ajax_console(self):
-
         kwargs = {'image_id': 'ami-1'}
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']

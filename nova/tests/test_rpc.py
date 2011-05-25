@@ -124,7 +124,6 @@ class RpcTestCase(test.TestCase):
                           'test',
                           {"method": "fail",
                            "args": {"value": value}})
-        LOG.error('INNNNNNN BETTTWWWWWWWWWWEEEEEEEEEEN')
         try:
             rpc.call(self.context,
                      'test',

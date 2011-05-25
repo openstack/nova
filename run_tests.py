@@ -285,7 +285,6 @@ if __name__ == '__main__':
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much
     argv = []
-    logging.getLogger('amqplib').setLevel(logging.DEBUG)
     for x in sys.argv:
         if x.startswith('test_'):
             argv.append('nova.tests.%s' % x)

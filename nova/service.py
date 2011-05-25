@@ -88,27 +88,27 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-        conn1 = rpc.Connection.instance(new=True)
-        logging.debug("Creating Consumer connection for Service %s" % \
-                self.topic)
+        self.conn = rpc.Connection.instance(new=True)
+        logging.debug("Creating Consumer connection for Service %s" %
+                      self.topic)
 
         # Share this same connection for these Consumers
         consumer_all = rpc.TopicAdapterConsumer(
-                connection=conn1,
+                connection=self.conn,
                 topic=self.topic,
                 proxy=self)
         consumer_node = rpc.TopicAdapterConsumer(
-                connection=conn1,
+                connection=self.conn,
                 topic='%s.%s' % (self.topic, self.host),
                 proxy=self)
         fanout = rpc.FanoutAdapterConsumer(
-                connection=conn1,
+                connection=self.conn,
                 topic=self.topic,
                 proxy=self)
 
-        cset = rpc.ConsumerSet(conn1, [consumer_all,
-                    consumer_node,
-                    fanout])
+        cset = rpc.ConsumerSet(self.conn, [consumer_all,
+                                           consumer_node,
+                                           fanout])
 
         # Wait forever, processing these consumers
         def _wait():
@@ -118,10 +118,6 @@ class Service(object):
                 cset.close()
 
         self.csetthread = greenthread.spawn(_wait)
-
-        #self.timers.append(consumer_all.attach_to_eventlet())
-        #self.timers.append(consumer_node.attach_to_eventlet())
-        #self.timers.append(fanout.attach_to_eventlet())
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
@@ -185,6 +181,7 @@ class Service(object):
         except greenlet.GreenletExit:
             pass
         self.stop()
+        rpc.ConnectionPool.put(self.conn)
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
