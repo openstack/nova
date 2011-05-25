@@ -53,6 +53,9 @@ class Controller(common.OpenstackController):
         self._compute_service = compute_service or compute.API()
         self._image_service = image_service or _default_service
 
+    def _limit_items(self, items, req):
+        return common.limited(items, req)
+
     def index(self, req):
         """Return an index listing of images available to the request.
 
@@ -60,7 +63,7 @@ class Controller(common.OpenstackController):
         """
         context = req.environ['nova.context']
         images = self._image_service.index(context)
-        images = common.limited(images, req)
+        images = self._limit_items(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
 
@@ -71,7 +74,7 @@ class Controller(common.OpenstackController):
         """
         context = req.environ['nova.context']
         images = self._image_service.detail(context)
-        images = common.limited(images, req)
+        images = self._limited_items(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
@@ -154,24 +157,5 @@ class ControllerV11(Controller):
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
 
-    def index(self, req):
-        """Return an index listing of images available to the request.
-
-        :param req: `wsgi.Request` object
-        """
-        context = req.environ['nova.context']
-        images = self._image_service.index(context)
-        images = common.limited_by_marker(images, req)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=False) for image in images])
-
-    def detail(self, req):
-        """Return a detailed index listing of images available to the request.
-
-        :param req: `wsgi.Request` object.
-        """
-        context = req.environ['nova.context']
-        images = self._image_service.detail(context)
-        images = common.limited_by_marker(images, req)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=True) for image in images])
+    def _limit_items(self, items, req):
+        return common.limited_by_marker(items, req)
