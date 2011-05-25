@@ -102,6 +102,7 @@ class Pool(pools.Pool):
 
     # TODO(comstud): Timeout connections not used in a while
     def create(self):
+        LOG.debug('Creating new connection')
         return Connection.instance(new=True)
 
 # Create a ConnectionPool to use for RPC calls.  We'll order the
@@ -165,6 +166,10 @@ class Consumer(messaging.Consumer):
     #        if not self.failed_connection:
     #            LOG.exception(_('Failed to fetch message from queue: %s' % e))
     #            self.failed_connection = True
+
+    def close(self, *args, **kwargs):
+        LOG.debug('Closing consumer %s', self.consumer_tag)
+        return super(Consumer, self).close(*args, **kwargs)
 
     def attach_to_eventlet(self):
         """Only needed for unit tests!"""
@@ -317,6 +322,8 @@ class ConsumerSet(object):
                     # Break to outer loop
                     break
 
+    def close(self):
+        self.consumer_set.close()
 
 class Publisher(messaging.Publisher):
     """Publisher base class."""
@@ -525,12 +532,19 @@ class MulticallWaiter(object):
         while True:
             rv = None
             while rv is None and not self._closed:
-                rv = self._consumer.fetch(enable_callbacks=True)
+                try:
+                    rv = self._consumer.fetch(enable_callbacks=True)
+                except Exception:
+                    self.close()
+                    raise
+                #rv = self._consumer.fetch(enable_callbacks=True)
                 time.sleep(0.01)
 
             LOG.error('RV %s', rv)
             result = self._results.get()
+            LOG.error('RESULT %s', result)
             if isinstance(result, Exception):
+                self.close()
                 raise result
             if result == None:
                 self.close()

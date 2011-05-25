@@ -87,8 +87,8 @@ class CloudTestCase(test.TestCase):
         db.network_disassociate(self.context, network_ref['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
-        self.compute.kill()
-        self.network.kill()
+        #self.compute.kill()
+        #self.network.kill()
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):

@@ -85,6 +85,7 @@ class TestCase(unittest.TestCase):
         self._monkey_patch_attach()
         self._monkey_patch_wsgi()
         self._original_flags = FLAGS.FlagValuesDict()
+        rpc.ConnectionPool = rpc.Pool(max_size=30)
 
     def tearDown(self):
         """Runs after each test method to tear down test environment."""

@@ -88,29 +88,39 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-        conn = rpc.Connection.instance(new=True)
+        conn1 = rpc.Connection.instance(new=True)
+        conn2 = rpc.Connection.instance(new=True)
+        conn3 = rpc.Connection.instance(new=True)
         logging.debug("Creating Consumer connection for Service %s" % \
                 self.topic)
 
         # Share this same connection for these Consumers
         consumer_all = rpc.TopicAdapterConsumer(
-                connection=conn,
+                connection=conn1,
                 topic=self.topic,
                 proxy=self)
         consumer_node = rpc.TopicAdapterConsumer(
-                connection=conn,
+                connection=conn1,
                 topic='%s.%s' % (self.topic, self.host),
                 proxy=self)
         fanout = rpc.FanoutAdapterConsumer(
-                connection=conn,
+                connection=conn1,
                 topic=self.topic,
                 proxy=self)
 
-        cset = rpc.ConsumerSet(conn, [consumer_all,
+        cset = rpc.ConsumerSet(conn1, [consumer_all,
                     consumer_node,
                     fanout])
         # Wait forever, processing these consumers
-        self.csetthread = greenthread.spawn(cset.wait)
+        def _wait():
+            cset.wait()
+            cset.close()
+
+        self.csetthread = greenthread.spawn(_wait)
+
+        #self.timers.append(consumer_all.attach_to_eventlet())
+        #self.timers.append(consumer_node.attach_to_eventlet())
+        #self.timers.append(fanout.attach_to_eventlet())
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
