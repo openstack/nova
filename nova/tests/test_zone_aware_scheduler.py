@@ -118,4 +118,5 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         fake_context = {}
         self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
                           fake_context, 1,
-                          dict(host_filter=None, instance_type={}))
+                          dict(host_filter=None,
+                               request_spec={'instance_type': {}}))

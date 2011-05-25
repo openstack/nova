@@ -57,7 +57,7 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
-        blob = request_spec['blob']
+        blob = request_spec.get('blob')
         if blob:
             self.provision_resource(context, request_spec, instance_id,
                                     request_spec, kwargs)
