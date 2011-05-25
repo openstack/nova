@@ -56,9 +56,10 @@ class RpcTestCase(test.TestCase):
                               'test',
                               {"method": "echo_three_times",
                                "args": {"value": value}})
-
+        i = 0
         for x in result:
-            self.assertEqual(value, x)
+            self.assertEqual(value + i, x)
+            i += 1
 
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call"""
@@ -140,8 +141,8 @@ class TestReceiver(object):
     @staticmethod
     def echo_three_times(context, value):
         context.reply(value)
-        context.reply(value)
-        context.reply(value)
+        context.reply(value + 1)
+        context.reply(value + 2)
 
     @staticmethod
     def fail(context, value):
