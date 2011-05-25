@@ -204,7 +204,7 @@ class VMOps(object):
                     self.inject_file(instance, path, contents)
 
         def _set_admin_password():
-            admin_password = instance.admin_password
+            admin_password = instance.admin_pass
             if admin_password:
                 LOG.debug(_("Setting admin password"))
                 self.set_admin_password(instance, admin_password)

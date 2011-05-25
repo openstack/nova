@@ -221,7 +221,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_ref.injected_files = kwargs.get('injected_files', [])
-        instance_ref.admin_password = kwargs.get('admin_password', None)
+        instance_ref.admin_pass = kwargs.get('admin_password', None)
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
