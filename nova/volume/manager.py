@@ -90,7 +90,7 @@ class VolumeManager(manager.SchedulerDependentManager):
             else:
                 LOG.info(_("volume %s: skipping export"), volume['name'])
 
-    def create_volume(self, context, volume_id, snapshot_id):
+    def create_volume(self, context, volume_id, snapshot_id=None):
         """Creates and exports the volume."""
         context = context.elevated()
         volume_ref = self.db.volume_get(context, volume_id)
