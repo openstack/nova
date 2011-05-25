@@ -100,7 +100,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         self.absolute_limits = {
             'instances': 5,
             'cores': 8,
-            'ram': 2**13,
+            'ram': 2 ** 13,
             'volumes': 21,
             'gigabytes': 34,
             'metadata_items': 55,
@@ -150,7 +150,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
                 "absolute": {
                     "maxTotalInstances": 5,
                     "maxTotalCores": 8,
-                    "maxTotalRAMSize": 2**13,
+                    "maxTotalRAMSize": 2 ** 13,
                     "maxServerMeta": 55,
                     "maxImageMeta": 55,
                     "maxPersonality": 89,
