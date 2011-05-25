@@ -266,7 +266,8 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_obj.id)
+            raise exception.NotFound(_("No opaque_ref could be determined "
+                    "for '%s'.") % instance_or_vm)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -1184,13 +1185,13 @@ class SimpleDH(object):
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
-        proc.stdin.write(text)
+        proc.stdin.write(text + '\n')
         proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return proc.stdout.read().strip('\n')
 
     def encrypt(self, text):
         return self._run_ssl(text, 'enc')
