@@ -175,11 +175,6 @@ class Service(object):
 
     def kill(self):
         """Destroy the service object in the datastore."""
-        self.csetthread.kill()
-        try:
-            self.csetthread.wait()
-        except greenlet.GreenletExit:
-            pass
         self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
@@ -187,6 +182,11 @@ class Service(object):
             logging.warn(_('Service killed that has no database entry'))
 
     def stop(self):
+        self.csetthread.kill()
+        try:
+            self.csetthread.wait()
+        except greenlet.GreenletExit:
+            pass
         for x in self.timers:
             try:
                 x.stop()
