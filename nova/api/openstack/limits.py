@@ -30,6 +30,7 @@ from collections import defaultdict
 
 from webob.dec import wsgify
 
+from nova import quota
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
@@ -64,7 +65,8 @@ class LimitsController(common.OpenstackController):
         """
         Return all global and rate limit information.
         """
-        abs_limits = {}
+        context = req.environ['nova.context']
+        abs_limits = quota.get_project_quotas(context, context.project_id)
         rate_limits = req.environ.get("nova.limits", [])
 
         builder = self._get_view_builder(req)

@@ -45,6 +45,34 @@ class ViewBuilder(object):
 
         return output
 
+    def _build_absolute_limits(self, absolute_limits):
+        """Builder for absolute limits
+
+        absolute_limits should be given as a dict of limits.
+        For example: {"ram": 512, "gigabytes": 1024}.
+
+        """
+        limit_names = {
+            "ram": ["maxTotalRAMSize"],
+            "instances": ["maxTotalInstances"],
+            "cores": ["maxTotalCores"],
+            "metadata_items": ["maxServerMeta", "maxImageMeta"],
+            "injected_files": ["maxPersonality"],
+            "injected_file_content_bytes": ["maxPersonalitySize"],
+        }
+        limits = {}
+        for name, value in absolute_limits.iteritems():
+            if name in limit_names and value is not None:
+                for name in limit_names[name]:
+                    limits[name] = value
+        return limits
+
+    def _build_rate_limits(self, rate_limits):
+        raise NotImplementedError()
+
+    def _build_rate_limit(self, rate_limit):
+        raise NotImplementedError()
+
 
 class ViewBuilderV10(ViewBuilder):
     """Openstack API v1.0 limits view builder."""
@@ -62,9 +90,6 @@ class ViewBuilderV10(ViewBuilder):
             "unit": rate_limit["unit"],
             "resetTime": rate_limit["resetTime"],
         }
-
-    def _build_absolute_limits(self, absolute_limit):
-        return {}
 
 
 class ViewBuilderV11(ViewBuilder):
@@ -104,6 +129,3 @@ class ViewBuilderV11(ViewBuilder):
             "unit": rate_limit["unit"],
             "next-available": rate_limit["resetTime"],
         }
-
-    def _build_absolute_limits(self, absolute_limit):
-        return {}

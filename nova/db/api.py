@@ -403,7 +403,7 @@ def instance_create(context, values):
 
 
 def instance_data_get_for_project(context, project_id):
-    """Get (instance_count, core_count) for project."""
+    """Get (instance_count, total_cores, total_ram) for project."""
     return IMPL.instance_data_get_for_project(context, project_id)
 
 

@@ -95,14 +95,15 @@ class API(base.Base):
         """
         if injected_files is None:
             return
-        limit = quota.allowed_injected_files(context)
+        limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
         path_limit = quota.allowed_injected_file_path_bytes(context)
-        content_limit = quota.allowed_injected_file_content_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            content_limit = quota.allowed_injected_file_content_bytes(
+                                                    context, len(content))
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
@@ -150,9 +151,13 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
-            raise quota.QuotaError(_("Instance quota exceeded. You can only "
-                                     "run %s more instances of this type.") %
-                                   num_instances, "InstanceLimitExceeded")
+            if num_instances <= 0:
+                message = _("Instance quota exceeded. You cannot run any "
+                            "more instances of this type.")
+            else:
+                message = _("Instance quota exceeded. You can only run %s "
+                            "more instances of this type.") % num_instances
+            raise quota.QuotaError(message, "InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
