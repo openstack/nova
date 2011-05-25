@@ -31,17 +31,15 @@ import uuid
 import unittest
 
 import mox
-import shutil
 import stubout
 from eventlet import greenthread
 
-from nova import context
-from nova import db
 from nova import fakerabbit
 from nova import flags
 from nova import rpc
 from nova import service
 from nova import wsgi
+from nova.virt import fake
 
 
 FLAGS = flags.FLAGS
@@ -99,6 +97,10 @@ class TestCase(unittest.TestCase):
             # Clean out fake_rabbit's queue if we used it
             if FLAGS.fake_rabbit:
                 fakerabbit.reset_all()
+
+            if FLAGS.connection_type == 'fake':
+                if hasattr(fake.FakeConnection, '_instance'):
+                    del fake.FakeConnection._instance
 
             # Reset any overriden flags
             self.reset_flags()

@@ -31,6 +31,7 @@ LOG = logging.getLogger("nova.fakerabbit")
 
 EXCHANGES = {}
 QUEUES = {}
+CONSUMERS = {}
 
 
 class Message(base.BaseMessage):
@@ -101,17 +102,20 @@ class Backend(base.BaseBackend):
         EXCHANGES[exchange].bind(QUEUES[queue].push, routing_key)
 
     def declare_consumer(self, queue, callback, consumer_tag, *args, **kwargs):
+        global CONSUMERS
         LOG.debug("Adding consumer %s", consumer_tag)
-        self.consumers[consumer_tag] = (queue, callback)
+        CONSUMERS[consumer_tag] = (queue, callback)
 
     def cancel(self, consumer_tag):
+        global CONSUMERS
         LOG.debug("Removing consumer %s", consumer_tag)
-        del self.consumers[consumer_tag]
+        del CONSUMERS[consumer_tag]
 
     def consume(self, limit=None):
+        global CONSUMERS
         num = 0
         while True:
-            for (queue, callback) in self.consumers.itervalues():
+            for (queue, callback) in CONSUMERS.itervalues():
                 item = self.get(queue)
                 if item:
                     callback(item)
@@ -147,5 +151,7 @@ class Backend(base.BaseBackend):
 def reset_all():
     global EXCHANGES
     global QUEUES
+    global CONSUMERS
     EXCHANGES = {}
     QUEUES = {}
+    CONSUMERS = {}

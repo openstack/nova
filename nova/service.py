@@ -89,8 +89,6 @@ class Service(object):
             self.manager.update_available_resource(ctxt)
 
         conn1 = rpc.Connection.instance(new=True)
-        conn2 = rpc.Connection.instance(new=True)
-        conn3 = rpc.Connection.instance(new=True)
         logging.debug("Creating Consumer connection for Service %s" % \
                 self.topic)
 
@@ -111,10 +109,13 @@ class Service(object):
         cset = rpc.ConsumerSet(conn1, [consumer_all,
                     consumer_node,
                     fanout])
+
         # Wait forever, processing these consumers
         def _wait():
-            cset.wait()
-            cset.close()
+            try:
+                cset.wait()
+            finally:
+                cset.close()
 
         self.csetthread = greenthread.spawn(_wait)
 
