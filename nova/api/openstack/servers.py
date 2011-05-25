@@ -180,7 +180,8 @@ class Controller(common.OpenstackController):
                 key_name=key_name,
                 key_data=key_data,
                 metadata=env['server'].get('metadata', {}),
-                injected_files=injected_files)
+                injected_files=injected_files,
+                admin_password=password)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
@@ -190,8 +191,6 @@ class Controller(common.OpenstackController):
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = password
-        self.compute_api.set_admin_password(context, server['server']['id'],
-                                            password)
         return server
 
     def _deserialize_create(self, request):
