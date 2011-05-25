@@ -6,6 +6,7 @@ function usage {
   echo ""
   echo "  -V, --virtual-env        Always use virtualenv.  Install automatically if not present"
   echo "  -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment"
+  echo "  -x, --stop               Stop running tests after the first error or failure."
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run pep8"
   echo "  -h, --help               Print this usage message"
@@ -58,7 +59,13 @@ function run_tests {
 
 function run_pep8 {
   echo "Running pep8 ..."
+  # Opt-out files from pep8
+  ignore_scripts="*.sh:*nova-debug:*clean-vlans"
+  ignore_files="*eventlet-patch:*pip-requires"
+  ignore_dirs="*ajaxterm*"
+  GLOBIGNORE="$ignore_scripts:$ignore_files:$ignore_dirs"
   srcfiles=`find bin -type f ! -name "nova.conf*"`
+  srcfiles+=" `find tools/*`"
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
   pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles}
 }

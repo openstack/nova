@@ -27,6 +27,8 @@ import datetime
 import IPy
 import os
 import urllib
+import tempfile
+import shutil
 
 from nova import compute
 from nova import context
@@ -35,6 +37,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import utils
@@ -49,8 +52,6 @@ flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
 
-InvalidInputException = exception.InvalidInputException
-
 
 def _gen_key(context, user_id, key_name):
     """Generate a key
@@ -61,8 +62,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate(_("The key_pair %s already exists")
-                                  % key_name)
+        raise exception.KeyPairExists(key_name=key_name)
     except exception.NotFound:
         pass
     private_key, public_key, fingerprint = crypto.generate_key_pair()
@@ -318,6 +318,27 @@ class CloudController(object):
                 'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
 
+    def import_public_key(self, context, key_name, public_key,
+                         fingerprint=None):
+        LOG.audit(_("Import key %s"), key_name, context=context)
+        key = {}
+        key['user_id'] = context.user_id
+        key['name'] = key_name
+        key['public_key'] = public_key
+        if fingerprint is None:
+            tmpdir = tempfile.mkdtemp()
+            pubfile = os.path.join(tmpdir, 'temp.pub')
+            fh = open(pubfile, 'w')
+            fh.write(public_key)
+            fh.close()
+            (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
+                                       '%s' % (pubfile))
+            fingerprint = out.split(' ')[1]
+            shutil.rmtree(tmpdir)
+        key['fingerprint'] = fingerprint
+        db.key_pair_create(context, key)
+        return True
+
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:
@@ -399,11 +420,11 @@ class CloudController(object):
             ip_protocol = str(ip_protocol)
 
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
-                raise InvalidInputException(_('%s is not a valid ipProtocol') %
-                                            (ip_protocol,))
+                raise exception.InvalidIpProtocol(protocol=ip_protocol)
             if ((min(from_port, to_port) < -1) or
                 (max(from_port, to_port) > 65535)):
-                raise InvalidInputException(_('Invalid port range'))
+                raise exception.InvalidPortRange(from_port=from_port,
+                                                 to_port=to_port)
 
             values['protocol'] = ip_protocol
             values['from_port'] = from_port
@@ -721,9 +742,10 @@ class CloudController(object):
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
-                    i['dnsNameV6'] = utils.to_global_ipv6(
+                    i['dnsNameV6'] = ipv6.to_global(
                         instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'])
+                        instance['mac_address'],
+                        instance['project_id'])
 
             i['privateDnsName'] = fixed_addr
             i['privateIpAddress'] = fixed_addr
@@ -909,11 +931,11 @@ class CloudController(object):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
-        except exception.NotFound:
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
             try:
                 return self.image_service.show_by_name(context, ec2_id)
             except exception.NotFound:
-                raise exception.NotFound(_('Image %s not found') % ec2_id)
+                raise exception.ImageNotFound(image_id=ec2_id)
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
@@ -957,8 +979,7 @@ class CloudController(object):
                 try:
                     image = self._get_image(context, ec2_id)
                 except exception.NotFound:
-                    raise exception.NotFound(_('Image %s not found') %
-                                             ec2_id)
+                    raise exception.ImageNotFound(image_id=ec2_id)
                 images.append(image)
         else:
             images = self.image_service.detail(context)
@@ -992,7 +1013,7 @@ class CloudController(object):
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
-            raise exception.NotFound(_('Image %s not found') % image_id)
+            raise exception.ImageNotFound(image_id=image_id)
         result = {'imageId': image_id, 'launchPermission': []}
         if image['is_public']:
             result['launchPermission'].append({'group': 'all'})
@@ -1015,7 +1036,7 @@ class CloudController(object):
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
-            raise exception.NotFound(_('Image %s not found') % image_id)
+            raise exception.ImageNotFound(image_id=image_id)
         internal_id = image['id']
         del(image['id'])
 

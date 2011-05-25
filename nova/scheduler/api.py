@@ -76,11 +76,15 @@ def zone_update(context, zone_id, data):
     return db.zone_update(context, zone_id, data)
 
 
-def get_zone_capabilities(context, service=None):
-    """Returns a dict of key, value capabilities for this zone,
-       or for a particular class of services running in this zone."""
-    return _call_scheduler('get_zone_capabilities', context=context,
-                          params=dict(service=service))
+def get_zone_capabilities(context):
+    """Returns a dict of key, value capabilities for this zone."""
+    return _call_scheduler('get_zone_capabilities', context=context)
+
+
+def select(context, specs=None):
+    """Returns a list of hosts."""
+    return _call_scheduler('select', context=context,
+            params={"specs": specs})
 
 
 def update_service_capabilities(context, service_name, host, capabilities):
@@ -105,6 +109,45 @@ def _process(func, zone):
     nova = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
     nova.authenticate()
     return func(nova, zone)
+
+
+def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
+    """Returns a list of (zone, call_result) objects."""
+    if not isinstance(errors_to_ignore, (list, tuple)):
+        # This will also handle the default None
+        errors_to_ignore = [errors_to_ignore]
+
+    pool = greenpool.GreenPool()
+    results = []
+    for zone in db.zone_get_all(context):
+        try:
+            nova = novaclient.OpenStack(zone.username, zone.password,
+                    zone.api_url)
+            nova.authenticate()
+        except novaclient.exceptions.BadRequest, e:
+            url = zone.api_url
+            LOG.warn(_("Failed request to zone; URL=%(url)s: %(e)s")
+                    % locals())
+            #TODO (dabo) - add logic for failure counts per zone,
+            # with escalation after a given number of failures.
+            continue
+        zone_method = getattr(nova.zones, method)
+
+        def _error_trap(*args, **kwargs):
+            try:
+                return zone_method(*args, **kwargs)
+            except Exception as e:
+                if type(e) in errors_to_ignore:
+                    return None
+                # TODO (dabo) - want to be able to re-raise here.
+                # Returning a string now; raising was causing issues.
+                # raise e
+                return "ERROR", "%s" % e
+
+        res = pool.spawn(_error_trap, *args, **kwargs)
+        results.append((zone, res))
+    pool.waitall()
+    return [(zone.id, res.wait()) for zone, res in results]
 
 
 def child_zone_helper(zone_list, func):

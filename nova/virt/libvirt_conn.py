@@ -57,6 +57,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import utils
 from nova import vnc
@@ -184,8 +185,9 @@ def _get_network_info(instance):
         def ip6_dict():
             prefix = network['cidr_v6']
             mac = instance['mac_address']
+            project_id = instance['project_id']
             return  {
-                'ip': utils.to_global_ipv6(prefix, mac),
+                'ip': ipv6.to_global(prefix, mac, project_id),
                 'netmask': network['netmask_v6'],
                 'enabled': '1'}
 
@@ -404,7 +406,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                    name,
                                    mount_device)
         else:
-            raise exception.Invalid(_("Invalid device path %s") % device_path)
+            raise exception.InvalidDevicePath(path=device_path)
 
         virt_dom.attachDevice(xml)
 
@@ -434,7 +436,7 @@ class LibvirtConnection(driver.ComputeDriver):
         mount_device = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
         if not xml:
-            raise exception.NotFound(_("No disk at %s") % mount_device)
+            raise exception.DiskNotFound(location=mount_device)
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
@@ -513,8 +515,15 @@ class LibvirtConnection(driver.ComputeDriver):
         reboot happens, as the guest OS cannot ignore this action.
 
         """
+        virt_dom = self._conn.lookupByName(instance['name'])
+        # NOTE(itoumsn): Use XML delived from the running instance
+        # instead of using to_xml(instance). This is almost the ultimate
+        # stupid workaround.
+        xml = virt_dom.XMLDesc(0)
+        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
+        # better because we cannot ensure flushing dirty buffers
+        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, False)
-        xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
@@ -614,7 +623,7 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = self.to_xml(instance, False, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info)
+        self._create_image(instance, xml, network_info=network_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -727,6 +736,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
+
+    def get_host_ip_addr(self):
+        return FLAGS.my_ip
 
     @exception.wrap_exception
     def get_vnc_console(self, instance):
@@ -953,26 +965,16 @@ class LibvirtConnection(driver.ComputeDriver):
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
+            template = "<parameter name=\"%s\"value=\"%s\" />\n"
+            net, mask = _get_net_and_mask(network['cidr'])
+            values = [("PROJNET", net), ("PROJMASK", mask)]
             if FLAGS.use_ipv6:
-                net, mask = _get_net_and_mask(network['cidr'])
                 net_v6, prefixlen_v6 = _get_net_and_prefixlen(
                                            network['cidr_v6'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJNETV6\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask, net_v6, prefixlen_v6)
-            else:
-                net, mask = _get_net_and_mask(network['cidr'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask)
+                values.extend([("PROJNETV6", net_v6),
+                               ("PROJMASKV6", prefixlen_v6)])
+
+            extra_params = "".join([template % value for value in values])
         else:
             extra_params = "\n"
 
@@ -990,10 +992,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    def to_xml(self, instance, rescue=False, network_info=None):
-        # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-
+    def _prepare_xml_info(self, instance, rescue=False, network_info=None):
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
@@ -1001,8 +1000,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(network,
-                                              mapping))
+            nics.append(self._get_nic_for_xml(network, mapping))
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
@@ -1034,10 +1032,14 @@ class LibvirtConnection(driver.ComputeDriver):
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
             xml_info['disk'] = xml_info['basepath'] + "/disk"
+        return xml_info
 
+    def to_xml(self, instance, rescue=False, network_info=None):
+        # TODO(termie): cache?
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+        xml_info = self._prepare_xml_info(instance, rescue, network_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        LOG.debug(_('instance %s: finished toXML method'),
-                        instance['name'])
+        LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml
 
     def _lookup_by_name(self, instance_name):
@@ -1052,8 +1054,7 @@ class LibvirtConnection(driver.ComputeDriver):
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                msg = _("Instance %s not found") % instance_name
-                raise exception.NotFound(msg)
+                raise exception.InstanceNotFound(instance_id=instance_name)
 
             msg = _("Error from libvirt while looking up %(instance_name)s: "
                     "[Error Code %(error_code)s] %(ex)s") % locals()
@@ -1312,9 +1313,9 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
-            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
-                                      "but %d\n") % len(nodes)
-                                      + xml.serialize())
+            reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
+            reason += xml.serialize()
+            raise exception.InvalidCPUInfo(reason=reason)
 
         cpu_info = dict()
 
@@ -1343,9 +1344,8 @@ class LibvirtConnection(driver.ComputeDriver):
             tkeys = topology.keys()
             if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
-                raise exception.Invalid(_("Invalid xml: topology"
-                                          "(%(topology)s) must have "
-                                          "%(ks)s") % locals())
+                reason = _("topology (%(topology)s) must have %(ks)s")
+                raise exception.InvalidCPUInfo(reason=reason % locals())
 
         feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
@@ -1400,9 +1400,7 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            raise exception.Invalid(_("Cannot update compute manager "
-                                      "specific info, because no service "
-                                      "record was found."))
+            raise exception.ComputeServiceUnavailable(host=host)
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -1455,7 +1453,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise
 
         if ret <= 0:
-            raise exception.Invalid(m % locals())
+            raise exception.InvalidCPUInfo(reason=m % locals())
 
         return
 
@@ -1586,6 +1584,14 @@ class LibvirtConnection(driver.ComputeDriver):
         """See comments of same method in firewall_driver."""
         self.firewall_driver.unfilter_instance(instance_ref)
 
+    def update_host_status(self):
+        """See xenapi_conn.py implementation."""
+        pass
+
+    def get_host_stats(self, refresh=False):
+        """See xenapi_conn.py implementation."""
+        pass
+
 
 class FirewallDriver(object):
     def prepare_instance_filter(self, instance, network_info=None):
@@ -1608,7 +1614,9 @@ class FirewallDriver(object):
         """
         raise NotImplementedError()
 
-    def refresh_security_group_rules(self, security_group_id):
+    def refresh_security_group_rules(self,
+                                     security_group_id,
+                                     network_info=None):
         """Refresh security group rules from data store
 
         Gets called when a rule has been added to or removed from
@@ -1842,10 +1850,6 @@ class NWFilterFirewall(FirewallDriver):
         """
         if not network_info:
             network_info = _get_network_info(instance)
-        if instance['image_id'] == str(FLAGS.vpn_image_id):
-            base_filter = 'nova-vpn'
-        else:
-            base_filter = 'nova-base'
 
         ctxt = context.get_admin_context()
 
@@ -1857,43 +1861,63 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
 
+        if FLAGS.use_ipv6:
+            networks = [network for (network, _m) in network_info if
+                        network['gateway_v6']]
+
+            if networks:
+                instance_secgroup_filter_children.\
+                    append('nova-allow-ra-server')
+
         for security_group in \
                 db.security_group_get_by_instance(ctxt, instance['id']):
 
             self.refresh_security_group_rules(security_group['id'])
 
-            instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                    security_group['id'])]
+            instance_secgroup_filter_children.append('nova-secgroup-%s' %
+                                                    security_group['id'])
 
             self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
 
-        for (network, mapping) in network_info:
+        network_filters = self.\
+            _create_network_filters(instance, network_info,
+                                    instance_secgroup_filter_name)
+
+        for (name, children) in network_filters:
+            self._define_filters(name, children)
+
+    def _create_network_filters(self, instance, network_info,
+                               instance_secgroup_filter_name):
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
+            base_filter = 'nova-vpn'
+        else:
+            base_filter = 'nova-base'
+
+        result = []
+        for (_n, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
-            instance_filter_children = \
-                [base_filter, instance_secgroup_filter_name]
-
-            if FLAGS.use_ipv6:
-                gateway_v6 = network['gateway_v6']
-
-                if gateway_v6:
-                    instance_secgroup_filter_children += \
-                        ['nova-allow-ra-server']
+            instance_filter_children = [base_filter,
+                                        instance_secgroup_filter_name]
 
             if FLAGS.allow_project_net_traffic:
-                instance_filter_children += ['nova-project']
+                instance_filter_children.append('nova-project')
                 if FLAGS.use_ipv6:
-                    instance_filter_children += ['nova-project-v6']
+                    instance_filter_children.append('nova-project-v6')
 
-            self._define_filter(
-                    self._filter_container(instance_filter_name,
-                                           instance_filter_children))
+            result.append((instance_filter_name, instance_filter_children))
 
-        return
+        return result
 
-    def refresh_security_group_rules(self, security_group_id):
+    def _define_filters(self, filter_name, filter_children):
+        self._define_filter(self._filter_container(filter_name,
+                                                   filter_children))
+
+    def refresh_security_group_rules(self,
+                                     security_group_id,
+                                     network_info=None):
         return self._define_filter(
                    self.security_group_to_nwfilter_xml(security_group_id))
 
@@ -1993,40 +2017,40 @@ class IptablesFirewallDriver(FirewallDriver):
         self.add_filters_for_instance(instance, network_info)
         self.iptables.apply()
 
-    def add_filters_for_instance(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        chain_name = self._instance_chain_name(instance)
+    def _create_filter(self, ips, chain_name):
+        return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
-        self.iptables.ipv4['filter'].add_chain(chain_name)
+    def _filters_for_instance(self, chain_name, network_info):
+        ips_v4 = [ip['ip'] for (_n, mapping) in network_info
+                 for ip in mapping['ips']]
+        ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        ips_v4 = [ip['ip'] for (_, mapping) in network_info
-                            for ip in mapping['ips']]
-
-        for ipv4_address in ips_v4:
-            self.iptables.ipv4['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv4_address, chain_name))
-
+        ipv6_rules = []
         if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for (_, mapping) in network_info
-                                 for ip in mapping['ip6s']]
+            ips_v6 = [ip['ip'] for (_n, mapping) in network_info
+                     for ip in mapping['ip6s']]
+            ipv6_rules = self._create_filter(ips_v6, chain_name)
 
-            for ipv6_address in ips_v6:
-                self.iptables.ipv6['filter'].add_rule('local',
-                                                      '-d %s -j $%s' %
-                                                      (ipv6_address,
-                                                       chain_name))
+        return ipv4_rules, ipv6_rules
 
-        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-
+    def _add_filters(self, chain_name, ipv4_rules, ipv6_rules):
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def add_filters_for_instance(self, instance, network_info=None):
+        chain_name = self._instance_chain_name(instance)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_rules, ipv6_rules = self._filters_for_instance(chain_name,
+                                                            network_info)
+        self._add_filters('local', ipv4_rules, ipv6_rules)
+        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
+        self._add_filters(chain_name, ipv4_rules, ipv6_rules)
 
     def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)
@@ -2151,15 +2175,19 @@ class IptablesFirewallDriver(FirewallDriver):
     def refresh_security_group_members(self, security_group):
         pass
 
-    def refresh_security_group_rules(self, security_group):
-        self.do_refresh_security_group_rules(security_group)
+    def refresh_security_group_rules(self, security_group, network_info=None):
+        self.do_refresh_security_group_rules(security_group, network_info)
         self.iptables.apply()
 
     @utils.synchronized('iptables', external=True)
-    def do_refresh_security_group_rules(self, security_group):
+    def do_refresh_security_group_rules(self,
+                                        security_group,
+                                        network_info=None):
         for instance in self.instances.values():
             self.remove_filters_for_instance(instance)
-            self.add_filters_for_instance(instance)
+            if not network_info:
+                network_info = _get_network_info(instance)
+            self.add_filters_for_instance(instance, network_info)
 
     def _security_group_chain_name(self, security_group_id):
         return 'nova-sg-%s' % (security_group_id,)

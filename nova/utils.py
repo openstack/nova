@@ -60,7 +60,7 @@ def import_class(import_str):
         return getattr(sys.modules[mod_str], class_str)
     except (ImportError, ValueError, AttributeError), exc:
         LOG.debug(_('Inner Exception: %s'), exc)
-        raise exception.NotFound(_('Class %s cannot be found') % class_str)
+        raise exception.ClassNotFound(class_name=class_str)
 
 
 def import_object(import_str):
@@ -232,9 +232,12 @@ def default_flagfile(filename='nova.conf'):
             # turn relative filename into an absolute path
             script_dir = os.path.dirname(inspect.stack()[-1][1])
             filename = os.path.abspath(os.path.join(script_dir, filename))
-        if os.path.exists(filename):
-            flagfile = ['--flagfile=%s' % filename]
-            sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
+        if not os.path.exists(filename):
+            filename = "./nova.conf"
+            if not os.path.exists(filename):
+                filename = '/etc/nova/nova.conf'
+        flagfile = ['--flagfile=%s' % filename]
+        sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
 
 
 def debug(arg):
@@ -301,26 +304,6 @@ def  get_my_linklocal(interface):
     except Exception as ex:
         raise exception.Error(_("Couldn't get Link Local IP of %(interface)s"
                                 " :%(ex)s") % locals())
-
-
-def to_global_ipv6(prefix, mac):
-    try:
-        mac64 = netaddr.EUI(mac).eui64().words
-        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-        mac64_addr = netaddr.IPAddress(int_addr)
-        maskIP = netaddr.IPNetwork(prefix).ip
-        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') | maskIP).\
-                                                                    format()
-    except TypeError:
-        raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
-
-
-def to_mac(ipv6_address):
-    address = netaddr.IPAddress(ipv6_address)
-    mask1 = netaddr.IPAddress('::ffff:ffff:ffff:ffff')
-    mask2 = netaddr.IPAddress('::0200:0:0:0')
-    mac64 = netaddr.EUI(int(address & mask1 ^ mask2)).words
-    return ':'.join(['%02x' % i for i in mac64[0:3] + mac64[5:8]])
 
 
 def utcnow():
@@ -459,6 +442,8 @@ class LoopingCall(object):
             try:
                 while self._running:
                     self.f(*self.args, **self.kw)
+                    if not self._running:
+                        break
                     greenthread.sleep(interval)
             except LoopingCallDone, e:
                 self.stop()
@@ -709,3 +694,33 @@ def check_isinstance(obj, cls):
     raise Exception(_('Expected object of type: %s') % (str(cls)))
     # TODO(justinsb): Can we make this better??
     return cls()  # Ugly PyLint hack
+
+
+def parse_server_string(server_str):
+    """
+    Parses the given server_string and returns a list of host and port.
+    If it's not a combination of host part and port, the port element
+    is a null string. If the input is invalid expression, return a null
+    list.
+    """
+    try:
+        # First of all, exclude pure IPv6 address (w/o port).
+        if netaddr.valid_ipv6(server_str):
+            return (server_str, '')
+
+        # Next, check if this is IPv6 address with a port number combination.
+        if server_str.find("]:") != -1:
+            (address, port) = server_str.replace('[', '', 1).split(']:')
+            return (address, port)
+
+        # Third, check if this is a combination of an address and a port
+        if server_str.find(':') == -1:
+            return (server_str, '')
+
+        # This must be a combination of an address and a port
+        (address, port) = server_str.split(':')
+        return (address, port)
+
+    except:
+        LOG.debug(_('Invalid server_string: %s' % server_str))
+        return ('', '')

@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-class NoopNotifier(object):
-    def notify(self, event_name, model):
-        """Notifies the recipient of the desired event given the model"""
-        pass
+
+def notify(message):
+    """Notifies the recipient of the desired event given the model"""
+    pass

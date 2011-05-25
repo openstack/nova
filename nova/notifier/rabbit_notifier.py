@@ -13,25 +13,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
 
 import nova.context
 
 from nova import flags
 from nova import rpc
 
+
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('notification_topic', 'notifications', 
+flags.DEFINE_string('notification_topic', 'notifications',
                     'RabbitMQ topic used for Nova notifications')
 
-class RabbitNotifier(object):
-    """Sends notifications to a specific RabbitMQ server and topic"""
-    pass
 
-    def notify(self, event_name, model):
-        """Sends a notification to the RabbitMQ"""
-        context = nova.context.get_admin_context()
-        topic = FLAGS.notification_topic
-        msg = { 'event_name': event_name, 'model': model.__dict__ }
-        rpc.cast(context, topic, json.dumps(msg))
+def notify(message):
+    """Sends a notification to the RabbitMQ"""
+    context = nova.context.get_admin_context()
+    priority = message.get('priority',
+                           FLAGS.default_notification_level)
+    priority = priority.lower()
+    topic = '%s.%s' % (FLAGS.notification_topic, priority)
+    rpc.cast(context, topic, message)

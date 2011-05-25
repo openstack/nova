@@ -12,13 +12,3 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
-from nova import flags
-from nova import utils
-
-FLAGS = flags.FLAGS
-
-def notify(event_name, model):
-    """Sends a notification using the specified driver"""
-    driver = utils.import_class(FLAGS.notification_driver)()
-    driver.notify(event_name, model)
