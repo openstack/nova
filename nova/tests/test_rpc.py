@@ -49,6 +49,17 @@ class RpcTestCase(test.TestCase):
                                                  "args": {"value": value}})
         self.assertEqual(value, result)
 
+    def test_multicall_succeed_three_times(self):
+        """Get a value through rpc call"""
+        value = 42
+        result = rpc.multicall(self.context,
+                              'test',
+                              {"method": "echo_three_times",
+                               "args": {"value": value}})
+
+        for x in result:
+            self.assertEqual(value, x)
+
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call"""
         value = 42
@@ -125,6 +136,12 @@ class TestReceiver(object):
         """Returns dictionary version of context"""
         LOG.debug(_("Received %s"), context)
         return context.to_dict()
+
+    @staticmethod
+    def echo_three_times(context, value):
+        context.reply(value)
+        context.reply(value)
+        context.reply(value)
 
     @staticmethod
     def fail(context, value):
