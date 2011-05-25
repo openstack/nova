@@ -25,15 +25,15 @@ import M2Crypto
 import os
 import pickle
 import subprocess
-import tempfile
 import uuid
 
-from nova import db
 from nova import context
-from nova import log as logging
+from nova import db
 from nova import exception
-from nova import utils
 from nova import flags
+from nova import ipv6
+from nova import log as logging
+from nova import utils
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -202,6 +202,13 @@ class VMOps(object):
                 for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
+
+        def _set_admin_password():
+            admin_password = instance.admin_pass
+            if admin_password:
+                LOG.debug(_("Setting admin password"))
+                self.set_admin_password(instance, admin_password)
+
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -214,6 +221,7 @@ class VMOps(object):
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
                     _inject_files()
+                    _set_admin_password()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -253,7 +261,8 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_obj.id)
+            raise exception.NotFound(_("No opaque_ref could be determined "
+                    "for '%s'.") % instance_or_vm)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -457,6 +466,9 @@ class VMOps(object):
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
+        db.instance_update(context.get_admin_context(),
+                                  instance['id'],
+                                  dict(admin_pass=new_pass))
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
@@ -808,8 +820,9 @@ class VMOps(object):
 
             def ip6_dict():
                 return {
-                    "ip": utils.to_global_ipv6(network['cidr_v6'],
-                                               instance['mac_address']),
+                    "ip": ipv6.to_global(network['cidr_v6'],
+                                         instance['mac_address'],
+                                         instance['project_id']),
                     "netmask": network['netmask_v6'],
                     "enabled": "1"}
 
@@ -1161,23 +1174,22 @@ class SimpleDH(object):
         return mpi
 
     def _run_ssl(self, text, which):
-        base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
-                '-a -pass pass:%(shared)s -nosalt %(dec_flag)s')
+        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
+                '-nosalt %(dec_flag)s')
         if which.lower()[0] == 'd':
             dec_flag = ' -d'
         else:
             dec_flag = ''
-        fd, tmpfile = tempfile.mkstemp()
-        os.close(fd)
-        file(tmpfile, 'w').write(text)
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
+        proc.stdin.write(text + '\n')
+        proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return proc.stdout.read().strip('\n')
 
     def encrypt(self, text):
         return self._run_ssl(text, 'enc')

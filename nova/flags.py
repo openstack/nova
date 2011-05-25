@@ -110,7 +110,7 @@ class FlagValues(gflags.FlagValues):
         return name in self.__dict__['__dirty']
 
     def ClearDirty(self):
-        self.__dict__['__is_dirty'] = []
+        self.__dict__['__dirty'] = []
 
     def WasAlreadyParsed(self):
         return self.__dict__['__was_already_parsed']
@@ -119,11 +119,12 @@ class FlagValues(gflags.FlagValues):
         if '__stored_argv' not in self.__dict__:
             return
         new_flags = FlagValues(self)
-        for k in self.__dict__['__dirty']:
+        for k in self.FlagDict().iterkeys():
             new_flags[k] = gflags.FlagValues.__getitem__(self, k)
 
+        new_flags.Reset()
         new_flags(self.__dict__['__stored_argv'])
-        for k in self.__dict__['__dirty']:
+        for k in new_flags.FlagDict().iterkeys():
             setattr(self, k, getattr(new_flags, k))
         self.ClearDirty()
 
@@ -369,6 +370,9 @@ DEFINE_string('host', socket.gethostname(),
 DEFINE_string('node_availability_zone', 'nova',
               'availability zone of this node')
 
+DEFINE_string('notification_driver',
+              'nova.notifier.no_op_notifier',
+              'Default driver for sending notifications')
 DEFINE_list('memcached_servers', None,
             'Memcached servers or None for in process cache.')
 

@@ -19,6 +19,7 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import datetime
+import eventlet
 import re
 import time
 
@@ -42,6 +43,8 @@ LOG = logging.getLogger('nova.compute.api')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
+flags.DEFINE_integer('find_host_timeout', 30,
+                     'Timeout after NN seconds when looking for a host.')
 
 
 def generate_default_hostname(instance_id):
@@ -92,14 +95,15 @@ class API(base.Base):
         """
         if injected_files is None:
             return
-        limit = quota.allowed_injected_files(context)
+        limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
         path_limit = quota.allowed_injected_file_path_bytes(context)
-        content_limit = quota.allowed_injected_file_content_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            content_limit = quota.allowed_injected_file_content_bytes(
+                                                    context, len(content))
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
@@ -131,7 +135,8 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None):
+               injected_files=None,
+               admin_password=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
@@ -146,9 +151,13 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
-            raise quota.QuotaError(_("Instance quota exceeded. You can only "
-                                     "run %s more instances of this type.") %
-                                   num_instances, "InstanceLimitExceeded")
+            if num_instances <= 0:
+                message = _("Instance quota exceeded. You cannot run any "
+                            "more instances of this type.")
+            else:
+                message = _("Instance quota exceeded. You can only run %s "
+                            "more instances of this type.") % num_instances
+            raise quota.QuotaError(message, "InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
@@ -248,13 +257,21 @@ class API(base.Base):
             uid = context.user_id
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " instance %(instance_id)s") % locals())
+
+            # NOTE(sandy): For now we're just going to pass in the
+            # instance_type record to the scheduler. In a later phase
+            # we'll be ripping this whole for-loop out and deferring the
+            # creation of the Instance record. At that point all this will
+            # change.
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
+                               "instance_type": instance_type,
                                "availability_zone": availability_zone,
-                               "injected_files": injected_files}})
+                               "injected_files": injected_files,
+                               "admin_password": admin_password}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -484,7 +501,7 @@ class API(base.Base):
 
     def _find_host(self, context, instance_id):
         """Find the host associated with an instance."""
-        for attempts in xrange(10):
+        for attempts in xrange(FLAGS.find_host_timeout):
             instance = self.get(context, instance_id)
             host = instance["host"]
             if host:

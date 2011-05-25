@@ -27,6 +27,7 @@ import webob
 
 from xml.dom.minidom import parseString
 
+import nova.context
 from nova.api.openstack import limits
 
 
@@ -47,6 +48,13 @@ class BaseLimitTestSuite(unittest.TestCase):
         self.time = 0.0
         self.stubs = stubout.StubOutForTesting()
         self.stubs.Set(limits.Limit, "_get_time", self._get_time)
+        self.absolute_limits = {}
+
+        def stub_get_project_quotas(context, project_id):
+            return self.absolute_limits
+
+        self.stubs.Set(nova.quota, "get_project_quotas",
+                       stub_get_project_quotas)
 
     def tearDown(self):
         """Run after each test."""
@@ -75,6 +83,8 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
             "action": "index",
             "controller": "",
         })
+        context = nova.context.RequestContext('testuser', 'testproject')
+        request.environ["nova.context"] = context
         return request
 
     def _populate_limits(self, request):
@@ -85,6 +95,18 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         ]
         request.environ["nova.limits"] = _limits
         return request
+
+    def _setup_absolute_limits(self):
+        self.absolute_limits = {
+            'instances': 5,
+            'cores': 8,
+            'ram': 2 ** 13,
+            'volumes': 21,
+            'gigabytes': 34,
+            'metadata_items': 55,
+            'injected_files': 89,
+            'injected_file_content_bytes': 144,
+        }
 
     def test_empty_index_json(self):
         """Test getting empty limit details in JSON."""
@@ -103,6 +125,7 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
         """Test getting limit details in JSON."""
         request = self._get_index_request()
         request = self._populate_limits(request)
+        self._setup_absolute_limits()
         response = request.get_response(self.controller)
         expected = {
             "limits": {
@@ -124,7 +147,15 @@ class LimitsControllerV10Test(BaseLimitTestSuite):
                     "remaining": 5,
                     "unit": "HOUR",
                 }],
-                "absolute": {},
+                "absolute": {
+                    "maxTotalInstances": 5,
+                    "maxTotalCores": 8,
+                    "maxTotalRAMSize": 2 ** 13,
+                    "maxServerMeta": 55,
+                    "maxImageMeta": 55,
+                    "maxPersonality": 89,
+                    "maxPersonalitySize": 144,
+                },
             },
         }
         body = json.loads(response.body)
@@ -188,6 +219,8 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
             "action": "index",
             "controller": "",
         })
+        context = nova.context.RequestContext('testuser', 'testproject')
+        request.environ["nova.context"] = context
         return request
 
     def _populate_limits(self, request):
@@ -218,6 +251,11 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
         """Test getting limit details in JSON."""
         request = self._get_index_request()
         request = self._populate_limits(request)
+        self.absolute_limits = {
+            'ram': 512,
+            'instances': 5,
+            'cores': 21,
+        }
         response = request.get_response(self.controller)
         expected = {
             "limits": {
@@ -257,11 +295,58 @@ class LimitsControllerV11Test(BaseLimitTestSuite):
                     },
 
                 ],
-                "absolute": {},
+                "absolute": {
+                    "maxTotalRAMSize": 512,
+                    "maxTotalInstances": 5,
+                    "maxTotalCores": 21,
+                    },
             },
         }
         body = json.loads(response.body)
         self.assertEqual(expected, body)
+
+    def _test_index_absolute_limits_json(self, expected):
+        request = self._get_index_request()
+        response = request.get_response(self.controller)
+        body = json.loads(response.body)
+        self.assertEqual(expected, body['limits']['absolute'])
+
+    def test_index_ignores_extra_absolute_limits_json(self):
+        self.absolute_limits = {'unknown_limit': 9001}
+        self._test_index_absolute_limits_json({})
+
+    def test_index_absolute_ram_json(self):
+        self.absolute_limits = {'ram': 1024}
+        self._test_index_absolute_limits_json({'maxTotalRAMSize': 1024})
+
+    def test_index_absolute_cores_json(self):
+        self.absolute_limits = {'cores': 17}
+        self._test_index_absolute_limits_json({'maxTotalCores': 17})
+
+    def test_index_absolute_instances_json(self):
+        self.absolute_limits = {'instances': 19}
+        self._test_index_absolute_limits_json({'maxTotalInstances': 19})
+
+    def test_index_absolute_metadata_json(self):
+        # NOTE: both server metadata and image metadata are overloaded
+        # into metadata_items
+        self.absolute_limits = {'metadata_items': 23}
+        expected = {
+            'maxServerMeta': 23,
+            'maxImageMeta': 23,
+        }
+        self._test_index_absolute_limits_json(expected)
+
+    def test_index_absolute_injected_files(self):
+        self.absolute_limits = {
+            'injected_files': 17,
+            'injected_file_content_bytes': 86753,
+        }
+        expected = {
+            'maxPersonality': 17,
+            'maxPersonalitySize': 86753,
+        }
+        self._test_index_absolute_limits_json(expected)
 
 
 class LimitMiddlewareTest(BaseLimitTestSuite):

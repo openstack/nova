@@ -75,6 +75,21 @@ class Controller(common.OpenstackController):
         """ Returns a list of server details for a given user """
         return self._items(req, is_detail=True)
 
+    def _image_id_from_req_data(self, data):
+        raise NotImplementedError()
+
+    def _flavor_id_from_req_data(self, data):
+        raise NotImplementedError()
+
+    def _get_view_builder(self, req):
+        raise NotImplementedError()
+
+    def _limit_items(self, items, req):
+        raise NotImplementedError()
+
+    def _action_rebuild(self, info, request, instance_id):
+        raise NotImplementedError()
+
     def _items(self, req, is_detail):
         """Returns a list of servers for a given user.
 
@@ -165,7 +180,8 @@ class Controller(common.OpenstackController):
                 key_name=key_name,
                 key_data=key_data,
                 metadata=env['server'].get('metadata', {}),
-                injected_files=injected_files)
+                injected_files=injected_files,
+                admin_password=password)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
@@ -175,8 +191,6 @@ class Controller(common.OpenstackController):
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = password
-        self.compute_api.set_admin_password(context, server['server']['id'],
-                                            password)
         return server
 
     def _deserialize_create(self, request):
@@ -593,8 +607,8 @@ class ControllerV10(Controller):
 
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            self.compute_api.set_admin_password(context, server_id)
+            self.compute_api.set_admin_password(context, server_id,
+                    inst_dict['server']['adminPass'])
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -743,8 +757,9 @@ class ServerCreateRequestXMLDeserializer(object):
         """Marshal the server attribute of a parsed request"""
         server = {}
         server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId"]:
-            server[attr] = server_node.getAttribute(attr)
+        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
+            if server_node.getAttribute(attr):
+                server[attr] = server_node.getAttribute(attr)
         metadata = self._extract_metadata(server_node)
         if metadata is not None:
             server["metadata"] = metadata
