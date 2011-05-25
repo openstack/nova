@@ -526,10 +526,11 @@ def fanout_cast(context, topic, msg):
     """Sends a message on a fanout exchange without waiting for a response."""
     LOG.debug(_('Making asynchronous fanout cast...'))
     _pack_context(msg, context)
-    conn = Connection.instance()
+    conn = ConnectionPool.get()
     publisher = FanoutPublisher(topic, connection=conn)
     publisher.send(msg)
     publisher.close()
+    ConnectionPool.put(conn)
 
 
 def generic_response(message_data, message):
