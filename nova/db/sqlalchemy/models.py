@@ -666,12 +666,12 @@ def register_models():
     connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceActions, InstanceTypes,
+    models = (Service, Instance, InstanceActions, InstanceTypes, 
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata, Migration)
+              InstanceMetadata, InstanceTypesMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)
