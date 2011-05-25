@@ -481,8 +481,7 @@ def multicall(context, topic, msg):
     wait_msg = MulticallWaiter(consumer)
     consumer.register_callback(wait_msg)
 
-    pub_conn = ConnectionPool.get()
-    publisher = TopicPublisher(connection=pub_conn, topic=topic)
+    publisher = TopicPublisher(connection=con_conn, topic=topic)
     publisher.send(msg)
     publisher.close()
 
