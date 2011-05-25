@@ -201,6 +201,11 @@ class AdapterConsumer(Consumer):
         try:
             rval = node_func(context=ctxt, **node_args)
             if msg_id:
+                # TODO(termie): re-enable when fix the yielding issue
+                #if hasattr(rval, 'send'):
+                #    logging.error('rval! %s', rval)
+                #    for x in rval:
+                #        msg_reply(msg_id, x, None)
                 msg_reply(msg_id, rval, None)
         except Exception as e:
             logging.exception('Exception during message handling')
