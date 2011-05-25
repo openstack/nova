@@ -28,10 +28,12 @@ import StringIO
 import webob
 
 from nova import context
+from nova import exception
 from nova import test
 from nova.api import ec2
-from nova.api.ec2 import cloud
 from nova.api.ec2 import apirequest
+from nova.api.ec2 import cloud
+from nova.api.ec2 import ec2utils
 from nova.auth import manager
 
 
@@ -99,6 +101,21 @@ class XmlConversionTestCase(test.TestCase):
         self.assertEqual(conv('-0x57'), -0x57)
         self.assertEqual(conv('-'), '-')
         self.assertEqual(conv('-0'), 0)
+
+
+class Ec2utilsTestCase(test.TestCase):
+    def test_ec2_id_to_id(self):
+        self.assertEqual(ec2utils.ec2_id_to_id('i-0000001e'), 30)
+        self.assertEqual(ec2utils.ec2_id_to_id('ami-1d'), 29)
+
+    def test_bad_ec2_id(self):
+        self.assertRaises(exception.InvalidEc2Id,
+                          ec2utils.ec2_id_to_id,
+                          'badone')
+
+    def test_id_to_ec2_id(self):
+        self.assertEqual(ec2utils.id_to_ec2_id(30), 'i-0000001e')
+        self.assertEqual(ec2utils.id_to_ec2_id(29, 'ami-%08x'), 'ami-0000001d')
 
 
 class ApiEc2TestCase(test.TestCase):
@@ -206,6 +223,29 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEquals(len(results), 1)
         self.manager.delete_project(project)
         self.manager.delete_user(user)
+
+    def test_create_duplicate_key_pair(self):
+        """Test that, after successfully generating a keypair,
+        requesting a second keypair with the same name fails sanely"""
+        self.expect_http()
+        self.mox.ReplayAll()
+        keyname = "".join(random.choice("sdiuisudfsdcnpaqwertasd") \
+                          for x in range(random.randint(4, 8)))
+        user = self.manager.create_user('fake', 'fake', 'fake')
+        project = self.manager.create_project('fake', 'fake', 'fake')
+        # NOTE(vish): create depends on pool, so call helper directly
+        self.ec2.create_key_pair('test')
+
+        try:
+            self.ec2.create_key_pair('test')
+        except EC2ResponseError, e:
+            if e.code == 'KeyPairExists':
+                pass
+            else:
+                self.fail("Unexpected EC2ResponseError: %s "
+                          "(expected KeyPairExists)" % e.code)
+        else:
+            self.fail('Exception not raised.')
 
     def test_get_all_security_groups(self):
         """Test that we can retrieve security groups"""

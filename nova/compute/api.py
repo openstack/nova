@@ -19,6 +19,7 @@
 """Handles all requests relating to instances (guest vms)."""
 
 import datetime
+import eventlet
 import re
 import time
 
@@ -42,6 +43,8 @@ LOG = logging.getLogger('nova.compute.api')
 
 FLAGS = flags.FLAGS
 flags.DECLARE('vncproxy_topic', 'nova.vnc')
+flags.DEFINE_integer('find_host_timeout', 30,
+                     'Timeout after NN seconds when looking for a host.')
 
 
 def generate_default_hostname(instance_id):
@@ -248,11 +251,18 @@ class API(base.Base):
             uid = context.user_id
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " instance %(instance_id)s") % locals())
+
+            # NOTE(sandy): For now we're just going to pass in the
+            # instance_type record to the scheduler. In a later phase
+            # we'll be ripping this whole for-loop out and deferring the
+            # creation of the Instance record. At that point all this will
+            # change.
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
+                               "instance_type": instance_type,
                                "availability_zone": availability_zone,
                                "injected_files": injected_files}})
 
@@ -482,6 +492,26 @@ class API(base.Base):
         """Generic handler for RPC calls to the scheduler."""
         rpc.cast(context, FLAGS.scheduler_topic, args)
 
+    def _find_host(self, context, instance_id):
+        """Find the host associated with an instance."""
+        for attempts in xrange(FLAGS.find_host_timeout):
+            instance = self.get(context, instance_id)
+            host = instance["host"]
+            if host:
+                return host
+            time.sleep(1)
+        raise exception.Error(_("Unable to find host for Instance %s")
+                                % instance_id)
+
+    def _set_admin_password(self, context, instance_id, password):
+        """Set the root/admin password for the given instance."""
+        host = self._find_host(context, instance_id)
+
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "set_admin_password",
+                  "args": {"instance_id": instance_id, "new_pass": password}})
+
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -635,8 +665,8 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        self._cast_compute_message(
-                'set_admin_password', context, instance_id, password)
+        eventlet.spawn_n(self._set_admin_password, context, instance_id,
+                                                  password)
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""

@@ -25,15 +25,15 @@ import M2Crypto
 import os
 import pickle
 import subprocess
-import tempfile
 import uuid
 
-from nova import db
 from nova import context
-from nova import log as logging
+from nova import db
 from nova import exception
-from nova import utils
 from nova import flags
+from nova import ipv6
+from nova import log as logging
+from nova import utils
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -428,11 +428,12 @@ class VMOps(object):
 
         """
         # Need to uniquely identify this request.
-        transaction_id = str(uuid.uuid4())
+        key_init_transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
         dh = SimpleDH()
-        args = {'id': transaction_id, 'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, '', args)
+        key_init_args = {'id': key_init_transaction_id,
+                         'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', key_init_args)
         if resp is None:
             # No response from the agent
             return
@@ -446,8 +447,9 @@ class VMOps(object):
         dh.compute_shared(agent_pub)
         enc_pass = dh.encrypt(new_pass)
         # Send the encrypted password
-        args['enc_pass'] = enc_pass
-        resp = self._make_agent_call('password', instance, '', args)
+        password_transaction_id = str(uuid.uuid4())
+        password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
+        resp = self._make_agent_call('password', instance, '', password_args)
         if resp is None:
             # No response from the agent
             return
@@ -806,8 +808,9 @@ class VMOps(object):
 
             def ip6_dict():
                 return {
-                    "ip": utils.to_global_ipv6(network['cidr_v6'],
-                                               instance['mac_address']),
+                    "ip": ipv6.to_global(network['cidr_v6'],
+                                         instance['mac_address'],
+                                         instance['project_id']),
                     "netmask": network['netmask_v6'],
                     "enabled": "1"}
 
@@ -1159,23 +1162,22 @@ class SimpleDH(object):
         return mpi
 
     def _run_ssl(self, text, which):
-        base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
-                '-a -pass pass:%(shared)s -nosalt %(dec_flag)s')
+        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
+                '-nosalt %(dec_flag)s')
         if which.lower()[0] == 'd':
             dec_flag = ' -d'
         else:
             dec_flag = ''
-        fd, tmpfile = tempfile.mkstemp()
-        os.close(fd)
-        file(tmpfile, 'w').write(text)
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
+        proc.stdin.write(text + '\n')
+        proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return proc.stdout.read().strip('\n')
 
     def encrypt(self, text):
         return self._run_ssl(text, 'enc')
