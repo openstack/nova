@@ -709,11 +709,20 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertDictListMatch(expected, response_list)
 
     def test_get_image_request_filters(self):
-        request =\
-        webob.Request.blank('/v1.1/images/detail?status=ACTIVE&name=testname')
+        request = webob.Request.blank(
+            '/v1.1/images/detail?status=ACTIVE&name=testname&property-test=3')
         filters = images.Controller()._get_filters(request)
         expected = {'status': 'ACTIVE',
                     'name': 'testname',
+                    'property-test': '3',
+                    }
+        self.assertDictMatch(expected, filters)
+
+    def test_get_image_request_filters_not_supported(self):
+        request = webob.Request.blank(
+            '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        filters = images.Controller()._get_filters(request)
+        expected = {'status': 'ACTIVE',
                     }
         self.assertDictMatch(expected, filters)
 
