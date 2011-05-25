@@ -466,6 +466,9 @@ class VMOps(object):
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
+        db.instance_update(context.get_admin_context(),
+                                  instance['id'],
+                                  dict(admin_pass=new_pass))
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
