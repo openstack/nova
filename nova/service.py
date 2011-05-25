@@ -91,7 +91,6 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-
         if self.report_interval:
             conn = rpc.Connection.instance(new=True)
 

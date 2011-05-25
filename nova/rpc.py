@@ -92,11 +92,15 @@ class Connection(carrot_connection.BrokerConnection):
             pass
         return cls.instance()
 
+
 class Pool(pools.Pool):
+    """Class that implements a Pool of Connections"""
+
     def create(self):
         return Connection.instance(new=True)
 
 ConnectionPool = Pool(max_size=20)
+
 
 class Consumer(messaging.Consumer):
     """Consumer base class.
@@ -171,6 +175,16 @@ class AdapterConsumer(Consumer):
         self.register_callback(self.process_data)
 
     def process_data(self, message_data, message):
+        """Consumer callback that parses the message for validity and
+        fires off a thread to call the proxy object method.
+
+        Message data should be a dictionary with two keys:
+            method: string representing the method to call
+            args: dictionary of arg: value
+
+        Example: {'method': 'echo', 'args': {'value': 42}}
+
+        """
         LOG.debug(_('received %s') % message_data)
         msg_id = message_data.pop('_msg_id', None)
 
@@ -191,14 +205,8 @@ class AdapterConsumer(Consumer):
 
     @exception.wrap_exception
     def _process_data(self, msg_id, ctxt, method, args):
-        """Magically looks for a method on the proxy object and calls it.
-
-        Message data should be a dictionary with two keys:
-            method: string representing the method to call
-            args: dictionary of arg: value
-
-        Example: {'method': 'echo', 'args': {'value': 42}}
-
+        """Thread that maigcally looks for a method on the proxy
+        object and calls it.
         """
 
         node_func = getattr(self.proxy, str(method))
@@ -285,7 +293,6 @@ class ConsumerSet(object):
                 except Exception as e:
                     LOG.error(_("Received exception %s " % str(e) + \
                             "while processing consumer"))
-                    fuck
                     self.reconnect()
                     # Break to outer loop
                     break
