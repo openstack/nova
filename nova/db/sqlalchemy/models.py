@@ -551,7 +551,7 @@ class AuthToken(BASE, NovaBase):
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
     user_id = Column(String(255))
-    server_manageent_url = Column(String(255))
+    server_management_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
 
