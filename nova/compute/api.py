@@ -505,7 +505,6 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
