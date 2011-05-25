@@ -284,7 +284,7 @@ class DiskNotFound(NotFound):
 
 
 class InvalidImageRef(Invalid):
-    message = _("Invalid image ref %(image_ref)s.")
+    message = _("Invalid image ref %(image_href)s.")
 
 
 class ImageNotFound(NotFound):

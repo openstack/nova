@@ -208,16 +208,16 @@ class _IntegratedTestBase(test.TestCase):
         LOG.debug("Image: %s" % image)
 
         if 'imageRef' in image:
-            image_ref = image['imageRef']
+            image_href = image['imageRef']
         else:
             # NOTE(justinsb): The imageRef code hasn't yet landed
             LOG.warning("imageRef not yet in images output")
-            image_ref = image['id']
+            image_href = image['id']
 
-            image_ref = 'http://fake.server/%s' % image_ref
+            image_href = 'http://fake.server/%s' % image_href
 
         # We now have a valid imageId
-        server['imageRef'] = image_ref
+        server['imageRef'] = image_href
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[0]

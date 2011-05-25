@@ -140,15 +140,15 @@ class Controller(common.OpenstackController):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
-        image_ref = self._image_ref_from_req_data(env)
+        image_href = self._image_ref_from_req_data(env)
         try:
-            image_service, image_id = nova.image.get_image_service(image_ref)
+            image_service, image_id = nova.image.get_image_service(image_href)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                 req, image_service, image_id)
             images = set([str(x['id']) for x in image_service.index(context)])
             assert str(image_id) in images
         except:
-            msg = _("Cannot find requested image %s") % image_ref
+            msg = _("Cannot find requested image %s") % image_href
             return faults.Fault(exc.HTTPBadRequest(msg))
 
         personality = env['server'].get('personality')
@@ -172,7 +172,7 @@ class Controller(common.OpenstackController):
             (inst,) = self.compute_api.create(
                 context,
                 inst_type,
-                image_ref,
+                image_href,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
                 display_name=name,
@@ -188,7 +188,7 @@ class Controller(common.OpenstackController):
             return faults.Fault(exc.HTTPBadRequest(msg))
 
         inst['instance_type'] = inst_type
-        inst['image_id'] = image_ref
+        inst['image_id'] = image_href
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
@@ -701,13 +701,13 @@ class ControllerV11(Controller):
         instance_id = int(instance_id)
 
         try:
-            image_ref = info["rebuild"]["imageRef"]
+            image_href = info["rebuild"]["imageRef"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageRef from request.")
             LOG.debug(msg)
             return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        image_id = common.get_id_from_href(image_ref)
+        image_id = common.get_id_from_href(image_href)
         personalities = info["rebuild"].get("personality", [])
         metadata = info["rebuild"].get("metadata", {})
 

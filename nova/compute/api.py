@@ -130,7 +130,7 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
     def create(self, context, instance_type,
-               image_ref, kernel_id=None, ramdisk_id=None,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
@@ -157,7 +157,7 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        (image_service, image_id) = nova.image.get_image_service(image_ref)
+        (image_service, image_id) = nova.image.get_image_service(image_href)
         image = image_service.show(context, image_id)
 
         os_type = None
@@ -201,7 +201,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'image_id': image_ref,
+            'image_id': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,

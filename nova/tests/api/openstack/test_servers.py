@@ -584,12 +584,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
@@ -611,16 +611,16 @@ class ServersTest(test.TestCase):
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_ref, server['imageRef'])
+        self.assertEqual(image_href, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/asdf'
+        image_href = 'http://localhost/v1.1/images/asdf'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = dict(server=dict(
-            name='server_test', imageRef=image_ref, flavorRef=flavor_ref,
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = webob.Request.blank('/v1.1/servers')
@@ -633,12 +633,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
-        image_ref = 2
+        image_id = 2
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_id,
                 'flavorRef': flavor_ref,
             },
         }
@@ -653,7 +653,7 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_ref, server['imageRef'])
+        self.assertEqual(image_id, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v1_0(self):
@@ -680,12 +680,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_with_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'adminPass': 'testpass',
             },
@@ -702,12 +702,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_with_empty_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'adminPass': '',
             },
@@ -1658,7 +1658,7 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
         request = self.deserializer.deserialize(serial_request)
         self.assertEqual(request, expected)
 
-    def test_request_xmlser_with_flavor_image_ref(self):
+    def test_request_xmlser_with_flavor_image_href(self):
         serial_request = """
                 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
                     name="new-server-test"

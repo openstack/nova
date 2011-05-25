@@ -28,14 +28,14 @@ from nova import flags
 FLAGS = flags.FLAGS
 
 
-def _parse_image_ref(image_ref):
+def _parse_image_ref(image_href):
     """Parse an image href into composite parts.
 
-    :param image_ref: href of an image
+    :param image_href: href of an image
     :returns: a tuple of the form (image_id, host, port)
 
     """
-    o = urlparse(image_ref)
+    o = urlparse(image_href)
     port = o.port or 80
     host = o.netloc.split(':', 1)[0]
     image_id = int(o.path.split('/')[-1])
@@ -47,25 +47,25 @@ def get_default_image_service():
     return ImageService()
 
 
-def get_image_service(image_ref):
-    """Get the proper image_service and id for the given image_ref.
+def get_image_service(image_href):
+    """Get the proper image_service and id for the given image_href.
 
-    The image_ref param can be an href of the form
+    The image_href param can be an href of the form
     http://myglanceserver:9292/images/42, or just an int such as 42. If the
-    image_ref is an int, then the default image service is returned.
+    image_href is an int, then the default image service is returned.
 
-    :param image_ref: image ref/id for an image
+    :param image_href: image ref/id for an image
     :returns: a tuple of the form (image_service, image_id)
 
     """
-    image_ref = image_ref or 0
-    if str(image_ref).isdigit():
-        return (get_default_image_service(), int(image_ref))
+    image_href = image_href or 0
+    if str(image_href).isdigit():
+        return (get_default_image_service(), int(image_href))
 
     try:
-        (image_id, host, port) = _parse_image_ref(image_ref)
+        (image_id, host, port) = _parse_image_ref(image_href)
     except:
-        raise exception.InvalidImageRef(image_ref=image_ref)
+        raise exception.InvalidImageRef(image_href=image_href)
     glance_client = nova.image.glance.GlanceClient(host, port)
     image_service = nova.image.glance.GlanceImageService(glance_client)
     return (image_service, image_id)
