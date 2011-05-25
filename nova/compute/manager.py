@@ -406,22 +406,28 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def set_admin_password(self, context, instance_id, new_pass=None):
-        """Set the root/admin password for an instance on this host."""
+        """Set the root/admin password for an instance on this host.
+
+        This is generally only called by API password resets after an
+        image has been built.
+        """
+
         context = context.elevated()
 
         if new_pass is None:
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
 
-        while True:
+        max_tries = 10
+
+        for i in xrange(max_tries):
             instance_ref = self.db.instance_get(context, instance_id)
             instance_id = instance_ref["id"]
             instance_state = instance_ref["state"]
             expected_state = power_state.RUNNING
 
             if instance_state != expected_state:
-                time.sleep(5)
-                continue
+                raise exception.Error(_('Instance is not running'))
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
@@ -437,6 +443,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 except Exception, e:
                     # Catch all here because this could be anything.
                     LOG.exception(e)
+                    if i == max_tries - 1:
+                        # At some point this exception may make it back
+                        # to the API caller, and we don't want to reveal
+                        # too much.  The real exception is logged above
+                        raise exception.Error(_('Internal error'))
+                    time.sleep(1)
                     continue
 
     @exception.wrap_exception
