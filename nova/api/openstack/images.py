@@ -93,7 +93,7 @@ class Controller(common.OpenstackController):
                 filters[param] = req.str_params.get(param)
 
         return filters
- 
+
     def show(self, req, id):
         """Return detailed information about a specific image.
 
