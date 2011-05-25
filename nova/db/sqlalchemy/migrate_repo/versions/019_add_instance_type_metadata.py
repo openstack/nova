@@ -26,8 +26,6 @@ instance_types = Table('instance_types', meta,
         Column('id', Integer(), primary_key=True, nullable=False),
         )
 
-
-
 #
 # New Tables
 #
@@ -49,6 +47,7 @@ instance_type_metadata_table = Table('instance_type_metadata', meta,
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False)))
 
+
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
@@ -61,8 +60,8 @@ def upgrade(migrate_engine):
             logging.exception('Exception while creating table')
             raise
 
+
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     for table in (instance_type_metadata_table, ):
         table.drop()
-

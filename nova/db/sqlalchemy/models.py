@@ -635,18 +635,20 @@ class InstanceMetadata(BASE, NovaBase):
                                 'InstanceMetadata.instance_id == Instance.id,'
                                 'InstanceMetadata.deleted == False)')
 
+
 class InstanceTypeMetadata(BASE, NovaBase):
     """Represents a metadata key/value pair for an instance_type"""
     __tablename__ = 'instance_type_metadata'
     id = Column(Integer, primary_key=True)
     key = Column(String(255))
     value = Column(String(255))
-    instance_type_id = Column(Integer, ForeignKey('instance_types.id'), nullable=False)
+    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
+                              nullable=False)
     instance_type = relationship(InstanceTypes, backref="metadata",
-                            foreign_keys=instance_type_id,
-                            primaryjoin='and_('
-                                'InstanceTypeMetadata.instance_type_id == InstanceTypes.id,'
-                                'InstanceTypeMetadata.deleted == False)')
+                 foreign_keys=instance_type_id,
+                 primaryjoin='and_('
+                 'InstanceTypeMetadata.instance_type_id == InstanceTypes.id,'
+                 'InstanceTypeMetadata.deleted == False)')
 
 
 class Zone(BASE, NovaBase):
@@ -666,7 +668,7 @@ def register_models():
     connection is lost and needs to be reestablished.
     """
     from sqlalchemy import create_engine
-    models = (Service, Instance, InstanceActions, InstanceTypes, 
+    models = (Service, Instance, InstanceActions, InstanceTypes,
               Volume, ExportDevice, IscsiTarget, FixedIp, FloatingIp,
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
