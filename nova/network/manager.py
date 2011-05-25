@@ -180,7 +180,7 @@ class FloatingIP(object):
         # call the next inherited class's allocate_for_instance()
         # which is currently the NetworkManager version
         # do this first so fixed ip is already allocated
-        super(FloatingIP, self).allocate_for_instance(context, **kwargs)
+        ips = super(FloatingIP, self).allocate_for_instance(context, **kwargs)
         if FLAGS.auto_assign_floating_ip:
             # allocate a floating ip (public_ip is just the address string)
             public_ip = self.allocate_floating_ip(context, project_id)
@@ -200,6 +200,7 @@ class FloatingIP(object):
                                               floating_ip,
                                               fixed_ip,
                                               affect_auto_assigned=True)
+        return ips
 
     def deallocate_for_instance(self, context, **kwargs):
         """handles deallocating floating IP resources for an instance
