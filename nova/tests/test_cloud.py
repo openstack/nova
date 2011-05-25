@@ -188,6 +188,52 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
 
+    def test_describe_snapshots(self):
+        """Makes sure describe_snapshots works and filters results."""
+        vol = db.volume_create(self.context, {})
+        snap1 = db.snapshot_create(self.context, {'volume_id': vol['id']})
+        snap2 = db.snapshot_create(self.context, {'volume_id': vol['id']})
+        result = self.cloud.describe_snapshots(self.context)
+        self.assertEqual(len(result['snapshotSet']), 2)
+        snapshot_id = ec2utils.id_to_ec2_id(snap2['id'], 'snap-%08x')
+        result = self.cloud.describe_snapshots(self.context,
+                                               snapshot_id=[snapshot_id])
+        self.assertEqual(len(result['snapshotSet']), 1)
+        self.assertEqual(
+            ec2utils.ec2_id_to_id(result['snapshotSet'][0]['snapshotId']),
+            snap2['id'])
+        db.snapshot_destroy(self.context, snap1['id'])
+        db.snapshot_destroy(self.context, snap2['id'])
+        db.volume_destroy(self.context, vol['id'])
+
+    def test_create_snapshot(self):
+        """Makes sure create_snapshot works."""
+        vol = db.volume_create(self.context, {'status': "available"})
+        volume_id = ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x')
+
+        result = self.cloud.create_snapshot(self.context,
+                                            volume_id=volume_id)
+        snapshot_id = result['snapshotId']
+        result = self.cloud.describe_snapshots(self.context)
+        self.assertEqual(len(result['snapshotSet']), 1)
+        self.assertEqual(result['snapshotSet'][0]['snapshotId'], snapshot_id)
+
+        db.snapshot_destroy(self.context, ec2utils.ec2_id_to_id(snapshot_id))
+        db.volume_destroy(self.context, vol['id'])
+
+    def test_delete_snapshot(self):
+        """Makes sure delete_snapshot works."""
+        vol = db.volume_create(self.context, {'status': "available"})
+        snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
+                                                  'status': "available"})
+        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+
+        result = self.cloud.delete_snapshot(self.context,
+                                            snapshot_id=snapshot_id)
+        self.assertTrue(result)
+
+        db.volume_destroy(self.context, vol['id'])
+
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
@@ -279,6 +325,26 @@ class CloudTestCase(test.TestCase):
                                            user_group=['all'])
         self.assertEqual(True, result['is_public'])
 
+    def test_deregister_image(self):
+        deregister_image = self.cloud.deregister_image
+
+        def fake_delete(self, context, id):
+            return None
+
+        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
+        # valid image
+        result = deregister_image(self.context, 'ami-00000001')
+        self.assertEqual(result['imageId'], 'ami-00000001')
+        # invalid image
+        self.stubs.UnsetAll()
+
+        def fake_detail_empty(self, context):
+            return []
+
+        self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
+        self.assertRaises(exception.ImageNotFound, deregister_image,
+                          self.context, 'ami-bad001')
+
     def test_console_output(self):
         instance_type = FLAGS.default_instance_type
         max_count = 1
@@ -337,41 +403,6 @@ class CloudTestCase(test.TestCase):
     def test_delete_key_pair(self):
         self._create_key('test')
         self.cloud.delete_key_pair(self.context, 'test')
-
-    def test_run_instances(self):
-        if FLAGS.connection_type == 'fake':
-            LOG.debug(_("Can't test instances without a real virtual env."))
-            return
-        image_id = FLAGS.default_image
-        instance_type = FLAGS.default_instance_type
-        max_count = 1
-        kwargs = {'image_id': image_id,
-                  'instance_type': instance_type,
-                  'max_count': max_count}
-        rv = self.cloud.run_instances(self.context, **kwargs)
-        # TODO: check for proper response
-        instance_id = rv['reservationSet'][0].keys()[0]
-        instance = rv['reservationSet'][0][instance_id][0]
-        LOG.debug(_("Need to watch instance %s until it's running..."),
-                  instance['instance_id'])
-        while True:
-            greenthread.sleep(1)
-            info = self.cloud._get_instance(instance['instance_id'])
-            LOG.debug(info['state'])
-            if info['state'] == power_state.RUNNING:
-                break
-        self.assert_(rv)
-
-        if FLAGS.connection_type != 'fake':
-            time.sleep(45)  # Should use boto for polling here
-        for reservations in rv['reservationSet']:
-            # for res_id in reservations.keys():
-            #     LOG.debug(reservations[res_id])
-            # for instance in reservations[res_id]:
-            for instance in reservations[reservations.keys()[0]]:
-                instance_id = instance['instance_id']
-                LOG.debug(_("Terminating instance %s"), instance_id)
-                rv = self.compute.terminate_instance(instance_id)
 
     def test_terminate_instances(self):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',

@@ -758,24 +758,34 @@ def auth_token_create(context, token):
 ###################
 
 
-def quota_create(context, values):
-    """Create a quota from the values dictionary."""
-    return IMPL.quota_create(context, values)
+def quota_create(context, project_id, resource, limit):
+    """Create a quota for the given project and resource."""
+    return IMPL.quota_create(context, project_id, resource, limit)
 
 
-def quota_get(context, project_id):
+def quota_get(context, project_id, resource):
     """Retrieve a quota or raise if it does not exist."""
-    return IMPL.quota_get(context, project_id)
+    return IMPL.quota_get(context, project_id, resource)
 
 
-def quota_update(context, project_id, values):
-    """Update a quota from the values dictionary."""
-    return IMPL.quota_update(context, project_id, values)
+def quota_get_all_by_project(context, project_id):
+    """Retrieve all quotas associated with a given project."""
+    return IMPL.quota_get_all_by_project(context, project_id)
 
 
-def quota_destroy(context, project_id):
+def quota_update(context, project_id, resource, limit):
+    """Update a quota or raise if it does not exist."""
+    return IMPL.quota_update(context, project_id, resource, limit)
+
+
+def quota_destroy(context, project_id, resource):
     """Destroy the quota or raise if it does not exist."""
-    return IMPL.quota_destroy(context, project_id)
+    return IMPL.quota_destroy(context, project_id, resource)
+
+
+def quota_destroy_all_by_project(context, project_id):
+    """Destroy all quotas associated with a given project."""
+    return IMPL.quota_get_all_by_project(context, project_id)
 
 
 ###################
@@ -874,27 +884,27 @@ def volume_update(context, volume_id, values):
 
 
 def snapshot_create(context, values):
-    """Create a volume from the values dictionary."""
+    """Create a snapshot from the values dictionary."""
     return IMPL.snapshot_create(context, values)
 
 
 def snapshot_destroy(context, snapshot_id):
-    """Create a volume from the values dictionary."""
+    """Destroy the snapshot or raise if it does not exist."""
     return IMPL.snapshot_destroy(context, snapshot_id)
 
 
 def snapshot_get(context, snapshot_id):
-    """Get a volume or raise if it does not exist."""
+    """Get a snapshot or raise if it does not exist."""
     return IMPL.snapshot_get(context, snapshot_id)
 
 
 def snapshot_get_all(context):
-    """Get all volumes."""
+    """Get all snapshots."""
     return IMPL.snapshot_get_all(context)
 
 
 def snapshot_get_all_by_project(context, project_id):
-    """Get all volumes belonging to a project."""
+    """Get all snapshots belonging to a project."""
     return IMPL.snapshot_get_all_by_project(context, project_id)
 
 
