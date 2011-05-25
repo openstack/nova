@@ -245,6 +245,7 @@ class QuotaTestCase(test.TestCase):
         for volume_id in volume_ids:
             db.volume_destroy(self.context, volume_id)
 
+    @test.skip_test
     def test_too_many_addresses(self):
         address = '192.168.0.100'
         db.floating_ip_create(context.get_admin_context(),

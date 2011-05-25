@@ -1184,7 +1184,7 @@ def instance_get_floating_address(context, instance_id):
     if not fixed_ip_refs[0].floating_ips:
         return None
     # NOTE(vish): this just returns the first floating ip
-    return fixed_ip_ref[0].floating_ips[0]['address']
+    return fixed_ip_refs[0].floating_ips[0]['address']
 
 
 @require_admin_context
