@@ -61,6 +61,18 @@ class RpcTestCase(test.TestCase):
             self.assertEqual(value + i, x)
             i += 1
 
+    def test_multicall_succeed_three_times_yield(self):
+        """Get a value through rpc call"""
+        value = 42
+        result = rpc.multicall(self.context,
+                              'test',
+                              {"method": "echo_three_times_yield",
+                               "args": {"value": value}})
+        i = 0
+        for x in result:
+            self.assertEqual(value + i, x)
+            i += 1
+
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call"""
         value = 42
@@ -83,6 +95,7 @@ class RpcTestCase(test.TestCase):
                           'test',
                           {"method": "fail",
                            "args": {"value": value}})
+        LOG.error('INNNNNNN BETTTWWWWWWWWWWEEEEEEEEEEN')
         try:
             rpc.call(self.context,
                      'test',
@@ -185,6 +198,12 @@ class TestReceiver(object):
         context.reply(value)
         context.reply(value + 1)
         context.reply(value + 2)
+
+    @staticmethod
+    def echo_three_times_yield(context, value):
+        yield value
+        yield value + 1
+        yield value + 2
 
     @staticmethod
     def fail(context, value):
