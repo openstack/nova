@@ -58,7 +58,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-#from nova import test
 from nova import utils
 from nova import vnc
 from nova.auth import manager
@@ -155,8 +154,8 @@ def _get_net_and_prefixlen(cidr):
 
 
 def _get_ip_version(cidr):
-        net = IPy.IP(cidr)
-        return int(net.version())
+    net = IPy.IP(cidr)
+    return int(net.version())
 
 
 def _get_network_info(instance):
@@ -166,9 +165,10 @@ def _get_network_info(instance):
 
     ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
                                                    instance['id'])
-
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
+    flavor = db.instance_type_get_by_id(admin_context,
+                                        instance['instance_type_id'])
     network_info = []
 
     for network in networks:
@@ -192,7 +192,9 @@ def _get_network_info(instance):
         mapping = {
             'label': network['label'],
             'gateway': network['gateway'],
+            'broadcast': network['broadcast'],
             'mac': instance['mac_address'],
+            'rxtx_cap': flavor['rxtx_cap'],
             'dns': [network['dns']],
             'ips': [ip_dict(ip) for ip in network_ips]}
 
@@ -211,7 +213,6 @@ class LibvirtConnection(driver.ComputeDriver):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        self.interfaces_xml = open(FLAGS.injected_network_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
@@ -311,19 +312,10 @@ class LibvirtConnection(driver.ComputeDriver):
     def destroy(self, instance, cleanup=True):
         instance_name = instance['name']
 
-        # TODO(justinsb): Refactor all lookupByName calls for error-handling
         try:
-            virt_dom = self._conn.lookupByName(instance_name)
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
-                virt_dom = None
-            else:
-                LOG.warning(_("Error from libvirt during lookup of "
-                              "%(instance_name)s. Code=%(errcode)s "
-                              "Error=%(e)s") %
-                            locals())
-                raise
+            virt_dom = self._lookup_by_name(instance_name)
+        except exception.NotFound:
+            virt_dom = None
 
         # If the instance is already terminated, we're still happy
         # Otherwise, destroy it
@@ -361,25 +353,19 @@ class LibvirtConnection(driver.ComputeDriver):
                             locals())
                 raise
 
-        # We'll save this for when we do shutdown,
-        # instead of destroy - but destroy returns immediately
-        timer = utils.LoopingCall(f=None)
+        def _wait_for_destroy():
+            """Called at an interval until the VM is gone."""
+            instance_name = instance['name']
 
-        while True:
             try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.SHUTOFF:
-                    break
-            except Exception as ex:
-                msg = _("Error encountered when destroying instance '%(id)s': "
-                        "%(ex)s") % {"id": instance["id"], "ex": ex}
-                LOG.debug(msg)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTOFF)
-                break
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("Instance %s destroyed successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_destroy)
+        timer.start(interval=0.5, now=True)
 
         self.firewall_driver.unfilter_instance(instance)
 
@@ -400,7 +386,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
-        virt_dom = self._conn.lookupByName(instance_name)
+        virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         if device_path.startswith('/dev/'):
             xml = """<disk type='block'>
@@ -418,7 +404,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                    name,
                                    mount_device)
         else:
-            raise exception.Invalid(_("Invalid device path %s") % device_path)
+            raise exception.InvalidDevicePath(path=device_path)
 
         virt_dom.attachDevice(xml)
 
@@ -437,18 +423,18 @@ class LibvirtConnection(driver.ComputeDriver):
                         if child.prop('dev') == device:
                             return str(node)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
     @exception.wrap_exception
     def detach_volume(self, instance_name, mountpoint):
-        virt_dom = self._conn.lookupByName(instance_name)
+        virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
         if not xml:
-            raise exception.NotFound(_("No disk at %s") % mount_device)
+            raise exception.DiskNotFound(location=mount_device)
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
@@ -461,7 +447,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
         image_service = utils.import_object(FLAGS.image_service)
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
         base = image_service.show(elevated, instance['image_id'])
@@ -469,8 +455,8 @@ class LibvirtConnection(driver.ComputeDriver):
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
                     'is_public': False,
+                    'name': '%s.%s' % (base['name'], image_id),
                     'properties': {'architecture': base['architecture'],
-                                   'name': '%s.%s' % (base['name'], image_id),
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
@@ -497,12 +483,17 @@ class LibvirtConnection(driver.ComputeDriver):
         # Export the snapshot to a raw image
         temp_dir = tempfile.mkdtemp()
         out_path = os.path.join(temp_dir, snapshot_name)
-        qemu_img_cmd = '%s convert -f qcow2 -O raw -s %s %s %s' % (
-                FLAGS.qemu_img,
-                snapshot_name,
-                disk_path,
-                out_path)
-        utils.execute(qemu_img_cmd)
+        qemu_img_cmd = (FLAGS.qemu_img,
+                        'convert',
+                        '-f',
+                        'qcow2',
+                        '-O',
+                        'raw',
+                        '-s',
+                        snapshot_name,
+                        disk_path,
+                        out_path)
+        utils.execute(*qemu_img_cmd)
 
         # Upload that image to the image service
         with open(out_path) as image_file:
@@ -516,31 +507,43 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def reboot(self, instance):
+        """Reboot a virtual machine, given an instance reference.
+
+        This method actually destroys and re-creates the domain to ensure the
+        reboot happens, as the guest OS cannot ignore this action.
+
+        """
+        virt_dom = self._conn.lookupByName(instance['name'])
+        # NOTE(itoumsn): Use XML delived from the running instance
+        # instead of using to_xml(instance). This is almost the ultimate
+        # stupid workaround.
+        xml = virt_dom.XMLDesc(0)
+        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
+        # better because we cannot ensure flushing dirty buffers
+        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, False)
-        xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
         self.firewall_driver.apply_instance_filter(instance)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_reboot():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: rebooted'), instance['name'])
-                    timer.stop()
-            except Exception, exn:
-                LOG.exception(_('_wait_for_reboot failed: %s'), exn)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
+            """Called at an interval until the VM is running again."""
+            instance_name = instance['name']
 
-        timer.f = _wait_for_reboot
+            try:
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("During reboot, %s disappeared.") % instance_name
+                LOG.error(msg)
+                raise utils.LoopingCallDone
+
+            if state == power_state.RUNNING:
+                msg = _("Instance %s rebooted successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_reboot)
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception
@@ -595,7 +598,15 @@ class LibvirtConnection(driver.ComputeDriver):
             self._create_new_domain(xml)
 
     @exception.wrap_exception
-    def rescue(self, instance, callback=None):
+    def rescue(self, instance):
+        """Loads a VM using rescue images.
+
+        A rescue is normally performed when something goes wrong with the
+        primary images and data needs to be corrected/recovered. Rescuing
+        should not edit or over-ride the original image, only allow for
+        data recovery.
+
+        """
         self.destroy(instance, False)
 
         xml = self.to_xml(instance, rescue=True)
@@ -605,29 +616,33 @@ class LibvirtConnection(driver.ComputeDriver):
         self._create_image(instance, xml, '.rescue', rescue_images)
         self._create_new_domain(xml)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_rescue():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(None, instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: rescued'), instance['name'])
-                    timer.stop()
-            except Exception, exn:
-                LOG.exception(_('_wait_for_rescue failed: %s'), exn)
-                db.instance_set_state(None,
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
+            """Called at an interval until the VM is running again."""
+            instance_name = instance['name']
 
-        timer.f = _wait_for_rescue
+            try:
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("During reboot, %s disappeared.") % instance_name
+                LOG.error(msg)
+                raise utils.LoopingCallDone
+
+            if state == power_state.RUNNING:
+                msg = _("Instance %s rescued successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_rescue)
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception
-    def unrescue(self, instance, callback=None):
-        # NOTE(vish): Because reboot destroys and recreates an instance using
-        #             the normal xml file, we can just call reboot here
+    def unrescue(self, instance):
+        """Reboot the VM which is being rescued back into primary images.
+
+        Because reboot destroys and re-creates instances, unresue should
+        simply call reboot.
+
+        """
         self.reboot(instance)
 
     @exception.wrap_exception
@@ -638,14 +653,10 @@ class LibvirtConnection(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     @exception.wrap_exception
     def spawn(self, instance, network_info=None):
-        xml = self.to_xml(instance, network_info)
-        db.instance_set_state(context.get_admin_context(),
-                              instance['id'],
-                              power_state.NOSTATE,
-                              'launching')
+        xml = self.to_xml(instance, False, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info)
+        self._create_image(instance, xml, network_info=network_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -655,25 +666,23 @@ class LibvirtConnection(driver.ComputeDriver):
                       instance['name'])
             domain.setAutostart(1)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_boot():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: booted'), instance['name'])
-                    timer.stop()
-            except:
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance['name'])
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
+            """Called at an interval until the VM is running."""
+            instance_name = instance['name']
 
-        timer.f = _wait_for_boot
+            try:
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("During reboot, %s disappeared.") % instance_name
+                LOG.error(msg)
+                raise utils.LoopingCallDone
+
+            if state == power_state.RUNNING:
+                msg = _("Instance %s spawned successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_boot)
         return timer.start(interval=0.5, now=True)
 
     def _flush_xen_console(self, virsh_output):
@@ -739,7 +748,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise Exception(_('Unable to find an open port'))
 
         def get_pty_for_instance(instance_name):
-            virt_dom = self._conn.lookupByName(instance_name)
+            virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             dom = minidom.parseString(xml)
 
@@ -761,10 +770,13 @@ class LibvirtConnection(driver.ComputeDriver):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    def get_host_ip_addr(self):
+        return FLAGS.my_ip
+
     @exception.wrap_exception
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
-            virt_dom = self._conn.lookupByName(instance_name)
+            virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             # TODO: use etree instead of minidom
             dom = minidom.parseString(xml)
@@ -986,26 +998,16 @@ class LibvirtConnection(driver.ComputeDriver):
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
+            template = "<parameter name=\"%s\"value=\"%s\" />\n"
+            net, mask = _get_net_and_mask(network['cidr'])
+            values = [("PROJNET", net), ("PROJMASK", mask)]
             if FLAGS.use_ipv6:
-                net, mask = _get_net_and_mask(network['cidr'])
                 net_v6, prefixlen_v6 = _get_net_and_prefixlen(
                                            network['cidr_v6'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJNETV6\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask, net_v6, prefixlen_v6)
-            else:
-                net, mask = _get_net_and_mask(network['cidr'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask)
+                values.extend([("PROJNETV6", net_v6),
+                               ("PROJMASKV6", prefixlen_v6)])
+
+            extra_params = "".join([template % value for value in values])
         else:
             extra_params = "\n"
 
@@ -1023,10 +1025,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    def to_xml(self, instance, rescue=False, network_info=None):
-        # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-
+    def _prepare_xml_info(self, instance, rescue=False, network_info=None):
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
@@ -1034,8 +1033,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(network,
-                                              mapping))
+            nics.append(self._get_nic_for_xml(network, mapping))
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
@@ -1067,29 +1065,43 @@ class LibvirtConnection(driver.ComputeDriver):
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
             xml_info['disk'] = xml_info['basepath'] + "/disk"
+        return xml_info
 
+    def to_xml(self, instance, rescue=False, network_info=None):
+        # TODO(termie): cache?
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+        xml_info = self._prepare_xml_info(instance, rescue, network_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        LOG.debug(_('instance %s: finished toXML method'),
-                        instance['name'])
+        LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml
 
-    def get_info(self, instance_name):
-        # NOTE(justinsb): When libvirt isn't running / can't connect, we get:
-        # libvir: Remote error : unable to connect to
-        #  '/var/run/libvirt/libvirt-sock', libvirtd may need to be started:
-        #  No such file or directory
-        try:
-            virt_dom = self._conn.lookupByName(instance_name)
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.NotFound(_("Instance %s not found")
-                                         % instance_name)
-            LOG.warning(_("Error from libvirt during lookup. "
-                          "Code=%(errcode)s Error=%(e)s") %
-                        locals())
-            raise
+    def _lookup_by_name(self, instance_name):
+        """Retrieve libvirt domain object given an instance name.
 
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
+
+        """
+        try:
+            return self._conn.lookupByName(instance_name)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=instance_name)
+
+            msg = _("Error from libvirt while looking up %(instance_name)s: "
+                    "[Error Code %(error_code)s] %(ex)s") % locals()
+            raise exception.Error(msg)
+
+    def get_info(self, instance_name):
+        """Retrieve information from libvirt for a specific instance name.
+
+        If a libvirt error is encountered during lookup, we might raise a
+        NotFound exception or Error exception depending on how severe the
+        libvirt error is.
+
+        """
+        virt_dom = self._lookup_by_name(instance_name)
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
@@ -1126,7 +1138,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         Returns a list of all block devices for this domain.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
@@ -1149,14 +1161,14 @@ class LibvirtConnection(driver.ComputeDriver):
                     if child.name == 'target':
                         devdst = child.prop('dev')
 
-                if devdst == None:
+                if devdst is None:
                     continue
 
                 disks.append(devdst)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
         return disks
@@ -1168,7 +1180,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         Returns a list of all network interfaces for this instance.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
@@ -1191,14 +1203,14 @@ class LibvirtConnection(driver.ComputeDriver):
                     if child.name == 'target':
                         devdst = child.prop('dev')
 
-                if devdst == None:
+                if devdst is None:
                     continue
 
                 interfaces.append(devdst)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
         return interfaces
@@ -1334,9 +1346,9 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
-            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
-                                      "but %d\n") % len(nodes)
-                                      + xml.serialize())
+            reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
+            reason += xml.serialize()
+            raise exception.InvalidCPUInfo(reason=reason)
 
         cpu_info = dict()
 
@@ -1365,9 +1377,8 @@ class LibvirtConnection(driver.ComputeDriver):
             tkeys = topology.keys()
             if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
-                raise exception.Invalid(_("Invalid xml: topology"
-                                          "(%(topology)s) must have "
-                                          "%(ks)s") % locals())
+                reason = _("topology (%(topology)s) must have %(ks)s")
+                raise exception.InvalidCPUInfo(reason=reason % locals())
 
         feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
@@ -1383,7 +1394,7 @@ class LibvirtConnection(driver.ComputeDriver):
         Note that this function takes an instance name, not an Instance, so
         that it can be called by monitor.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         return domain.blockStats(disk)
 
     def interface_stats(self, instance_name, interface):
@@ -1391,7 +1402,7 @@ class LibvirtConnection(driver.ComputeDriver):
         Note that this function takes an instance name, not an Instance, so
         that it can be called by monitor.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         return domain.interfaceStats(interface)
 
     def get_console_pool_info(self, console_type):
@@ -1422,9 +1433,7 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            raise exception.Invalid(_("Cannot update compute manager "
-                                      "specific info, because no service "
-                                      "record was found."))
+            raise exception.ComputeServiceUnavailable(host=host)
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -1477,7 +1486,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise
 
         if ret <= 0:
-            raise exception.Invalid(m % locals())
+            raise exception.InvalidCPUInfo(reason=m % locals())
 
         return
 
@@ -1587,7 +1596,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                  FLAGS.live_migration_bandwidth)
 
         except Exception:
-            recover_method(ctxt, instance_ref)
+            recover_method(ctxt, instance_ref, dest=dest)
             raise
 
         # Waiting for completion of live_migration.
@@ -1763,11 +1772,16 @@ class NWFilterFirewall(FirewallDriver):
         logging.info('ensuring static filters')
         self._ensure_static_filters()
 
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
+            base_filter = 'nova-vpn'
+        else:
+            base_filter = 'nova-base'
+
         for (network, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
             self._define_filter(self._filter_container(instance_filter_name,
-                                                       ['nova-base']))
+                                                       [base_filter]))
 
     def _ensure_static_filters(self):
         if self.static_filters_configured:
@@ -1778,11 +1792,12 @@ class NWFilterFirewall(FirewallDriver):
                                                     'no-ip-spoofing',
                                                     'no-arp-spoofing',
                                                     'allow-dhcp-server']))
+        self._define_filter(self._filter_container('nova-vpn',
+                                                   ['allow-dhcp-server']))
         self._define_filter(self.nova_base_ipv4_filter)
         self._define_filter(self.nova_base_ipv6_filter)
         self._define_filter(self.nova_dhcp_filter)
         self._define_filter(self.nova_ra_filter)
-        self._define_filter(self.nova_vpn_filter)
         if FLAGS.allow_project_net_traffic:
             self._define_filter(self.nova_project_filter)
             if FLAGS.use_ipv6:
@@ -1795,14 +1810,6 @@ class NWFilterFirewall(FirewallDriver):
                  name,
                  ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
         return xml
-
-    nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
-                           <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
-                           <filterref filter='allow-dhcp-server'/>
-                           <filterref filter='nova-allow-dhcp-server'/>
-                           <filterref filter='nova-base-ipv4'/>
-                           <filterref filter='nova-base-ipv6'/>
-                         </filter>'''
 
     def nova_base_ipv4_filter(self):
         retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
@@ -1866,10 +1873,6 @@ class NWFilterFirewall(FirewallDriver):
         """
         if not network_info:
             network_info = _get_network_info(instance)
-        if instance['image_id'] == FLAGS.vpn_image_id:
-            base_filter = 'nova-vpn'
-        else:
-            base_filter = 'nova-base'
 
         ctxt = context.get_admin_context()
 
@@ -1881,41 +1884,59 @@ class NWFilterFirewall(FirewallDriver):
                                              'nova-base-ipv6',
                                              'nova-allow-dhcp-server']
 
+        if FLAGS.use_ipv6:
+            networks = [network for (network, _m) in network_info if
+                        network['gateway_v6']]
+
+            if networks:
+                instance_secgroup_filter_children.\
+                    append('nova-allow-ra-server')
+
         for security_group in \
                 db.security_group_get_by_instance(ctxt, instance['id']):
 
             self.refresh_security_group_rules(security_group['id'])
 
-            instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                    security_group['id'])]
+            instance_secgroup_filter_children.append('nova-secgroup-%s' %
+                                                    security_group['id'])
 
             self._define_filter(
                     self._filter_container(instance_secgroup_filter_name,
                                            instance_secgroup_filter_children))
 
-        for (network, mapping) in network_info:
+        network_filters = self.\
+            _create_network_filters(instance, network_info,
+                                    instance_secgroup_filter_name)
+
+        for (name, children) in network_filters:
+            self._define_filters(name, children)
+
+    def _create_network_filters(self, instance, network_info,
+                               instance_secgroup_filter_name):
+        if instance['image_id'] == str(FLAGS.vpn_image_id):
+            base_filter = 'nova-vpn'
+        else:
+            base_filter = 'nova-base'
+
+        result = []
+        for (_n, mapping) in network_info:
             nic_id = mapping['mac'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)
-            instance_filter_children = \
-                [base_filter, instance_secgroup_filter_name]
-
-            if FLAGS.use_ipv6:
-                gateway_v6 = network['gateway_v6']
-
-                if gateway_v6:
-                    instance_secgroup_filter_children += \
-                        ['nova-allow-ra-server']
+            instance_filter_children = [base_filter,
+                                        instance_secgroup_filter_name]
 
             if FLAGS.allow_project_net_traffic:
-                instance_filter_children += ['nova-project']
+                instance_filter_children.append('nova-project')
                 if FLAGS.use_ipv6:
-                    instance_filter_children += ['nova-project-v6']
+                    instance_filter_children.append('nova-project-v6')
 
-            self._define_filter(
-                    self._filter_container(instance_filter_name,
-                                           instance_filter_children))
+            result.append((instance_filter_name, instance_filter_children))
 
-        return
+        return result
+
+    def _define_filters(self, filter_name, filter_children):
+        self._define_filter(self._filter_container(filter_name,
+                                                   filter_children))
 
     def refresh_security_group_rules(self, security_group_id):
         return self._define_filter(
@@ -2017,40 +2038,40 @@ class IptablesFirewallDriver(FirewallDriver):
         self.add_filters_for_instance(instance, network_info)
         self.iptables.apply()
 
-    def add_filters_for_instance(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        chain_name = self._instance_chain_name(instance)
+    def _create_filter(self, ips, chain_name):
+        return ['-d %s -j $%s' % (ip, chain_name) for ip in ips]
 
-        self.iptables.ipv4['filter'].add_chain(chain_name)
+    def _filters_for_instance(self, chain_name, network_info):
+        ips_v4 = [ip['ip'] for (_n, mapping) in network_info
+                 for ip in mapping['ips']]
+        ipv4_rules = self._create_filter(ips_v4, chain_name)
 
-        ips_v4 = [ip['ip'] for (_, mapping) in network_info
-                            for ip in mapping['ips']]
-
-        for ipv4_address in ips_v4:
-            self.iptables.ipv4['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv4_address, chain_name))
-
+        ipv6_rules = []
         if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for (_, mapping) in network_info
-                                 for ip in mapping['ip6s']]
+            ips_v6 = [ip['ip'] for (_n, mapping) in network_info
+                     for ip in mapping['ip6s']]
+            ipv6_rules = self._create_filter(ips_v6, chain_name)
 
-            for ipv6_address in ips_v6:
-                self.iptables.ipv6['filter'].add_rule('local',
-                                                      '-d %s -j $%s' %
-                                                      (ipv6_address,
-                                                       chain_name))
+        return ipv4_rules, ipv6_rules
 
-        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-
+    def _add_filters(self, chain_name, ipv4_rules, ipv6_rules):
         for rule in ipv4_rules:
             self.iptables.ipv4['filter'].add_rule(chain_name, rule)
 
         if FLAGS.use_ipv6:
             for rule in ipv6_rules:
                 self.iptables.ipv6['filter'].add_rule(chain_name, rule)
+
+    def add_filters_for_instance(self, instance, network_info=None):
+        chain_name = self._instance_chain_name(instance)
+        if FLAGS.use_ipv6:
+            self.iptables.ipv6['filter'].add_chain(chain_name)
+        self.iptables.ipv4['filter'].add_chain(chain_name)
+        ipv4_rules, ipv6_rules = self._filters_for_instance(chain_name,
+                                                            network_info)
+        self._add_filters('local', ipv4_rules, ipv6_rules)
+        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
+        self._add_filters(chain_name, ipv4_rules, ipv6_rules)
 
     def remove_filters_for_instance(self, instance):
         chain_name = self._instance_chain_name(instance)

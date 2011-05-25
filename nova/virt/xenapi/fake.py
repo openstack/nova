@@ -294,7 +294,7 @@ class Failure(Exception):
     def __str__(self):
         try:
             return str(self.details)
-        except Exception, exc:
+        except Exception:
             return "XenAPI Fake Failure: %s" % str(self.details)
 
     def _details_map(self):

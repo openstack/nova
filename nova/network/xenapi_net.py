@@ -47,7 +47,7 @@ def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
     network_ref = network_utils.NetworkHelper.find_network_with_name_label(
                                                                        session,
                                                                        bridge)
-    if network_ref == None:
+    if network_ref is None:
         # If bridge does not exists
         # 1 - create network
         description = "network for nova bridge %s" % bridge
