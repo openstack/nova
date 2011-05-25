@@ -774,8 +774,7 @@ class ServersTest(test.TestCase):
 
         def server_update(context, id, params):
             filtered_dict = dict(
-                display_name='server_test',
-                admin_pass='bacon',
+                display_name='server_test'
             )
             self.assertEqual(params, filtered_dict)
             return filtered_dict

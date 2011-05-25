@@ -134,7 +134,8 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None):
+               injected_files=None,
+               admin_password=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
@@ -264,7 +265,8 @@ class API(base.Base):
                                "instance_id": instance_id,
                                "instance_type": instance_type,
                                "availability_zone": availability_zone,
-                               "injected_files": injected_files}})
+                               "injected_files": injected_files,
+                               "admin_password": admin_password}})
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -503,15 +505,6 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def _set_admin_password(self, context, instance_id, password):
-        """Set the root/admin password for the given instance."""
-        host = self._find_host(context, instance_id)
-
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "set_admin_password",
-                  "args": {"instance_id": instance_id, "new_pass": password}})
-
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -665,8 +658,12 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        eventlet.spawn_n(self._set_admin_password, context, instance_id,
-                                                  password)
+        host = self._find_host(context, instance_id)
+
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "set_admin_password",
+                  "args": {"instance_id": instance_id, "new_pass": password}})
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""
