@@ -54,6 +54,7 @@ def generate_default_hostname(instance_id):
 
 class API(base.Base):
     """API for interacting with the compute manager."""
+    scheduler_rules = None
 
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
@@ -128,18 +129,15 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
-    def create(self, context, instance_type,
+    def _check_create_parameters(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, zone_blob=None):
-        """Create the number and type of instances requested.
-
-        Verifies that quota and other arguments are valid.
-
-        """
+        """Verify all the input parameters regardless of the provisioning
+        strategy being performed."""
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 
@@ -220,7 +218,46 @@ class API(base.Base):
             'metadata': metadata,
             'availability_zone': availability_zone,
             'os_type': os_type}
-        elevated = context.elevated()
+
+        return (num_instances, base_options)
+
+    def create_all_at_once(self, context, instance_type,
+               image_id, kernel_id=None, ramdisk_id=None,
+               min_count=1, max_count=1,
+               display_name='', display_description='',
+               key_name=None, key_data=None, security_group='default',
+               availability_zone=None, user_data=None, metadata={},
+               injected_files=None, zone_blob=None):
+         """Provision the instances by passing the whole request to
+         the Scheduler for execution."""
+         self._check_create_parameters(self, context, instance_type,
+               image_id, kernel_id, ramdisk_id, min_count=1, max_count=1,
+               display_name, display_description,
+               key_name, key_data, security_group,
+               availability_zone, user_data, metadata,
+               injected_files, zone_blob)
+
+    def create(self, context, instance_type,
+               image_id, kernel_id=None, ramdisk_id=None,
+               min_count=1, max_count=1,
+               display_name='', display_description='',
+               key_name=None, key_data=None, security_group='default',
+               availability_zone=None, user_data=None, metadata={},
+               injected_files=None, zone_blob=None):
+        """Provision the instances by sending off a series of single
+        instance requests to the Schedulers. This is fine for trival
+        Scheduler drivers, but may remove the effectiveness of the
+        more complicated drivers."""
+
+        num_instances, base_options = self._check_create_parameters(
+                               context, instance_type,
+                               image_id, kernel_id, ramdisk_id,
+                               min_count=1, max_count=1,
+                               display_name, display_description,
+                               key_name, key_data, security_group,
+                               availability_zone, user_data, metadata,
+                               injected_files, zone_blob)
+ 
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
@@ -278,6 +315,22 @@ class API(base.Base):
             self.trigger_security_group_members_refresh(elevated, group_id)
 
         return [dict(x.iteritems()) for x in instances]
+
+    def smart_create(self, *args, **kwargs):
+        """Ask the scheduler if we should: 1. do single shot instance
+        requests or all-at-once, and 2. defer the DB work until
+        a suitable host has been selected (if at all). Cache this
+        information and act accordingly."""
+
+        if API.scheduler_rules == None:
+            API.scheduler_rules = scheduler_api.get_scheduler_rules(context)
+
+        should_create_all_at_once, should_defer_database_create = \
+                        API.scheduler_rules
+
+        if should_create_all_at_once:
+            return self.create_all_at_once(*args, **kwargs)
+        return self.create(*args, **kwargs)
 
     def has_finished_migration(self, context, instance_id):
         """Returns true if an instance has a finished migration."""
