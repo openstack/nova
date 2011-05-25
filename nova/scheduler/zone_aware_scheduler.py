@@ -27,6 +27,7 @@ import novaclient
 
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
@@ -38,54 +39,17 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
 
 
+class InvalidBlob(exception.NovaException):
+    message = _("Ill-formed or incorrectly routed 'blob' data sent "
+                "to instance create request.")
+
+
 class ZoneAwareScheduler(driver.Scheduler):
     """Base class for creating Zone Aware Schedulers."""
 
     def _call_zone_method(self, context, method, specs):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs)
-
-    def schedule_run_instance(self, context, instance_id, request_spec,
-                                        *args, **kwargs):
-        """This method is called from nova.compute.api to provision
-        an instance. However we need to look at the parameters being
-        passed in to see if this is a request to:
-        1. Create a Build Plan and then provision, or
-        2. Use the Build Plan information in the request parameters
-           to simply create the instance (either in this zone or
-           a child zone)."""
-
-        # TODO(sandy): We'll have to look for richer specs at some point.
-
-        blob = request_spec.get('blob')
-        if blob:
-            self.provision_resource(context, request_spec, instance_id,
-                                    request_spec, kwargs)
-            return None
-
-        # Create build plan and provision ...
-        build_plan = self.select(context, request_spec)
-        if not build_plan:
-            raise driver.NoValidHost(_('No hosts were available'))
-
-        for item in build_plan:
-            self.provision_resource(context, item, instance_id, request_spec,
-                                    kwargs)
-
-        # Returning None short-circuits the routing to Compute (since
-        # we've already done it here)
-        return None
-
-    def provision_resource(self, context, item, instance_id, request_spec,
-                           kwargs):
-        """Create the requested resource in this Zone or a child zone."""
-        if "hostname" in item:
-            self._provision_resource_locally(context, item, instance_id,
-                            kwargs)
-            return
-
-        self._provision_resource_from_blob(context, item, instance_id,
-                                               request_spec, kwargs)
 
     def _provision_resource_locally(self, context, item, instance_id, kwargs):
         """Create the requested resource in this Zone."""
@@ -98,48 +62,16 @@ class ZoneAwareScheduler(driver.Scheduler):
         LOG.debug(_("Provisioning locally via compute node %(host)s")
                             % locals())
 
-    def _provision_resource_from_blob(self, context, item, instance_id,
-                                          request_spec, kwargs):
-        """Create the requested resource locally or in a child zone
-           based on what is stored in the zone blob info.
-
-           Attempt to decrypt the blob to see if this request is:
-           1. valid, and
-           2. intended for this zone or a child zone.
-
-           Note: If we have "blob" that means the request was passed
-           into us from a parent zone. If we have "child_blob" that
-           means we gathered the info from one of our children.
-           It's possible that, when we decrypt the 'blob' field, it
-           contains "child_blob" data. In which case we forward the
-           request."""
-
-        if "blob" in item:
-            # Request was passed in from above. Is it for us?
-            blob = item['blob']
-            decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
-            host_info = None
-            try:
-                json_entry = decryptor(blob)
-                host_info = json.dumps(entry)
-            except M2Crypto.EVP.EVPError:
-                pass
-        elif "child_blob" in item:
-            # Our immediate child zone provided this info ...
-            host_info = item
-
-        if not host_info:
-            raise exception.Invalid(_("Ill-formed or incorrectly "
-                            "routed 'blob' data sent "
-                            "to instance create request.") % locals())
-
-        # Valid data ... is it for us?
-        if 'child_zone' in host_info and 'child_blob' in host_info:
-            self._ask_child_zone_to_create_instance(context, host_info,
-                                                    request_spec, kwargs)
-        else:
-            self._provision_resource_locally(context, host_info,
-                                             instance_id, kwargs)
+    def _decrypt_blob(self, blob):
+        """Returns the decrypted blob or None if invalid. Broken out
+        for testing."""
+        decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
+        try:
+            json_entry = decryptor(blob)
+            return json.dumps(entry)
+        except M2Crypto.EVP.EVPError:
+            pass
+        return None
 
     def _ask_child_zone_to_create_instance(self, context, zone_info,
                                            request_spec, kwargs):
@@ -178,6 +110,83 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
                             child_blob)
+
+    def _provision_resource_from_blob(self, context, item, instance_id,
+                                          request_spec, kwargs):
+        """Create the requested resource locally or in a child zone
+           based on what is stored in the zone blob info.
+
+           Attempt to decrypt the blob to see if this request is:
+           1. valid, and
+           2. intended for this zone or a child zone.
+
+           Note: If we have "blob" that means the request was passed
+           into us from a parent zone. If we have "child_blob" that
+           means we gathered the info from one of our children.
+           It's possible that, when we decrypt the 'blob' field, it
+           contains "child_blob" data. In which case we forward the
+           request."""
+
+        host_info = None
+        if "blob" in item:
+            # Request was passed in from above. Is it for us?
+            host_info = self._decrypt_blob(item['blob'])
+        elif "child_blob" in item:
+            # Our immediate child zone provided this info ...
+            host_info = item
+
+        if not host_info:
+            raise InvalidBlob()
+
+        # Valid data ... is it for us?
+        if 'child_zone' in host_info and 'child_blob' in host_info:
+            self._ask_child_zone_to_create_instance(context, host_info,
+                                                    request_spec, kwargs)
+        else:
+            self._provision_resource_locally(context, host_info,
+                                             instance_id, kwargs)
+
+    def _provision_resource(self, context, item, instance_id, request_spec,
+                           kwargs):
+        """Create the requested resource in this Zone or a child zone."""
+        if "hostname" in item:
+            self._provision_resource_locally(context, item, instance_id,
+                            kwargs)
+            return
+
+        self._provision_resource_from_blob(context, item, instance_id,
+                                               request_spec, kwargs)
+
+    def schedule_run_instance(self, context, instance_id, request_spec,
+                                        *args, **kwargs):
+        """This method is called from nova.compute.api to provision
+        an instance. However we need to look at the parameters being
+        passed in to see if this is a request to:
+        1. Create a Build Plan and then provision, or
+        2. Use the Build Plan information in the request parameters
+           to simply create the instance (either in this zone or
+           a child zone)."""
+
+        # TODO(sandy): We'll have to look for richer specs at some point.
+
+        blob = request_spec.get('blob')
+        if blob:
+            self._provision_resource(context, request_spec, instance_id,
+                                    request_spec, kwargs)
+            return None
+
+        # Create build plan and provision ...
+        build_plan = self.select(context, request_spec)
+        if not build_plan:
+            raise driver.NoValidHost(_('No hosts were available'))
+
+        for item in build_plan:
+            self._provision_resource(context, item, instance_id, request_spec,
+                                    kwargs)
+
+        # Returning None short-circuits the routing to Compute (since
+        # we've already done it here)
+        return None
 
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information

@@ -119,7 +119,6 @@ class Controller(common.OpenstackController):
         ctx = req.environ['nova.context']
         json_specs = json.loads(req.body)
         specs = json.loads(json_specs)
-        LOG.debug("NOVA.API.OPENSTACK.ZONES.SELECT '%s'" % specs)#pep8
         build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}

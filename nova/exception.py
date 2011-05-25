@@ -122,7 +122,7 @@ class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
     def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(**kwargs)
+        super(NotAuthorized, self).__init__(**kwargs)
 
 
 class AdminRequired(NotAuthorized):
