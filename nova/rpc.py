@@ -24,13 +24,13 @@ No fan-out support yet.
 
 """
 
+import greenlet
 import json
 import sys
 import time
 import traceback
 import uuid
 
-import greenlet
 from carrot import connection as carrot_connection
 from carrot import messaging
 import eventlet

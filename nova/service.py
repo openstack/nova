@@ -19,6 +19,7 @@
 
 """Generic Node baseclass for all workers that run on hosts."""
 
+import greenlet
 import inspect
 import os
 
@@ -166,7 +167,10 @@ class Service(object):
     def kill(self):
         """Destroy the service object in the datastore."""
         self.csetthread.kill()
-        self.csetthread.wait()
+        try:
+            self.csetthread.wait()
+        except greenlet.GreenletExit:
+            pass
         self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
