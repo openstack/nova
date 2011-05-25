@@ -261,7 +261,8 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=instance_obj.id)
+            raise exception.NotFound(_("No opaque_ref could be determined "
+                    "for '%s'.") % instance_or_vm)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
