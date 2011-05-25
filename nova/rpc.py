@@ -30,11 +30,11 @@ import time
 import traceback
 import uuid
 
+import greenlet
 from carrot import connection as carrot_connection
 from carrot import messaging
 import eventlet
 from eventlet import greenpool
-from eventlet import greenthread
 from eventlet import pools
 from eventlet import queue
 
@@ -266,6 +266,7 @@ class ConsumerSet(object):
     def __init__(self, conn, consumer_list):
         self.consumer_list = set(consumer_list)
         self.consumer_set = None
+        self.enabled = True
         self.init(conn)
 
     def init(self, conn):
@@ -283,15 +284,21 @@ class ConsumerSet(object):
         self.init(None)
 
     def wait(self, limit=None):
-        while True:
+        running = True
+        while running:
             it = self.consumer_set.iterconsume(limit=limit)
+            if not it:
+                break
             while True:
                 try:
                     it.next()
                 except StopIteration:
                     return
+                except greenlet.GreenletExit:
+                    running = False
+                    break
                 except Exception as e:
-                    LOG.error(_("Received exception %s " % str(e) + \
+                    LOG.error(_("Received exception %s " % type(e) + \
                             "while processing consumer"))
                     self.reconnect()
                     # Break to outer loop

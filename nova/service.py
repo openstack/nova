@@ -21,12 +21,8 @@
 
 import inspect
 import os
-import sys
-import time
 
-from eventlet import event
 from eventlet import greenthread
-from eventlet import greenpool
 
 from nova import context
 from nova import db
@@ -112,7 +108,7 @@ class Service(object):
                         consumer_node,
                         fanout])
             # Wait forever, processing these consumers
-            greenthread.spawn_n(cset.wait)
+            self.csetthread = greenthread.spawn(cset.wait)
 
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
@@ -169,6 +165,8 @@ class Service(object):
 
     def kill(self):
         """Destroy the service object in the datastore."""
+        self.csetthread.kill()
+        self.csetthread.wait()
         self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)

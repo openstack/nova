@@ -79,7 +79,7 @@ class Queue(object):
 class Backend(base.BaseBackend):
     def __init__(self, connection, **kwargs):
         super(Backend, self).__init__(connection, **kwargs)
-        self.consumers = []
+        self.consumers = {}
 
     def queue_declare(self, queue, **kwargs):
         global QUEUES
@@ -100,13 +100,18 @@ class Backend(base.BaseBackend):
                 ' key %(routing_key)s') % locals())
         EXCHANGES[exchange].bind(QUEUES[queue].push, routing_key)
 
-    def declare_consumer(self, queue, callback, *args, **kwargs):
-        self.consumers.append((queue, callback))
+    def declare_consumer(self, queue, callback, consumer_tag, *args, **kwargs):
+        LOG.debug("Adding consumer %s", consumer_tag)
+        self.consumers[consumer_tag] = (queue, callback)
+
+    def cancel(self, consumer_tag):
+        LOG.debug("Removing consumer %s", consumer_tag)
+        del self.consumers[consumer_tag]
 
     def consume(self, limit=None):
         num = 0
         while True:
-            for (queue, callback) in self.consumers:
+            for (queue, callback) in self.consumers.itervalues():
                 item = self.get(queue)
                 if item:
                     callback(item)

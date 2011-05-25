@@ -17,13 +17,8 @@
 #    under the License.
 
 from base64 import b64decode
-import json
 from M2Crypto import BIO
 from M2Crypto import RSA
-import os
-import shutil
-import tempfile
-import time
 
 from eventlet import greenthread
 
@@ -33,12 +28,10 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova import rpc
-from nova import service
 from nova import test
 from nova import utils
 from nova import exception
 from nova.auth import manager
-from nova.compute import power_state
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
@@ -79,6 +72,15 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
+        # NOTE(vish): set up a manual wait so rpc.cast has a chance to finish
+        rpc_cast = rpc.cast
+
+        def finish_cast(*args, **kwargs):
+            rpc_cast(*args, **kwargs)
+            greenthread.sleep(0.2)
+
+        self.stubs.Set(rpc, 'cast', finish_cast)
+
     def tearDown(self):
         network_ref = db.project_get_network(self.context,
                                              self.project.id)
@@ -113,7 +115,6 @@ class CloudTestCase(test.TestCase):
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
                                   public_ip=address)
-        greenthread.sleep(0.3)
         db.floating_ip_destroy(self.context, address)
 
     def test_associate_disassociate_address(self):
@@ -129,12 +130,10 @@ class CloudTestCase(test.TestCase):
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
-        greenthread.sleep(0.3)
         self.cloud.disassociate_address(self.context,
                                         public_ip=address)
         self.cloud.release_address(self.context,
                                   public_ip=address)
-        greenthread.sleep(0.3)
         self.network.deallocate_fixed_ip(self.context, fixed)
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
@@ -306,31 +305,26 @@ class CloudTestCase(test.TestCase):
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
-        greenthread.sleep(0.3)
         instance_id = rv['instancesSet'][0]['instanceId']
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE?OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
-        greenthread.sleep(0.3)
         rv = self.cloud.terminate_instances(self.context, [instance_id])
-        greenthread.sleep(0.3)
 
     def test_ajax_console(self):
+
         kwargs = {'image_id': 'ami-1'}
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        greenthread.sleep(0.3)
         output = self.cloud.get_ajax_console(context=self.context,
                                              instance_id=[instance_id])
         self.assertEquals(output['url'],
                           '%s/?token=FAKETOKEN' % FLAGS.ajax_console_proxy_url)
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
-        greenthread.sleep(0.3)
         rv = self.cloud.terminate_instances(self.context, [instance_id])
-        greenthread.sleep(0.3)
 
     def test_key_generation(self):
         result = self._create_key('test')
