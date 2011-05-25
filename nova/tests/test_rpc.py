@@ -120,6 +120,48 @@ class RpcTestCase(test.TestCase):
                                               "value": value}})
         self.assertEqual(value, result)
 
+    def test_connectionpool_single(self):
+        """Test that ConnectionPool recycles a single connection"""
+
+        conn1 = rpc.ConnectionPool.get()
+        rpc.ConnectionPool.put(conn1)
+        conn2 = rpc.ConnectionPool.get()
+        rpc.ConnectionPool.put(conn2)
+        self.assertEqual(conn1, conn2)
+
+    def test_connectionpool_double(self):
+        """Test that ConnectionPool returns 2 separate connections
+        when called consecutively and the pool returns connections LIFO
+        """
+
+        conn1 = rpc.ConnectionPool.get()
+        conn2 = rpc.ConnectionPool.get()
+
+        self.assertNotEqual(conn1, conn2)
+        rpc.ConnectionPool.put(conn1)
+        rpc.ConnectionPool.put(conn2)
+
+        conn3 = rpc.ConnectionPool.get()
+        conn4 = rpc.ConnectionPool.get()
+        self.assertEqual(conn2, conn3)
+        self.assertEqual(conn1, conn4)
+
+    def test_connectionpool_limit(self):
+        """Test connection pool limit and verify all connections
+        are unique
+        """
+
+        max_size = FLAGS.rpc_conn_pool_size
+        conns = []
+
+        for i in xrange(max_size):
+            conns.append(rpc.ConnectionPool.get())
+
+        self.assertFalse(rpc.ConnectionPool.free_items)
+        self.assertEqual(rpc.ConnectionPool.current_size,
+                rpc.ConnectionPool.max_size)
+        self.assertEqual(len(set(conns)), max_size)
+
 
 class TestReceiver(object):
     """Simple Proxy class so the consumer has methods to call

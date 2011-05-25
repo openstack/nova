@@ -99,10 +99,16 @@ class Connection(carrot_connection.BrokerConnection):
 class Pool(pools.Pool):
     """Class that implements a Pool of Connections"""
 
+    # TODO(comstud): Timeout connections not used in a while
     def create(self):
         return Connection.instance(new=True)
 
-ConnectionPool = Pool(max_size=FLAGS.rpc_conn_pool_size)
+# Create a ConnectionPool to use for RPC calls.  We'll order the
+# pool as a stack (LIFO), so that we can potentially loop through and
+# timeout old unused connections at some point
+ConnectionPool = Pool(
+        max_size=FLAGS.rpc_conn_pool_size,
+        order_as_stack=True)
 
 
 class Consumer(messaging.Consumer):
