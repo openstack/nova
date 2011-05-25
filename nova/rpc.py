@@ -236,6 +236,9 @@ class AdapterConsumer(Consumer):
 
                 # This final None tells multicall that it is done.
                 msg_reply(msg_id, None, None)
+            elif hasattr(rval, 'send'):
+                # NOTE(vish): this iterates through the generator
+                list(rval)
         except Exception as e:
             logging.exception('Exception during message handling')
             if msg_id:
@@ -530,9 +533,8 @@ class MulticallWaiter(object):
 def call(context, topic, msg):
     """Sends a message on a topic and wait for a response."""
     rv = multicall(context, topic, msg)
-    for x in rv:
-        rv.close()
-        return x
+    # NOTE(vish): return the last result from the multicall
+    return list(rv)[-1]
 
 
 def cast(context, topic, msg):
