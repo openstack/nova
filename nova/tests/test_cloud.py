@@ -19,6 +19,7 @@
 from base64 import b64decode
 from M2Crypto import BIO
 from M2Crypto import RSA
+import os
 
 from eventlet import greenthread
 
