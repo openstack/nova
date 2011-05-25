@@ -50,7 +50,10 @@ LOG = logging.getLogger('nova.rpc')
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('rpc_thread_pool_size', 1024, 'Size of RPC thread pool')
+flags.DEFINE_integer('rpc_thread_pool_size', 1024,
+        'Size of RPC thread pool')
+flags.DEFINE_integer('rpc_conn_pool_size', 30,
+        'Size of RPC connection pool')
 
 
 class Connection(carrot_connection.BrokerConnection):
@@ -99,7 +102,7 @@ class Pool(pools.Pool):
     def create(self):
         return Connection.instance(new=True)
 
-ConnectionPool = Pool(max_size=20)
+ConnectionPool = Pool(max_size=FLAGS.rpc_conn_pool_size)
 
 
 class Consumer(messaging.Consumer):
