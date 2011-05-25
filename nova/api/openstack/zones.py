@@ -26,9 +26,6 @@ from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('build_plan_encryption_key',
-        None,
-        '128bit (hex) encryption key for scheduler build plans.')
 
 
 LOG = logging.getLogger('nova.api.openstack.zones')
