@@ -181,7 +181,6 @@ class Service(object):
         except greenlet.GreenletExit:
             pass
         self.stop()
-        rpc.ConnectionPool.put(self.conn)
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
