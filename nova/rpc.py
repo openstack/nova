@@ -233,10 +233,10 @@ class AdapterConsumer(Consumer):
                     logging.error('rval! %s', rval)
                     for x in rval:
                         msg_reply(msg_id, x, None)
-                    msg_reply(msg_id, None, None)
                 else:
                     msg_reply(msg_id, rval, None)
-                #msg_reply(msg_id, rval, None)
+                # This final None tells multicall that it is done.
+                msg_reply(msg_id, None, None)
         except Exception as e:
             logging.exception('Exception during message handling')
             if msg_id:

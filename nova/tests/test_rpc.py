@@ -49,6 +49,35 @@ class RpcTestCase(test.TestCase):
                                                  "args": {"value": value}})
         self.assertEqual(value, result)
 
+    def test_call_succeed_despite_multiple_returns(self):
+        """Get a value through rpc call"""
+        value = 42
+        result = rpc.call(self.context, 'test', {"method": "echo_three_times",
+                                                 "args": {"value": value}})
+        self.assertEqual(value, result)
+
+    def test_call_succeed_despite_multiple_returns_yield(self):
+        """Get a value through rpc call"""
+        value = 42
+        result = rpc.call(self.context, 'test',
+                          {"method": "echo_three_times_yield",
+                           "args": {"value": value}})
+        self.assertEqual(value, result)
+
+    def test_multicall_succeed_once(self):
+        """Get a value through rpc call"""
+        value = 42
+        result = rpc.multicall(self.context,
+                              'test',
+                              {"method": "echo",
+                               "args": {"value": value}})
+        i = 0
+        for x in result:
+            if i > 0:
+                self.fail('should only receive one response')
+            self.assertEqual(value + i, x)
+            i += 1
+
     def test_multicall_succeed_three_times(self):
         """Get a value through rpc call"""
         value = 42
