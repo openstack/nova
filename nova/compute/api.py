@@ -754,7 +754,8 @@ class API(base.Base):
         fixed_ip_addrs = []
         for info in self.network_api.get_instance_nw_info(context,
                                                           instance):
-            fixed_ip_addrs.extend([ip_dict['ip'] for ip_dict in info['ips']])
+            ips = info[1]['ips']
+            fixed_ip_addrs.extend([ip_dict['ip'] for ip_dict in ips])
 
         # TODO(tr3buchet): this will associate the floating IP with the first
         # fixed_ip (lowest id) an instance has. This should be changed to
