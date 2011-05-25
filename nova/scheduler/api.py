@@ -139,7 +139,6 @@ def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
             except Exception as e:
                 if type(e) in errors_to_ignore:
                     return None
-                ex = traceback.format_exc(e)
                 # TODO (dabo) - want to be able to re-raise here.
                 # Returning a string now; raising was causing issues.
                 # raise e

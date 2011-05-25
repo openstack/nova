@@ -255,6 +255,10 @@ class NotFound(NovaException):
         super(NotFound, self).__init__(**kwargs)
 
 
+class FlagNotSet(NotFound):
+    message = _("Required flag %(flag)s not set.")
+
+
 class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 
@@ -461,9 +465,8 @@ class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
 
 
-class SchedulerHostFilterDriverNotFound(NotFound):
-    message = _("Scheduler Host Filter Driver %(driver_name)s could"
-                " not be found.")
+class SchedulerHostFilterNotFound(NotFound):
+    message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):
