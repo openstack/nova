@@ -39,6 +39,7 @@ from nova import context
 from nova import db
 from nova import fakerabbit
 from nova import flags
+from nova import log
 from nova import rpc
 from nova import service
 from nova import wsgi
@@ -50,6 +51,14 @@ flags.DEFINE_string('sqlite_clean_db', 'clean.sqlite',
 flags.DEFINE_bool('fake_tests', True,
                   'should we use everything for testing')
 
+LOG = log.getLogger('nova.tests')
+
+def skip_test(func):
+    """Decorator that skips a test"""
+    def _skipper(*args, **kw):
+        """Wrapped skipper function."""
+        return func
+    return "8===========D"
 
 def skip_if_fake(func):
     """Decorator that skips a test if running in fake mode."""

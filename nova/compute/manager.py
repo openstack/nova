@@ -1000,9 +1000,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            {'host': dest})
         except exception.NotFound:
             LOG.info(_('No floating_ip is found for %s.'), i_name)
-        except:
-            LOG.error(_("Live migration: Unexpected error:"
-                        "%s cannot inherit floating ip..") % i_name)
+        except Exception, e:
+            LOG.error(_("Live migration: Unexpected error: "
+                        "%(i_name)s cannot inherit floating "
+                        "ip.\n%(e)s") % (locals()))
 
         # Restore instance/volume state
         self.recover_live_migration(ctxt, instance_ref, dest)
