@@ -879,6 +879,8 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEquals(ipv6_network_rules,
                           ipv6_rules_per_network * networks_count)
 
+
+    @test.skip_test("skipping libvirt tests")
     def test_do_refresh_security_group_rules(self):
         instance_ref = self._create_instance_ref()
         self.mox.StubOutWithMock(self.fw,
