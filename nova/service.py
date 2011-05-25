@@ -88,29 +88,31 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
+        conn = rpc.Connection.instance(new=True)
+        logging.debug("Creating Consumer connection for Service %s" % \
+                self.topic)
+
+        # Share this same connection for these Consumers
+        consumer_all = rpc.TopicAdapterConsumer(
+                connection=conn,
+                topic=self.topic,
+                proxy=self)
+        consumer_node = rpc.TopicAdapterConsumer(
+                connection=conn,
+                topic='%s.%s' % (self.topic, self.host),
+                proxy=self)
+        fanout = rpc.FanoutAdapterConsumer(
+                connection=conn,
+                topic=self.topic,
+                proxy=self)
+
+        cset = rpc.ConsumerSet(conn, [consumer_all,
+                    consumer_node,
+                    fanout])
+        # Wait forever, processing these consumers
+        self.csetthread = greenthread.spawn(cset.wait)
+
         if self.report_interval:
-            conn = rpc.Connection.instance(new=True)
-
-            # Share this same connection for these Consumers
-            consumer_all = rpc.TopicAdapterConsumer(
-                    connection=conn,
-                    topic=self.topic,
-                    proxy=self)
-            consumer_node = rpc.TopicAdapterConsumer(
-                    connection=conn,
-                    topic='%s.%s' % (self.topic, self.host),
-                    proxy=self)
-            fanout = rpc.FanoutAdapterConsumer(
-                    connection=conn,
-                    topic=self.topic,
-                    proxy=self)
-
-            cset = rpc.ConsumerSet(conn, [consumer_all,
-                        consumer_node,
-                        fanout])
-            # Wait forever, processing these consumers
-            self.csetthread = greenthread.spawn(cset.wait)
-
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
             self.timers.append(pulse)
