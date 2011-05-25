@@ -135,7 +135,9 @@ class VolumeDriver(object):
 
     def create_volume_from_snapshot(self, volume, snapshot):
         """Creates a volume from a snapshot."""
-        raise NotImplementedError()
+        self._create_volume(volume['name'], self._sizestr(volume['size']))
+        self._copy_volume(self.local_path(snapshot), self.local_path(volume),
+                          snapshot['volume_size'])
 
     def delete_volume(self, volume):
         """Deletes a logical volume."""
