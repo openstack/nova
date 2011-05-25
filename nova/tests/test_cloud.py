@@ -132,8 +132,10 @@ class CloudTestCase(test.TestCase):
         for network in networks:
             self.network.set_network_host(self.context, network['id'])
         project_id = self.context.project_id
-        ips = self.network.allocate_for_instance(self.context, inst['id'],
-                                                 inst['instance_type_id'],
+        type_id = inst['instance_type_id']
+        ips = self.network.allocate_for_instance(self.context,
+                                                 instance_id=inst['id'],
+                                                 instance_type_id=type_id,
                                                  project_id=project_id)
         # TODO(jkoelker) Make this mas bueno
         self.assertTrue(ips)
