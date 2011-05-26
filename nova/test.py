@@ -56,13 +56,13 @@ LOG = log.getLogger('nova.tests')
 
 
 class skip_test(object):
-    """Decorator that skips a test"""
+    """decorator that skips a test"""
     def __init__(self, msg):
         self.message = msg
     
     def __call__(self, func):
         def _skipper(*args, **kw):
-            """Wrapped skipper function."""
+            """wrapped skipper function."""
             raise nose.SkipTest(self.message)
         _skipper.__name__ = func.__name__
         _skipper.__doc__ = func.__doc__

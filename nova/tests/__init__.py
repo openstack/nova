@@ -42,6 +42,7 @@ def setup():
 
     from nova import context
     from nova import flags
+    from nova import db
     from nova.db import migration
     from nova.network import manager as network_manager
     from nova.tests import fake_flags
@@ -64,5 +65,8 @@ def setup():
                             bridge_interface=bridge_interface,
                             vpn_start=FLAGS.vpn_start,
                             vlan_start=FLAGS.vlan_start)
+    for net in db.network_get_all(ctxt):
+        network.set_network_host(ctxt, net['id'])
+    
     cleandb = os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db)
     shutil.copyfile(testdb, cleandb)
