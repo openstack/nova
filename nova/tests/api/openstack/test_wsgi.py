@@ -205,7 +205,7 @@ class ResponseSerializerTest(test.TestCase):
     def test_serialize_response_dict_to_unknown_content_type(self):
         self.assertRaises(exception.InvalidContentType,
                           self.serializer.serialize,
-                          'application/unknown', {})
+                          {}, 'application/unknown')
 
 
 class RequestDeserializerTest(test.TestCase):

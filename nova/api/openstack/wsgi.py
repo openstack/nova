@@ -62,7 +62,7 @@ class TextDeserializer(object):
         """Find local deserialization method and parse request body."""
         try:
             action_method = getattr(self, action)
-        except Exception:
+        except (AttributeError, TypeError):
             action_method = self.default
 
         return action_method(datastring)
@@ -162,7 +162,7 @@ class RequestDeserializer(object):
     def get_deserializer(self, content_type):
         try:
             return self.deserializers[content_type]
-        except Exception:
+        except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 
     def get_expected_content_type(self, request):
@@ -172,16 +172,20 @@ class RequestDeserializer(object):
         """Parse dictionary created by routes library."""
         try:
             args = request_environment['wsgiorg.routing_args'][1].copy()
-
-            del args['controller']
-
-            if 'format' in args:
-                del args['format']
-
-            return args
-
-        except KeyError:
+        except Exception:
             return {}
+
+        try:
+            del args['controller']
+        except KeyError:
+            pass
+
+        try:
+            del args['format']
+        except KeyError:
+            pass
+
+        return args
 
 
 class DictSerializer(object):
@@ -191,7 +195,7 @@ class DictSerializer(object):
         """Find local serialization method and encode response body."""
         try:
             action_method = getattr(self, action)
-        except Exception:
+        except (AttributeError, TypeError):
             action_method = self.default
 
         return action_method(data)
@@ -316,7 +320,7 @@ class ResponseSerializer(object):
     def get_serializer(self, content_type):
         try:
             return self.serializers[content_type]
-        except Exception:
+        except (KeyError, TypeError):
             raise exception.InvalidContentType(content_type=content_type)
 
 
@@ -347,7 +351,8 @@ class Resource(wsgi.Application):
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
 
-        LOG.debug("%s %s" % (request.method, request.url))
+        LOG.debug("%(method)s %(url)s" % {"method": request.method,
+                                          "url": request.url})
 
         try:
             action, action_args, accept = self.deserializer.deserialize(

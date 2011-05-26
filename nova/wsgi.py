@@ -260,8 +260,8 @@ class Router(object):
 
         Each route in `mapper` must specify a 'controller', which is a
         WSGI app to call.  You'll probably want to specify an 'action' as
-        well and have your controller be a controller, who will route
-        the request to the action method.
+        well and have your controller be an object that can route
+        the request to the action-specific method.
 
         Examples:
           mapper = routes.Mapper()
