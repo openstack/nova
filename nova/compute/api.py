@@ -372,7 +372,7 @@ class API(base.Base):
         for host in hosts:
             rpc.cast(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                     {"method": "refresh_provider_fw_rules", "args": {}})
+                     {'method': 'refresh_provider_fw_rules', 'args': {}})
 
     def update(self, context, instance_id, **kwargs):
         """Updates the instance in the datastore.
