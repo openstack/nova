@@ -45,7 +45,6 @@ import sys
 import tempfile
 import time
 import uuid
-import inspect
 from xml.dom import minidom
 from xml.etree import ElementTree
 
