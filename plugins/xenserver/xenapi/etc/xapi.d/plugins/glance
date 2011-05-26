@@ -210,11 +210,13 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
         # We return this snap as the VDI instead of image.vhd
         vdi_return_list.append(dict(vdi_type="os", vdi_uuid=snap_info[1]))
     else:
+        assert_vhd_not_hidden(image_info[0])
         # If there's no snap, we return the image.vhd UUID
         vdi_return_list.append(dict(vdi_type="os", vdi_uuid=image_info[1]))
 
     swap_info = prepare_if_exists(staging_path, 'swap.vhd')
     if swap_info:
+        assert_vhd_not_hidden(swap_info[0])
         paths_to_move.append(swap_info[0])
         vdi_return_list.append(dict(vdi_type="swap", vdi_uuid=swap_info[1]))
 
