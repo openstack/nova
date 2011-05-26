@@ -349,19 +349,19 @@ class AdminController(object):
 
     def block_external_addresses(self, context, cidr):
         """Add provider-level firewall rules to block incoming traffic."""
-        LOG.audit(_("Blocking traffic to all projects incoming from %s"),
+        LOG.audit(_('Blocking traffic to all projects incoming from %s'),
                   cidr, context=context)
         cidr = urllib.unquote(cidr).decode()
         # raise if invalid
         IPy.IP(cidr)
         rule = {'cidr': cidr}
         tcp_rule = rule.copy()
-        tcp_rule.update({"protocol": "tcp", "from_port": 1, "to_port": 65535})
+        tcp_rule.update({'protocol': 'tcp', 'from_port': 1, 'to_port': 65535})
         udp_rule = rule.copy()
-        udp_rule.update({"protocol": "udp", "from_port": 1, "to_port": 65535})
+        udp_rule.update({'protocol': 'udp', 'from_port': 1, 'to_port': 65535})
         icmp_rule = rule.copy()
-        icmp_rule.update({"protocol": "icmp", "from_port": -1,
-                          "to_port": None})
+        icmp_rule.update({'protocol': 'icmp', 'from_port': -1,
+                          'to_port': None})
         rules_added = 0
         if not self._provider_fw_rule_exists(context, tcp_rule):
             db.provider_fw_rule_create(context, tcp_rule)
@@ -375,4 +375,4 @@ class AdminController(object):
         if rules_added == 0:
             raise exception.ApiError(_('Duplicate rule'))
         self.compute_api.trigger_provider_fw_rules_refresh(context)
-        return {'status': 'OK', 'message': 'Disabled (number) IPs'}
+        return {'status': 'OK', 'message': 'Added %s rules' % rules_added}
