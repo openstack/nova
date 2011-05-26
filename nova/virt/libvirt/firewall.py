@@ -376,7 +376,7 @@ class NWFilterFirewall(FirewallDriver):
         return result
 
     def _define_filters(self, filter_name, filter_children):
-        self._define_fitler(self._filter_container(filter_name,
+        self._define_filter(self._filter_container(filter_name,
                                                    filter_children))
 
     def refresh_security_group_rules(self,
