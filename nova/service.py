@@ -105,19 +105,18 @@ class Service(object):
                 connection=self.conn,
                 topic=self.topic,
                 proxy=self)
-
-        cset = rpc.ConsumerSet(self.conn, [consumer_all,
-                                           consumer_node,
-                                           fanout])
+        consumer_set = rpc.ConsumerSet(
+                connection=self.conn,
+                consumer_list=[consumer_all, consumer_node, fanout])
 
         # Wait forever, processing these consumers
         def _wait():
             try:
-                cset.wait()
+                consumer_set.wait()
             finally:
-                cset.close()
+                consumer_set.close()
 
-        self.csetthread = greenthread.spawn(_wait)
+        self.consumer_set_thread = greenthread.spawn(_wait)
 
         if self.report_interval:
             pulse = utils.LoopingCall(self.report_state)
@@ -182,9 +181,9 @@ class Service(object):
             logging.warn(_('Service killed that has no database entry'))
 
     def stop(self):
-        self.csetthread.kill()
+        self.consumer_set_thread.kill()
         try:
-            self.csetthread.wait()
+            self.consumer_set_thread.wait()
         except greenlet.GreenletExit:
             pass
         for x in self.timers:

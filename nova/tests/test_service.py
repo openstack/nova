@@ -142,7 +142,8 @@ class ServiceTestCase(test.TestCase):
 
         mock_cset = self.mox.CreateMock(rpc.ConsumerSet,
                 {'wait': wait_func})
-        rpc.ConsumerSet(mox.IgnoreArg(), mox.IsA(list)).AndReturn(mock_cset)
+        rpc.ConsumerSet(connection=mox.IgnoreArg(),
+                        consumer_list=mox.IsA(list)).AndReturn(mock_cset)
         wait_func(mox.IgnoreArg())
 
         service_create = {'host': host,
@@ -331,7 +332,8 @@ class ServiceTestCase(test.TestCase):
 
         mock_cset = self.mox.CreateMock(rpc.ConsumerSet,
                 {'wait': wait_func})
-        rpc.ConsumerSet(mox.IgnoreArg(), mox.IsA(list)).AndReturn(mock_cset)
+        rpc.ConsumerSet(connection=mox.IgnoreArg(),
+                        consumer_list=mox.IsA(list)).AndReturn(mock_cset)
         wait_func(mox.IgnoreArg())
 
         self.mox.StubOutWithMock(serv.manager.driver,

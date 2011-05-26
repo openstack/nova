@@ -66,12 +66,10 @@ class RpcTestCase(test.TestCase):
                               'test',
                               {"method": "echo",
                                "args": {"value": value}})
-        i = 0
-        for x in result:
+        for i, x in enumerate(result):
             if i > 0:
                 self.fail('should only receive one response')
             self.assertEqual(value + i, x)
-            i += 1
 
     def test_multicall_succeed_three_times(self):
         value = 42
@@ -79,10 +77,8 @@ class RpcTestCase(test.TestCase):
                               'test',
                               {"method": "echo_three_times",
                                "args": {"value": value}})
-        i = 0
-        for x in result:
+        for i, x in enumerate(result):
             self.assertEqual(value + i, x)
-            i += 1
 
     def test_multicall_succeed_three_times_yield(self):
         value = 42
@@ -90,10 +86,8 @@ class RpcTestCase(test.TestCase):
                               'test',
                               {"method": "echo_three_times_yield",
                                "args": {"value": value}})
-        i = 0
-        for x in result:
+        for i, x in enumerate(result):
             self.assertEqual(value + i, x)
-            i += 1
 
     def test_context_passed(self):
         """Makes sure a context is passed through rpc call."""
