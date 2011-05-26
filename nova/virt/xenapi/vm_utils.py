@@ -417,6 +417,10 @@ class VMHelper(HelperBase):
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
         result = session.wait_for_task(task, instance_id)
+        # 'download_vhd' will return a json encoded string containing
+        # a list of dictionaries describing VDIs.  The dictionary will
+        # contain 'vdi_type' and 'vdi_uuid' keys.  'vdi_type' can be
+        # 'os' or 'swap' right now.
         vdis = json.loads(result)
         for vdi in vdis:
             LOG.debug(_("xapi 'download_vhd' returned VDI of "
