@@ -564,23 +564,23 @@ class LibvirtConnection(driver.ComputeDriver):
     @exception.wrap_exception
     def pause(self, instance, callback):
         """Pause VM instance"""
-        self._take_action_to_instance("suspend", instance)
+        self._take_action_to_instance('suspend', instance)
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
         """Unpause paused VM instance"""
-        self._take_action_to_instance("resume", instance)
+        self._take_action_to_instance('resume', instance)
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
         """Suspend the specified instance"""
-        self._take_action_to_instance("managedSave", instance, 0)
+        self._take_action_to_instance('managedSave', instance, 0)
 
     @exception.wrap_exception
     def resume(self, instance, callback):
         """resume the specified instance"""
         try:
-            self._take_action_to_instance("create", instance)
+            self._take_action_to_instance('create', instance)
         except libvirt.LibvirtError:
             xml = self.to_xml(instance, None)
             self._create_new_domain(xml)
