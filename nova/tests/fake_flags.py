@@ -21,24 +21,24 @@ from nova import flags
 FLAGS = flags.FLAGS
 
 flags.DECLARE('volume_driver', 'nova.volume.manager')
-FLAGS.volume_driver = 'nova.volume.driver.FakeISCSIDriver'
-FLAGS.connection_type = 'fake'
-FLAGS.fake_rabbit = True
+FLAGS['volume_driver'].SetDefault('nova.volume.driver.FakeISCSIDriver')
+FLAGS['connection_type'].SetDefault('fake')
+FLAGS['fake_rabbit'].SetDefault(True)
 flags.DECLARE('auth_driver', 'nova.auth.manager')
-FLAGS.auth_driver = 'nova.auth.dbdriver.DbDriver'
+FLAGS['auth_driver'].SetDefault('nova.auth.dbdriver.DbDriver')
 flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('num_networks', 'nova.network.manager')
 flags.DECLARE('fake_network', 'nova.network.manager')
-FLAGS.network_size = 8
-FLAGS.num_networks = 2
-FLAGS.fake_network = True
-FLAGS.image_service = 'nova.image.local.LocalImageService'
+FLAGS['network_size'].SetDefault(8)
+FLAGS['num_networks'].SetDefault(2)
+FLAGS['fake_network'].SetDefault(True)
+FLAGS['image_service'].SetDefault('nova.image.local.LocalImageService')
 flags.DECLARE('num_shelves', 'nova.volume.driver')
 flags.DECLARE('blades_per_shelf', 'nova.volume.driver')
 flags.DECLARE('iscsi_num_targets', 'nova.volume.driver')
-FLAGS.num_shelves = 2
-FLAGS.blades_per_shelf = 4
-FLAGS.iscsi_num_targets = 8
-FLAGS.verbose = True
-FLAGS.sqlite_db = "tests.sqlite"
-FLAGS.use_ipv6 = True
+FLAGS['num_shelves'].SetDefault(2)
+FLAGS['blades_per_shelf'].SetDefault(4)
+FLAGS['iscsi_num_targets'].SetDefault(8)
+FLAGS['verbose'].SetDefault(True)
+FLAGS['sqlite_db'].SetDefault("tests.sqlite")
+FLAGS['use_ipv6'].SetDefault(True)

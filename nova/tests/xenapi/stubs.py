@@ -17,6 +17,7 @@
 """Stubouts, mocks and fixtures for the test suite"""
 
 import eventlet
+import json
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
@@ -37,7 +38,7 @@ def stubout_instance_snapshot(stubs):
                              sr_ref=sr_ref, sharable=False)
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         vdi_uuid = vdi_rec['uuid']
-        return vdi_uuid
+        return [dict(vdi_type='os', vdi_uuid=vdi_uuid)]
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
 
@@ -132,11 +133,30 @@ class FakeSessionForVMTests(fake.SessionBase):
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
 
-    def host_call_plugin(self, _1, _2, _3, _4, _5):
+    def host_call_plugin(self, _1, _2, plugin, method, _5):
         sr_ref = fake.get_all('SR')[0]
         vdi_ref = fake.create_vdi('', False, sr_ref, False)
         vdi_rec = fake.get_record('VDI', vdi_ref)
-        return '<string>%s</string>' % vdi_rec['uuid']
+        if plugin == "glance" and method == "download_vhd":
+            ret_str = json.dumps([dict(vdi_type='os',
+                    vdi_uuid=vdi_rec['uuid'])])
+        else:
+            ret_str = vdi_rec['uuid']
+        return '<string>%s</string>' % ret_str
+
+    def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
+        sr_ref = fake.get_all('SR')[0]
+        vdi_ref = fake.create_vdi('', False, sr_ref, False)
+        vdi_rec = fake.get_record('VDI', vdi_ref)
+        if plugin == "glance" and method == "download_vhd":
+            swap_vdi_ref = fake.create_vdi('', False, sr_ref, False)
+            swap_vdi_rec = fake.get_record('VDI', swap_vdi_ref)
+            ret_str = json.dumps(
+                    [dict(vdi_type='os', vdi_uuid=vdi_rec['uuid']),
+                    dict(vdi_type='swap', vdi_uuid=swap_vdi_rec['uuid'])])
+        else:
+            ret_str = vdi_rec['uuid']
+        return '<string>%s</string>' % ret_str
 
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
