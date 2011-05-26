@@ -164,10 +164,18 @@ def _get_network_info(instance):
     # we should cache network_info
     admin_context = context.get_admin_context()
 
-    ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
+    try:
+        ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
                                                    instance['id'])
-    networks = db.network_get_all_by_instance(admin_context,
-                                              instance['id'])
+    except exception.NoFixedIpsFoundForInstance, e:
+        pass
+
+    try:
+        networks = db.network_get_all_by_instance(admin_context,
+                                                instance['id'])
+    except exception.NetworkNotFoundForInstance, e:
+        return []
+
     flavor = db.instance_type_get_by_id(admin_context,
                                         instance['instance_type_id'])
     network_info = []
@@ -175,6 +183,17 @@ def _get_network_info(instance):
     for network in networks:
         network_ips = [ip for ip in ip_addresses
                        if ip['network_id'] == network['id']]
+
+        # FIXME(anyone): remove this once libvirt multinic is implemented
+        # correctly. This is merely a shim to make the unit tests continue to
+        # work
+        mac_address = None
+        try:
+            fixed_ip = db.fixed_ip_get_by_instance_and_network(admin_context,
+                                                instance['id'], network['id'])
+            mac_address = fixed_ip.mac_address.address
+        except exception.NoFixedIpsFoundForInstance, e:
+            pass
 
         def ip_dict(ip):
             return {
@@ -184,7 +203,7 @@ def _get_network_info(instance):
 
         def ip6_dict():
             prefix = network['cidr_v6']
-            mac = instance['mac_address']
+            mac = mac_address
             project_id = instance['project_id']
             return  {
                 'ip': ipv6.to_global(prefix, mac, project_id),
@@ -195,7 +214,7 @@ def _get_network_info(instance):
             'label': network['label'],
             'gateway': network['gateway'],
             'broadcast': network['broadcast'],
-            'mac': instance['mac_address'],
+            'mac': mac_address,
             'rxtx_cap': flavor['rxtx_cap'],
             'dns': [network['dns']],
             'ips': [ip_dict(ip) for ip in network_ips]}

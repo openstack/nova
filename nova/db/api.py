@@ -376,6 +376,13 @@ def fixed_ip_get_all_by_instance(context, instance_id):
     return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
 
 
+def fixed_ip_get_by_instance_and_network(context, instance_id,
+                                             network_id):
+    """Get fixed ips by instance and network or raise if none exist."""
+    return IMPL.fixed_ip_get_by_instance_and_network(context, instance_id,
+                                                     network_id)
+
+
 def fixed_ip_get_all_by_mac_address(context, mac_address_id):
     """Get fixed ips by mac_address or raise if none exist."""
     return IMPL.fixed_ip_get_all_by_mac_address(context, mac_address_id)

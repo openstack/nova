@@ -748,6 +748,19 @@ def fixed_ip_get_all_by_instance(context, instance_id):
         raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
     return rv
 
+@require_context
+def fixed_ip_get_by_instance_and_network(context, instance_id,
+                                             network_id):
+    session = get_session()
+    rv = session.query(models.FixedIp).\
+                 filter_by(instance_id=instance_id).\
+                 filter_by(network_id=network_id).\
+                 filter_by(deleted=False).\
+                 first()
+    if not rv:
+        raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
+    return rv
+
 
 @require_context
 def fixed_ip_get_all_by_mac_address(context, mac_address_id):
