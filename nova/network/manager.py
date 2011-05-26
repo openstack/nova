@@ -345,9 +345,9 @@ class NetworkManager(manager.SchedulerDependentManager):
 
         rpc.called by network_api
         """
-        instance_id = kwargs.get('instance_id')
-        project_id = kwargs.get('project_id')
-        type_id = kwargs.get('instance_type_id')
+        instance_id = kwargs.pop('instance_id')
+        project_id = kwargs.pop('project_id')
+        type_id = kwargs.pop('instance_type_id')
         admin_context = context.elevated()
         LOG.debug(_("network allocations for instance %s"), instance_id,
                                                             context=context)
@@ -364,7 +364,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         rpc.called by network_api
         kwargs can contain fixed_ips to circumvent another db lookup
         """
-        instance_id = kwargs.get('instance_id')
+        instance_id = kwargs.pop('instance_id')
         fixed_ips = kwargs.get('fixed_ips') or \
                   self.db.fixed_ip_get_all_by_instance(context, instance_id)
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
