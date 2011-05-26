@@ -28,10 +28,7 @@ import urllib
 import uuid
 from xml.dom import minidom
 
-from eventlet import event
 import glance.client
-from nova import context
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -51,6 +48,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('default_os_type', 'linux', 'Default OS type')
 flags.DEFINE_integer('block_device_creation_timeout', 10,
                      'time to wait for a block device to be created')
+flags.DEFINE_integer('max_kernel_ramdisk_size', 16 * 1024 * 1024,
+                     'maximum size in bytes of kernel or ramdisk images')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -306,7 +305,6 @@ class VMHelper(HelperBase):
                 % locals())
 
         vm_vdi_ref, vm_vdi_rec = cls.get_vdi_for_vm_safely(session, vm_ref)
-        vm_vdi_uuid = vm_vdi_rec["uuid"]
         sr_ref = vm_vdi_rec["SR"]
 
         original_parent_uuid = get_vhd_parent_uuid(session, vm_vdi_ref)
@@ -448,6 +446,12 @@ class VMHelper(HelperBase):
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
+        elif image_type == ImageType.KERNEL_RAMDISK and \
+             vdi_size > FLAGS.max_kernel_ramdisk_size:
+            max_size = FLAGS.max_kernel_ramdisk_size
+            raise exception.Error(
+                _("Kernel/Ramdisk image is too large: %(vdi_size)d bytes, "
+                  "max %(max_size)d bytes") % locals())
 
         name_label = get_name_label_for_image(image)
         vdi_ref = cls.create_vdi(session, sr_ref, name_label, vdi_size, False)
@@ -510,9 +514,7 @@ class VMHelper(HelperBase):
             try:
                 return glance_disk_format2nova_type[disk_format]
             except KeyError:
-                raise exception.NotFound(
-                    _("Unrecognized disk_format '%(disk_format)s'")
-                    % locals())
+                raise exception.InvalidDiskFormat(disk_format=disk_format)
 
         def determine_from_instance():
             if instance.kernel_id:
@@ -647,8 +649,7 @@ class VMHelper(HelperBase):
         if n == 0:
             return None
         elif n > 1:
-            raise exception.Duplicate(_('duplicate name found: %s') %
-                                        name_label)
+            raise exception.InstanceExists(name=name_label)
         else:
             return vm_refs[0]
 
@@ -755,14 +756,14 @@ class VMHelper(HelperBase):
         session.call_xenapi('SR.scan', sr_ref)
 
 
-def get_rrd(host, uuid):
+def get_rrd(host, vm_uuid):
     """Return the VM RRD XML as a string"""
     try:
         xml = urllib.urlopen("http://%s:%s@%s/vm_rrd?uuid=%s" % (
             FLAGS.xenapi_connection_username,
             FLAGS.xenapi_connection_password,
             host,
-            uuid))
+            vm_uuid))
         return xml.read()
     except IOError:
         return None
@@ -857,7 +858,7 @@ def safe_find_sr(session):
     """
     sr_ref = find_sr(session)
     if sr_ref is None:
-        raise exception.NotFound(_('Cannot find SR to read/write VDI'))
+        raise exception.StorageRepositoryNotFound()
     return sr_ref
 
 
@@ -1023,7 +1024,6 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
 
 def _write_partition(virtual_size, dev):
     dest = '/dev/%s' % dev
-    mbr_last = MBR_SIZE_SECTORS - 1
     primary_first = MBR_SIZE_SECTORS
     primary_last = MBR_SIZE_SECTORS + (virtual_size / SECTOR_SIZE) - 1
 

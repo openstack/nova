@@ -58,7 +58,6 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-#from nova import test
 from nova import utils
 from nova import vnc
 from nova.auth import manager
@@ -67,12 +66,16 @@ from nova.compute import power_state
 from nova.virt import disk
 from nova.virt import driver
 from nova.virt import images
+from nova.virt.libvirt import netutils
+
 
 libvirt = None
 libxml2 = None
 Template = None
 
+
 LOG = logging.getLogger('nova.virt.libvirt_conn')
+
 
 FLAGS = flags.FLAGS
 flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
@@ -80,7 +83,6 @@ flags.DECLARE('live_migration_retry_count', 'nova.compute.manager')
 flags.DEFINE_string('rescue_image_id', 'ami-rescue', 'Rescue ami image')
 flags.DEFINE_string('rescue_kernel_id', 'aki-rescue', 'Rescue aki image')
 flags.DEFINE_string('rescue_ramdisk_id', 'ari-rescue', 'Rescue ari image')
-
 flags.DEFINE_string('libvirt_xml_template',
                     utils.abspath('virt/libvirt.xml.template'),
                     'Libvirt XML Template')
@@ -102,7 +104,7 @@ flags.DEFINE_string('ajaxterm_portrange',
                     '10000-12000',
                     'Range of ports that ajaxterm should randomly try to bind')
 flags.DEFINE_string('firewall_driver',
-                    'nova.virt.libvirt_conn.IptablesFirewallDriver',
+                    'nova.virt.libvirt.firewall.IptablesFirewallDriver',
                     'Firewall driver (defaults to iptables)')
 flags.DEFINE_string('cpuinfo_xml_template',
                     utils.abspath('virt/cpuinfo.xml.template'),
@@ -144,66 +146,6 @@ def _late_load_cheetah():
         Template = t.Template
 
 
-def _get_net_and_mask(cidr):
-    net = IPy.IP(cidr)
-    return str(net.net()), str(net.netmask())
-
-
-def _get_net_and_prefixlen(cidr):
-    net = IPy.IP(cidr)
-    return str(net.net()), str(net.prefixlen())
-
-
-def _get_ip_version(cidr):
-        net = IPy.IP(cidr)
-        return int(net.version())
-
-
-def _get_network_info(instance):
-    # TODO(adiantum) If we will keep this function
-    # we should cache network_info
-    admin_context = context.get_admin_context()
-
-    ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
-                                                   instance['id'])
-
-    networks = db.network_get_all_by_instance(admin_context,
-                                              instance['id'])
-    network_info = []
-
-    for network in networks:
-        network_ips = [ip for ip in ip_addresses
-                       if ip['network_id'] == network['id']]
-
-        def ip_dict(ip):
-            return {
-                'ip': ip['address'],
-                'netmask': network['netmask'],
-                'enabled': '1'}
-
-        def ip6_dict():
-            prefix = network['cidr_v6']
-            mac = instance['mac_address']
-            return  {
-                'ip': utils.to_global_ipv6(prefix, mac),
-                'netmask': network['netmask_v6'],
-                'enabled': '1'}
-
-        mapping = {
-            'label': network['label'],
-            'gateway': network['gateway'],
-            'mac': instance['mac_address'],
-            'dns': [network['dns']],
-            'ips': [ip_dict(ip) for ip in network_ips]}
-
-        if FLAGS.use_ipv6:
-            mapping['ip6s'] = [ip6_dict()]
-            mapping['gateway6'] = network['gateway_v6']
-
-        network_info.append((network, mapping))
-    return network_info
-
-
 class LibvirtConnection(driver.ComputeDriver):
 
     def __init__(self, read_only):
@@ -211,7 +153,6 @@ class LibvirtConnection(driver.ComputeDriver):
         self.libvirt_uri = self.get_uri()
 
         self.libvirt_xml = open(FLAGS.libvirt_xml_template).read()
-        self.interfaces_xml = open(FLAGS.injected_network_template).read()
         self.cpuinfo_xml = open(FLAGS.cpuinfo_xml_template).read()
         self._wrapped_conn = None
         self.read_only = read_only
@@ -311,19 +252,10 @@ class LibvirtConnection(driver.ComputeDriver):
     def destroy(self, instance, cleanup=True):
         instance_name = instance['name']
 
-        # TODO(justinsb): Refactor all lookupByName calls for error-handling
         try:
-            virt_dom = self._conn.lookupByName(instance_name)
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
-                virt_dom = None
-            else:
-                LOG.warning(_("Error from libvirt during lookup of "
-                              "%(instance_name)s. Code=%(errcode)s "
-                              "Error=%(e)s") %
-                            locals())
-                raise
+            virt_dom = self._lookup_by_name(instance_name)
+        except exception.NotFound:
+            virt_dom = None
 
         # If the instance is already terminated, we're still happy
         # Otherwise, destroy it
@@ -361,25 +293,19 @@ class LibvirtConnection(driver.ComputeDriver):
                             locals())
                 raise
 
-        # We'll save this for when we do shutdown,
-        # instead of destroy - but destroy returns immediately
-        timer = utils.LoopingCall(f=None)
+        def _wait_for_destroy():
+            """Called at an interval until the VM is gone."""
+            instance_name = instance['name']
 
-        while True:
             try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.SHUTOFF:
-                    break
-            except Exception as ex:
-                msg = _("Error encountered when destroying instance '%(id)s': "
-                        "%(ex)s") % {"id": instance["id"], "ex": ex}
-                LOG.debug(msg)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTOFF)
-                break
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("Instance %s destroyed successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_destroy)
+        timer.start(interval=0.5, now=True)
 
         self.firewall_driver.unfilter_instance(instance)
 
@@ -400,7 +326,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):
-        virt_dom = self._conn.lookupByName(instance_name)
+        virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         if device_path.startswith('/dev/'):
             xml = """<disk type='block'>
@@ -418,7 +344,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                    name,
                                    mount_device)
         else:
-            raise exception.Invalid(_("Invalid device path %s") % device_path)
+            raise exception.InvalidDevicePath(path=device_path)
 
         virt_dom.attachDevice(xml)
 
@@ -437,18 +363,18 @@ class LibvirtConnection(driver.ComputeDriver):
                         if child.prop('dev') == device:
                             return str(node)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
     @exception.wrap_exception
     def detach_volume(self, instance_name, mountpoint):
-        virt_dom = self._conn.lookupByName(instance_name)
+        virt_dom = self._lookup_by_name(instance_name)
         mount_device = mountpoint.rpartition("/")[2]
         xml = self._get_disk_xml(virt_dom.XMLDesc(0), mount_device)
         if not xml:
-            raise exception.NotFound(_("No disk at %s") % mount_device)
+            raise exception.DiskNotFound(location=mount_device)
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
@@ -461,7 +387,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         """
         image_service = utils.import_object(FLAGS.image_service)
-        virt_dom = self._conn.lookupByName(instance['name'])
+        virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
         base = image_service.show(elevated, instance['image_id'])
@@ -469,8 +395,8 @@ class LibvirtConnection(driver.ComputeDriver):
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
                     'is_public': False,
+                    'name': '%s.%s' % (base['name'], image_id),
                     'properties': {'architecture': base['architecture'],
-                                   'name': '%s.%s' % (base['name'], image_id),
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
@@ -497,12 +423,17 @@ class LibvirtConnection(driver.ComputeDriver):
         # Export the snapshot to a raw image
         temp_dir = tempfile.mkdtemp()
         out_path = os.path.join(temp_dir, snapshot_name)
-        qemu_img_cmd = '%s convert -f qcow2 -O raw -s %s %s %s' % (
-                FLAGS.qemu_img,
-                snapshot_name,
-                disk_path,
-                out_path)
-        utils.execute(qemu_img_cmd)
+        qemu_img_cmd = (FLAGS.qemu_img,
+                        'convert',
+                        '-f',
+                        'qcow2',
+                        '-O',
+                        'raw',
+                        '-s',
+                        snapshot_name,
+                        disk_path,
+                        out_path)
+        utils.execute(*qemu_img_cmd)
 
         # Upload that image to the image service
         with open(out_path) as image_file:
@@ -516,31 +447,43 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def reboot(self, instance):
+        """Reboot a virtual machine, given an instance reference.
+
+        This method actually destroys and re-creates the domain to ensure the
+        reboot happens, as the guest OS cannot ignore this action.
+
+        """
+        virt_dom = self._conn.lookupByName(instance['name'])
+        # NOTE(itoumsn): Use XML delived from the running instance
+        # instead of using to_xml(instance). This is almost the ultimate
+        # stupid workaround.
+        xml = virt_dom.XMLDesc(0)
+        # NOTE(itoumsn): self.shutdown() and wait instead of self.destroy() is
+        # better because we cannot ensure flushing dirty buffers
+        # in the guest OS. But, in case of KVM, shutdown() does not work...
         self.destroy(instance, False)
-        xml = self.to_xml(instance)
         self.firewall_driver.setup_basic_filtering(instance)
         self.firewall_driver.prepare_instance_filter(instance)
         self._create_new_domain(xml)
         self.firewall_driver.apply_instance_filter(instance)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_reboot():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: rebooted'), instance['name'])
-                    timer.stop()
-            except Exception, exn:
-                LOG.exception(_('_wait_for_reboot failed: %s'), exn)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
+            """Called at an interval until the VM is running again."""
+            instance_name = instance['name']
 
-        timer.f = _wait_for_reboot
+            try:
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("During reboot, %s disappeared.") % instance_name
+                LOG.error(msg)
+                raise utils.LoopingCallDone
+
+            if state == power_state.RUNNING:
+                msg = _("Instance %s rebooted successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_reboot)
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception
@@ -560,7 +503,15 @@ class LibvirtConnection(driver.ComputeDriver):
         raise exception.ApiError("resume not supported for libvirt")
 
     @exception.wrap_exception
-    def rescue(self, instance, callback=None):
+    def rescue(self, instance):
+        """Loads a VM using rescue images.
+
+        A rescue is normally performed when something goes wrong with the
+        primary images and data needs to be corrected/recovered. Rescuing
+        should not edit or over-ride the original image, only allow for
+        data recovery.
+
+        """
         self.destroy(instance, False)
 
         xml = self.to_xml(instance, rescue=True)
@@ -570,29 +521,33 @@ class LibvirtConnection(driver.ComputeDriver):
         self._create_image(instance, xml, '.rescue', rescue_images)
         self._create_new_domain(xml)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_rescue():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(None, instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: rescued'), instance['name'])
-                    timer.stop()
-            except Exception, exn:
-                LOG.exception(_('_wait_for_rescue failed: %s'), exn)
-                db.instance_set_state(None,
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
+            """Called at an interval until the VM is running again."""
+            instance_name = instance['name']
 
-        timer.f = _wait_for_rescue
+            try:
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("During reboot, %s disappeared.") % instance_name
+                LOG.error(msg)
+                raise utils.LoopingCallDone
+
+            if state == power_state.RUNNING:
+                msg = _("Instance %s rescued successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_rescue)
         return timer.start(interval=0.5, now=True)
 
     @exception.wrap_exception
-    def unrescue(self, instance, callback=None):
-        # NOTE(vish): Because reboot destroys and recreates an instance using
-        #             the normal xml file, we can just call reboot here
+    def unrescue(self, instance):
+        """Reboot the VM which is being rescued back into primary images.
+
+        Because reboot destroys and re-creates instances, unresue should
+        simply call reboot.
+
+        """
         self.reboot(instance)
 
     @exception.wrap_exception
@@ -603,14 +558,10 @@ class LibvirtConnection(driver.ComputeDriver):
     # for xenapi(tr3buchet)
     @exception.wrap_exception
     def spawn(self, instance, network_info=None):
-        xml = self.to_xml(instance, network_info)
-        db.instance_set_state(context.get_admin_context(),
-                              instance['id'],
-                              power_state.NOSTATE,
-                              'launching')
+        xml = self.to_xml(instance, False, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
-        self._create_image(instance, xml, network_info)
+        self._create_image(instance, xml, network_info=network_info)
         domain = self._create_new_domain(xml)
         LOG.debug(_("instance %s: is running"), instance['name'])
         self.firewall_driver.apply_instance_filter(instance)
@@ -620,25 +571,23 @@ class LibvirtConnection(driver.ComputeDriver):
                       instance['name'])
             domain.setAutostart(1)
 
-        timer = utils.LoopingCall(f=None)
-
         def _wait_for_boot():
-            try:
-                state = self.get_info(instance['name'])['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
-                if state == power_state.RUNNING:
-                    LOG.debug(_('instance %s: booted'), instance['name'])
-                    timer.stop()
-            except:
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance['name'])
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
-                timer.stop()
+            """Called at an interval until the VM is running."""
+            instance_name = instance['name']
 
-        timer.f = _wait_for_boot
+            try:
+                state = self.get_info(instance_name)['state']
+            except exception.NotFound:
+                msg = _("During reboot, %s disappeared.") % instance_name
+                LOG.error(msg)
+                raise utils.LoopingCallDone
+
+            if state == power_state.RUNNING:
+                msg = _("Instance %s spawned successfully.") % instance_name
+                LOG.info(msg)
+                raise utils.LoopingCallDone
+
+        timer = utils.LoopingCall(_wait_for_boot)
         return timer.start(interval=0.5, now=True)
 
     def _flush_xen_console(self, virsh_output):
@@ -704,7 +653,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise Exception(_('Unable to find an open port'))
 
         def get_pty_for_instance(instance_name):
-            virt_dom = self._conn.lookupByName(instance_name)
+            virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             dom = minidom.parseString(xml)
 
@@ -726,10 +675,13 @@ class LibvirtConnection(driver.ComputeDriver):
         subprocess.Popen(cmd, shell=True)
         return {'token': token, 'host': host, 'port': port}
 
+    def get_host_ip_addr(self):
+        return FLAGS.my_ip
+
     @exception.wrap_exception
     def get_vnc_console(self, instance):
         def get_vnc_port_for_instance(instance_name):
-            virt_dom = self._conn.lookupByName(instance_name)
+            virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
             # TODO: use etree instead of minidom
             dom = minidom.parseString(xml)
@@ -793,7 +745,7 @@ class LibvirtConnection(driver.ComputeDriver):
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
                         network_info=None):
         if not network_info:
-            network_info = _get_network_info(inst)
+            network_info = netutils.get_network_info(inst)
 
         if not suffix:
             suffix = ''
@@ -951,26 +903,16 @@ class LibvirtConnection(driver.ComputeDriver):
         mac_id = mapping['mac'].replace(':', '')
 
         if FLAGS.allow_project_net_traffic:
+            template = "<parameter name=\"%s\"value=\"%s\" />\n"
+            net, mask = netutils.get_net_and_mask(network['cidr'])
+            values = [("PROJNET", net), ("PROJMASK", mask)]
             if FLAGS.use_ipv6:
-                net, mask = _get_net_and_mask(network['cidr'])
-                net_v6, prefixlen_v6 = _get_net_and_prefixlen(
+                net_v6, prefixlen_v6 = netutils.get_net_and_prefixlen(
                                            network['cidr_v6'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJNETV6\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASKV6\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask, net_v6, prefixlen_v6)
-            else:
-                net, mask = _get_net_and_mask(network['cidr'])
-                extra_params = ("<parameter name=\"PROJNET\" "
-                            "value=\"%s\" />\n"
-                            "<parameter name=\"PROJMASK\" "
-                            "value=\"%s\" />\n") % \
-                              (net, mask)
+                values.extend([("PROJNETV6", net_v6),
+                               ("PROJMASKV6", prefixlen_v6)])
+
+            extra_params = "".join([template % value for value in values])
         else:
             extra_params = "\n"
 
@@ -988,19 +930,15 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    def to_xml(self, instance, rescue=False, network_info=None):
-        # TODO(termie): cache?
-        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
-
+    def _prepare_xml_info(self, instance, rescue=False, network_info=None):
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
-            network_info = _get_network_info(instance)
+            network_info = netutils.get_network_info(instance)
 
         nics = []
         for (network, mapping) in network_info:
-            nics.append(self._get_nic_for_xml(network,
-                                              mapping))
+            nics.append(self._get_nic_for_xml(network, mapping))
         # FIXME(vish): stick this in db
         inst_type_id = instance['instance_type_id']
         inst_type = instance_types.get_instance_type(inst_type_id)
@@ -1032,29 +970,43 @@ class LibvirtConnection(driver.ComputeDriver):
                 xml_info['ramdisk'] = xml_info['basepath'] + "/ramdisk"
 
             xml_info['disk'] = xml_info['basepath'] + "/disk"
+        return xml_info
 
+    def to_xml(self, instance, rescue=False, network_info=None):
+        # TODO(termie): cache?
+        LOG.debug(_('instance %s: starting toXML method'), instance['name'])
+        xml_info = self._prepare_xml_info(instance, rescue, network_info)
         xml = str(Template(self.libvirt_xml, searchList=[xml_info]))
-        LOG.debug(_('instance %s: finished toXML method'),
-                        instance['name'])
+        LOG.debug(_('instance %s: finished toXML method'), instance['name'])
         return xml
 
-    def get_info(self, instance_name):
-        # NOTE(justinsb): When libvirt isn't running / can't connect, we get:
-        # libvir: Remote error : unable to connect to
-        #  '/var/run/libvirt/libvirt-sock', libvirtd may need to be started:
-        #  No such file or directory
-        try:
-            virt_dom = self._conn.lookupByName(instance_name)
-        except libvirt.libvirtError as e:
-            errcode = e.get_error_code()
-            if errcode == libvirt.VIR_ERR_NO_DOMAIN:
-                raise exception.NotFound(_("Instance %s not found")
-                                         % instance_name)
-            LOG.warning(_("Error from libvirt during lookup. "
-                          "Code=%(errcode)s Error=%(e)s") %
-                        locals())
-            raise
+    def _lookup_by_name(self, instance_name):
+        """Retrieve libvirt domain object given an instance name.
 
+        All libvirt error handling should be handled in this method and
+        relevant nova exceptions should be raised in response.
+
+        """
+        try:
+            return self._conn.lookupByName(instance_name)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                raise exception.InstanceNotFound(instance_id=instance_name)
+
+            msg = _("Error from libvirt while looking up %(instance_name)s: "
+                    "[Error Code %(error_code)s] %(ex)s") % locals()
+            raise exception.Error(msg)
+
+    def get_info(self, instance_name):
+        """Retrieve information from libvirt for a specific instance name.
+
+        If a libvirt error is encountered during lookup, we might raise a
+        NotFound exception or Error exception depending on how severe the
+        libvirt error is.
+
+        """
+        virt_dom = self._lookup_by_name(instance_name)
         (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
         return {'state': state,
                 'max_mem': max_mem,
@@ -1091,7 +1043,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         Returns a list of all block devices for this domain.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
@@ -1114,14 +1066,14 @@ class LibvirtConnection(driver.ComputeDriver):
                     if child.name == 'target':
                         devdst = child.prop('dev')
 
-                if devdst == None:
+                if devdst is None:
                     continue
 
                 disks.append(devdst)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
         return disks
@@ -1133,7 +1085,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         Returns a list of all network interfaces for this instance.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         # TODO(devcamcar): Replace libxml2 with etree.
         xml = domain.XMLDesc(0)
         doc = None
@@ -1156,14 +1108,14 @@ class LibvirtConnection(driver.ComputeDriver):
                     if child.name == 'target':
                         devdst = child.prop('dev')
 
-                if devdst == None:
+                if devdst is None:
                     continue
 
                 interfaces.append(devdst)
         finally:
-            if ctx != None:
+            if ctx is not None:
                 ctx.xpathFreeContext()
-            if doc != None:
+            if doc is not None:
                 doc.freeDoc()
 
         return interfaces
@@ -1299,9 +1251,9 @@ class LibvirtConnection(driver.ComputeDriver):
         xml = libxml2.parseDoc(xml)
         nodes = xml.xpathEval('//host/cpu')
         if len(nodes) != 1:
-            raise exception.Invalid(_("Invalid xml. '<cpu>' must be 1,"
-                                      "but %d\n") % len(nodes)
-                                      + xml.serialize())
+            reason = _("'<cpu>' must be 1, but %d\n") % len(nodes)
+            reason += xml.serialize()
+            raise exception.InvalidCPUInfo(reason=reason)
 
         cpu_info = dict()
 
@@ -1330,9 +1282,8 @@ class LibvirtConnection(driver.ComputeDriver):
             tkeys = topology.keys()
             if set(tkeys) != set(keys):
                 ks = ', '.join(keys)
-                raise exception.Invalid(_("Invalid xml: topology"
-                                          "(%(topology)s) must have "
-                                          "%(ks)s") % locals())
+                reason = _("topology (%(topology)s) must have %(ks)s")
+                raise exception.InvalidCPUInfo(reason=reason % locals())
 
         feature_nodes = xml.xpathEval('//host/cpu/feature')
         features = list()
@@ -1348,7 +1299,7 @@ class LibvirtConnection(driver.ComputeDriver):
         Note that this function takes an instance name, not an Instance, so
         that it can be called by monitor.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         return domain.blockStats(disk)
 
     def interface_stats(self, instance_name, interface):
@@ -1356,7 +1307,7 @@ class LibvirtConnection(driver.ComputeDriver):
         Note that this function takes an instance name, not an Instance, so
         that it can be called by monitor.
         """
-        domain = self._conn.lookupByName(instance_name)
+        domain = self._lookup_by_name(instance_name)
         return domain.interfaceStats(interface)
 
     def get_console_pool_info(self, console_type):
@@ -1387,9 +1338,7 @@ class LibvirtConnection(driver.ComputeDriver):
         try:
             service_ref = db.service_get_all_compute_by_host(ctxt, host)[0]
         except exception.NotFound:
-            raise exception.Invalid(_("Cannot update compute manager "
-                                      "specific info, because no service "
-                                      "record was found."))
+            raise exception.ComputeServiceUnavailable(host=host)
 
         # Updating host information
         dic = {'vcpus': self.get_vcpu_total(),
@@ -1442,7 +1391,7 @@ class LibvirtConnection(driver.ComputeDriver):
             raise
 
         if ret <= 0:
-            raise exception.Invalid(m % locals())
+            raise exception.InvalidCPUInfo(reason=m % locals())
 
         return
 
@@ -1552,7 +1501,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                  FLAGS.live_migration_bandwidth)
 
         except Exception:
-            recover_method(ctxt, instance_ref)
+            recover_method(ctxt, instance_ref, dest=dest)
             raise
 
         # Waiting for completion of live_migration.
@@ -1573,585 +1522,10 @@ class LibvirtConnection(driver.ComputeDriver):
         """See comments of same method in firewall_driver."""
         self.firewall_driver.unfilter_instance(instance_ref)
 
-
-class FirewallDriver(object):
-    def prepare_instance_filter(self, instance, network_info=None):
-        """Prepare filters for the instance.
-
-        At this point, the instance isn't running yet."""
-        raise NotImplementedError()
-
-    def unfilter_instance(self, instance):
-        """Stop filtering instance"""
-        raise NotImplementedError()
-
-    def apply_instance_filter(self, instance):
-        """Apply instance filter.
-
-        Once this method returns, the instance should be firewalled
-        appropriately. This method should as far as possible be a
-        no-op. It's vastly preferred to get everything set up in
-        prepare_instance_filter.
-        """
-        raise NotImplementedError()
-
-    def refresh_security_group_rules(self, security_group_id):
-        """Refresh security group rules from data store
-
-        Gets called when a rule has been added to or removed from
-        the security group."""
-        raise NotImplementedError()
-
-    def refresh_security_group_members(self, security_group_id):
-        """Refresh security group members from data store
-
-        Gets called when an instance gets added to or removed from
-        the security group."""
-        raise NotImplementedError()
-
-    def setup_basic_filtering(self, instance, network_info=None):
-        """Create rules to block spoofing and allow dhcp.
-
-        This gets called when spawning an instance, before
-        :method:`prepare_instance_filter`.
-
-        """
-        raise NotImplementedError()
-
-    def instance_filter_exists(self, instance):
-        """Check nova-instance-instance-xxx exists"""
-        raise NotImplementedError()
-
-
-class NWFilterFirewall(FirewallDriver):
-    """
-    This class implements a network filtering mechanism versatile
-    enough for EC2 style Security Group filtering by leveraging
-    libvirt's nwfilter.
-
-    First, all instances get a filter ("nova-base-filter") applied.
-    This filter provides some basic security such as protection against
-    MAC spoofing, IP spoofing, and ARP spoofing.
-
-    This filter drops all incoming ipv4 and ipv6 connections.
-    Outgoing connections are never blocked.
-
-    Second, every security group maps to a nwfilter filter(*).
-    NWFilters can be updated at runtime and changes are applied
-    immediately, so changes to security groups can be applied at
-    runtime (as mandated by the spec).
-
-    Security group rules are named "nova-secgroup-<id>" where <id>
-    is the internal id of the security group. They're applied only on
-    hosts that have instances in the security group in question.
-
-    Updates to security groups are done by updating the data model
-    (in response to API calls) followed by a request sent to all
-    the nodes with instances in the security group to refresh the
-    security group.
-
-    Each instance has its own NWFilter, which references the above
-    mentioned security group NWFilters. This was done because
-    interfaces can only reference one filter while filters can
-    reference multiple other filters. This has the added benefit of
-    actually being able to add and remove security groups from an
-    instance at run time. This functionality is not exposed anywhere,
-    though.
-
-    Outstanding questions:
-
-    The name is unique, so would there be any good reason to sync
-    the uuid across the nodes (by assigning it from the datamodel)?
-
-
-    (*) This sentence brought to you by the redundancy department of
-        redundancy.
-
-    """
-
-    def __init__(self, get_connection, **kwargs):
-        self._libvirt_get_connection = get_connection
-        self.static_filters_configured = False
-        self.handle_security_groups = False
-
-    def apply_instance_filter(self, instance):
-        """No-op. Everything is done in prepare_instance_filter"""
+    def update_host_status(self):
+        """See xenapi_conn.py implementation."""
         pass
 
-    def _get_connection(self):
-        return self._libvirt_get_connection()
-    _conn = property(_get_connection)
-
-    def nova_dhcp_filter(self):
-        """The standard allow-dhcp-server filter is an <ip> one, so it uses
-           ebtables to allow traffic through. Without a corresponding rule in
-           iptables, it'll get blocked anyway."""
-
-        return '''<filter name='nova-allow-dhcp-server' chain='ipv4'>
-                    <uuid>891e4787-e5c0-d59b-cbd6-41bc3c6b36fc</uuid>
-                    <rule action='accept' direction='out'
-                          priority='100'>
-                      <udp srcipaddr='0.0.0.0'
-                           dstipaddr='255.255.255.255'
-                           srcportstart='68'
-                           dstportstart='67'/>
-                    </rule>
-                    <rule action='accept' direction='in'
-                          priority='100'>
-                      <udp srcipaddr='$DHCPSERVER'
-                           srcportstart='67'
-                           dstportstart='68'/>
-                    </rule>
-                  </filter>'''
-
-    def nova_ra_filter(self):
-        return '''<filter name='nova-allow-ra-server' chain='root'>
-                            <uuid>d707fa71-4fb5-4b27-9ab7-ba5ca19c8804</uuid>
-                              <rule action='accept' direction='inout'
-                                    priority='100'>
-                                <icmpv6 srcipaddr='$RASERVER'/>
-                              </rule>
-                            </filter>'''
-
-    def setup_basic_filtering(self, instance, network_info=None):
-        """Set up basic filtering (MAC, IP, and ARP spoofing protection)"""
-        logging.info('called setup_basic_filtering in nwfilter')
-
-        if not network_info:
-            network_info = _get_network_info(instance)
-
-        if self.handle_security_groups:
-            # No point in setting up a filter set that we'll be overriding
-            # anyway.
-            return
-
-        logging.info('ensuring static filters')
-        self._ensure_static_filters()
-
-        for (network, mapping) in network_info:
-            nic_id = mapping['mac'].replace(':', '')
-            instance_filter_name = self._instance_filter_name(instance, nic_id)
-            self._define_filter(self._filter_container(instance_filter_name,
-                                                       ['nova-base']))
-
-    def _ensure_static_filters(self):
-        if self.static_filters_configured:
-            return
-
-        self._define_filter(self._filter_container('nova-base',
-                                                   ['no-mac-spoofing',
-                                                    'no-ip-spoofing',
-                                                    'no-arp-spoofing',
-                                                    'allow-dhcp-server']))
-        self._define_filter(self.nova_base_ipv4_filter)
-        self._define_filter(self.nova_base_ipv6_filter)
-        self._define_filter(self.nova_dhcp_filter)
-        self._define_filter(self.nova_ra_filter)
-        self._define_filter(self.nova_vpn_filter)
-        if FLAGS.allow_project_net_traffic:
-            self._define_filter(self.nova_project_filter)
-            if FLAGS.use_ipv6:
-                self._define_filter(self.nova_project_filter_v6)
-
-        self.static_filters_configured = True
-
-    def _filter_container(self, name, filters):
-        xml = '''<filter name='%s' chain='root'>%s</filter>''' % (
-                 name,
-                 ''.join(["<filterref filter='%s'/>" % (f,) for f in filters]))
-        return xml
-
-    nova_vpn_filter = '''<filter name='nova-vpn' chain='root'>
-                           <uuid>2086015e-cf03-11df-8c5d-080027c27973</uuid>
-                           <filterref filter='allow-dhcp-server'/>
-                           <filterref filter='nova-allow-dhcp-server'/>
-                           <filterref filter='nova-base-ipv4'/>
-                           <filterref filter='nova-base-ipv6'/>
-                         </filter>'''
-
-    def nova_base_ipv4_filter(self):
-        retval = "<filter name='nova-base-ipv4' chain='ipv4'>"
-        for protocol in ['tcp', 'udp', 'icmp']:
-            for direction, action, priority in [('out', 'accept', 399),
-                                                ('in', 'drop', 400)]:
-                retval += """<rule action='%s' direction='%s' priority='%d'>
-                               <%s />
-                             </rule>""" % (action, direction,
-                                              priority, protocol)
-        retval += '</filter>'
-        return retval
-
-    def nova_base_ipv6_filter(self):
-        retval = "<filter name='nova-base-ipv6' chain='ipv6'>"
-        for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
-            for direction, action, priority in [('out', 'accept', 399),
-                                                ('in', 'drop', 400)]:
-                retval += """<rule action='%s' direction='%s' priority='%d'>
-                               <%s />
-                             </rule>""" % (action, direction,
-                                              priority, protocol)
-        retval += '</filter>'
-        return retval
-
-    def nova_project_filter(self):
-        retval = "<filter name='nova-project' chain='ipv4'>"
-        for protocol in ['tcp', 'udp', 'icmp']:
-            retval += """<rule action='accept' direction='in' priority='200'>
-                           <%s srcipaddr='$PROJNET' srcipmask='$PROJMASK' />
-                         </rule>""" % protocol
-        retval += '</filter>'
-        return retval
-
-    def nova_project_filter_v6(self):
-        retval = "<filter name='nova-project-v6' chain='ipv6'>"
-        for protocol in ['tcp-ipv6', 'udp-ipv6', 'icmpv6']:
-            retval += """<rule action='accept' direction='inout'
-                                                   priority='200'>
-                           <%s srcipaddr='$PROJNETV6'
-                               srcipmask='$PROJMASKV6' />
-                         </rule>""" % (protocol)
-        retval += '</filter>'
-        return retval
-
-    def _define_filter(self, xml):
-        if callable(xml):
-            xml = xml()
-        # execute in a native thread and block current greenthread until done
-        tpool.execute(self._conn.nwfilterDefineXML, xml)
-
-    def unfilter_instance(self, instance):
-        # Nothing to do
+    def get_host_stats(self, refresh=False):
+        """See xenapi_conn.py implementation."""
         pass
-
-    def prepare_instance_filter(self, instance, network_info=None):
-        """
-        Creates an NWFilter for the given instance. In the process,
-        it makes sure the filters for the security groups as well as
-        the base filter are all in place.
-        """
-        if not network_info:
-            network_info = _get_network_info(instance)
-        if instance['image_id'] == FLAGS.vpn_image_id:
-            base_filter = 'nova-vpn'
-        else:
-            base_filter = 'nova-base'
-
-        ctxt = context.get_admin_context()
-
-        instance_secgroup_filter_name = \
-            '%s-secgroup' % (self._instance_filter_name(instance))
-            #% (instance_filter_name,)
-
-        instance_secgroup_filter_children = ['nova-base-ipv4',
-                                             'nova-base-ipv6',
-                                             'nova-allow-dhcp-server']
-
-        for security_group in \
-                db.security_group_get_by_instance(ctxt, instance['id']):
-
-            self.refresh_security_group_rules(security_group['id'])
-
-            instance_secgroup_filter_children += [('nova-secgroup-%s' %
-                                                    security_group['id'])]
-
-            self._define_filter(
-                    self._filter_container(instance_secgroup_filter_name,
-                                           instance_secgroup_filter_children))
-
-        for (network, mapping) in network_info:
-            nic_id = mapping['mac'].replace(':', '')
-            instance_filter_name = self._instance_filter_name(instance, nic_id)
-            instance_filter_children = \
-                [base_filter, instance_secgroup_filter_name]
-
-            if FLAGS.use_ipv6:
-                gateway_v6 = network['gateway_v6']
-
-                if gateway_v6:
-                    instance_secgroup_filter_children += \
-                        ['nova-allow-ra-server']
-
-            if FLAGS.allow_project_net_traffic:
-                instance_filter_children += ['nova-project']
-                if FLAGS.use_ipv6:
-                    instance_filter_children += ['nova-project-v6']
-
-            self._define_filter(
-                    self._filter_container(instance_filter_name,
-                                           instance_filter_children))
-
-        return
-
-    def refresh_security_group_rules(self, security_group_id):
-        return self._define_filter(
-                   self.security_group_to_nwfilter_xml(security_group_id))
-
-    def security_group_to_nwfilter_xml(self, security_group_id):
-        security_group = db.security_group_get(context.get_admin_context(),
-                                               security_group_id)
-        rule_xml = ""
-        v6protocol = {'tcp': 'tcp-ipv6', 'udp': 'udp-ipv6', 'icmp': 'icmpv6'}
-        for rule in security_group.rules:
-            rule_xml += "<rule action='accept' direction='in' priority='300'>"
-            if rule.cidr:
-                version = _get_ip_version(rule.cidr)
-                if(FLAGS.use_ipv6 and version == 6):
-                    net, prefixlen = _get_net_and_prefixlen(rule.cidr)
-                    rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (v6protocol[rule.protocol], net, prefixlen)
-                else:
-                    net, mask = _get_net_and_mask(rule.cidr)
-                    rule_xml += "<%s srcipaddr='%s' srcipmask='%s' " % \
-                                (rule.protocol, net, mask)
-                if rule.protocol in ['tcp', 'udp']:
-                    rule_xml += "dstportstart='%s' dstportend='%s' " % \
-                                (rule.from_port, rule.to_port)
-                elif rule.protocol == 'icmp':
-                    LOG.info('rule.protocol: %r, rule.from_port: %r, '
-                             'rule.to_port: %r', rule.protocol,
-                             rule.from_port, rule.to_port)
-                    if rule.from_port != -1:
-                        rule_xml += "type='%s' " % rule.from_port
-                    if rule.to_port != -1:
-                        rule_xml += "code='%s' " % rule.to_port
-
-                rule_xml += '/>\n'
-            rule_xml += "</rule>\n"
-        xml = "<filter name='nova-secgroup-%s' " % security_group_id
-        if(FLAGS.use_ipv6):
-            xml += "chain='root'>%s</filter>" % rule_xml
-        else:
-            xml += "chain='ipv4'>%s</filter>" % rule_xml
-        return xml
-
-    def _instance_filter_name(self, instance, nic_id=None):
-        if not nic_id:
-            return 'nova-instance-%s' % (instance['name'])
-        return 'nova-instance-%s-%s' % (instance['name'], nic_id)
-
-    def instance_filter_exists(self, instance):
-        """Check nova-instance-instance-xxx exists"""
-        network_info = _get_network_info(instance)
-        for (network, mapping) in network_info:
-            nic_id = mapping['mac'].replace(':', '')
-            instance_filter_name = self._instance_filter_name(instance, nic_id)
-            try:
-                self._conn.nwfilterLookupByName(instance_filter_name)
-            except libvirt.libvirtError:
-                name = instance.name
-                LOG.debug(_('The nwfilter(%(instance_filter_name)s) for'
-                            '%(name)s is not found.') % locals())
-                return False
-        return True
-
-
-class IptablesFirewallDriver(FirewallDriver):
-    def __init__(self, execute=None, **kwargs):
-        from nova.network import linux_net
-        self.iptables = linux_net.iptables_manager
-        self.instances = {}
-        self.nwfilter = NWFilterFirewall(kwargs['get_connection'])
-
-        self.iptables.ipv4['filter'].add_chain('sg-fallback')
-        self.iptables.ipv4['filter'].add_rule('sg-fallback', '-j DROP')
-        self.iptables.ipv6['filter'].add_chain('sg-fallback')
-        self.iptables.ipv6['filter'].add_rule('sg-fallback', '-j DROP')
-
-    def setup_basic_filtering(self, instance, network_info=None):
-        """Use NWFilter from libvirt for this."""
-        if not network_info:
-            network_info = _get_network_info(instance)
-        return self.nwfilter.setup_basic_filtering(instance, network_info)
-
-    def apply_instance_filter(self, instance):
-        """No-op. Everything is done in prepare_instance_filter"""
-        pass
-
-    def unfilter_instance(self, instance):
-        if self.instances.pop(instance['id'], None):
-            self.remove_filters_for_instance(instance)
-            self.iptables.apply()
-        else:
-            LOG.info(_('Attempted to unfilter instance %s which is not '
-                     'filtered'), instance['id'])
-
-    def prepare_instance_filter(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        self.instances[instance['id']] = instance
-        self.add_filters_for_instance(instance, network_info)
-        self.iptables.apply()
-
-    def add_filters_for_instance(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        chain_name = self._instance_chain_name(instance)
-
-        self.iptables.ipv4['filter'].add_chain(chain_name)
-
-        ips_v4 = [ip['ip'] for (_, mapping) in network_info
-                            for ip in mapping['ips']]
-
-        for ipv4_address in ips_v4:
-            self.iptables.ipv4['filter'].add_rule('local',
-                                                  '-d %s -j $%s' %
-                                                  (ipv4_address, chain_name))
-
-        if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].add_chain(chain_name)
-            ips_v6 = [ip['ip'] for (_, mapping) in network_info
-                                 for ip in mapping['ip6s']]
-
-            for ipv6_address in ips_v6:
-                self.iptables.ipv6['filter'].add_rule('local',
-                                                      '-d %s -j $%s' %
-                                                      (ipv6_address,
-                                                       chain_name))
-
-        ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
-
-        for rule in ipv4_rules:
-            self.iptables.ipv4['filter'].add_rule(chain_name, rule)
-
-        if FLAGS.use_ipv6:
-            for rule in ipv6_rules:
-                self.iptables.ipv6['filter'].add_rule(chain_name, rule)
-
-    def remove_filters_for_instance(self, instance):
-        chain_name = self._instance_chain_name(instance)
-
-        self.iptables.ipv4['filter'].remove_chain(chain_name)
-        if FLAGS.use_ipv6:
-            self.iptables.ipv6['filter'].remove_chain(chain_name)
-
-    def instance_rules(self, instance, network_info=None):
-        if not network_info:
-            network_info = _get_network_info(instance)
-        ctxt = context.get_admin_context()
-
-        ipv4_rules = []
-        ipv6_rules = []
-
-        # Always drop invalid packets
-        ipv4_rules += ['-m state --state ' 'INVALID -j DROP']
-        ipv6_rules += ['-m state --state ' 'INVALID -j DROP']
-
-        # Allow established connections
-        ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
-        ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
-
-        dhcp_servers = [network['gateway'] for (network, _m) in network_info]
-
-        for dhcp_server in dhcp_servers:
-            ipv4_rules.append('-s %s -p udp --sport 67 --dport 68 '
-                              '-j ACCEPT' % (dhcp_server,))
-
-        #Allow project network traffic
-        if FLAGS.allow_project_net_traffic:
-            cidrs = [network['cidr'] for (network, _m) in network_info]
-            for cidr in cidrs:
-                ipv4_rules.append('-s %s -j ACCEPT' % (cidr,))
-
-        # We wrap these in FLAGS.use_ipv6 because they might cause
-        # a DB lookup. The other ones are just list operations, so
-        # they're not worth the clutter.
-        if FLAGS.use_ipv6:
-            # Allow RA responses
-            gateways_v6 = [network['gateway_v6'] for (network, _) in
-                           network_info]
-            for gateway_v6 in gateways_v6:
-                ipv6_rules.append(
-                        '-s %s/128 -p icmpv6 -j ACCEPT' % (gateway_v6,))
-
-            #Allow project network traffic
-            if FLAGS.allow_project_net_traffic:
-                cidrv6s = [network['cidr_v6'] for (network, _m)
-                          in network_info]
-
-                for cidrv6 in cidrv6s:
-                    ipv6_rules.append('-s %s -j ACCEPT' % (cidrv6,))
-
-        security_groups = db.security_group_get_by_instance(ctxt,
-                                                            instance['id'])
-
-        # then, security group chains and rules
-        for security_group in security_groups:
-            rules = db.security_group_rule_get_by_security_group(ctxt,
-                                                          security_group['id'])
-
-            for rule in rules:
-                logging.info('%r', rule)
-
-                if not rule.cidr:
-                    # Eventually, a mechanism to grant access for security
-                    # groups will turn up here. It'll use ipsets.
-                    continue
-
-                version = _get_ip_version(rule.cidr)
-                if version == 4:
-                    rules = ipv4_rules
-                else:
-                    rules = ipv6_rules
-
-                protocol = rule.protocol
-                if version == 6 and rule.protocol == 'icmp':
-                    protocol = 'icmpv6'
-
-                args = ['-p', protocol, '-s', rule.cidr]
-
-                if rule.protocol in ['udp', 'tcp']:
-                    if rule.from_port == rule.to_port:
-                        args += ['--dport', '%s' % (rule.from_port,)]
-                    else:
-                        args += ['-m', 'multiport',
-                                 '--dports', '%s:%s' % (rule.from_port,
-                                                        rule.to_port)]
-                elif rule.protocol == 'icmp':
-                    icmp_type = rule.from_port
-                    icmp_code = rule.to_port
-
-                    if icmp_type == -1:
-                        icmp_type_arg = None
-                    else:
-                        icmp_type_arg = '%s' % icmp_type
-                        if not icmp_code == -1:
-                            icmp_type_arg += '/%s' % icmp_code
-
-                    if icmp_type_arg:
-                        if version == 4:
-                            args += ['-m', 'icmp', '--icmp-type',
-                                     icmp_type_arg]
-                        elif version == 6:
-                            args += ['-m', 'icmp6', '--icmpv6-type',
-                                     icmp_type_arg]
-
-                args += ['-j ACCEPT']
-                rules += [' '.join(args)]
-
-        ipv4_rules += ['-j $sg-fallback']
-        ipv6_rules += ['-j $sg-fallback']
-
-        return ipv4_rules, ipv6_rules
-
-    def instance_filter_exists(self, instance):
-        """Check nova-instance-instance-xxx exists"""
-        return self.nwfilter.instance_filter_exists(instance)
-
-    def refresh_security_group_members(self, security_group):
-        pass
-
-    def refresh_security_group_rules(self, security_group):
-        self.do_refresh_security_group_rules(security_group)
-        self.iptables.apply()
-
-    @utils.synchronized('iptables', external=True)
-    def do_refresh_security_group_rules(self, security_group):
-        for instance in self.instances.values():
-            self.remove_filters_for_instance(instance)
-            self.add_filters_for_instance(instance)
-
-    def _security_group_chain_name(self, security_group_id):
-        return 'nova-sg-%s' % (security_group_id,)
-
-    def _instance_chain_name(self, instance):
-        return 'inst-%s' % (instance['id'],)

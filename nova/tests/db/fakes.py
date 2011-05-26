@@ -124,7 +124,6 @@ def stub_out_db_instance_api(stubs, injected=True):
             return FakeModel(vlan_network_fields)
         else:
             return FakeModel(flat_network_fields)
-        return FakeModel(network_fields)
 
     def fake_network_get_all_by_instance(context, instance_id):
         # Even instance numbers are on vlan networks

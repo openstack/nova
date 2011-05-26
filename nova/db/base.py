@@ -16,12 +16,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Base class for classes that need modular database access.
-"""
+"""Base class for classes that need modular database access."""
 
 from nova import utils
 from nova import flags
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('db_driver', 'nova.db.api',
@@ -29,7 +28,8 @@ flags.DEFINE_string('db_driver', 'nova.db.api',
 
 
 class Base(object):
-    """DB driver is injected in the init method"""
+    """DB driver is injected in the init method."""
+
     def __init__(self, db_driver=None):
         if not db_driver:
             db_driver = FLAGS.db_driver

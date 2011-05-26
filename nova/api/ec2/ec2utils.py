@@ -24,7 +24,7 @@ def ec2_id_to_id(ec2_id):
     try:
         return int(ec2_id.split('-')[-1], 16)
     except ValueError:
-        raise exception.NotFound(_("Id %s Not Found") % ec2_id)
+        raise exception.InvalidEc2Id(ec2_id=ec2_id)
 
 
 def id_to_ec2_id(instance_id, template='i-%08x'):

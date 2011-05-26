@@ -35,6 +35,7 @@ Programming Concepts
 .. toctree::
    :maxdepth: 3
 
+   zone
    rabbit
 
 API Reference

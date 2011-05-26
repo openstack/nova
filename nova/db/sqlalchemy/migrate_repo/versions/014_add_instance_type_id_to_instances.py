@@ -14,15 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import *
-from sqlalchemy.sql import text
-from migrate import *
-
+from sqlalchemy import Column, Integer, MetaData, String, Table
 #from nova import log as logging
 
-
 meta = MetaData()
-
 
 c_instance_type = Column('instance_type',
                            String(length=255, convert_unicode=False,
@@ -54,10 +49,12 @@ def upgrade(migrate_engine):
 
     instances.create_column(c_instance_type_id)
 
+    type_names = {}
     recs = migrate_engine.execute(instance_types.select())
     for row in recs:
-        type_id = row[0]
-        type_name = row[1]
+        type_names[row[0]] = row[1]
+
+    for type_id, type_name in type_names.iteritems():
         migrate_engine.execute(instances.update()\
             .where(instances.c.instance_type == type_name)\
             .values(instance_type_id=type_id))

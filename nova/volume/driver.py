@@ -112,6 +112,12 @@ class VolumeDriver(object):
             # If the volume isn't present, then don't attempt to delete
             return True
 
+        # zero out old volumes to prevent data leaking between users
+        # TODO(ja): reclaiming space should be done lazy and low priority
+        self._execute('sudo', 'dd', 'if=/dev/zero',
+                      'of=%s' % self.local_path(volume),
+                      'count=%d' % (volume['size'] * 1024),
+                      'bs=1M')
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            volume['name']))
@@ -557,7 +563,7 @@ class RBDDriver(VolumeDriver):
         """Returns the path of the rbd volume."""
         # This is the same as the remote path
         # since qemu accesses it directly.
-        return self.discover_volume(volume)
+        return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def ensure_export(self, context, volume):
         """Synchronously recreates an export for a logical volume."""
@@ -571,10 +577,8 @@ class RBDDriver(VolumeDriver):
         """Removes an export for a logical volume"""
         pass
 
-    def discover_volume(self, volume):
+    def discover_volume(self, context, volume):
         """Discover volume on a remote host"""
-        # NOTE(justinsb): This is messed up... discover_volume takes 3 args
-        # but then that would break local_path
         return "rbd:%s/%s" % (FLAGS.rbd_pool, volume['name'])
 
     def undiscover_volume(self, volume):

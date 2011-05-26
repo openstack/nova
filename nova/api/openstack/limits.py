@@ -30,10 +30,11 @@ from collections import defaultdict
 
 from webob.dec import wsgify
 
+from nova import quota
 from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
-from nova.wsgi import Middleware
+from nova.api.openstack.views import limits as limits_views
 
 
 # Convenience constants for the limits dictionary passed to Limiter().
@@ -51,8 +52,8 @@ class LimitsController(common.OpenstackController):
     _serialization_metadata = {
         "application/xml": {
             "attributes": {
-                "limit": ["verb", "URI", "regex", "value", "unit",
-                    "resetTime", "remaining", "name"],
+                "limit": ["verb", "URI", "uri", "regex", "value", "unit",
+                    "resetTime", "next-available", "remaining", "name"],
             },
             "plurals": {
                 "rate": "limit",
@@ -64,15 +65,25 @@ class LimitsController(common.OpenstackController):
         """
         Return all global and rate limit information.
         """
-        abs_limits = {}
+        context = req.environ['nova.context']
+        abs_limits = quota.get_project_quotas(context, context.project_id)
         rate_limits = req.environ.get("nova.limits", [])
 
-        return {
-            "limits": {
-                "rate": rate_limits,
-                "absolute": abs_limits,
-            },
-        }
+        builder = self._get_view_builder(req)
+        return builder.build(rate_limits, abs_limits)
+
+    def _get_view_builder(self, req):
+        raise NotImplementedError()
+
+
+class LimitsControllerV10(LimitsController):
+    def _get_view_builder(self, req):
+        return limits_views.ViewBuilderV10()
+
+
+class LimitsControllerV11(LimitsController):
+    def _get_view_builder(self, req):
+        return limits_views.ViewBuilderV11()
 
 
 class Limit(object):
@@ -186,7 +197,7 @@ DEFAULT_LIMITS = [
 ]
 
 
-class RateLimitingMiddleware(Middleware):
+class RateLimitingMiddleware(wsgi.Middleware):
     """
     Rate-limits requests passing through this middleware. All limit information
     is stored in memory for this implementation.
@@ -200,7 +211,7 @@ class RateLimitingMiddleware(Middleware):
         @param application: WSGI application to wrap
         @param limits: List of dictionaries describing limits
         """
-        Middleware.__init__(self, application)
+        wsgi.Middleware.__init__(self, application)
         self._limiter = Limiter(limits or DEFAULT_LIMITS)
 
     @wsgify(RequestClass=wsgi.Request)
