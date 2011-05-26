@@ -28,8 +28,7 @@ from nova.api.openstack.views import images as images_view
 LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
-SUPPORTED_FILTERS = ['name', 'status', 'container_format', 'disk_format',
-                     'size_min', 'size_max']
+SUPPORTED_FILTERS = ['name', 'status']
 
 
 class Controller(common.OpenstackController):
