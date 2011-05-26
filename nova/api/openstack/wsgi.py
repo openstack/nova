@@ -58,13 +58,9 @@ class Request(webob.Request):
 class TextDeserializer(object):
     """Custom request body deserialization based on controller action name."""
 
-    def deserialize(self, datastring, action=None):
+    def deserialize(self, datastring, action='default'):
         """Find local deserialization method and parse request body."""
-        try:
-            action_method = getattr(self, action)
-        except (AttributeError, TypeError):
-            action_method = self.default
-
+        action_method = getattr(self, action, self.default)
         return action_method(datastring)
 
     def default(self, datastring):
@@ -191,13 +187,9 @@ class RequestDeserializer(object):
 class DictSerializer(object):
     """Custom response body serialization based on controller action name."""
 
-    def serialize(self, data, action=None):
+    def serialize(self, data, action='default'):
         """Find local serialization method and encode response body."""
-        try:
-            action_method = getattr(self, action)
-        except (AttributeError, TypeError):
-            action_method = self.default
-
+        action_method = getattr(self, action, self.default)
         return action_method(data)
 
     def default(self, data):
