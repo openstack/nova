@@ -203,7 +203,8 @@ def _import_vhds(sr_path, staging_path, uuid_stack):
 
     paths_to_move.append(image_info[0])
 
-    snap_info = prepare_if_exists(staging_path, 'snap.vhd', image_path)
+    snap_info = prepare_if_exists(staging_path, 'snap.vhd',
+            image_info[0])
     if snap_info:
         paths_to_move.append(snap_info[0])
         # We return this snap as the VDI instead of image.vhd
