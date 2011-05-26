@@ -225,9 +225,9 @@ class API(base.Base):
 
         return (num_instances, base_options, security_groups)
 
-    def create_db_entry_for_new_instance(self, context, base_options, 
+    def create_db_entry_for_new_instance(self, context, base_options,
              security_groups, num=1):
-        """Create an entry in the DB for this new instance, 
+        """Create an entry in the DB for this new instance,
         including any related table updates (such as security
         groups, MAC address, etc). This will called by create()
         in the majority of situations, but all-at-once style
@@ -272,7 +272,7 @@ class API(base.Base):
         else:
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " (all-at-once)") % locals())
- 
+
         filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
         request_spec = {
             'instance_properties': base_options,
@@ -290,7 +290,7 @@ class API(base.Base):
                            "request_spec": request_spec,
                            "availability_zone": availability_zone,
                            "injected_files": injected_files}})
-        
+
     def create_all_at_once(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
@@ -298,10 +298,10 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, zone_blob=None):
-         """Provision the instances by passing the whole request to
-         the Scheduler for execution. Returns a Reservation ID 
-         related to the creation of all of these instances."""
-         num_instances, base_options, security_groups = \
+        """Provision the instances by passing the whole request to
+        the Scheduler for execution. Returns a Reservation ID
+        related to the creation of all of these instances."""
+        num_instances, base_options, security_groups = \
                     self._check_create_parameters(
                                context, instance_type,
                                image_id, kernel_id, ramdisk_id,
@@ -311,12 +311,12 @@ class API(base.Base):
                                availability_zone, user_data, metadata,
                                injected_files, zone_blob)
 
-         self._ask_scheduler_to_create_instance(context, base_options,
+        self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
                                       num_instances=num_instances)
 
-         return base_options['reservation_id']
+        return base_options['reservation_id']
 
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
@@ -330,7 +330,7 @@ class API(base.Base):
         instance requests to the Schedulers. This is fine for trival
         Scheduler drivers, but may remove the effectiveness of the
         more complicated drivers.
-        
+
         Returns a list of instance dicts.
         """
 
@@ -343,7 +343,7 @@ class API(base.Base):
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
                                injected_files, zone_blob)
- 
+
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
@@ -351,13 +351,13 @@ class API(base.Base):
                                     base_options, security_groups, num=num)
             instances.append(instance)
             instance_id = instance['id']
-            
+
             self._ask_scheduler_to_create_instance(context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
                                           instance_id=instance_id)
-                                    
-        return [x.items() for x in instances]
+
+        return [dict(x.iteritems()) for x in instances]
 
     def smart_create(self, *args, **kwargs):
         """

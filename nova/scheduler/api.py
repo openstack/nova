@@ -87,10 +87,10 @@ def select(context, specs=None):
             params={"request_spec": specs})
 
 
-def get_scheduler_rules(context):
+def should_create_all_at_once(context):
     """Returns a tuple of rules for how instances should
     be created given the current Scheduler driver being used."""
-    return _call_scheduler('get_scheduler_rules', context=context,
+    return _call_scheduler('should_create_all_at_once', context=context,
             params={})
 
 
