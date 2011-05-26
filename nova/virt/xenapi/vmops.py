@@ -91,7 +91,8 @@ class VMOps(object):
     def finish_resize(self, instance, disk_info):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
-        vm_ref = self._create_vm(instance, {'primary_vdi_uuid': vdi_uuid})
+        vm_ref = self._create_vm(instance,
+                [dict(vdi_type='os', vdi_uuid=vdi_uuid)])
         self.resize_instance(instance, vdi_uuid)
         self._spawn(instance, vm_ref)
 
@@ -105,25 +106,25 @@ class VMOps(object):
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
 
-    def _create_disk(self, instance):
+    def _create_disks(self, instance):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-        vdi_uuids = VMHelper.fetch_image(self._session,
+        vdis = VMHelper.fetch_image(self._session,
                 instance.id, instance.image_id, user, project,
                 disk_image_type)
-        return vdi_uuids
+        return vdis
 
     def spawn(self, instance, network_info=None):
-        vdi_uuids = self._create_disk(instance)
-        vm_ref = self._create_vm(instance, vdi_uuids, network_info)
+        vdis = self._create_disks(instance)
+        vm_ref = self._create_vm(instance, vdis, network_info)
         self._spawn(instance, vm_ref)
 
     def spawn_rescue(self, instance):
         """Spawn a rescue instance."""
         self.spawn(instance)
 
-    def _create_vm(self, instance, vdi_uuids, network_info=None):
+    def _create_vm(self, instance, vdis, network_info=None):
         """Create VM instance."""
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
@@ -142,15 +143,6 @@ class VMOps(object):
         user = AuthManager().get_user(instance.user_id)
         project = AuthManager().get_project(instance.project_id)
 
-        # Are we building from a pre-existing disk?
-        primary_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
-                vdi_uuids.get('primary_vdi_uuid'))
-        swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid', None)
-        if swap_vdi_uuid:
-            swap_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid', swap_vdi_uuid)
-        else:
-            swap_vdi_ref = None
-
         disk_image_type = VMHelper.determine_disk_image_type(instance)
 
         kernel = None
@@ -165,17 +157,29 @@ class VMOps(object):
                     instance.ramdisk_id, user, project,
                     ImageType.KERNEL_RAMDISK)
 
+        # Create the VM ref and attach the first disk
+        first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                vdis[0]['vdi_uuid'])
         use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                instance.id, primary_vdi_ref, disk_image_type,
+                instance.id, first_vdi_ref, disk_image_type,
                 instance.os_type)
-        vm_ref = VMHelper.create_vm(self._session, instance, kernel,
-                ramdisk, use_pv_kernel)
-
+        vm_ref = VMHelper.create_vm(self._session, instance,
+                kernel, ramdisk, use_pv_kernel)
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                vdi_ref=primary_vdi_ref, userdevice=0, bootable=True)
-        if swap_vdi_ref:
+                vdi_ref=first_vdi_ref, userdevice=0, bootable=True)
+
+        # Attach any other disks
+        # userdevice 1 is reserved for rescue
+        userdevice = 2
+        for vdi in vdis[1:]:
+            # vdi['vdi_type'] is either 'os' or 'swap', but we don't
+            # really care what it is right here.
+            vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
+                    vdi['vdi_uuid'])
             VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
-                    vdi_ref=swap_vdi_ref, userdevice=2, bootable=False)
+                    vdi_ref=vdi_ref, userdevice=userdevice,
+                    bootable=False)
+            userdevice += 1
 
         # TODO(tr3buchet) - check to make sure we have network info, otherwise
         # create it now. This goes away once nova-multi-nic hits.
@@ -185,7 +189,7 @@ class VMOps(object):
         # Alter the image before VM start for, e.g. network injection
         if FLAGS.xenapi_inject_image:
             VMHelper.preconfigure_instance(self._session, instance,
-                                           primary_vdi_ref, network_info)
+                                           first_vdi_ref, network_info)
 
         self.create_vifs(vm_ref, network_info)
         self.inject_network_info(instance, network_info, vm_ref)

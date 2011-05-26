@@ -91,8 +91,8 @@ def _download_tarball(sr_path, staging_path, image_id, glance_host,
     conn.close()
 
 
-def _fixup_vhds(sr_path, staging_path, uuid_stack):
-    """Fixup the downloaded VHDs before we move them into the SR.
+def _import_vhds(sr_path, staging_path, uuid_stack):
+    """Import the VHDs found in the staging path.
 
     We cannot extract VHDs directly into the SR since they don't yet have
     UUIDs, aren't properly associated with each other, and would be subject to
@@ -102,16 +102,25 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
     To avoid these we problems, we use a staging area to fixup the VHDs before
     moving them into the SR. The steps involved are:
 
-        1. Extracting tarball into staging area
+        1. Extracting tarball into staging area (done prior to this call)
 
         2. Renaming VHDs to use UUIDs ('snap.vhd' -> 'ffff-aaaa-...vhd')
 
-        3. Linking the two VHDs together
+        3. Linking VHDs together if there's a snap.vhd
 
         4. Pseudo-atomically moving the images into the SR. (It's not really
-           atomic because it takes place as two os.rename operations; however,
-           the chances of an SR.scan occuring between the two rename()
+           atomic because it takes place as multiple os.rename operations;
+           however, the chances of an SR.scan occuring between the rename()s
            invocations is so small that we can safely ignore it)
+
+    Returns: A list of VDIs.  Each list element is a dictionary containing
+    information about the VHD.  Dictionary keys are:
+        1. "vdi_type" - The type of VDI. Currently they can be "os_disk" or
+           "swap"
+        2. "vdi_uuid" - The UUID of the VDI
+
+    Example return: [{"vdi_type": "os_disk","vdi_uuid": "ffff-aaa..vhd"},
+                     {"vdi_type": "swap","vdi_uuid": "ffff-bbb..vhd"}]
     """
     def rename_with_uuid(orig_path):
         """Rename VHD using UUID so that it will be recognized by SR on a
@@ -162,39 +171,57 @@ def _fixup_vhds(sr_path, staging_path, uuid_stack):
                         "VHD %(path)s is marked as hidden without child" %
                         locals())
 
-    orig_base_copy_path = os.path.join(staging_path, 'image.vhd')
-    if not os.path.exists(orig_base_copy_path):
+    def prepare_if_exists(staging_path, vhd_name, parent_path=None):
+        """
+        Check for existance of a particular VHD in the staging path and
+        preparing it for moving into the SR.
+
+        Returns: Tuple of (Path to move into the SR, VDI_UUID)
+                 None, if the vhd_name doesn't exist in the staging path
+
+        If the VHD exists, we will do the following:
+            1. Rename it with a UUID.
+            2. If parent_path exists, we'll link up the VHDs.
+        """
+        orig_path = os.path.join(staging_path, vhd_name)
+        if not os.path.exists(orig_path):
+            return None
+        new_path, vdi_uuid = rename_with_uuid(orig_path)
+        if parent_path:
+            # NOTE(sirp): this step is necessary so that an SR scan won't
+            # delete the base_copy out from under us (since it would be
+            # orphaned)
+            link_vhds(new_path, parent_path)
+        return (new_path, vdi_uuid)
+
+    vdi_return_list = []
+    paths_to_move = []
+
+    image_info = prepare_if_exists(staging_path, 'image.vhd')
+    if not image_info:
         raise Exception("Invalid image: image.vhd not present")
 
-    base_copy_path, base_copy_uuid = rename_with_uuid(orig_base_copy_path)
+    paths_to_move.append(image_info[0])
 
-    vdi_uuid = base_copy_uuid
-    orig_snap_path = os.path.join(staging_path, 'snap.vhd')
-    if os.path.exists(orig_snap_path):
-        snap_path, snap_uuid = rename_with_uuid(orig_snap_path)
-        vdi_uuid = snap_uuid
-        # NOTE(sirp): this step is necessary so that an SR scan won't
-        # delete the base_copy out from under us (since it would be
-        # orphaned)
-        link_vhds(snap_path, base_copy_path)
-        move_into_sr(snap_path)
+    snap_info = prepare_if_exists(staging_path, 'snap.vhd', image_path)
+    if snap_info:
+        paths_to_move.append(snap_info[0])
+        # We return this snap as the VDI instead of image.vhd
+        vdi_return_list.append(dict(vdi_type="os", vdi_uuid=snap_info[1]))
     else:
-        assert_vhd_not_hidden(base_copy_path)
+        # If there's no snap, we return the image.vhd UUID
+        vdi_return_list.append(dict(vdi_type="os", vdi_uuid=image_info[1]))
 
-    # If we find a swap.vhd, go ahead and copy it into the SR
-    swap_vdi_uuid = None
-    orig_swap_path = os.path.join(staging_path, 'swap.vhd')
-    if os.path.exists(orig_swap_path):
-        swap_path, swap_vdi_uuid = rename_with_uuid(orig_swap_path)
-        move_into_sr(swap_path)
+    swap_info = prepare_if_exists(staging_path, 'swap.vhd')
+    if swap_info:
+        paths_to_move.append(swap_info[0])
+        vdi_return_list.append(dict(vdi_type="swap", vdi_uuid=swap_info[1]))
 
-    vdi_uuids = {}
-    vdi_uuids['primary_vdi_uuid'] = vdi_uuid
-    if swap_vdi_uuid:
-        vdi_uuids['swap_vdi_uuid'] = swap_vdi_uuid
+    for path in paths_to_move:
+        move_into_sr(path)
 
-    move_into_sr(base_copy_path)
-    return vdi_uuids
+    return vdi_return_list
+
 
 def _prepare_staging_area_for_upload(sr_path, staging_path, vdi_uuids):
     """Hard-link VHDs into staging area with appropriate filename
@@ -339,7 +366,9 @@ def download_vhd(session, args):
     try:
         _download_tarball(sr_path, staging_path, image_id, glance_host,
                           glance_port)
-        return json.dumps(_fixup_vhds(sr_path, staging_path, uuid_stack))
+        # Right now, it's easier to return a single string via XenAPI,
+        # so we'll json encode the list of VHDs.
+        return json.dumps(_import_vhds(sr_path, staging_path, uuid_stack))
     finally:
         _cleanup_staging_area(staging_path)
 

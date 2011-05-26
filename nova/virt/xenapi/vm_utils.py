@@ -377,6 +377,9 @@ class VMHelper(HelperBase):
             xenapi_image_service = ['glance', 'objectstore']
             glance_address = 'address for glance services'
             glance_port = 'port for glance services'
+
+        Returns: A single filename if image_type is KERNEL_RAMDISK
+                 A list of dictionaries that describe VDIs, otherwise
         """
         access = AuthManager().get_access_key(user, project)
 
@@ -391,6 +394,10 @@ class VMHelper(HelperBase):
     @classmethod
     def _fetch_image_glance_vhd(cls, session, instance_id, image, access,
                                 image_type):
+        """Tell glance to download an image and put the VHDs into the SR
+
+        Returns: A list of dictionaries that describe VDIs
+        """
         LOG.debug(_("Asking xapi to fetch vhd image %(image)s")
                     % locals())
 
@@ -410,25 +417,21 @@ class VMHelper(HelperBase):
         kwargs = {'params': pickle.dumps(params)}
         task = session.async_call_plugin('glance', 'download_vhd', kwargs)
         result = session.wait_for_task(task, instance_id)
-        vdi_uuids = json.loads(result)
-        primary_vdi_uuid = vdi_uuids.get('primary_vdi_uuid')
-        swap_vdi_uuid = vdi_uuids.get('swap_vdi_uuid', None)
+        vdis = json.loads(result)
+        for vdi in vdis:
+            LOG.debug(_("xapi 'download_vhd' returned VDI of "
+                    "type '%(vdi_type)s' with UUID '%(vdi_uuid)s'" % vdi))
 
         cls.scan_sr(session, instance_id, sr_ref)
 
+        # Pull out the UUID of the first VDI
+        vdi_uuid = vdis[0]['vdi_uuid']
         # Set the name-label to ease debugging
-        primary_vdi_ref = session.get_xenapi().VDI.get_by_uuid(primary_vdi_uuid)
+        vdi_ref = session.get_xenapi().VDI.get_by_uuid(vdi_uuid)
         primary_name_label = get_name_label_for_image(image)
-        session.get_xenapi().VDI.set_name_label(primary_vdi_ref, primary_name_label)
+        session.get_xenapi().VDI.set_name_label(vdi_ref, primary_name_label)
 
-        LOG.debug(_("xapi 'download_vhd' returned VDI UUID "
-                "%(primary_vdi_uuid)s") % locals())
-        if swap_vdi_uuid:
-            LOG.debug(_("xapi 'download_vhd' returned SWAP VDI UUID "
-                    "%(swap_vdi_uuid)s") % locals())
-
-        LOG.debug("=" * 100)
-        return vdi_uuids
+        return vdis
 
     @classmethod
     def _fetch_image_glance_disk(cls, session, instance_id, image, access,
@@ -440,6 +443,8 @@ class VMHelper(HelperBase):
         plugin; instead, it streams the disks through domU to the VDI
         directly.
 
+        Returns: A single filename if image_type is KERNEL_RAMDISK
+                 A list of dictionaries that describe VDIs, otherwise
         """
         # FIXME(sirp): Since the Glance plugin seems to be required for the
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
@@ -486,7 +491,7 @@ class VMHelper(HelperBase):
             return filename
         else:
             vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
-            return {'primary_vdi_uuid': vdi_uuid}
+            return [dict(vdi_type='os', vdi_uuid=vdi_uuid)]
 
     @classmethod
     def determine_disk_image_type(cls, instance):
@@ -545,6 +550,11 @@ class VMHelper(HelperBase):
     @classmethod
     def _fetch_image_glance(cls, session, instance_id, image, access,
                             image_type):
+        """Fetch image from glance based on image type.
+
+        Returns: A single filename if image_type is KERNEL_RAMDISK
+                 A list of dictionaries that describe VDIs, otherwise
+        """
         if image_type == ImageType.DISK_VHD:
             return cls._fetch_image_glance_vhd(
                 session, instance_id, image, access, image_type)
@@ -555,6 +565,11 @@ class VMHelper(HelperBase):
     @classmethod
     def _fetch_image_objectstore(cls, session, instance_id, image, access,
                                  secret, image_type):
+        """Fetch an image from objectstore.
+
+        Returns: A single filename if image_type is KERNEL_RAMDISK
+                 A list of dictionaries that describe VDIs, otherwise
+        """
         url = images.image_url(image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         if image_type == ImageType.KERNEL_RAMDISK:
@@ -572,10 +587,10 @@ class VMHelper(HelperBase):
             if image_type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid = session.wait_for_task(task, instance_id)
+        uuid_or_fn = session.wait_for_task(task, instance_id)
         if image_type != ImageType.KERNEL_RAMDISK:
-            return {'primary_vdi_uuid': uuid}
-        return uuid
+            return [dict(vdi_type='os', vdi_uuid=uuid_or_fn)]
+        return uuid_or_fn
 
     @classmethod
     def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,

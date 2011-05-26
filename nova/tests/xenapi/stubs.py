@@ -38,7 +38,7 @@ def stubout_instance_snapshot(stubs):
                              sr_ref=sr_ref, sharable=False)
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         vdi_uuid = vdi_rec['uuid']
-        return {'primary_vdi_uuid': vdi_uuid}
+        return [dict(vdi_type='os', vdi_uuid=vdi_uuid)]
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
 
@@ -138,12 +138,25 @@ class FakeSessionForVMTests(fake.SessionBase):
         vdi_ref = fake.create_vdi('', False, sr_ref, False)
         vdi_rec = fake.get_record('VDI', vdi_ref)
         if plugin == "glance" and method == "download_vhd":
+            ret_str = json.dumps([dict(vdi_type='os',
+                    vdi_uuid=vdi_rec['uuid'])])
+        else:
+            ret_str = vdi_rec['uuid']
+        return '<string>%s</string>' % ret_str
+
+    def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
+        sr_ref = fake.get_all('SR')[0]
+        vdi_ref = fake.create_vdi('', False, sr_ref, False)
+        vdi_rec = fake.get_record('VDI', vdi_ref)
+        if plugin == "glance" and method == "download_vhd":
             swap_vdi_ref = fake.create_vdi('', False, sr_ref, False)
             swap_vdi_rec = fake.get_record('VDI', swap_vdi_ref)
-            return '<string>%s</string>' % json.dumps(
-                    {'primary_vdi_uuid': vdi_rec['uuid'],
-                    'swap_vdi_uuid': swap_vdi_rec['uuid']})
-        return '<string>%s</string>' % vdi_rec['uuid']
+            ret_str = json.dumps(
+                    [dict(vdi_type='os', vdi_uuid=vdi_rec['uuid']),
+                    dict(vdi_type='swap', vdi_uuid=swap_vdi_rec['uuid'])])
+        else:
+            ret_str = vdi_rec['uuid']
+        return '<string>%s</string>' % ret_str
 
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)
