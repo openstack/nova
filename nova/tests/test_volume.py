@@ -106,7 +106,7 @@ class VolumeTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        inst['instance_type'] = 'm1.tiny'
+        inst['instance_type_id'] = '2'  # m1.tiny
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         instance_id = db.instance_create(self.context, inst)['id']
@@ -142,7 +142,7 @@ class VolumeTestCase(test.TestCase):
         self.assertEqual(vol['status'], "available")
 
         self.volume.delete_volume(self.context, volume_id)
-        self.assertRaises(exception.Error,
+        self.assertRaises(exception.VolumeNotFound,
                           db.volume_get,
                           self.context,
                           volume_id)

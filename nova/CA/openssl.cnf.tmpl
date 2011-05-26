@@ -41,9 +41,13 @@ nameopt			= default_ca
 certopt			= default_ca
 policy			= policy_match
 
+# NOTE(dprince): stateOrProvinceName must be 'supplied' or 'optional' to
+# work around a stateOrProvince printable string UTF8 mismatch on
+# RHEL 6 and Fedora 14 (using openssl-1.0.0-4.el6.x86_64 or
+# openssl-1.0.0d-1.fc14.x86_64)
 [ policy_match ]
-countryName		= match
-stateOrProvinceName	= match
+countryName		= supplied
+stateOrProvinceName	= supplied
 organizationName	= optional
 organizationalUnitName	= optional
 commonName		= supplied

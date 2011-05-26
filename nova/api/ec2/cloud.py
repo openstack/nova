@@ -27,6 +27,8 @@ import datetime
 import IPy
 import os
 import urllib
+import tempfile
+import shutil
 
 from nova import compute
 from nova import context
@@ -35,6 +37,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import network
 from nova import utils
@@ -49,8 +52,6 @@ flags.DECLARE('service_down_time', 'nova.scheduler.driver')
 
 LOG = logging.getLogger("nova.api.cloud")
 
-InvalidInputException = exception.InvalidInputException
-
 
 def _gen_key(context, user_id, key_name):
     """Generate a key
@@ -61,8 +62,7 @@ def _gen_key(context, user_id, key_name):
     #             creation before creating key_pair
     try:
         db.key_pair_get(context, user_id, key_name)
-        raise exception.Duplicate(_("The key_pair %s already exists")
-                                  % key_name)
+        raise exception.KeyPairExists(key_name=key_name)
     except exception.NotFound:
         pass
     private_key, public_key, fingerprint = crypto.generate_key_pair()
@@ -142,6 +142,11 @@ class CloudController(object):
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
         if instance_ref is None:
             return None
+
+        # This ensures that all attributes of the instance
+        # are populated.
+        instance_ref = db.instance_get(ctxt, instance_ref['id'])
+
         mpi = self._get_mpi_data(ctxt, instance_ref['project_id'])
         if instance_ref['key_name']:
             keys = {'0': {'_name': instance_ref['key_name'],
@@ -154,7 +159,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self._image_ec2_id(instance_ref['image_id'], 'machine')
+        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -182,9 +187,9 @@ class CloudController(object):
                 'mpi': mpi}}
 
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance_ref:
-                ec2_id = self._image_ec2_id(instance_ref['%s_id' % image_type],
-                                            image_type)
+            if instance_ref.get('%s_id' % image_type):
+                ec2_id = self.image_ec2_id(instance_ref['%s_id' % image_type],
+                                           self._image_type(image_type))
                 data['meta-data']['%s-id' % image_type] = ec2_id
 
         if False:  # TODO(vish): store ancestor ids
@@ -313,6 +318,27 @@ class CloudController(object):
                 'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
 
+    def import_public_key(self, context, key_name, public_key,
+                         fingerprint=None):
+        LOG.audit(_("Import key %s"), key_name, context=context)
+        key = {}
+        key['user_id'] = context.user_id
+        key['name'] = key_name
+        key['public_key'] = public_key
+        if fingerprint is None:
+            tmpdir = tempfile.mkdtemp()
+            pubfile = os.path.join(tmpdir, 'temp.pub')
+            fh = open(pubfile, 'w')
+            fh.write(public_key)
+            fh.close()
+            (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
+                                       '%s' % (pubfile))
+            fingerprint = out.split(' ')[1]
+            shutil.rmtree(tmpdir)
+        key['fingerprint'] = fingerprint
+        db.key_pair_create(context, key)
+        return True
+
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
         try:
@@ -394,11 +420,11 @@ class CloudController(object):
             ip_protocol = str(ip_protocol)
 
             if ip_protocol.upper() not in ['TCP', 'UDP', 'ICMP']:
-                raise InvalidInputException(_('%s is not a valid ipProtocol') %
-                                            (ip_protocol,))
+                raise exception.InvalidIpProtocol(protocol=ip_protocol)
             if ((min(from_port, to_port) < -1) or
                 (max(from_port, to_port) > 65535)):
-                raise InvalidInputException(_('Invalid port range'))
+                raise exception.InvalidPortRange(from_port=from_port,
+                                                 to_port=to_port)
 
             values['protocol'] = ip_protocol
             values['from_port'] = from_port
@@ -437,7 +463,7 @@ class CloudController(object):
                                                        group_name)
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
-        if criteria == None:
+        if criteria is None:
             raise exception.ApiError(_("Not enough parameters to build a "
                                        "valid rule."))
 
@@ -608,7 +634,7 @@ class CloudController(object):
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.
-        return {'volumeSet': [self._format_volume(context, dict(volume))]}
+        return self._format_volume(context, dict(volume))
 
     def delete_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -659,7 +685,7 @@ class CloudController(object):
                 'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
 
     def _convert_to_set(self, lst, label):
-        if lst == None or lst == []:
+        if lst is None or lst == []:
             return None
         if not isinstance(lst, list):
             lst = [lst]
@@ -698,13 +724,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == FLAGS.vpn_image_id:
+                if instance['image_id'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self._image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_id'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -716,12 +742,15 @@ class CloudController(object):
                     fixed = instance['fixed_ip']
                     floating_addr = fixed['floating_ips'][0]['address']
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
-                    i['dnsNameV6'] = utils.to_global_ipv6(
+                    i['dnsNameV6'] = ipv6.to_global(
                         instance['fixed_ip']['network']['cidr_v6'],
-                        instance['mac_address'])
+                        instance['mac_address'],
+                        instance['project_id'])
 
             i['privateDnsName'] = fixed_addr
+            i['privateIpAddress'] = fixed_addr
             i['publicDnsName'] = floating_addr
+            i['ipAddress'] = floating_addr or fixed_addr
             i['dnsName'] = i['publicDnsName'] or i['privateDnsName']
             i['keyName'] = instance['key_name']
 
@@ -730,7 +759,10 @@ class CloudController(object):
                     instance['project_id'],
                     instance['host'])
             i['productCodesSet'] = self._convert_to_set([], 'product_codes')
-            i['instanceType'] = instance['instance_type']
+            if instance['instance_type']:
+                i['instanceType'] = instance['instance_type'].get('name')
+            else:
+                i['instanceType'] = None
             i['launchTime'] = instance['created_at']
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
@@ -785,7 +817,7 @@ class CloudController(object):
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
         public_ip = self.network_api.allocate_floating_ip(context)
-        return {'addressSet': [{'publicIp': public_ip}]}
+        return {'publicIp': public_ip}
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
@@ -815,7 +847,7 @@ class CloudController(object):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
         instances = self.compute_api.create(context,
-            instance_type=instance_types.get_by_type(
+            instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
             image_id=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
@@ -872,46 +904,70 @@ class CloudController(object):
             self.compute_api.update(context, instance_id=instance_id, **kwargs)
         return True
 
-    _type_prefix_map = {'machine': 'ami',
-                        'kernel': 'aki',
-                        'ramdisk': 'ari'}
+    @staticmethod
+    def _image_type(image_type):
+        """Converts to a three letter image type.
 
-    def _image_ec2_id(self, image_id, image_type='machine'):
-        prefix = self._type_prefix_map[image_type]
-        template = prefix + '-%08x'
+        aki, kernel => aki
+        ari, ramdisk => ari
+        anything else => ami
+
+        """
+        if image_type == 'kernel':
+            return 'aki'
+        if image_type == 'ramdisk':
+            return 'ari'
+        if image_type not in ['aki', 'ari']:
+            return 'ami'
+        return image_type
+
+    @staticmethod
+    def image_ec2_id(image_id, image_type='ami'):
+        """Returns image ec2_id using id and three letter type."""
+        template = image_type + '-%08x'
         return ec2utils.id_to_ec2_id(int(image_id), template=template)
 
     def _get_image(self, context, ec2_id):
         try:
             internal_id = ec2utils.ec2_id_to_id(ec2_id)
             return self.image_service.show(context, internal_id)
-        except exception.NotFound:
-            return self.image_service.show_by_name(context, ec2_id)
+        except (exception.InvalidEc2Id, exception.ImageNotFound):
+            try:
+                return self.image_service.show_by_name(context, ec2_id)
+            except exception.NotFound:
+                raise exception.ImageNotFound(image_id=ec2_id)
 
     def _format_image(self, image):
         """Convert from format defined by BaseImageService to S3 format."""
         i = {}
-        image_type = image['properties'].get('type')
-        ec2_id = self._image_ec2_id(image.get('id'), image_type)
+        image_type = self._image_type(image.get('container_format'))
+        ec2_id = self.image_ec2_id(image.get('id'), image_type)
         name = image.get('name')
         i['imageId'] = ec2_id
         kernel_id = image['properties'].get('kernel_id')
         if kernel_id:
-            i['kernelId'] = self._image_ec2_id(kernel_id, 'kernel')
+            i['kernelId'] = self.image_ec2_id(kernel_id, 'aki')
         ramdisk_id = image['properties'].get('ramdisk_id')
         if ramdisk_id:
-            i['ramdiskId'] = self._image_ec2_id(ramdisk_id, 'ramdisk')
+            i['ramdiskId'] = self.image_ec2_id(ramdisk_id, 'ari')
         i['imageOwnerId'] = image['properties'].get('owner_id')
         if name:
             i['imageLocation'] = "%s (%s)" % (image['properties'].
                                               get('image_location'), name)
         else:
             i['imageLocation'] = image['properties'].get('image_location')
-        i['imageState'] = image['properties'].get('image_state')
+        # NOTE(vish): fallback status if image_state isn't set
+        state = image.get('status')
+        if state == 'active':
+            state = 'available'
+        i['imageState'] = image['properties'].get('image_state', state)
         i['displayName'] = name
         i['description'] = image.get('description')
-        i['imageType'] = image_type
-        i['isPublic'] = str(image['properties'].get('is_public', '')) == 'True'
+        display_mapping = {'aki': 'kernel',
+                           'ari': 'ramdisk',
+                           'ami': 'machine'}
+        i['imageType'] = display_mapping.get(image_type)
+        i['isPublic'] = image.get('is_public') == True
         i['architecture'] = image['properties'].get('architecture')
         return i
 
@@ -923,8 +979,7 @@ class CloudController(object):
                 try:
                     image = self._get_image(context, ec2_id)
                 except exception.NotFound:
-                    raise exception.NotFound(_('Image %s not found') %
-                                             ec2_id)
+                    raise exception.ImageNotFound(image_id=ec2_id)
                 images.append(image)
         else:
             images = self.image_service.detail(context)
@@ -943,8 +998,9 @@ class CloudController(object):
             image_location = kwargs['name']
         metadata = {'properties': {'image_location': image_location}}
         image = self.image_service.create(context, metadata)
-        image_id = self._image_ec2_id(image['id'],
-                                      image['properties']['type'])
+        image_type = self._image_type(image.get('container_format'))
+        image_id = self.image_ec2_id(image['id'],
+                                     image_type)
         msg = _("Registered image %(image_location)s with"
                 " id %(image_id)s") % locals()
         LOG.audit(msg, context=context)
@@ -957,9 +1013,9 @@ class CloudController(object):
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
-            raise exception.NotFound(_('Image %s not found') % image_id)
+            raise exception.ImageNotFound(image_id=image_id)
         result = {'imageId': image_id, 'launchPermission': []}
-        if image['properties']['is_public']:
+        if image['is_public']:
             result['launchPermission'].append({'group': 'all'})
         return result
 
@@ -980,11 +1036,11 @@ class CloudController(object):
         try:
             image = self._get_image(context, image_id)
         except exception.NotFound:
-            raise exception.NotFound(_('Image %s not found') % image_id)
+            raise exception.ImageNotFound(image_id=image_id)
         internal_id = image['id']
         del(image['id'])
 
-        image['properties']['is_public'] = (operation_type == 'add')
+        image['is_public'] = (operation_type == 'add')
         return self.image_service.update(context, internal_id, image)
 
     def update_image(self, context, image_id, **kwargs):

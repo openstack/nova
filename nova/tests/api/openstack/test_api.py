@@ -53,13 +53,13 @@ class APITest(test.TestCase):
         #api.application = succeed
         api = self._wsgi_app(succeed)
         resp = Request.blank('/').get_response(api)
-        self.assertFalse('computeFault' in resp.body, resp.body)
+        self.assertFalse('cloudServersFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 200, resp.body)
 
         #api.application = raise_webob_exc
         api = self._wsgi_app(raise_webob_exc)
         resp = Request.blank('/').get_response(api)
-        self.assertFalse('computeFault' in resp.body, resp.body)
+        self.assertFalse('cloudServersFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
         #api.application = raise_api_fault
@@ -71,11 +71,11 @@ class APITest(test.TestCase):
         #api.application = fail
         api = self._wsgi_app(fail)
         resp = Request.blank('/').get_response(api)
-        self.assertTrue('{"computeFault' in resp.body, resp.body)
+        self.assertTrue('{"cloudServersFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
         #api.application = fail
         api = self._wsgi_app(fail)
         resp = Request.blank('/.xml').get_response(api)
-        self.assertTrue('<computeFault' in resp.body, resp.body)
+        self.assertTrue('<cloudServersFault' in resp.body, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)

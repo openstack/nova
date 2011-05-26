@@ -63,10 +63,12 @@ class ViewBuilder(object):
             power_state.BLOCKED: 'ACTIVE',
             power_state.SUSPENDED: 'SUSPENDED',
             power_state.PAUSED: 'PAUSED',
-            power_state.SHUTDOWN: 'ACTIVE',
-            power_state.SHUTOFF: 'ACTIVE',
+            power_state.SHUTDOWN: 'SHUTDOWN',
+            power_state.SHUTOFF: 'SHUTOFF',
             power_state.CRASHED: 'ERROR',
-            power_state.FAILED: 'ERROR'}
+            power_state.FAILED: 'ERROR',
+            power_state.BUILDING: 'BUILD',
+        }
 
         inst_dict = {
             'id': int(inst['id']),
@@ -82,7 +84,7 @@ class ViewBuilder(object):
         # Return the metadata as a dictionary
         metadata = {}
         for item in inst.get('metadata', []):
-            metadata[item['key']] = item['value']
+            metadata[item['key']] = str(item['value'])
         inst_dict['metadata'] = metadata
 
         inst_dict['hostId'] = ''
@@ -115,7 +117,7 @@ class ViewBuilderV10(ViewBuilder):
 
     def _build_flavor(self, response, inst):
         if 'instance_type' in dict(inst):
-            response['flavorId'] = inst['instance_type']
+            response['flavorId'] = inst['instance_type']['flavorid']
 
 
 class ViewBuilderV11(ViewBuilder):
@@ -134,7 +136,7 @@ class ViewBuilderV11(ViewBuilder):
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):
-            flavor_id = inst["instance_type"]
+            flavor_id = inst["instance_type"]['flavorid']
             flavor_ref = self.flavor_builder.generate_href(flavor_id)
             response["flavorRef"] = flavor_ref
 

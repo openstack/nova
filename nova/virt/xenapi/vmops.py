@@ -25,15 +25,15 @@ import M2Crypto
 import os
 import pickle
 import subprocess
-import tempfile
 import uuid
 
-from nova import db
 from nova import context
-from nova import log as logging
+from nova import db
 from nova import exception
-from nova import utils
 from nova import flags
+from nova import ipv6
+from nova import log as logging
+from nova import utils
 
 from nova.auth.manager import AuthManager
 from nova.compute import power_state
@@ -127,8 +127,7 @@ class VMOps(object):
         instance_name = instance.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is not None:
-            raise exception.Duplicate(_('Attempted to create'
-                    ' non-unique name %s') % instance_name)
+            raise exception.InstanceExists(name=instance_name)
 
         #ensure enough free memory is available
         if not VMHelper.ensure_free_mem(self._session, instance):
@@ -176,7 +175,7 @@ class VMOps(object):
                                            vdi_ref, network_info)
 
         self.create_vifs(vm_ref, network_info)
-        self.inject_network_info(instance, vm_ref, network_info)
+        self.inject_network_info(instance, network_info, vm_ref)
         return vm_ref
 
     def _spawn(self, instance, vm_ref):
@@ -203,6 +202,13 @@ class VMOps(object):
                 for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
+
+        def _set_admin_password():
+            admin_password = instance.admin_pass
+            if admin_password:
+                LOG.debug(_("Setting admin password"))
+                self.set_admin_password(instance, admin_password)
+
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -211,20 +217,15 @@ class VMOps(object):
         def _wait_for_boot():
             try:
                 state = self.get_info(instance_name)['state']
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'], state)
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
                     _inject_files()
+                    _set_admin_password()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
-                LOG.exception(_('instance %s: failed to boot'),
-                              instance_name)
-                db.instance_set_state(context.get_admin_context(),
-                                      instance['id'],
-                                      power_state.SHUTDOWN)
+                LOG.exception(_('Instance %s: failed to boot'), instance_name)
                 timer.stop()
                 return False
 
@@ -260,8 +261,8 @@ class VMOps(object):
             instance_name = instance_or_vm.name
         vm_ref = VMHelper.lookup(self._session, instance_name)
         if vm_ref is None:
-            raise exception.NotFound(
-                            _('Instance not present %s') % instance_name)
+            raise exception.NotFound(_("No opaque_ref could be determined "
+                    "for '%s'.") % instance_or_vm)
         return vm_ref
 
     def _acquire_bootlock(self, vm):
@@ -387,7 +388,6 @@ class VMOps(object):
 
     def link_disks(self, instance, base_copy_uuid, cow_uuid):
         """Links the base copy VHD to the COW via the XAPI plugin."""
-        vm_ref = VMHelper.lookup(self._session, instance.name)
         new_base_copy_uuid = str(uuid.uuid4())
         new_cow_uuid = str(uuid.uuid4())
         params = {'instance_id': instance.id,
@@ -437,11 +437,12 @@ class VMOps(object):
 
         """
         # Need to uniquely identify this request.
-        transaction_id = str(uuid.uuid4())
+        key_init_transaction_id = str(uuid.uuid4())
         # The simple Diffie-Hellman class is used to manage key exchange.
         dh = SimpleDH()
-        args = {'id': transaction_id, 'pub': str(dh.get_public())}
-        resp = self._make_agent_call('key_init', instance, '', args)
+        key_init_args = {'id': key_init_transaction_id,
+                         'pub': str(dh.get_public())}
+        resp = self._make_agent_call('key_init', instance, '', key_init_args)
         if resp is None:
             # No response from the agent
             return
@@ -455,8 +456,9 @@ class VMOps(object):
         dh.compute_shared(agent_pub)
         enc_pass = dh.encrypt(new_pass)
         # Send the encrypted password
-        args['enc_pass'] = enc_pass
-        resp = self._make_agent_call('password', instance, '', args)
+        password_transaction_id = str(uuid.uuid4())
+        password_args = {'id': password_transaction_id, 'enc_pass': enc_pass}
+        resp = self._make_agent_call('password', instance, '', password_args)
         if resp is None:
             # No response from the agent
             return
@@ -464,6 +466,9 @@ class VMOps(object):
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
+        db.instance_update(context.get_admin_context(),
+                                  instance['id'],
+                                  dict(admin_pass=new_pass))
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):
@@ -579,9 +584,8 @@ class VMOps(object):
 
         if not (instance.kernel_id and instance.ramdisk_id):
             # 2. We only have kernel xor ramdisk
-            raise exception.NotFound(
-                _("Instance %(instance_id)s has a kernel or ramdisk but not "
-                  "both" % locals()))
+            raise exception.InstanceUnacceptable(instance_id=instance_id,
+               reason=_("instance has a kernel or ramdisk but not both"))
 
         # 3. We have both kernel and ramdisk
         (kernel, ramdisk) = VMHelper.lookup_kernel_ramdisk(self._session,
@@ -722,8 +726,7 @@ class VMOps(object):
                                         "%s-rescue" % instance.name)
 
         if not rescue_vm_ref:
-            raise exception.NotFound(_(
-                "Instance is not in Rescue Mode: %s" % instance.name))
+            raise exception.InstanceNotInRescueMode(instance_id=instance.id)
 
         original_vm_ref = VMHelper.lookup(self._session, instance.name)
         instance._rescue = False
@@ -760,7 +763,6 @@ class VMOps(object):
                                                               instance)))
 
         for vm in rescue_vms:
-            rescue_name = vm["name"]
             rescue_vm_ref = vm["vm_ref"]
 
             self._destroy_rescue_instance(rescue_vm_ref)
@@ -798,15 +800,17 @@ class VMOps(object):
     def _get_network_info(self, instance):
         """Creates network info list for instance."""
         admin_context = context.get_admin_context()
-        IPs = db.fixed_ip_get_all_by_instance(admin_context,
+        ips = db.fixed_ip_get_all_by_instance(admin_context,
                                               instance['id'])
         networks = db.network_get_all_by_instance(admin_context,
                                                   instance['id'])
-        flavor = db.instance_type_get_by_name(admin_context,
-                                              instance['instance_type'])
+
+        inst_type = db.instance_type_get_by_id(admin_context,
+                                              instance['instance_type_id'])
+
         network_info = []
         for network in networks:
-            network_IPs = [ip for ip in IPs if ip.network_id == network.id]
+            network_ips = [ip for ip in ips if ip.network_id == network.id]
 
             def ip_dict(ip):
                 return {
@@ -814,12 +818,12 @@ class VMOps(object):
                     "netmask": network["netmask"],
                     "enabled": "1"}
 
-            def ip6_dict(ip6):
+            def ip6_dict():
                 return {
-                    "ip": utils.to_global_ipv6(network['cidr_v6'],
-                                               instance['mac_address']),
+                    "ip": ipv6.to_global(network['cidr_v6'],
+                                         instance['mac_address'],
+                                         instance['project_id']),
                     "netmask": network['netmask_v6'],
-                    "gateway": network['gateway_v6'],
                     "enabled": "1"}
 
             info = {
@@ -827,23 +831,41 @@ class VMOps(object):
                 'gateway': network['gateway'],
                 'broadcast': network['broadcast'],
                 'mac': instance.mac_address,
-                'rxtx_cap': flavor['rxtx_cap'],
+                'rxtx_cap': inst_type['rxtx_cap'],
                 'dns': [network['dns']],
-                'ips': [ip_dict(ip) for ip in network_IPs]}
+                'ips': [ip_dict(ip) for ip in network_ips]}
             if network['cidr_v6']:
-                info['ip6s'] = [ip6_dict(ip) for ip in network_IPs]
+                info['ip6s'] = [ip6_dict()]
+            if network['gateway_v6']:
+                info['gateway6'] = network['gateway_v6']
             network_info.append((network, info))
         return network_info
 
-    def inject_network_info(self, instance, vm_ref, network_info):
+    #TODO{tr3buchet) remove this shim with nova-multi-nic
+    def inject_network_info(self, instance, network_info=None, vm_ref=None):
+        """
+        shim in place which makes inject_network_info work without being
+        passed network_info.
+        shim goes away after nova-multi-nic
+        """
+        if not network_info:
+            network_info = self._get_network_info(instance)
+        self._inject_network_info(instance, network_info, vm_ref)
+
+    def _inject_network_info(self, instance, network_info, vm_ref=None):
         """
         Generate the network info and make calls to place it into the
         xenstore and the xenstore param list.
+        vm_ref can be passed in because it will sometimes be different than
+        what VMHelper.lookup(session, instance.name) will find (ex: rescue)
         """
         logging.debug(_("injecting network info to xs for vm: |%s|"), vm_ref)
 
-        # this function raises if vm_ref is not a vm_opaque_ref
-        self._session.get_xenapi().VM.get_record(vm_ref)
+        if vm_ref:
+            # this function raises if vm_ref is not a vm_opaque_ref
+            self._session.get_xenapi().VM.get_record(vm_ref)
+        else:
+            vm_ref = VMHelper.lookup(self._session, instance.name)
 
         for (network, info) in network_info:
             location = 'vm-data/networking/%s' % info['mac'].replace(':', '')
@@ -875,8 +897,10 @@ class VMOps(object):
             VMHelper.create_vif(self._session, vm_ref, network_ref,
                                 mac_address, device, rxtx_cap)
 
-    def reset_network(self, instance, vm_ref):
+    def reset_network(self, instance, vm_ref=None):
         """Creates uuid arg to pass to make_agent_call and calls it."""
+        if not vm_ref:
+            vm_ref = VMHelper.lookup(self._session, instance.name)
         args = {'id': str(uuid.uuid4())}
         # TODO(tr3buchet): fix function call after refactor
         #resp = self._make_agent_call('resetnetwork', instance, '', args)
@@ -902,7 +926,7 @@ class VMOps(object):
         try:
             ret = self._make_xenstore_call('read_record', vm, path,
                     {'ignore_missing_path': 'True'})
-        except self.XenAPI.Failure, e:
+        except self.XenAPI.Failure:
             return None
         ret = json.loads(ret)
         if ret == "None":
@@ -1150,23 +1174,22 @@ class SimpleDH(object):
         return mpi
 
     def _run_ssl(self, text, which):
-        base_cmd = ('cat %(tmpfile)s | openssl enc -aes-128-cbc '
-                '-a -pass pass:%(shared)s -nosalt %(dec_flag)s')
+        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
+                '-nosalt %(dec_flag)s')
         if which.lower()[0] == 'd':
             dec_flag = ' -d'
         else:
             dec_flag = ''
-        fd, tmpfile = tempfile.mkstemp()
-        os.close(fd)
-        file(tmpfile, 'w').write(text)
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
+        proc.stdin.write(text + '\n')
+        proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read()
+        return proc.stdout.read().strip('\n')
 
     def encrypt(self, text):
         return self._run_ssl(text, 'enc')

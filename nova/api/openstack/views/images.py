@@ -34,17 +34,25 @@ class ViewBuilder(object):
     def _format_status(self, image):
         """Update the status field to standardize format."""
         status_mapping = {
-            'pending': 'queued',
-            'decrypting': 'preparing',
-            'untarring': 'saving',
-            'available': 'active',
-            'killed': 'failed',
+            'pending': 'QUEUED',
+            'decrypting': 'PREPARING',
+            'untarring': 'SAVING',
+            'available': 'ACTIVE',
+            'killed': 'FAILED',
         }
 
         try:
             image['status'] = status_mapping[image['status']].upper()
         except KeyError:
             image['status'] = image['status'].upper()
+
+    def _build_server(self, image, instance_id):
+        """Indicates that you must use a ViewBuilder subclass."""
+        raise NotImplementedError
+
+    def generate_server_ref(self, server_id):
+        """Return an href string pointing to this server."""
+        return os.path.join(self._url, "servers", str(server_id))
 
     def generate_href(self, image_id):
         """Return an href string pointing to this object."""
@@ -66,7 +74,7 @@ class ViewBuilder(object):
 
         if "instance_id" in properties:
             try:
-                image["serverId"] = int(properties["instance_id"])
+                self._build_server(image, int(properties["instance_id"]))
             except ValueError:
                 pass
 
@@ -85,11 +93,16 @@ class ViewBuilder(object):
 
 class ViewBuilderV10(ViewBuilder):
     """OpenStack API v1.0 Image Builder"""
-    pass
+
+    def _build_server(self, image, instance_id):
+        image["serverId"] = instance_id
 
 
 class ViewBuilderV11(ViewBuilder):
     """OpenStack API v1.1 Image Builder"""
+
+    def _build_server(self, image, instance_id):
+        image["serverRef"] = self.generate_server_ref(instance_id)
 
     def build(self, image_obj, detail=False):
         """Return a standardized image structure for display by the API."""

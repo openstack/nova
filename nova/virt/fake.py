@@ -288,8 +288,7 @@ class FakeConnection(driver.ComputeDriver):
         knowledge of the instance
         """
         if instance_name not in self.instances:
-            raise exception.NotFound(_("Instance %s Not Found")
-                                     % instance_name)
+            raise exception.InstanceNotFound(instance_id=instance_name)
         i = self.instances[instance_name]
         return {'state': i.state,
                 'max_mem': 0,
@@ -368,7 +367,7 @@ class FakeConnection(driver.ComputeDriver):
         return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
 
     def get_console_output(self, instance):
-        return 'FAKE CONSOLE OUTPUT'
+        return 'FAKE CONSOLE\xffOUTPUT'
 
     def get_ajax_console(self, instance):
         return {'token': 'FAKETOKEN',

@@ -46,8 +46,6 @@ flags.DEFINE_integer('lockout_minutes', 15,
                      'Number of minutes to lockout if triggered.')
 flags.DEFINE_integer('lockout_window', 15,
                      'Number of minutes for lockout window.')
-flags.DEFINE_list('lockout_memcached_servers', None,
-                  'Memcached servers or None for in process cache.')
 
 
 class RequestLogging(wsgi.Middleware):
@@ -107,11 +105,11 @@ class Lockout(wsgi.Middleware):
 
     def __init__(self, application):
         """middleware can use fake for testing."""
-        if FLAGS.lockout_memcached_servers:
+        if FLAGS.memcached_servers:
             import memcache
         else:
             from nova import fakememcache as memcache
-        self.mc = memcache.Client(FLAGS.lockout_memcached_servers,
+        self.mc = memcache.Client(FLAGS.memcached_servers,
                                   debug=0)
         super(Lockout, self).__init__(application)
 
@@ -322,9 +320,7 @@ class Executor(wsgi.Application):
         except exception.InstanceNotFound as ex:
             LOG.info(_('InstanceNotFound raised: %s'), unicode(ex),
                      context=context)
-            ec2_id = ec2utils.id_to_ec2_id(ex.instance_id)
-            message = _('Instance %s not found') % ec2_id
-            return self._error(req, context, type(ex).__name__, message)
+            return self._error(req, context, type(ex).__name__, ex.message)
         except exception.VolumeNotFound as ex:
             LOG.info(_('VolumeNotFound raised: %s'), unicode(ex),
                      context=context)
@@ -342,6 +338,10 @@ class Executor(wsgi.Application):
             else:
                 return self._error(req, context, type(ex).__name__,
                                    unicode(ex))
+        except exception.KeyPairExists as ex:
+            LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
+                     context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
         except Exception as ex:
             extra = {'environment': req.environ}
             LOG.exception(_('Unexpected error raised: %s'), unicode(ex),

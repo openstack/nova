@@ -60,10 +60,9 @@ class SchedulerManager(manager.Manager):
         """Get a list of zones from the ZoneManager."""
         return self.zone_manager.get_zone_list()
 
-    def get_zone_capabilities(self, context=None, service=None):
-        """Get the normalized set of capabilites for this zone,
-           or for a particular service."""
-        return self.zone_manager.get_zone_capabilities(context, service)
+    def get_zone_capabilities(self, context=None):
+        """Get the normalized set of capabilites for this zone."""
+        return self.zone_manager.get_zone_capabilities(context)
 
     def update_service_capabilities(self, context=None, service_name=None,
                                                 host=None, capabilities={}):
