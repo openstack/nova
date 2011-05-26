@@ -100,14 +100,15 @@ class API(base.Base):
         """
         if injected_files is None:
             return
-        limit = quota.allowed_injected_files(context)
+        limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
         path_limit = quota.allowed_injected_file_path_bytes(context)
-        content_limit = quota.allowed_injected_file_content_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            content_limit = quota.allowed_injected_file_content_bytes(
+                                                    context, len(content))
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
@@ -139,9 +140,10 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
+
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 
@@ -151,9 +153,13 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
-            raise quota.QuotaError(_("Instance quota exceeded. You can only "
-                                     "run %s more instances of this type.") %
-                                   num_instances, "InstanceLimitExceeded")
+            if num_instances <= 0:
+                message = _("Instance quota exceeded. You cannot run any "
+                            "more instances of this type.")
+            else:
+                message = _("Instance quota exceeded. You can only run %s "
+                            "more instances of this type.") % num_instances
+            raise quota.QuotaError(message, "InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
@@ -262,6 +268,7 @@ class API(base.Base):
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
+                                          admin_password,
                                           instance_id=None, num_instances=1):
         """Send the run_instance request to the schedulers for processing."""
         pid = context.project_id
@@ -289,6 +296,7 @@ class API(base.Base):
                            "instance_id": instance_id,
                            "request_spec": request_spec,
                            "availability_zone": availability_zone,
+                           "admin_password": admin_password,
                            "injected_files": injected_files}})
 
     def create_all_at_once(self, context, instance_type,
@@ -297,7 +305,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -309,11 +317,12 @@ class API(base.Base):
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
-                               injected_files, zone_blob)
+                               injected_files, admin_password, zone_blob)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
                                       availability_zone, injected_files,
+                                      admin_password,
                                       num_instances=num_instances)
 
         return base_options['reservation_id']
@@ -324,7 +333,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -342,7 +351,7 @@ class API(base.Base):
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
-                               injected_files, zone_blob)
+                               injected_files, admin_password, zone_blob)
 
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -355,6 +364,7 @@ class API(base.Base):
             self._ask_scheduler_to_create_instance(context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,
+                                          admin_password,
                                           instance_id=instance_id)
 
         return [dict(x.iteritems()) for x in instances]
@@ -607,15 +617,6 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def _set_admin_password(self, context, instance_id, password):
-        """Set the root/admin password for the given instance."""
-        host = self._find_host(context, instance_id)
-
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "set_admin_password",
-                  "args": {"instance_id": instance_id, "new_pass": password}})
-
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
@@ -769,8 +770,12 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        eventlet.spawn_n(self._set_admin_password, context, instance_id,
-                                                  password)
+        host = self._find_host(context, instance_id)
+
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "set_admin_password",
+                  "args": {"instance_id": instance_id, "new_pass": password}})
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""
