@@ -54,7 +54,11 @@ def generate_default_hostname(instance_id):
 
 class API(base.Base):
     """API for interacting with the compute manager."""
-    scheduler_rules = None
+
+    # Should we create instances all-at-once or as single-shot requests.
+    # Different schedulers use different approaches.
+    # This is cached across all API instances.
+    should_create_all_at_once = None  # None implies uninitialized.
 
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
@@ -219,8 +223,74 @@ class API(base.Base):
             'availability_zone': availability_zone,
             'os_type': os_type}
 
-        return (num_instances, base_options)
+        return (num_instances, base_options, security_groups)
 
+    def create_db_entry_for_new_instance(self, context, base_options, 
+             security_groups, num=1):
+        """Create an entry in the DB for this new instance, 
+        including any related table updates (such as security
+        groups, MAC address, etc). This will called by create()
+        in the majority of situations, but all-at-once style
+        Schedulers may initiate the call."""
+        instance = dict(mac_address=utils.generate_mac(),
+                        launch_index=num,
+                        **base_options)
+        instance = self.db.instance_create(context, instance)
+        instance_id = instance['id']
+
+        elevated = context.elevated()
+        if not security_groups:
+            security_groups = []
+        for security_group_id in security_groups:
+            self.db.instance_add_security_group(elevated,
+                                                instance_id,
+                                                security_group_id)
+
+        # Set sane defaults if not specified
+        updates = dict(hostname=self.hostname_factory(instance_id))
+        if (not hasattr(instance, 'display_name') or
+                instance.display_name is None):
+            updates['display_name'] = "Server %s" % instance_id
+
+        instance = self.update(context, instance_id, **updates)
+
+        for group_id in security_groups:
+            self.trigger_security_group_members_refresh(elevated, group_id)
+
+        return instance
+
+    def _ask_scheduler_to_create_instance(self, context, base_options,
+                                          instance_type, zone_blob,
+                                          availability_zone, injected_files,
+                                          instance_id=None, num_instances=1):
+        """Send the run_instance request to the schedulers for processing."""
+        pid = context.project_id
+        uid = context.user_id
+        if instance_id:
+            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
+                    " instance %(instance_id)s (single-shot)") % locals())
+        else:
+            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
+                    " (all-at-once)") % locals())
+ 
+        filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
+        request_spec = {
+            'instance_properties': base_options,
+            'instance_type': instance_type,
+            'filter': filter_class,
+            'blob': zone_blob,
+            'num_instances': num_instances
+        }
+
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "run_instance",
+                  "args": {"topic": FLAGS.compute_topic,
+                           "instance_id": instance_id,
+                           "request_spec": request_spec,
+                           "availability_zone": availability_zone,
+                           "injected_files": injected_files}})
+        
     def create_all_at_once(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
@@ -229,13 +299,24 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, zone_blob=None):
          """Provision the instances by passing the whole request to
-         the Scheduler for execution."""
-         self._check_create_parameters(self, context, instance_type,
-               image_id, kernel_id, ramdisk_id, min_count=1, max_count=1,
-               display_name, display_description,
-               key_name, key_data, security_group,
-               availability_zone, user_data, metadata,
-               injected_files, zone_blob)
+         the Scheduler for execution. Returns a Reservation ID 
+         related to the creation of all of these instances."""
+         num_instances, base_options, security_groups = \
+                    self._check_create_parameters(
+                               context, instance_type,
+                               image_id, kernel_id, ramdisk_id,
+                               min_count, max_count,
+                               display_name, display_description,
+                               key_name, key_data, security_group,
+                               availability_zone, user_data, metadata,
+                               injected_files, zone_blob)
+
+         self._ask_scheduler_to_create_instance(context, base_options,
+                                      instance_type, zone_blob,
+                                      availability_zone, injected_files,
+                                      num_instances=num_instances)
+
+         return base_options['reservation_id']
 
     def create(self, context, instance_type,
                image_id, kernel_id=None, ramdisk_id=None,
@@ -244,15 +325,20 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, zone_blob=None):
-        """Provision the instances by sending off a series of single
+        """
+        Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
         Scheduler drivers, but may remove the effectiveness of the
-        more complicated drivers."""
+        more complicated drivers.
+        
+        Returns a list of instance dicts.
+        """
 
-        num_instances, base_options = self._check_create_parameters(
+        num_instances, base_options, security_groups = \
+                    self._check_create_parameters(
                                context, instance_type,
                                image_id, kernel_id, ramdisk_id,
-                               min_count=1, max_count=1,
+                               min_count, max_count,
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
@@ -261,74 +347,31 @@ class API(base.Base):
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
-            instance = dict(mac_address=utils.generate_mac(),
-                            launch_index=num,
-                            **base_options)
-            instance = self.db.instance_create(context, instance)
-            instance_id = instance['id']
-
-            elevated = context.elevated()
-            if not security_groups:
-                security_groups = []
-            for security_group_id in security_groups:
-                self.db.instance_add_security_group(elevated,
-                                                    instance_id,
-                                                    security_group_id)
-
-            # Set sane defaults if not specified
-            updates = dict(hostname=self.hostname_factory(instance_id))
-            if (not hasattr(instance, 'display_name') or
-                    instance.display_name is None):
-                updates['display_name'] = "Server %s" % instance_id
-
-            instance = self.update(context, instance_id, **updates)
+            instance = self.create_db_entry_for_new_instance(context,
+                                    base_options, security_groups, num=num)
             instances.append(instance)
-
-            pid = context.project_id
-            uid = context.user_id
-            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
-                    " instance %(instance_id)s") % locals())
-
-            # NOTE(sandy): For now we're just going to pass in the
-            # instance_type record to the scheduler. In a later phase
-            # we'll be ripping this whole for-loop out and deferring the
-            # creation of the Instance record. At that point all this will
-            # change.
-            filter_driver = 'nova.scheduler.host_filter.InstanceTypeFilter'
-            request_spec = {
-                'instance_properties': base_options,
-                'instance_type': instance_type,
-                'filter_driver': filter_driver,
-                'blob': zone_blob
-            }
-
-            rpc.cast(context,
-                     FLAGS.scheduler_topic,
-                     {"method": "run_instance",
-                      "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id,
-                               "request_spec": request_spec,
-                               "availability_zone": availability_zone,
-                               "injected_files": injected_files}})
-
-        for group_id in security_groups:
-            self.trigger_security_group_members_refresh(elevated, group_id)
-
-        return [dict(x.iteritems()) for x in instances]
+            instance_id = instance['id']
+            
+            self._ask_scheduler_to_create_instance(context, base_options,
+                                          instance_type, zone_blob,
+                                          availability_zone, injected_files,
+                                          instance_id=instance_id)
+                                    
+        return [x.items() for x in instances]
 
     def smart_create(self, *args, **kwargs):
-        """Ask the scheduler if we should: 1. do single shot instance
-        requests or all-at-once, and 2. defer the DB work until
-        a suitable host has been selected (if at all). Cache this
-        information and act accordingly."""
+        """
+        Ask the scheduler if we should do single shot instance requests
+        or all-at-once.
 
-        if API.scheduler_rules == None:
-            API.scheduler_rules = scheduler_api.get_scheduler_rules(context)
+        Cache this information on first request and act accordingly.
+        """
 
-        should_create_all_at_once, should_defer_database_create = \
-                        API.scheduler_rules
+        if API.should_create_all_at_once == None:
+            API.should_create_all_at_once = \
+                    scheduler_api.should_create_all_at_once(context)
 
-        if should_create_all_at_once:
+        if API.should_create_all_at_once:
             return self.create_all_at_once(*args, **kwargs)
         return self.create(*args, **kwargs)
 

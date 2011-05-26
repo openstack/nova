@@ -157,6 +157,12 @@ class ZoneAwareScheduler(driver.Scheduler):
         self._provision_resource_from_blob(context, item, instance_id,
                                                request_spec, kwargs)
 
+    def should_create_all_at_once(self, context=None, *args, **kwargs):
+        """
+        This driver prefers all-at-once requests.
+        """
+        return True
+
     def schedule_run_instance(self, context, instance_id, request_spec,
                                         *args, **kwargs):
         """This method is called from nova.compute.api to provision

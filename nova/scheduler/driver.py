@@ -72,6 +72,13 @@ class Scheduler(object):
                 for service in services
                 if self.service_is_up(service)]
 
+    def should_create_all_at_once(self, context=None, *args, **kwargs):
+        """
+        Does this driver prefer single-shot requests or all-at-once?
+        By default, prefer single-shot.
+        """
+        return False
+
     def schedule(self, context, topic, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""
         raise NotImplementedError(_("Must implement a fallback schedule"))
