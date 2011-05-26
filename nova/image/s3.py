@@ -31,12 +31,14 @@ import eventlet
 from nova import crypto
 from nova import exception
 from nova import flags
+from nova import log as logging
 from nova import utils
 from nova.auth import manager
 from nova.image import service
 from nova.api.ec2 import ec2utils
 
 
+LOG = logging.getLogger("nova.image.s3")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('image_decryption_dir', '/tmp',
                     'parent dir for tempdir used for image decryption')
@@ -181,6 +183,8 @@ class S3ImageService(service.BaseImageService):
                             shutil.copyfileobj(part, combined)
 
             except Exception:
+                LOG.exception(_("Failed to download %(image_location)s "
+                                "to %(image_path)s"), locals())
                 metadata['properties']['image_state'] = 'failed_download'
                 self.service.update(context, image_id, metadata)
                 raise
@@ -203,6 +207,9 @@ class S3ImageService(service.BaseImageService):
                                     encrypted_iv, cloud_pk,
                                     dec_filename)
             except Exception:
+                LOG.exception(_("Failed to decrypt %(image_location)s "
+                                "to %(image_path)s"), locals())
+                LOG.exception(_("Failed to decrypt %s"), enc_filename)
                 metadata['properties']['image_state'] = 'failed_decrypt'
                 self.service.update(context, image_id, metadata)
                 raise
@@ -213,6 +220,8 @@ class S3ImageService(service.BaseImageService):
             try:
                 unz_filename = self._untarzip_image(image_path, dec_filename)
             except Exception:
+                LOG.exception(_("Failed to untar %(image_location)s "
+                                "to %(image_path)s"), locals())
                 metadata['properties']['image_state'] = 'failed_untar'
                 self.service.update(context, image_id, metadata)
                 raise
@@ -224,6 +233,8 @@ class S3ImageService(service.BaseImageService):
                     self.service.update(context, image_id,
                                         metadata, image_file)
             except Exception:
+                LOG.exception(_("Failed to upload %(image_location)s "
+                                "to %(image_path)s"), locals())
                 metadata['properties']['image_state'] = 'failed_upload'
                 self.service.update(context, image_id, metadata)
                 raise
