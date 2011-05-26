@@ -214,7 +214,7 @@ class XenAPIVMTestCase(test.TestCase):
                 'mac_address': 'aa:bb:cc:dd:ee:ff',
                 'os_type': 'linux'}
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance)
+            self.conn.spawn(instance, {})
 
         gt1 = eventlet.spawn(_do_build, 1, self.project.id, self.user.id)
         gt2 = eventlet.spawn(_do_build, 2, self.project.id, self.user.id)
@@ -365,7 +365,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': os_type}
         instance = db.instance_create(self.context, values)
-        self.conn.spawn(instance)
+        self.conn.spawn(instance, {})
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
 
@@ -551,7 +551,7 @@ class XenAPIVMTestCase(test.TestCase):
             'mac_address': 'aa:bb:cc:dd:ee:ff',
             'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
-        self.conn.spawn(instance)
+        self.conn.spawn(instance, {})
         return instance
 
 
