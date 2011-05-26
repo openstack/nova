@@ -513,7 +513,7 @@ class IptablesFirewallDriver(FirewallDriver):
             network_info = netutils.get_network_info(instance)
         self.nwfilter.setup_basic_filtering(instance, network_info)
         if not self.basicly_filtered:
-            LOG.debug(_("iptables firewall: Setup Basic Filtering"))
+            LOG.debug(_('iptables firewall: Setup Basic Filtering'))
             self.refresh_provider_fw_rules()
             self.basicly_filtered = True
 
@@ -638,7 +638,7 @@ class IptablesFirewallDriver(FirewallDriver):
                                                           security_group['id'])
 
             for rule in rules:
-                LOG.debug(_("Adding security group rule: %r"), rule)
+                LOG.debug(_('Adding security group rule: %r'), rule)
 
                 if not rule.cidr:
                     # Eventually, a mechanism to grant access for security
