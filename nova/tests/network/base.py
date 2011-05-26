@@ -56,7 +56,6 @@ class NetworkTestCase(test.TestCase):
             # create the necessary network data for the project
             user_context = context.RequestContext(project=self.projects[i],
                                                      user=self.user)
-            host = self.network.get_network_host(user_context.elevated())
         instance_ref = self._create_instance(0)
         self.instance_id = instance_ref['id']
         instance_ref = self._create_instance(1)
@@ -72,15 +71,12 @@ class NetworkTestCase(test.TestCase):
         self.manager.delete_user(self.user)
         super(NetworkTestCase, self).tearDown()
 
-    def _create_instance(self, project_num, mac=None):
-        if not mac:
-            mac = utils.generate_mac()
+    def _create_instance(self, project_num):
         project = self.projects[project_num]
         self.context._project = project
         self.context.project_id = project.id
         return db.instance_create(self.context,
-                                  {'project_id': project.id,
-                                   'mac_address': mac})
+                                  {'project_id': project.id})
 
     def _create_address(self, project_num, instance_id=None):
         """Create an address in given project num"""
