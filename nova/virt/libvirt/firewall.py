@@ -749,29 +749,29 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv6_rules = []
         rules = db.provider_fw_rule_get_all(ctxt)
         for rule in rules:
-            LOG.debug(_('Adding prvider rule: %r'), rule)
-            version = netutils.get_ip_version(rule.cidr)
+            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            version = netutils.get_ip_version(rule['cidr'])
             if version == 4:
                 fw_rules = ipv4_rules
             else:
                 fw_rules = ipv6_rules
 
-            protocol = rule.protocol
+            protocol = rule['protocol']
             if version == 6 and protocol == 'icmp':
                 protocol = 'icmpv6'
 
-            args = ['-p', protocol, '-s', rule.cidr]
+            args = ['-p', protocol, '-s', rule['cidr']]
 
             if protocol in ['udp', 'tcp']:
-                if rule.from_port == rule.to_port:
-                    args += ['--dport', '%s' % (rule.from_port,)]
+                if rule['from_port'] == rule['to_port']:
+                    args += ['--dport', '%s' % (rule['from_port'],)]
                 else:
                     args += ['-m', 'multiport',
-                             '--dports', '%s:%s' % (rule.from_port,
-                                                    rule.to_port)]
+                             '--dports', '%s:%s' % (rule['from_port'],
+                                                    rule['to_port'])]
             elif protocol == 'icmp':
-                icmp_type = rule.from_port
-                icmp_code = rule.to_port
+                icmp_type = rule['from_port']
+                icmp_code = rule['to_port']
 
                 if icmp_type == -1:
                     icmp_type_arg = None
