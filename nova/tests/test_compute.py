@@ -84,7 +84,7 @@ class ComputeTestCase(test.TestCase):
     def _create_instance(self, params={}):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id

@@ -184,11 +184,11 @@ class Instance(BASE, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    image_id = Column(String(255))
+    image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
 
-#    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))

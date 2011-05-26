@@ -207,7 +207,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'image_id': image_href,
+            'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,

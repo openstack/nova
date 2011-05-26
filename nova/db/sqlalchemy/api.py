@@ -955,7 +955,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
-                   filter_by(image_id=str(FLAGS.vpn_image_id)).\
+                   filter_by(image_ref=str(FLAGS.vpn_image_id)).\
                    filter_by(deleted=can_read_deleted(context)).\
                    first()
 

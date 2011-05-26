@@ -159,7 +159,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -724,13 +724,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == str(FLAGS.vpn_image_id):
+                if instance['image_ref'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self.image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_ref'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
