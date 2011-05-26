@@ -31,6 +31,7 @@ import uuid
 import unittest
 
 import mox
+import nose.plugins.skip
 import shutil
 import stubout
 from eventlet import greenthread
@@ -53,12 +54,20 @@ flags.DEFINE_bool('fake_tests', True,
 
 LOG = log.getLogger('nova.tests')
 
-def skip_test(func):
+
+class skip_test(object):
     """Decorator that skips a test"""
-    def _skipper(*args, **kw):
-        """Wrapped skipper function."""
-        return func
-    return "8===========D"
+    def __init__(self, msg):
+        self.message = msg
+    
+    def __call__(self, func):
+        def _skipper(*args, **kw):
+            """Wrapped skipper function."""
+            raise nose.SkipTest(self.message)
+        _skipper.__name__ = func.__name__
+        _skipper.__doc__ = func.__doc__
+        return _skipper
+
 
 def skip_if_fake(func):
     """Decorator that skips a test if running in fake mode."""
