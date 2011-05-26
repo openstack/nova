@@ -339,12 +339,9 @@ class AdminController(object):
     def _provider_fw_rule_exists(self, context, rule):
         # TODO(todd): we call this repeatedly, can we filter by protocol?
         for old_rule in db.provider_fw_rule_get_all(context):
-            dupe = True
-            for key in ('cidr', 'from_port', 'to_port', 'protocol'):
-                if rule[key] != old_rule[key]:
-                    dupe = False
-            if dupe:
-                return dupe
+            if all([rule[k] == old_rule[k] for k in ('cidr', 'from_port',
+                                                     'to_port', 'protocol')]):
+                return True
         return False
 
     def block_external_addresses(self, context, cidr):
@@ -372,7 +369,7 @@ class AdminController(object):
         if not self._provider_fw_rule_exists(context, icmp_rule):
             db.provider_fw_rule_create(context, icmp_rule)
             rules_added += 1
-        if rules_added == 0:
+        if not rules_added:
             raise exception.ApiError(_('Duplicate rule'))
         self.compute_api.trigger_provider_fw_rules_refresh(context)
         return {'status': 'OK', 'message': 'Added %s rules' % rules_added}
