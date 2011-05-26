@@ -237,6 +237,7 @@ class XMLDictSerializer(DictSerializer):
         if xmlns:
             result.setAttribute('xmlns', xmlns)
 
+        #TODO(bcwaldon): accomplish this without a type-check
         if type(data) is list:
             collections = metadata.get('list_collections', {})
             if nodename in collections:
@@ -255,6 +256,7 @@ class XMLDictSerializer(DictSerializer):
             for item in data:
                 node = self._to_xml_node(doc, metadata, singular, item)
                 result.appendChild(node)
+        #TODO(bcwaldon): accomplish this without a type-check
         elif type(data) is dict:
             collections = metadata.get('dict_collections', {})
             if nodename in collections:
