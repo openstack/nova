@@ -2011,10 +2011,6 @@ def provider_fw_rule_get_all(context):
     return session.query(models.ProviderFirewallRule).\
                    filter_by(deleted=can_read_deleted(context)).\
                    all()
-    fw_rule_ref = models.ProviderFirewallRule()
-    fw_rule_ref.update(rule)
-    fw_rule_ref.save()
-    return fw_rule_ref
 
 
 ###################
