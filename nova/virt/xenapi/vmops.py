@@ -219,6 +219,13 @@ class VMOps(object):
                 for path, contents in instance.injected_files:
                     LOG.debug(_("Injecting file path: '%s'") % path)
                     self.inject_file(instance, path, contents)
+
+        def _set_admin_password():
+            admin_password = instance.admin_pass
+            if admin_password:
+                LOG.debug(_("Setting admin password"))
+                self.set_admin_password(instance, admin_password)
+
         # NOTE(armando): Do we really need to do this in virt?
         # NOTE(tr3buchet): not sure but wherever we do it, we need to call
         #                  reset_network afterwards
@@ -231,6 +238,7 @@ class VMOps(object):
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
                     _inject_files()
+                    _set_admin_password()
                     return True
             except Exception, exc:
                 LOG.warn(exc)
@@ -475,6 +483,9 @@ class VMOps(object):
         # Successful return code from password is '0'
         if resp_dict['returncode'] != '0':
             raise RuntimeError(resp_dict['message'])
+        db.instance_update(context.get_admin_context(),
+                                  instance['id'],
+                                  dict(admin_pass=new_pass))
         return resp_dict['message']
 
     def inject_file(self, instance, path, contents):

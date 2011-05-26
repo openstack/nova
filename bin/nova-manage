@@ -417,12 +417,16 @@ class ProjectCommands(object):
         arguments: project_id [key] [value]"""
         ctxt = context.get_admin_context()
         if key:
+            if value.lower() == 'unlimited':
+                value = None
             try:
                 db.quota_update(ctxt, project_id, key, value)
             except exception.ProjectQuotaNotFound:
                 db.quota_create(ctxt, project_id, key, value)
-        project_quota = quota.get_quota(ctxt, project_id)
+        project_quota = quota.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
+            if value is None:
+                value = 'unlimited'
             print '%s: %s' % (key, value)
 
     def remove(self, project_id, user_id):
