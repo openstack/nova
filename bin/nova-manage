@@ -98,7 +98,7 @@ flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
 flags.DECLARE('images_path', 'nova.image.local')
-flags.DECLARE('libvirt_type', 'nova.virt.libvirt_conn')
+flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
@@ -418,12 +418,16 @@ class ProjectCommands(object):
         arguments: project_id [key] [value]"""
         ctxt = context.get_admin_context()
         if key:
+            if value.lower() == 'unlimited':
+                value = None
             try:
                 db.quota_update(ctxt, project_id, key, value)
             except exception.ProjectQuotaNotFound:
                 db.quota_create(ctxt, project_id, key, value)
-        project_quota = quota.get_quota(ctxt, project_id)
+        project_quota = quota.get_project_quotas(ctxt, project_id)
         for key, value in project_quota.iteritems():
+            if value is None:
+                value = 'unlimited'
             print '%s: %s' % (key, value)
 
     def remove(self, project_id, user_id):

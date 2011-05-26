@@ -180,7 +180,8 @@ class Controller(common.OpenstackController):
                 key_name=key_name,
                 key_data=key_data,
                 metadata=env['server'].get('metadata', {}),
-                injected_files=injected_files)
+                injected_files=injected_files,
+                admin_password=password)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
@@ -193,8 +194,6 @@ class Controller(common.OpenstackController):
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = password
-        self.compute_api.set_admin_password(context, server['server']['id'],
-                                            password)
         return server
 
     def _deserialize_create(self, request):
@@ -609,8 +608,8 @@ class ControllerV10(Controller):
 
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            self.compute_api.set_admin_password(context, server_id)
+            self.compute_api.set_admin_password(context, server_id,
+                    inst_dict['server']['adminPass'])
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
