@@ -1013,8 +1013,7 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
         offset = MBR_SIZE_BYTES
         _write_partition(virtual_size, dev)
 
-    utils.execute('sudo', 'setfacl', '-m', 'u:%s:rw' % os.getuid(),
-                  '/dev/%s' % dev)
+    utils.execute('sudo', 'chown', os.getuid(), '/dev/%s' % dev)
 
     with open('/dev/%s' % dev, 'wb') as f:
         f.seek(offset)
