@@ -45,6 +45,7 @@ import sys
 import tempfile
 import time
 import uuid
+import inspect
 from xml.dom import minidom
 from xml.etree import ElementTree
 
@@ -548,53 +549,39 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_reboot)
         return timer.start(interval=0.5, now=True)
 
-    @exception.wrap_exception
-    def pause(self, instance, callback):
-        """Pause VM instance"""
+    def _take_action_to_instance(self, action, instance, *arg):
+        """action VM instance"""
         if self.read_only:
             tmpconn = self._connect(self.libvirt_uri, False)
             dom = tmpconn.lookupByName(instance.name)
-            dom.suspend()
+            method = getattr(dom, action)
+            method(*arg)
             tmpconn.close()
         else:
             dom = self._conn.lookupByName(instance.name)
-            dom.suspend()
+            method = getattr(dom, action)
+            method(*arg)
+
+    @exception.wrap_exception
+    def pause(self, instance, callback):
+        """Pause VM instance"""
+        self._take_action_to_instance("suspend", instance)
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
         """Unpause paused VM instance"""
-        if self.read_only:
-            tmpconn = self._connect(self.libvirt_uri, False)
-            dom = tmpconn.lookupByName(instance.name)
-            dom.resume()
-            tmpconn.close()
-        else:
-            dom = self._conn.lookupByName(instance.name)
-            dom.resume()
+        self._take_action_to_instance("resume", instance)
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
         """Suspend the specified instance"""
-        if self.read_only:
-            tmpconn = self._connect(self.libvirt_uri, False)
-            dom = tmpconn.lookupByName(instance.name)
-            dom.managedSave(0)
-            tmpconn.close()
-        else:
-            dom = self._conn.lookupByName(instance.name)
-            dom.managedSave(0)
+        self._take_action_to_instance("managedSave", instance, 0)
 
     @exception.wrap_exception
     def resume(self, instance, callback):
         """resume the specified instance"""
         try:
-            if self.read_only:
-                tmpconn = self._connect(self.libvirt_uri, False)
-                dom = tmpconn.lookupByName(instance.name)
-                tmpconn.close()
-            else:
-                dom = self._conn.lookupByName(instance.name)
-            dom.create()
+            self._take_action_to_instance("create", instance)
         except libvirt.LibvirtError:
             xml = self.to_xml(instance, None)
             self._create_new_domain(xml)
