@@ -885,6 +885,7 @@ class IptablesFirewallTestCase(test.TestCase):
     def test_provider_firewall_rules(self):
         # setup basic instance data
         instance_ref = self._create_instance_ref()
+        nw_info = _create_network_info(1)
         ip = '10.11.12.13'
         network_ref = db.project_get_network(self.context, 'fake')
         admin_ctxt = context.get_admin_context()
@@ -897,7 +898,7 @@ class IptablesFirewallTestCase(test.TestCase):
 
         # create a firewall via setup_basic_filtering like libvirt_conn.spawn
         # should have a chain with 0 rules
-        self.fw.setup_basic_filtering(instance_ref, network_info=None)
+        self.fw.setup_basic_filtering(instance_ref, network_info=nw_info)
         self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
@@ -926,13 +927,17 @@ class IptablesFirewallTestCase(test.TestCase):
         self.assertEqual(2, len(rules))
 
         # create the instance filter and make sure it has a jump rule
-        self.fw.prepare_instance_filter(instance_ref, network_info=None)
+        self.fw.prepare_instance_filter(instance_ref, network_info=nw_info)
         self.fw.apply_instance_filter(instance_ref)
         inst_rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                            if rule.chain == chain_name]
         jump_rules = [rule for rule in inst_rules if '-j' in rule.rule]
-        prov_rules = [rule for rule in jump_rules if 'provider' in rule.rule]
-        self.assertEqual(1, len(prov_rules))
+        provjump_rules = []
+        # IptablesTable doesn't make rules unique internally
+        for rule in jump_rules:
+            if 'provider' in rule.rule and rule not in provjump_rules:
+                provjump_rules.append(rule)
+        self.assertEqual(1, len(provjump_rules))
 
 
 class NWFilterTestCase(test.TestCase):
