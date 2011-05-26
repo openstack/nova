@@ -296,13 +296,13 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     hosts for weighing. The particular filter used may be passed in
     as an argument or the default will be used.
 
-    request_spec = {'filter_name': <Filter name>,
+    request_spec = {'filter': <Filter name>,
                     'instance_type': <InstanceType dict>}
     """
 
     def filter_hosts(self, num, request_spec):
         """Filter the full host list (from the ZoneManager)"""
-        filter_name = request_spec.get('filter_name', None)
+        filter_name = request_spec.get('filter', None)
         host_filter = choose_host_filter(filter_name)
 
         # TODO(sandy): We're only using InstanceType-based specs

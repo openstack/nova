@@ -264,7 +264,7 @@ class API(base.Base):
                                "instance_id": instance_id,
                                "request_spec": {
                                         'instance_type': instance_type,
-                                        'filter_driver':
+                                        'filter':
                                             'nova.scheduler.host_filter.'
                                             'InstanceTypeFilter'
                                     },
