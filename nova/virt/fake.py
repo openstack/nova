@@ -222,6 +222,10 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
+    def poll_rescued_instances(self, timeout):
+        """Poll for rescued instances"""
+        pass
+
     def migrate_disk_and_power_off(self, instance, dest):
         """
         Transfers the disk of a running instance in multiple phases, turning
