@@ -128,9 +128,9 @@ class RPCAllocateFixedIP(object):
                 # need to cast allocate_fixed_ip to correct network host
                 topic = self.db.queue_get_for(context, FLAGS.network_topic,
                                                            network['host'])
-                args = kwargs
+                args = {}
                 args['instance_id'] = instance_id
-                args['network_id'] = network_id
+                args['network_id'] = network['id']
 
                 green_pool.spawn_n(rpc.call, context, topic,
                                    {'method': '_rpc_allocate_fixed_ip',
