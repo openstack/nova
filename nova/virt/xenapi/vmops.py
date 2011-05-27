@@ -1190,30 +1190,20 @@ class SimpleDH(object):
         mpi = M2Crypto.m2.bn_to_mpi(bn)
         return mpi
 
-    def _run_ssl(self, text, which):
-        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
-                '-nosalt %(dec_flag)s')
-        if which.lower()[0] == 'd':
-            dec_flag = ' -d'
-            # When decoding base64, we need to make sure there's a
-            # single '\n' at the end of the base64 encoded data.
-            # It's kinda dumb that openssl wants to see a newline
-            text = text.strip('\n') + '\n'
-        else:
-            dec_flag = ''
-        shared = self._shared
-        cmd = base_cmd % locals()
-        proc = _runproc(cmd)
+    def _run_ssl(self, subcommand, text):
+        proc = _runproc('openssl %s' % subcommand)
         proc.stdin.write(text)
         proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read().strip('\n')
+        return proc.stdout.read()
 
     def encrypt(self, text):
-        return self._run_ssl(text, 'enc')
+        cmd = 'enc -aes-128-cbc -a -pass pass:%s -nosalt' % self._shared
+        return self._run_ssl(cmd, text).strip('\n')
 
     def decrypt(self, text):
-        return self._run_ssl(text, 'dec')
+        cmd = 'enc -aes-128-cbc -a -A -pass pass:%s -nosalt -d' % self._shared
+        return self._run_ssl(cmd, text)
