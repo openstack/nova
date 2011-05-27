@@ -91,6 +91,20 @@ class FlagsTestCase(test.TestCase):
         self.assert_('runtime_answer' in self.global_FLAGS)
         self.assertEqual(self.global_FLAGS.runtime_answer, 60)
 
+    def test_long_vs_short_flags(self):
+        flags.DEFINE_string('duplicate_answer_long', 'val', 'desc',
+                            flag_values=self.global_FLAGS)
+        argv = ['flags_test', '--duplicate_answer=60', 'extra_arg']
+        args = self.global_FLAGS(argv)
+
+        self.assert_('duplicate_answer' not in self.global_FLAGS)
+        self.assert_(self.global_FLAGS.duplicate_answer_long, 60)
+
+        flags.DEFINE_integer('duplicate_answer', 60, 'desc',
+                             flag_values=self.global_FLAGS)
+        self.assertEqual(self.global_FLAGS.duplicate_answer, 60)
+        self.assertEqual(self.global_FLAGS.duplicate_answer_long, 'val')
+
     def test_flag_leak_left(self):
         self.assertEqual(FLAGS.flags_unittest, 'foo')
         FLAGS.flags_unittest = 'bar'
