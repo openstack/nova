@@ -344,6 +344,10 @@ class Executor(wsgi.Application):
             else:
                 return self._error(req, context, type(ex).__name__,
                                    unicode(ex))
+        except exception.KeyPairExists as ex:
+            LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
+                     context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
         except Exception as ex:
             extra = {'environment': req.environ}
             LOG.exception(_('Unexpected error raised: %s'), unicode(ex),

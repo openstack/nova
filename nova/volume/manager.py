@@ -174,7 +174,8 @@ class VolumeManager(manager.SchedulerDependentManager):
             LOG.debug(_("snapshot %(snap_name)s: creating") % locals())
             model_update = self.driver.create_snapshot(snapshot_ref)
             if model_update:
-                self.db.snapshot_update(context, snapshot_ref['id'], model_update)
+                self.db.snapshot_update(context, snapshot_ref['id'],
+                                        model_update)
 
         except Exception:
             self.db.snapshot_update(context,

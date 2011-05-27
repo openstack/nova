@@ -355,6 +355,7 @@ class Snapshot(BASE, NovaBase):
     display_name = Column(String(255))
     display_description = Column(String(255))
 
+
 class ExportDevice(BASE, NovaBase):
     """Represates a shelf and blade that a volume can be exported on."""
     __tablename__ = 'export_devices'

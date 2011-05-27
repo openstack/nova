@@ -48,7 +48,7 @@ flags.DEFINE_string('instance_name_template', 'instance-%08x',
 flags.DEFINE_string('volume_name_template', 'volume-%08x',
                     'Template string to be used to generate instance names')
 flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
-                    'Template string to be used to generate instance names')
+                    'Template string to be used to generate snapshot names')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -405,7 +405,7 @@ def instance_create(context, values):
 
 
 def instance_data_get_for_project(context, project_id):
-    """Get (instance_count, core_count) for project."""
+    """Get (instance_count, total_cores, total_ram) for project."""
     return IMPL.instance_data_get_for_project(context, project_id)
 
 

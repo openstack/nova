@@ -13,7 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+import urlparse
+
+from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
@@ -21,6 +26,12 @@ from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
+flags.DEFINE_string('build_plan_encryption_key',
+        None,
+        '128bit (hex) encryption key for scheduler build plans.')
+
+
+LOG = logging.getLogger('nova.api.openstack.zones')
 
 
 def _filter_keys(item, keys):
@@ -97,3 +108,35 @@ class Controller(common.OpenstackController):
         zone_id = int(id)
         zone = api.zone_update(context, zone_id, env["zone"])
         return dict(zone=_scrub_zone(zone))
+
+    def select(self, req):
+        """Returns a weighted list of costs to create instances
+           of desired capabilities."""
+        ctx = req.environ['nova.context']
+        qs = req.environ['QUERY_STRING']
+        param_dict = urlparse.parse_qs(qs)
+        param_dict.pop("fresh", None)
+        # parse_qs returns a dict where the values are lists,
+        # since query strings can have multiple values for the
+        # same key. We need to convert that to single values.
+        for key in param_dict:
+            param_dict[key] = param_dict[key][0]
+        build_plan = api.select(ctx, specs=param_dict)
+        cooked = self._scrub_build_plan(build_plan)
+        return {"weights": cooked}
+
+    def _scrub_build_plan(self, build_plan):
+        """Remove all the confidential data and return a sanitized
+        version of the build plan. Include an encrypted full version
+        of the weighting entry so we can get back to it later."""
+        if not FLAGS.build_plan_encryption_key:
+            raise exception.FlagNotSet(flag='build_plan_encryption_key')
+
+        encryptor = crypto.encryptor(FLAGS.build_plan_encryption_key)
+        cooked = []
+        for entry in build_plan:
+            json_entry = json.dumps(entry)
+            cipher_text = encryptor(json_entry)
+            cooked.append(dict(weight=entry['weight'],
+                blob=cipher_text))
+        return cooked

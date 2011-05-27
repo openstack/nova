@@ -104,6 +104,10 @@ class QuotaTestCase(test.TestCase):
         num_instances = quota.allowed_instances(self.context, 100,
             self._get_instance_type('m1.small'))
         self.assertEqual(num_instances, 10)
+        db.quota_create(self.context, self.project.id, 'ram', 3 * 2048)
+        num_instances = quota.allowed_instances(self.context, 100,
+            self._get_instance_type('m1.small'))
+        self.assertEqual(num_instances, 3)
 
         # metadata_items
         too_many_items = FLAGS.quota_metadata_items + 1000
@@ -120,7 +124,8 @@ class QuotaTestCase(test.TestCase):
 
     def test_unlimited_instances(self):
         FLAGS.quota_instances = 2
-        FLAGS.quota_cores = 1000
+        FLAGS.quota_ram = -1
+        FLAGS.quota_cores = -1
         instance_type = self._get_instance_type('m1.small')
         num_instances = quota.allowed_instances(self.context, 100,
                                                 instance_type)
@@ -133,8 +138,25 @@ class QuotaTestCase(test.TestCase):
                                                 instance_type)
         self.assertEqual(num_instances, 101)
 
+    def test_unlimited_ram(self):
+        FLAGS.quota_instances = -1
+        FLAGS.quota_ram = 2 * 2048
+        FLAGS.quota_cores = -1
+        instance_type = self._get_instance_type('m1.small')
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 2)
+        db.quota_create(self.context, self.project.id, 'ram', None)
+        num_instances = quota.allowed_instances(self.context, 100,
+                                                instance_type)
+        self.assertEqual(num_instances, 100)
+        num_instances = quota.allowed_instances(self.context, 101,
+                                                instance_type)
+        self.assertEqual(num_instances, 101)
+
     def test_unlimited_cores(self):
-        FLAGS.quota_instances = 1000
+        FLAGS.quota_instances = -1
+        FLAGS.quota_ram = -1
         FLAGS.quota_cores = 2
         instance_type = self._get_instance_type('m1.small')
         num_instances = quota.allowed_instances(self.context, 100,
@@ -150,7 +172,7 @@ class QuotaTestCase(test.TestCase):
 
     def test_unlimited_volumes(self):
         FLAGS.quota_volumes = 10
-        FLAGS.quota_gigabytes = 1000
+        FLAGS.quota_gigabytes = -1
         volumes = quota.allowed_volumes(self.context, 100, 1)
         self.assertEqual(volumes, 10)
         db.quota_create(self.context, self.project.id, 'volumes', None)
@@ -160,7 +182,7 @@ class QuotaTestCase(test.TestCase):
         self.assertEqual(volumes, 101)
 
     def test_unlimited_gigabytes(self):
-        FLAGS.quota_volumes = 1000
+        FLAGS.quota_volumes = -1
         FLAGS.quota_gigabytes = 10
         volumes = quota.allowed_volumes(self.context, 100, 1)
         self.assertEqual(volumes, 10)
@@ -276,10 +298,47 @@ class QuotaTestCase(test.TestCase):
                                             image_id='fake',
                                             metadata=metadata)
 
-    def test_allowed_injected_files(self):
-        self.assertEqual(
-                quota.allowed_injected_files(self.context),
-                FLAGS.quota_max_injected_files)
+    def test_default_allowed_injected_files(self):
+        FLAGS.quota_max_injected_files = 55
+        self.assertEqual(quota.allowed_injected_files(self.context, 100), 55)
+
+    def test_overridden_allowed_injected_files(self):
+        FLAGS.quota_max_injected_files = 5
+        db.quota_create(self.context, self.project.id, 'injected_files', 77)
+        self.assertEqual(quota.allowed_injected_files(self.context, 100), 77)
+
+    def test_unlimited_default_allowed_injected_files(self):
+        FLAGS.quota_max_injected_files = -1
+        self.assertEqual(quota.allowed_injected_files(self.context, 100), 100)
+
+    def test_unlimited_db_allowed_injected_files(self):
+        FLAGS.quota_max_injected_files = 5
+        db.quota_create(self.context, self.project.id, 'injected_files', None)
+        self.assertEqual(quota.allowed_injected_files(self.context, 100), 100)
+
+    def test_default_allowed_injected_file_content_bytes(self):
+        FLAGS.quota_max_injected_file_content_bytes = 12345
+        limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
+        self.assertEqual(limit, 12345)
+
+    def test_overridden_allowed_injected_file_content_bytes(self):
+        FLAGS.quota_max_injected_file_content_bytes = 12345
+        db.quota_create(self.context, self.project.id,
+                        'injected_file_content_bytes', 5678)
+        limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
+        self.assertEqual(limit, 5678)
+
+    def test_unlimited_default_allowed_injected_file_content_bytes(self):
+        FLAGS.quota_max_injected_file_content_bytes = -1
+        limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
+        self.assertEqual(limit, 23456)
+
+    def test_unlimited_db_allowed_injected_file_content_bytes(self):
+        FLAGS.quota_max_injected_file_content_bytes = 12345
+        db.quota_create(self.context, self.project.id,
+                        'injected_file_content_bytes', None)
+        limit = quota.allowed_injected_file_content_bytes(self.context, 23456)
+        self.assertEqual(limit, 23456)
 
     def _create_with_injected_files(self, files):
         api = compute.API(image_service=self.StubImageService())
@@ -305,11 +364,6 @@ class QuotaTestCase(test.TestCase):
             files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
         self.assertRaises(quota.QuotaError,
                           self._create_with_injected_files, files)
-
-    def test_allowed_injected_file_content_bytes(self):
-        self.assertEqual(
-                quota.allowed_injected_file_content_bytes(self.context),
-                FLAGS.quota_max_injected_file_content_bytes)
 
     def test_max_injected_file_content_bytes(self):
         max = FLAGS.quota_max_injected_file_content_bytes

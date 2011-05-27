@@ -211,8 +211,9 @@ class VolumeTestCase(test.TestCase):
         self.volume.create_volume(self.context, volume_id)
         snapshot_id = self._create_snapshot(volume_id)
         self.volume.create_snapshot(self.context, volume_id, snapshot_id)
-        self.assertEqual(snapshot_id, db.snapshot_get(context.get_admin_context(),
-                         snapshot_id).id)
+        self.assertEqual(snapshot_id,
+                         db.snapshot_get(context.get_admin_context(),
+                                         snapshot_id).id)
 
         self.volume.delete_snapshot(self.context, snapshot_id)
         self.assertRaises(exception.NotFound,
