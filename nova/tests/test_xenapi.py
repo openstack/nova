@@ -594,7 +594,6 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
     def _test_encryption(self, message):
         enc = self.alice.encrypt(message)
-        print enc
         self.assertFalse(enc.endswith('\n'))
         dec = self.bob.decrypt(enc)
         self.assertEquals(dec, message)
