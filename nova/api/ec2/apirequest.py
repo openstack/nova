@@ -59,8 +59,8 @@ def _try_convert(value):
     ============= =====================================================
     zero-length   ''
     'None'        None
-    'True'        True
-    'False'       False
+    'True'        True case insensitive
+    'False'       False case insensitive
     '0', '-0'     0
     0xN, -0xN     int from hex (postitive) (N is any number)
     0bN, -0bN     int from binary (positive) (N is any number)
@@ -71,9 +71,9 @@ def _try_convert(value):
         return ''
     if value == 'None':
         return None
-    if value == 'True':
+    if value.lower() == 'true':
         return True
-    if value == 'False':
+    if value.lower() == 'false':
         return False
     valueneg = value[1:] if value[0] == '-' else value
     if valueneg == '0':
