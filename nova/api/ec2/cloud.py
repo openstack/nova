@@ -285,7 +285,9 @@ class CloudController(object):
             snapshots = []
             for ec2_id in snapshot_id:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                snapshot = self.volume_api.get_snapshot(context, snapshot_id=internal_id)
+                snapshot = self.volume_api.get_snapshot(
+                    context,
+                    snapshot_id=internal_id)
                 snapshots.append(snapshot)
         else:
             snapshots = self.volume_api.get_all_snapshots(context)
@@ -295,7 +297,8 @@ class CloudController(object):
     def _format_snapshot(self, context, snapshot):
         s = {}
         s['snapshotId'] = ec2utils.id_to_ec2_id(snapshot['id'], 'snap-%08x')
-        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'], 'vol-%08x')
+        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'],
+                                              'vol-%08x')
         s['status'] = snapshot['status']
         s['startTime'] = snapshot['created_at']
         s['progress'] = snapshot['progress']
@@ -308,7 +311,8 @@ class CloudController(object):
         return s
 
     def create_snapshot(self, context, volume_id, **kwargs):
-        LOG.audit(_("Create snapshot of volume %s"), volume_id, context=context)
+        LOG.audit(_("Create snapshot of volume %s"), volume_id,
+                  context=context)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         snapshot = self.volume_api.create_snapshot(
                 context,
@@ -629,7 +633,8 @@ class CloudController(object):
         else:
             v['attachmentSet'] = [{}]
         if volume.get('snapshot_id') != None:
-            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'], 'snap-%08x')
+            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'],
+                                                    'snap-%08x')
         else:
             v['snapshotId'] = None
 

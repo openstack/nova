@@ -97,7 +97,7 @@ class VolumeDriver(object):
     def _copy_volume(self, srcstr, deststr, size_in_g):
         self._execute('sudo', 'dd', 'if=%s' % srcstr, 'of=%s' % deststr,
                       'count=%d' % (size_in_g * 1024), 'bs=1M')
-        
+
     def _volume_not_present(self, volume_name):
         path_name = '%s/%s' % (FLAGS.volume_group, volume_name)
         try:
@@ -115,7 +115,7 @@ class VolumeDriver(object):
         self._try_execute('sudo', 'lvremove', '-f', "%s/%s" %
                           (FLAGS.volume_group,
                            self._escape_snapshot(volume['name'])))
-        
+
     def _sizestr(self, size_in_g):
         if int(size_in_g) == 0:
             return '100M'
@@ -150,7 +150,7 @@ class VolumeDriver(object):
             out = out.strip()
             if (out[0] == 'o') or (out[0] == 'O'):
                 raise exception.VolumeIsBusy(volume_name=volume['name'])
-                
+
         self._delete_volume(volume, volume['size'])
 
     def create_snapshot(self, snapshot):

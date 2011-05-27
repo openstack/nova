@@ -48,8 +48,7 @@ snapshots = Table('snapshots', meta,
                       unicode_error=None, _warn_on_bytestring=False)),
         Column('display_description',
                String(length=255, convert_unicode=False, assert_unicode=None,
-                      unicode_error=None, _warn_on_bytestring=False))
-        )
+                      unicode_error=None, _warn_on_bytestring=False)))
 
 
 def upgrade(migrate_engine):
