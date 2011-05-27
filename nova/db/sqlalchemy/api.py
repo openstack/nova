@@ -2579,3 +2579,66 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
                             "deleted": 0})
         meta_ref.save(session=session)
     return metadata
+
+####################
+
+@require_context
+def instance_type_metadata_get(context, instance_type_id):
+    session = get_session()
+
+    meta_results = session.query(models.InstanceTypeMetadata).\
+                    filter_by(instance_type_id=instance_type_id).\
+                    filter_by(deleted=False).\
+                    all()
+
+    meta_dict = {}
+    for i in meta_results:
+        meta_dict[i['key']] = i['value']
+    return meta_dict
+
+
+@require_context
+def instance_type_metadata_delete(context, instance_type_id, key):
+    session = get_session()
+    session.query(models.InstanceTypeMetadata).\
+        filter_by(instance_type_id=instance_type_id).\
+        filter_by(key=key).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': datetime.datetime.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def instance_type_metadata_get_item(context, instance_type_id, key):
+    session = get_session()
+
+    meta_result = session.query(models.InstanceMetadata).\
+                    filter_by(instance_type_id=instance_type_id).\
+                    filter_by(key=key).\
+                    filter_by(deleted=False).\
+                    first()
+
+    if not meta_result:
+        raise exception.InstanceTypeMetadataNotFound(metadata_key=key,
+                                                 instance_type_id=instance_type_id)
+    return meta_result
+
+
+@require_context
+def instance_type_metadata_update_or_create(context, instance_type_id, 
+                                            metadata):
+    session = get_session()
+    meta_ref = None
+    for key, value in metadata.iteritems():
+        try:
+            meta_ref = instance_type_metadata_get_item(context, 
+                                                       instance_type_id, key,
+                                                       session)
+        except:
+            meta_ref = models.InstanceTypeMetadata()
+        meta_ref.update({"key": key, "value": value,
+                            "instance_type_id": instance_id,
+                            "deleted": 0})
+        meta_ref.save(session=session)
+    return metadata
