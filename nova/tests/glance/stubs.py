@@ -63,8 +63,8 @@ class FakeGlance(object):
         pass
 
     def get_image_meta(self, image_id):
-        return self.IMAGE_FIXTURES[image_id]['image_meta']
+        return self.IMAGE_FIXTURES[int(image_id)]['image_meta']
 
     def get_image(self, image_id):
-        image = self.IMAGE_FIXTURES[image_id]
+        image = self.IMAGE_FIXTURES[int(image_id)]
         return image['image_meta'], image['image_data']

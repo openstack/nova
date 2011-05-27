@@ -353,7 +353,7 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
                     instance_type_id="3", os_type="linux",
-                    instance_id=1, check_injection=False):
+                    instance_id=1, check_injection=False, create_record=True):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
                   'project_id': self.project.id,
@@ -364,8 +364,11 @@ class XenAPIVMTestCase(test.TestCase):
                   'instance_type_id': instance_type_id,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': os_type}
-        instance = db.instance_create(self.context, values)
-        self.conn.spawn(instance, {})
+        if create_record:
+            instance = db.instance_create(self.context, values)
+            self.conn.spawn(instance, None)
+        else:
+            instance = db.instance_get(self.context, instance_id)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
 
@@ -492,18 +495,25 @@ class XenAPIVMTestCase(test.TestCase):
                    network_manager='nova.network.manager.VlanManager',
                    network_driver='nova.network.xenapi_net',
                    vlan_interface='fake0')
+        def dummy(*args, **kwargs):
+            pass
+        self.stubs.Set(VMOps, 'create_vifs', dummy)
         # Reset network table
         xenapi_fake.reset_table('network')
         # Instance id = 2 will use vlan network (see db/fakes.py)
-        fake_instance_id = 2
+        ctxt = self.context.elevated()
+        instance_ref = self._create_instance(2)
         network_bk = self.network
         # Ensure we use xenapi_net driver
         self.network = utils.import_object(FLAGS.network_manager)
-        self.network.setup_compute_network(None, fake_instance_id)
+        self.network.allocate_for_instance(ctxt, instance_id=instance_ref.id,
+                instance_type_id=1, project_id=ctxt.project.id)
+        self.network.setup_compute_network(ctxt, instance_ref.id)
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_MACHINE,
                          glance_stubs.FakeGlance.IMAGE_KERNEL,
                          glance_stubs.FakeGlance.IMAGE_RAMDISK,
-                         instance_id=fake_instance_id)
+                         instance_id=instance_ref.id,
+                         create_record=False)
         # TODO(salvatore-orlando): a complete test here would require
         # a check for making sure the bridge for the VM's VIF is
         # consistent with bridge specified in nova db
@@ -537,11 +547,11 @@ class XenAPIVMTestCase(test.TestCase):
         self.vm = None
         self.stubs.UnsetAll()
 
-    def _create_instance(self):
+    def _create_instance(self, instance_id=1):
         """Creates and spawns a test instance."""
         stubs.stubout_loopingcall_start(self.stubs)
         values = {
-            'id': 1,
+            'id': instance_id,
             'project_id': self.project.id,
             'user_id': self.user.id,
             'image_id': 1,
@@ -551,7 +561,7 @@ class XenAPIVMTestCase(test.TestCase):
             'mac_address': 'aa:bb:cc:dd:ee:ff',
             'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
-        self.conn.spawn(instance, {})
+        self.conn.spawn(instance, None)
         return instance
 
 
