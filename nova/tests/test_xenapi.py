@@ -594,6 +594,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
     def _test_encryption(self, message):
         enc = self.alice.encrypt(message)
+        print enc
         self.assertFalse(enc.endswith('\n'))
         dec = self.bob.decrypt(enc)
         self.assertEquals(dec, message)
@@ -612,6 +613,9 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
 
     def test_encrypt_with_leading_newlines(self):
         self._test_encryption('\n\nMessage with leading newlines.')
+
+    def test_encrypt_really_long_message(self):
+        self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
 
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()

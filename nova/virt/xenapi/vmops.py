@@ -1201,7 +1201,7 @@ class SimpleDH(object):
         return proc.stdout.read()
 
     def encrypt(self, text):
-        cmd = 'enc -aes-128-cbc -a -pass pass:%s -nosalt' % self._shared
+        cmd = 'enc -aes-128-cbc -a -A -pass pass:%s -nosalt' % self._shared
         return self._run_ssl(cmd, text).strip('\n')
 
     def decrypt(self, text):
