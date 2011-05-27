@@ -920,6 +920,34 @@ def snapshot_update(context, snapshot_id, values):
 ####################
 
 
+def block_device_mapping_create(context, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_create(context, values)
+
+def block_device_mapping_update(context, bdm_id, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_update(context, bdm_id, values)
+
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    """Get all block device mapping blonging to a instance"""
+    return IMPL.block_device_mapping_get_all_by_instance(context, instance_id)
+
+
+def block_device_mapping_destroy(context, bdm_id):
+    """Destroy the block device mapping."""
+    return IMPL.block_device_mapping_destroy(context, bdm_id)
+
+
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    """Destroy the block device mapping or raise if it does not exist."""
+    return IMPL.block_device_mapping_destroy_by_instance_and_volume(
+        context, instance_id, volume_id)
+
+
+####################
+
+
 def security_group_get_all(context):
     """Get all security groups."""
     return IMPL.security_group_get_all(context)

@@ -1865,6 +1865,62 @@ def snapshot_update(context, snapshot_id, values):
 
 
 @require_context
+def block_device_mapping_create(context, values):
+    bdm_ref = models.BlockDeviceMapping()
+    bdm_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        bdm_ref.save(session=session)
+
+@require_context
+def block_device_mapping_update(context, bdm_id, values):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+                filter_by(id=bdm_id).\
+                filter_by(deleted=False).\
+                update(values)
+
+@require_context
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.BlockDeviceMapping).\
+             filter_by(instance_id=instance_id).\
+             filter_by(deleted=False).\
+             all()
+    if not result:
+        raise exception.NotFound()
+    return result
+
+@require_context
+def block_device_mapping_destroy(context, bdm_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+                filter_by(id=bdm_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+@require_context
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+        filter_by(instance_id=instance_id).\
+        filter_by(volume_id=volume_id).\
+        filter_by(deleted=False).\
+        update({'deleted': 1,
+                'deleted_at': datetime.datetime.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+###################
+
+
+@require_context
 def security_group_get_all(context):
     session = get_session()
     return session.query(models.SecurityGroup).\
