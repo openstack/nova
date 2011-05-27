@@ -1193,7 +1193,7 @@ class SimpleDH(object):
     def _run_ssl(self, text, extra_args=None):
         if not extra_args:
             extra_args = ''
-        cmd = 'enc -aes-128-cbc -a -pass pass:%s -nosalt %s' % (
+        cmd = 'enc -aes-128-cbc -A -a -pass pass:%s -nosalt %s' % (
                 self._shared, extra_args)
         proc = _runproc('openssl %s' % cmd)
         proc.stdin.write(text)
