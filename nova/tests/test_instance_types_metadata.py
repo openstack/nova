@@ -47,11 +47,8 @@ class InstanceTypeMetadataTestCase(test.TestCase):
             metadata_ref['value'] = v
             metadata_refs.append(metadata_ref)
         values['meta'] = metadata_refs
-
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
-        
-            
         session = get_session()
         with session.begin():
             instance_type_ref.save(session=session)
@@ -65,10 +62,22 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                                  xpu_model="Tesla 2050", 
                                  net_arch="ethernet",
                                  net_mbps="10000")
-        retrieved_metadata = db.api.instance_type_metadata_get(
+        actual_metadata = db.api.instance_type_metadata_get(
                               context.get_admin_context(),
                               self.instance_type_id)
-        self.assertEquals(expected_metadata, retrieved_metadata)
-
-         
-            
+        self.assertEquals(expected_metadata, actual_metadata)
+        
+    def test_instance_type_metadata_delete(self):
+        expected_metadata = dict(cpu_arch="x86_64",
+                                 cpu_model="Nehalem",
+                                 xpu_arch="fermi",
+                                 xpus="2",
+                                 net_arch="ethernet",
+                                 net_mbps="10000")
+        db.api.instance_type_metadata_delete(context.get_admin_context(), 
+                                      self.instance_type_id,
+                                      "xpu_model")
+        actual_metadata = db.api.instance_type_metadata_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(expected_metadata, actual_metadata)
