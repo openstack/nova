@@ -803,12 +803,13 @@ def instance_create(context, values):
 def instance_data_get_for_project(context, project_id):
     session = get_session()
     result = session.query(func.count(models.Instance.id),
-                           func.sum(models.Instance.vcpus)).\
+                           func.sum(models.Instance.vcpus),
+                           func.sum(models.Instance.memory_mb)).\
                      filter_by(project_id=project_id).\
                      filter_by(deleted=False).\
                      first()
     # NOTE(vish): convert None to 0
-    return (result[0] or 0, result[1] or 0)
+    return (result[0] or 0, result[1] or 0, result[2] or 0)
 
 
 @require_context
@@ -1499,7 +1500,7 @@ def auth_token_create(_context, token):
 ###################
 
 
-@require_admin_context
+@require_context
 def quota_get(context, project_id, resource, session=None):
     if not session:
         session = get_session()
@@ -1513,7 +1514,7 @@ def quota_get(context, project_id, resource, session=None):
     return result
 
 
-@require_admin_context
+@require_context
 def quota_get_all_by_project(context, project_id):
     session = get_session()
     result = {'project_id': project_id}
