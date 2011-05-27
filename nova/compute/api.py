@@ -34,6 +34,7 @@ from nova import utils
 from nova import volume
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute.utils import terminate_volumes
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -50,6 +51,18 @@ flags.DEFINE_integer('find_host_timeout', 30,
 def generate_default_hostname(instance_id):
     """Default function to generate a hostname given an instance reference."""
     return str(instance_id)
+
+
+def _is_able_to_shutdown(instance, instance_id):
+    states = {'terminating': "Instance %s is already being terminated",
+              'migrating': "Instance %s is being migrated",
+              'stopping': "Instance %s is being stopped"}
+    msg = states.get(instance['state_description'])
+    if msg:
+        LOG.warning(_(msg), instance_id)
+        return False
+
+    return True
 
 
 class API(base.Base):
@@ -238,6 +251,22 @@ class API(base.Base):
                                                     instance_id,
                                                     security_group_id)
 
+            # tell vm driver to attach volume at boot time by updating
+            # BlockDeviceMapping
+            for bdm in block_device_mapping:
+                LOG.debug(_('bdm %s'), bdm)
+                assert bdm.has_key('device_name')
+                values = {
+                    'instance_id': instance_id,
+                    'device_name': bdm['device_name'],
+                    'delete_on_termination': bdm.get('delete_on_termination'),
+                    'virtual_name': bdm.get('virtual_name'),
+                    'snapshot_id': bdm.get('snapshot_id'),
+                    'volume_id': bdm.get('volume_id'),
+                    'volume_size': bdm.get('volume_size'),
+                    'no_device': bdm.get('no_device')}
+                self.db.block_device_mapping_create(elevated, values)
+
             # Set sane defaults if not specified
             updates = dict(hostname=self.hostname_factory(instance_id))
             if (not hasattr(instance, 'display_name') or
@@ -365,24 +394,22 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
+    def _get_instance(self, context, instance_id, action_str):
+        try:
+            return self.get(context, instance_id)
+        except exception.NotFound:
+            LOG.warning(_("Instance %(instance_id)s was not found during "
+                          "%(action_str)s") %
+                        {'instance_id': instance_id, 'action_str': action_str})
+            raise
+
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate %s"), instance_id)
-        try:
-            instance = self.get(context, instance_id)
-        except exception.NotFound:
-            LOG.warning(_("Instance %s was not found during terminate"),
-                        instance_id)
-            raise
+        instance = self._get_instance(context, instance_id, 'terminating')
 
-        if instance['state_description'] == 'terminating':
-            LOG.warning(_("Instance %s is already being terminated"),
-                        instance_id)
-            return
-
-        if instance['state_description'] == 'migrating':
-            LOG.warning(_("Instance %s is being migrated"), instance_id)
+        if not _is_able_to_shutdown(instance, instance_id):
             return
 
         self.update(context,
@@ -396,6 +423,7 @@ class API(base.Base):
             self._cast_compute_message('terminate_instance', context,
                     instance_id, host)
         else:
+            terminate_volumes(self.db, context, instance_id)
             self.db.instance_destroy(context, instance_id)
 
     def get(self, context, instance_id):

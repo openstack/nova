@@ -61,7 +61,7 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None):
+    def spawn(self, instance, network_info=None, block_device_mapping=[]):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 

@@ -54,6 +54,7 @@ from nova import rpc
 from nova import utils
 from nova import volume
 from nova.compute import power_state
+from nova.compute.utils import terminate_volumes
 from nova.virt import driver
 
 
@@ -215,7 +216,59 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.refresh_security_group_members(security_group_id)
 
-    @exception.wrap_exception
+    def _setup_block_device_mapping(self, context, instance_id):
+        """setup volumes for block device mapping"""
+        self.db.instance_set_state(context,
+                                   instance_id,
+                                   power_state.NOSTATE,
+                                   'block_device_mapping')
+
+        block_device_mapping = []
+        try:
+            bdms = self.db.block_device_mapping_get_all_by_instance(
+                context, instance_id)
+        except exception.NotFound:
+            pass
+        else:
+            volume_api = volume.API()
+            for bdm in bdms:
+                LOG.debug(_("setting up bdm %s"), bdm)
+                if ((bdm['snapshot_id'] is not None) and
+                    (bdm['volume_id'] is None)):
+                    # TODO(yamahata): default name and description
+                    vol = volume_api.create(context, bdm['volume_size'],
+                                            bdm['snapshot_id'], '', '')
+                    # TODO(yamahata): creatning volume simulteneously
+                    #                 reduce creation time?
+                    volume_api.wait_creation(context, vol['id'])
+                    self.db.block_device_mapping_update(
+                        context, bdm['id'], {'volume_id': vol['id']})
+                    bdm['volume_id'] = vol['id']
+
+                assert ((bdm['snapshot_id'] is None) or
+                        (bdm['volume_id'] is not None))
+
+                if bdm['volume_id'] is not None:
+                    volume_api.check_attach(context,
+                                            volume_id=bdm['volume_id'])
+                    dev_path = self._attach_volume_boot(context, instance_id,
+                                                        bdm['volume_id'],
+                                                        bdm['device_name'])
+                    block_device_mapping.append({'device_path': dev_path,
+                                                 'mount_device':
+                                                 bdm['device_name']})
+                elif bdm['virtual_name'] is not None:
+                    # TODO(yamahata)
+                    LOG.debug(_('block_device_mapping: '
+                                'ephemeral device is not supported yet'))
+                else:
+                    # TODO(yamahata)
+                    assert bdm['no_device']
+                    LOG.debug(_('block_device_mapping: '
+                                'no device is not supported yet'))
+
+        return block_device_mapping
+
     def run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
@@ -249,11 +302,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.network_manager.setup_compute_network(context,
                                                        instance_id)
 
+        block_device_mapping = self._setup_block_device_mapping(context,
+                                                                instance_id)
+
         # TODO(vish) check to make sure the availability zone matches
         self._update_state(context, instance_id, power_state.BUILDING)
 
         try:
-            self.driver.spawn(instance_ref)
+            self.driver.spawn(instance_ref,
+                              block_device_mapping=block_device_mapping)
         except Exception as ex:  # pylint: disable=W0702
             msg = _("Instance '%(instance_id)s' failed to spawn. Is "
                     "virtualization enabled in the BIOS? Details: "
@@ -786,6 +843,22 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_ref = self.db.instance_get(context, instance_id)
         return self.driver.get_vnc_console(instance_ref)
 
+    def _attach_volume_boot(self, context, instance_id, volume_id, mountpoint):
+        """Attach a volume to an instnace at boot time. So actual attach
+        is done by instance creation"""
+
+        # TODO(yamahata):
+        # should move check_attach to volume manager?
+        volume.API().check_attach(context, volume_id)
+
+        context = context.elevated()
+        LOG.audit(_("instance %(instance_id)s: booting with "
+                    "volume %(volume_id)s at %(mountpoint)s") %
+                  locals(), context=context)
+        dev_path = self.volume_manager.setup_compute_volume(context, volume_id)
+        self.db.volume_attached(context, volume_id, instance_id, mountpoint)
+        return dev_path
+
     @checks_instance_lock
     def attach_volume(self, context, instance_id, volume_id, mountpoint):
         """Attach a volume to an instance."""
@@ -803,6 +876,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     volume_id,
                                     instance_id,
                                     mountpoint)
+            values = {
+                'instance_id': instance_id,
+                'device_name': mountpoint,
+                'delete_on_termination': False,
+                'virtual_name': None,
+                'snapshot_id': None,
+                'volume_id': volume_id,
+                'volume_size': None,
+                'no_device': None}
+            self.db.block_device_mapping_create(context, values)
         except Exception as exc:  # pylint: disable=W0702
             # NOTE(vish): The inline callback eats the exception info so we
             #             log the traceback here and reraise the same
@@ -817,7 +900,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def detach_volume(self, context, instance_id, volume_id):
+    def _detach_volume(self, context, instance_id, volume_id, destroy_bdm):
         """Detach a volume from an instance."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
@@ -833,7 +916,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                       volume_ref['mountpoint'])
         self.volume_manager.remove_compute_volume(context, volume_id)
         self.db.volume_detached(context, volume_id)
+        if destroy_bdm:
+            self.db.block_device_mapping_destroy_by_instance_and_volume(
+                context, instance_id, volume_id)
         return True
+
+    def detach_volume(self, context, instance_id, volume_id):
+        """Detach a volume from an instance."""
+        return self._detach_volume(context, instance_id, volume_id, True)
 
     def remove_volume(self, context, volume_id):
         """Remove volume on compute host.

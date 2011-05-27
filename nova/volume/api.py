@@ -22,6 +22,8 @@ Handles all requests relating to volumes.
 
 import datetime
 
+from eventlet import greenthread
+
 from nova import db
 from nova import exception
 from nova import flags
@@ -73,6 +75,14 @@ class API(base.Base):
                            "volume_id": volume['id'],
                            "snapshot_id": snapshot_id}})
         return volume
+
+    # TODO(yamahata): eliminate dumb polling
+    def wait_creation(self, context, volume_id):
+        while True:
+            volume = self.get(context, volume_id)
+            if volume['status'] != 'creating':
+                return
+            greenthread.sleep(1)
 
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)
