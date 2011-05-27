@@ -2638,7 +2638,7 @@ def instance_type_metadata_update_or_create(context, instance_type_id,
         except:
             meta_ref = models.InstanceTypeMetadata()
         meta_ref.update({"key": key, "value": value,
-                            "instance_type_id": instance_id,
+                            "instance_type_id": instance_type_id,
                             "deleted": 0})
         meta_ref.save(session=session)
     return metadata

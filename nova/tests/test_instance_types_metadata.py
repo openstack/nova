@@ -81,3 +81,23 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                               context.get_admin_context(),
                               self.instance_type_id)
         self.assertEquals(expected_metadata, actual_metadata)
+        
+    def test_instance_type_metadata_update(self):
+        expected_metadata = dict(cpu_arch="x86_64",
+                                 cpu_model="Sandy Bridge",
+                                 xpu_arch="fermi",
+                                 xpus="2",
+                                 xpu_model="Tesla 2050", 
+                                 net_arch="ethernet",
+                                 net_mbps="10000")
+        db.api.instance_type_metadata_update_or_create(
+                              context.get_admin_context(),
+                              self.instance_type_id,
+                              dict(cpu_model="Sandy Bridge"))
+        actual_metadata = db.api.instance_type_metadata_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(expected_metadata, actual_metadata)
+                              
+
+        
