@@ -666,14 +666,15 @@ class CloudController(object):
         return v
 
     def create_volume(self, context, **kwargs):
-        size = kwargs.get('size');
+        size = kwargs.get('size')
         if kwargs.get('snapshot_id') != None:
             snapshot_id = ec2utils.ec2_id_to_id(kwargs['snapshot_id'])
-            LOG.audit(_("Create volume from snapshot %s"), snapshot_id, context=context)
+            LOG.audit(_("Create volume from snapshot %s"), snapshot_id,
+                      context=context)
         else:
             snapshot_id = None
             LOG.audit(_("Create volume of %s GB"), size, context=context)
-            
+
         volume = self.volume_api.create(
                 context,
                 size=size,

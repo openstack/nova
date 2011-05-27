@@ -43,7 +43,8 @@ class API(base.Base):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
-                raise exception.ApiError(_("Snapshot status must be available"))
+                raise exception.ApiError(
+                    _("Snapshot status must be available"))
             size = snapshot['volume_size']
 
         if quota.allowed_volumes(context, 1, size) < 1:

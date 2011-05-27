@@ -112,8 +112,9 @@ class VolumeManager(manager.SchedulerDependentManager):
                 model_update = self.driver.create_volume(volume_ref)
             else:
                 snapshot_ref = self.db.snapshot_get(context, snapshot_id)
-                model_update = self.driver.create_volume_from_snapshot(volume_ref,
-                                                                       snapshot_ref)
+                model_update = self.driver.create_volume_from_snapshot(
+                    volume_ref,
+                    snapshot_ref)
             if model_update:
                 self.db.volume_update(context, volume_ref['id'], model_update)
 

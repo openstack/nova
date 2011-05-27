@@ -78,10 +78,12 @@ class VolumeTestCase(test.TestCase):
         self.volume.create_snapshot(self.context, volume_src_id, snapshot_id)
         volume_dst_id = self._create_volume(0, snapshot_id)
         self.volume.create_volume(self.context, volume_dst_id, snapshot_id)
-        self.assertEqual(volume_dst_id, db.volume_get(context.get_admin_context(),
-                         volume_dst_id).id)
-        self.assertEqual(snapshot_id, db.volume_get(context.get_admin_context(),
-                         volume_dst_id).snapshot_id)
+        self.assertEqual(volume_dst_id, db.volume_get(
+                context.get_admin_context(),
+                volume_dst_id).id)
+        self.assertEqual(snapshot_id, db.volume_get(
+                context.get_admin_context(),
+                volume_dst_id).snapshot_id)
 
         self.volume.delete_volume(self.context, volume_dst_id)
         self.volume.delete_snapshot(self.context, snapshot_id)
