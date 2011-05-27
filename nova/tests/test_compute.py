@@ -229,6 +229,21 @@ class ComputeTestCase(test.TestCase):
         self.assert_(instance_ref['launched_at'] < terminate)
         self.assert_(instance_ref['deleted_at'] > terminate)
 
+    def test_stop(self):
+        """Ensure instance can be stopped"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_start(self):
+        """Ensure instance can be started"""
+        instance_id = self._create_instance()
+        self.compute.run_instance(self.context, instance_id)
+        self.compute.stop_instance(self.context, instance_id)
+        self.compute.start_instance(self.context, instance_id)
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_pause(self):
         """Ensure instance can be paused"""
         instance_id = self._create_instance()
