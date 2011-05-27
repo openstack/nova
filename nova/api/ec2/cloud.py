@@ -867,6 +867,23 @@ class CloudController(object):
         if kwargs.get('ramdisk_id'):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
+        for bdm in kwargs.get('block_device_mapping', []):
+            # BlockDevicedMapping.<N>.DeviceName
+            # BlockDevicedMapping.<N>.Ebs.SnapshotId
+            # BlockDevicedMapping.<N>.Ebs.VolumeSize
+            # BlockDevicedMapping.<N>.Ebs.DeleteOnTermination
+            # BlockDevicedMapping.<N>.VirtualName
+            # => remove .Ebs and allow volume id in SnapshotId
+            ebs = bdm.pop('ebs', None)
+            if ebs:
+                ec2_id = ebs.pop('snapshot_id')
+                id = ec2utils.ec2_id_to_id(ec2_id)
+                if ec2_id.startswith('snap-'):
+                    bdm['snapshot_id'] = id
+                elif ec2_id.startswith('vol-'):
+                    bdm['volume_id'] = id
+                ebs.setdefault('delete_on_termination', True)
+                bdm.update(ebs)
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
@@ -881,7 +898,8 @@ class CloudController(object):
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
-                                  'AvailabilityZone'))
+                                  'AvailabilityZone'),
+            block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
 

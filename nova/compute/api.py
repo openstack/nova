@@ -134,7 +134,7 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None):
+               injected_files=None, block_device_mapping=[]):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
