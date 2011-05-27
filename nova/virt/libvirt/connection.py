@@ -392,7 +392,7 @@ class LibvirtConnection(driver.ComputeDriver):
         elevated = context.get_admin_context()
 
         (image_service, image_id) = nova.image.get_image_service(
-            instance['image_id'])
+            instance['image_ref'])
         base = image_service.show(elevated, image_id)
 
         metadata = {'disk_format': base['disk_format'],
@@ -779,7 +779,7 @@ class LibvirtConnection(driver.ComputeDriver):
         project = manager.AuthManager().get_project(inst['project_id'])
 
         if not disk_images:
-            disk_images = {'image_id': inst['image_id'],
+            disk_images = {'image_id': inst['image_ref'],
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
 
@@ -875,7 +875,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if key or net:
             inst_name = inst['name']
-            img_id = inst.image_id
+            img_id = inst.image_ref
             if key:
                 LOG.info(_('instance %(inst_name)s: injecting key into'
                         ' image %(img_id)s') % locals())
