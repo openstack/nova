@@ -1208,6 +1208,4 @@ class SimpleDH(object):
         return self._run_ssl(text).strip('\n')
 
     def decrypt(self, text):
-        if text[len(text)-1:] != '\n':
-            text = text + '\n'
         return self._run_ssl(text, '-d')
