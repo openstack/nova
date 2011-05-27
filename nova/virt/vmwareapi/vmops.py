@@ -150,7 +150,7 @@ class VMWareVMOps(object):
             """
             image_size, image_properties = \
                     vmware_images.get_vmdk_size_and_properties(
-                                       instance.image_id, instance)
+                                       instance.image_ref, instance)
             vmdk_file_size_in_kb = int(image_size) / 1024
             os_type = image_properties.get("vmware_ostype", "otherGuest")
             adapter_type = image_properties.get("vmware_adaptertype",
@@ -265,23 +265,23 @@ class VMWareVMOps(object):
 
         def _fetch_image_on_esx_datastore():
             """Fetch image from Glance to ESX datastore."""
-            LOG.debug(_("Downloading image file data %(image_id)s to the ESX "
+            LOG.debug(_("Downloading image file data %(image_ref)s to the ESX "
                         "data store %(data_store_name)s") %
-                        ({'image_id': instance.image_id,
+                        ({'image_ref': instance.image_ref,
                           'data_store_name': data_store_name}))
             # Upload the -flat.vmdk file whose meta-data file we just created
             # above
             vmware_images.fetch_image(
-                instance.image_id,
+                instance.image_ref,
                 instance,
                 host=self._session._host_ip,
                 data_center_name=self._get_datacenter_name_and_ref()[1],
                 datastore_name=data_store_name,
                 cookies=cookies,
                 file_path=flat_uploaded_vmdk_name)
-            LOG.debug(_("Downloaded image file data %(image_id)s to the ESX "
+            LOG.debug(_("Downloaded image file data %(image_ref)s to the ESX "
                         "data store %(data_store_name)s") %
-                        ({'image_id': instance.image_id,
+                        ({'image_ref': instance.image_ref,
                          'data_store_name': data_store_name}))
         _fetch_image_on_esx_datastore()
 

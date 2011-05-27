@@ -18,14 +18,14 @@
 
 from urlparse import urlparse
 
-
 from nova import exception
-import nova.image.glance
-from nova.utils import import_class
+from nova import utils
 from nova import flags
 
-
 FLAGS = flags.FLAGS
+
+
+GlanceClient = utils.import_class('glance.client.Client')
 
 
 def _parse_image_ref(image_href):
@@ -43,8 +43,34 @@ def _parse_image_ref(image_href):
 
 
 def get_default_image_service():
-    ImageService = import_class(FLAGS.image_service)
+    ImageService = utils.import_class(FLAGS.image_service)
     return ImageService()
+
+
+def get_glance_client(image_href):
+    """Get the correct glance client and id for the given image_href.
+
+    The image_href param can be an href of the form
+    http://myglanceserver:9292/images/42, or just an int such as 42. If the
+    image_href is an int, then flags are used to create the default
+    glance client.
+
+    :param image_href: image ref/id for an image
+    :returns: a tuple of the form (glance_client, image_id)
+
+    """
+    image_href = image_href or 0
+    if str(image_href).isdigit():
+        glance_client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
+        return (glance_client, int(image_href))
+
+    try:
+        (image_id, host, port) = _parse_image_ref(image_href)
+    except:
+        raise exception.InvalidImageRef(image_href=image_href)
+    glance_client = GlanceClient(host, port)
+    #glance_client = client.Client(host, port)
+    return (glance_client, image_id)
 
 
 def get_image_service(image_href):
@@ -62,10 +88,6 @@ def get_image_service(image_href):
     if str(image_href).isdigit():
         return (get_default_image_service(), int(image_href))
 
-    try:
-        (image_id, host, port) = _parse_image_ref(image_href)
-    except:
-        raise exception.InvalidImageRef(image_href=image_href)
-    glance_client = nova.image.glance.GlanceClient(host, port)
+    (glance_client, image_id) = get_glance_client(image_href)
     image_service = nova.image.glance.GlanceImageService(glance_client)
     return (image_service, image_id)

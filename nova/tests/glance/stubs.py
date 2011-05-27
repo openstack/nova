@@ -16,13 +16,17 @@
 
 import StringIO
 
-import glance.client
+
+from nova import images
 
 
-def stubout_glance_client(stubs, cls):
+def get_mock_glance_client():
+    return FakeGlance()
+
+
+def stubout_glance_client(stubs):
     """Stubs out glance.client.Client"""
-    stubs.Set(glance.client, 'Client',
-              lambda *args, **kwargs: cls(*args, **kwargs))
+    stubs.Set(images, 'get_glance_client', get_mock_glance_client)
 
 
 class FakeGlance(object):

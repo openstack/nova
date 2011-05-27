@@ -18,10 +18,9 @@
 Utility functions for Image transfer.
 """
 
-from glance import client
-
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova.virt.vmwareapi import io_util
 from nova.virt.vmwareapi import read_write_util
@@ -117,8 +116,8 @@ def upload_image(image, instance, **kwargs):
 def _get_glance_image(image, instance, **kwargs):
     """Download image from the glance image server."""
     LOG.debug(_("Downloading image %s from glance image server") % image)
-    glance_client = client.Client(FLAGS.glance_host, FLAGS.glance_port)
-    metadata, read_iter = glance_client.get_image(image)
+    glance_client, image_id = nova.image.get_glance_client(image)    
+    metadata, read_iter = glance_client.get_image(image_id)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
     file_size = int(metadata['size'])
     write_file_handle = read_write_util.VMWareHTTPWriteFile(
@@ -153,7 +152,7 @@ def _put_glance_image(image, instance, **kwargs):
                                 kwargs.get("cookies"),
                                 kwargs.get("file_path"))
     file_size = read_file_handle.get_size()
-    glance_client = client.Client(FLAGS.glance_host, FLAGS.glance_port)
+    glance_client, image_id = nova.image.get_glance_client(image)    
     # The properties and other fields that we need to set for the image.
     image_metadata = {"is_public": True,
                       "disk_format": "vmdk",
@@ -165,7 +164,7 @@ def _put_glance_image(image, instance, **kwargs):
                                      "vmware_image_version":
                                             kwargs.get("image_version")}}
     start_transfer(read_file_handle, file_size, glance_client=glance_client,
-                        image_id=image, image_meta=image_metadata)
+                        image_id=image_id, image_meta=image_metadata)
     LOG.debug(_("Uploaded image %s to the Glance image server") % image)
 
 
@@ -188,9 +187,8 @@ def get_vmdk_size_and_properties(image, instance):
 
     LOG.debug(_("Getting image size for the image %s") % image)
     if FLAGS.image_service == "nova.image.glance.GlanceImageService":
-        glance_client = client.Client(FLAGS.glance_host,
-                                             FLAGS.glance_port)
-        meta_data = glance_client.get_image_meta(image)
+        glance_client, image_id = nova.image.get_glance_client(image)    
+        meta_data = glance_client.get_image_meta(image_id)
         size, properties = meta_data["size"], meta_data["properties"]
     elif FLAGS.image_service == "nova.image.s3.S3ImageService":
         raise NotImplementedError

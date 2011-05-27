@@ -111,7 +111,7 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         vdis = VMHelper.fetch_image(self._session,
-                instance.id, instance.image_id, user, project,
+                instance.id, instance.image_ref, user, project,
                 disk_image_type)
         return vdis
 
