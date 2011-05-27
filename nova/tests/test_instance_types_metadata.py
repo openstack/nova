@@ -36,10 +36,7 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                         cpu_model="Nehalem",
                         xpu_arch="fermi",
                         xpus=2,
-                        xpu_model="Tesla 2050", 
-                        net_arch="ethernet",
-                        net_mbps=10000)
-        
+                        xpu_model="Tesla 2050")        
         metadata_refs = []
         for k,v in metadata.iteritems():
             metadata_ref = models.InstanceTypeMetadata()
@@ -54,14 +51,18 @@ class InstanceTypeMetadataTestCase(test.TestCase):
             instance_type_ref.save(session=session)
         self.instance_type_id = instance_type_ref.id
         
+    def tearDown(self):
+        # Remove the instance from the database
+        db.api.instance_type_purge(context.get_admin_context(), "cg1.4xlarge")
+        super(InstanceTypeMetadataTestCase, self).tearDown()
+        
+        
     def test_instance_type_metadata_get(self):
         expected_metadata = dict(cpu_arch="x86_64",
                                  cpu_model="Nehalem",
                                  xpu_arch="fermi",
                                  xpus="2",
-                                 xpu_model="Tesla 2050", 
-                                 net_arch="ethernet",
-                                 net_mbps="10000")
+                                 xpu_model="Tesla 2050")
         actual_metadata = db.api.instance_type_metadata_get(
                               context.get_admin_context(),
                               self.instance_type_id)
@@ -71,9 +72,7 @@ class InstanceTypeMetadataTestCase(test.TestCase):
         expected_metadata = dict(cpu_arch="x86_64",
                                  cpu_model="Nehalem",
                                  xpu_arch="fermi",
-                                 xpus="2",
-                                 net_arch="ethernet",
-                                 net_mbps="10000")
+                                 xpus="2")
         db.api.instance_type_metadata_delete(context.get_admin_context(), 
                                       self.instance_type_id,
                                       "xpu_model")
@@ -87,9 +86,7 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                                  cpu_model="Sandy Bridge",
                                  xpu_arch="fermi",
                                  xpus="2",
-                                 xpu_model="Tesla 2050", 
-                                 net_arch="ethernet",
-                                 net_mbps="10000")
+                                 xpu_model="Tesla 2050")
         db.api.instance_type_metadata_update_or_create(
                               context.get_admin_context(),
                               self.instance_type_id,
@@ -98,6 +95,21 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                               context.get_admin_context(),
                               self.instance_type_id)
         self.assertEquals(expected_metadata, actual_metadata)
-                              
-
-        
+    
+    def test_instance_type_metadata_create(self):
+        expected_metadata = dict(cpu_arch="x86_64",
+                                 cpu_model="Nehalem",
+                                 xpu_arch="fermi",
+                                 xpus="2",
+                                 xpu_model="Tesla 2050", 
+                                 net_arch="ethernet",
+                                 net_mbps="10000")
+        db.api.instance_type_metadata_update_or_create(
+                              context.get_admin_context(),
+                              self.instance_type_id,
+                              dict(net_arch="ethernet",
+                                   net_mbps=10000))
+        actual_metadata = db.api.instance_type_metadata_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(expected_metadata, actual_metadata)
