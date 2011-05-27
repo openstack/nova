@@ -1222,6 +1222,9 @@ def instance_type_metadata_delete(context, instance_type_id, key):
     IMPL.instance_type_metadata_delete(context, instance_type_id, key)
 
 
-def instance_type_metadata_update_or_create(context, instance_type_id, metadata):
-    """Create or update instance type metadata."""
-    IMPL.instance_type_metadata_update_or_create(context, instance_type_id, metadata)
+def instance_type_metadata_update_or_create(context, instance_type_id,
+                                            metadata):
+    """Create or update instance type metadata. This adds or modifies the
+    key/value pairs specified in the metadata dict argument"""
+    IMPL.instance_type_metadata_update_or_create(context, instance_type_id,
+                                                 metadata)

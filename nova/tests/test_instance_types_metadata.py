@@ -24,7 +24,7 @@ from nova.db.sqlalchemy import models
 
 
 class InstanceTypeMetadataTestCase(test.TestCase):
-    
+
     def setUp(self):
         super(InstanceTypeMetadataTestCase, self).setUp()
         self.context = context.get_admin_context()
@@ -42,12 +42,12 @@ class InstanceTypeMetadataTestCase(test.TestCase):
         ref = db.api.instance_type_create(self.context,
                                           values)
         self.instance_type_id = ref.id
-        
+
     def tearDown(self):
         # Remove the instance type from the database
         db.api.instance_type_purge(context.get_admin_context(), "cg1.4xlarge")
         super(InstanceTypeMetadataTestCase, self).tearDown()
-        
+
     def test_instance_type_metadata_get(self):
         expected_metadata = dict(cpu_arch="x86_64",
                                  cpu_model="Nehalem",
@@ -58,20 +58,20 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                               context.get_admin_context(),
                               self.instance_type_id)
         self.assertEquals(expected_metadata, actual_metadata)
-        
+
     def test_instance_type_metadata_delete(self):
         expected_metadata = dict(cpu_arch="x86_64",
                                  cpu_model="Nehalem",
                                  xpu_arch="fermi",
                                  xpus="2")
-        db.api.instance_type_metadata_delete(context.get_admin_context(), 
+        db.api.instance_type_metadata_delete(context.get_admin_context(),
                                       self.instance_type_id,
                                       "xpu_model")
         actual_metadata = db.api.instance_type_metadata_get(
                               context.get_admin_context(),
                               self.instance_type_id)
         self.assertEquals(expected_metadata, actual_metadata)
-        
+
     def test_instance_type_metadata_update(self):
         expected_metadata = dict(cpu_arch="x86_64",
                                  cpu_model="Sandy Bridge",
@@ -86,13 +86,13 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                               context.get_admin_context(),
                               self.instance_type_id)
         self.assertEquals(expected_metadata, actual_metadata)
-    
+
     def test_instance_type_metadata_create(self):
         expected_metadata = dict(cpu_arch="x86_64",
                                  cpu_model="Nehalem",
                                  xpu_arch="fermi",
                                  xpus="2",
-                                 xpu_model="Tesla 2050", 
+                                 xpu_model="Tesla 2050",
                                  net_arch="ethernet",
                                  net_mbps="10000")
         db.api.instance_type_metadata_update_or_create(

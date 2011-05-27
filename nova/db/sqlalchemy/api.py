@@ -2373,11 +2373,11 @@ def console_get(context, console_id, instance_id=None):
 
 @require_admin_context
 def instance_type_create(_context, values):
-    """Create a new instance type. In order to pass in metadata, 
-    the values dict should contain a 'meta' key/value pair: 
-    
+    """Create a new instance type. In order to pass in metadata,
+    the values dict should contain a 'meta' key/value pair:
+
     {'meta' : {'k1': 'v1', 'k2': 'v2', ...}}
-    
+
     """
     try:
         metadata = values.get('meta')
@@ -2597,6 +2597,7 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
 
 ####################
 
+
 @require_context
 def instance_type_metadata_get(context, instance_type_id):
     session = get_session()
@@ -2635,19 +2636,20 @@ def instance_type_metadata_get_item(context, instance_type_id, key):
                     first()
 
     if not meta_result:
-        raise exception.InstanceTypeMetadataNotFound(metadata_key=key,
-                                                 instance_type_id=instance_type_id)
+        raise exception.\
+           InstanceTypeMetadataNotFound(metadata_key=key,
+                                        instance_type_id=instance_type_id)
     return meta_result
 
 
 @require_context
-def instance_type_metadata_update_or_create(context, instance_type_id, 
+def instance_type_metadata_update_or_create(context, instance_type_id,
                                             metadata):
     session = get_session()
     meta_ref = None
     for key, value in metadata.iteritems():
         try:
-            meta_ref = instance_type_metadata_get_item(context, 
+            meta_ref = instance_type_metadata_get_item(context,
                                                        instance_type_id, key,
                                                        session)
         except:
