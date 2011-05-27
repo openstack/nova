@@ -160,10 +160,7 @@ class _IntegratedTestBase(test.TestCase):
         # set up services
         self.start_service('compute')
         self.start_service('volume')
-        # NOTE(justinsb): There's a bug here which is eluding me...
-        # If we start the network_service, all is good, but then subsequent
-        # tests fail: CloudTestCase.test_ajax_console in particular.
-        #self.start_service('network')
+        self.start_service('network')
         self.start_service('scheduler')
 
         self._start_api_service()

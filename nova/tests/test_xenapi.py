@@ -395,6 +395,29 @@ class XenAPIVMTestCase(test.TestCase):
                          os_type="linux")
         self.check_vm_params_for_linux()
 
+    def test_spawn_vhd_glance_swapdisk(self):
+        # Change the default host_call_plugin to one that'll return
+        # a swap disk
+        orig_func = stubs.FakeSessionForVMTests.host_call_plugin
+
+        stubs.FakeSessionForVMTests.host_call_plugin = \
+                stubs.FakeSessionForVMTests.host_call_plugin_swap
+
+        try:
+            # We'll steal the above glance linux test
+            self.test_spawn_vhd_glance_linux()
+        finally:
+            # Make sure to put this back
+            stubs.FakeSessionForVMTests.host_call_plugin = orig_func
+
+        # We should have 2 VBDs.
+        self.assertEqual(len(self.vm['VBDs']), 2)
+        # Now test that we have 1.
+        self.tearDown()
+        self.setUp()
+        self.test_spawn_vhd_glance_linux()
+        self.assertEqual(len(self.vm['VBDs']), 1)
+
     def test_spawn_vhd_glance_windows(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
