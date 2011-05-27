@@ -548,19 +548,6 @@ class LibvirtConnection(driver.ComputeDriver):
         timer = utils.LoopingCall(_wait_for_reboot)
         return timer.start(interval=0.5, now=True)
 
-    def _take_action_to_instance(self, action, instance, *arg):
-        """action VM instance"""
-        if self.read_only:
-            tmpconn = self._connect(self.libvirt_uri, False)
-            dom = tmpconn.lookupByName(instance.name)
-            method = getattr(dom, action)
-            method(*arg)
-            tmpconn.close()
-        else:
-            dom = self._conn.lookupByName(instance.name)
-            method = getattr(dom, action)
-            method(*arg)
-
     @exception.wrap_exception
     def pause(self, instance, callback):
         """Pause VM instance"""
