@@ -269,7 +269,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return block_device_mapping
 
-    def run_instance(self, context, instance_id, **kwargs):
+    def _run_instance(self, context, instance_id, **kwargs):
         """Launch a new instance with specified options."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
@@ -334,12 +334,24 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
+    def run_instance(self, context, instance_id, **kwargs):
+        self._run_instance(context, instance_id, **kwargs)
+
+    @exception.wrap_exception
     @checks_instance_lock
-    def terminate_instance(self, context, instance_id):
-        """Terminate an instance on this host."""
+    def start_instance(self, context, instance_id):
+        """Starting an instance on this host."""
+        # TODO(yamahata): injected_files isn't supported.
+        #                 Anyway OSAPI doesn't support stop/start yet
+        self._run_instance(context, instance_id)
+
+    def _shutdown_instance(self, context, instance_id, action_str):
+        """Shutdown an instance on this host."""
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
-        LOG.audit(_("Terminating instance %s"), instance_id, context=context)
+        LOG.audit(_("%(action_str)s instance %(instance_id)s") %
+                  {'action_str': action_str, 'instance_id': instance_id},
+                  context=context)
 
         fixed_ip = instance_ref.get('fixed_ip')
         if not FLAGS.stub_network and fixed_ip:
@@ -375,15 +387,33 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         volumes = instance_ref.get('volumes') or []
         for volume in volumes:
-            self.detach_volume(context, instance_id, volume['id'])
-        if instance_ref['state'] == power_state.SHUTOFF:
+            self._detach_volume(context, instance_id, volume['id'], False)
+
+        if (instance_ref['state'] == power_state.SHUTOFF and
+            instance_ref['state_description'] != 'stopped'):
             self.db.instance_destroy(context, instance_id)
             raise exception.Error(_('trying to destroy already destroyed'
                                     ' instance: %s') % instance_id)
         self.driver.destroy(instance_ref)
 
+        if action_str == 'Terminating':
+            terminate_volumes(self.db, context, instance_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def terminate_instance(self, context, instance_id):
+        """Terminate an instance on this host."""
+        self._shutdown_instance(context, instance_id, 'Terminating')
+
         # TODO(ja): should we keep it in a terminated state for a bit?
         self.db.instance_destroy(context, instance_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
+    def stop_instance(self, context, instance_id):
+        """Stopping an instance on this host."""
+        self._shutdown_instance(context, instance_id, 'Stopping')
+        # instance state will be updated to stopped by _poll_istance_states()
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -1250,11 +1280,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                                "State=%(db_state)s, so setting state to "
                                "shutoff.") % locals())
                     vm_state = power_state.SHUTOFF
+                    if db_instance['state_description'] == 'stopping':
+                        self.db.instance_stop(context, db_instance['id'])
+                        continue
             else:
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
-            if db_instance['state_description'] == 'migrating':
+                
+            if (db_instance['state_description'] in ['migrating', 'stopping']):
                 # A situation which db record exists, but no instance"
                 # sometimes occurs while live-migration at src compute,
                 # this case should be ignored.

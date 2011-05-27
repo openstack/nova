@@ -831,6 +831,24 @@ def instance_destroy(context, instance_id):
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
+@require_context
+def instance_stop(context, instance_id):
+    session = get_session()
+    with session.begin():
+        from nova.compute import power_state
+        session.query(models.Instance).\
+                filter_by(id=instance_id).\
+                update({'host': None,
+                        'state': power_state.SHUTOFF,
+                        'state_description': 'stopped',
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                update({'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
+                filter_by(instance_id=instance_id).\
+                update({'updated_at': literal_column('updated_at')})
+
 
 @require_context
 def instance_get(context, instance_id, session=None):

@@ -426,6 +426,45 @@ class API(base.Base):
             terminate_volumes(self.db, context, instance_id)
             self.db.instance_destroy(context, instance_id)
 
+    @scheduler_api.reroute_compute("stop")
+    def stop(self, context, instance_id):
+        """Stop an instnace."""
+        LOG.debug(_("Going to try to stop %s"), instance_id)
+
+        instance = self._get_instance(context, instance_id, 'stopping')
+        if not _is_able_to_shutdown(instance, instance_id):
+            return
+        
+        self.update(context,
+                    instance['id'],
+                    state_description='stopping',
+                    state=power_state.NOSTATE,
+                    terminated_at=datetime.datetime.utcnow())
+
+        host = instance['host']
+        if host:
+            self._cast_compute_message('stop_instance', context,
+                    instance_id, host)
+
+    def start(self, context, instance_id):
+        """Start an instnace."""
+        LOG.debug(_("Going to try to start %s"), instance_id)
+        instance = self._get_instance(context, instance_id, 'starting')
+        if instance['state_description'] != 'stopped':
+            _state_description = instance['state_description']
+            LOG.warning(_("Instance %(instance_id)s is not "
+                          "stopped(%(_state_description)s)") % locals())
+            return
+
+        # TODO(yamahata): injected_files isn't supported right now.
+        #                 It is used only for osapi. not for ec2 api.
+        #                 availability_zone isn't used by run_instance.
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "start_instance",
+                  "args": {"topic": FLAGS.compute_topic,
+                           "instance_id": instance_id}})
+
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
         rv = self.db.instance_get(context, instance_id)
