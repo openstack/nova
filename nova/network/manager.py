@@ -181,7 +181,7 @@ class FloatingIP(object):
         # which is currently the NetworkManager version
         # do this first so fixed ip is already allocated
         ips = super(FloatingIP, self).allocate_for_instance(context, **kwargs)
-        if FLAGS.auto_assign_floating_ip:
+        if hasattr(FLAGS, 'auto_assign_floating_ip'):
             # allocate a floating ip (public_ip is just the address string)
             public_ip = self.allocate_floating_ip(context, project_id)
             # set auto_assigned column to true for the floating ip

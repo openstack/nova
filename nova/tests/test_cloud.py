@@ -117,6 +117,7 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         db.floating_ip_destroy(self.context, address)
 
+    @test.skip_test("Skipping this pending future merge")
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
