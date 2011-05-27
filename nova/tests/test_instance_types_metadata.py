@@ -16,9 +16,8 @@
 Unit Tests for instance types metadata code
 """
 
-import nova.db.api
-
 from nova import context
+from nova import db
 from nova import test
 from nova.db.sqlalchemy.session import get_session
 from nova.db.sqlalchemy import models
@@ -59,10 +58,17 @@ class InstanceTypeMetadataTestCase(test.TestCase):
         self.instance_type_id = instance_type_ref.id
         
     def test_instance_type_metadata_get(self):
-        self.assertEquals( \
-         nova.db.api.instance_type_metadata_get(context.get_admin_context(),
-                                                self.instance_type_id),
-                          {'foo' : 'bar'})
+        expected_metadata = dict(cpu_arch="x86_64",
+                                 cpu_model="Nehalem",
+                                 xpu_arch="fermi",
+                                 xpus="2",
+                                 xpu_model="Tesla 2050", 
+                                 net_arch="ethernet",
+                                 net_mbps="10000")
+        retrieved_metadata = db.api.instance_type_metadata_get(
+                              context.get_admin_context(),
+                              self.instance_type_id)
+        self.assertEquals(expected_metadata, retrieved_metadata)
 
          
             
