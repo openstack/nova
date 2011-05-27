@@ -133,11 +133,18 @@ class APIRequest(object):
                 # NOTE(vish): Automatically convert strings back
                 #             into their respective values
                 value = _try_convert(value)
-            if len(parts) > 1:
-                d = args.get(key, {})
-                d[parts[1]] = value
-                value = d
-            args[key] = value
+
+                if len(parts) > 1:
+                    d = args.get(key, {})
+                    args[key] = d
+                    for k in parts[1:-1]:
+                        k = _camelcase_to_underscore(k)
+                        v = d.get(k, {})
+                        d[k] = v
+                        d = v
+                    d[_camelcase_to_underscore(parts[-1])] = value
+                else:
+                    args[key] = value
 
         for key in args.keys():
             # NOTE(vish): Turn numeric dict keys into lists
