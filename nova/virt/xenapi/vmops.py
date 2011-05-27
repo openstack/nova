@@ -1195,12 +1195,16 @@ class SimpleDH(object):
                 '-nosalt %(dec_flag)s')
         if which.lower()[0] == 'd':
             dec_flag = ' -d'
+            # When decoding base64, we need to make sure there's a
+            # single '\n' at the end of the base64 encoded data.
+            # It's kinda dumb that openssl wants to see a newline
+            text = text.strip('\n') + '\n'
         else:
             dec_flag = ''
         shared = self._shared
         cmd = base_cmd % locals()
         proc = _runproc(cmd)
-        proc.stdin.write(text + '\n')
+        proc.stdin.write(text)
         proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()

@@ -595,6 +595,7 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
     def test_encryption(self):
         msg = "This is a top-secret message"
         enc = self.alice.encrypt(msg)
+        self.assertFalse(enc.endswith('\n'))
         dec = self.bob.decrypt(enc)
         self.assertEquals(dec, msg)
 
