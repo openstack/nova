@@ -644,7 +644,7 @@ class InstanceTypeMetadata(BASE, NovaBase):
     value = Column(String(255))
     instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
                               nullable=False)
-    instance_type = relationship(InstanceTypes, backref="metadata",
+    instance_type = relationship(InstanceTypes, backref="meta",
                  foreign_keys=instance_type_id,
                  primaryjoin='and_('
                  'InstanceTypeMetadata.instance_type_id == InstanceTypes.id,'
