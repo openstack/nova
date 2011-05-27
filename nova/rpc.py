@@ -212,7 +212,9 @@ class AdapterConsumer(Consumer):
             #             we just log the message and send an error string
             #             back to the caller
             LOG.warn(_('no method for message: %s') % message_data)
-            msg_reply(msg_id, _('No method for message: %s') % message_data)
+            if msg_id:
+                msg_reply(msg_id,
+                          _('No method for message: %s') % message_data)
             return
         self.pool.spawn_n(self._process_data, msg_id, ctxt, method, args)
 
