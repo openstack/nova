@@ -23,8 +23,8 @@ across zones. There are two expansion points to this class for:
 import operator
 
 from nova import db
-from nova import rpc
 from nova import log as logging
+from nova import rpc
 from nova.scheduler import api
 from nova.scheduler import driver
 
@@ -40,8 +40,7 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def schedule_run_instance(self, context, instance_id, request_spec,
                                         *args, **kwargs):
-        """
-        This method is called from nova.compute.api to provision
+        """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
         1. Create a Build Plan and then provision, or
@@ -85,8 +84,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             pass
 
     def select(self, context, request_spec, *args, **kwargs):
-        """
-        Select returns a list of weights and zone/host information
+        """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
         anything about the children.
@@ -98,15 +96,13 @@ class ZoneAwareScheduler(driver.Scheduler):
     # so we don't implement the default "schedule()" method required
     # of Schedulers.
     def schedule(self, context, topic, request_spec, *args, **kwargs):
-        """
-        The schedule() contract requires we return the one
+        """The schedule() contract requires we return the one
         best-suited host for this request.
         """
         raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):
-        """
-        Returns a list of hosts that meet the required specs,
+        """Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
 
@@ -142,15 +138,13 @@ class ZoneAwareScheduler(driver.Scheduler):
         return weighted
 
     def filter_hosts(self, num, request_spec):
-        """
-        Derived classes must override this method and return
+        """Derived classes must override this method and return
         a list of hosts in [(hostname, capability_dict)] format.
         """
         raise NotImplemented()
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """
-        Derived classes must override this method and return
+        """Derived classes must override this method and return
         a lists of hosts in [{weight, hostname}] format.
         """
         raise NotImplemented()

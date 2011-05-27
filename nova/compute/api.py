@@ -88,8 +88,7 @@ class API(base.Base):
                         {"method": "get_network_topic", "args": {'fake': 1}})
 
     def _check_injected_file_quota(self, context, injected_files):
-        """
-        Enforce quota limits on injected files.
+        """Enforce quota limits on injected files.
 
         Raises a QuotaError if any limit is exceeded.
         """
@@ -137,8 +136,7 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata={},
                injected_files=None,
                admin_password=None):
-        """
-        Create the number and type of instances requested.
+        """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
         """
@@ -293,8 +291,7 @@ class API(base.Base):
             return False
 
     def ensure_default_security_group(self, context):
-        """
-        Ensure that a context has a security group.
+        """Ensure that a context has a security group.
 
         Creates a security group for the security context if it does not
         already exist.
@@ -328,8 +325,7 @@ class API(base.Base):
                       "args": {"security_group_id": security_group.id}})
 
     def trigger_security_group_members_refresh(self, context, group_id):
-        """
-        Called when a security group gains a new or loses a member.
+        """Called when a security group gains a new or loses a member.
 
         Sends an update request to each compute node for whom this is
         relevant.
@@ -370,8 +366,7 @@ class API(base.Base):
                       "args": {"security_group_id": group_id}})
 
     def update(self, context, instance_id, **kwargs):
-        """
-        Updates the instance in the datastore.
+        """Updates the instance in the datastore.
 
         :param context: The security context
         :param instance_id: ID of the instance to update
@@ -424,8 +419,7 @@ class API(base.Base):
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):
-        """
-        A version of get with special routing characteristics.
+        """A version of get with special routing characteristics.
 
         Use this method instead of get() if this is the only operation you
         intend to to. It will route to novaclient.get if the instance is not
@@ -435,8 +429,7 @@ class API(base.Base):
 
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
-        """
-        Get all instances filtered by one of the given parameters.
+        """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
@@ -463,8 +456,7 @@ class API(base.Base):
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):
-        """
-        Generic handler for RPC casts to compute.
+        """Generic handler for RPC casts to compute.
 
         :param params: Optional dictionary of arguments to be passed to the
                        compute worker
@@ -483,8 +475,7 @@ class API(base.Base):
 
     def _call_compute_message(self, method, context, instance_id, host=None,
                               params=None):
-        """
-        Generic handler for RPC calls to compute.
+        """Generic handler for RPC calls to compute.
 
         :param params: Optional dictionary of arguments to be passed to the
                        compute worker
@@ -517,8 +508,7 @@ class API(base.Base):
                                 % instance_id)
 
     def snapshot(self, context, instance_id, name):
-        """
-        Snapshot the given instance.
+        """Snapshot the given instance.
 
         :returns: A dict containing image metadata
         """

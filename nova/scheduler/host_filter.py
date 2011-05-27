@@ -69,8 +69,7 @@ class HostFilter(object):
 
 
 class AllHostsFilter(HostFilter):
-    """
-    NOP host filter. Returns all hosts in ZoneManager.
+    """ NOP host filter. Returns all hosts in ZoneManager.
     This essentially does what the old Scheduler+Chance used
     to give us.
     """
@@ -135,8 +134,7 @@ class InstanceTypeFilter(HostFilter):
 
 
 class JsonFilter(HostFilter):
-    """
-    Host Filter to allow simple JSON-based grammar for
+    """Host Filter to allow simple JSON-based grammar for
     selecting hosts.
     """
 
@@ -233,8 +231,7 @@ class JsonFilter(HostFilter):
         return (self._full_name(), json.dumps(query))
 
     def _parse_string(self, string, host, services):
-        """
-        Strings prefixed with $ are capability lookups in the
+        """Strings prefixed with $ are capability lookups in the
         form '$service.capability[.subcap*]'
         """
         if not string:
@@ -283,8 +280,7 @@ FILTERS = [AllHostsFilter, InstanceTypeFilter, JsonFilter]
 
 
 def choose_host_filter(filter_name=None):
-    """
-    Since the caller may specify which filter to use we need
+    """Since the caller may specify which filter to use we need
     to have an authoritative list of what is permissible. This
     function checks the filter name against a predefined set
     of acceptable filters.
@@ -300,8 +296,7 @@ def choose_host_filter(filter_name=None):
 
 
 class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
-    """
-    The HostFilterScheduler uses the HostFilter to filter
+    """The HostFilterScheduler uses the HostFilter to filter
     hosts for weighing. The particular filter used may be passed in
     as an argument or the default will be used.
 
@@ -322,8 +317,7 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
         return host_filter.filter_hosts(self.zone_manager, query)
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """
-        Derived classes must override this method and return
+        """Derived classes must override this method and return
         a lists of hosts in [{weight, hostname}] format.
         """
         return [dict(weight=1, hostname=host) for host, caps in hosts]
