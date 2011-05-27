@@ -64,6 +64,8 @@ class API(base.Base):
         fixed_ip is either a fixed_ip object or a string fixed ip address
         floating_ip is a string floating ip address
         """
+        # NOTE(tr3buchet): i don't like the "either or" argument type
+        # funcationility but i've left it alone for now
         if isinstance(fixed_ip, basestring):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
