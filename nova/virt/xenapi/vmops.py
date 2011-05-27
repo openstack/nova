@@ -1190,26 +1190,22 @@ class SimpleDH(object):
         mpi = M2Crypto.m2.bn_to_mpi(bn)
         return mpi
 
-    def _run_ssl(self, text, which):
-        base_cmd = ('openssl enc -aes-128-cbc -a -pass pass:%(shared)s '
-                '-nosalt %(dec_flag)s')
-        if which.lower()[0] == 'd':
-            dec_flag = ' -d'
-        else:
-            dec_flag = ''
-        shared = self._shared
-        cmd = base_cmd % locals()
-        proc = _runproc(cmd)
-        proc.stdin.write(text + '\n')
+    def _run_ssl(self, text, extra_args=None):
+        if not extra_args:
+            extra_args = ''
+        cmd = 'enc -aes-128-cbc -A -a -pass pass:%s -nosalt %s' % (
+                self._shared, extra_args)
+        proc = _runproc('openssl %s' % cmd)
+        proc.stdin.write(text)
         proc.stdin.close()
         proc.wait()
         err = proc.stderr.read()
         if err:
             raise RuntimeError(_('OpenSSL error: %s') % err)
-        return proc.stdout.read().strip('\n')
+        return proc.stdout.read()
 
     def encrypt(self, text):
-        return self._run_ssl(text, 'enc')
+        return self._run_ssl(text).strip('\n')
 
     def decrypt(self, text):
-        return self._run_ssl(text, 'dec')
+        return self._run_ssl(text, '-d')
