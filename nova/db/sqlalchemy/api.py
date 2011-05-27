@@ -2373,7 +2373,22 @@ def console_get(context, console_id, instance_id=None):
 
 @require_admin_context
 def instance_type_create(_context, values):
+    """Create a new instance type. In order to pass in metadata, 
+    the values dict should contain a 'meta' key/value pair: 
+    
+    {'meta' : {'k1': 'v1', 'k2': 'v2', ...}}
+    
+    """
     try:
+        metadata = values.get('meta')
+        metadata_refs = []
+        if metadata:
+            for k, v in metadata.iteritems():
+                metadata_ref = models.InstanceTypeMetadata()
+                metadata_ref['key'] = k
+                metadata_ref['value'] = v
+                metadata_refs.append(metadata_ref)
+        values['meta'] = metadata_refs
         instance_type_ref = models.InstanceTypes()
         instance_type_ref.update(values)
         instance_type_ref.save()

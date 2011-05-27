@@ -27,6 +27,7 @@ class InstanceTypeMetadataTestCase(test.TestCase):
     
     def setUp(self):
         super(InstanceTypeMetadataTestCase, self).setUp()
+        self.context = context.get_admin_context()
         values = dict(name="cg1.4xlarge",
                       memory_mb=22000,
                       vcpus=8,
@@ -36,26 +37,16 @@ class InstanceTypeMetadataTestCase(test.TestCase):
                         cpu_model="Nehalem",
                         xpu_arch="fermi",
                         xpus=2,
-                        xpu_model="Tesla 2050")        
-        metadata_refs = []
-        for k,v in metadata.iteritems():
-            metadata_ref = models.InstanceTypeMetadata()
-            metadata_ref['key'] = k
-            metadata_ref['value'] = v
-            metadata_refs.append(metadata_ref)
-        values['meta'] = metadata_refs
-        instance_type_ref = models.InstanceTypes()
-        instance_type_ref.update(values)
-        session = get_session()
-        with session.begin():
-            instance_type_ref.save(session=session)
-        self.instance_type_id = instance_type_ref.id
+                        xpu_model="Tesla 2050")
+        values['meta'] = metadata
+        ref = db.api.instance_type_create(self.context,
+                                          values)
+        self.instance_type_id = ref.id
         
     def tearDown(self):
-        # Remove the instance from the database
+        # Remove the instance type from the database
         db.api.instance_type_purge(context.get_admin_context(), "cg1.4xlarge")
         super(InstanceTypeMetadataTestCase, self).tearDown()
-        
         
     def test_instance_type_metadata_get(self):
         expected_metadata = dict(cpu_arch="x86_64",
