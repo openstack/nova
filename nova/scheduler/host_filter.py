@@ -69,9 +69,11 @@ class HostFilter(object):
 
 
 class AllHostsFilter(HostFilter):
-    """NOP host filter. Returns all hosts in ZoneManager.
+    """
+    NOP host filter. Returns all hosts in ZoneManager.
     This essentially does what the old Scheduler+Chance used
-    to give us."""
+    to give us.
+    """
 
     def instance_type_to_filter(self, instance_type):
         """Return anything to prevent base-class from raising
@@ -133,8 +135,10 @@ class InstanceTypeFilter(HostFilter):
 
 
 class JsonFilter(HostFilter):
-    """Host Filter to allow simple JSON-based grammar for
-       selecting hosts."""
+    """
+    Host Filter to allow simple JSON-based grammar for
+    selecting hosts.
+    """
 
     def _equals(self, args):
         """First term is == all the other terms."""
@@ -229,8 +233,10 @@ class JsonFilter(HostFilter):
         return (self._full_name(), json.dumps(query))
 
     def _parse_string(self, string, host, services):
-        """Strings prefixed with $ are capability lookups in the
-        form '$service.capability[.subcap*]'"""
+        """
+        Strings prefixed with $ are capability lookups in the
+        form '$service.capability[.subcap*]'
+        """
         if not string:
             return None
         if string[0] != '$':
@@ -277,22 +283,25 @@ FILTERS = [AllHostsFilter, InstanceTypeFilter, JsonFilter]
 
 
 def choose_host_filter(filter_name=None):
-    """Since the caller may specify which filter to use we need
-       to have an authoritative list of what is permissible. This
-       function checks the filter name against a predefined set
-       of acceptable filters."""
+    """
+    Since the caller may specify which filter to use we need
+    to have an authoritative list of what is permissible. This
+    function checks the filter name against a predefined set
+    of acceptable filters.
+    """
 
     if not filter_name:
         filter_name = FLAGS.default_host_filter
     for filter_class in FILTERS:
-        if "%s.%s" % (filter_class.__module__, filter_class.__name__) == \
-                filter_name:
+        host_match = "%s.%s" % (filter_class.__module__, filter_class.__name__)
+        if host_match == filter_name:
             return filter_class()
     raise exception.SchedulerHostFilterNotFound(filter_name=filter_name)
 
 
 class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
-    """The HostFilterScheduler uses the HostFilter to filter
+    """
+    The HostFilterScheduler uses the HostFilter to filter
     hosts for weighing. The particular filter used may be passed in
     as an argument or the default will be used.
 
@@ -313,6 +322,8 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
         return host_filter.filter_hosts(self.zone_manager, query)
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """Derived classes must override this method and return
-           a lists of hosts in [{weight, hostname}] format."""
+        """
+        Derived classes must override this method and return
+        a lists of hosts in [{weight, hostname}] format.
+        """
         return [dict(weight=1, hostname=host) for host, caps in hosts]

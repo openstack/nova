@@ -40,13 +40,15 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def schedule_run_instance(self, context, instance_id, request_spec,
                                         *args, **kwargs):
-        """This method is called from nova.compute.api to provision
+        """
+        This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
         1. Create a Build Plan and then provision, or
         2. Use the Build Plan information in the request parameters
            to simply create the instance (either in this zone or
-           a child zone)."""
+           a child zone).
+        """
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
@@ -79,15 +81,16 @@ class ZoneAwareScheduler(driver.Scheduler):
                                 % locals())
         else:
             # TODO(sandy) Provision in child zone ...
-            LOG.warning(_("Provision to Child Zone not supported (yet)")
-                                % locals())
+            LOG.warning(_("Provision to Child Zone not supported (yet)"))
             pass
 
     def select(self, context, request_spec, *args, **kwargs):
-        """Select returns a list of weights and zone/host information
+        """
+        Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
-        anything about the children."""
+        anything about the children.
+        """
         return self._schedule(context, "compute", request_spec,
                               *args, **kwargs)
 
@@ -95,13 +98,15 @@ class ZoneAwareScheduler(driver.Scheduler):
     # so we don't implement the default "schedule()" method required
     # of Schedulers.
     def schedule(self, context, topic, request_spec, *args, **kwargs):
-        """The schedule() contract requires we return the one
+        """
+        The schedule() contract requires we return the one
         best-suited host for this request.
         """
         raise driver.NoValidHost(_('No hosts were available'))
 
     def _schedule(self, context, topic, request_spec, *args, **kwargs):
-        """Returns a list of hosts that meet the required specs,
+        """
+        Returns a list of hosts that meet the required specs,
         ordered by their fitness.
         """
 
@@ -137,11 +142,15 @@ class ZoneAwareScheduler(driver.Scheduler):
         return weighted
 
     def filter_hosts(self, num, request_spec):
-        """Derived classes must override this method and return
-           a list of hosts in [(hostname, capability_dict)] format."""
+        """
+        Derived classes must override this method and return
+        a list of hosts in [(hostname, capability_dict)] format.
+        """
         raise NotImplemented()
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """Derived classes must override this method and return
-           a lists of hosts in [{weight, hostname}] format."""
+        """
+        Derived classes must override this method and return
+        a lists of hosts in [{weight, hostname}] format.
+        """
         raise NotImplemented()
