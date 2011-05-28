@@ -16,19 +16,16 @@
 
 import StringIO
 
-
-from nova import images
-
-
-def get_mock_glance_client():
-    return FakeGlance()
+import nova.image
 
 
 def stubout_glance_client(stubs):
-    """Stubs out glance.client.Client"""
-    stubs.Set(images, 'get_glance_client', get_mock_glance_client)
+    def fake_get_glance_client(image_href):
+        image_id = int(str(image_href).split('/')[-1])
+        return (FakeGlance('foo'), image_id)
+    stubs.Set(nova.image, 'get_glance_client', fake_get_glance_client)
 
-
+    
 class FakeGlance(object):
     IMAGE_MACHINE = 1
     IMAGE_KERNEL = 2
