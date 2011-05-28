@@ -152,10 +152,10 @@ class _IntegratedTestBase(test.TestCase):
         f = self._get_flags()
         self.flags(**f)
 
-        def fake_image_service(*args):
-            return nova.image.fake.FakeImageService()
-        self.stubs.Set(
-            nova.image.glance, 'GlanceImageService', fake_image_service)
+        def fake_get_image_service(image_href):
+            image_id = int(str(image_href).split('/')[-1])
+            return (nova.image.fake.FakeImageService(), image_id)
+        self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
 
         # set up services
         self.start_service('compute')
