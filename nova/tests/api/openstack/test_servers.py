@@ -475,13 +475,6 @@ class ServersTest(test.TestCase):
         def image_id_from_hash(*args, **kwargs):
             return 2
 
-        def fake_get_image_service(image_href):
-            image_id = int(str(image_href).split('/')[-1])
-            return (nova.image.fake.FakeImageService(), image_id)
-
-        self.stubs.Set(nova.image, 'get_default_image_service',
-            lambda: nova.image.fake.FakeImageService())
-        self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
         self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
@@ -1684,10 +1677,9 @@ class TestServerInstanceCreation(test.TestCase):
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
+        fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.allow_admin = FLAGS.allow_admin_api
-        self.stubs.Set(nova.image, 'get_default_image_service',
-            lambda: nova.image.fake.FakeImageService())
 
     def tearDown(self):
         self.stubs.UnsetAll()

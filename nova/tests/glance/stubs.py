@@ -25,7 +25,7 @@ def stubout_glance_client(stubs):
         return (FakeGlance('foo'), image_id)
     stubs.Set(nova.image, 'get_glance_client', fake_get_glance_client)
 
-    
+
 class FakeGlance(object):
     IMAGE_MACHINE = 1
     IMAGE_KERNEL = 2

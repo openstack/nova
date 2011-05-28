@@ -116,7 +116,7 @@ def upload_image(image, instance, **kwargs):
 def _get_glance_image(image, instance, **kwargs):
     """Download image from the glance image server."""
     LOG.debug(_("Downloading image %s from glance image server") % image)
-    glance_client, image_id = nova.image.get_glance_client(image)    
+    (glance_client, image_id) = nova.image.get_glance_client(image)
     metadata, read_iter = glance_client.get_image(image_id)
     read_file_handle = read_write_util.GlanceFileRead(read_iter)
     file_size = int(metadata['size'])
@@ -152,7 +152,7 @@ def _put_glance_image(image, instance, **kwargs):
                                 kwargs.get("cookies"),
                                 kwargs.get("file_path"))
     file_size = read_file_handle.get_size()
-    glance_client, image_id = nova.image.get_glance_client(image)    
+    (glance_client, image_id) = nova.image.get_glance_client(image)
     # The properties and other fields that we need to set for the image.
     image_metadata = {"is_public": True,
                       "disk_format": "vmdk",
@@ -187,7 +187,7 @@ def get_vmdk_size_and_properties(image, instance):
 
     LOG.debug(_("Getting image size for the image %s") % image)
     if FLAGS.image_service == "nova.image.glance.GlanceImageService":
-        glance_client, image_id = nova.image.get_glance_client(image)    
+        (glance_client, image_id) = nova.image.get_glance_client(image)
         meta_data = glance_client.get_image_meta(image_id)
         size, properties = meta_data["size"], meta_data["properties"]
     elif FLAGS.image_service == "nova.image.s3.S3ImageService":
