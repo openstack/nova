@@ -189,7 +189,7 @@ class Controller(common.OpenstackController):
             return faults.Fault(exc.HTTPBadRequest(msg))
 
         inst['instance_type'] = inst_type
-        inst['image_id'] = image_href
+        inst['image_ref'] = image_href
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)

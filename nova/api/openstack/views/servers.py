@@ -112,8 +112,8 @@ class ViewBuilderV10(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
 
     def _build_image(self, response, inst):
-        if 'image_id' in dict(inst):
-            response['imageId'] = int(inst['image_id'])
+        if 'image_ref' in dict(inst):
+            response['imageId'] = int(inst['image_ref'])
 
     def _build_flavor(self, response, inst):
         if 'instance_type' in dict(inst):
@@ -130,8 +130,8 @@ class ViewBuilderV11(ViewBuilder):
         self.base_url = base_url
 
     def _build_image(self, response, inst):
-        if 'image_id' in dict(inst):
-            image_href = inst['image_id']
+        if 'image_ref' in dict(inst):
+            image_href = inst['image_ref']
             if str(image_href).isdigit():
                 image_href = int(image_href)
             response['imageRef'] = image_href

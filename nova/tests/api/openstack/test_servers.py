@@ -98,7 +98,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
-        "image_id": "10",
+        "image_ref": "10",
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
@@ -475,12 +475,13 @@ class ServersTest(test.TestCase):
         def image_id_from_hash(*args, **kwargs):
             return 2
 
-        def fake_image_service(*args):
-            return nova.image.fake.FakeImageService()
+        def fake_get_image_service(image_href):
+            image_id = int(str(image_href).split('/')[-1])
+            return (nova.image.fake.FakeImageService(), image_id)
 
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
-        self.stubs.Set(
-            nova.image.glance, 'GlanceImageService', fake_image_service)
+        self.stubs.Set(nova.image, 'get_default_image_service',
+            lambda: nova.image.fake.FakeImageService())
+        self.stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
         self.stubs.Set(nova.db.api, 'project_get_network', project_get_network)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
@@ -1685,6 +1686,8 @@ class TestServerInstanceCreation(test.TestCase):
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.allow_admin = FLAGS.allow_admin_api
+        self.stubs.Set(nova.image, 'get_default_image_service',
+            lambda: nova.image.fake.FakeImageService())
 
     def tearDown(self):
         self.stubs.UnsetAll()
@@ -1714,7 +1717,6 @@ class TestServerInstanceCreation(test.TestCase):
             return stub_method
 
         compute_api = MockComputeAPI()
-        FLAGS.image_service = 'nova.image.fake.FakeImageService'
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
         self.stubs.Set(nova.api.openstack.servers.Controller,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
