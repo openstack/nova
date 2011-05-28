@@ -18,6 +18,7 @@
 
 from urlparse import urlparse
 
+import nova
 from nova import exception
 from nova import utils
 from nova import flags
