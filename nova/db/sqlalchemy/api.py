@@ -1013,7 +1013,7 @@ def instance_update(context, instance_id, values):
     session = get_session()
     metadata = values.get('metadata')
     if metadata:
-        values['metadata'] = _metadata_refs(values.get('metadata'))
+        values['metadata'] = _metadata_refs(metadata)
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
