@@ -331,7 +331,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def rebuild_instance(self, context, instance_id, image_id):
+    def rebuild_instance(self, context, instance_id, **kwargs):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -349,7 +349,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id, power_state.BUILDING)
 
         self.driver.destroy(instance_ref)
-        instance_ref.image_id = image_id
+        instance_ref.image_id = kwargs.get('image_id')
+        instance_ref.injected_files = kwargs.get('injected_files', [])
         self.driver.spawn(instance_ref)
 
         self._update_image_id(context, instance_id, image_id)
