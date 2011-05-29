@@ -771,6 +771,15 @@ def fixed_ip_update(context, address, values):
 
 
 ###################
+def _metadata_refs(metadata_dict):
+    metadata_refs = []
+    if metadata_dict:
+        for k, v in metadata_dict.iteritems():
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref['key'] = k
+            metadata_ref['value'] = v
+            metadata_refs.append(metadata_ref)
+    return metadata_refs
 
 
 @require_context
@@ -780,15 +789,7 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
-    metadata = values.get('metadata')
-    metadata_refs = []
-    if metadata:
-        for k, v in metadata.iteritems():
-            metadata_ref = models.InstanceMetadata()
-            metadata_ref['key'] = k
-            metadata_ref['value'] = v
-            metadata_refs.append(metadata_ref)
-    values['metadata'] = metadata_refs
+    values['metadata'] = _metadata_refs(values.get('metadata'))
 
     instance_ref = models.Instance()
     instance_ref.update(values)
@@ -1010,6 +1011,9 @@ def instance_set_state(context, instance_id, state, description=None):
 @require_context
 def instance_update(context, instance_id, values):
     session = get_session()
+    metadata = values.get('metadata')
+    if metadata:
+        values['metadata'] = _metadata_refs(values.get('metadata'))
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
