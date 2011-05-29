@@ -1267,6 +1267,25 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
 
+    def test_resize_server_v11(self):
+
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(resize=dict(flavorRef="http://localhost/3"))
+        req.body = json.dumps(body_dict)
+
+        self.resize_called = False
+
+        def resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
     def test_resize_bad_flavor_fails(self):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(derp=3)))
 

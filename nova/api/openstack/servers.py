@@ -332,6 +332,7 @@ class Controller(common.OpenstackController):
         return exc.HTTPAccepted()
 
     def _action_resize(self, input_dict, req, id):
+        return exc.HTTPNotImplemented()
         """ Resizes a given instance to the flavor size requested """
         try:
             if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
@@ -610,6 +611,21 @@ class ControllerV10(Controller):
             self.compute_api.set_admin_password(context, server_id,
                     inst_dict['server']['adminPass'])
 
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
+                flavor_id = input_dict['resize']['flavorId']
+                self.compute_api.resize(req.environ['nova.context'], id,
+                        flavor_id)
+            else:
+                LOG.exception(_("Missing arguments for resize"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
+
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
         instance_id = int(instance_id)
@@ -694,6 +710,22 @@ class ControllerV11(Controller):
                 msg = _("Personality content could not be Base64 decoded.")
                 LOG.info(msg)
                 raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
+
+    def _action_resize(self, input_dict, req, id):
+        """ Resizes a given instance to the flavor size requested """
+        try:
+            if 'resize' in input_dict and 'flavorRef' in input_dict['resize']:
+                flavor_ref = input_dict['resize']['flavorRef']
+                flavor_id = common.get_id_from_href(flavor_ref)
+                self.compute_api.resize(req.environ['nova.context'], id,
+                        flavor_id)
+            else:
+                LOG.exception(_("Missing arguments for resize"))
+                return faults.Fault(exc.HTTPUnprocessableEntity())
+        except Exception, e:
+            LOG.exception(_("Error in resize %s"), e)
+            return faults.Fault(exc.HTTPBadRequest())
+        return exc.HTTPAccepted()
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
