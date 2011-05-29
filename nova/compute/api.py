@@ -258,6 +258,7 @@ class API(base.Base):
                                                     instance_id,
                                                     security_group_id)
 
+            # NOTE(yamahata)
             # tell vm driver to attach volume at boot time by updating
             # BlockDeviceMapping
             for bdm in block_device_mapping:

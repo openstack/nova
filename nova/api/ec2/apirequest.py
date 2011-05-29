@@ -134,6 +134,12 @@ class APIRequest(object):
                 #             into their respective values
                 value = _try_convert(value)
 
+                # NOTE(yamahata)
+                # parse multi dot-separted argument.
+                # EBS boot uses multi dot-separeted arguments like
+                # BlockDeviceMapping.1.DeviceName=snap-id
+                # Convert the above into
+                # {'block_device_mapping': {'1': {'device_name': snap-id}}}
                 if len(parts) > 1:
                     d = args.get(key, {})
                     args[key] = d
