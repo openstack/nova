@@ -1132,9 +1132,18 @@ def main():
     action = argv.pop(0)
     matches = lazy_match(action, actions)
     action, fn = matches[0]
+
+    fn_args, fn_kwargs = [], {}
+    for arg in argv:
+        if '=' in arg:
+            key, value = arg.split('=')
+            fn_kwargs[key] = value
+        else:
+            fn_args.append(arg)
+
     # call the action with the remaining arguments
     try:
-        fn(*argv)
+        fn(*fn_args, **fn_kwargs)
         sys.exit(0)
     except TypeError:
         print _("Possible wrong number of arguments supplied")
