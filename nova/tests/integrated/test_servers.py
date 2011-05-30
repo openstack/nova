@@ -179,6 +179,36 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Cleanup
         self._delete_server(created_server_id)
 
+    def test_create_and_rebuild_server(self):
+        """Rebuild a server."""
+
+        # create a server with initially has no metadata
+        server = self._build_minimal_create_server_request()
+        server_post = {'server': server}
+        created_server = self.api.post_server(server_post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # rebuild the server with metadata
+        post = {}
+        post['rebuild'] = {
+            "imageRef": "https://localhost/v1.1/32278/images/2",
+            "name": "blah"
+        }
+
+        self.api.post_server_action(created_server_id, post)
+        LOG.debug("rebuilt server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+        self.assertEqual({}, found_server.get('metadata'))
+        self.assertEqual('blah', found_server.get('name'))
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
     def test_create_and_rebuild_server_with_metadata(self):
         """Rebuild a server with metadata."""
 
@@ -210,9 +240,51 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         found_server = self.api.get_server(created_server_id)
         self.assertEqual(created_server_id, found_server['id'])
         self.assertEqual(metadata, found_server.get('metadata'))
+        self.assertEqual('blah', found_server.get('name'))
 
         # Cleanup
         self._delete_server(created_server_id)
+
+    def test_create_and_rebuild_server_with_metadata_removal(self):
+        """Rebuild a server with metadata."""
+
+        # create a server with initially has no metadata
+        server = self._build_minimal_create_server_request()
+        server_post = {'server': server}
+
+        metadata = {}
+        for i in range(30):
+            metadata['key_%s' % i] = 'value_%s' % i
+
+        server_post['server']['metadata'] = metadata
+
+        created_server = self.api.post_server(server_post)
+        LOG.debug("created_server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+        created_server_id = created_server['id']
+
+        # rebuild the server with metadata
+        post = {}
+        post['rebuild'] = {
+            "imageRef": "https://localhost/v1.1/32278/images/2",
+            "name": "blah"
+        }
+
+        metadata = {}
+        post['rebuild']['metadata'] = metadata
+
+        self.api.post_server_action(created_server_id, post)
+        LOG.debug("rebuilt server: %s" % created_server)
+        self.assertTrue(created_server['id'])
+
+        found_server = self.api.get_server(created_server_id)
+        self.assertEqual(created_server_id, found_server['id'])
+        self.assertEqual(metadata, found_server.get('metadata'))
+        self.assertEqual('blah', found_server.get('name'))
+
+        # Cleanup
+        self._delete_server(created_server_id)
+
 
 if __name__ == "__main__":
     unittest.main()

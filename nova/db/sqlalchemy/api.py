@@ -1012,8 +1012,9 @@ def instance_set_state(context, instance_id, state, description=None):
 def instance_update(context, instance_id, values):
     session = get_session()
     metadata = values.get('metadata')
-    if metadata:
-        values['metadata'] = _metadata_refs(metadata)
+    if metadata is not None:
+        instance_metadata_update_or_create(context, instance_id,
+                                           values.pop('metadata'), True)
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
@@ -2570,8 +2571,12 @@ def instance_metadata_get_item(context, instance_id, key):
 
 
 @require_context
-def instance_metadata_update_or_create(context, instance_id, metadata):
+def instance_metadata_update_or_create(context, instance_id, metadata,
+                                       purge=False):
     session = get_session()
+
+    original_metadata = instance_metadata_get(context, instance_id)
+
     meta_ref = None
     for key, value in metadata.iteritems():
         try:
@@ -2583,4 +2588,10 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
                             "instance_id": instance_id,
                             "deleted": 0})
         meta_ref.save(session=session)
+
+    if purge:
+        for key in original_metadata.keys():
+            if not key in metadata.keys():
+                instance_metadata_delete(context, instance_id, key)
+
     return metadata
