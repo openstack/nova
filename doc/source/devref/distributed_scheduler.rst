@@ -55,6 +55,8 @@ Here is how it works:
 3. The Parent Zone sorts and aggregates all the Weights and a final Build Plan is constructed.
 4. The Build Plan is executed upon. Concurrently, Instance Create requests are sent to each of the selected Hosts, be they local or in a child zone. Child Zones may forward the requests to their Child Zones as needed.
 
+`ZoneAwareScheduler` by itself is not capable of handling all the provisioning itself. Derived classes are used to select which Host filtering and Weighing strategy will be used. We'll go into more detail on that later. 
+
 Filtering and Weighing
 ------------
 Filtering (excluding Compute nodes incapable of fulfilling the request) and Weighing (computing the relative "fitness" of a Compute node to fulfill the request) are very subjective operations. Service Providers will probably have a very different set of filtering and weighing rules than private cloud administrators. The filtering and weighing aspects of the `ZoneAwareScheduler` are flexible and extensible. We will explain how to do this later in this document.
@@ -77,7 +79,7 @@ The problem with this approach is that each request is scattered amongst each of
 
 For the `ZoneAwareScheduler` we need to use the All-at-Once approach. We need to consider all the hosts across all the Zones before deciding where they should reside. In order to handle this we have a new method `nova.compute.api.create_all_at_once()`. This method does things a little differently:
 1. it validates all the fields passed into it.
-2. it creates a single `request_id` for all of instances created. This is a UUID.
+2. it creates a single `reservation_id` for all of instances created. This is a UUID.
 3. it creates a single `run_instance` request in the scheduler queue
 4. a scheduler picks the message off the queue and works on it.
 5. the scheduler sends off an OS API `POST /zones/select` command to each Child Zone. The `BODY` payload of the call contains the `request_spec`.
@@ -85,6 +87,7 @@ For the `ZoneAwareScheduler` we need to use the All-at-Once approach. We need to
 7. if the Child Zone has its own Child Zone's, the `/zones/select` call will be sent down to them as well.
 8. Finally, when all the estimates have bubbled back to the Zone that initiated the call, all the results are merged, sorted and processed.
 9. Now the instances can be created. The initiating Zone either forwards the `run_instance` message to the local Compute node to do the work, or it issues a `POST /servers` call to the relevant Child Zone. The parameters to the Child Zone call are the same as what was passed in by the user.
+10. The `reservation_id` is passed back to the caller. Later we explain how the user can check on the status of the command with this `reservation_id`.
 
 The Catch
 -------------
@@ -92,105 +95,23 @@ This all seems pretty straightforward but, like most things, there's a catch. Zo
 
 When `POST /zones/select` is called to estimate which Compute node to use, time passes until the `POST /servers` call is issued. If we only passed the Weight back from the `select` we would have to re-compute the appropriate Compute node for the create command ... and we could end up with a different host. Somehow we need to remember the results of our computations and pass them outside of the Zone. Now, we could store this information in the local database and return a reference to it, but remember that the vast majority of weights are going be ignored. Storing them in the database would result in a flood of disk access and then we have to clean up all these entries periodically. Recall that there are going to be many many `select` calls issued to Child Zones asking for estimates. 
 
-Instead, we take a rather innovative approach to the problem. We encrypt all the child zone internal details and pass them back the to parent Zone. If the parent zone decides to use a child Zone for the instance it simply passes the encrypted data back to the child during the `POST /servers` call as an extra parameter. The child Zone can then decrypt the hint and go directly to the Compute node previously selected. 
+Instead, we take a rather innovative approach to the problem. We encrypt all the child zone internal details and pass them back the to parent Zone. If the parent zone decides to use a child Zone for the instance it simply passes the encrypted data back to the child during the `POST /servers` call as an extra parameter. The child Zone can then decrypt the hint and go directly to the Compute node previously selected. If the estimate isn't used, it is simply discarded by the parent.
+
+In the case of nested child Zones, each Zone re-encrypts the weighted list results and passes those values to the parent.
+
+Throughout the `nova.api.openstack.servers`, `nova.api.openstack.zones`, `nova.compute.api.create*` and `nova.scheduler.zone_aware_scheduler` code you'll see references to `blob` and `child_blob`. These are the encrypted hints about which Compute node to use.
+
+Reservation ID's
+---------------
 
 
 
--
-Routing between Zones is based on the Capabilities of that Zone. Capabilities are nothing more than key/value pairs. Values are multi-value, with each value separated with a semicolon (`;`). When expressed as a string they take the form:
 
-::
-
-  key=value;value;value, key=value;value;value
-
-Zones have Capabilities which are general to the Zone and are set via `--zone_capabilities` flag. Zones also have dynamic per-service Capabilities. Services derived from `nova.manager.SchedulerDependentManager` (such as Compute, Volume and Network) can set these capabilities by calling the `update_service_capabilities()` method on their `Manager` base class. These capabilities will be periodically sent to the Scheduler service automatically. The rate at which these updates are sent is controlled by the `--periodic_interval` flag.
-
-Flow within a Zone
-------------------
-The brunt of the work within a Zone is done in the Scheduler Service. The Scheduler is responsible for:
-- collecting capability messages from the Compute, Volume and Network nodes,
-- polling the child Zones for their status and
-- providing data to the Distributed Scheduler for performing load balancing calculations
-
-Inter-service communication within a Zone is done with RabbitMQ. Each class of Service (Compute, Volume and Network) has both a named message exchange (particular to that host) and a general message exchange (particular to that class of service). Messages sent to these exchanges are picked off in round-robin fashion. Zones introduce a new fan-out exchange per service. Messages sent to the fan-out exchange are picked up by all services of a particular class. This fan-out exchange is used by the Scheduler services to receive capability messages from the Compute, Volume and Network nodes.
-
-These capability messages are received by the Scheduler services and stored in the `ZoneManager` object. The SchedulerManager object has a reference to the `ZoneManager` it can use for load balancing.
-
-The `ZoneManager` also polls the child Zones periodically to gather their capabilities to aid in decision making. This is done via the OpenStack API `/v1.0/zones/info` REST call. This also captures the name of each child Zone. The Zone name is set via the `--zone_name` flag (and defaults to "nova"). 
-
-Zone administrative functions
------------------------------
-Zone administrative operations are usually done using python-novaclient_
-
-.. _python-novaclient: https://github.com/rackspace/python-novaclient
-
-In order to use the Zone operations, be sure to enable administrator operations in OpenStack API by setting the `--allow_admin_api=true` flag.
-
-Finally you need to enable Zone Forwarding. This will be used by the Distributed Scheduler initiative currently underway. Set `--enable_zone_routing=true` to enable this feature.
-
-Find out about this Zone
-------------------------
-In any Zone you can find the Zone's name and capabilities with the ``nova zone-info`` command.
-
-::
-
-  alice@novadev:~$ nova zone-info
-  +-----------------+---------------+
-  |     Property    |     Value     |
-  +-----------------+---------------+
-  | compute_cpu     | 0.7,0.7       |
-  | compute_disk    | 123000,123000 |
-  | compute_network | 800,800       |
-  | hypervisor      | xenserver     |
-  | name            | nova          |
-  | network_cpu     | 0.7,0.7       |
-  | network_disk    | 123000,123000 |
-  | network_network | 800,800       |
-  | os              | linux         |
-  +-----------------+---------------+
-
-This equates to a GET operation on `.../zones/info`. If you have no child Zones defined you'll usually only get back the default `name`, `hypervisor` and `os` capabilities. Otherwise you'll get back a tuple of min, max values for each capabilities of all the hosts of all the services running in the child zone. These take the `<service>_<capability> = <min>,<max>` format.
-
-Adding a child Zone
--------------------
-Any Zone can be a parent Zone. Children are associated to a Zone. The Zone where this command originates from is known as the Parent Zone. Routing is only ever conducted from a Zone to its children, never the other direction. From a parent zone you can add a child zone with the following command:
-
-::
-
-  nova zone-add <child zone api url> <username> <nova api key>
-
-You can get the `child zone api url`, `nova api key` and `username` from the `novarc` file in the child zone. For example:
-
-::
-
-  export NOVA_API_KEY="3bd1af06-6435-4e23-a827-413b2eb86934"
-  export NOVA_USERNAME="alice"
-  export NOVA_URL="http://192.168.2.120:8774/v1.0/"
+Host Filter
+--------------
 
 
-This equates to a POST operation to `.../zones/` to add a new zone. No connection attempt to the child zone is done when this command. It only puts an entry in the db at this point. After about 30 seconds the `ZoneManager` in the Scheduler services will attempt to talk to the child zone and get its information. 
+Cost Scheduler Weighing
+--------------
 
-Getting a list of child Zones
------------------------------
 
-::
-
-  nova zone-list
-
-  alice@novadev:~$ nova zone-list
-  +----+-------+-----------+--------------------------------------------+---------------------------------+
-  | ID |  Name | Is Active |                Capabilities                |             API URL             |
-  +----+-------+-----------+--------------------------------------------+---------------------------------+
-  | 2  | zone1 | True      | hypervisor=xenserver;kvm, os=linux;windows | http://192.168.2.108:8774/v1.0/ |
-  | 3  | zone2 | True      | hypervisor=xenserver;kvm, os=linux;windows | http://192.168.2.115:8774/v1.0/ |
-  +----+-------+-----------+--------------------------------------------+---------------------------------+
-
-This equates to a GET operation to `.../zones`.
-
-Removing a child Zone
----------------------
-::
-
-  nova zone-delete <N>
-
-This equates to a DELETE call to `.../zones/N`. The Zone with ID=N will be removed. This will only remove the zone entry from the current (parent) Zone, no child Zones are affected. Removing a Child Zone doesn't affect any other part of the hierarchy.
