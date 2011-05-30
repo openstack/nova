@@ -569,12 +569,8 @@ class LibvirtConnection(driver.ComputeDriver):
     @exception.wrap_exception
     def resume(self, instance, callback):
         """resume the specified instance"""
-        try:
-            dom = self._lookup_by_name(instance.name)
-            dom.create()
-        except libvirt.LibvirtError:
-            xml = self.to_xml(instance, None)
-            self._create_new_domain(xml)
+        dom = self._lookup_by_name(instance.name)
+        dom.create()
 
     @exception.wrap_exception
     def rescue(self, instance):
