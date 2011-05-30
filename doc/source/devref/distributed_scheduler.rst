@@ -104,8 +104,17 @@ Throughout the `nova.api.openstack.servers`, `nova.api.openstack.zones`, `nova.c
 Reservation ID's
 ---------------
 
+NOTE: The features described in this section are related to the up-coming 'merge-4' branch. 
 
+The OpenStack API allows a user to list all the instances they own via the `GET /servers/` command or the details on a particular instance via `GET /servers/###`. This mechanism is usually sufficient since OS API only allows for creating one instance at a time, unlike the EC2 API which allows you to specify a quantity of instances to be created.
 
+NOTE: currently the `GET /servers` command is not Zone-aware since all operations done in child Zones are done via a single administrative account. Therefore, asking a child Zone to `GET /servers` would return all the active instances ... and that would be bad. Later, when the Keystone Auth system is integrated with Nova, this functionality will be enabled. 
+
+We could use the OS API 1.1 Extensions mechanism to accept a `num_instances` parameter, but this would result in a different return code. Instead of getting back an `Instance` record, we would be getting back a `reservation_id`. So, instead, we've implemented a new command `POST /zones/servers` command which is nearly identical to `POST /servers` except that it takes a `num_instances` parameter and returns a `reservation_id`. Perhaps in OS API 2.x we can unify these approaches. 
+
+Finally, we need to give the user a way to get information on each of the instances created under this `reservation_id`. Fortunately, this is still possible with the existing `GET /servers` command, so long as we add a new optional `reservation_id` parameter. 
+
+`python-novaclient` will be extended to support both of these changes.
 
 Host Filter
 --------------
