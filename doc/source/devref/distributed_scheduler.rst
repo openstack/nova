@@ -25,7 +25,7 @@ This is the purpose of the Distributed Scheduler (DS). The DS utilizes the Capab
 
 So, how does this all work?
 
-This document will explain the strategy employed by the ZoneAwareScheduler and its derivations.
+This document will explain the strategy employed by the `ZoneAwareScheduler` and its derivations. You should read the Zones documentation before reading this.
 
 Costs & Weights
 ----------
@@ -48,19 +48,51 @@ As we explained in the Zones documentation, each Scheduler has a `ZoneManager` o
 
 Here is how it works:
 
-1. The Compute nodes are Filtered and the remaining set are Weighted.
+1. The Compute nodes are Filtered and the nodes remaining are Weighed.
 1a. Filtering the hosts is a simple matter of ensuring the Compute node has ample resources (CPU, RAM, DISK, etc) to fulfil the request. 
-1b. Weighing of the remaining Compute nodes is performed
+1b. Weighing of the remaining Compute nodes assigns a number based on their suitability for the request.
 2. The same request is sent to each Child Zone and step #1 is done there too. The resulting Weighted List is returned to the parent.
 3. The Parent Zone sorts and aggregates all the Weights and a final Build Plan is constructed.
 4. The Build Plan is executed upon. Concurrently, Instance Create requests are sent to each of the selected Hosts, be they local or in a child zone. Child Zones may forward the requests to their Child Zones as needed.
 
 Filtering and Weighing
 ------------
-Filtering (excluding Compute nodes incapable of fulfilling the request) and Weighing (computing the relative "fitness" of a Compute node to fulfill the request) are very subjective operations. 
+Filtering (excluding Compute nodes incapable of fulfilling the request) and Weighing (computing the relative "fitness" of a Compute node to fulfill the request) are very subjective operations. Service Providers will probably have a very different set of filtering and weighing rules than private cloud administrators. The filtering and weighing aspects of the `ZoneAwareScheduler` are flexible and extensible. We will explain how to do this later in this document.
 
+Requesting a new instance
+------------
+To request a new instance, a call is made to `nova.compute.api.create()`. The type of instance created depends on the value of the `InstanceType` record being passed in. The `InstanceType` determines the amount of disk, cpu, ram and network required for the instance. Administrators can add new `InstanceType` records to suit their needs. For more complicated instance requests we need to go beyond the default fields in the `InstanceType` table, but we'll discuss that later.
 
+`nova.compute.api.create()` performs the following actions:
+1. it validates all the fields passed into it.
+2. it creates an entry in the `Instance` table for each instance requested
+3. it puts one `run_instance` message in the scheduler queue for each instance requested
+4. the schedulers pick off the messages and decide which Compute node should handle the request.
+5. the `run_instance` message is forwarded to the Compute node for processing and the instance is created. 
+6. it returns a list of dicts representing each of the `Instance` records (even if the instance has not been activated yet). At least the `instance_id`'s are valid. 
 
+Generally, the standard schedulers (like `ChangeScheduler` and `AvailabilityZoneScheduler`) only operate in the current Zone. They have no concept of Child Zones.
+
+The problem with this approach is that each request is scattered amongst each of the schedulers. If we are asking for 1000 instances, each scheduler gets the requests one-at-a-time. There is no possability of optimizing the requests to take into account all 1000 instances as a group. We call this Single-Shot vs. All-at-Once. 
+
+For the `ZoneAwareScheduler` we need to use the All-at-Once approach. We need to consider all the hosts across all the Zones before deciding where they should reside. In order to handle this we have a new method `nova.compute.api.create_all_at_once()`. This method does things a little differently:
+1. it validates all the fields passed into it.
+2. it creates a single `request_id` for all of instances created. This is a UUID.
+3. it creates a single `run_instance` request in the scheduler queue
+4. a scheduler picks the message off the queue and works on it.
+5. the scheduler sends off an OS API `POST /zones/select` command to each Child Zone. The `BODY` payload of the call contains the `request_spec`.
+6. the Child Zones use the `request_spec` to compute a weighted list for each instance requested. No attempt to actually create an instance is done at this point. We're only estimating the suitability of the Zones.
+7. if the Child Zone has its own Child Zone's, the `/zones/select` call will be sent down to them as well.
+8. Finally, when all the estimates have bubbled back to the Zone that initiated the call, all the results are merged, sorted and processed.
+9. Now the instances can be created. The initiating Zone either forwards the `run_instance` message to the local Compute node to do the work, or it issues a `POST /servers` call to the relevant Child Zone. The parameters to the Child Zone call are the same as what was passed in by the user.
+
+The Catch
+-------------
+This all seems pretty straightforward but, like most things, there's a catch. Zones are expected to operate in complete isolation from each other. Each Zone has its own AMQP service, Database and set of Nova Services. But, for security reasons Zones should never leak information about the architectural layout internally. That means Zones cannot leak information about hostnames or service IP addresses outside of its world.
+
+When `POST /zones/select` is called to estimate which Compute node to use, time passes until the `POST /servers` call is issued. If we only passed the Weight back from the `select` we would have to re-compute the appropriate Compute node for the create command ... and we could end up with a different host. Somehow we need to remember the results of our computations and pass them outside of the Zone. Now, we could store this information in the local database and return a reference to it, but remember that the vast majority of weights are going be ignored. Storing them in the database would result in a flood of disk access and then we have to clean up all these entries periodically. Recall that there are going to be many many `select` calls issued to Child Zones asking for estimates. 
+
+Instead, we take a rather innovative approach to the problem. We encrypt all the child zone internal details and pass them back the to parent Zone. If the parent zone decides to use a child Zone for the instance it simply passes the encrypted data back to the child during the `POST /servers` call as an extra parameter. The child Zone can then decrypt the hint and go directly to the Compute node previously selected. 
 
 
 
