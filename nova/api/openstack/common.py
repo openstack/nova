@@ -23,12 +23,11 @@ import webob
 from nova import exception
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova import wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
-
-
 FLAGS = flags.FLAGS
 
 

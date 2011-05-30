@@ -21,7 +21,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.api.openstack import common
+from nova.api.openstack import create_instance_controller as controller
 from nova.scheduler import api
 
 
@@ -57,7 +57,7 @@ def check_encryption_key(func):
     return wrapped
 
 
-class Controller(common.OpenstackController):
+class Controller(controller.OpenstackCreateInstanceController):
 
     _serialization_metadata = {
         'application/xml': {
@@ -97,17 +97,20 @@ class Controller(common.OpenstackController):
         return dict(zone=_scrub_zone(zone))
 
     def delete(self, req, id):
+        """Delete a child zone entry."""
         zone_id = int(id)
         api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
     def create(self, req):
+        """Create a child zone entry."""
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req.get_content_type())
         zone = api.zone_create(context, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
     def update(self, req, id):
+        """Update a child zone entry."""
         context = req.environ['nova.context']
         env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
@@ -115,11 +118,14 @@ class Controller(common.OpenstackController):
         return dict(zone=_scrub_zone(zone))
 
     def boot(self, req):
-        """Creates a new server for a given user while being Zone aware."""
+        """Creates a new server for a given user while being Zone aware.
+        
+        Returns a reservation ID (a UUID).
+        """
         reservation_id = \
                     common.create(req, self.compute_api.create_all_at_once)
 
-        return {'reservation': {'reservation_id': reservation_id}}
+        return {'reservation_id': reservation_id}
 
     @check_encryption_key
     def select(self, req):
@@ -144,3 +150,11 @@ class Controller(common.OpenstackController):
             cooked.append(dict(weight=entry['weight'],
                 blob=cipher_text))
         return cooked
+        
+    # Assume OS 1.0 functionality for these overrides. 
+
+    def _image_id_from_req_data(self, data):
+        return data['server']['imageId']
+
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorId']

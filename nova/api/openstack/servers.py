@@ -23,16 +23,15 @@ from nova import compute
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import quota
 from nova import utils
 from nova.api.openstack import common
+from nova.api.openstack import create_instance_controller as controller
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.auth import manager as auth_manager
-from nova.compute import instance_types
 import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 
@@ -41,7 +40,7 @@ LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
-class Controller(common.OpenstackController):
+class Controller(controller.OpenstackCreateInstanceController):
     """ The Server API controller for the OpenStack API """
 
     _serialization_metadata = {
@@ -64,7 +63,6 @@ class Controller(common.OpenstackController):
 
     def __init__(self):
         self.compute_api = compute.API()
-        self._image_service = utils.import_object(FLAGS.image_service)
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -124,88 +122,17 @@ class Controller(common.OpenstackController):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        env = self._deserialize_create(req)
-        if not env:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+        extra_values, instances = \
+                self.create_instance(req, self.compute_api.create)
 
-        context = req.environ['nova.context']
-
-        password = self._get_server_admin_password(env['server'])
-
-        key_name = None
-        key_data = None
-        key_pairs = auth_manager.AuthManager.get_key_pairs(context)
-        if key_pairs:
-            key_pair = key_pairs[0]
-            key_name = key_pair['name']
-            key_data = key_pair['public_key']
-
-        requested_image_id = self._image_id_from_req_data(env)
-        try:
-            image_id = common.get_image_id_from_image_hash(self._image_service,
-                context, requested_image_id)
-        except:
-            msg = _("Can not find requested image")
-            return faults.Fault(exc.HTTPBadRequest(msg))
-
-        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-            req, image_id)
-
-        personality = env['server'].get('personality')
-        injected_files = []
-        if personality:
-            injected_files = self._get_injected_files(personality)
-
-        flavor_id = self._flavor_id_from_req_data(env)
-
-        if not 'name' in env['server']:
-            msg = _("Server name is not defined")
-            return exc.HTTPBadRequest(msg)
-
-        zone_blob = env['server'].get('blob')
-        name = env['server']['name']
-        self._validate_server_name(name)
-        name = name.strip()
-
-        try:
-            inst_type = \
-                instance_types.get_instance_type_by_flavor_id(flavor_id)
-            (inst,) = self.compute_api.create(
-                context,
-                inst_type,
-                image_id,
-                kernel_id=kernel_id,
-                ramdisk_id=ramdisk_id,
-                display_name=name,
-                display_description=name,
-                key_name=key_name,
-                key_data=key_data,
-                metadata=env['server'].get('metadata', {}),
-                injected_files=injected_files,
-                admin_password=password,
-                zone_blob=zone_blob)
-        except quota.QuotaError as error:
-            self._handle_quota_error(error)
-
-        inst['instance_type'] = inst_type
-        inst['image_id'] = requested_image_id
-
+        (inst, ) = instances
+        for key in ['instance_type', 'image_id']:
+            inst[key] = extra_values[key]
+ 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
-        server['server']['adminPass'] = password
+        server['server']['adminPass'] = extra_values['password']
         return server
-
-    def _deserialize_create(self, request):
-        """
-        Deserialize a create request
-
-        Overrides normal behavior in the case of xml content
-        """
-        if request.content_type == "application/xml":
-            deserializer = ServerCreateRequestXMLDeserializer()
-            return deserializer.deserialize(request.body)
-        else:
-            return self._deserialize(request.body, request.get_content_type())
 
     def _get_injected_files(self, personality):
         """
@@ -234,22 +161,6 @@ class Controller(common.OpenstackController):
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
         return injected_files
-
-    def _handle_quota_error(self, error):
-        """
-        Reraise quota errors as api-specific http exceptions
-        """
-        if error.code == "OnsetFileLimitExceeded":
-            expl = _("Personality file limit exceeded")
-            raise exc.HTTPBadRequest(explanation=expl)
-        if error.code == "OnsetFilePathLimitExceeded":
-            expl = _("Personality file path too long")
-            raise exc.HTTPBadRequest(explanation=expl)
-        if error.code == "OnsetFileContentLimitExceeded":
-            expl = _("Personality file content too long")
-            raise exc.HTTPBadRequest(explanation=expl)
-        # if the original error is okay, just reraise it
-        raise error
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
@@ -552,45 +463,6 @@ class Controller(common.OpenstackController):
                 error=item.error))
         return dict(actions=actions)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
-        """Fetch an image from the ImageService, then if present, return the
-        associated kernel and ramdisk image IDs.
-        """
-        context = req.environ['nova.context']
-        image_meta = self._image_service.show(context, image_id)
-        # NOTE(sirp): extracted to a separate method to aid unit-testing, the
-        # new method doesn't need a request obj or an ImageService stub
-        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
-            image_meta)
-        return kernel_id, ramdisk_id
-
-    @staticmethod
-    def  _do_get_kernel_ramdisk_from_image(image_meta):
-        """Given an ImageService image_meta, return kernel and ramdisk image
-        ids if present.
-
-        This is only valid for `ami` style images.
-        """
-        image_id = image_meta['id']
-        if image_meta['status'] != 'active':
-            raise exception.ImageUnacceptable(image_id=image_id,
-                                              reason=_("status is not active"))
-
-        if image_meta.get('container_format') != 'ami':
-            return None, None
-
-        try:
-            kernel_id = image_meta['properties']['kernel_id']
-        except KeyError:
-            raise exception.KernelNotFoundForImage(image_id=image_id)
-
-        try:
-            ramdisk_id = image_meta['properties']['ramdisk_id']
-        except KeyError:
-            raise exception.RamdiskNotFoundForImage(image_id=image_id)
-
-        return kernel_id, ramdisk_id
-
 
 class ControllerV10(Controller):
     def _image_id_from_req_data(self, data):
@@ -727,92 +599,5 @@ class ControllerV11(Controller):
         response.empty_body = True
         return response
 
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        password = server.get('adminPass')
-        if password is None:
-            return utils.generate_password(16)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(msg)
-        return password
-
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
-
-
-class ServerCreateRequestXMLDeserializer(object):
-    """
-    Deserializer to handle xml-formatted server create requests.
-
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    def deserialize(self, string):
-        """Deserialize an xml-formatted server create request"""
-        dom = minidom.parseString(string)
-        server = self._extract_server(dom)
-        return {'server': server}
-
-    def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request"""
-        server = {}
-        server_node = self._find_first_child_named(node, 'server')
-        for attr in ["name", "imageId", "flavorId", "imageRef", "flavorRef"]:
-            if server_node.getAttribute(attr):
-                server[attr] = server_node.getAttribute(attr)
-        metadata = self._extract_metadata(server_node)
-        if metadata is not None:
-            server["metadata"] = metadata
-        personality = self._extract_personality(server_node)
-        if personality is not None:
-            server["personality"] = personality
-        return server
-
-    def _extract_metadata(self, server_node):
-        """Marshal the metadata attribute of a parsed request"""
-        metadata_node = self._find_first_child_named(server_node, "metadata")
-        if metadata_node is None:
-            return None
-        metadata = {}
-        for meta_node in self._find_children_named(metadata_node, "meta"):
-            key = meta_node.getAttribute("key")
-            metadata[key] = self._extract_text(meta_node)
-        return metadata
-
-    def _extract_personality(self, server_node):
-        """Marshal the personality attribute of a parsed request"""
-        personality_node = \
-                self._find_first_child_named(server_node, "personality")
-        if personality_node is None:
-            return None
-        personality = []
-        for file_node in self._find_children_named(personality_node, "file"):
-            item = {}
-            if file_node.hasAttribute("path"):
-                item["path"] = file_node.getAttribute("path")
-            item["contents"] = self._extract_text(file_node)
-            personality.append(item)
-        return personality
-
-    def _find_first_child_named(self, parent, name):
-        """Search a nodes children for the first child with a given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                return node
-        return None
-
-    def _find_children_named(self, parent, name):
-        """Return all of a nodes children who have the given name"""
-        for node in parent.childNodes:
-            if node.nodeName == name:
-                yield node
-
-    def _extract_text(self, node):
-        """Get the text field contained by the given node"""
-        if len(node.childNodes) == 1:
-            child = node.childNodes[0]
-            if child.nodeType == child.TEXT_NODE:
-                return child.nodeValue
-        return ""
