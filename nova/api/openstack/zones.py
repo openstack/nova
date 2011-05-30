@@ -114,6 +114,13 @@ class Controller(common.OpenstackController):
         zone = api.zone_update(context, zone_id, env["zone"])
         return dict(zone=_scrub_zone(zone))
 
+    def boot(self, req):
+        """Creates a new server for a given user while being Zone aware."""
+        reservation_id = \
+                    common.create(req, self.compute_api.create_all_at_once)
+
+        return {'reservation': {'reservation_id': reservation_id}}
+
     @check_encryption_key
     def select(self, req):
         """Returns a weighted list of costs to create instances
