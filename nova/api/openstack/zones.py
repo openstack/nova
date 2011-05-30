@@ -21,9 +21,11 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.api.openstack import create_instance_controller as controller
+
+from nova.compute import api as compute
 from nova.scheduler import api
 
+from nova.api.openstack import create_instance_controller as controller
 
 FLAGS = flags.FLAGS
 
@@ -63,6 +65,10 @@ class Controller(controller.OpenstackCreateInstanceController):
         'application/xml': {
             "attributes": {
                 "zone": ["id", "api_url", "name", "capabilities"]}}}
+
+    def __init__(self):
+        self.compute_api = compute.API()
+        super(Controller, self).__init__()
 
     def index(self, req):
         """Return all zones in brief"""
@@ -122,8 +128,8 @@ class Controller(controller.OpenstackCreateInstanceController):
         
         Returns a reservation ID (a UUID).
         """
-        reservation_id = \
-                    common.create(req, self.compute_api.create_all_at_once)
+        extra_values, reservation_id = \
+                self.create_instance(req, self.compute_api.create_all_at_once)
 
         return {'reservation_id': reservation_id}
 

@@ -73,12 +73,6 @@ class Controller(controller.OpenstackCreateInstanceController):
         """ Returns a list of server details for a given user """
         return self._items(req, is_detail=True)
 
-    def _image_id_from_req_data(self, data):
-        raise NotImplementedError()
-
-    def _flavor_id_from_req_data(self, data):
-        raise NotImplementedError()
-
     def _get_view_builder(self, req):
         raise NotImplementedError()
 
@@ -192,15 +186,6 @@ class Controller(controller.OpenstackCreateInstanceController):
             return faults.Fault(exc.HTTPNotFound())
 
         return exc.HTTPNoContent()
-
-    def _validate_server_name(self, value):
-        if not isinstance(value, basestring):
-            msg = _("Server name is not a string or unicode")
-            raise exc.HTTPBadRequest(msg)
-
-        if value.strip() == '':
-            msg = _("Server name is an empty string")
-            raise exc.HTTPBadRequest(msg)
 
     def _parse_update(self, context, id, inst_dict, update_dict):
         pass

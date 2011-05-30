@@ -52,6 +52,12 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         self._image_service = utils.import_object(FLAGS.image_service)
         super(OpenstackCreateInstanceController, self).__init__()
 
+    def _image_id_from_req_data(self, data):
+        raise NotImplementedError()
+
+    def _flavor_id_from_req_data(self, data):
+        raise NotImplementedError()
+
     def create_instance(self, req, create_method):
         """Creates a new server for the given user. The approach
         used depends on the create_method. For example, the standard
@@ -163,6 +169,15 @@ class OpenstackCreateInstanceController(common.OpenstackController):
             return deserializer.deserialize(request.body)
         else:
             return self._deserialize(request.body, request.get_content_type())
+
+    def _validate_server_name(self, value):
+        if not isinstance(value, basestring):
+            msg = _("Server name is not a string or unicode")
+            raise exc.HTTPBadRequest(msg)
+
+        if value.strip() == '':
+            msg = _("Server name is an empty string")
+            raise exc.HTTPBadRequest(msg)
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
