@@ -333,19 +333,6 @@ class Controller(common.OpenstackController):
 
     def _action_resize(self, input_dict, req, id):
         return exc.HTTPNotImplemented()
-        """ Resizes a given instance to the flavor size requested """
-        try:
-            if 'resize' in input_dict and 'flavorId' in input_dict['resize']:
-                flavor_id = input_dict['resize']['flavorId']
-                self.compute_api.resize(req.environ['nova.context'], id,
-                        flavor_id)
-            else:
-                LOG.exception(_("Missing arguments for resize"))
-                return faults.Fault(exc.HTTPUnprocessableEntity())
-        except Exception, e:
-            LOG.exception(_("Error in resize %s"), e)
-            return faults.Fault(exc.HTTPBadRequest())
-        return exc.HTTPAccepted()
 
     def _action_reboot(self, input_dict, req, id):
         if 'reboot' in input_dict and 'type' in input_dict['reboot']:
