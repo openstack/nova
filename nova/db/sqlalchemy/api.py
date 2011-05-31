@@ -1013,8 +1013,9 @@ def instance_update(context, instance_id, values):
     session = get_session()
     metadata = values.get('metadata')
     if metadata is not None:
+        instance_metadata_delete_all(context, instance_id)
         instance_metadata_update_or_create(context, instance_id,
-                                           values.pop('metadata'), True)
+                                           values.pop('metadata'))
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
@@ -2555,6 +2556,17 @@ def instance_metadata_delete(context, instance_id, key):
 
 
 @require_context
+def instance_metadata_delete_all(context, instance_id):
+    session = get_session()
+    session.query(models.InstanceMetadata).\
+        filter_by(instance_id=instance_id).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': datetime.datetime.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
 def instance_metadata_get_item(context, instance_id, key):
     session = get_session()
 
@@ -2571,8 +2583,7 @@ def instance_metadata_get_item(context, instance_id, key):
 
 
 @require_context
-def instance_metadata_update_or_create(context, instance_id, metadata,
-                                       purge=False):
+def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
 
     original_metadata = instance_metadata_get(context, instance_id)
@@ -2588,10 +2599,5 @@ def instance_metadata_update_or_create(context, instance_id, metadata,
                             "instance_id": instance_id,
                             "deleted": 0})
         meta_ref.save(session=session)
-
-    if purge:
-        for key in original_metadata.keys():
-            if not key in metadata.keys():
-                instance_metadata_delete(context, instance_id, key)
 
     return metadata
