@@ -63,7 +63,7 @@ class LocalImageService(service.BaseImageService):
                 images.append(unhexed_image_id)
         return images
 
-    def index(self, context):
+    def index(self, context, *args, **kwargs):
         filtered = []
         image_metas = self.detail(context)
         for image_meta in image_metas:
@@ -71,7 +71,7 @@ class LocalImageService(service.BaseImageService):
             filtered.append(meta)
         return filtered
 
-    def detail(self, context):
+    def detail(self, context, *args, **kwargs):
         images = []
         for image_id in self._ids():
             try:
