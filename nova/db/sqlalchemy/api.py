@@ -771,6 +771,15 @@ def fixed_ip_update(context, address, values):
 
 
 ###################
+def _metadata_refs(metadata_dict):
+    metadata_refs = []
+    if metadata_dict:
+        for k, v in metadata_dict.iteritems():
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref['key'] = k
+            metadata_ref['value'] = v
+            metadata_refs.append(metadata_ref)
+    return metadata_refs
 
 
 @require_context
@@ -780,15 +789,7 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
-    metadata = values.get('metadata')
-    metadata_refs = []
-    if metadata:
-        for k, v in metadata.iteritems():
-            metadata_ref = models.InstanceMetadata()
-            metadata_ref['key'] = k
-            metadata_ref['value'] = v
-            metadata_refs.append(metadata_ref)
-    values['metadata'] = metadata_refs
+    values['metadata'] = _metadata_refs(values.get('metadata'))
 
     instance_ref = models.Instance()
     instance_ref.update(values)
@@ -1010,6 +1011,11 @@ def instance_set_state(context, instance_id, state, description=None):
 @require_context
 def instance_update(context, instance_id, values):
     session = get_session()
+    metadata = values.get('metadata')
+    if metadata is not None:
+        instance_metadata_delete_all(context, instance_id)
+        instance_metadata_update_or_create(context, instance_id,
+                                           values.pop('metadata'))
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
@@ -1784,6 +1790,82 @@ def volume_update(context, volume_id, values):
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
+
+
+###################
+
+
+@require_context
+def snapshot_create(context, values):
+    snapshot_ref = models.Snapshot()
+    snapshot_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        snapshot_ref.save(session=session)
+    return snapshot_ref
+
+
+@require_admin_context
+def snapshot_destroy(context, snapshot_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.Snapshot).\
+                filter_by(id=snapshot_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def snapshot_get(context, snapshot_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Snapshot).\
+                         filter_by(id=snapshot_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Snapshot).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=snapshot_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
+
+    return result
+
+
+@require_admin_context
+def snapshot_get_all(context):
+    session = get_session()
+    return session.query(models.Snapshot).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def snapshot_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.Snapshot).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def snapshot_update(context, snapshot_id, values):
+    session = get_session()
+    with session.begin():
+        snapshot_ref = snapshot_get(context, snapshot_id, session=session)
+        snapshot_ref.update(values)
+        snapshot_ref.save(session=session)
 
 
 ###################
@@ -2569,6 +2651,17 @@ def instance_metadata_delete(context, instance_id, key):
 
 
 @require_context
+def instance_metadata_delete_all(context, instance_id):
+    session = get_session()
+    session.query(models.InstanceMetadata).\
+        filter_by(instance_id=instance_id).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': datetime.datetime.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
 def instance_metadata_get_item(context, instance_id, key):
     session = get_session()
 
@@ -2587,6 +2680,9 @@ def instance_metadata_get_item(context, instance_id, key):
 @require_context
 def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
+
+    original_metadata = instance_metadata_get(context, instance_id)
+
     meta_ref = None
     for key, value in metadata.iteritems():
         try:
@@ -2598,4 +2694,5 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
                             "instance_id": instance_id,
                             "deleted": 0})
         meta_ref.save(session=session)
+
     return metadata
