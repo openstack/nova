@@ -81,34 +81,36 @@ def inject_data(image, key=None, net=None, partition=None, nbd=False):
         else:
             mapped_device = device
 
-        # We can only loopback mount raw images. If the device isn't there,
-        # it's normally because it's a .vmdk or a .vdi etc
-        if not os.path.exists(mapped_device):
-            raise exception.Error('Mapped device was not found (we can'
-                                  ' only inject raw disk images): %s' %
-                                  mapped_device)
-
-        # Configure ext2fs so that it doesn't auto-check every N boots
-        out, err = utils.execute('sudo', 'tune2fs',
-                                 '-c', 0, '-i', 0, mapped_device)
-
-        tmpdir = tempfile.mkdtemp()
         try:
-            # mount loopback to dir
-            out, err = utils.execute(
-                    'sudo', 'mount', mapped_device, tmpdir)
-            if err:
-                raise exception.Error(_('Failed to mount filesystem: %s')
-                                      % err)
+            # We can only loopback mount raw images. If the device isn't there,
+            # it's normally because it's a .vmdk or a .vdi etc
+            if not os.path.exists(mapped_device):
+                raise exception.Error('Mapped device was not found (we can'
+                                      ' only inject raw disk images): %s' %
+                                      mapped_device)
 
+            # Configure ext2fs so that it doesn't auto-check every N boots
+            out, err = utils.execute('sudo', 'tune2fs',
+                                     '-c', 0, '-i', 0, mapped_device)
+
+            tmpdir = tempfile.mkdtemp()
             try:
-                inject_data_into_fs(tmpdir, key, net, utils.execute)
+                # mount loopback to dir
+                out, err = utils.execute(
+                        'sudo', 'mount', mapped_device, tmpdir)
+                if err:
+                    raise exception.Error(_('Failed to mount filesystem: %s')
+                                          % err)
+
+                try:
+                    inject_data_into_fs(tmpdir, key, net, utils.execute)
+                finally:
+                    # unmount device
+                    utils.execute('sudo', 'umount', mapped_device)
             finally:
-                # unmount device
-                utils.execute('sudo', 'umount', mapped_device)
+                # remove temporary directory
+                utils.execute('rmdir', tmpdir)
         finally:
-            # remove temporary directory
-            utils.execute('rmdir', tmpdir)
             if not partition is None:
                 # remove partitions
                 utils.execute('sudo', 'kpartx', '-d', device)

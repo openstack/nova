@@ -180,7 +180,8 @@ class Controller(common.OpenstackController):
                 key_name=key_name,
                 key_data=key_data,
                 metadata=env['server'].get('metadata', {}),
-                injected_files=injected_files)
+                injected_files=injected_files,
+                admin_password=password)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
@@ -190,8 +191,6 @@ class Controller(common.OpenstackController):
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = password
-        self.compute_api.set_admin_password(context, server['server']['id'],
-                                            password)
         return server
 
     def _deserialize_create(self, request):
@@ -608,8 +607,8 @@ class ControllerV10(Controller):
 
     def _parse_update(self, context, server_id, inst_dict, update_dict):
         if 'adminPass' in inst_dict['server']:
-            update_dict['admin_pass'] = inst_dict['server']['adminPass']
-            self.compute_api.set_admin_password(context, server_id)
+            self.compute_api.set_admin_password(context, server_id,
+                    inst_dict['server']['adminPass'])
 
     def _action_rebuild(self, info, request, instance_id):
         context = request.environ['nova.context']
@@ -709,14 +708,16 @@ class ControllerV11(Controller):
 
         image_id = common.get_id_from_href(image_ref)
         personalities = info["rebuild"].get("personality", [])
-        metadata = info["rebuild"].get("metadata", {})
+        metadata = info["rebuild"].get("metadata")
+        name = info["rebuild"].get("name")
 
-        self._validate_metadata(metadata)
+        if metadata:
+            self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
         try:
-            self.compute_api.rebuild(context, instance_id, image_id, metadata,
-                                     personalities)
+            self.compute_api.rebuild(context, instance_id, image_id, name,
+                                     metadata, personalities)
         except exception.BuildInProgress:
             msg = _("Instance %d is currently being rebuilt.") % instance_id
             LOG.debug(msg)

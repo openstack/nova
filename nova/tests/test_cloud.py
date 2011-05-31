@@ -17,13 +17,9 @@
 #    under the License.
 
 from base64 import b64decode
-import json
 from M2Crypto import BIO
 from M2Crypto import RSA
 import os
-import shutil
-import tempfile
-import time
 
 from eventlet import greenthread
 
@@ -33,12 +29,10 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova import rpc
-from nova import service
 from nova import test
 from nova import utils
 from nova import exception
 from nova.auth import manager
-from nova.compute import power_state
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
@@ -79,14 +73,21 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
 
+        # NOTE(vish): set up a manual wait so rpc.cast has a chance to finish
+        rpc_cast = rpc.cast
+
+        def finish_cast(*args, **kwargs):
+            rpc_cast(*args, **kwargs)
+            greenthread.sleep(0.2)
+
+        self.stubs.Set(rpc, 'cast', finish_cast)
+
     def tearDown(self):
         network_ref = db.project_get_network(self.context,
                                              self.project.id)
         db.network_disassociate(self.context, network_ref['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
-        self.compute.kill()
-        self.network.kill()
         super(CloudTestCase, self).tearDown()
 
     def _create_key(self, name):
@@ -113,7 +114,6 @@ class CloudTestCase(test.TestCase):
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
                                   public_ip=address)
-        greenthread.sleep(0.3)
         db.floating_ip_destroy(self.context, address)
 
     def test_associate_disassociate_address(self):
@@ -129,12 +129,10 @@ class CloudTestCase(test.TestCase):
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
-        greenthread.sleep(0.3)
         self.cloud.disassociate_address(self.context,
                                         public_ip=address)
         self.cloud.release_address(self.context,
                                   public_ip=address)
-        greenthread.sleep(0.3)
         self.network.deallocate_fixed_ip(self.context, fixed)
         db.instance_destroy(self.context, inst['id'])
         db.floating_ip_destroy(self.context, address)
@@ -171,6 +169,25 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+    def test_create_volume_from_snapshot(self):
+        """Makes sure create_volume works when we specify a snapshot."""
+        vol = db.volume_create(self.context, {'size': 1})
+        snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
+                                                 'volume_size': vol['size'],
+                                                 'status': "available"})
+        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+
+        result = self.cloud.create_volume(self.context,
+                                          snapshot_id=snapshot_id)
+        volume_id = result['volumeId']
+        result = self.cloud.describe_volumes(self.context)
+        self.assertEqual(len(result['volumeSet']), 2)
+        self.assertEqual(result['volumeSet'][1]['volumeId'], volume_id)
+
+        db.volume_destroy(self.context, ec2utils.ec2_id_to_id(volume_id))
+        db.snapshot_destroy(self.context, snap['id'])
+        db.volume_destroy(self.context, vol['id'])
+
     def test_describe_availability_zones(self):
         """Makes sure describe_availability_zones works and filters results."""
         service1 = db.service_create(self.context, {'host': 'host1_zones',
@@ -187,6 +204,52 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['availabilityZoneInfo']), 3)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
+
+    def test_describe_snapshots(self):
+        """Makes sure describe_snapshots works and filters results."""
+        vol = db.volume_create(self.context, {})
+        snap1 = db.snapshot_create(self.context, {'volume_id': vol['id']})
+        snap2 = db.snapshot_create(self.context, {'volume_id': vol['id']})
+        result = self.cloud.describe_snapshots(self.context)
+        self.assertEqual(len(result['snapshotSet']), 2)
+        snapshot_id = ec2utils.id_to_ec2_id(snap2['id'], 'snap-%08x')
+        result = self.cloud.describe_snapshots(self.context,
+                                               snapshot_id=[snapshot_id])
+        self.assertEqual(len(result['snapshotSet']), 1)
+        self.assertEqual(
+            ec2utils.ec2_id_to_id(result['snapshotSet'][0]['snapshotId']),
+            snap2['id'])
+        db.snapshot_destroy(self.context, snap1['id'])
+        db.snapshot_destroy(self.context, snap2['id'])
+        db.volume_destroy(self.context, vol['id'])
+
+    def test_create_snapshot(self):
+        """Makes sure create_snapshot works."""
+        vol = db.volume_create(self.context, {'status': "available"})
+        volume_id = ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x')
+
+        result = self.cloud.create_snapshot(self.context,
+                                            volume_id=volume_id)
+        snapshot_id = result['snapshotId']
+        result = self.cloud.describe_snapshots(self.context)
+        self.assertEqual(len(result['snapshotSet']), 1)
+        self.assertEqual(result['snapshotSet'][0]['snapshotId'], snapshot_id)
+
+        db.snapshot_destroy(self.context, ec2utils.ec2_id_to_id(snapshot_id))
+        db.volume_destroy(self.context, vol['id'])
+
+    def test_delete_snapshot(self):
+        """Makes sure delete_snapshot works."""
+        vol = db.volume_create(self.context, {'status': "available"})
+        snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
+                                                  'status': "available"})
+        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+
+        result = self.cloud.delete_snapshot(self.context,
+                                            snapshot_id=snapshot_id)
+        self.assertTrue(result)
+
+        db.volume_destroy(self.context, vol['id'])
 
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
@@ -306,31 +369,25 @@ class CloudTestCase(test.TestCase):
                   'instance_type': instance_type,
                   'max_count': max_count}
         rv = self.cloud.run_instances(self.context, **kwargs)
-        greenthread.sleep(0.3)
         instance_id = rv['instancesSet'][0]['instanceId']
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE?OUTPUT')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
-        greenthread.sleep(0.3)
         rv = self.cloud.terminate_instances(self.context, [instance_id])
-        greenthread.sleep(0.3)
 
     def test_ajax_console(self):
         kwargs = {'image_id': 'ami-1'}
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
-        greenthread.sleep(0.3)
         output = self.cloud.get_ajax_console(context=self.context,
                                              instance_id=[instance_id])
         self.assertEquals(output['url'],
                           '%s/?token=FAKETOKEN' % FLAGS.ajax_console_proxy_url)
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
-        greenthread.sleep(0.3)
         rv = self.cloud.terminate_instances(self.context, [instance_id])
-        greenthread.sleep(0.3)
 
     def test_key_generation(self):
         result = self._create_key('test')
@@ -353,6 +410,36 @@ class CloudTestCase(test.TestCase):
         keys = result["keySet"]
         self.assertTrue(filter(lambda k: k['keyName'] == 'test1', keys))
         self.assertTrue(filter(lambda k: k['keyName'] == 'test2', keys))
+
+    def test_import_public_key(self):
+        # test when user provides all values
+        result1 = self.cloud.import_public_key(self.context,
+                                               'testimportkey1',
+                                               'mytestpubkey',
+                                               'mytestfprint')
+        self.assertTrue(result1)
+        keydata = db.key_pair_get(self.context,
+                                  self.context.user.id,
+                                  'testimportkey1')
+        self.assertEqual('mytestpubkey', keydata['public_key'])
+        self.assertEqual('mytestfprint', keydata['fingerprint'])
+        # test when user omits fingerprint
+        pubkey_path = os.path.join(os.path.dirname(__file__), 'public_key')
+        f = open(pubkey_path + '/dummy.pub', 'r')
+        dummypub = f.readline().rstrip()
+        f.close
+        f = open(pubkey_path + '/dummy.fingerprint', 'r')
+        dummyfprint = f.readline().rstrip()
+        f.close
+        result2 = self.cloud.import_public_key(self.context,
+                                               'testimportkey2',
+                                               dummypub)
+        self.assertTrue(result2)
+        keydata = db.key_pair_get(self.context,
+                                  self.context.user.id,
+                                  'testimportkey2')
+        self.assertEqual(dummypub, keydata['public_key'])
+        self.assertEqual(dummyfprint, keydata['fingerprint'])
 
     def test_delete_key_pair(self):
         self._create_key('test')

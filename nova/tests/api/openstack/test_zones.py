@@ -21,6 +21,7 @@ import json
 import nova.db
 from nova import context
 from nova import crypto
+from nova import exception
 from nova import flags
 from nova import test
 from nova.api.openstack import zones

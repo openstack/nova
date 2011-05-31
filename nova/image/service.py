@@ -46,7 +46,7 @@ class BaseImageService(object):
     # the ImageService subclass
     SERVICE_IMAGE_ATTRS = []
 
-    def index(self, context):
+    def index(self, context, *args, **kwargs):
         """List images.
 
         :returns: a sequence of mappings with the following signature
@@ -55,7 +55,7 @@ class BaseImageService(object):
         """
         raise NotImplementedError
 
-    def detail(self, context):
+    def detail(self, context, *args, **kwargs):
         """Detailed information about an images.
 
         :returns: a sequence of mappings with the following signature

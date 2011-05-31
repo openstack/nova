@@ -45,10 +45,11 @@ class VolumeTestCase(test.TestCase):
         self.context = context.get_admin_context()
 
     @staticmethod
-    def _create_volume(size='0'):
+    def _create_volume(size='0', snapshot_id=None):
         """Create a volume object."""
         vol = {}
         vol['size'] = size
+        vol['snapshot_id'] = snapshot_id
         vol['user_id'] = 'fake'
         vol['project_id'] = 'fake'
         vol['availability_zone'] = FLAGS.storage_availability_zone
@@ -68,6 +69,25 @@ class VolumeTestCase(test.TestCase):
                           db.volume_get,
                           self.context,
                           volume_id)
+
+    def test_create_volume_from_snapshot(self):
+        """Test volume can be created from a snapshot."""
+        volume_src_id = self._create_volume()
+        self.volume.create_volume(self.context, volume_src_id)
+        snapshot_id = self._create_snapshot(volume_src_id)
+        self.volume.create_snapshot(self.context, volume_src_id, snapshot_id)
+        volume_dst_id = self._create_volume(0, snapshot_id)
+        self.volume.create_volume(self.context, volume_dst_id, snapshot_id)
+        self.assertEqual(volume_dst_id, db.volume_get(
+                context.get_admin_context(),
+                volume_dst_id).id)
+        self.assertEqual(snapshot_id, db.volume_get(
+                context.get_admin_context(),
+                volume_dst_id).snapshot_id)
+
+        self.volume.delete_volume(self.context, volume_dst_id)
+        self.volume.delete_snapshot(self.context, snapshot_id)
+        self.volume.delete_volume(self.context, volume_src_id)
 
     def test_too_big_volume(self):
         """Ensure failure if a too large of a volume is requested."""
@@ -175,6 +195,34 @@ class VolumeTestCase(test.TestCase):
         # each of them having a different FLAG for storage_node
         # This will allow us to test cross-node interactions
         pass
+
+    @staticmethod
+    def _create_snapshot(volume_id, size='0'):
+        """Create a snapshot object."""
+        snap = {}
+        snap['volume_size'] = size
+        snap['user_id'] = 'fake'
+        snap['project_id'] = 'fake'
+        snap['volume_id'] = volume_id
+        snap['status'] = "creating"
+        return db.snapshot_create(context.get_admin_context(), snap)['id']
+
+    def test_create_delete_snapshot(self):
+        """Test snapshot can be created and deleted."""
+        volume_id = self._create_volume()
+        self.volume.create_volume(self.context, volume_id)
+        snapshot_id = self._create_snapshot(volume_id)
+        self.volume.create_snapshot(self.context, volume_id, snapshot_id)
+        self.assertEqual(snapshot_id,
+                         db.snapshot_get(context.get_admin_context(),
+                                         snapshot_id).id)
+
+        self.volume.delete_snapshot(self.context, snapshot_id)
+        self.assertRaises(exception.NotFound,
+                          db.snapshot_get,
+                          self.context,
+                          snapshot_id)
+        self.volume.delete_volume(self.context, volume_id)
 
 
 class DriverTestCase(test.TestCase):
