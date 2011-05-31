@@ -30,7 +30,7 @@ from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
-from nova.tests.network import base
+from nova.tests.network import old_base as base
 
 
 FLAGS = flags.FLAGS
