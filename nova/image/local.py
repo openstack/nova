@@ -64,6 +64,7 @@ class LocalImageService(service.BaseImageService):
         return images
 
     def index(self, context, filters=None, marker=None, limit=None):
+        # TODO(blamar): Make use of filters, marker, and limit
         filtered = []
         image_metas = self.detail(context)
         for image_meta in image_metas:
@@ -72,6 +73,7 @@ class LocalImageService(service.BaseImageService):
         return filtered
 
     def detail(self, context, filters=None, marker=None, limit=None):
+        # TODO(blamar): Make use of filters, marker, and limit
         images = []
         for image_id in self._ids():
             try:

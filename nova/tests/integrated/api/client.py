@@ -152,7 +152,10 @@ class TestOpenStackClient(object):
     def _decode_json(self, response):
         body = response.read()
         LOG.debug(_("Decoding JSON: %s") % (body))
-        return json.loads(body)
+        if body:
+            return json.loads(body)
+        else:
+            return ""
 
     def api_get(self, relative_uri, **kwargs):
         kwargs.setdefault('check_response_status', [200])
@@ -166,7 +169,7 @@ class TestOpenStackClient(object):
             headers['Content-Type'] = 'application/json'
             kwargs['body'] = json.dumps(body)
 
-        kwargs.setdefault('check_response_status', [200])
+        kwargs.setdefault('check_response_status', [200, 202])
         response = self.api_request(relative_uri, **kwargs)
         return self._decode_json(response)
 
@@ -184,6 +187,9 @@ class TestOpenStackClient(object):
 
     def post_server(self, server):
         return self.api_post('/servers', server)['server']
+
+    def post_server_action(self, server_id, data):
+        return self.api_post('/servers/%s/action' % server_id, data)
 
     def delete_server(self, server_id):
         return self.api_delete('/servers/%s' % server_id)

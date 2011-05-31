@@ -182,10 +182,10 @@ def stub_out_glance(stubs, initial_fixtures=None):
                 if f['id'] == marker:
                     found = True
 
-            return [dict(id=f['id'], name=f['name']) 
+            return [dict(id=f['id'], name=f['name'])
                     for f in fixtures]
 
-        def fake_get_images_detailed(self, filters=None, 
+        def fake_get_images_detailed(self, filters=None,
                                      marker=None, limit=None):
             found = True
             if marker: found = False
@@ -204,7 +204,6 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
 
             return fixtures
-
 
         def fake_get_image_meta(self, image_id):
             image = self._find_image(image_id)

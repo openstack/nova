@@ -708,14 +708,16 @@ class ControllerV11(Controller):
 
         image_id = common.get_id_from_href(image_ref)
         personalities = info["rebuild"].get("personality", [])
-        metadata = info["rebuild"].get("metadata", {})
+        metadata = info["rebuild"].get("metadata")
+        name = info["rebuild"].get("name")
 
-        self._validate_metadata(metadata)
+        if metadata:
+            self._validate_metadata(metadata)
         self._decode_personalities(personalities)
 
         try:
-            self.compute_api.rebuild(context, instance_id, image_id, metadata,
-                                     personalities)
+            self.compute_api.rebuild(context, instance_id, image_id, name,
+                                     metadata, personalities)
         except exception.BuildInProgress:
             msg = _("Instance %d is currently being rebuilt.") % instance_id
             LOG.debug(msg)
