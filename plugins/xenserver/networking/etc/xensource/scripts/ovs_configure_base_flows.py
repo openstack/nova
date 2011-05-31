@@ -34,13 +34,13 @@ def main(command, phys_dev_name, bridge_name):
     ovs_ofctl('del-flows', bridge_name)
 
     if command in ('online', 'reset'):
-        pnic_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get', 'Interface',
-                                         phys_dev_name, 'ofport')
+        pnic_ofport = execute_get_output('/usr/bin/ovs-vsctl', 'get',
+                                         'Interface', phys_dev_name, 'ofport')
 
         # these flows are lower priority than all VM-specific flows.
 
-        # allow all traffic from the physical NIC, as it is trusted (i.e., from a
-        # filtered vif, or from the physical infrastructure
+        # allow all traffic from the physical NIC, as it is trusted (i.e.,
+        # from a filtered vif, or from the physical infrastructure)
         ovs_ofctl('add-flow', bridge_name,
                   "priority=2,in_port=%s,actions=normal" % pnic_ofport)
 
@@ -53,7 +53,8 @@ if __name__ == "__main__":
         print sys.argv
         script_name = os.path.basename(sys.argv[0])
         print "This script configures base ovs flows."
-        print "usage: %s [online|offline|reset] phys-dev-name bridge-name" % script_name
+        print "usage: %s [online|offline|reset] phys-dev-name bridge-name" \
+                % script_name
         print "   ex: %s online eth0 xenbr0" % script_name
         sys.exit(1)
     else:
