@@ -43,25 +43,18 @@ def upgrade(migrate_engine):
         migrate_engine.execute("ALTER TABLE networks Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE projects Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE quotas Engine=InnoDB")
-
         migrate_engine.execute(
          "ALTER TABLE security_group_instance_association Engine=InnoDB")
-
         migrate_engine.execute(
          "ALTER TABLE security_group_rules Engine=InnoDB")
-
         migrate_engine.execute("ALTER TABLE security_groups Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE services Engine=InnoDB")
-
         migrate_engine.execute(
          "ALTER TABLE user_project_association Engine=InnoDB")
-
         migrate_engine.execute(
          "ALTER TABLE user_project_role_association Engine=InnoDB")
-
         migrate_engine.execute(
          "ALTER TABLE user_role_association Engine=InnoDB")
-
         migrate_engine.execute("ALTER TABLE users Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE volumes Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE zones Engine=InnoDB")
