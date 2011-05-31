@@ -81,7 +81,7 @@ class FirewallDriver(object):
 
         Gets called when a rule has been added to or removed from
         the list of rules (via admin api).
-        
+
         """
         raise NotImplementedError()
 
@@ -306,7 +306,7 @@ class NWFilterFirewall(FirewallDriver):
 
     def prepare_instance_filter(self, instance, network_info=None):
         """Creates an NWFilter for the given instance.
-        
+
         In the process, it makes sure the filters for the provider blocks,
         security groups, and base filter are all in place.
 
