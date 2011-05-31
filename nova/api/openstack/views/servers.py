@@ -116,7 +116,7 @@ class ViewBuilderV10(ViewBuilder):
         if 'image_ref' in dict(inst):
             image_ref = inst['image_ref']
             if str(image_ref).startswith('http'):
-                raise exception.ListingImageRefsNotSupported();
+                raise exception.ListingImageRefsNotSupported()
             response['imageId'] = int(image_ref)
 
     def _build_flavor(self, response, inst):
