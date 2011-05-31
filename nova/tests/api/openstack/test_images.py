@@ -226,6 +226,74 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         expected = {'name': 'test image', 'properties': {}}
         self.assertDictMatch(self.sent_to_glance['metadata'], expected)
 
+    def test_index_default_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context)
+        i = 0
+        for meta in image_metas:
+            expected = {'id': 'DONTCARE', 
+                         'name': 'TestImage %d' % (i)}
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_index_marker(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context, marker=ids[1])
+        self.assertEquals(len(image_metas), 8)
+        i = 2
+        for meta in image_metas:
+            expected = {'id': 'DONTCARE', 
+                         'name': 'TestImage %d' % (i)}
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_index_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context, limit=3)
+        self.assertEquals(len(image_metas), 3)
+
+    def test_index_marker_and_limit(self):
+        fixtures = []
+        ids = []
+        for i in range(10):
+            fixture = self._make_fixture('TestImage %d' % (i))
+            fixtures.append(fixture)
+            ids.append(self.service.create(self.context, fixture)['id'])
+
+        image_metas = self.service.index(self.context, marker=ids[3], limit=1)
+        self.assertEquals(len(image_metas), 1)
+        i = 4
+        for meta in image_metas:
+            expected = {'id': 'DONTCARE', 
+                         'name': 'TestImage %d' % (i)}
+            self.assertDictMatch(meta, expected)
+            i = i + 1
+
+    def test_detail(self):
+        fixture = self._make_fixture('test image')
+        image_id = self.service.create(self.context, fixture)['id']
+        image_metas = self.service.index(self.context)
+        expected = [{'id': 'DONTCARE', 'name': 'test image'}]
+        self.assertDictListMatch(image_metas, expected)
+
 
 class ImageControllerWithGlanceServiceTest(test.TestCase):
     """
