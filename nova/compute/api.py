@@ -530,7 +530,7 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_id, metadata=None,
+    def rebuild(self, context, instance_id, image_id, name=None, metadata=None,
                 files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
@@ -539,13 +539,16 @@ class API(base.Base):
             msg = _("Instance already building")
             raise exception.BuildInProgress(msg)
 
-        metadata = metadata or {}
-        self._check_metadata_properties_quota(context, metadata)
-
         files_to_inject = files_to_inject or []
         self._check_injected_file_quota(context, files_to_inject)
 
-        self.db.instance_update(context, instance_id, {"metadata": metadata})
+        values = {}
+        if metadata is not None:
+            self._check_metadata_properties_quota(context, metadata)
+            values['metadata'] = metadata
+        if name is not None:
+            values['display_name'] = name
+        self.db.instance_update(context, instance_id, values)
 
         rebuild_params = {
             "image_id": image_id,
