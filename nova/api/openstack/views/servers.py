@@ -18,6 +18,7 @@
 import hashlib
 import os
 
+from nova import exception
 from nova.compute import power_state
 import nova.compute
 import nova.context
@@ -113,7 +114,10 @@ class ViewBuilderV10(ViewBuilder):
 
     def _build_image(self, response, inst):
         if 'image_ref' in dict(inst):
-            response['imageId'] = int(inst['image_ref'])
+            image_ref = inst['image_ref']
+            if str(image_ref).startswith('http'):
+                raise exception.ListingImageRefsNotSupported();
+            response['imageId'] = int(image_ref)
 
     def _build_flavor(self, response, inst):
         if 'instance_type' in dict(inst):

@@ -69,11 +69,19 @@ class Controller(common.OpenstackController):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, is_detail=False)
+        try:
+            servers = self._items(req, is_detail=False)
+        except exception.Invalid as err:
+            return exc.HTTPBadRequest(str(err))
+        return servers
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, is_detail=True)
+        try:
+            servers = self._items(req, is_detail=True)
+        except exception.Invalid as err:
+            return exc.HTTPBadRequest(str(err))
+        return servers
 
     def _image_ref_from_req_data(self, data):
         raise NotImplementedError()

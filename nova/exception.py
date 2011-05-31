@@ -284,7 +284,12 @@ class DiskNotFound(NotFound):
 
 
 class InvalidImageRef(Invalid):
-    message = _("Invalid image ref %(image_href)s.")
+    message = _("Invalid image href %(image_href)s.")
+
+
+class ListingImageRefsNotSupported(Invalid):
+    message = _("Some images have been stored via hrefs."
+        + " This version of the api does not support displaying image hrefs.")
 
 
 class ImageNotFound(NotFound):
