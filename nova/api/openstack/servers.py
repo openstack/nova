@@ -491,10 +491,6 @@ class ControllerV10(Controller):
         response.empty_body = True
         return response
 
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        return utils.generate_password(16)
-
 
 class ControllerV11(Controller):
     def _image_id_from_req_data(self, data):

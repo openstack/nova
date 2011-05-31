@@ -59,7 +59,8 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         raise NotImplementedError()
 
     def _get_server_admin_password(self, server):
-        raise NotImplementedError()
+        """ Determine the admin password for a server on creation """
+        return utils.generate_password(16)
 
     def create_instance(self, req, create_method):
         """Creates a new server for the given user. The approach

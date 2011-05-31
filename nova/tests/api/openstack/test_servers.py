@@ -218,7 +218,6 @@ class ServersTest(test.TestCase):
             },
         ]
 
-        print res_dict['server']
         self.assertEqual(res_dict['server']['links'], expected_links)
 
     def test_get_server_by_id_with_addresses_xml(self):
@@ -484,7 +483,9 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
-        self.stubs.Set(nova.api.openstack.servers.Controller,
+        self.stubs.Set(
+            nova.api.openstack.create_instance_controller.\
+                                    OpenstackCreateInstanceController,
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
         self.stubs.Set(nova.api.openstack.common,
             "get_image_id_from_image_hash", image_id_from_hash)
@@ -514,6 +515,28 @@ class ServersTest(test.TestCase):
 
     def test_create_instance(self):
         self._test_create_instance_helper()
+
+    def test_create_instance_via_zones(self):
+        """Server generated ReservationID"""
+        self._setup_for_create_instance()
+        FLAGS.allow_admin_api = True
+
+        body = dict(server=dict(
+            name='server_test', imageId=3, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.0/zones/boot')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        reservation_id = json.loads(res.body)['reservation_id']
+        self.assertEqual(res.status_int, 200)
+        self.assertNotEqual(reservation_id, "")
+        self.assertNotEqual(reservation_id, None)
+        self.assertTrue(len(reservation_id) > 1)
 
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
