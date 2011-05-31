@@ -75,7 +75,8 @@ class MetadataRequestHandler(wsgi.Application):
         try:
             meta_data = cc.get_metadata(remote_address)
         except Exception:
-            LOG.exception(_('Failed to get metadata for ip: %s'), remote_address)
+            LOG.exception(_('Failed to get metadata for ip: %s'),
+                          remote_address)
             msg = _('An unknown error has occurred. '
                     'Please try your request again.')
             exc = webob.exc.HTTPInternalServerError(explanation=unicode(msg))
