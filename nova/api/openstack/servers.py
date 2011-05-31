@@ -116,13 +116,17 @@ class Controller(controller.OpenstackCreateInstanceController):
 
     def create(self, req):
         """ Creates a new server for a given user """
-        extra_values, instances = \
+        extra_values, result = \
                 self.create_instance(req, self.compute_api.create)
+        if extra_values is None:
+            return result  # a Fault.
+
+        instances = result
 
         (inst, ) = instances
         for key in ['instance_type', 'image_id']:
             inst[key] = extra_values[key]
- 
+
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = extra_values['password']
@@ -155,10 +159,6 @@ class Controller(controller.OpenstackCreateInstanceController):
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
         return injected_files
-
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        return utils.generate_password(16)
 
     @scheduler_api.redirect_handler
     def update(self, req, id):
@@ -491,6 +491,10 @@ class ControllerV10(Controller):
         response.empty_body = True
         return response
 
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return utils.generate_password(16)
+
 
 class ControllerV11(Controller):
     def _image_id_from_req_data(self, data):
@@ -586,3 +590,14 @@ class ControllerV11(Controller):
 
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        password = server.get('adminPass')
+
+        if password is None:
+            return utils.generate_password(16)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(msg)
+        return password

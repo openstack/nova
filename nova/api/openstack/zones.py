@@ -26,6 +26,7 @@ from nova.compute import api as compute
 from nova.scheduler import api
 
 from nova.api.openstack import create_instance_controller as controller
+from nova.api.openstack import common
 
 FLAGS = flags.FLAGS
 
@@ -125,12 +126,15 @@ class Controller(controller.OpenstackCreateInstanceController):
 
     def boot(self, req):
         """Creates a new server for a given user while being Zone aware.
-        
+
         Returns a reservation ID (a UUID).
         """
-        extra_values, reservation_id = \
+        extra_values, result = \
                 self.create_instance(req, self.compute_api.create_all_at_once)
+        if extra_values is None:
+            return result  # a Fault.
 
+        reservation_id = result
         return {'reservation_id': reservation_id}
 
     @check_encryption_key
@@ -156,8 +160,8 @@ class Controller(controller.OpenstackCreateInstanceController):
             cooked.append(dict(weight=entry['weight'],
                 blob=cipher_text))
         return cooked
-        
-    # Assume OS 1.0 functionality for these overrides. 
+
+    # Assume OS 1.0 functionality for these overrides.
 
     def _image_id_from_req_data(self, data):
         return data['server']['imageId']

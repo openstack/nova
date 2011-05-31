@@ -31,6 +31,7 @@ from nova import flags
 from nova import test
 import nova.api.openstack
 from nova.api.openstack import servers
+from nova.api.openstack import create_instance_controller
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -1380,7 +1381,8 @@ class ServersTest(test.TestCase):
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def setUp(self):
-        self.deserializer = servers.ServerCreateRequestXMLDeserializer()
+        self.deserializer = \
+            create_instance_controller.ServerCreateRequestXMLDeserializer()
 
     def test_minimal_request(self):
         serial_request = """

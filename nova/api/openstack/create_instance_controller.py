@@ -46,7 +46,7 @@ class OpenstackCreateInstanceController(common.OpenstackController):
     Once we stabilize the Zones portion of the API we may be able
     to move this code back into servers.py
     """
-    
+
     def __init__(self):
         """We need the image service to create an instance."""
         self._image_service = utils.import_object(FLAGS.image_service)
@@ -58,19 +58,22 @@ class OpenstackCreateInstanceController(common.OpenstackController):
     def _flavor_id_from_req_data(self, data):
         raise NotImplementedError()
 
+    def _get_server_admin_password(self, server):
+        raise NotImplementedError()
+
     def create_instance(self, req, create_method):
         """Creates a new server for the given user. The approach
         used depends on the create_method. For example, the standard
-        POST /server call uses compute.api.create(), while 
+        POST /server call uses compute.api.create(), while
         POST /zones/server uses compute.api.create_all_at_once().
 
         The problem is, both approaches return different values (i.e.
         [instance dicts] vs. reservation_id). So the handling of the
-        return type from this method is left to the caller. 
+        return type from this method is left to the caller.
         """
         env = self._deserialize_create(req)
         if not env:
-            return faults.Fault(exc.HTTPUnprocessableEntity())
+            return (None, faults.Fault(exc.HTTPUnprocessableEntity()))
 
         context = req.environ['nova.context']
 
@@ -90,7 +93,7 @@ class OpenstackCreateInstanceController(common.OpenstackController):
                 context, requested_image_id)
         except:
             msg = _("Can not find requested image")
-            return faults.Fault(exc.HTTPBadRequest(msg))
+            return (None, faults.Fault(exc.HTTPBadRequest(msg)))
 
         kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
             req, image_id)
@@ -104,13 +107,13 @@ class OpenstackCreateInstanceController(common.OpenstackController):
 
         if not 'name' in env['server']:
             msg = _("Server name is not defined")
-            return exc.HTTPBadRequest(msg)
-
-        zone_blob = env['server'].get('blob')
-        reservation_id = env['server'].get('reservation_id')
+            return (None, exc.HTTPBadRequest(msg))
         name = env['server']['name']
         self._validate_server_name(name)
         name = name.strip()
+
+        zone_blob = env['server'].get('blob')
+        reservation_id = env['server'].get('reservation_id')
 
         inst_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
         extra_values = {
@@ -178,16 +181,6 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         if value.strip() == '':
             msg = _("Server name is an empty string")
             raise exc.HTTPBadRequest(msg)
-
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        password = server.get('adminPass')
-        if password is None:
-            return utils.generate_password(16)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(msg)
-        return password
 
     def _get_kernel_ramdisk_from_image(self, req, image_id):
         """Fetch an image from the ImageService, then if present, return the
