@@ -146,7 +146,7 @@ class HostFilterTestCase(test.TestCase):
             self.assertEquals('host%02d' % index, host)
 
         raw = ['not',
-                  ['=', '$compute.host_memory_free', 30],]
+                  ['=', '$compute.host_memory_free', 30], ]
         cooked = json.dumps(raw)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
 
