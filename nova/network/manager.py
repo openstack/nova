@@ -839,7 +839,8 @@ class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
-        if address == FLAGS.vpn_ip:
+        if address == FLAGS.vpn_ip and hasattr(self.driver,
+                                               "ensure_vlan_forward"):
             self.driver.ensure_vlan_forward(FLAGS.vpn_ip,
                                             network['vpn_public_port'],
                                             network['vpn_private_address'])
