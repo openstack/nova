@@ -38,11 +38,11 @@ Role-based access control (RBAC) is an approach to restricting system access to 
 
 Nova’s rights management system employs the RBAC model and currently supports the following five roles:
 
-* **Cloud Administrator.**  (admin) Users of this class enjoy complete system access.
+* **Cloud Administrator.**  (cloudadmin) Users of this class enjoy complete system access.
 * **IT Security.** (itsec) This role is limited to IT security personnel.  It permits role holders to quarantine instances.
-* **Project Manager.** (projectmanager)The default for project owners, this role affords users the ability to add other users to a project, interact with project images, and launch and terminate instances.
+* **System Administrator.** (sysadmin) The default for project owners, this role affords users the ability to add other users to a project, interact with project images, and launch and terminate instances.
 * **Network Administrator.** (netadmin) Users with this role are permitted to allocate and assign publicly accessible IP addresses as well as create and modify firewall rules.
-* **Developer.**  This is a general purpose role that is assigned to users by default.
+* **Developer.**  (developer) This is a general purpose role that is assigned to users by default.
 
 RBAC management is exposed through the dashboard for simplified user management.
 

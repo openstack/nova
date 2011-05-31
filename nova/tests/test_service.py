@@ -106,7 +106,10 @@ class ServiceTestCase(test.TestCase):
 
         # NOTE(vish): Create was moved out of mox replay to make sure that
         #             the looping calls are created in StartService.
-        app = service.Service.create(host=host, binary=binary)
+        app = service.Service.create(host=host, binary=binary, topic=topic)
+
+        self.mox.StubOutWithMock(service.rpc.Connection, 'instance')
+        service.rpc.Connection.instance(new=mox.IgnoreArg())
 
         self.mox.StubOutWithMock(rpc,
                                  'TopicAdapterConsumer',
@@ -114,6 +117,11 @@ class ServiceTestCase(test.TestCase):
         self.mox.StubOutWithMock(rpc,
                                  'FanoutAdapterConsumer',
                                  use_mock_anything=True)
+
+        self.mox.StubOutWithMock(rpc,
+                                 'ConsumerSet',
+                                 use_mock_anything=True)
+
         rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
                             topic=topic,
                             proxy=mox.IsA(service.Service)).AndReturn(
@@ -129,9 +137,14 @@ class ServiceTestCase(test.TestCase):
                             proxy=mox.IsA(service.Service)).AndReturn(
                                     rpc.FanoutAdapterConsumer)
 
-        rpc.TopicAdapterConsumer.attach_to_eventlet()
-        rpc.TopicAdapterConsumer.attach_to_eventlet()
-        rpc.FanoutAdapterConsumer.attach_to_eventlet()
+        def wait_func(self, limit=None):
+            return None
+
+        mock_cset = self.mox.CreateMock(rpc.ConsumerSet,
+                {'wait': wait_func})
+        rpc.ConsumerSet(connection=mox.IgnoreArg(),
+                        consumer_list=mox.IsA(list)).AndReturn(mock_cset)
+        wait_func(mox.IgnoreArg())
 
         service_create = {'host': host,
                           'binary': binary,
@@ -287,8 +300,42 @@ class ServiceTestCase(test.TestCase):
         # Creating mocks
         self.mox.StubOutWithMock(service.rpc.Connection, 'instance')
         service.rpc.Connection.instance(new=mox.IgnoreArg())
-        service.rpc.Connection.instance(new=mox.IgnoreArg())
-        service.rpc.Connection.instance(new=mox.IgnoreArg())
+
+        self.mox.StubOutWithMock(rpc,
+                                 'TopicAdapterConsumer',
+                                 use_mock_anything=True)
+        self.mox.StubOutWithMock(rpc,
+                                 'FanoutAdapterConsumer',
+                                 use_mock_anything=True)
+
+        self.mox.StubOutWithMock(rpc,
+                                 'ConsumerSet',
+                                 use_mock_anything=True)
+
+        rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
+                            topic=topic,
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.TopicAdapterConsumer)
+
+        rpc.TopicAdapterConsumer(connection=mox.IgnoreArg(),
+                            topic='%s.%s' % (topic, host),
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.TopicAdapterConsumer)
+
+        rpc.FanoutAdapterConsumer(connection=mox.IgnoreArg(),
+                            topic=topic,
+                            proxy=mox.IsA(service.Service)).AndReturn(
+                                    rpc.FanoutAdapterConsumer)
+
+        def wait_func(self, limit=None):
+            return None
+
+        mock_cset = self.mox.CreateMock(rpc.ConsumerSet,
+                {'wait': wait_func})
+        rpc.ConsumerSet(connection=mox.IgnoreArg(),
+                        consumer_list=mox.IsA(list)).AndReturn(mock_cset)
+        wait_func(mox.IgnoreArg())
+
         self.mox.StubOutWithMock(serv.manager.driver,
                                  'update_available_resource')
         serv.manager.driver.update_available_resource(mox.IgnoreArg(), host)

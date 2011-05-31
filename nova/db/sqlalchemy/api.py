@@ -803,12 +803,13 @@ def instance_create(context, values):
 def instance_data_get_for_project(context, project_id):
     session = get_session()
     result = session.query(func.count(models.Instance.id),
-                           func.sum(models.Instance.vcpus)).\
+                           func.sum(models.Instance.vcpus),
+                           func.sum(models.Instance.memory_mb)).\
                      filter_by(project_id=project_id).\
                      filter_by(deleted=False).\
                      first()
     # NOTE(vish): convert None to 0
-    return (result[0] or 0, result[1] or 0)
+    return (result[0] or 0, result[1] or 0, result[2] or 0)
 
 
 @require_context
@@ -1499,7 +1500,7 @@ def auth_token_create(_context, token):
 ###################
 
 
-@require_admin_context
+@require_context
 def quota_get(context, project_id, resource, session=None):
     if not session:
         session = get_session()
@@ -1513,7 +1514,7 @@ def quota_get(context, project_id, resource, session=None):
     return result
 
 
-@require_admin_context
+@require_context
 def quota_get_all_by_project(context, project_id):
     session = get_session()
     result = {'project_id': project_id}
@@ -1783,6 +1784,82 @@ def volume_update(context, volume_id, values):
         volume_ref = volume_get(context, volume_id, session=session)
         volume_ref.update(values)
         volume_ref.save(session=session)
+
+
+###################
+
+
+@require_context
+def snapshot_create(context, values):
+    snapshot_ref = models.Snapshot()
+    snapshot_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        snapshot_ref.save(session=session)
+    return snapshot_ref
+
+
+@require_admin_context
+def snapshot_destroy(context, snapshot_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.Snapshot).\
+                filter_by(id=snapshot_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def snapshot_get(context, snapshot_id, session=None):
+    if not session:
+        session = get_session()
+    result = None
+
+    if is_admin_context(context):
+        result = session.query(models.Snapshot).\
+                         filter_by(id=snapshot_id).\
+                         filter_by(deleted=can_read_deleted(context)).\
+                         first()
+    elif is_user_context(context):
+        result = session.query(models.Snapshot).\
+                         filter_by(project_id=context.project_id).\
+                         filter_by(id=snapshot_id).\
+                         filter_by(deleted=False).\
+                         first()
+    if not result:
+        raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
+
+    return result
+
+
+@require_admin_context
+def snapshot_get_all(context):
+    session = get_session()
+    return session.query(models.Snapshot).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def snapshot_get_all_by_project(context, project_id):
+    authorize_project_context(context, project_id)
+
+    session = get_session()
+    return session.query(models.Snapshot).\
+                   filter_by(project_id=project_id).\
+                   filter_by(deleted=can_read_deleted(context)).\
+                   all()
+
+
+@require_context
+def snapshot_update(context, snapshot_id, values):
+    session = get_session()
+    with session.begin():
+        snapshot_ref = snapshot_get(context, snapshot_id, session=session)
+        snapshot_ref.update(values)
+        snapshot_ref.save(session=session)
 
 
 ###################
