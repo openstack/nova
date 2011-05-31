@@ -135,7 +135,7 @@ class VolumeController(wsgi.Controller):
         vol = env['volume']
         size = vol['size']
         LOG.audit(_("Create volume of %s GB"), size, context=context)
-        new_volume = self.volume_api.create(context, size,
+        new_volume = self.volume_api.create(context, size, None,
                                             vol.get('display_name'),
                                             vol.get('display_description'))
 

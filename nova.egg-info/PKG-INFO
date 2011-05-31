@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: nova
+Version: 2011.3
+Summary: cloud computing fabric controller
+Home-page: http://www.openstack.org/
+Author: OpenStack
+Author-email: nova@lists.launchpad.net
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
