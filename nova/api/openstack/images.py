@@ -28,6 +28,8 @@ from nova.api.openstack.views import images as images_view
 LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
+SUPPORTED_FILTERS = ['name', 'status']
+
 
 class Controller(common.OpenstackController):
     """Base `wsgi.Controller` for retrieving/displaying images."""
@@ -62,8 +64,9 @@ class Controller(common.OpenstackController):
         :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
-        images = self._image_service.index(context)
-        images = self._limit_items(images, req)
+        filters = self._get_filters(req)
+        images = self._image_service.index(context, filters)
+        images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
 
@@ -73,10 +76,25 @@ class Controller(common.OpenstackController):
         :param req: `wsgi.Request` object.
         """
         context = req.environ['nova.context']
-        images = self._image_service.detail(context)
-        images = self._limit_items(images, req)
+        filters = self._get_filters(req)
+        images = self._image_service.detail(context, filters)
+        images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
+
+    def _get_filters(self, req):
+        """
+        Return a dictionary of query param filters from the request
+
+        :param req: the Request object coming from the wsgi layer
+        :retval a dict of key/value filters
+        """
+        filters = {}
+        for param in req.str_params:
+            if param in SUPPORTED_FILTERS or param.startswith('property-'):
+                filters[param] = req.str_params.get(param)
+
+        return filters
 
     def show(self, req, id):
         """Return detailed information about a specific image.
