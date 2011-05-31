@@ -90,6 +90,15 @@ class API(base.Base):
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
 
+    def get_snapshot(self, context, snapshot_id):
+        rv = self.db.snapshot_get(context, snapshot_id)
+        return dict(rv.iteritems())
+
+    def get_all_snapshots(self, context):
+        if context.is_admin:
+            return self.db.snapshot_get_all(context)
+        return self.db.snapshot_get_all_by_project(context, context.project_id)
+
     def check_attach(self, context, volume_id):
         volume = self.get(context, volume_id)
         # TODO(vish): abstract status checking?
@@ -110,3 +119,38 @@ class API(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "remove_volume",
                   "args": {'volume_id': volume_id}})
+
+    def create_snapshot(self, context, volume_id, name, description):
+        volume = self.get(context, volume_id)
+        if volume['status'] != "available":
+            raise exception.ApiError(_("Volume status must be available"))
+
+        options = {
+            'volume_id': volume_id,
+            'user_id': context.user_id,
+            'project_id': context.project_id,
+            'status': "creating",
+            'progress': '0%',
+            'volume_size': volume['size'],
+            'display_name': name,
+            'display_description': description}
+
+        snapshot = self.db.snapshot_create(context, options)
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "create_snapshot",
+                  "args": {"topic": FLAGS.volume_topic,
+                           "volume_id": volume_id,
+                           "snapshot_id": snapshot['id']}})
+        return snapshot
+
+    def delete_snapshot(self, context, snapshot_id):
+        snapshot = self.get_snapshot(context, snapshot_id)
+        if snapshot['status'] != "available":
+            raise exception.ApiError(_("Snapshot status must be available"))
+        self.db.snapshot_update(context, snapshot_id, {'status': 'deleting'})
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "delete_snapshot",
+                  "args": {"topic": FLAGS.volume_topic,
+                           "snapshot_id": snapshot_id}})
