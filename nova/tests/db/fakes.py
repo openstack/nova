@@ -24,6 +24,100 @@ from nova import test
 from nova import utils
 
 
+class FakeModel(object):
+    """Stubs out for model."""
+    def __init__(self, values):
+        self.values = values
+
+    def __getattr__(self, name):
+        return self.values[name]
+
+    def __getitem__(self, key):
+        if key in self.values:
+            return self.values[key]
+        else:
+            raise NotImplementedError()
+
+
+def stub_out(stubs, mapping):
+    """
+    Set the stubs in mapping in the db api
+    """
+    for func_name, func in mapping:
+        stubs.set(db, func_name, func)
+
+
+def stub_out_db_network_api(stubs, host='localhost'):
+    network_fields = {'id': 0}
+    flavor_fields = {'id': 0,
+                     'rxtx_cap': 3}
+    fixed_ip_fields = {'id': 0,
+                       'address': '192.169.0.100',
+                       'instance': True}
+
+    floating_ip_fields = {'id': 0,
+                          'address': '192.168.1.100',
+                          'fixed_ip_id': 0,
+                          'fixed_ip': FakeModel(fixed_ip_fields),
+                          'project_id': 'fake',
+                          'host': host,
+                          'auto_assigned': True}
+
+    def fake_floating_ip_allocate_address(context, host, project_id):
+        return FakeModel(floating_ip_fields)
+
+    def fake_floating_ip_deallocate(context, floating_address):
+        pass
+
+    def fake_floating_ip_disassociate(context, address):
+        return fixed_ip_fields['address']
+
+    def fake_floating_ip_fixed_ip_associate(context, floating_address,
+                                            fixed_address):
+        pass
+
+    def fake_floating_ip_get_all_by_host(context, host):
+        return [FakeModel(floating_ip_fields)]
+
+    def fake_floating_ip_get_by_address(context, address):
+        return FakeModel(floating_ip_fields)
+
+    def fake_floating_ip_set_auto_assigned(contex, public_ip):
+        pass
+
+    def fake_fixed_ip_associate(context, address, instance_id):
+        pass
+
+    def fake_fixed_ip_associate_pool(context, network_id, instance_id):
+        return fixed_ip_fields['address']
+
+    def fake_fixed_ip_create(context, values):
+        return values['address']
+
+    def fake_fixed_ip_disassociate(context, address):
+        pass
+
+    def fake_fixed_ip_disassociate_all_by_timeout(context, host, time):
+        return 1
+
+    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+        return [FakeModel(fixed_ip_fields)]
+
+    def fake_fixed_ip_get_by_address(context, address):
+        ip = dict(fixed_ip_fields)
+        ip['address'] = address
+        return FakeModel(ip)
+
+    def fake_fixed_ip_get_network(context, address):
+        return FakeModel(network_fields)
+
+    def fake_fixed_ip_update(context, address, values):
+        pass
+
+    def fake_instance_type_get_by_id(context, id):
+        return FakeModel(flavor_fields)
+
+
 def stub_out_db_instance_api(stubs, injected=True):
     """Stubs out the db API for creating Instances."""
 
@@ -92,20 +186,6 @@ def stub_out_db_instance_api(stubs, injected=True):
                        'address_v6': 'fe80::a00:3',
                        'network_id': 'fake_flat'}
 
-    class FakeModel(object):
-        """Stubs out for model."""
-        def __init__(self, values):
-            self.values = values
-
-        def __getattr__(self, name):
-            return self.values[name]
-
-        def __getitem__(self, key):
-            if key in self.values:
-                return self.values[key]
-            else:
-                raise NotImplementedError()
-
     def fake_instance_type_get_all(context, inactive=0):
         return INSTANCE_TYPES
 
@@ -141,17 +221,23 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_fixed_ip_get_all_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
-    stubs.Set(db, 'network_get_all_by_instance',
-              fake_network_get_all_by_instance)
-    stubs.Set(db, 'instance_type_get_all', fake_instance_type_get_all)
-    stubs.Set(db, 'instance_type_get_by_name', fake_instance_type_get_by_name)
-    stubs.Set(db, 'instance_type_get_by_id', fake_instance_type_get_by_id)
-    stubs.Set(db, 'instance_get_fixed_addresses',
-        fake_instance_get_fixed_addresses)
-    stubs.Set(db, 'instance_get_fixed_addresses_v6',
-        fake_instance_get_fixed_addresses_v6)
-    stubs.Set(db, 'network_get_all_by_instance',
-        fake_network_get_all_by_instance)
-    stubs.Set(db, 'fixed_ip_get_all_by_instance',
-        fake_fixed_ip_get_all_by_instance)
+    mapping = [
+                ('network_get_by_instance',
+                    fake_network_get_by_instance),
+                ('network_get_all_by_instance',
+                    fake_network_get_all_by_instance),
+                ('instance_type_get_all',
+                    fake_instance_type_get_all),
+                ('instance_type_get_by_name',
+                    fake_instance_type_get_by_name),
+                ('instance_type_get_by_id',
+                    fake_instance_type_get_by_id),
+                ('instance_get_fixed_addresses',
+                    fake_instance_get_fixed_addresses),
+                ('instance_get_fixed_addresses_v6',
+                    fake_instance_get_fixed_addresses_v6),
+                ('network_get_all_by_instance',
+                    fake_network_get_all_by_instance),
+                ('fixed_ip_get_all_by_instance',
+                    fake_fixed_ip_get_all_by_instance)]
+    stub_out(stubs, mapping)
