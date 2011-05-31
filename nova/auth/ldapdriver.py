@@ -26,7 +26,6 @@ public methods.
 
 import functools
 import sys
-import threading
 
 from nova import exception
 from nova import flags
@@ -106,7 +105,8 @@ class LdapDriver(object):
     isadmin_attribute = 'isNovaAdmin'
     project_attribute = 'owner'
     project_objectclass = 'groupOfNames'
-    __local = threading.local()
+    conn = None
+    mc = None
 
     def __init__(self):
         """Imports the LDAP module"""
@@ -117,15 +117,22 @@ class LdapDriver(object):
             LdapDriver.project_attribute = 'projectManager'
             LdapDriver.project_objectclass = 'novaProject'
         self.__cache = None
+        if LdapDriver.conn is None:
+            LdapDriver.conn = self.ldap.initialize(FLAGS.ldap_url)
+            LdapDriver.conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
+        if LdapDriver.mc is None:
+            if FLAGS.memcached_servers:
+                import memcache
+            else:
+                from nova import fakememcache as memcache
+            LdapDriver.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 
     def __enter__(self):
-        """Creates the connection to LDAP"""
         # TODO(yorik-sar): Should be per-request cache, not per-driver-request
         self.__cache = {}
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        """Destroys the connection to LDAP"""
         self.__cache = None
         return False
 
@@ -148,29 +155,6 @@ class LdapDriver(object):
                     return res
             return inner
         return do_wrap
-
-    @property
-    def conn(self):
-        try:
-            return self.__local.conn
-        except AttributeError:
-            conn = self.ldap.initialize(FLAGS.ldap_url)
-            conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
-            self.__local.conn = conn
-            return conn
-
-    @property
-    def mc(self):
-        try:
-            return self.__local.mc
-        except AttributeError:
-            if FLAGS.memcached_servers:
-                import memcache
-            else:
-                from nova import fakememcache as memcache
-            mc = memcache.Client(FLAGS.memcached_servers, debug=0)
-            self.__local.mc = mc
-            return mc
 
     @sanitize
     @__local_cache('uid_user-%s')

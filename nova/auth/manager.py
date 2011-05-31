@@ -23,7 +23,6 @@ Nova authentication management
 import os
 import shutil
 import string  # pylint: disable=W0402
-import threading
 import tempfile
 import uuid
 import zipfile
@@ -207,7 +206,7 @@ class AuthManager(object):
     """
 
     _instance = None
-    __local = threading.local()
+    mc = None
 
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
@@ -224,19 +223,12 @@ class AuthManager(object):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         if driver or not getattr(self, 'driver', None):
             self.driver = utils.import_class(driver or FLAGS.auth_driver)
-
-    @property
-    def mc(self):
-        try:
-            return self.__local.mc
-        except AttributeError:
+        if AuthManager.mc is None:
             if FLAGS.memcached_servers:
                 import memcache
             else:
                 from nova import fakememcache as memcache
-            mc = memcache.Client(FLAGS.memcached_servers, debug=0)
-            self.__local.mc = mc
-            return mc
+            AuthManager.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',
