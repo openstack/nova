@@ -58,6 +58,7 @@ def upgrade(migrate_engine):
         migrate_engine.execute("ALTER TABLE users Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE volumes Engine=InnoDB")
         migrate_engine.execute("ALTER TABLE zones Engine=InnoDB")
+        migrate_engine.execute("ALTER TABLE snapshots Engine=InnoDB")
 
 
 def downgrade(migrate_engine):
