@@ -606,7 +606,7 @@ class ControllerV10(Controller):
                 self.compute_api.resize(req.environ['nova.context'], id,
                         flavor_id)
             else:
-                LOG.exception(_("Missing arguments for resize"))
+                LOG.exception(_("Missing 'flavorId' argument for resize"))
                 return faults.Fault(exc.HTTPUnprocessableEntity())
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
@@ -707,7 +707,7 @@ class ControllerV11(Controller):
                 self.compute_api.resize(req.environ['nova.context'], id,
                         flavor_id)
             else:
-                LOG.exception(_("Missing arguments for resize"))
+                LOG.exception(_("Missing 'flavorRef' argument for resize"))
                 return faults.Fault(exc.HTTPUnprocessableEntity())
         except Exception, e:
             LOG.exception(_("Error in resize %s"), e)
