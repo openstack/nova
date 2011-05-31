@@ -209,7 +209,7 @@ class Instance(BASE, NovaBase):
     hostname = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
-    instance_type_id = Column(String(255))
+    instance_type_id = Column(Integer)
 
     user_data = Column(Text)
 
@@ -327,6 +327,31 @@ class Quota(BASE, NovaBase):
 
     resource = Column(String(255))
     hard_limit = Column(Integer, nullable=True)
+
+
+class Snapshot(BASE, NovaBase):
+    """Represents a block storage device that can be attached to a vm."""
+    __tablename__ = 'snapshots'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.snapshot_name_template % self.id
+
+    @property
+    def volume_name(self):
+        return FLAGS.volume_name_template % self.volume_id
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    volume_id = Column(Integer)
+    status = Column(String(255))
+    progress = Column(String(255))
+    volume_size = Column(Integer)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
 
 
 class ExportDevice(BASE, NovaBase):
@@ -495,7 +520,7 @@ class AuthToken(BASE, NovaBase):
     __tablename__ = 'auth_tokens'
     token_hash = Column(String(255), primary_key=True)
     user_id = Column(String(255))
-    server_manageent_url = Column(String(255))
+    server_management_url = Column(String(255))
     storage_url = Column(String(255))
     cdn_management_url = Column(String(255))
 

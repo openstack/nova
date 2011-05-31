@@ -27,6 +27,8 @@ import datetime
 import IPy
 import os
 import urllib
+import tempfile
+import shutil
 
 from nova import compute
 from nova import context
@@ -281,14 +283,50 @@ class CloudController(object):
                            owner=None,
                            restorable_by=None,
                            **kwargs):
-        return {'snapshotSet': [{'snapshotId': 'fixme',
-                                 'volumeId': 'fixme',
-                                 'status': 'fixme',
-                                 'startTime': 'fixme',
-                                 'progress': 'fixme',
-                                 'ownerId': 'fixme',
-                                 'volumeSize': 0,
-                                 'description': 'fixme'}]}
+        if snapshot_id:
+            snapshots = []
+            for ec2_id in snapshot_id:
+                internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                snapshot = self.volume_api.get_snapshot(
+                    context,
+                    snapshot_id=internal_id)
+                snapshots.append(snapshot)
+        else:
+            snapshots = self.volume_api.get_all_snapshots(context)
+        snapshots = [self._format_snapshot(context, s) for s in snapshots]
+        return {'snapshotSet': snapshots}
+
+    def _format_snapshot(self, context, snapshot):
+        s = {}
+        s['snapshotId'] = ec2utils.id_to_ec2_id(snapshot['id'], 'snap-%08x')
+        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'],
+                                              'vol-%08x')
+        s['status'] = snapshot['status']
+        s['startTime'] = snapshot['created_at']
+        s['progress'] = snapshot['progress']
+        s['ownerId'] = snapshot['project_id']
+        s['volumeSize'] = snapshot['volume_size']
+        s['description'] = snapshot['display_description']
+
+        s['display_name'] = snapshot['display_name']
+        s['display_description'] = snapshot['display_description']
+        return s
+
+    def create_snapshot(self, context, volume_id, **kwargs):
+        LOG.audit(_("Create snapshot of volume %s"), volume_id,
+                  context=context)
+        volume_id = ec2utils.ec2_id_to_id(volume_id)
+        snapshot = self.volume_api.create_snapshot(
+                context,
+                volume_id=volume_id,
+                name=kwargs.get('display_name'),
+                description=kwargs.get('display_description'))
+        return self._format_snapshot(context, snapshot)
+
+    def delete_snapshot(self, context, snapshot_id, **kwargs):
+        snapshot_id = ec2utils.ec2_id_to_id(snapshot_id)
+        self.volume_api.delete_snapshot(context, snapshot_id=snapshot_id)
+        return True
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
         key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
@@ -315,6 +353,27 @@ class CloudController(object):
                 'keyFingerprint': data['fingerprint'],
                 'keyMaterial': data['private_key']}
         # TODO(vish): when context is no longer an object, pass it here
+
+    def import_public_key(self, context, key_name, public_key,
+                         fingerprint=None):
+        LOG.audit(_("Import key %s"), key_name, context=context)
+        key = {}
+        key['user_id'] = context.user_id
+        key['name'] = key_name
+        key['public_key'] = public_key
+        if fingerprint is None:
+            tmpdir = tempfile.mkdtemp()
+            pubfile = os.path.join(tmpdir, 'temp.pub')
+            fh = open(pubfile, 'w')
+            fh.write(public_key)
+            fh.close()
+            (out, err) = utils.execute('ssh-keygen', '-q', '-l', '-f',
+                                       '%s' % (pubfile))
+            fingerprint = out.split(' ')[1]
+            shutil.rmtree(tmpdir)
+        key['fingerprint'] = fingerprint
+        db.key_pair_create(context, key)
+        return True
 
     def delete_key_pair(self, context, key_name, **kwargs):
         LOG.audit(_("Delete key pair %s"), key_name, context=context)
@@ -596,6 +655,11 @@ class CloudController(object):
                                    'volumeId': v['volumeId']}]
         else:
             v['attachmentSet'] = [{}]
+        if volume.get('snapshot_id') != None:
+            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'],
+                                                    'snap-%08x')
+        else:
+            v['snapshotId'] = None
 
         v['display_name'] = volume['display_name']
         v['display_description'] = volume['display_description']

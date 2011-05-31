@@ -221,6 +221,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_ref.injected_files = kwargs.get('injected_files', [])
+        instance_ref.admin_pass = kwargs.get('admin_password', None)
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
@@ -405,22 +406,28 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def set_admin_password(self, context, instance_id, new_pass=None):
-        """Set the root/admin password for an instance on this host."""
+        """Set the root/admin password for an instance on this host.
+
+        This is generally only called by API password resets after an
+        image has been built.
+        """
+
         context = context.elevated()
 
         if new_pass is None:
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
 
-        while True:
+        max_tries = 10
+
+        for i in xrange(max_tries):
             instance_ref = self.db.instance_get(context, instance_id)
             instance_id = instance_ref["id"]
             instance_state = instance_ref["state"]
             expected_state = power_state.RUNNING
 
             if instance_state != expected_state:
-                time.sleep(5)
-                continue
+                raise exception.Error(_('Instance is not running'))
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
@@ -436,6 +443,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 except Exception, e:
                     # Catch all here because this could be anything.
                     LOG.exception(e)
+                    if i == max_tries - 1:
+                        # At some point this exception may make it back
+                        # to the API caller, and we don't want to reveal
+                        # too much.  The real exception is logged above
+                        raise exception.Error(_('Internal error'))
+                    time.sleep(1)
                     continue
 
     @exception.wrap_exception
@@ -628,7 +641,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['new_flavor_id'])
         self.db.instance_update(context, instance_id,
-               dict(instance_type=instance_type['name'],
+               dict(instance_type_id=instance_type['id'],
                     memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))

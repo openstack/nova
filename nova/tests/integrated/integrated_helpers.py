@@ -154,13 +154,10 @@ class _IntegratedTestBase(test.TestCase):
         # set up services
         self.start_service('compute')
         self.start_service('volume')
-        # NOTE(justinsb): There's a bug here which is eluding me...
-        # If we start the network_service, all is good, but then subsequent
-        # tests fail: CloudTestCase.test_ajax_console in particular.
-        #self.start_service('network')
+        self.start_service('network')
         self.start_service('scheduler')
 
-        self.auth_url = self._start_api_service()
+        self._start_api_service()
 
         self.context = IntegratedUnitTestContext(self.auth_url)
 
@@ -174,8 +171,10 @@ class _IntegratedTestBase(test.TestCase):
         if not api_service:
             raise Exception("API Service was None")
 
-        auth_url = 'http://localhost:8774/v1.1'
-        return auth_url
+        self.api_service = api_service
+
+        host, port = api_service.get_socket_info('osapi')
+        self.auth_url = 'http://%s:%s/v1.1' % (host, port)
 
     def tearDown(self):
         self.context.cleanup()
@@ -184,6 +183,11 @@ class _IntegratedTestBase(test.TestCase):
     def _get_flags(self):
         """An opportunity to setup flags, before the services are started."""
         f = {}
+
+        # Auto-assign ports to allow concurrent tests
+        f['ec2_listen_port'] = 0
+        f['osapi_listen_port'] = 0
+
         f['image_service'] = 'nova.image.fake.FakeImageService'
         f['fake_network'] = True
         return f

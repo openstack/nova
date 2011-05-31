@@ -108,6 +108,13 @@ def main():
     interface = os.environ.get('DNSMASQ_INTERFACE', FLAGS.dnsmasq_interface)
     if int(os.environ.get('TESTING', '0')):
         from nova.tests import fake_flags
+
+    #if FLAGS.fake_rabbit:
+    #    LOG.debug(_("leasing ip"))
+    #    network_manager = utils.import_object(FLAGS.network_manager)
+    ##    reload(fake_flags)
+    #    from nova.tests import fake_flags
+
     action = argv[1]
     if action in ['add', 'del', 'old']:
         mac = argv[2]
