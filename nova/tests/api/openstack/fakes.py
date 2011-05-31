@@ -166,11 +166,12 @@ def stub_out_glance(stubs, initial_fixtures=None):
         def __init__(self, initial_fixtures):
             self.fixtures = initial_fixtures or []
 
-        def fake_get_images(self):
+        def fake_get_images(self, filters=None, marker=None, limit=None):
             return [dict(id=f['id'], name=f['name'])
                     for f in self.fixtures]
 
-        def fake_get_images_detailed(self):
+        def fake_get_images_detailed(self, filters=None, 
+                                     marker=None, limit=None):
             return copy.deepcopy(self.fixtures)
 
         def fake_get_image_meta(self, image_id):

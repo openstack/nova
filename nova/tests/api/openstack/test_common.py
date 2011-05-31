@@ -25,6 +25,7 @@ from webob import Request
 
 from nova import test
 from nova.api.openstack.common import limited
+from nova.api.openstack.common import get_pagination_params
 
 
 class LimiterTest(test.TestCase):
@@ -169,3 +170,48 @@ class LimiterTest(test.TestCase):
         """
         req = Request.blank('/?offset=-30')
         self.assertRaises(webob.exc.HTTPBadRequest, limited, self.tiny, req)
+
+
+class PaginationParamsTest(test.TestCase):
+    """
+    Unit tests for the `nova.api.openstack.common.get_pagination_params` 
+    method which takes in a request object and returns 'marker' and 'limit' 
+    GET params.
+    """
+
+    def test_no_params(self):
+        """
+        Test no params.
+        """
+        req = Request.blank('/')
+        self.assertEqual(get_pagination_params(req), (0, 0))
+        
+    def test_valid_marker(self):
+        """
+        Test valid marker param.
+        """
+        req = Request.blank('/?marker=1')
+        self.assertEqual(get_pagination_params(req), (1, 0))
+
+    def test_invalid_marker(self):
+        """
+        Test invalid marker param.
+        """
+        req = Request.blank('/?marker=-2')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          get_pagination_params, req)
+
+    def test_valid_limit(self):
+        """
+        Test valid limit param.
+        """
+        req = Request.blank('/?limit=10')
+        self.assertEqual(get_pagination_params(req), (0, 10))
+
+    def test_invalid_limit(self):
+        """
+        Test invalid limit param.
+        """
+        req = Request.blank('/?limit=-2')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          get_pagination_params, req)

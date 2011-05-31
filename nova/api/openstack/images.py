@@ -74,7 +74,7 @@ class Controller(common.OpenstackController):
         """
         context = req.environ['nova.context']
         images = self._image_service.detail(context)
-        images = self._limited_items(images, req)
+        images = self._limit_items(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
@@ -157,5 +157,24 @@ class ControllerV11(Controller):
     def get_default_xmlns(self, req):
         return common.XML_NS_V11
 
-    def _limit_items(self, items, req):
-        return common.limited_by_marker(items, req)
+    def index(self, req):
+        """Return an index listing of images available to the request.
+
+        :param req: `wsgi.Request` object
+        """
+        context = req.environ['nova.context']
+        (marker, limit) = common.get_pagination_params(req)
+        images = self._image_service.index(context, marker, limit)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=False) for image in images])
+
+    def detail(self, req):
+        """Return a detailed index listing of images available to the request.
+
+        :param req: `wsgi.Request` object.
+        """
+        context = req.environ['nova.context']
+        (marker, limit) = common.get_pagination_params(req)
+        images = self._image_service.detail(context, marker, limit)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=True) for image in images])
