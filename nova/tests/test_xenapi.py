@@ -496,8 +496,10 @@ class XenAPIVMTestCase(test.TestCase):
                    network_manager='nova.network.manager.VlanManager',
                    network_driver='nova.network.xenapi_net',
                    vlan_interface='fake0')
+
         def dummy(*args, **kwargs):
             pass
+
         self.stubs.Set(VMOps, 'create_vifs', dummy)
         # Reset network table
         xenapi_fake.reset_table('network')

@@ -748,6 +748,7 @@ def fixed_ip_get_all_by_instance(context, instance_id):
         raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
     return rv
 
+
 @require_context
 def fixed_ip_get_by_instance_and_network(context, instance_id,
                                              network_id):
@@ -2434,7 +2435,7 @@ def project_get_networks(context, project_id, associate=True):
     result = session.query(models.Network).\
                      filter_by(project_id=project_id).\
                      filter_by(deleted=False).all()
-                     
+
     if not result:
         if not associate:
             return []

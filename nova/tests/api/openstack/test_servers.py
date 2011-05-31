@@ -465,7 +465,8 @@ class ServersTest(test.TestCase):
         def image_id_from_hash(*args, **kwargs):
             return 2
 
-        self.stubs.Set(nova.db.api, 'project_get_networks', project_get_networks)
+        self.stubs.Set(nova.db.api, 'project_get_networks',
+                       project_get_networks)
         self.stubs.Set(nova.db.api, 'instance_create', instance_create)
         self.stubs.Set(nova.rpc, 'cast', fake_method)
         self.stubs.Set(nova.rpc, 'call', fake_method)

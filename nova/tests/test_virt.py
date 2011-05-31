@@ -82,6 +82,7 @@ def _setup_networking(instance_id, ip='1.2.3.4'):
     db.fixed_ip_update(ctxt, ip, {'allocated': True,
                                         'instance_id': instance_id})
 
+
 class CacheConcurrencyTestCase(test.TestCase):
     def setUp(self):
         super(CacheConcurrencyTestCase, self).setUp()
@@ -173,8 +174,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.manager.delete_user(self.user)
         super(LibvirtConnTestCase, self).tearDown()
 
-
-
     test_ip = '10.11.12.13'
     test_instance = {'memory_kb':     '1024000',
                      'basepath':      '/some/path',
@@ -183,7 +182,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
-                     'instance_type_id': '5'}  # m1.small 
+                     'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):
         """check if libvirt is available."""
@@ -673,7 +672,8 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_conn.LibvirtConnection(False)
         ip = conn.get_host_ip_addr()
         self.assertEquals(ip, FLAGS.my_ip)
-    
+
+
 class IptablesFirewallTestCase(test.TestCase):
     def setUp(self):
         super(IptablesFirewallTestCase, self).setUp()
@@ -890,7 +890,6 @@ class IptablesFirewallTestCase(test.TestCase):
                           ipv4_rules_per_network * networks_count)
         self.assertEquals(ipv6_network_rules,
                           ipv6_rules_per_network * networks_count)
-
 
     @test.skip_test("skipping libvirt tests")
     def test_do_refresh_security_group_rules(self):

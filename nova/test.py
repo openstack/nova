@@ -59,7 +59,7 @@ class skip_test(object):
     """decorator that skips a test"""
     def __init__(self, msg):
         self.message = msg
-    
+
     def __call__(self, func):
         def _skipper(*args, **kw):
             """wrapped skipper function."""

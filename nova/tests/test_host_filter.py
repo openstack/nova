@@ -132,13 +132,10 @@ class HostFilterTestCase(test.TestCase):
         raw = ['or',
                    ['and',
                        ['<', '$compute.host_memory_free', 30],
-                       ['<', '$compute.disk_available', 300]
-                   ],
+                       ['<', '$compute.disk_available', 300]],
                    ['and',
                        ['>', '$compute.host_memory_free', 70],
-                       ['>', '$compute.disk_available', 700]
-                   ]
-              ]
+                       ['>', '$compute.disk_available', 700]]]
         cooked = json.dumps(raw)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
 
@@ -149,8 +146,7 @@ class HostFilterTestCase(test.TestCase):
             self.assertEquals('host%02d' % index, host)
 
         raw = ['not',
-                  ['=', '$compute.host_memory_free', 30],
-              ]
+                  ['=', '$compute.host_memory_free', 30],]
         cooked = json.dumps(raw)
         hosts = driver.filter_hosts(self.zone_manager, cooked)
 
@@ -182,27 +178,22 @@ class HostFilterTestCase(test.TestCase):
         self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps([])))
         self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps({})))
         self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps(
-                ['not', True, False, True, False]
-            )))
+                ['not', True, False, True, False])))
 
         try:
             driver.filter_hosts(self.zone_manager, json.dumps(
-                'not', True, False, True, False
-            ))
+                'not', True, False, True, False))
             self.fail("Should give KeyError")
         except KeyError, e:
             pass
 
         self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
-                ['=', '$foo', 100]
-            )))
+                ['=', '$foo', 100])))
         self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
-                ['=', '$.....', 100]
-            )))
+                ['=', '$.....', 100])))
         self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
-            ['>', ['and', ['or', ['not', ['<', ['>=', ['<=', ['in', ]]]]]]]]
-        )))
+            ['>', ['and', ['or', ['not', ['<', ['>=',
+                ['<=', ['in', ]]]]]]]])))
 
         self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
-                ['=', {}, ['>', '$missing....foo']]
-            )))
+                ['=', {}, ['>', '$missing....foo']])))
