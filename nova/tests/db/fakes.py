@@ -50,9 +50,9 @@ def stub_out(stubs, funcs):
 def stub_out_db_network_api(stubs, host='localhost'):
     network_fields = {'id': 0,
                       'cidr': '192.168.0.0/24',
-                      'netmask': '255.255.255.0'
+                      'netmask': '255.255.255.0',
                       'cidr_v6': 'dead:beef::/64',
-                      'netmask_v6': '64'
+                      'netmask_v6': '64',
                       'project_id': 'fake',
                       'label': 'fake',
                       'gateway': '192.168.0.1',
