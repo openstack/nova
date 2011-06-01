@@ -24,8 +24,7 @@ import webob.exc
 from webob import Request
 
 from nova import test
-from nova.api.openstack.common import limited
-from nova.api.openstack.common import get_pagination_params
+from nova.api.openstack.common import limited, get_pagination_params
 
 
 class LimiterTest(test.TestCase):

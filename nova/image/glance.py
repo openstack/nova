@@ -64,9 +64,9 @@ class GlanceImageService(service.BaseImageService):
         # `get_images` here because we need `is_public` and `properties`
         # included so we can filter by user
         filtered = []
-        image_metas = self.client.get_images_detailed(marker=marker,
-                                                      limit=limit,
-                                                      filters=filters)
+        image_metas = self.client.get_images_detailed(filters=filters,
+                                                      marker=marker,
+                                                      limit=limit)
         for image_meta in image_metas:
             if self._is_image_available(context, image_meta):
                 meta_subset = utils.subset_dict(image_meta, ('id', 'name'))
@@ -76,9 +76,9 @@ class GlanceImageService(service.BaseImageService):
     def detail(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of detailed image information."""
         filtered = []
-        image_metas = self.client.get_images_detailed(marker=marker,
-                                                      limit=limit,
-                                                      filters=filters)
+        image_metas = self.client.get_images_detailed(filters=filters,
+                                                      marker=marker,
+                                                      limit=limit)
         for image_meta in image_metas:
             if self._is_image_available(context, image_meta):
                 base_image_meta = self._translate_to_base(image_meta)
