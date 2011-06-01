@@ -39,21 +39,36 @@ class FakeModel(object):
             raise NotImplementedError()
 
 
-def stub_out(stubs, mapping):
+def stub_out(stubs, funcs):
     """
     Set the stubs in mapping in the db api
     """
-    for func_name, func in mapping:
-        stubs.set(db, func_name, func)
+    for func in funcs:
+        stubs.set(db, func.__name__.lstrip("fake_"), func)
 
 
 def stub_out_db_network_api(stubs, host='localhost'):
-    network_fields = {'id': 0}
+    network_fields = {'id': 0,
+                      'cidr': '192.168.0.0/24',
+                      'netmask': '255.255.255.0'
+                      'cidr_v6': 'dead:beef::/64',
+                      'netmask_v6': '64'
+                      'project_id': 'fake',
+                      'label': 'fake',
+                      'gateway': '192.168.0.1',
+                      'bridge': 'fa0',
+                      'bridge_interface': 'fake_fa0',
+                      'broadcast': '192.168.0.255',
+                      'gateway_v6': 'dead:beef::1',
+                      'vlan': None,
+                      'host': 'fake'}
+
+    fixed_ip_fields = {'id': 0,
+                       'address': '192.168.0.100',
+                       'instance': True}
+
     flavor_fields = {'id': 0,
                      'rxtx_cap': 3}
-    fixed_ip_fields = {'id': 0,
-                       'address': '192.169.0.100',
-                       'instance': True}
 
     floating_ip_fields = {'id': 0,
                           'address': '192.168.1.100',
@@ -62,6 +77,13 @@ def stub_out_db_network_api(stubs, host='localhost'):
                           'project_id': 'fake',
                           'host': host,
                           'auto_assigned': True}
+
+    mac_address_fields = {'id': 0,
+                          'address': 'DE:AD:BE:EF:00:00',
+                          'network_id': 0,
+                          'instance_id':0,
+                          'network': FakeModel(network_fields)}
+    
 
     def fake_floating_ip_allocate_address(context, host, project_id):
         return FakeModel(floating_ip_fields)
@@ -116,6 +138,90 @@ def stub_out_db_network_api(stubs, host='localhost'):
 
     def fake_instance_type_get_by_id(context, id):
         return FakeModel(flavor_fields)
+
+    def fake_mac_address_create(context, values):
+        return FakeModel(values)
+
+    def fake_mac_address_delete_by_instance(context, instance_id):
+        pass
+
+    def fake_mac_address_get_all_by_instance(context, instance_id):
+        mac = dict(mac_address_fields)
+        mac['instance_id'] = instance_id
+        return [FakeModel(mac)]
+
+    def fake_mac_address_get_by_instance_and_network(context, instance_id,
+                                                     network_id):
+        mac = dict(mac_address_fields)
+        mac['instance_id'] = instance_id
+        mac['network_id'] = network_id
+        return FakeModel(mac)
+
+    def fake_network_create_safe(context, net):
+        return True
+
+    def fake_network_get(context, network_id):
+        net = dict(network_fields)
+        net['network_id'] = network_id
+        return FakeModel(net)
+
+    def fake_network_get_all(context):
+        return [FakeModel(network_fields)]
+
+    def fake_network_get_all_by_host(context, host)
+        net = dict(network_fields)
+        net['host'] = host
+        return [FakeModel(net)]
+
+    def fake_network_get_all_by_instance(context, instance_id)
+        return [FakeModel(network_fields)]
+
+    def fake_network_set_host(context, network_id, host_id):
+        return host_id
+
+    def fake_network_update(context, network_id, net):
+        pass
+
+    def fake_project_get_networks(context, project_id):
+        net = dict(network_fields)
+        net['project_id'] = project_id
+        return [FakeModel(net)]
+
+    def fake_queue_get_for(context, topic, node):
+        return "%s.%s" % (topic, node)
+
+    funcs = [fake_floating_ip_allocate_address,
+             fake_floating_ip_deallocate,
+             fake_floating_ip_disassociate,
+             fake_floating_ip_fixed_ip_associate,
+             fake_floating_ip_get_all_by_host,
+             fake_floating_ip_get_by_address,
+             fake_floating_ip_set_auto_assigned,
+             fake_fixed_ip_associate,
+             fake_fixed_ip_associate_pool,
+             fake_fixed_ip_create,
+             fake_fixed_ip_disassociate,
+             fake_fixed_ip_disassociate_all_by_timeout,
+             fake_fixed_ip_get_all_by_instance,
+             fake_fixed_ip_get_by_address,
+             fake_fixed_ip_get_network,
+             fake_fixed_ip_update,
+             fake_instance_type_get_by_id,
+             fake_mac_address_create,
+             fake_mac_address_delete_by_instance,
+             fake_mac_address_get_all_by_instance,
+             fake_mac_address_get_by_instance_and_network,
+             fake_network_create_safe,
+             fake_network_get,
+             fake_network_get_all,
+             fake_network_get_all_by_host,
+             fake_network_get_all_by_instance,
+             fake_network_set_host,
+             fake_network_update,
+             fake_project_get_networks,
+             fake_queue_get_for]
+
+    stub_out(stubs, funcs)
 
 
 def stub_out_db_instance_api(stubs, injected=True):
@@ -221,23 +327,13 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_fixed_ip_get_all_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    mapping = [
-                ('network_get_by_instance',
-                    fake_network_get_by_instance),
-                ('network_get_all_by_instance',
-                    fake_network_get_all_by_instance),
-                ('instance_type_get_all',
-                    fake_instance_type_get_all),
-                ('instance_type_get_by_name',
-                    fake_instance_type_get_by_name),
-                ('instance_type_get_by_id',
-                    fake_instance_type_get_by_id),
-                ('instance_get_fixed_addresses',
-                    fake_instance_get_fixed_addresses),
-                ('instance_get_fixed_addresses_v6',
-                    fake_instance_get_fixed_addresses_v6),
-                ('network_get_all_by_instance',
-                    fake_network_get_all_by_instance),
-                ('fixed_ip_get_all_by_instance',
-                    fake_fixed_ip_get_all_by_instance)]
-    stub_out(stubs, mapping)
+    funcs = [fake_network_get_by_instance
+             fake_network_get_all_by_instance,
+             fake_instance_type_get_all,
+             fake_instance_type_get_by_name,
+             fake_instance_type_get_by_id,
+             fake_instance_get_fixed_addresses,
+             fake_instance_get_fixed_addresses_v6,
+             fake_network_get_all_by_instance,
+             fake_fixed_ip_get_all_by_instance]
+    stub_out(stubs, funcs)
