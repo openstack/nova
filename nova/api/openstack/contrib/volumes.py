@@ -22,7 +22,6 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import volume
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import faults
@@ -64,7 +63,7 @@ def _translate_volume_summary_view(context, vol):
     return d
 
 
-class VolumeController(wsgi.Controller):
+class VolumeController(object):
     """The Volumes API controller for the OpenStack API."""
 
     _serialization_metadata = {
@@ -124,15 +123,14 @@ class VolumeController(wsgi.Controller):
         res = [entity_maker(context, vol) for vol in limited_list]
         return {'volumes': res}
 
-    def create(self, req):
+    def create(self, req, body):
         """Creates a new volume."""
         context = req.environ['nova.context']
 
-        env = self._deserialize(req.body, req.get_content_type())
-        if not env:
+        if not body:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
-        vol = env['volume']
+        vol = body['volume']
         size = vol['size']
         LOG.audit(_("Create volume of %s GB"), size, context=context)
         new_volume = self.volume_api.create(context, size, None,
@@ -175,7 +173,7 @@ def _translate_attachment_summary_view(_context, vol):
     return d
 
 
-class VolumeAttachmentController(wsgi.Controller):
+class VolumeAttachmentController(object):
     """The volume attachment API controller for the Openstack API.
 
     A child resource of the server.  Note that we use the volume id
@@ -219,17 +217,16 @@ class VolumeAttachmentController(wsgi.Controller):
         return {'volumeAttachment': _translate_attachment_detail_view(context,
                                                                       vol)}
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
 
-        env = self._deserialize(req.body, req.get_content_type())
-        if not env:
+        if not body:
             return faults.Fault(exc.HTTPUnprocessableEntity())
 
         instance_id = server_id
-        volume_id = env['volumeAttachment']['volumeId']
-        device = env['volumeAttachment']['device']
+        volume_id = body['volumeAttachment']['volumeId']
+        device = body['volumeAttachment']['device']
 
         msg = _("Attach volume %(volume_id)s to instance %(server_id)s"
                 " at %(device)s") % locals()
@@ -259,7 +256,7 @@ class VolumeAttachmentController(wsgi.Controller):
         # TODO(justinsb): How do I return "accepted" here?
         return {'volumeAttachment': attachment}
 
-    def update(self, _req, _server_id, _id):
+    def update(self, req, server_id, id, body):
         """Update a volume attachment.  We don't currently support this."""
         return faults.Fault(exc.HTTPBadRequest())
 

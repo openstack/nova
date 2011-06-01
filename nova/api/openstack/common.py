@@ -23,7 +23,6 @@ import webob
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
@@ -177,9 +176,3 @@ def get_id_from_href(href):
     except:
         LOG.debug(_("Error extracting id from href: %s") % href)
         raise webob.exc.HTTPBadRequest(_('could not parse id from href'))
-
-
-class OpenstackController(wsgi.Controller):
-    def get_default_xmlns(self, req):
-        # Use V10 by default
-        return XML_NS_V10
