@@ -44,7 +44,8 @@ def stub_out(stubs, funcs):
     Set the stubs in mapping in the db api
     """
     for func in funcs:
-        stubs.set(db, func.__name__.lstrip("fake_"), func)
+        func_name = '_'.join(func.__name__.split('_')[1:])
+        stubs.Set(db, func_name, func)
 
 
 def stub_out_db_network_api(stubs, host='localhost'):
@@ -60,12 +61,15 @@ def stub_out_db_network_api(stubs, host='localhost'):
                       'bridge_interface': 'fake_fa0',
                       'broadcast': '192.168.0.255',
                       'gateway_v6': 'dead:beef::1',
+                      'dns': '192.168.0.1',
                       'vlan': None,
                       'host': host}
 
     fixed_ip_fields = {'id': 0,
+                       'network_id': 0,
                        'address': '192.168.0.100',
-                       'instance': True}
+                       'instance': False,
+                       'instance_id': 0}
 
     flavor_fields = {'id': 0,
                      'rxtx_cap': 3}
@@ -73,47 +77,71 @@ def stub_out_db_network_api(stubs, host='localhost'):
     floating_ip_fields = {'id': 0,
                           'address': '192.168.1.100',
                           'fixed_ip_id': 0,
-                          'fixed_ip': FakeModel(fixed_ip_fields),
+                          'fixed_ip': None, 
                           'project_id': 'fake',
                           'host': host,
-                          'auto_assigned': True}
+                          'auto_assigned': False}
 
     mac_address_fields = {'id': 0,
                           'address': 'DE:AD:BE:EF:00:00',
                           'network_id': 0,
                           'instance_id':0,
                           'network': FakeModel(network_fields)}
+
+    networks = {0: network_fields}
+    fixed_ips = {0: fixed_ip_fields}
+    floating_ips = {0: floating_ip_fields}
+    mac_addresses = {0: mac_address_fields}
     
 
     def fake_floating_ip_allocate_address(context, host, project_id):
+        floating_ip_fields['project_id'] = project_id
         return FakeModel(floating_ip_fields)
 
     def fake_floating_ip_deallocate(context, floating_address):
-        pass
+        floating_ip_fields['project_id'] = None
+        floating_ip_fields['auto_assigned'] = False
+
 
     def fake_floating_ip_disassociate(context, address):
-        return fixed_ip_fields['address']
+        if floating_ip_fields['address'] == address:
+            fixed_ip = floating_ip_fields['fixed_ip']['address']
+            floating_ip_fields['fixed_ip'] = None
+            return fixed_ip
 
     def fake_floating_ip_fixed_ip_associate(context, floating_address,
                                             fixed_address):
-        pass
+        if fixed_ip_fields['address'] == fixed_address and \
+           floating_ip_fields['address'] == floating_address:
+            floating_ip_fields['fixed_ip'] = FakeModel(fixed_ip_fields)
 
     def fake_floating_ip_get_all_by_host(context, host):
-        return [FakeModel(floating_ip_fields)]
+        if floating_ip_fields['host'] == host:
+            return [FakeModel(floating_ip_fields)]
 
     def fake_floating_ip_get_by_address(context, address):
-        return FakeModel(floating_ip_fields)
+        if floating_ip_fields['address'] == address:
+            return FakeModel(floating_ip_fields)
 
     def fake_floating_ip_set_auto_assigned(contex, public_ip):
-        pass
+        if floating_ip_fields['fixed_ip']['address'] == public_ip:
+            floating_ip_fields['auto_assigned'] = True
 
     def fake_fixed_ip_associate(context, address, instance_id):
-        pass
+        if fixed_ip_fields['address'] == address and \
+           not fixed_ip_fields['instance']:
+            fixed_ip_fields['instance'] = True
+            fixed_ip_fields['instance_id'] = instance_id
 
     def fake_fixed_ip_associate_pool(context, network_id, instance_id):
-        return fixed_ip_fields['address']
+        if fixed_ip_fields['network_id'] == network_id and \
+           not fixed_ip_fields['instance']:
+            fixed_ip_fields['instance'] = True
+            fixed_ip_fields['instance_id'] = instance_id
+            return fixed_ip_fields['address']
 
     def fake_fixed_ip_create(context, values):
+        if values['addres
         return values['address']
 
     def fake_fixed_ip_disassociate(context, address):

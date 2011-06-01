@@ -20,6 +20,7 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova import test
+from nova import utils
 from nova.auth import manager
 from nova.tests.db import fakes as db_fakes
 
@@ -39,23 +40,52 @@ class NetworkTestCase(test.TestCase):
                                              'netuser',
                                              'netuser')
         self.projects = []
-        db_fakes.stub_out_db_network_api(self.stubs)
         self.network = utils.import_object(FLAGS.network_manager)
+        db_fakes.stub_out_db_network_api(self.stubs)
+        self.network.db = db
         self.context = context.RequestContext(project=None, user=self.user)
+
+    def tearDown(self):
+        super(NetworkTestCase, self).tearDown()
+        reload(db)
 
 
 class TestFuncs(object):
+    def test_set_network_hosts(self):
+        db_fakes.stub_out_db_network_api(self.stubs, host=None)
+        self.network.set_network_hosts(self.context)
+        
+        
     def test_set_network_host(self):
-        host = "fake_test_host"
-        self.assertEqual(self.network.set_network_host(self.context, host),
+        host = self.network.host
+        self.assertEqual(self.network.set_network_host(self.context, 0),
                          host)
 
     def test_allocate_for_instance(self):
         instance_id = 0
         project_id = 0
         type_id = 0
-        ip = self.network.allocate_from_instance(self.context,
-                                                 instance_id=instance_id,
-                                                 project_id=project_id,
-                                                 type_id=type_id)
-        print ip
+        nw = self.network.allocate_for_instance(self.context,
+                                                instance_id=instance_id,
+                                                project_id=project_id,
+                                                instance_type_id=type_id)
+        static_info = [({'bridge': 'fa0'},
+                        {'broadcast': '192.168.0.255',
+                         'dns': ['192.168.0.1'],
+                         'gateway': '192.168.0.1',
+                         'gateway6': 'dead:beef::1',
+                         'ip6s': [{'enabled': '1',
+                                   'ip': 'dead:beef::dcad:beff:feef:0',
+                                         'netmask': '64'}],
+                         'ips': [{'enabled': '1',
+                                  'ip': '192.168.0.100',
+                                  'netmask': '255.255.255.0'}],
+                         'label': 'fake',
+                         'mac': 'DE:AD:BE:EF:00:00',
+                         'rxtx_cap': 3})]
+        self.assertEqual(static_info, nw)
+
+
+    def test_deallocate_for_instance(self):
+        pass
+
