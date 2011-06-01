@@ -69,6 +69,12 @@ flags.DEFINE_string('ldap_developer',
 LOG = logging.getLogger("nova.ldapdriver")
 
 
+if FLAGS.memcached_servers:
+    import memcache
+else:
+    from nova import fakememcache as memcache
+
+
 # TODO(vish): make an abstract base class with the same public methods
 #             to define a set interface for AuthDrivers. I'm delaying
 #             creating this now because I'm expecting an auth refactor
@@ -121,10 +127,6 @@ class LdapDriver(object):
             LdapDriver.conn = self.ldap.initialize(FLAGS.ldap_url)
             LdapDriver.conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
         if LdapDriver.mc is None:
-            if FLAGS.memcached_servers:
-                import memcache
-            else:
-                from nova import fakememcache as memcache
             LdapDriver.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 
     def __enter__(self):
