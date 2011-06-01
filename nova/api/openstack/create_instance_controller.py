@@ -116,6 +116,8 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         zone_blob = env['server'].get('blob')
         reservation_id = env['server'].get('reservation_id')
 
+        LOG.exception("******* CREATE_INSTANCE RES_ID=%s of %s" % (reservation_id, env))
+
         inst_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
         extra_values = {
             'instance_type': inst_type,
@@ -221,6 +223,34 @@ class OpenstackCreateInstanceController(common.OpenstackController):
             raise exception.RamdiskNotFoundForImage(image_id=image_id)
 
         return kernel_id, ramdisk_id
+        
+    def _get_injected_files(self, personality):
+        """
+        Create a list of injected files from the personality attribute
+
+        At this time, injected_files must be formatted as a list of
+        (file_path, file_content) pairs for compatibility with the
+        underlying compute service.
+        """
+        injected_files = []
+
+        for item in personality:
+            try:
+                path = item['path']
+                contents = item['contents']
+            except KeyError as key:
+                expl = _('Bad personality format: missing %s') % key
+                raise exc.HTTPBadRequest(explanation=expl)
+            except TypeError:
+                expl = _('Bad personality format')
+                raise exc.HTTPBadRequest(explanation=expl)
+            try:
+                contents = base64.b64decode(contents)
+            except TypeError:
+                expl = _('Personality content for %s cannot be decoded') % path
+                raise exc.HTTPBadRequest(explanation=expl)
+            injected_files.append((path, contents))
+        return injected_files
 
 
 class ServerCreateRequestXMLDeserializer(object):
