@@ -181,8 +181,10 @@ class ControllerV11(Controller):
         :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
+        filters = self._get_filters(req)
         (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.index(context, marker, limit)
+        images = self._image_service.index(
+            context, filters=filters, marker=marker, limit=limit)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
 
@@ -192,7 +194,9 @@ class ControllerV11(Controller):
         :param req: `wsgi.Request` object.
         """
         context = req.environ['nova.context']
+        filters = self._get_filters(req)
         (marker, limit) = common.get_pagination_params(req)
-        images = self._image_service.detail(context, marker, limit)
+        images = self._image_service.detail(
+            context, filters=filters, marker=marker, limit=limit)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])

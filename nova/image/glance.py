@@ -58,7 +58,7 @@ class GlanceImageService(service.BaseImageService):
         else:
             self.client = client
 
-    def index(self, context, marker=None, limit=None, filters=None):
+    def index(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of images available."""
         # NOTE(sirp): We need to use `get_images_detailed` and not
         # `get_images` here because we need `is_public` and `properties`
@@ -73,7 +73,7 @@ class GlanceImageService(service.BaseImageService):
                 filtered.append(meta_subset)
         return filtered
 
-    def detail(self, context, marker=None, limit=None, filters=None):
+    def detail(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of detailed image information."""
         filtered = []
         image_metas = self.client.get_images_detailed(marker=marker,
