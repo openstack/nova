@@ -194,8 +194,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         post = {}
         post['rebuild'] = {
             "imageRef": "https://localhost/v1.1/32278/images/2",
-            "name": "blah"
-        }
+            "name": "blah"}
 
         self.api.post_server_action(created_server_id, post)
         LOG.debug("rebuilt server: %s" % created_server)
@@ -224,8 +223,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         post = {}
         post['rebuild'] = {
             "imageRef": "https://localhost/v1.1/32278/images/2",
-            "name": "blah"
-        }
+            "name": "blah"}
 
         metadata = {}
         for i in range(30):
@@ -267,8 +265,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         post = {}
         post['rebuild'] = {
             "imageRef": "https://localhost/v1.1/32278/images/2",
-            "name": "blah"
-        }
+            "name": "blah"}
 
         metadata = {}
         post['rebuild']['metadata'] = metadata

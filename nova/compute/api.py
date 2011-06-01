@@ -270,8 +270,7 @@ class API(base.Base):
                                         'instance_type': instance_type,
                                         'filter':
                                             'nova.scheduler.host_filter.'
-                                            'InstanceTypeFilter'
-                                    },
+                                            'InstanceTypeFilter'},
                                "availability_zone": availability_zone,
                                "injected_files": injected_files,
                                "admin_password": admin_password}})

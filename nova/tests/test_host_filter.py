@@ -133,13 +133,11 @@ class HostFilterTestCase(test.TestCase):
         raw = ['or',
                    ['and',
                        ['<', '$compute.host_memory_free', 30],
-                       ['<', '$compute.disk_available', 300]
-                   ],
+                       ['<', '$compute.disk_available', 300]],
                    ['and',
                        ['>', '$compute.host_memory_free', 70],
-                       ['>', '$compute.disk_available', 700]
-                   ]
-              ]
+                       ['>', '$compute.disk_available', 700]]]
+
         cooked = json.dumps(raw)
         hosts = hf.filter_hosts(self.zone_manager, cooked)
 
@@ -183,13 +181,11 @@ class HostFilterTestCase(test.TestCase):
         self.assertTrue(hf.filter_hosts(self.zone_manager, json.dumps([])))
         self.assertTrue(hf.filter_hosts(self.zone_manager, json.dumps({})))
         self.assertTrue(hf.filter_hosts(self.zone_manager, json.dumps(
-                ['not', True, False, True, False]
-            )))
+                ['not', True, False, True, False])))
 
         try:
             hf.filter_hosts(self.zone_manager, json.dumps(
-                'not', True, False, True, False
-            ))
+                'not', True, False, True, False))
             self.fail("Should give KeyError")
         except KeyError, e:
             pass

@@ -160,8 +160,7 @@ def convert_backward(migrate_engine, old_quotas, new_quotas):
                 'project_id': quota.project_id,
                 'created_at': quota.created_at,
                 'updated_at': quota.updated_at,
-                quota.resource: quota.hard_limit
-            }
+                quota.resource: quota.hard_limit}
         else:
             quotas[quota.project_id]['created_at'] = earliest(
                 quota.created_at, quotas[quota.project_id]['created_at'])
