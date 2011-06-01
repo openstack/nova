@@ -250,6 +250,7 @@ class QuotaTestCase(test.TestCase):
                           volume.API().create,
                           self.context,
                           size=10,
+                          snapshot_id=None,
                           name='',
                           description='')
         for volume_id in volume_ids:
@@ -263,6 +264,7 @@ class QuotaTestCase(test.TestCase):
                           volume.API().create,
                           self.context,
                           size=10,
+                          snapshot_id=None,
                           name='',
                           description='')
         for volume_id in volume_ids:

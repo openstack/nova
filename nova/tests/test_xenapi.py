@@ -591,11 +591,29 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
         bob_shared = self.bob.compute_shared(alice_pub)
         self.assertEquals(alice_shared, bob_shared)
 
-    def test_encryption(self):
-        msg = "This is a top-secret message"
-        enc = self.alice.encrypt(msg)
+    def _test_encryption(self, message):
+        enc = self.alice.encrypt(message)
+        self.assertFalse(enc.endswith('\n'))
         dec = self.bob.decrypt(enc)
-        self.assertEquals(dec, msg)
+        self.assertEquals(dec, message)
+
+    def test_encrypt_simple_message(self):
+        self._test_encryption('This is a simple message.')
+
+    def test_encrypt_message_with_newlines_at_end(self):
+        self._test_encryption('This message has a newline at the end.\n')
+
+    def test_encrypt_many_newlines_at_end(self):
+        self._test_encryption('Message with lotsa newlines.\n\n\n')
+
+    def test_encrypt_newlines_inside_message(self):
+        self._test_encryption('Message\nwith\ninterior\nnewlines.')
+
+    def test_encrypt_with_leading_newlines(self):
+        self._test_encryption('\n\nMessage with leading newlines.')
+
+    def test_encrypt_really_long_message(self):
+        self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
 
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()

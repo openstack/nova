@@ -169,6 +169,25 @@ class CloudTestCase(test.TestCase):
         db.volume_destroy(self.context, vol1['id'])
         db.volume_destroy(self.context, vol2['id'])
 
+    def test_create_volume_from_snapshot(self):
+        """Makes sure create_volume works when we specify a snapshot."""
+        vol = db.volume_create(self.context, {'size': 1})
+        snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
+                                                 'volume_size': vol['size'],
+                                                 'status': "available"})
+        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+
+        result = self.cloud.create_volume(self.context,
+                                          snapshot_id=snapshot_id)
+        volume_id = result['volumeId']
+        result = self.cloud.describe_volumes(self.context)
+        self.assertEqual(len(result['volumeSet']), 2)
+        self.assertEqual(result['volumeSet'][1]['volumeId'], volume_id)
+
+        db.volume_destroy(self.context, ec2utils.ec2_id_to_id(volume_id))
+        db.snapshot_destroy(self.context, snap['id'])
+        db.volume_destroy(self.context, vol['id'])
+
     def test_describe_availability_zones(self):
         """Makes sure describe_availability_zones works and filters results."""
         service1 = db.service_create(self.context, {'host': 'host1_zones',
@@ -185,6 +204,52 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['availabilityZoneInfo']), 3)
         db.service_destroy(self.context, service1['id'])
         db.service_destroy(self.context, service2['id'])
+
+    def test_describe_snapshots(self):
+        """Makes sure describe_snapshots works and filters results."""
+        vol = db.volume_create(self.context, {})
+        snap1 = db.snapshot_create(self.context, {'volume_id': vol['id']})
+        snap2 = db.snapshot_create(self.context, {'volume_id': vol['id']})
+        result = self.cloud.describe_snapshots(self.context)
+        self.assertEqual(len(result['snapshotSet']), 2)
+        snapshot_id = ec2utils.id_to_ec2_id(snap2['id'], 'snap-%08x')
+        result = self.cloud.describe_snapshots(self.context,
+                                               snapshot_id=[snapshot_id])
+        self.assertEqual(len(result['snapshotSet']), 1)
+        self.assertEqual(
+            ec2utils.ec2_id_to_id(result['snapshotSet'][0]['snapshotId']),
+            snap2['id'])
+        db.snapshot_destroy(self.context, snap1['id'])
+        db.snapshot_destroy(self.context, snap2['id'])
+        db.volume_destroy(self.context, vol['id'])
+
+    def test_create_snapshot(self):
+        """Makes sure create_snapshot works."""
+        vol = db.volume_create(self.context, {'status': "available"})
+        volume_id = ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x')
+
+        result = self.cloud.create_snapshot(self.context,
+                                            volume_id=volume_id)
+        snapshot_id = result['snapshotId']
+        result = self.cloud.describe_snapshots(self.context)
+        self.assertEqual(len(result['snapshotSet']), 1)
+        self.assertEqual(result['snapshotSet'][0]['snapshotId'], snapshot_id)
+
+        db.snapshot_destroy(self.context, ec2utils.ec2_id_to_id(snapshot_id))
+        db.volume_destroy(self.context, vol['id'])
+
+    def test_delete_snapshot(self):
+        """Makes sure delete_snapshot works."""
+        vol = db.volume_create(self.context, {'status': "available"})
+        snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
+                                                  'status': "available"})
+        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+
+        result = self.cloud.delete_snapshot(self.context,
+                                            snapshot_id=snapshot_id)
+        self.assertTrue(result)
+
+        db.volume_destroy(self.context, vol['id'])
 
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""

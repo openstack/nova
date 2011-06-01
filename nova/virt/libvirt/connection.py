@@ -491,19 +491,27 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.ApiError("pause not supported for libvirt.")
+        """Pause VM instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.suspend()
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.ApiError("unpause not supported for libvirt.")
+        """Unpause paused VM instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.resume()
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.ApiError("suspend not supported for libvirt")
+        """Suspend the specified instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.managedSave(0)
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.ApiError("resume not supported for libvirt")
+        """resume the specified instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.create()
 
     @exception.wrap_exception
     def rescue(self, instance):
@@ -965,6 +973,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.vnc_enabled:
             if FLAGS.libvirt_type != 'lxc':
                 xml_info['vncserver_host'] = FLAGS.vncserver_host
+                xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

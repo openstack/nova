@@ -92,7 +92,6 @@ class API(base.Base):
         """Enforce quota limits on injected files.
 
         Raises a QuotaError if any limit is exceeded.
-
         """
         if injected_files is None:
             return
@@ -141,7 +140,6 @@ class API(base.Base):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
-
         """
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
@@ -270,7 +268,12 @@ class API(base.Base):
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
-                               "instance_type": instance_type,
+                               "request_spec": {
+                                        'instance_type': instance_type,
+                                        'filter':
+                                            'nova.scheduler.host_filter.'
+                                            'InstanceTypeFilter'
+                                    },
                                "availability_zone": availability_zone,
                                "injected_files": injected_files,
                                "admin_password": admin_password}})
@@ -296,7 +299,6 @@ class API(base.Base):
         already exist.
 
         :param context: the security context
-
         """
         try:
             db.security_group_get_by_name(context, context.project_id,
@@ -329,7 +331,6 @@ class API(base.Base):
 
         Sends an update request to each compute node for whom this is
         relevant.
-
         """
         # First, we get the security group rules that reference this group as
         # the grantee..
@@ -376,7 +377,6 @@ class API(base.Base):
                        updated
 
         :returns: None
-
         """
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
@@ -426,7 +426,6 @@ class API(base.Base):
         Use this method instead of get() if this is the only operation you
         intend to to. It will route to novaclient.get if the instance is not
         found.
-
         """
         return self.get(context, instance_id)
 
@@ -436,7 +435,6 @@ class API(base.Base):
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
-
         """
         if reservation_id is not None:
             return self.db.instance_get_all_by_reservation(
@@ -466,7 +464,6 @@ class API(base.Base):
                        compute worker
 
         :returns: None
-
         """
         if not params:
             params = {}
@@ -516,7 +513,6 @@ class API(base.Base):
         """Snapshot the given instance.
 
         :returns: A dict containing image metadata
-
         """
         properties = {'instance_id': str(instance_id),
                       'user_id': str(context.user_id)}
@@ -533,7 +529,7 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_ref, metadata=None,
+    def rebuild(self, context, instance_id, image_id, name=None, metadata=None,
                 files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
@@ -542,13 +538,16 @@ class API(base.Base):
             msg = _("Instance already building")
             raise exception.BuildInProgress(msg)
 
-        metadata = metadata or {}
-        self._check_metadata_properties_quota(context, metadata)
-
         files_to_inject = files_to_inject or []
         self._check_injected_file_quota(context, files_to_inject)
 
-        self.db.instance_update(context, instance_id, {"metadata": metadata})
+        values = {}
+        if metadata is not None:
+            self._check_metadata_properties_quota(context, metadata)
+            values['metadata'] = metadata
+        if name is not None:
+            values['display_name'] = name
+        self.db.instance_update(context, instance_id, values)
 
         rebuild_params = {
             "image_ref": image_ref,

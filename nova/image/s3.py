@@ -32,12 +32,14 @@ from nova import crypto
 from nova import exception
 from nova import flags
 from nova import image
+from nova import log as logging
 from nova import utils
 from nova.auth import manager
 from nova.image import service
 from nova.api.ec2 import ec2utils
 
 
+LOG = logging.getLogger("nova.image.s3")
 FLAGS = flags.FLAGS
 flags.DEFINE_string('image_decryption_dir', '/tmp',
                     'parent dir for tempdir used for image decryption')
@@ -160,43 +162,83 @@ class S3ImageService(service.BaseImageService):
 
         def delayed_create():
             """This handles the fetching and decrypting of the part files."""
-            parts = []
-            for fn_element in manifest.find('image').getiterator('filename'):
-                part = self._download_file(bucket, fn_element.text, image_path)
-                parts.append(part)
+            metadata['properties']['image_state'] = 'downloading'
+            self.service.update(context, image_id, metadata)
 
-            # NOTE(vish): this may be suboptimal, should we use cat?
-            encrypted_filename = os.path.join(image_path, 'image.encrypted')
-            with open(encrypted_filename, 'w') as combined:
-                for filename in parts:
-                    with open(filename) as part:
-                        shutil.copyfileobj(part, combined)
+            try:
+                parts = []
+                elements = manifest.find('image').getiterator('filename')
+                for fn_element in elements:
+                    part = self._download_file(bucket,
+                                               fn_element.text,
+                                               image_path)
+                    parts.append(part)
+
+                # NOTE(vish): this may be suboptimal, should we use cat?
+                enc_filename = os.path.join(image_path, 'image.encrypted')
+                with open(enc_filename, 'w') as combined:
+                    for filename in parts:
+                        with open(filename) as part:
+                            shutil.copyfileobj(part, combined)
+
+            except Exception:
+                LOG.error(_("Failed to download %(image_location)s "
+                            "to %(image_path)s"), locals())
+                metadata['properties']['image_state'] = 'failed_download'
+                self.service.update(context, image_id, metadata)
+                raise
 
             metadata['properties']['image_state'] = 'decrypting'
             self.service.update(context, image_id, metadata)
 
-            hex_key = manifest.find('image/ec2_encrypted_key').text
-            encrypted_key = binascii.a2b_hex(hex_key)
-            hex_iv = manifest.find('image/ec2_encrypted_iv').text
-            encrypted_iv = binascii.a2b_hex(hex_iv)
+            try:
+                hex_key = manifest.find('image/ec2_encrypted_key').text
+                encrypted_key = binascii.a2b_hex(hex_key)
+                hex_iv = manifest.find('image/ec2_encrypted_iv').text
+                encrypted_iv = binascii.a2b_hex(hex_iv)
 
-            # FIXME(vish): grab key from common service so this can run on
-            #              any host.
-            cloud_pk = crypto.key_path(context.project_id)
+                # FIXME(vish): grab key from common service so this can run on
+                #              any host.
+                cloud_pk = crypto.key_path(context.project_id)
 
-            decrypted_filename = os.path.join(image_path, 'image.tar.gz')
-            self._decrypt_image(encrypted_filename, encrypted_key,
-                                encrypted_iv, cloud_pk, decrypted_filename)
+                dec_filename = os.path.join(image_path, 'image.tar.gz')
+                self._decrypt_image(enc_filename, encrypted_key,
+                                    encrypted_iv, cloud_pk,
+                                    dec_filename)
+            except Exception:
+                LOG.error(_("Failed to decrypt %(image_location)s "
+                            "to %(image_path)s"), locals())
+                metadata['properties']['image_state'] = 'failed_decrypt'
+                self.service.update(context, image_id, metadata)
+                raise
 
             metadata['properties']['image_state'] = 'untarring'
             self.service.update(context, image_id, metadata)
 
-            unz_filename = self._untarzip_image(image_path, decrypted_filename)
+            try:
+                unz_filename = self._untarzip_image(image_path, dec_filename)
+            except Exception:
+                LOG.error(_("Failed to untar %(image_location)s "
+                            "to %(image_path)s"), locals())
+                metadata['properties']['image_state'] = 'failed_untar'
+                self.service.update(context, image_id, metadata)
+                raise
 
             metadata['properties']['image_state'] = 'uploading'
-            with open(unz_filename) as image_file:
-                self.service.update(context, image_id, metadata, image_file)
+            self.service.update(context, image_id, metadata)
+            try:
+                with open(unz_filename) as image_file:
+                    self.service.update(context, image_id,
+                                        metadata, image_file)
+            except Exception:
+                LOG.error(_("Failed to upload %(image_location)s "
+                            "to %(image_path)s"), locals())
+                metadata['properties']['image_state'] = 'failed_upload'
+                self.service.update(context, image_id, metadata)
+                raise
+
             metadata['properties']['image_state'] = 'available'
+            metadata['status'] = 'active'
             self.service.update(context, image_id, metadata)
 
             shutil.rmtree(image_path)
