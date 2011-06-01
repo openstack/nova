@@ -125,7 +125,8 @@ class LdapDriver(object):
         self.__cache = None
         if LdapDriver.conn is None:
             LdapDriver.conn = self.ldap.initialize(FLAGS.ldap_url)
-            LdapDriver.conn.simple_bind_s(FLAGS.ldap_user_dn, FLAGS.ldap_password)
+            LdapDriver.conn.simple_bind_s(FLAGS.ldap_user_dn,
+                                          FLAGS.ldap_password)
         if LdapDriver.mc is None:
             LdapDriver.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 
