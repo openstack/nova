@@ -18,6 +18,7 @@ import eventlet
 import mox
 import os
 import re
+import shutil
 import sys
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
@@ -644,6 +645,8 @@ class LibvirtConnTestCase(test.TestCase):
             conn.spawn(instance, network_info)
         except Exception, e:
             count = (0 <= str(e.message).find('Unexpected method call'))
+
+        shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
 
         self.assertTrue(count)
 

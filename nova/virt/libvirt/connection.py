@@ -488,19 +488,27 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.ApiError("pause not supported for libvirt.")
+        """Pause VM instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.suspend()
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.ApiError("unpause not supported for libvirt.")
+        """Unpause paused VM instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.resume()
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.ApiError("suspend not supported for libvirt")
+        """Suspend the specified instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.managedSave(0)
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.ApiError("resume not supported for libvirt")
+        """resume the specified instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.create()
 
     @exception.wrap_exception
     def rescue(self, instance):

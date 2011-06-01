@@ -19,12 +19,11 @@ from webob import exc
 
 from nova import compute
 from nova import quota
-from nova import wsgi
-from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """ The server metadata API controller for the Openstack API """
 
     def __init__(self):
@@ -43,10 +42,9 @@ class Controller(common.OpenstackController):
         context = req.environ['nova.context']
         return self._get_metadata(context, server_id)
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
         context = req.environ['nova.context']
-        data = self._deserialize(req.body, req.get_content_type())
-        metadata = data.get('metadata')
+        metadata = body.get('metadata')
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
@@ -55,9 +53,8 @@ class Controller(common.OpenstackController):
             self._handle_quota_error(error)
         return req.body
 
-    def update(self, req, server_id, id):
+    def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
-        body = self._deserialize(req.body, req.get_content_type())
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -92,3 +89,11 @@ class Controller(common.OpenstackController):
         if error.code == "MetadataLimitExceeded":
             raise exc.HTTPBadRequest(explanation=error.message)
         raise error
+
+
+def create_resource():
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

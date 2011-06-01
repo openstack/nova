@@ -14,22 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from sqlalchemy import Column, Integer, MetaData, String, Table
-#from nova import log as logging
+from sqlalchemy import MetaData, Table
 
 meta = MetaData()
-
-c_manageent = Column('server_manageent_url',
-                           String(length=255, convert_unicode=False,
-                                  assert_unicode=None, unicode_error=None,
-                                  _warn_on_bytestring=False),
-                           nullable=True)
-
-c_management = Column('server_management_url',
-                           String(length=255, convert_unicode=False,
-                                  assert_unicode=None, unicode_error=None,
-                                  _warn_on_bytestring=False),
-                           nullable=True)
 
 
 def upgrade(migrate_engine):
@@ -40,11 +27,8 @@ def upgrade(migrate_engine):
     tokens = Table('auth_tokens', meta, autoload=True,
                       autoload_with=migrate_engine)
 
-    tokens.create_column(c_management)
-    migrate_engine.execute(tokens.update()
-            .values(server_management_url=tokens.c.server_manageent_url))
-
-    tokens.c.server_manageent_url.drop()
+    c_manageent = tokens.c.server_manageent_url
+    c_manageent.alter(name='server_management_url')
 
 
 def downgrade(migrate_engine):
@@ -53,8 +37,5 @@ def downgrade(migrate_engine):
     tokens = Table('auth_tokens', meta, autoload=True,
                       autoload_with=migrate_engine)
 
-    tokens.create_column(c_manageent)
-    migrate_engine.execute(tokens.update()
-            .values(server_manageent_url=tokens.c.server_management_url))
-
-    tokens.c.server_management_url.drop()
+    c_management = tokens.c.server_management_url
+    c_management.alter(name='server_manageent_url')
