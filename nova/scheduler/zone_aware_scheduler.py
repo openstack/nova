@@ -23,8 +23,8 @@ across zones. There are two expansion points to this class for:
 import operator
 
 from nova import db
-from nova import rpc
 from nova import log as logging
+from nova import rpc
 from nova.scheduler import api
 from nova.scheduler import driver
 
@@ -43,12 +43,11 @@ class ZoneAwareScheduler(driver.Scheduler):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
-
         1. Create a Build Plan and then provision, or
-
         2. Use the Build Plan information in the request parameters
            to simply create the instance (either in this zone or
-           a child zone)."""
+           a child zone).
+        """
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
@@ -81,15 +80,15 @@ class ZoneAwareScheduler(driver.Scheduler):
                                 % locals())
         else:
             # TODO(sandy) Provision in child zone ...
-            LOG.warning(_("Provision to Child Zone not supported (yet)")
-                                % locals())
+            LOG.warning(_("Provision to Child Zone not supported (yet)"))
             pass
 
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
-        anything about the children."""
+        anything about the children.
+        """
         return self._schedule(context, "compute", request_spec,
                               *args, **kwargs)
 
@@ -143,7 +142,8 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def filter_hosts(self, num, request_spec):
         """Derived classes must override this method and return
-           a list of hosts in [(hostname, capability_dict)] format."""
+           a list of hosts in [(hostname, capability_dict)] format.
+        """
         # NOTE(sirp): The default logic is the equivalent to AllHostsFilter
         service_states = self.zone_manager.service_states
         return [(host, services)
@@ -151,6 +151,7 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def weigh_hosts(self, num, request_spec, hosts):
         """Derived classes may override this to provide more sophisticated
-        scheduling objectives"""
+        scheduling objectives
+        """
         # NOTE(sirp): The default logic is the same as the NoopCostFunction
         return [dict(weight=1, hostname=host) for host, caps in hosts]
