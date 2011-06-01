@@ -30,9 +30,7 @@ LOG = logging.getLogger("nova.network.vmwareapi_net")
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('vlan_interface', 'vmnic0',
-                    'Physical network adapter name in VMware ESX host for '
-                    'vlan networking')
+FLAGS['vlan_interface'].SetDefault('vmnic0')
 
 
 def ensure_vlan_bridge(vlan_num, bridge, net_attrs=None):
