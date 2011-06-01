@@ -61,7 +61,7 @@ def stub_out_db_network_api(stubs, host='localhost'):
                       'broadcast': '192.168.0.255',
                       'gateway_v6': 'dead:beef::1',
                       'vlan': None,
-                      'host': 'fake'}
+                      'host': host}
 
     fixed_ip_fields = {'id': 0,
                        'address': '192.168.0.100',
