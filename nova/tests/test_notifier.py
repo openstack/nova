@@ -122,12 +122,13 @@ class NotifierTestCase(test.TestCase):
         self.stubs.Set(nova.flags.FLAGS, 'publish_errors', True)
         LOG = log.getLogger('nova')
         LOG.setup_from_flags()
-
         msgs = []
+
         def mock_cast(context, topic, data):
             msgs.append(data)
-        self.stubs.Set(nova.rpc, 'cast', mock_cast) 
-        LOG.error('foo');
+
+        self.stubs.Set(nova.rpc, 'cast', mock_cast)
+        LOG.error('foo')
         self.assertEqual(1, len(msgs))
         msg = msgs[0]
         self.assertEqual(msg['event_type'], 'error_notification')
