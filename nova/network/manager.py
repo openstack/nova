@@ -122,9 +122,10 @@ class RPCAllocateFixedIP(object):
     def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
         """calls allocate_fixed_ip once for each network"""
         green_pool = greenpool.GreenPool()
+
         for network in networks:
             if network['host'] != self.host:
-                # need to cast allocate_fixed_ip to correct network host
+                # need to call allocate_fixed_ip to correct network host
                 topic = self.db.queue_get_for(context, FLAGS.network_topic,
                                                            network['host'])
                 args = kwargs
@@ -416,7 +417,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                     "netmask": network['netmask_v6'],
                     "enabled": "1"}
             network_dict = {
-                'bridge': network['bridge']}
+                'bridge': network['bridge'],
+                'id': network['id']}
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],
@@ -457,6 +459,11 @@ class NetworkManager(manager.SchedulerDependentManager):
                random.randint(0x00, 0xff),
                random.randint(0x00, 0xff)]
         return ':'.join(map(lambda x: "%02x" % x, mac))
+
+    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
+        """adds a fixed ip to an instance from specified network"""
+        networks = [self.db.network_get(context, network_id)]
+        self._allocate_fixed_ips(context, instance_id, networks)
 
     def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
         """Gets a fixed ip from the pool."""
@@ -785,6 +792,10 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
         self.db.fixed_ip_update(context, address, values)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network['id'])
+
+    def add_network_to_project(self, context, project_id):
+        """force adds another network to a project"""
+        self.db.network_associate(context, project_id, force=True)
 
     def setup_compute_network(self, context, instance_id):
         """Sets up matching network for compute hosts.

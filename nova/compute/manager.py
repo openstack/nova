@@ -591,6 +591,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
+    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
+        """calls network_api to add new fixed_ip to instance
+        only here because of checks_instance_lock"""
+        self.network_api.add_fixed_ip_to_instance(context, instance_id,
+                                                           network_id)
+
+    @exception.wrap_exception
+    @checks_instance_lock
     def pause_instance(self, context, instance_id):
         """Pause an instance on this host."""
         context = context.elevated()
