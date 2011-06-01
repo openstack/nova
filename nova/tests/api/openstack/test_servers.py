@@ -538,6 +538,26 @@ class ServersTest(test.TestCase):
         self.assertNotEqual(reservation_id, None)
         self.assertTrue(len(reservation_id) > 1)
 
+    def test_create_instance_via_zones_with_resid(self):
+        """User supplied ReservationID"""
+        self._setup_for_create_instance()
+        FLAGS.allow_admin_api = True
+
+        body = dict(server=dict(
+            name='server_test', imageId=3, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}, reservation_id='myresid'))
+        req = webob.Request.blank('/v1.0/zones/boot')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        reservation_id = json.loads(res.body)['reservation_id']
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(reservation_id, "myresid")
+
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
         self._test_create_instance_helper()
