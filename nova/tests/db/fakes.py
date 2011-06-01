@@ -168,12 +168,12 @@ def stub_out_db_network_api(stubs, host='localhost'):
     def fake_network_get_all(context):
         return [FakeModel(network_fields)]
 
-    def fake_network_get_all_by_host(context, host)
+    def fake_network_get_all_by_host(context, host):
         net = dict(network_fields)
         net['host'] = host
         return [FakeModel(net)]
 
-    def fake_network_get_all_by_instance(context, instance_id)
+    def fake_network_get_all_by_instance(context, instance_id):
         return [FakeModel(network_fields)]
 
     def fake_network_set_host(context, network_id, host_id):
@@ -327,7 +327,7 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_fixed_ip_get_all_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    funcs = [fake_network_get_by_instance
+    funcs = [fake_network_get_by_instance,
              fake_network_get_all_by_instance,
              fake_instance_type_get_all,
              fake_instance_type_get_by_name,
