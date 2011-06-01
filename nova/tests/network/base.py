@@ -20,7 +20,7 @@ from nova import db
 from nova import flags
 from nova import log as logging
 from nova import test
-
+from nova.tests.db import fakes as db_fakes
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.network')
@@ -37,3 +37,5 @@ class NetworkTestCase(test.TestCase):
                                              'netuser',
                                              'netuser')
         self.projects = []
+        db_fakes.stub_out_db_network_api(self.stubs)
+
