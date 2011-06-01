@@ -39,13 +39,13 @@ XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 def get_pagination_params(request):
     """
     Return marker, limit tuple from request
-    
+
     @param request: `wsgi.Request` possibly containing 'marker' and 'limit'
                     GET variables. 'marker' is the id of the last element
                     the client has seen, and 'limit' is the maximum number
                     of items to return. If 'limit' is not specified, 0, or
                     > max_limit, we default to max_limit. Negative values
-                    for either marker or limit will cause 
+                    for either marker or limit will cause
                     exc.HTTPBadRequest() exceptions to be raised.
     """
     try:

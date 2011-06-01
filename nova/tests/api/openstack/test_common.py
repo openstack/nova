@@ -174,8 +174,8 @@ class LimiterTest(test.TestCase):
 
 class PaginationParamsTest(test.TestCase):
     """
-    Unit tests for the `nova.api.openstack.common.get_pagination_params` 
-    method which takes in a request object and returns 'marker' and 'limit' 
+    Unit tests for the `nova.api.openstack.common.get_pagination_params`
+    method which takes in a request object and returns 'marker' and 'limit'
     GET params.
     """
 
@@ -185,7 +185,7 @@ class PaginationParamsTest(test.TestCase):
         """
         req = Request.blank('/')
         self.assertEqual(get_pagination_params(req), (0, 0))
-        
+
     def test_valid_marker(self):
         """
         Test valid marker param.
