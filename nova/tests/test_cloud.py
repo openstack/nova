@@ -445,38 +445,41 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
-        all_instances = db.instance_get_all(context.get_admin_context())
-        self.assertEqual(0, len(all_instances))
-
-        def fake_show_decrypt(self, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine', 'image_state': 'decrypting'}}
-
-        def fake_show_no_state(self, context, id):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}}
-
-        image_id = FLAGS.default_image
-        instance_type = FLAGS.default_instance_type
-        max_count = 1
-        kwargs = {'image_id': image_id,
-                  'instance_type': instance_type,
-                  'max_count': max_count}
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
         run_instances = self.cloud.run_instances
-        # when image has valid image_state
         result = run_instances(self.context, **kwargs)
         instance = result['instancesSet'][0]
         self.assertEqual(instance['imageId'], 'ami-00000001')
         self.assertEqual(instance['displayName'], 'Server 1')
         self.assertEqual(instance['instanceId'], 'i-00000001')
-        self.assertEqual(instance['instanceState']['name'], 'scheduling')
+        self.assertEqual(instance['instanceState']['name'], 'networking')
         self.assertEqual(instance['instanceType'], 'm1.small')
-        # when image doesn't have 'image_state' attr at all
+
+    def test_run_instances_image_state_none(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+        def fake_show_no_state(self, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}}
+
         self.stubs.UnsetAll()
         self.stubs.Set(local.LocalImageService, 'show', fake_show_no_state)
         self.assertRaises(exception.ApiError, run_instances,
                           self.context, **kwargs)
-        # when image has 'image_state' yet not 'available'
+
+    def test_run_instances_image_state_invalid(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+        def fake_show_decrypt(self, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine', 'image_state': 'decrypting'}}
+
         self.stubs.UnsetAll()
         self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
         self.assertRaises(exception.ApiError, run_instances,
