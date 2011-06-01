@@ -129,7 +129,6 @@ class Controller(controller.OpenstackCreateInstanceController):
 
         Returns a reservation ID (a UUID).
         """
-        print "************** IN ZONE BOOT"
         extra_values, result = \
                 self.create_instance(req, self.compute_api.create_all_at_once)
         if extra_values is None:

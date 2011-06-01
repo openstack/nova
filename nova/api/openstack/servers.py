@@ -87,7 +87,11 @@ class Controller(controller.OpenstackCreateInstanceController):
 
         builder - the response model builder
         """
-        instance_list = self.compute_api.get_all(req.environ['nova.context'])
+        reservation_id = req.str_GET.get('reservation_id')
+        LOG.exception(_(" ************* RESERVATION ID %s"), reservation_id)
+        instance_list = self.compute_api.get_all(
+                                            req.environ['nova.context'],
+                                            reservation_id=reservation_id)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
@@ -131,34 +135,6 @@ class Controller(controller.OpenstackCreateInstanceController):
         server = builder.build(inst, is_detail=True)
         server['server']['adminPass'] = extra_values['password']
         return server
-
-    def _get_injected_files(self, personality):
-        """
-        Create a list of injected files from the personality attribute
-
-        At this time, injected_files must be formatted as a list of
-        (file_path, file_content) pairs for compatibility with the
-        underlying compute service.
-        """
-        injected_files = []
-
-        for item in personality:
-            try:
-                path = item['path']
-                contents = item['contents']
-            except KeyError as key:
-                expl = _('Bad personality format: missing %s') % key
-                raise exc.HTTPBadRequest(explanation=expl)
-            except TypeError:
-                expl = _('Bad personality format')
-                raise exc.HTTPBadRequest(explanation=expl)
-            try:
-                contents = base64.b64decode(contents)
-            except TypeError:
-                expl = _('Personality content for %s cannot be decoded') % path
-                raise exc.HTTPBadRequest(explanation=expl)
-            injected_files.append((path, contents))
-        return injected_files
 
     @scheduler_api.redirect_handler
     def update(self, req, id):
