@@ -222,7 +222,7 @@ class OpenstackCreateInstanceController(common.OpenstackController):
             raise exception.RamdiskNotFoundForImage(image_id=image_id)
 
         return kernel_id, ramdisk_id
-        
+
     def _get_injected_files(self, personality):
         """
         Create a list of injected files from the personality attribute
