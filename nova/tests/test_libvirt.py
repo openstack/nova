@@ -328,14 +328,14 @@ class LibvirtConnTestCase(test.TestCase):
         # To work with it from snapshot, the single image_service is needed
         recv_meta = image_service.create(context, sent_meta)
 
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
-        libvirt_conn.LibvirtConnection._conn.lookupByName = fake_lookup
-        self.mox.StubOutWithMock(libvirt_conn.utils, 'execute')
-        libvirt_conn.utils.execute = fake_execute
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = fake_execute
 
         self.mox.ReplayAll()
 
-        conn = libvirt_conn.LibvirtConnection(False)
+        conn = connection.LibvirtConnection(False)
         conn.snapshot(instance_ref, recv_meta['id'])
 
         snapshot = image_service.show(context, recv_meta['id'])

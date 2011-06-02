@@ -82,12 +82,9 @@ class _FakeImageService(service.BaseImageService):
         :raises: Duplicate if the image already exist.
 
         """
-        #image_id = int(metadata['id'])
-        # metadata['id'] may not exists, and since image_id is
-        #   randomly generated in local.py, let us do the same here
         try:
             image_id = int(metadata['id'])
-        except:
+        except KeyError:
             image_id = random.randint(0, 2 ** 31 - 1)
 
         if self.images.get(image_id):
