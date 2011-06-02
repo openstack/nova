@@ -714,7 +714,6 @@ class ControllerV11(Controller):
             LOG.debug(msg)
             return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        image_id = common.get_id_from_href(image_href)
         personalities = info["rebuild"].get("personality", [])
         metadata = info["rebuild"].get("metadata")
         name = info["rebuild"].get("name")
@@ -724,7 +723,7 @@ class ControllerV11(Controller):
         self._decode_personalities(personalities)
 
         try:
-            self.compute_api.rebuild(context, instance_id, image_id, name,
+            self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
         except exception.BuildInProgress:
             msg = _("Instance %d is currently being rebuilt.") % instance_id

@@ -529,8 +529,8 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_id, name=None, metadata=None,
-                files_to_inject=None):
+    def rebuild(self, context, instance_id, image_href, name=None,
+            metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
 
@@ -550,7 +550,7 @@ class API(base.Base):
         self.db.instance_update(context, instance_id, values)
 
         rebuild_params = {
-            "image_ref": image_ref,
+            "image_ref": image_href,
             "injected_files": files_to_inject,
         }
 
