@@ -148,10 +148,7 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
             except Exception as e:
                 if type(e) in errors_to_ignore:
                     return None
-                # TODO (dabo) - want to be able to re-raise here.
-                # Returning a string now; raising was causing issues.
-                # raise e
-                return "ERROR", "%s" % e
+                raise e
 
         res = pool.spawn(_error_trap, *args, **kwargs)
         results.append((zone, res))

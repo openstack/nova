@@ -556,7 +556,6 @@ class API(base.Base):
 
         for zone, servers in children:
             for server in servers:
-                LOG.debug("**** INSTANCE= %s" % server._info)
                 # Results are ready to send to user. No need to scrub.
                 server._info['_is_precooked'] = True
                 instances.append(server._info)

@@ -88,7 +88,6 @@ class Controller(controller.OpenstackCreateInstanceController):
         builder - the response model builder
         """
         reservation_id = req.str_GET.get('reservation_id')
-        LOG.exception(_(" ************* RESERVATION ID %s"), reservation_id)
         instance_list = self.compute_api.get_all(
                                             req.environ['nova.context'],
                                             reservation_id=reservation_id)

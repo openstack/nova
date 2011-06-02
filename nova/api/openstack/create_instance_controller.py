@@ -15,12 +15,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import re
+import webob
+
 from urlparse import urlparse
 from webob import exc
 from xml.dom import minidom
-
-import webob
 
 from nova import exception
 from nova import flags
