@@ -207,10 +207,7 @@ class _IntegratedTestBase(test.TestCase):
         if 'imageRef' in image:
             image_href = image['imageRef']
         else:
-            # NOTE(justinsb): The imageRef code hasn't yet landed
-            LOG.warning("imageRef not yet in images output")
             image_href = image['id']
-
             image_href = 'http://fake.server/%s' % image_href
 
         # We now have a valid imageId
