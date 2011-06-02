@@ -77,7 +77,7 @@ def stub_out_db_network_api(stubs, host='localhost'):
     floating_ip_fields = {'id': 0,
                           'address': '192.168.1.100',
                           'fixed_ip_id': 0,
-                          'fixed_ip': None, 
+                          'fixed_ip': None,
                           'project_id': 'fake',
                           'host': host,
                           'auto_assigned': False}
@@ -85,14 +85,13 @@ def stub_out_db_network_api(stubs, host='localhost'):
     mac_address_fields = {'id': 0,
                           'address': 'DE:AD:BE:EF:00:00',
                           'network_id': 0,
-                          'instance_id':0,
+                          'instance_id': 0,
                           'network': FakeModel(network_fields)}
 
     networks = {0: network_fields}
     fixed_ips = {0: fixed_ip_fields}
     floating_ips = {0: floating_ip_fields}
     mac_addresses = {0: mac_address_fields}
-    
 
     def fake_floating_ip_allocate_address(context, host, project_id):
         floating_ip_fields['project_id'] = project_id
@@ -101,7 +100,6 @@ def stub_out_db_network_api(stubs, host='localhost'):
     def fake_floating_ip_deallocate(context, floating_address):
         floating_ip_fields['project_id'] = None
         floating_ip_fields['auto_assigned'] = False
-
 
     def fake_floating_ip_disassociate(context, address):
         if floating_ip_fields['address'] == address:

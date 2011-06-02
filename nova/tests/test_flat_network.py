@@ -29,4 +29,3 @@ LOG = logging.getLogger('nova.tests.network')
 
 #    def setUp(self):
 #        super(FlatNetworkTestCase, self).setUp()
-

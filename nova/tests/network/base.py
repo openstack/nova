@@ -54,8 +54,7 @@ class TestFuncs(object):
     def test_set_network_hosts(self):
         db_fakes.stub_out_db_network_api(self.stubs, host=None)
         self.network.set_network_hosts(self.context)
-        
-        
+
     def test_set_network_host(self):
         host = self.network.host
         self.assertEqual(self.network.set_network_host(self.context, 0),
@@ -85,7 +84,5 @@ class TestFuncs(object):
                          'rxtx_cap': 3})]
         self.assertEqual(static_info, nw)
 
-
     def test_deallocate_for_instance(self):
         pass
-
