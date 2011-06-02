@@ -36,6 +36,7 @@ import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.db.api
+import nova.scheduler.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.rpc
@@ -68,6 +69,26 @@ def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
 
+def return_servers_by_reservation(context, reservation_id=""):
+    return [stub_instance(i, reservation_id) for i in xrange(5)]
+
+
+def return_servers_from_child_zones(*args, **kwargs):
+    class Server(object):
+        pass
+
+    zones = []
+    for zone in xrange(3):
+        servers = []
+        for server_id in xrange(5):
+            server = Server()
+            server._info = stub_instance(server_id, reservation_id="child")
+            servers.append(server)
+
+        zones.append(("Zone%d" % zone, servers))
+    return zones
+
+
 def return_security_group(context, instance_id, security_group_id):
     pass
 
@@ -81,7 +102,7 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
-                  host=None, power_state=0):
+                  host=None, power_state=0, reservation_id=""):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -92,6 +113,11 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     if host is not None:
         host = str(host)
+
+    # ReservationID isn't sent back, hack it in there.
+    server_name = "server%s" % id
+    if reservation_id != "":
+        server_name = "reservation_%s" % (reservation_id, )
 
     instance = {
         "id": id,
@@ -113,13 +139,13 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "host": host,
         "instance_type": dict(inst_type),
         "user_data": "",
-        "reservation_id": "",
+        "reservation_id": reservation_id,
         "mac_address": "",
         "scheduled_at": datetime.datetime.now(),
         "launched_at": datetime.datetime.now(),
         "terminated_at": datetime.datetime.now(),
         "availability_zone": "",
-        "display_name": "server%s" % id,
+        "display_name": server_name,
         "display_description": "",
         "locked": False,
         "metadata": metadata}
@@ -363,6 +389,24 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['name'], 'server%d' % i)
             self.assertEqual(s.get('imageId', None), None)
             i += 1
+
+    def test_get_server_list_with_reservation_id(self):
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+                       return_servers_by_reservation)
+        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
+                       return_servers_from_child_zones)
+        req = webob.Request.blank('/v1.0/servers/detail?reservation_id=foo')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            print "SERVER", s
+            if '_is_precooked' in s:
+                self.assertEqual(s.get('reservation_id'), 'child')
+            else:
+                self.assertEqual(s.get('name'), 'server%d' % i)
+                i += 1
 
     def test_get_server_list_v1_1(self):
         req = webob.Request.blank('/v1.1/servers')

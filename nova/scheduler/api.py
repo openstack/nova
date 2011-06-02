@@ -87,13 +87,6 @@ def select(context, specs=None):
             params={"request_spec": specs})
 
 
-def should_create_all_at_once(context):
-    """Returns a tuple of rules for how instances should
-    be created given the current Scheduler driver being used."""
-    return _call_scheduler('should_create_all_at_once', context=context,
-            params={})
-
-
 def update_service_capabilities(context, service_name, host, capabilities):
     """Send an update to all the scheduler services informing them
        of the capabilities of this service."""

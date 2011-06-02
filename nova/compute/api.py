@@ -377,22 +377,6 @@ class API(base.Base):
 
         return [dict(x.iteritems()) for x in instances]
 
-    def smart_create(self, *args, **kwargs):
-        """
-        Ask the scheduler if we should do single shot instance requests
-        or all-at-once.
-
-        Cache this information on first request and act accordingly.
-        """
-
-        if API.should_create_all_at_once == None:
-            API.should_create_all_at_once = \
-                    scheduler_api.should_create_all_at_once(context)
-
-        if API.should_create_all_at_once:
-            return self.create_all_at_once(*args, **kwargs)
-        return self.create(*args, **kwargs)
-
     def has_finished_migration(self, context, instance_id):
         """Returns true if an instance has a finished migration."""
         try:
