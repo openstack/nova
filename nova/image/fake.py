@@ -19,6 +19,7 @@
 
 import copy
 import datetime
+import random
 
 from nova import exception
 from nova import flags
@@ -32,7 +33,7 @@ LOG = logging.getLogger('nova.image.fake')
 FLAGS = flags.FLAGS
 
 
-class FakeImageService(service.BaseImageService):
+class _FakeImageService(service.BaseImageService):
     """Mock (fake) image service for unit testing."""
 
     def __init__(self):
@@ -48,7 +49,8 @@ class FakeImageService(service.BaseImageService):
                  'container_format': 'ami',
                  'disk_format': 'raw',
                  'properties': {'kernel_id': FLAGS.null_kernel,
-                                'ramdisk_id': FLAGS.null_kernel}}
+                                'ramdisk_id': FLAGS.null_kernel,
+                                'architecture': 'x86_64'}}
 
         image2 = {'id': 'fake',
                  'name': 'fakeimage123456',
@@ -95,7 +97,7 @@ class FakeImageService(service.BaseImageService):
         self.create(None, image3)
         self.create(None, image4)
         self.create(None, image5)
-        super(FakeImageService, self).__init__()
+        super(_FakeImageService, self).__init__()
 
     def index(self, context, filters=None):
         """Returns list of images."""
@@ -118,28 +120,34 @@ class FakeImageService(service.BaseImageService):
                  image_id, self.images)
         raise exception.ImageNotFound(image_id=image_id)
 
-    def create(self, context, data):
+    def create(self, context, metadata, data=None):
         """Store the image data and return the new image id.
 
         :raises: Duplicate if the image already exist.
 
         """
-        image_id = str(data['id'])
+        try:
+            image_id = metadata['id']
+        except KeyError:
+            image_id = random.randint(0, 2 ** 31 - 1)
+        image_id = str(image_id)
+
         if self.images.get(image_id):
             raise exception.Duplicate()
 
-        self.images[image_id] = copy.deepcopy(data)
+        metadata['id'] = image_id
+        self.images[image_id] = copy.deepcopy(metadata)
+        return self.images[image_id]
 
-    def update(self, context, image_id, data):
+    def update(self, context, image_id, metadata, data=None):
         """Replace the contents of the given image with the new data.
 
         :raises: ImageNotFound if the image does not exist.
 
         """
-        image_id = int(image_id)
         if not self.images.get(image_id):
             raise exception.ImageNotFound(image_id=image_id)
-        self.images[image_id] = copy.deepcopy(data)
+        self.images[image_id] = copy.deepcopy(metadata)
 
     def delete(self, context, image_id):
         """Delete the given image.
@@ -147,7 +155,6 @@ class FakeImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
-        image_id = int(image_id)
         removed = self.images.pop(image_id, None)
         if not removed:
             raise exception.ImageNotFound(image_id=image_id)
@@ -155,3 +162,9 @@ class FakeImageService(service.BaseImageService):
     def delete_all(self):
         """Clears out all images."""
         self.images.clear()
+
+_fakeImageService = _FakeImageService()
+
+
+def FakeImageService():
+    return _fakeImageService

@@ -394,12 +394,17 @@ class LibvirtConnection(driver.ComputeDriver):
         (image_service, image_id) = nova.image.get_image_service(
             instance['image_ref'])
         base = image_service.show(elevated, image_id)
+        (snapshot_image_service, snapshot_image_id) = \
+            nova.image.get_image_service(image_href)
+        snapshot = snapshot_image_service.show(elevated, snapshot_image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
                     'is_public': False,
-                    'name': '%s.%s' % (base['name'], image_href),
-                    'properties': {'architecture': base['architecture'],
+                    'status': 'active',
+                    'name': snapshot['name'],
+                    'properties': {'architecture':
+                                        base['properties']['architecture'],
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',

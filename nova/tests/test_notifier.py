@@ -13,18 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova
+import stubout
 
+import nova
 from nova import context
 from nova import flags
+from nova import log
 from nova import rpc
 import nova.notifier.api
 from nova.notifier.api import notify
 from nova.notifier import no_op_notifier
 from nova.notifier import rabbit_notifier
 from nova import test
-
-import stubout
 
 
 class NotifierTestCase(test.TestCase):
@@ -115,3 +115,22 @@ class NotifierTestCase(test.TestCase):
         notify('publisher_id',
                 'event_type', 'DEBUG', dict(a=3))
         self.assertEqual(self.test_topic, 'testnotify.debug')
+
+    def test_error_notification(self):
+        self.stubs.Set(nova.flags.FLAGS, 'notification_driver',
+            'nova.notifier.rabbit_notifier')
+        self.stubs.Set(nova.flags.FLAGS, 'publish_errors', True)
+        LOG = log.getLogger('nova')
+        LOG.setup_from_flags()
+        msgs = []
+
+        def mock_cast(context, topic, data):
+            msgs.append(data)
+
+        self.stubs.Set(nova.rpc, 'cast', mock_cast)
+        LOG.error('foo')
+        self.assertEqual(1, len(msgs))
+        msg = msgs[0]
+        self.assertEqual(msg['event_type'], 'error_notification')
+        self.assertEqual(msg['priority'], 'ERROR')
+        self.assertEqual(msg['payload']['error'], 'foo')
