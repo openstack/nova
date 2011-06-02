@@ -94,8 +94,7 @@ class Controller(object):
         context = req.environ['nova.context']
 
         try:
-            (image_service, image_id) = nova.image.get_image_service(id)
-            image = image_service.show(context, image_id)
+            image = self._image_service.show(context, id)
         except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
             raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
@@ -109,8 +108,7 @@ class Controller(object):
         :param id: Image identifier (integer)
         """
         context = req.environ['nova.context']
-        (image_service, image_id) = nova.image.get_image_service(id)
-        image_service.delete(context, image_id)
+        self._image_service.delete(context, id)
         return webob.exc.HTTPNoContent()
 
     def create(self, req, body):

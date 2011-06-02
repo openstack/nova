@@ -211,7 +211,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         def _find_image(self, image_id):
             for f in self.fixtures:
-                if f['id'] == image_id:
+                if str(f['id']) == str(image_id):
                     return f
             return None
 
