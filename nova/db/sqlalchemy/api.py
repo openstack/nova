@@ -1360,6 +1360,8 @@ def key_pair_get_all_by_user(context, user_id):
 @require_admin_context
 def network_associate(context, project_id, force=False):
     """associate a project with a network
+    called by project_get_networks under certain conditions
+    and network manager add_network_to_project()
 
     only associates projects with networks that have configured hosts
 
@@ -1369,6 +1371,8 @@ def network_associate(context, project_id, force=False):
     force solves race condition where a fresh project has multiple instance
     builds simultaneosly picked up by multiple network hosts which attempt
     to associate the project with multiple networks
+    force should only be used as a direct consequence of user request
+    all automated requests should not use force
     """
     session = get_session()
     with session.begin():
@@ -2431,6 +2435,9 @@ def project_delete(context, id):
 
 @require_context
 def project_get_networks(context, project_id, associate=True):
+    # NOTE(tr3buchet): as before this function will associate
+    # a project with a network if it doesn't have one and
+    # associate is true
     session = get_session()
     result = session.query(models.Network).\
                      filter_by(project_id=project_id).\
