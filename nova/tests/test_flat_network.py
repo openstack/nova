@@ -24,11 +24,9 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.network')
 
 
-class FlatNetworkTestCase(base.NetworkTestCase, base.TestFuncs):
-    network_manager = 'nova.network.manager.FlatManager'
+#class FlatNetworkTestCase(base.NetworkTestCase, base.TestFuncs):
+#    network_manager = 'nova.network.manager.FlatManager'
 
-    def setUp(self):
-        super(FlatNetworkTestCase, self).setUp()
-
-    
+#    def setUp(self):
+#        super(FlatNetworkTestCase, self).setUp()
 

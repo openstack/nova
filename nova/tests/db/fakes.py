@@ -141,7 +141,7 @@ def stub_out_db_network_api(stubs, host='localhost'):
             return fixed_ip_fields['address']
 
     def fake_fixed_ip_create(context, values):
-        if values['addres
+        #if values['addres
         return values['address']
 
     def fake_fixed_ip_disassociate(context, address):
