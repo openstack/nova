@@ -49,7 +49,7 @@ class ViewBuilder(object):
             else:
                 server = self._build_simple(inst)
 
-        self._build_extra(server, inst)
+            self._build_extra(server, inst)
 
         return server
 
@@ -82,8 +82,6 @@ class ViewBuilder(object):
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
 
-        # TODO(sandy): Could be a bug here since the instance ID
-        # may have come from another Zone.
         if compute_api.has_finished_migration(ctxt, inst['id']):
             inst_dict['status'] = 'RESIZE-CONFIRM'
 
