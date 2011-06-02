@@ -24,6 +24,7 @@ from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
+from nova.api.openstack import wsgi
 
 
 LOG = log.getLogger('nova.api.openstack.images')
@@ -32,18 +33,8 @@ FLAGS = flags.FLAGS
 SUPPORTED_FILTERS = ['name', 'status']
 
 
-class Controller(common.OpenstackController):
-    """Base `wsgi.Controller` for retrieving/displaying images."""
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "image": ["id", "name", "updated", "created", "status",
-                          "serverId", "progress"],
-                "link": ["rel", "type", "href"],
-            },
-        },
-    }
+class Controller(object):
+    """Base controller for retrieving/displaying images."""
 
     def __init__(self, image_service=None, compute_service=None):
         """Initialize new `ImageController`.
@@ -122,21 +113,20 @@ class Controller(common.OpenstackController):
         image_service.delete(context, image_id)
         return webob.exc.HTTPNoContent()
 
-    def create(self, req):
+    def create(self, req, body):
         """Snapshot a server instance and save the image.
 
         :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
         content_type = req.get_content_type()
-        image = self._deserialize(req.body, content_type)
 
-        if not image:
+        if not body:
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = image["image"]["serverId"]
-            image_name = image["image"]["name"]
+            server_id = body["image"]["serverId"]
+            image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
@@ -165,5 +155,29 @@ class ControllerV11(Controller):
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
 
-    def get_default_xmlns(self, req):
-        return common.XML_NS_V11
+
+def create_resource(version='1.0'):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
+
+    xmlns = {
+        '1.0': wsgi.XMLNS_V10,
+        '1.1': wsgi.XMLNS_V11,
+    }[version]
+
+    metadata = {
+        "attributes": {
+            "image": ["id", "name", "updated", "created", "status",
+                      "serverId", "progress"],
+            "link": ["rel", "type", "href"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
+                                                  metadata=metadata),
+    }
+
+    return wsgi.Resource(controller, serializers=serializers)

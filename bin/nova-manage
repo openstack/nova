@@ -537,7 +537,7 @@ class FloatingIpCommands(object):
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
-                instance = floating_ip['fixed_ip']['instance']['ec2_id']
+                instance = floating_ip['fixed_ip']['instance']['hostname']
             print "%s\t%s\t%s" % (floating_ip['host'],
                                   floating_ip['address'],
                                   instance)
