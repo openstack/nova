@@ -306,7 +306,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
                 'is_public': True,
                 'name': 'TestImage %d' % (i),
                 'properties': {
-                    'updated': None, 
+                    'updated': None,
                     'created': None,
                 },
             }

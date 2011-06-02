@@ -448,7 +448,6 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.1/servers?limit=2&marker=asdf')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 400)
-        print "BODY",res.body
         self.assertTrue(res.body.find('marker param') > -1)
 
     def _setup_for_create_instance(self):

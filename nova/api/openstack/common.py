@@ -102,7 +102,6 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
 
 def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     """Return a slice of items according to the requested marker and limit."""
-    print "TEST LIMIT"
     (marker, limit) = get_pagination_params(request)
 
     if limit == 0:
