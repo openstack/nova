@@ -391,12 +391,15 @@ class LibvirtConnection(driver.ComputeDriver):
         elevated = context.get_admin_context()
 
         base = image_service.show(elevated, instance['image_id'])
+        snapshot = image_service.show(elevated, image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
                     'is_public': False,
-                    'name': '%s.%s' % (base['name'], image_id),
-                    'properties': {'architecture': base['architecture'],
+                    'status': 'active',
+                    'name': snapshot['name'],
+                    'properties': {'architecture':
+                                        base['properties']['architecture'],
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
