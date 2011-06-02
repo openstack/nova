@@ -41,10 +41,13 @@ class ViewBuilder(object):
 
     def build(self, inst, is_detail):
         """Return a dict that represenst a server."""
-        if is_detail:
-            server = self._build_detail(inst)
+        if inst.get('_is_precooked', False):
+            server = dict(server=inst)
         else:
-            server = self._build_simple(inst)
+            if is_detail:
+                server = self._build_detail(inst)
+            else:
+                server = self._build_simple(inst)
 
         self._build_extra(server, inst)
 
@@ -78,6 +81,9 @@ class ViewBuilder(object):
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
+
+        # TODO(sandy): Could be a bug here since the instance ID
+        # may have come from another Zone.
         if compute_api.has_finished_migration(ctxt, inst['id']):
             inst_dict['status'] = 'RESIZE-CONFIRM'
 

@@ -116,8 +116,6 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         zone_blob = env['server'].get('blob')
         reservation_id = env['server'].get('reservation_id')
 
-        LOG.exception("******* CREATE_INSTANCE RES_ID=%s of %s" % (reservation_id, env))
-
         inst_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
         extra_values = {
             'instance_type': inst_type,

@@ -543,6 +543,25 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
+    def get_all_across_zones(self, context, reservation_id):
+        """Get all instances with this reservation_id, across
+        all available Zones (if any).
+        """
+        instances = self.db.instance_get_all_by_reservation(
+                                    context, reservation_id)
+
+        children = scheduler_api.call_zone_method(context, "list",
+                                novaclient_collection_name="servers",
+                                reservation_id=reservation_id)
+
+        for zone, servers in children:
+            for server in servers:
+                LOG.debug("**** INSTANCE= %s" % server._info)
+                # Results are ready to send to user. No need to scrub.
+                server._info['_is_precooked'] = True
+                instances.append(server._info)
+        return instances
+
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
         """Get all instances filtered by one of the given parameters.
@@ -552,8 +571,7 @@ class API(base.Base):
 
         """
         if reservation_id is not None:
-            return self.db.instance_get_all_by_reservation(
-                context, reservation_id)
+            return self.get_all_across_zones(context, reservation_id)
 
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)

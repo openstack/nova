@@ -118,7 +118,8 @@ def _process(func, zone):
     return func(nova, zone)
 
 
-def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
+def call_zone_method(context, method_name, errors_to_ignore=None,
+                     novaclient_collection_name='zones', *args, **kwargs):
     """Returns a list of (zone, call_result) objects."""
     if not isinstance(errors_to_ignore, (list, tuple)):
         # This will also handle the default None
@@ -138,11 +139,12 @@ def call_zone_method(context, method, errors_to_ignore=None, *args, **kwargs):
             #TODO (dabo) - add logic for failure counts per zone,
             # with escalation after a given number of failures.
             continue
-        zone_method = getattr(nova.zones, method)
+        novaclient_collection = getattr(nova, novaclient_collection_name)
+        collection_method = getattr(novaclient_collection, method_name)
 
         def _error_trap(*args, **kwargs):
             try:
-                return zone_method(*args, **kwargs)
+                return collection_method(*args, **kwargs)
             except Exception as e:
                 if type(e) in errors_to_ignore:
                     return None
