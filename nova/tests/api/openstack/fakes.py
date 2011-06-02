@@ -16,7 +16,6 @@
 #    under the License.
 
 import copy
-import datetime
 import json
 import random
 import string
@@ -253,7 +252,7 @@ class FakeAuthDatabase(object):
 
     @staticmethod
     def auth_token_create(context, token):
-        fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
+        fake_token = FakeToken(created_at=utils.utcnow(), **token)
         FakeAuthDatabase.data[fake_token.token_hash] = fake_token
         FakeAuthDatabase.data['id_%i' % fake_token.id] = fake_token
         return fake_token

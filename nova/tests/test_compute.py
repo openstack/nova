@@ -19,7 +19,6 @@
 Tests For Compute
 """
 
-import datetime
 import mox
 import stubout
 
@@ -217,12 +216,12 @@ class ComputeTestCase(test.TestCase):
         instance_ref = db.instance_get(self.context, instance_id)
         self.assertEqual(instance_ref['launched_at'], None)
         self.assertEqual(instance_ref['deleted_at'], None)
-        launch = datetime.datetime.utcnow()
+        launch = utils.utcnow()
         self.compute.run_instance(self.context, instance_id)
         instance_ref = db.instance_get(self.context, instance_id)
         self.assert_(instance_ref['launched_at'] > launch)
         self.assertEqual(instance_ref['deleted_at'], None)
-        terminate = datetime.datetime.utcnow()
+        terminate = utils.utcnow()
         self.compute.terminate_instance(self.context, instance_id)
         self.context = self.context.elevated(True)
         instance_ref = db.instance_get(self.context, instance_id)

@@ -35,7 +35,6 @@ terminating it.
 
 """
 
-import datetime
 import os
 import socket
 import sys
@@ -159,7 +158,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _update_launched_at(self, context, instance_id, launched_at=None):
         """Update the launched_at parameter of the given instance."""
-        data = {'launched_at': launched_at or datetime.datetime.utcnow()}
+        data = {'launched_at': launched_at or utils.utcnow()}
         self.db.instance_update(context, instance_id, data)
 
     def _update_image_id(self, context, instance_id, image_id):
