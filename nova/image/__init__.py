@@ -70,7 +70,6 @@ def get_glance_client(image_href):
     except:
         raise exception.InvalidImageRef(image_href=image_href)
     glance_client = GlanceClient(host, port)
-    #glance_client = client.Client(host, port)
     return (glance_client, image_id)
 
 
