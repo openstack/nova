@@ -73,6 +73,14 @@ def return_servers_by_reservation(context, reservation_id=""):
     return [stub_instance(i, reservation_id) for i in xrange(5)]
 
 
+def return_servers_by_reservation_empty(context, reservation_id=""):
+    return []
+
+
+def return_servers_from_child_zones_empty(*args, **kwargs):
+    return [] 
+
+
 def return_servers_from_child_zones(*args, **kwargs):
     class Server(object):
         pass
@@ -395,18 +403,53 @@ class ServersTest(test.TestCase):
                        return_servers_by_reservation)
         self.stubs.Set(nova.scheduler.api, 'call_zone_method',
                        return_servers_from_child_zones)
+        req = webob.Request.blank('/v1.0/servers?reservation_id=foo')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            if '_is_precooked' in s:
+                self.assertEqual(s.get('reservation_id'), 'child')
+            else:
+                self.assertEqual(s.get('name'), 'server%d' % i)
+                i += 1
+
+    def test_get_server_list_with_reservation_id_empty(self):
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+                       return_servers_by_reservation_empty)
+        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
+                       return_servers_from_child_zones_empty)
         req = webob.Request.blank('/v1.0/servers/detail?reservation_id=foo')
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
 
         i = 0
         for s in res_dict['servers']:
-            print "SERVER", s
             if '_is_precooked' in s:
                 self.assertEqual(s.get('reservation_id'), 'child')
             else:
                 self.assertEqual(s.get('name'), 'server%d' % i)
                 i += 1
+
+    def test_get_server_list_with_reservation_id_details(self):
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+                       return_servers_by_reservation)
+        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
+                       return_servers_from_child_zones)
+        req = webob.Request.blank('/v1.0/servers/detail?reservation_id=foo')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            if '_is_precooked' in s:
+                self.assertEqual(s.get('reservation_id'), 'child')
+            else:
+                self.assertEqual(s.get('name'), 'server%d' % i)
+                i += 1
+
+
 
     def test_get_server_list_v1_1(self):
         req = webob.Request.blank('/v1.1/servers')
