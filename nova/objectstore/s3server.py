@@ -81,7 +81,7 @@ class S3Application(wsgi.Router):
         super(S3Application, self).__init__(mapper)
 
 
-class BaseRequestHandler(wsgi.Controller):
+class BaseRequestHandler(object):
     """Base class emulating Tornado's web framework pattern in WSGI.
 
     This is a direct port of Tornado's implementation, so some key decisions

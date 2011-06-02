@@ -275,6 +275,14 @@ class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
 
 
+class SnapshotNotFound(NotFound):
+    message = _("Snapshot %(snapshot_id)s could not be found.")
+
+
+class VolumeIsBusy(Error):
+    message = _("deleting volume %(volume_name)s that has snapshot")
+
+
 class ExportDeviceNotFoundForVolume(NotFound):
     message = _("No export device found for volume %(volume_id)s.")
 
@@ -485,9 +493,8 @@ class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
 
 
-class SchedulerHostFilterDriverNotFound(NotFound):
-    message = _("Scheduler Host Filter Driver %(driver_name)s could"
-                " not be found.")
+class SchedulerHostFilterNotFound(NotFound):
+    message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):

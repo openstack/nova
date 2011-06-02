@@ -14,8 +14,8 @@
 #    under the License.
 
 """
-Host Filter is a driver mechanism for requesting instance resources.
-Three drivers are included: AllHosts, Flavor & JSON. AllHosts just
+Host Filter is a mechanism for requesting instance resources.
+Three filters are included: AllHosts, Flavor & JSON. AllHosts just
 returns the full, unfiltered list of hosts. Flavor is a hard coded
 matching mechanism based on flavor criteria and JSON is an ad-hoc
 filter grammar.
@@ -42,17 +42,18 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import utils
+from nova.scheduler import zone_aware_scheduler
 
 LOG = logging.getLogger('nova.scheduler.host_filter')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('default_host_filter_driver',
+flags.DEFINE_string('default_host_filter',
                     'nova.scheduler.host_filter.AllHostsFilter',
-                    'Which driver to use for filtering hosts.')
+                    'Which filter to use for filtering hosts.')
 
 
 class HostFilter(object):
-    """Base class for host filter drivers."""
+    """Base class for host filters."""
 
     def instance_type_to_filter(self, instance_type):
         """Convert instance_type into a filter for most common use-case."""
@@ -63,14 +64,15 @@ class HostFilter(object):
         raise NotImplementedError()
 
     def _full_name(self):
-        """module.classname of the filter driver"""
+        """module.classname of the filter."""
         return "%s.%s" % (self.__module__, self.__class__.__name__)
 
 
 class AllHostsFilter(HostFilter):
-    """NOP host filter driver. Returns all hosts in ZoneManager.
+    """ NOP host filter. Returns all hosts in ZoneManager.
     This essentially does what the old Scheduler+Chance used
-    to give us."""
+    to give us.
+    """
 
     def instance_type_to_filter(self, instance_type):
         """Return anything to prevent base-class from raising
@@ -83,8 +85,8 @@ class AllHostsFilter(HostFilter):
                for host, services in zone_manager.service_states.iteritems()]
 
 
-class FlavorFilter(HostFilter):
-    """HostFilter driver hard-coded to work with flavors."""
+class InstanceTypeFilter(HostFilter):
+    """HostFilter hard-coded to work with InstanceType records."""
 
     def instance_type_to_filter(self, instance_type):
         """Use instance_type to filter hosts."""
@@ -98,9 +100,10 @@ class FlavorFilter(HostFilter):
             capabilities = services.get('compute', {})
             host_ram_mb = capabilities['host_memory_free']
             disk_bytes = capabilities['disk_available']
-            if host_ram_mb >= instance_type['memory_mb'] and \
-                disk_bytes >= instance_type['local_gb']:
-                    selected_hosts.append((host, capabilities))
+            spec_ram = instance_type['memory_mb']
+            spec_disk = instance_type['local_gb']
+            if host_ram_mb >= spec_ram and disk_bytes >= spec_disk:
+                selected_hosts.append((host, capabilities))
         return selected_hosts
 
 #host entries (currently) are like:
@@ -109,15 +112,15 @@ class FlavorFilter(HostFilter):
 #    'host_memory_total': 8244539392,
 #    'host_memory_overhead': 184225792,
 #    'host_memory_free': 3868327936,
-#    'host_memory_free_computed': 3840843776},
-#    'host_other-config': {},
+#    'host_memory_free_computed': 3840843776,
+#    'host_other_config': {},
 #    'host_ip_address': '192.168.1.109',
 #    'host_cpu_info': {},
 #    'disk_available': 32954957824,
 #    'disk_total': 50394562560,
-#    'disk_used': 17439604736},
+#    'disk_used': 17439604736,
 #    'host_uuid': 'cedb9b39-9388-41df-8891-c5c9a0c0fe5f',
-#    'host_name-label': 'xs-mini'}
+#    'host_name_label': 'xs-mini'}
 
 # instance_type table has:
 #name = Column(String(255), unique=True)
@@ -131,8 +134,9 @@ class FlavorFilter(HostFilter):
 
 
 class JsonFilter(HostFilter):
-    """Host Filter driver to allow simple JSON-based grammar for
-       selecting hosts."""
+    """Host Filter to allow simple JSON-based grammar for
+    selecting hosts.
+    """
 
     def _equals(self, args):
         """First term is == all the other terms."""
@@ -222,13 +226,14 @@ class JsonFilter(HostFilter):
         required_disk = instance_type['local_gb']
         query = ['and',
                     ['>=', '$compute.host_memory_free', required_ram],
-                    ['>=', '$compute.disk_available', required_disk]
+                    ['>=', '$compute.disk_available', required_disk],
                 ]
         return (self._full_name(), json.dumps(query))
 
     def _parse_string(self, string, host, services):
         """Strings prefixed with $ are capability lookups in the
-        form '$service.capability[.subcap*]'"""
+        form '$service.capability[.subcap*]'
+        """
         if not string:
             return None
         if string[0] != '$':
@@ -271,18 +276,48 @@ class JsonFilter(HostFilter):
         return hosts
 
 
-DRIVERS = [AllHostsFilter, FlavorFilter, JsonFilter]
+FILTERS = [AllHostsFilter, InstanceTypeFilter, JsonFilter]
 
 
-def choose_driver(driver_name=None):
-    """Since the caller may specify which driver to use we need
-       to have an authoritative list of what is permissible. This
-       function checks the driver name against a predefined set
-       of acceptable drivers."""
+def choose_host_filter(filter_name=None):
+    """Since the caller may specify which filter to use we need
+    to have an authoritative list of what is permissible. This
+    function checks the filter name against a predefined set
+    of acceptable filters.
+    """
 
-    if not driver_name:
-        driver_name = FLAGS.default_host_filter_driver
-    for driver in DRIVERS:
-        if "%s.%s" % (driver.__module__, driver.__name__) == driver_name:
-            return driver()
-    raise exception.SchedulerHostFilterDriverNotFound(driver_name=driver_name)
+    if not filter_name:
+        filter_name = FLAGS.default_host_filter
+    for filter_class in FILTERS:
+        host_match = "%s.%s" % (filter_class.__module__, filter_class.__name__)
+        if host_match == filter_name:
+            return filter_class()
+    raise exception.SchedulerHostFilterNotFound(filter_name=filter_name)
+
+
+class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
+    """The HostFilterScheduler uses the HostFilter to filter
+    hosts for weighing. The particular filter used may be passed in
+    as an argument or the default will be used.
+
+    request_spec = {'filter': <Filter name>,
+                    'instance_type': <InstanceType dict>}
+    """
+
+    def filter_hosts(self, num, request_spec):
+        """Filter the full host list (from the ZoneManager)"""
+        filter_name = request_spec.get('filter', None)
+        host_filter = choose_host_filter(filter_name)
+
+        # TODO(sandy): We're only using InstanceType-based specs
+        # currently. Later we'll need to snoop for more detailed
+        # host filter requests.
+        instance_type = request_spec['instance_type']
+        name, query = host_filter.instance_type_to_filter(instance_type)
+        return host_filter.filter_hosts(self.zone_manager, query)
+
+    def weigh_hosts(self, num, request_spec, hosts):
+        """Derived classes must override this method and return
+        a lists of hosts in [{weight, hostname}] format.
+        """
+        return [dict(weight=1, hostname=host) for host, caps in hosts]
