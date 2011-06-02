@@ -46,9 +46,6 @@ class Controller(object):
         self._compute_service = compute_service or compute.API()
         self._image_service = image_service or _default_service
 
-    def _limit_items(self, items, req):
-        return common.limited(items, req)
-
     def index(self, req):
         """Return an index listing of images available to the request.
 
@@ -162,13 +159,11 @@ class ControllerV11(Controller):
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
 
-    def get_default_xmlns(self, req):
-        return common.XML_NS_V11
-
     def index(self, req):
         """Return an index listing of images available to the request.
 
         :param req: `wsgi.Request` object
+
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
@@ -182,6 +177,7 @@ class ControllerV11(Controller):
         """Return a detailed index listing of images available to the request.
 
         :param req: `wsgi.Request` object.
+
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)

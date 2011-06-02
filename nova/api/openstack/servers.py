@@ -55,6 +55,7 @@ class Controller(object):
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
+        print "DETAIL"
         return self._items(req, is_detail=True)
 
     def _image_id_from_req_data(self, data):

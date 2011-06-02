@@ -88,12 +88,15 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
 
         # Check it's there
         found_server = self.api.get_server(created_server_id)
+        print "FOUND_SERVER:", found_server
         self.assertEqual(created_server_id, found_server['id'])
 
         # It should also be in the all-servers list
         servers = self.api.get_servers()
+        print "SERVERS:", servers
         server_ids = [server['id'] for server in servers]
         self.assertTrue(created_server_id in server_ids)
+        return
 
         # Wait (briefly) for creation
         retries = 0

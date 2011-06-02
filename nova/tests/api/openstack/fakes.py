@@ -166,29 +166,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
         def __init__(self, initial_fixtures):
             self.fixtures = initial_fixtures or []
 
-        def fake_get_images(self, filters=None, marker=None, limit=None):
-            found = True
-            if marker:
-                found = False
-            if limit == 0:
-                limit = None
-
-            fixtures = []
-            count = 0
-            for f in self.fixtures:
-                if limit and count >= limit:
-                    break
-                if found:
-                    fixtures.append(f)
-                    count = count + 1
-                if f['id'] == marker:
-                    found = True
-
-            return [dict(id=f['id'], name=f['name'])
-                    for f in fixtures]
-
-        def fake_get_images_detailed(self, filters=None,
-                                     marker=None, limit=None):
+        def _filter_images(self, filters=None, marker=None, limit=None):
             found = True
             if marker:
                 found = False
@@ -207,6 +185,15 @@ def stub_out_glance(stubs, initial_fixtures=None):
                     found = True
 
             return fixtures
+
+        def fake_get_images(self, filters=None, marker=None, limit=None):
+            fixtures = self._filter_images(filters, marker, limit)
+            return [dict(id=f['id'], name=f['name'])
+                    for f in fixtures]
+
+        def fake_get_images_detailed(self, filters=None,
+                                     marker=None, limit=None):
+            return self._filter_images(filters, marker, limit)
 
         def fake_get_image_meta(self, image_id):
             image = self._find_image(image_id)

@@ -50,7 +50,7 @@ def get_pagination_params(request):
     try:
         marker = int(request.GET.get('marker', 0))
     except ValueError:
-        raise webob.exc.HTTPBadRequest(_('offset param must be an integer'))
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
 
     try:
         limit = int(request.GET.get('limit', 0))
@@ -102,19 +102,11 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
 
 def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     """Return a slice of items according to the requested marker and limit."""
+    print "TEST LIMIT"
+    (marker, limit) = get_pagination_params(request)
 
-    try:
-        marker = int(request.GET.get('marker', 0))
-    except ValueError:
-        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
-
-    try:
-        limit = int(request.GET.get('limit', max_limit))
-    except ValueError:
-        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
-
-    if limit < 0:
-        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+    if limit == 0:
+        limit = max_limit
 
     limit = min(max_limit, limit)
     start_index = 0

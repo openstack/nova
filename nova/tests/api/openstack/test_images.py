@@ -239,7 +239,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         i = 0
         for meta in image_metas:
             expected = {'id': 'DONTCARE',
-                         'name': 'TestImage %d' % (i)}
+                        'name': 'TestImage %d' % (i)}
             self.assertDictMatch(meta, expected)
             i = i + 1
 
@@ -256,7 +256,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         i = 2
         for meta in image_metas:
             expected = {'id': 'DONTCARE',
-                         'name': 'TestImage %d' % (i)}
+                        'name': 'TestImage %d' % (i)}
             self.assertDictMatch(meta, expected)
             i = i + 1
 
@@ -284,7 +284,7 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         i = 4
         for meta in image_metas:
             expected = {'id': 'DONTCARE',
-                         'name': 'TestImage %d' % (i)}
+                        'name': 'TestImage %d' % (i)}
             self.assertDictMatch(meta, expected)
             i = i + 1
 
@@ -300,10 +300,17 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         self.assertEquals(len(image_metas), 8)
         i = 2
         for meta in image_metas:
-            expected = {'id': 'DONTCARE', 'status': None,
-                         'is_public': True, 'properties': {
-                            'updated': None, 'created': None},
-                         'name': 'TestImage %d' % (i)}
+            expected = {
+                'id': 'DONTCARE',
+                'status': None,
+                'is_public': True,
+                'name': 'TestImage %d' % (i),
+                'properties': {
+                    'updated': None, 
+                    'created': None,
+                },
+            }
+
             self.assertDictMatch(meta, expected)
             i = i + 1
 
@@ -330,10 +337,14 @@ class GlanceImageServiceTest(_BaseImageServiceTests):
         self.assertEquals(len(image_metas), 3)
         i = 4
         for meta in image_metas:
-            expected = {'id': 'DONTCARE', 'status': None,
-                         'is_public': True, 'properties': {
-                            'updated': None, 'created': None},
-                         'name': 'TestImage %d' % (i)}
+            expected = {
+                'id': 'DONTCARE',
+                'status': None,
+                'is_public': True,
+                'name': 'TestImage %d' % (i),
+                'properties': {
+                    'updated': None, 'created': None},
+            }
             self.assertDictMatch(meta, expected)
             i = i + 1
 
