@@ -130,6 +130,7 @@ class ControllerV10(Controller):
         """Return an index listing of images available to the request.
 
         :param req: `wsgi.Request` object
+
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
@@ -142,6 +143,7 @@ class ControllerV10(Controller):
         """Return a detailed index listing of images available to the request.
 
         :param req: `wsgi.Request` object.
+
         """
         context = req.environ['nova.context']
         filters = self._get_filters(req)
