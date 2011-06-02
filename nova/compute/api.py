@@ -270,11 +270,13 @@ class API(base.Base):
                                         'instance_type': instance_type,
                                         'filter':
                                             'nova.scheduler.host_filter.'
-                                            'InstanceTypeFilter'
-                                    },
+                                            'InstanceTypeFilter',
+                               },
                                "availability_zone": availability_zone,
                                "injected_files": injected_files,
-                               "admin_password": admin_password}})
+                               "admin_password": admin_password,
+                              },
+                     })
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -513,9 +515,10 @@ class API(base.Base):
         :returns: A dict containing image metadata
         """
         properties = {'instance_id': str(instance_id),
-                      'user_id': str(context.user_id)}
+                      'user_id': str(context.user_id),
+                      'image_state': 'creating'}
         sent_meta = {'name': name, 'is_public': False,
-                     'properties': properties}
+                     'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
