@@ -71,6 +71,8 @@ class API(base.Base):
         """
         # NOTE(tr3buchet): i don't like the "either or" argument type
         # funcationility but i've left it alone for now
+        # TODO(tr3buchet): this function needs to be rewritten to move
+        # the network related db lookups into the network host code
         if isinstance(fixed_ip, basestring):
             fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_ip)
         floating_ip = self.db.floating_ip_get_by_address(context, floating_ip)
@@ -133,9 +135,9 @@ class API(base.Base):
                  {'method': 'deallocate_for_instance',
                   'args': args})
 
-    def add_fixed_ip_to_instance(self, context, instance, network_id):
+    def add_fixed_ip_to_instance(self, context, instance_id, network_id):
         """adds a fixed ip to instance from specified network"""
-        args = {'instance_id': instance['id'],
+        args = {'instance_id': instance_id,
                 'network_id': network_id}
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'add_fixed_ip_to_instance',

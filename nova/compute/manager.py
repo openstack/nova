@@ -132,7 +132,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.network_api = network.API()
         self.network_manager = utils.import_object(FLAGS.network_manager)
         self.volume_manager = utils.import_object(FLAGS.volume_manager)
-        self.network_api = network.API()
         self._last_host_check = 0
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -592,10 +591,13 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def add_fixed_ip_to_instance(self, context, instance_id, network_id):
-        """calls network_api to add new fixed_ip to instance
-        only here because of checks_instance_lock"""
+        """calls network_api to add new fixed_ip to instance"""
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
                                                            network_id)
+        instance = self.db.instance_get(context, instance_id)
+        network_info = self.network_api.get_instance_nw_info(context, instance)
+        self.driver.inject_network_info(instance, network_info)
+        self.driver.reset_networking(instance)
 
     @exception.wrap_exception
     @checks_instance_lock

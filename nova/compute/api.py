@@ -611,7 +611,7 @@ class API(base.Base):
                                                               instance_id,
                                                               network_id)
 
-    @scheduler_api.reroute_compute("add_network_to_project")
+    #TODO(tr3buchet): how to run this in the correct zone?
     def add_network_to_project(self, context, project_id):
         """force adds a network to the project"""
         # this will raise if zone doesn't know about project so the decorator
