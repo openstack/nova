@@ -249,6 +249,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.fixtures = self._make_image_fixtures()
         fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
+        fakes.stub_out_compute_api_snapshot(self.stubs)
 
     def tearDown(self):
         """Run after each test."""
@@ -870,6 +871,46 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         req = webob.Request.blank('/v1.0/images/128')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 404)
+
+    def test_create_image(self):
+
+        body = dict(image=dict(serverId='123', name='Backup 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+
+    def test_create_image_no_server_id(self):
+
+        body = dict(image=dict(name='Backup 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_v1_1(self):
+
+        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+
+    def test_create_image_v1_1_no_server_ref(self):
+
+        body = dict(image=dict(name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
 
     @classmethod
     def _make_image_fixtures(cls):

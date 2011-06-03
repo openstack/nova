@@ -123,7 +123,7 @@ class Controller(object):
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = body["image"]["serverId"]
+            server_id = self._server_id_from_req_data(body)
             image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
@@ -135,6 +135,9 @@ class Controller(object):
         """Indicates that you must use a Controller subclass."""
         raise NotImplementedError
 
+    def _server_id_from_req_data(self, data):
+        raise NotImplementedError()
+
 
 class ControllerV10(Controller):
     """Version 1.0 specific controller logic."""
@@ -144,6 +147,9 @@ class ControllerV10(Controller):
         base_url = request.application_url
         return images_view.ViewBuilderV10(base_url)
 
+    def _server_id_from_req_data(self, data):
+        return data['image']['serverId']
+
 
 class ControllerV11(Controller):
     """Version 1.1 specific controller logic."""
@@ -152,6 +158,9 @@ class ControllerV11(Controller):
         """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
+
+    def _server_id_from_req_data(self, data):
+        return data['image']['serverRef']
 
 
 def create_resource(version='1.0'):
