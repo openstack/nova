@@ -1,7 +1,3 @@
-
-
-
-
 ..
       Copyright 2011 OpenStack LLC 
       All Rights Reserved.
@@ -40,7 +36,7 @@ Some Costs are more esoteric. Consider a rule that says we should prefer Hosts t
 An example of some other costs might include selecting:
 * a GPU-based host over a standard CPU
 * a host with fast ethernet over a 10mbps line
-* a host than can run Windows instances
+* a host that can run Windows instances
 * a host in the EU vs North America
 * etc
 
