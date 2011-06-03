@@ -53,7 +53,6 @@
   CLI interface for nova management.
 """
 
-import datetime
 import gettext
 import glob
 import json
@@ -78,6 +77,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova import flags
+from nova import image
 from nova import log as logging
 from nova import quota
 from nova import rpc
@@ -536,7 +536,7 @@ class FloatingIpCommands(object):
         for floating_ip in floating_ips:
             instance = None
             if floating_ip['fixed_ip']:
-                instance = floating_ip['fixed_ip']['instance']['ec2_id']
+                instance = floating_ip['fixed_ip']['instance']['hostname']
             print "%s\t%s\t%s" % (floating_ip['host'],
                                   floating_ip['address'],
                                   instance)
@@ -689,7 +689,7 @@ class ServiceCommands(object):
         """Show a list of all running services. Filter by host & service name.
         args: [host] [service]"""
         ctxt = context.get_admin_context()
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         services = db.service_get_all(ctxt)
         if host:
             services = [s for s in services if s['host'] == host]
@@ -936,7 +936,7 @@ class ImageCommands(object):
     """Methods for dealing with a cloud in an odd state"""
 
     def __init__(self, *args, **kwargs):
-        self.image_service = utils.import_object(FLAGS.image_service)
+        self.image_service = image.get_default_image_service()
 
     def _register(self, container_format, disk_format,
                   path, owner, name=None, is_public='T',

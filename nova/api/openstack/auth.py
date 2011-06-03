@@ -13,9 +13,8 @@
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
-#    under the License.import datetime
+#    under the License.
 
-import datetime
 import hashlib
 import time
 
@@ -127,7 +126,7 @@ class AuthMiddleware(wsgi.Middleware):
         except exception.NotFound:
             return None
         if token:
-            delta = datetime.datetime.utcnow() - token['created_at']
+            delta = utils.utcnow() - token['created_at']
             if delta.days >= 2:
                 self.db.auth_token_destroy(ctxt, token['token_hash'])
             else:

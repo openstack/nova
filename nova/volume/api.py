@@ -20,14 +20,13 @@
 Handles all requests relating to volumes.
 """
 
-import datetime
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import rpc
+from nova import utils
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -39,7 +38,14 @@ LOG = logging.getLogger('nova.volume')
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def create(self, context, size, name, description):
+    def create(self, context, size, snapshot_id, name, description):
+        if snapshot_id != None:
+            snapshot = self.get_snapshot(context, snapshot_id)
+            if snapshot['status'] != "available":
+                raise exception.ApiError(
+                    _("Snapshot status must be available"))
+            size = snapshot['volume_size']
+
         if quota.allowed_volumes(context, 1, size) < 1:
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
@@ -51,6 +57,7 @@ class API(base.Base):
             'size': size,
             'user_id': context.user_id,
             'project_id': context.project_id,
+            'snapshot_id': snapshot_id,
             'availability_zone': FLAGS.storage_availability_zone,
             'status': "creating",
             'attach_status': "detached",
@@ -62,14 +69,15 @@ class API(base.Base):
                  FLAGS.scheduler_topic,
                  {"method": "create_volume",
                   "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume['id']}})
+                           "volume_id": volume['id'],
+                           "snapshot_id": snapshot_id}})
         return volume
 
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
         host = volume['host']
@@ -89,6 +97,15 @@ class API(base.Base):
         if context.is_admin:
             return self.db.volume_get_all(context)
         return self.db.volume_get_all_by_project(context, context.project_id)
+
+    def get_snapshot(self, context, snapshot_id):
+        rv = self.db.snapshot_get(context, snapshot_id)
+        return dict(rv.iteritems())
+
+    def get_all_snapshots(self, context):
+        if context.is_admin:
+            return self.db.snapshot_get_all(context)
+        return self.db.snapshot_get_all_by_project(context, context.project_id)
 
     def check_attach(self, context, volume_id):
         volume = self.get(context, volume_id)
@@ -110,3 +127,38 @@ class API(base.Base):
                  self.db.queue_get_for(context, FLAGS.compute_topic, host),
                  {"method": "remove_volume",
                   "args": {'volume_id': volume_id}})
+
+    def create_snapshot(self, context, volume_id, name, description):
+        volume = self.get(context, volume_id)
+        if volume['status'] != "available":
+            raise exception.ApiError(_("Volume status must be available"))
+
+        options = {
+            'volume_id': volume_id,
+            'user_id': context.user_id,
+            'project_id': context.project_id,
+            'status': "creating",
+            'progress': '0%',
+            'volume_size': volume['size'],
+            'display_name': name,
+            'display_description': description}
+
+        snapshot = self.db.snapshot_create(context, options)
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "create_snapshot",
+                  "args": {"topic": FLAGS.volume_topic,
+                           "volume_id": volume_id,
+                           "snapshot_id": snapshot['id']}})
+        return snapshot
+
+    def delete_snapshot(self, context, snapshot_id):
+        snapshot = self.get_snapshot(context, snapshot_id)
+        if snapshot['status'] != "available":
+            raise exception.ApiError(_("Snapshot status must be available"))
+        self.db.snapshot_update(context, snapshot_id, {'status': 'deleting'})
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "delete_snapshot",
+                  "args": {"topic": FLAGS.volume_topic,
+                           "snapshot_id": snapshot_id}})

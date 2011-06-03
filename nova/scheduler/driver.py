@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
+from nova import utils
 from nova.compute import power_state
 
 FLAGS = flags.FLAGS
@@ -61,7 +62,7 @@ class Scheduler(object):
         """Check whether a service is up based on last heartbeat."""
         last_heartbeat = service['updated_at'] or service['created_at']
         # Timestamps in DB are UTC.
-        elapsed = datetime.datetime.utcnow() - last_heartbeat
+        elapsed = utils.utcnow() - last_heartbeat
         return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
 
     def hosts_up(self, context, topic):
@@ -71,13 +72,6 @@ class Scheduler(object):
         return [service.host
                 for service in services
                 if self.service_is_up(service)]
-
-    def should_create_all_at_once(self, context=None, *args, **kwargs):
-        """
-        Does this driver prefer single-shot requests or all-at-once?
-        By default, prefer single-shot.
-        """
-        return False
 
     def schedule(self, context, topic, *_args, **_kwargs):
         """Must override at least this method for scheduler to work."""

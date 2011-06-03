@@ -22,6 +22,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
+from nova.api.openstack import wsgi
 from nova.scheduler import api
 
 
@@ -101,17 +102,15 @@ class Controller(common.OpenstackController):
         api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
-    def create(self, req):
+    def create(self, req, body):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
-        zone = api.zone_create(context, env["zone"])
+        zone = api.zone_create(context, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def update(self, req, id):
+    def update(self, req, id, body):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
-        zone = api.zone_update(context, zone_id, env["zone"])
+        zone = api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
     @check_encryption_key
@@ -137,3 +136,18 @@ class Controller(common.OpenstackController):
             cooked.append(dict(weight=entry['weight'],
                 blob=cipher_text))
         return cooked
+
+
+def create_resource():
+    metadata = {
+        "attributes": {
+            "zone": ["id", "api_url", "name", "capabilities"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10,
+                                                  metadata=metadata),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)
