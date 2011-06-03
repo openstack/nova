@@ -20,22 +20,13 @@ import time
 from webob import exc
 
 import nova
-import nova.api.openstack.views.addresses
-from nova.api.openstack import common
 from nova.api.openstack import faults
+import nova.api.openstack.views.addresses
+from nova.api.openstack import wsgi
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """The servers addresses API controller for the Openstack API."""
-
-    _serialization_metadata = {
-        'application/xml': {
-            'list_collections': {
-                'public':  {'item_name': 'ip', 'item_key': 'addr'},
-                'private': {'item_name': 'ip', 'item_key': 'addr'},
-            },
-        },
-    }
 
     def __init__(self):
         self.compute_api = nova.compute.API()
@@ -65,8 +56,24 @@ class Controller(common.OpenstackController):
     def show(self, req, server_id, id):
         return faults.Fault(exc.HTTPNotImplemented())
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
         return faults.Fault(exc.HTTPNotImplemented())
 
     def delete(self, req, server_id, id):
         return faults.Fault(exc.HTTPNotImplemented())
+
+
+def create_resource():
+    metadata = {
+        'list_collections': {
+            'public':  {'item_name': 'ip', 'item_key': 'addr'},
+            'private': {'item_name': 'ip', 'item_key': 'addr'},
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(metadata=metadata,
+                                                  xmlns=wsgi.XMLNS_V10),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

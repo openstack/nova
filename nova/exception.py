@@ -65,7 +65,7 @@ class BuildInProgress(Error):
 
 class DBError(Error):
     """Wraps an implementation specific exception."""
-    def __init__(self, inner_exception):
+    def __init__(self, inner_exception=None):
         self.inner_exception = inner_exception
         super(DBError, self).__init__(str(inner_exception))
 
@@ -122,7 +122,7 @@ class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
     def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(**kwargs)
+        super(NotAuthorized, self).__init__(**kwargs)
 
 
 class AdminRequired(NotAuthorized):
@@ -473,9 +473,8 @@ class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
 
 
-class SchedulerHostFilterDriverNotFound(NotFound):
-    message = _("Scheduler Host Filter Driver %(driver_name)s could"
-                " not be found.")
+class SchedulerHostFilterNotFound(NotFound):
+    message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
 class InstanceMetadataNotFound(NotFound):
