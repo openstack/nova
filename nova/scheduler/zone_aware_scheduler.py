@@ -39,7 +39,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         return api.call_zone_method(context, method, specs=specs)
 
     def schedule_run_instance(self, context, instance_id, request_spec,
-                                        *args, **kwargs):
+                              *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
@@ -116,6 +116,9 @@ class ZoneAwareScheduler(driver.Scheduler):
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
+        # TODO(sirp): weigh_hosts should also be a function of 'topic' or
+        # resources, so that we can apply different objective functions to it
+
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
@@ -139,12 +142,16 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def filter_hosts(self, num, request_spec):
         """Derived classes must override this method and return
-        a list of hosts in [(hostname, capability_dict)] format.
+           a list of hosts in [(hostname, capability_dict)] format.
         """
-        raise NotImplemented()
+        # NOTE(sirp): The default logic is the equivalent to AllHostsFilter
+        service_states = self.zone_manager.service_states
+        return [(host, services)
+                for host, services in service_states.iteritems()]
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """Derived classes must override this method and return
-        a lists of hosts in [{weight, hostname}] format.
+        """Derived classes may override this to provide more sophisticated
+        scheduling objectives
         """
-        raise NotImplemented()
+        # NOTE(sirp): The default logic is the same as the NoopCostFunction
+        return [dict(weight=1, hostname=host) for host, caps in hosts]
