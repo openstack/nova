@@ -45,6 +45,26 @@ mac_addresses = Table('mac_addresses', meta,
                nullable=False),
         )
 
+# Don't autoload this table since sqlite will have issues when
+# adding the column
+#TODO(tr3buchet)[wishful thinking]: remove support for sqlite
+fixed_ips = Table('fixed_ips', meta,
+        Column('created_at', DateTime(timezone=False),
+               default=datetime.datetime.utcnow),
+        Column('updated_at', DateTime(timezone=False),
+               onupdate=datetime.datetime.utcnow),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Boolean(create_constraint=True, name=None)),
+        Column('id', Integer(), primary_key=True),
+        Column('address', String(255)),
+        Column('network_id', Integer(), ForeignKey('networks.id'),
+               nullable=True),
+        Column('instance_id', Integer(), ForeignKey('instances.id'),
+               nullable=True),
+        Column('allocated', Boolean(), default=False),
+        Column('leased', Boolean(), default=False),
+        Column('reserved', Boolean(), default=False),
+        )
 
 # bridge_interface column to add to networks table
 interface = Column('bridge_interface',
@@ -66,7 +86,6 @@ def upgrade(migrate_engine):
 
     # grab tables and (column for dropping later)
     instances = Table('instances', meta, autoload=True)
-    fixed_ips = Table('fixed_ips', meta, autoload=True)
     networks = Table('networks', meta, autoload=True)
     c = instances.columns['mac_address']
 
@@ -111,8 +130,8 @@ def upgrade(migrate_engine):
                fixed_ips.c.instance_id != None)
 
     for row in s.execute():
-        m = select([mac_addresses.c.id]).\
-            where(mac_addresses.c.instance_id == row['instance_id']).\
+        m = select([mac_addresses.c.id].\
+            where(mac_addresses.c.instance_id == row['instance_id'])).\
             as_scalar()
         u = fixed_ips.update().values(mac_address_id=m).\
             where(fixed_ips.c.id == row['id'])
