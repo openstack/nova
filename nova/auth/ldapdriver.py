@@ -676,6 +676,7 @@ class LdapDriver(object):
 class FakeLdapDriver(LdapDriver):
     """Fake Ldap Auth driver"""
 
-    def __init__(self):  # pylint: disable=W0231
-        __import__('nova.auth.fakeldap')
-        self.ldap = sys.modules['nova.auth.fakeldap']
+    def __init__(self):
+        import nova.auth.fakeldap
+        sys.modules['ldap'] = nova.auth.fakeldap
+        super(FakeLdapDriver, self).__init__()
