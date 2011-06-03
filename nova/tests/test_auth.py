@@ -86,6 +86,7 @@ class _AuthManagerBaseTestCase(test.TestCase):
         super(_AuthManagerBaseTestCase, self).setUp()
         self.flags(connection_type='fake')
         self.manager = manager.AuthManager(new=True)
+        self.manager.mc.cache = {}
 
     def test_create_and_find_user(self):
         with user_generator(self.manager):
