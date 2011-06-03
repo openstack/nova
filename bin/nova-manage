@@ -1081,24 +1081,35 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class ConfigCommands(object):
+    """Class for exposing the flags defined by flag_file(s)."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print FLAGS.FlagsIntoString()
+
+
 CATEGORIES = [
-    ('user', UserCommands),
     ('account', AccountCommands),
-    ('project', ProjectCommands),
-    ('role', RoleCommands),
-    ('shell', ShellCommands),
-    ('vpn', VpnCommands),
-    ('fixed', FixedIpCommands),
-    ('floating', FloatingIpCommands),
-    ('network', NetworkCommands),
-    ('vm', VmCommands),
-    ('service', ServiceCommands),
+    ('config', ConfigCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands),
+    ('fixed', FixedIpCommands),
+    ('flavor', InstanceTypeCommands),
+    ('floating', FloatingIpCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands),
-    ('version', VersionCommands)]
+    ('network', NetworkCommands),
+    ('project', ProjectCommands),
+    ('role', RoleCommands),
+    ('service', ServiceCommands),
+    ('shell', ShellCommands),
+    ('user', UserCommands),
+    ('version', VersionCommands),
+    ('vm', VmCommands),
+    ('volume', VolumeCommands),
+    ('vpn', VpnCommands)]
 
 
 def lazy_match(name, key_value_tuples):
