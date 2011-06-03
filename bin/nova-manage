@@ -53,7 +53,6 @@
   CLI interface for nova management.
 """
 
-import datetime
 import gettext
 import glob
 import json
@@ -690,7 +689,7 @@ class ServiceCommands(object):
         """Show a list of all running services. Filter by host & service name.
         args: [host] [service]"""
         ctxt = context.get_admin_context()
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         services = db.service_get_all(ctxt)
         if host:
             services = [s for s in services if s['host'] == host]

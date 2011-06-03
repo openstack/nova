@@ -23,7 +23,6 @@ datastore.
 """
 
 import base64
-import datetime
 import IPy
 import os
 import urllib
@@ -235,7 +234,7 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -595,7 +594,7 @@ class CloudController(object):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
                 "output": base64.b64encode(output)}

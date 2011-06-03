@@ -23,7 +23,6 @@ inline callbacks.
 
 """
 
-import datetime
 import functools
 import os
 import shutil
@@ -37,6 +36,7 @@ from eventlet import greenthread
 from nova import fakerabbit
 from nova import flags
 from nova import rpc
+from nova import utils
 from nova import service
 from nova import wsgi
 from nova.virt import fake
@@ -69,7 +69,7 @@ class TestCase(unittest.TestCase):
         # NOTE(vish): We need a better method for creating fixtures for tests
         #             now that we have some required db setup for the system
         #             to work properly.
-        self.start = datetime.datetime.utcnow()
+        self.start = utils.utcnow()
         shutil.copyfile(os.path.join(FLAGS.state_path, FLAGS.sqlite_clean_db),
                         os.path.join(FLAGS.state_path, FLAGS.sqlite_db))
 

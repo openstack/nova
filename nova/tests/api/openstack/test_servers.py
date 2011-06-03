@@ -16,7 +16,6 @@
 #    under the License.
 
 import base64
-import datetime
 import json
 import unittest
 from xml.dom import minidom
@@ -29,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import test
+from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.compute.api
@@ -115,9 +115,9 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "user_data": "",
         "reservation_id": "",
         "mac_address": "",
-        "scheduled_at": datetime.datetime.now(),
-        "launched_at": datetime.datetime.now(),
-        "terminated_at": datetime.datetime.now(),
+        "scheduled_at": utils.utcnow(),
+        "launched_at": utils.utcnow(),
+        "terminated_at": utils.utcnow(),
         "availability_zone": "",
         "display_name": "server%s" % id,
         "display_description": "",

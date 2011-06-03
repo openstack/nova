@@ -18,7 +18,6 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-import datetime
 import eventlet
 import re
 import time
@@ -407,7 +406,7 @@ class API(base.Base):
                     instance['id'],
                     state_description='terminating',
                     state=0,
-                    terminated_at=datetime.datetime.utcnow())
+                    terminated_at=utils.utcnow())
 
         host = instance['host']
         if host:

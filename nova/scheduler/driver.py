@@ -28,6 +28,7 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
+from nova import utils
 from nova.compute import power_state
 
 FLAGS = flags.FLAGS
@@ -61,7 +62,7 @@ class Scheduler(object):
         """Check whether a service is up based on last heartbeat."""
         last_heartbeat = service['updated_at'] or service['created_at']
         # Timestamps in DB are UTC.
-        elapsed = datetime.datetime.utcnow() - last_heartbeat
+        elapsed = utils.utcnow() - last_heartbeat
         return elapsed < datetime.timedelta(seconds=FLAGS.service_down_time)
 
     def hosts_up(self, context, topic):
