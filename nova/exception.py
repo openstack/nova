@@ -255,6 +255,10 @@ class NotFound(NovaException):
         super(NotFound, self).__init__(**kwargs)
 
 
+class FlagNotSet(NotFound):
+    message = _("Required flag %(flag)s not set.")
+
+
 class InstanceNotFound(NotFound):
     message = _("Instance %(instance_id)s could not be found.")
 
@@ -265,6 +269,14 @@ class VolumeNotFound(NotFound):
 
 class VolumeNotFoundForInstance(VolumeNotFound):
     message = _("Volume not found for instance %(instance_id)s.")
+
+
+class SnapshotNotFound(NotFound):
+    message = _("Snapshot %(snapshot_id)s could not be found.")
+
+
+class VolumeIsBusy(Error):
+    message = _("deleting volume %(volume_name)s that has snapshot")
 
 
 class ExportDeviceNotFoundForVolume(NotFound):

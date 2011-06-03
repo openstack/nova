@@ -31,7 +31,6 @@ LOG = logging.getLogger('nova.tests.rpc')
 
 
 class RpcTestCase(test.TestCase):
-    """Test cases for rpc"""
     def setUp(self):
         super(RpcTestCase, self).setUp()
         self.conn = rpc.Connection.instance(True)
@@ -43,14 +42,55 @@ class RpcTestCase(test.TestCase):
         self.context = context.get_admin_context()
 
     def test_call_succeed(self):
-        """Get a value through rpc call"""
         value = 42
         result = rpc.call(self.context, 'test', {"method": "echo",
                                                  "args": {"value": value}})
         self.assertEqual(value, result)
 
+    def test_call_succeed_despite_multiple_returns(self):
+        value = 42
+        result = rpc.call(self.context, 'test', {"method": "echo_three_times",
+                                                 "args": {"value": value}})
+        self.assertEqual(value + 2, result)
+
+    def test_call_succeed_despite_multiple_returns_yield(self):
+        value = 42
+        result = rpc.call(self.context, 'test',
+                          {"method": "echo_three_times_yield",
+                           "args": {"value": value}})
+        self.assertEqual(value + 2, result)
+
+    def test_multicall_succeed_once(self):
+        value = 42
+        result = rpc.multicall(self.context,
+                              'test',
+                              {"method": "echo",
+                               "args": {"value": value}})
+        for i, x in enumerate(result):
+            if i > 0:
+                self.fail('should only receive one response')
+            self.assertEqual(value + i, x)
+
+    def test_multicall_succeed_three_times(self):
+        value = 42
+        result = rpc.multicall(self.context,
+                              'test',
+                              {"method": "echo_three_times",
+                               "args": {"value": value}})
+        for i, x in enumerate(result):
+            self.assertEqual(value + i, x)
+
+    def test_multicall_succeed_three_times_yield(self):
+        value = 42
+        result = rpc.multicall(self.context,
+                              'test',
+                              {"method": "echo_three_times_yield",
+                               "args": {"value": value}})
+        for i, x in enumerate(result):
+            self.assertEqual(value + i, x)
+
     def test_context_passed(self):
-        """Makes sure a context is passed through rpc call"""
+        """Makes sure a context is passed through rpc call."""
         value = 42
         result = rpc.call(self.context,
                           'test', {"method": "context",
@@ -58,11 +98,12 @@ class RpcTestCase(test.TestCase):
         self.assertEqual(self.context.to_dict(), result)
 
     def test_call_exception(self):
-        """Test that exception gets passed back properly
+        """Test that exception gets passed back properly.
 
         rpc.call returns a RemoteError object.  The value of the
         exception is converted to a string, so we convert it back
         to an int in the test.
+
         """
         value = 42
         self.assertRaises(rpc.RemoteError,
@@ -81,7 +122,7 @@ class RpcTestCase(test.TestCase):
             self.assertEqual(int(exc.value), value)
 
     def test_nested_calls(self):
-        """Test that we can do an rpc.call inside another call"""
+        """Test that we can do an rpc.call inside another call."""
         class Nested(object):
             @staticmethod
             def echo(context, queue, value):
@@ -108,25 +149,80 @@ class RpcTestCase(test.TestCase):
                                               "value": value}})
         self.assertEqual(value, result)
 
+    def test_connectionpool_single(self):
+        """Test that ConnectionPool recycles a single connection."""
+        conn1 = rpc.ConnectionPool.get()
+        rpc.ConnectionPool.put(conn1)
+        conn2 = rpc.ConnectionPool.get()
+        rpc.ConnectionPool.put(conn2)
+        self.assertEqual(conn1, conn2)
+
+    def test_connectionpool_double(self):
+        """Test that ConnectionPool returns and reuses separate connections.
+
+        When called consecutively we should get separate connections and upon
+        returning them those connections should be reused for future calls
+        before generating a new connection.
+
+        """
+        conn1 = rpc.ConnectionPool.get()
+        conn2 = rpc.ConnectionPool.get()
+
+        self.assertNotEqual(conn1, conn2)
+        rpc.ConnectionPool.put(conn1)
+        rpc.ConnectionPool.put(conn2)
+
+        conn3 = rpc.ConnectionPool.get()
+        conn4 = rpc.ConnectionPool.get()
+        self.assertEqual(conn1, conn3)
+        self.assertEqual(conn2, conn4)
+
+    def test_connectionpool_limit(self):
+        """Test connection pool limit and connection uniqueness."""
+        max_size = FLAGS.rpc_conn_pool_size
+        conns = []
+
+        for i in xrange(max_size):
+            conns.append(rpc.ConnectionPool.get())
+
+        self.assertFalse(rpc.ConnectionPool.free_items)
+        self.assertEqual(rpc.ConnectionPool.current_size,
+                rpc.ConnectionPool.max_size)
+        self.assertEqual(len(set(conns)), max_size)
+
 
 class TestReceiver(object):
-    """Simple Proxy class so the consumer has methods to call
+    """Simple Proxy class so the consumer has methods to call.
 
-    Uses static methods because we aren't actually storing any state"""
+    Uses static methods because we aren't actually storing any state.
+
+    """
 
     @staticmethod
     def echo(context, value):
-        """Simply returns whatever value is sent in"""
+        """Simply returns whatever value is sent in."""
         LOG.debug(_("Received %s"), value)
         return value
 
     @staticmethod
     def context(context, value):
-        """Returns dictionary version of context"""
+        """Returns dictionary version of context."""
         LOG.debug(_("Received %s"), context)
         return context.to_dict()
 
     @staticmethod
+    def echo_three_times(context, value):
+        context.reply(value)
+        context.reply(value + 1)
+        context.reply(value + 2)
+
+    @staticmethod
+    def echo_three_times_yield(context, value):
+        yield value
+        yield value + 1
+        yield value + 2
+
+    @staticmethod
     def fail(context, value):
-        """Raises an exception with the value sent in"""
+        """Raises an exception with the value sent in."""
         raise Exception(value)

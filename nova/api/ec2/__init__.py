@@ -327,6 +327,12 @@ class Executor(wsgi.Application):
             ec2_id = ec2utils.id_to_ec2_id(ex.volume_id, 'vol-%08x')
             message = _('Volume %s not found') % ec2_id
             return self._error(req, context, type(ex).__name__, message)
+        except exception.SnapshotNotFound as ex:
+            LOG.info(_('SnapshotNotFound raised: %s'), unicode(ex),
+                     context=context)
+            ec2_id = ec2utils.id_to_ec2_id(ex.snapshot_id, 'snap-%08x')
+            message = _('Snapshot %s not found') % ec2_id
+            return self._error(req, context, type(ex).__name__, message)
         except exception.NotFound as ex:
             LOG.info(_('NotFound raised: %s'), unicode(ex), context=context)
             return self._error(req, context, type(ex).__name__, unicode(ex))
@@ -338,6 +344,10 @@ class Executor(wsgi.Application):
             else:
                 return self._error(req, context, type(ex).__name__,
                                    unicode(ex))
+        except exception.KeyPairExists as ex:
+            LOG.debug(_('KeyPairExists raised: %s'), unicode(ex),
+                     context=context)
+            return self._error(req, context, type(ex).__name__, unicode(ex))
         except Exception as ex:
             extra = {'environment': req.environ}
             LOG.exception(_('Unexpected error raised: %s'), unicode(ex),

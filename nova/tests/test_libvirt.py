@@ -32,7 +32,8 @@ from nova import utils
 from nova.api.ec2 import cloud
 from nova.auth import manager
 from nova.compute import power_state
-from nova.virt import libvirt_conn
+from nova.virt.libvirt import connection
+from nova.virt.libvirt import firewall
 
 libvirt = None
 FLAGS = flags.FLAGS
@@ -83,7 +84,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def test_same_fname_concurrency(self):
         """Ensures that the same fname cache runs at a sequentially"""
-        conn = libvirt_conn.LibvirtConnection
+        conn = connection.LibvirtConnection
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
@@ -104,7 +105,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 
     def test_different_fname_concurrency(self):
         """Ensures that two different fname caches are concurrent"""
-        conn = libvirt_conn.LibvirtConnection
+        conn = connection.LibvirtConnection
         wait1 = eventlet.event.Event()
         done1 = eventlet.event.Event()
         eventlet.spawn(conn._cache_image, _concurrency,
@@ -125,7 +126,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 class LibvirtConnTestCase(test.TestCase):
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
-        libvirt_conn._late_load_cheetah()
+        connection._late_load_cheetah()
         self.flags(fake_call=True)
         self.manager = manager.AuthManager()
 
@@ -171,8 +172,8 @@ class LibvirtConnTestCase(test.TestCase):
             return False
         global libvirt
         libvirt = __import__('libvirt')
-        libvirt_conn.libvirt = __import__('libvirt')
-        libvirt_conn.libxml2 = __import__('libxml2')
+        connection.libvirt = __import__('libvirt')
+        connection.libxml2 = __import__('libxml2')
         return True
 
     def create_fake_libvirt_mock(self, **kwargs):
@@ -182,7 +183,7 @@ class LibvirtConnTestCase(test.TestCase):
         class FakeLibvirtConnection(object):
             pass
 
-        # A fake libvirt_conn.IptablesFirewallDriver
+        # A fake connection.IptablesFirewallDriver
         class FakeIptablesFirewallDriver(object):
 
             def __init__(self, **kwargs):
@@ -198,11 +199,11 @@ class LibvirtConnTestCase(test.TestCase):
         for key, val in kwargs.items():
             fake.__setattr__(key, val)
 
-        # Inevitable mocks for libvirt_conn.LibvirtConnection
-        self.mox.StubOutWithMock(libvirt_conn.utils, 'import_class')
-        libvirt_conn.utils.import_class(mox.IgnoreArg()).AndReturn(fakeip)
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection, '_conn')
-        libvirt_conn.LibvirtConnection._conn = fake
+        # Inevitable mocks for connection.LibvirtConnection
+        self.mox.StubOutWithMock(connection.utils, 'import_class')
+        connection.utils.import_class(mox.IgnoreArg()).AndReturn(fakeip)
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn = fake
 
     def create_service(self, **kwargs):
         service_ref = {'host': kwargs.get('host', 'dummy'),
@@ -214,7 +215,7 @@ class LibvirtConnTestCase(test.TestCase):
         return db.service_create(context.get_admin_context(), service_ref)
 
     def test_preparing_xml_info(self):
-        conn = libvirt_conn.LibvirtConnection(True)
+        conn = connection.LibvirtConnection(True)
         instance_ref = db.instance_create(self.context, self.test_instance)
 
         result = conn._prepare_xml_info(instance_ref, False)
@@ -229,7 +230,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(len(result['nics']) == 2)
 
     def test_get_nic_for_xml_v4(self):
-        conn = libvirt_conn.LibvirtConnection(True)
+        conn = connection.LibvirtConnection(True)
         network, mapping = _create_network_info()[0]
         self.flags(use_ipv6=False)
         params = conn._get_nic_for_xml(network, mapping)['extra_params']
@@ -237,7 +238,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(params.find('PROJMASKV6') == -1)
 
     def test_get_nic_for_xml_v6(self):
-        conn = libvirt_conn.LibvirtConnection(True)
+        conn = connection.LibvirtConnection(True)
         network, mapping = _create_network_info()[0]
         self.flags(use_ipv6=True)
         params = conn._get_nic_for_xml(network, mapping)['extra_params']
@@ -282,7 +283,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
         network_info = _create_network_info(2)
-        conn = libvirt_conn.LibvirtConnection(True)
+        conn = connection.LibvirtConnection(True)
         instance_ref = db.instance_create(self.context, instance_data)
         xml = conn.to_xml(instance_ref, False, network_info)
         tree = xml_to_tree(xml)
@@ -313,7 +314,7 @@ class LibvirtConnTestCase(test.TestCase):
                                   'instance_id': instance_ref['id']})
 
         self.flags(libvirt_type='lxc')
-        conn = libvirt_conn.LibvirtConnection(True)
+        conn = connection.LibvirtConnection(True)
 
         uri = conn.get_uri()
         self.assertEquals(uri, 'lxc:///')
@@ -419,7 +420,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
-            conn = libvirt_conn.LibvirtConnection(True)
+            conn = connection.LibvirtConnection(True)
 
             uri = conn.get_uri()
             self.assertEquals(uri, expected_uri)
@@ -446,7 +447,7 @@ class LibvirtConnTestCase(test.TestCase):
         FLAGS.libvirt_uri = testuri
         for (libvirt_type, (expected_uri, checks)) in type_uri_map.iteritems():
             FLAGS.libvirt_type = libvirt_type
-            conn = libvirt_conn.LibvirtConnection(True)
+            conn = connection.LibvirtConnection(True)
             uri = conn.get_uri()
             self.assertEquals(uri, testuri)
         db.instance_destroy(user_context, instance_ref['id'])
@@ -470,13 +471,13 @@ class LibvirtConnTestCase(test.TestCase):
         self.create_fake_libvirt_mock(getVersion=getVersion,
                                       getType=getType,
                                       listDomainsID=listDomainsID)
-        self.mox.StubOutWithMock(libvirt_conn.LibvirtConnection,
+        self.mox.StubOutWithMock(connection.LibvirtConnection,
                                  'get_cpu_info')
-        libvirt_conn.LibvirtConnection.get_cpu_info().AndReturn('cpuinfo')
+        connection.LibvirtConnection.get_cpu_info().AndReturn('cpuinfo')
 
         # Start test
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
+        conn = connection.LibvirtConnection(False)
         conn.update_available_resource(self.context, 'dummy')
         service_ref = db.service_get(self.context, service_ref['id'])
         compute_node = service_ref['compute_node'][0]
@@ -510,7 +511,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.create_fake_libvirt_mock()
 
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
+        conn = connection.LibvirtConnection(False)
         self.assertRaises(exception.ComputeServiceUnavailable,
                           conn.update_available_resource,
                           self.context, 'dummy')
@@ -545,7 +546,7 @@ class LibvirtConnTestCase(test.TestCase):
         # Start test
         self.mox.ReplayAll()
         try:
-            conn = libvirt_conn.LibvirtConnection(False)
+            conn = connection.LibvirtConnection(False)
             conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
             conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
             conn.firewall_driver.setattr('instance_filter_exists', fake_none)
@@ -594,7 +595,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Start test
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
+        conn = connection.LibvirtConnection(False)
         self.assertRaises(libvirt.libvirtError,
                       conn._live_migration,
                       self.context, instance_ref, 'dest', '',
@@ -623,7 +624,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Start test
         self.mox.ReplayAll()
-        conn = libvirt_conn.LibvirtConnection(False)
+        conn = connection.LibvirtConnection(False)
         conn.firewall_driver.setattr('setup_basic_filtering', fake_none)
         conn.firewall_driver.setattr('prepare_instance_filter', fake_none)
 
@@ -647,7 +648,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(count)
 
     def test_get_host_ip_addr(self):
-        conn = libvirt_conn.LibvirtConnection(False)
+        conn = connection.LibvirtConnection(False)
         ip = conn.get_host_ip_addr()
         self.assertEquals(ip, FLAGS.my_ip)
 
@@ -657,17 +658,16 @@ class LibvirtConnTestCase(test.TestCase):
         super(LibvirtConnTestCase, self).tearDown()
 
 
-class FakeNWFilter:
+class NWFilterFakes:
     def __init__(self):
-        
         self.filters = {}
 
-    def _nwfilterLookupByName(self, name):
+    def nwfilterLookupByName(self, name):
         if name in self.filters:
             return self.filters[name]
         raise libvirt.libvirtError('Filter Not Found')
 
-    def _filterDefineXMLMock(self, xml):
+    def filterDefineXMLMock(self, xml):
         class FakeNWFilterInternal:
             def __init__(self, parent, name):
                 self.name = name
@@ -697,7 +697,7 @@ class IptablesFirewallTestCase(test.TestCase):
         class FakeLibvirtConnection(object):
             pass
         self.fake_libvirt_connection = FakeLibvirtConnection()
-        self.fw = libvirt_conn.IptablesFirewallDriver(
+        self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
 
     def lazy_load_library_exists(self):
@@ -710,8 +710,8 @@ class IptablesFirewallTestCase(test.TestCase):
             return False
         global libvirt
         libvirt = __import__('libvirt')
-        libvirt_conn.libvirt = __import__('libvirt')
-        libvirt_conn.libxml2 = __import__('libxml2')
+        connection.libvirt = __import__('libvirt')
+        connection.libxml2 = __import__('libxml2')
         return True
 
     def tearDown(self):
@@ -926,11 +926,11 @@ class IptablesFirewallTestCase(test.TestCase):
 
         admin_ctxt = context.get_admin_context()
 
-        fakefilter = FakeNWFilter()
+        fakefilter = NWFilterFakes()
         self.fw.nwfilter._conn.nwfilterDefineXML =\
-                               fakefilter._filterDefineXMLMock
+                               fakefilter.filterDefineXMLMock
         self.fw.nwfilter._conn.nwfilterLookupByName =\
-                               fakefilter._nwfilterLookupByName
+                               fakefilter.nwfilterLookupByName
 
         instance_ref = self._create_instance_ref()
         inst_id = instance_ref['id']
@@ -969,7 +969,7 @@ class NWFilterTestCase(test.TestCase):
 
         self.fake_libvirt_connection = Mock()
 
-        self.fw = libvirt_conn.NWFilterFirewall(
+        self.fw = firewall.NWFilterFirewall(
                                          lambda: self.fake_libvirt_connection)
 
     def tearDown(self):
@@ -1133,9 +1133,9 @@ class NWFilterTestCase(test.TestCase):
     def test_unfilter_instance_undefines_nwfilters(self):
         admin_ctxt = context.get_admin_context()
 
-        fakefilter = FakeNWFilter()
-        self.fw._conn.nwfilterDefineXML = fakefilter._filterDefineXMLMock
-        self.fw._conn.nwfilterLookupByName = fakefilter._nwfilterLookupByName
+        fakefilter = NWFilterFakes()
+        self.fw._conn.nwfilterDefineXML = fakefilter.filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter.nwfilterLookupByName
 
         instance_ref = self._create_instance()
         inst_id = instance_ref['id']
@@ -1157,10 +1157,8 @@ class NWFilterTestCase(test.TestCase):
         self.fw.prepare_instance_filter(instance)
         self.fw.apply_instance_filter(instance)
         original_filter_count = len(fakefilter.filters)
-        print fakefilter.filters.keys()
         self.fw.unfilter_instance(instance)
 
-        print fakefilter.filters.keys()
         # should undefine 2 filters: instance and instance-secgroup
         self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
 
