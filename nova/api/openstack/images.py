@@ -177,7 +177,7 @@ def create_resource(version='1.0'):
     metadata = {
         "attributes": {
             "image": ["id", "name", "updated", "created", "status",
-                      "serverId", "progress"],
+                      "serverId", "progress", "serverRef"],
             "link": ["rel", "type", "href"],
         },
     }
