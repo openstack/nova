@@ -16,7 +16,6 @@
 #    under the License.
 
 import base64
-import datetime
 import json
 import unittest
 from xml.dom import minidom
@@ -29,6 +28,7 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import test
+from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
 import nova.compute.api
@@ -37,6 +37,7 @@ from nova.compute import power_state
 import nova.db.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
+import nova.image.fake
 import nova.rpc
 from nova.tests.api.openstack import common
 from nova.tests.api.openstack import fakes
@@ -97,7 +98,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
-        "image_id": "10",
+        "image_ref": "10",
         "kernel_id": "",
         "ramdisk_id": "",
         "launch_index": 0,
@@ -114,9 +115,9 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "user_data": "",
         "reservation_id": "",
         "mac_address": "",
-        "scheduled_at": datetime.datetime.now(),
-        "launched_at": datetime.datetime.now(),
-        "terminated_at": datetime.datetime.now(),
+        "scheduled_at": utils.utcnow(),
+        "launched_at": utils.utcnow(),
+        "terminated_at": utils.utcnow(),
         "availability_zone": "",
         "display_name": "server%s" % id,
         "display_description": "",
@@ -217,7 +218,6 @@ class ServersTest(test.TestCase):
             },
         ]
 
-        print res_dict['server']
         self.assertEqual(res_dict['server']['links'], expected_links)
 
     def test_get_server_by_id_with_addresses_xml(self):
@@ -485,8 +485,6 @@ class ServersTest(test.TestCase):
             fake_method)
         self.stubs.Set(nova.api.openstack.servers.Controller,
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
-        self.stubs.Set(nova.api.openstack.common,
-            "get_image_id_from_image_hash", image_id_from_hash)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
     def _test_create_instance_helper(self):
@@ -589,12 +587,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
@@ -616,16 +614,16 @@ class ServersTest(test.TestCase):
         self.assertEqual('server_test', server['name'])
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_ref, server['imageRef'])
+        self.assertEqual(image_href, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_v1_1_bad_href(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/asdf'
+        image_href = 'http://localhost/v1.1/images/asdf'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = dict(server=dict(
-            name='server_test', imageRef=image_ref, flavorRef=flavor_ref,
+            name='server_test', imageRef=image_href, flavorRef=flavor_ref,
             metadata={'hello': 'world', 'open': 'stack'},
             personality={}))
         req = webob.Request.blank('/v1.1/servers')
@@ -638,13 +636,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_v1_1_local_href(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
-        image_ref_local = '2'
+        image_id = 2
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref_local,
+                'imageRef': image_id,
                 'flavorRef': flavor_ref,
             },
         }
@@ -659,7 +656,7 @@ class ServersTest(test.TestCase):
         server = json.loads(res.body)['server']
         self.assertEqual(1, server['id'])
         self.assertEqual(flavor_ref, server['flavorRef'])
-        self.assertEqual(image_ref, server['imageRef'])
+        self.assertEqual(image_id, server['imageRef'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance_with_admin_pass_v1_0(self):
@@ -686,12 +683,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_with_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'adminPass': 'testpass',
             },
@@ -708,12 +705,12 @@ class ServersTest(test.TestCase):
     def test_create_instance_with_empty_admin_pass_v1_1(self):
         self._setup_for_create_instance()
 
-        image_ref = 'http://localhost/v1.1/images/2'
+        image_href = 'http://localhost/v1.1/images/2'
         flavor_ref = 'http://localhost/v1.1/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_ref,
+                'imageRef': image_href,
                 'flavorRef': flavor_ref,
                 'adminPass': '',
             },
@@ -773,9 +770,7 @@ class ServersTest(test.TestCase):
         self.body = json.dumps(dict(server=inst_dict))
 
         def server_update(context, id, params):
-            filtered_dict = dict(
-                display_name='server_test'
-            )
+            filtered_dict = dict(display_name='server_test')
             self.assertEqual(params, filtered_dict)
             return filtered_dict
 
@@ -844,7 +839,6 @@ class ServersTest(test.TestCase):
         req = webob.Request.blank('/v1.0/servers/detail')
         req.headers['Accept'] = 'application/xml'
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         dom = minidom.parseString(res.body)
         for i, server in enumerate(dom.getElementsByTagName('server')):
             self.assertEqual(server.getAttribute('id'), str(i))
@@ -865,7 +859,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['flavorId'], 1)
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
@@ -879,7 +873,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], '')
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageRef'], 'http://localhost/v1.1/images/10')
+            self.assertEqual(s['imageRef'], 10)
             self.assertEqual(s['flavorRef'], 'http://localhost/v1.1/flavors/1')
             self.assertEqual(s['status'], 'BUILD')
             self.assertEqual(s['metadata']['seq'], str(i))
@@ -911,7 +905,7 @@ class ServersTest(test.TestCase):
             self.assertEqual(s['id'], i)
             self.assertEqual(s['hostId'], host_ids[i % 2])
             self.assertEqual(s['name'], 'server%d' % i)
-            self.assertEqual(s['imageId'], '10')
+            self.assertEqual(s['imageId'], 10)
             self.assertEqual(s['flavorId'], 1)
 
     def test_server_pause(self):
@@ -1007,6 +1001,14 @@ class ServersTest(test.TestCase):
         req.body = json.dumps(body)
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 501)
+
+    def test_server_change_password_xml(self):
+        req = webob.Request.blank('/v1.0/servers/1/action')
+        req.method = 'POST'
+        req.content_type = 'application/xml'
+        req.body = '<changePassword adminPass="1234pass">'
+#        res = req.get_response(fakes.wsgi_app())
+#        self.assertEqual(res.status_int, 501)
 
     def test_server_change_password_v1_1(self):
         mock_method = MockSetAdminPassword()
@@ -1267,6 +1269,25 @@ class ServersTest(test.TestCase):
         self.assertEqual(res.status_int, 202)
         self.assertEqual(self.resize_called, True)
 
+    def test_resize_server_v11(self):
+
+        req = webob.Request.blank('/v1.1/servers/1/action')
+        req.content_type = 'application/json'
+        req.method = 'POST'
+        body_dict = dict(resize=dict(flavorRef="http://localhost/3"))
+        req.body = json.dumps(body_dict)
+
+        self.resize_called = False
+
+        def resize_mock(*args):
+            self.resize_called = True
+
+        self.stubs.Set(nova.compute.api.API, 'resize', resize_mock)
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 202)
+        self.assertEqual(self.resize_called, True)
+
     def test_resize_bad_flavor_fails(self):
         req = self.webreq('/1/action', 'POST', dict(resize=dict(derp=3)))
 
@@ -1380,13 +1401,13 @@ class ServersTest(test.TestCase):
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def setUp(self):
-        self.deserializer = servers.ServerCreateRequestXMLDeserializer()
+        self.deserializer = servers.ServerXMLDeserializer()
 
     def test_minimal_request(self):
         serial_request = """
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1"/>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1400,7 +1421,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
  name="new-server-test" imageId="1" flavorId="1">
     <metadata/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1415,7 +1436,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
  name="new-server-test" imageId="1" flavorId="1">
     <personality/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1431,7 +1452,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
     <metadata/>
     <personality/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1448,7 +1469,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
     <personality/>
     <metadata/>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"server": {
                 "name": "new-server-test",
                 "imageId": "1",
@@ -1466,7 +1487,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <file path="/etc/conf">aabbccdd</file>
     </personality>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1476,7 +1497,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf">aabbccdd</file>
 <file path="/etc/sudoers">abcd</file></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"},
                     {"path": "/etc/sudoers", "contents": "abcd"}]
         self.assertEquals(request["server"]["personality"], expected)
@@ -1492,7 +1513,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <file path="/etc/ignoreme">anything</file>
     </personality>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1501,7 +1522,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file>aabbccdd</file></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"contents": "aabbccdd"}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1510,7 +1531,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf"></file></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": ""}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1519,7 +1540,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 <server xmlns="http://docs.rackspacecloud.com/servers/api/v1.0"
  name="new-server-test" imageId="1" flavorId="1">
 <personality><file path="/etc/conf"/></personality></server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = [{"path": "/etc/conf", "contents": ""}]
         self.assertEquals(request["server"]["personality"], expected)
 
@@ -1531,7 +1552,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="alpha">beta</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "beta"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1544,7 +1565,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="foo">bar</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "beta", "foo": "bar"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1556,7 +1577,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="alpha"></meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": ""}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1569,7 +1590,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="delta"/>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"alpha": "", "delta": ""}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1581,7 +1602,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta>beta</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"": "beta"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1594,7 +1615,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta>gamma</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"": "gamma"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1607,7 +1628,7 @@ class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
         <meta key="foo">baz</meta>
     </metadata>
 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         expected = {"foo": "baz"}
         self.assertEquals(request["server"]["metadata"], expected)
 
@@ -1654,17 +1675,17 @@ b25zLiINCg0KLVJpY2hhcmQgQmFjaA==""",
                 },
             ],
         }}
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         self.assertEqual(request, expected)
 
-    def test_request_xmlser_with_flavor_image_ref(self):
+    def test_request_xmlser_with_flavor_image_href(self):
         serial_request = """
                 <server xmlns="http://docs.openstack.org/compute/api/v1.1"
                     name="new-server-test"
                     imageRef="http://localhost:8774/v1.1/images/1"
                     flavorRef="http://localhost:8774/v1.1/flavors/1">
                 </server>"""
-        request = self.deserializer.deserialize(serial_request)
+        request = self.deserializer.deserialize(serial_request, 'create')
         self.assertEquals(request["server"]["flavorRef"],
                           "http://localhost:8774/v1.1/flavors/1")
         self.assertEquals(request["server"]["imageRef"],
@@ -1679,6 +1700,7 @@ class TestServerInstanceCreation(test.TestCase):
         fakes.FakeAuthManager.auth_data = {}
         fakes.FakeAuthDatabase.data = {}
         fakes.stub_out_auth(self.stubs)
+        fakes.stub_out_image_service(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         self.allow_admin = FLAGS.allow_admin_api
 
@@ -1713,8 +1735,6 @@ class TestServerInstanceCreation(test.TestCase):
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
         self.stubs.Set(nova.api.openstack.servers.Controller,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
-        self.stubs.Set(nova.api.openstack.common,
-            'get_image_id_from_image_hash', make_stub_method(2))
         return compute_api
 
     def _create_personality_request_dict(self, personality_files):

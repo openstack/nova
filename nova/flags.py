@@ -296,6 +296,7 @@ DEFINE_bool('fake_network', False,
             'should we use fake network devices and addresses')
 DEFINE_string('rabbit_host', 'localhost', 'rabbit host')
 DEFINE_integer('rabbit_port', 5672, 'rabbit port')
+DEFINE_bool('rabbit_use_ssl', False, 'connect over SSL')
 DEFINE_string('rabbit_userid', 'guest', 'rabbit userid')
 DEFINE_string('rabbit_password', 'guest', 'rabbit password')
 DEFINE_string('rabbit_virtual_host', '/', 'rabbit virtual host')

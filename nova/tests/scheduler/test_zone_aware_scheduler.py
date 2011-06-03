@@ -22,6 +22,37 @@ from nova.scheduler import zone_aware_scheduler
 from nova.scheduler import zone_manager
 
 
+def _host_caps(multiplier):
+    # Returns host capabilities in the following way:
+    # host1 = memory:free 10 (100max)
+    #         disk:available 100 (1000max)
+    # hostN = memory:free 10 + 10N
+    #         disk:available 100 + 100N
+    # in other words: hostN has more resources than host0
+    # which means ... don't go above 10 hosts.
+    return {'host_name-description': 'XenServer %s' % multiplier,
+            'host_hostname': 'xs-%s' % multiplier,
+            'host_memory_total': 100,
+            'host_memory_overhead': 10,
+            'host_memory_free': 10 + multiplier * 10,
+            'host_memory_free-computed': 10 + multiplier * 10,
+            'host_other-config': {},
+            'host_ip_address': '192.168.1.%d' % (100 + multiplier),
+            'host_cpu_info': {},
+            'disk_available': 100 + multiplier * 100,
+            'disk_total': 1000,
+            'disk_used': 0,
+            'host_uuid': 'xxx-%d' % multiplier,
+            'host_name-label': 'xs-%s' % multiplier}
+
+
+def fake_zone_manager_service_states(num_hosts):
+    states = {}
+    for x in xrange(num_hosts):
+        states['host%02d' % (x + 1)] = {'compute': _host_caps(x)}
+    return states
+
+
 class FakeZoneAwareScheduler(zone_aware_scheduler.ZoneAwareScheduler):
     def filter_hosts(self, num, specs):
         # NOTE(sirp): this is returning [(hostname, services)]
@@ -38,16 +69,16 @@ class FakeZoneAwareScheduler(zone_aware_scheduler.ZoneAwareScheduler):
 class FakeZoneManager(zone_manager.ZoneManager):
     def __init__(self):
         self.service_states = {
-                        'host1': {
-                            'compute': {'ram': 1000}
-                         },
-                         'host2': {
-                            'compute': {'ram': 2000}
-                         },
-                         'host3': {
-                            'compute': {'ram': 3000}
-                         }
-                     }
+            'host1': {
+                'compute': {'ram': 1000},
+            },
+            'host2': {
+                'compute': {'ram': 2000},
+            },
+            'host3': {
+                'compute': {'ram': 3000},
+            },
+        }
 
 
 class FakeEmptyZoneManager(zone_manager.ZoneManager):

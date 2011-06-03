@@ -18,6 +18,7 @@ import eventlet
 import mox
 import os
 import re
+import shutil
 import sys
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
@@ -160,6 +161,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
+                     'image_ref':     '123456',
                      'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):
@@ -279,6 +281,68 @@ class LibvirtConnTestCase(test.TestCase):
     def test_lxc_container_and_uri(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_container(instance_data)
+
+    def test_snapshot(self):
+        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+
+        # Only file-based instance storages are supported at the moment
+        test_xml = """
+            <domain type='kvm'>
+                <devices>
+                    <disk type='file'>
+                        <source file='filename'/>
+                    </disk>
+                </devices>
+            </domain>
+            """
+
+        class FakeVirtDomain(object):
+
+            def __init__(self):
+                pass
+
+            def snapshotCreateXML(self, *args):
+                return None
+
+            def XMLDesc(self, *args):
+                return test_xml
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref.name:
+                return FakeVirtDomain()
+
+        def fake_execute(*args):
+            # Touch filename to pass 'with open(out_path)'
+            open(args[-1], "a").close()
+
+        # Start test
+        image_service = utils.import_object(FLAGS.image_service)
+
+        # Assuming that base image already exists in image_service
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = connection.LibvirtConnection(False)
+        conn.snapshot(instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
 
     def test_multi_nic(self):
         instance_data = dict(self.test_instance)
@@ -644,6 +708,8 @@ class LibvirtConnTestCase(test.TestCase):
             conn.spawn(instance, network_info)
         except Exception, e:
             count = (0 <= str(e.message).find('Unexpected method call'))
+
+        shutil.rmtree(os.path.join(FLAGS.instances_path, instance.name))
 
         self.assertTrue(count)
 

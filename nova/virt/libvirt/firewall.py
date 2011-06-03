@@ -195,7 +195,7 @@ class NWFilterFirewall(FirewallDriver):
         logging.info('ensuring static filters')
         self._ensure_static_filters()
 
-        if instance['image_id'] == str(FLAGS.vpn_image_id):
+        if instance['image_ref'] == str(FLAGS.vpn_image_id):
             base_filter = 'nova-vpn'
         else:
             base_filter = 'nova-base'
@@ -336,7 +336,7 @@ class NWFilterFirewall(FirewallDriver):
 
     def _create_network_filters(self, instance, network_info,
                                instance_secgroup_filter_name):
-        if instance['image_id'] == str(FLAGS.vpn_image_id):
+        if instance['image_ref'] == str(FLAGS.vpn_image_id):
             base_filter = 'nova-vpn'
         else:
             base_filter = 'nova-base'

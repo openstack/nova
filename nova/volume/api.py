@@ -20,14 +20,13 @@
 Handles all requests relating to volumes.
 """
 
-import datetime
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import rpc
+from nova import utils
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -78,7 +77,7 @@ class API(base.Base):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
         host = volume['host']
