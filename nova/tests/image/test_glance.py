@@ -34,7 +34,7 @@ class StubGlanceClient(object):
     def get_image_meta(self, image_id):
         return self.images[image_id]
 
-    def get_images_detailed(self):
+    def get_images_detailed(self, filters=None):
         return self.images.itervalues()
 
     def get_image(self, image_id):

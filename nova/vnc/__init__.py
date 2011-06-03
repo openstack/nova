@@ -32,3 +32,5 @@ flags.DEFINE_string('vncserver_host', '0.0.0.0',
                     'the host interface on which vnc server should listen')
 flags.DEFINE_bool('vnc_enabled', True,
                   'enable vnc related features')
+flags.DEFINE_string('vnc_keymap', 'en-us',
+                   'keymap for vnc')

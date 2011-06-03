@@ -26,6 +26,7 @@ import time
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import network
 from nova import quota
@@ -58,9 +59,9 @@ class API(base.Base):
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
-        if not image_service:
-            image_service = utils.import_object(FLAGS.image_service)
-        self.image_service = image_service
+        self.image_service = image_service or \
+                nova.image.get_default_image_service()
+
         if not network_api:
             network_api = network.API()
         self.network_api = network_api
@@ -91,18 +92,18 @@ class API(base.Base):
         """Enforce quota limits on injected files.
 
         Raises a QuotaError if any limit is exceeded.
-
         """
         if injected_files is None:
             return
-        limit = quota.allowed_injected_files(context)
+        limit = quota.allowed_injected_files(context, len(injected_files))
         if len(injected_files) > limit:
             raise quota.QuotaError(code="OnsetFileLimitExceeded")
         path_limit = quota.allowed_injected_file_path_bytes(context)
-        content_limit = quota.allowed_injected_file_content_bytes(context)
         for path, content in injected_files:
             if len(path) > path_limit:
                 raise quota.QuotaError(code="OnsetFilePathLimitExceeded")
+            content_limit = quota.allowed_injected_file_content_bytes(
+                                                    context, len(content))
             if len(content) > content_limit:
                 raise quota.QuotaError(code="OnsetFileContentLimitExceeded")
 
@@ -129,16 +130,16 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
     def create(self, context, instance_type,
-               image_id, kernel_id=None, ramdisk_id=None,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None):
+               injected_files=None,
+               admin_password=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
-
         """
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
@@ -149,14 +150,19 @@ class API(base.Base):
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s,"
                     " tried to run %(min_count)s instances") % locals())
-            raise quota.QuotaError(_("Instance quota exceeded. You can only "
-                                     "run %s more instances of this type.") %
-                                   num_instances, "InstanceLimitExceeded")
+            if num_instances <= 0:
+                message = _("Instance quota exceeded. You cannot run any "
+                            "more instances of this type.")
+            else:
+                message = _("Instance quota exceeded. You can only run %s "
+                            "more instances of this type.") % num_instances
+            raise quota.QuotaError(message, "InstanceLimitExceeded")
 
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        image = self.image_service.show(context, image_id)
+        (image_service, image_id) = nova.image.get_image_service(image_href)
+        image = image_service.show(context, image_id)
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
@@ -176,9 +182,9 @@ class API(base.Base):
         logging.debug("Using Kernel=%s, Ramdisk=%s" %
                        (kernel_id, ramdisk_id))
         if kernel_id:
-            self.image_service.show(context, kernel_id)
+            image_service.show(context, kernel_id)
         if ramdisk_id:
-            self.image_service.show(context, ramdisk_id)
+            image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -199,7 +205,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'image_id': image_id,
+            'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,
@@ -251,13 +257,28 @@ class API(base.Base):
             uid = context.user_id
             LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
                     " instance %(instance_id)s") % locals())
+
+            # NOTE(sandy): For now we're just going to pass in the
+            # instance_type record to the scheduler. In a later phase
+            # we'll be ripping this whole for-loop out and deferring the
+            # creation of the Instance record. At that point all this will
+            # change.
             rpc.cast(context,
                      FLAGS.scheduler_topic,
                      {"method": "run_instance",
                       "args": {"topic": FLAGS.compute_topic,
                                "instance_id": instance_id,
+                               "request_spec": {
+                                        'instance_type': instance_type,
+                                        'filter':
+                                            'nova.scheduler.host_filter.'
+                                            'InstanceTypeFilter',
+                               },
                                "availability_zone": availability_zone,
-                               "injected_files": injected_files}})
+                               "injected_files": injected_files,
+                               "admin_password": admin_password,
+                              },
+                     })
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
@@ -280,7 +301,6 @@ class API(base.Base):
         already exist.
 
         :param context: the security context
-
         """
         try:
             db.security_group_get_by_name(context, context.project_id,
@@ -313,7 +333,6 @@ class API(base.Base):
 
         Sends an update request to each compute node for whom this is
         relevant.
-
         """
         # First, we get the security group rules that reference this group as
         # the grantee..
@@ -360,7 +379,6 @@ class API(base.Base):
                        updated
 
         :returns: None
-
         """
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
@@ -410,7 +428,6 @@ class API(base.Base):
         Use this method instead of get() if this is the only operation you
         intend to to. It will route to novaclient.get if the instance is not
         found.
-
         """
         return self.get(context, instance_id)
 
@@ -420,7 +437,6 @@ class API(base.Base):
 
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
-
         """
         if reservation_id is not None:
             return self.db.instance_get_all_by_reservation(
@@ -450,7 +466,6 @@ class API(base.Base):
                        compute worker
 
         :returns: None
-
         """
         if not params:
             params = {}
@@ -496,25 +511,16 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def _set_admin_password(self, context, instance_id, password):
-        """Set the root/admin password for the given instance."""
-        host = self._find_host(context, instance_id)
-
-        rpc.cast(context,
-                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
-                 {"method": "set_admin_password",
-                  "args": {"instance_id": instance_id, "new_pass": password}})
-
     def snapshot(self, context, instance_id, name):
         """Snapshot the given instance.
 
         :returns: A dict containing image metadata
-
         """
         properties = {'instance_id': str(instance_id),
-                      'user_id': str(context.user_id)}
+                      'user_id': str(context.user_id),
+                      'image_state': 'creating'}
         sent_meta = {'name': name, 'is_public': False,
-                     'properties': properties}
+                     'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
@@ -525,8 +531,8 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_id, metadata=None,
-                files_to_inject=None):
+    def rebuild(self, context, instance_id, image_href, name=None,
+            metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
 
@@ -534,16 +540,19 @@ class API(base.Base):
             msg = _("Instance already building")
             raise exception.BuildInProgress(msg)
 
-        metadata = metadata or {}
-        self._check_metadata_properties_quota(context, metadata)
-
         files_to_inject = files_to_inject or []
         self._check_injected_file_quota(context, files_to_inject)
 
-        self.db.instance_update(context, instance_id, {"metadata": metadata})
+        values = {}
+        if metadata is not None:
+            self._check_metadata_properties_quota(context, metadata)
+            values['metadata'] = metadata
+        if name is not None:
+            values['display_name'] = name
+        self.db.instance_update(context, instance_id, values)
 
         rebuild_params = {
-            "image_id": image_id,
+            "image_ref": image_href,
             "injected_files": files_to_inject,
         }
 
@@ -658,8 +667,12 @@ class API(base.Base):
 
     def set_admin_password(self, context, instance_id, password=None):
         """Set the root/admin password for the given instance."""
-        eventlet.spawn_n(self._set_admin_password(context, instance_id,
-                                                  password))
+        host = self._find_host(context, instance_id)
+
+        rpc.cast(context,
+                 self.db.queue_get_for(context, FLAGS.compute_topic, host),
+                 {"method": "set_admin_password",
+                  "args": {"instance_id": instance_id, "new_pass": password}})
 
     def inject_file(self, context, instance_id):
         """Write a file to the given instance."""

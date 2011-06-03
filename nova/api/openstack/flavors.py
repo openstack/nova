@@ -19,21 +19,12 @@ import webob
 
 from nova import db
 from nova import exception
-from nova.api.openstack import common
 from nova.api.openstack import views
+from nova.api.openstack import wsgi
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """Flavor controller for the OpenStack API."""
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "flavor": ["id", "name", "ram", "disk"],
-                "link": ["rel", "type", "href"],
-            }
-        }
-    }
 
     def index(self, req):
         """Return all flavors in brief."""
@@ -44,6 +35,9 @@ class Controller(common.OpenstackController):
         """Return all flavors in detail."""
         items = self._get_flavors(req, is_detail=True)
         return dict(flavors=items)
+
+    def _get_view_builder(self, req):
+        raise NotImplementedError()
 
     def _get_flavors(self, req, is_detail=True):
         """Helper function that returns a list of flavor dicts."""
@@ -68,14 +62,31 @@ class Controller(common.OpenstackController):
 
 
 class ControllerV10(Controller):
+
     def _get_view_builder(self, req):
         return views.flavors.ViewBuilder()
 
 
 class ControllerV11(Controller):
+
     def _get_view_builder(self, req):
         base_url = req.application_url
         return views.flavors.ViewBuilderV11(base_url)
 
-    def get_default_xmlns(self, req):
-        return common.XML_NS_V11
+
+def create_resource(version='1.0'):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
+
+    xmlns = {
+        '1.0': wsgi.XMLNS_V10,
+        '1.1': wsgi.XMLNS_V11,
+    }[version]
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns),
+    }
+
+    return wsgi.Resource(controller, serializers=serializers)

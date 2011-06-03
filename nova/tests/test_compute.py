@@ -84,7 +84,7 @@ class ComputeTestCase(test.TestCase):
     def _create_instance(self, params={}):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id
@@ -150,7 +150,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
         try:
             self.assertEqual(len(db.security_group_get_by_instance(
@@ -168,7 +168,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
         try:
             db.instance_destroy(self.context, ref[0]['id'])
@@ -184,7 +184,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
 
         try:
@@ -331,6 +331,28 @@ class ComputeTestCase(test.TestCase):
         self.compute.unlock_instance(self.context, instance_id)
         ret_val = self.compute.reboot_instance(non_admin_context, instance_id)
         self.assertEqual(ret_val, None)
+
+        self.compute.terminate_instance(self.context, instance_id)
+
+    def test_finish_resize(self):
+        """Contrived test to ensure finish_resize doesn't raise anything"""
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+        try:
+            self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+        except KeyError, e:
+            # Only catch key errors. We want other reasons for the test to
+            # fail to actually error out so we don't obscure anything
+            self.fail()
 
         self.compute.terminate_instance(self.context, instance_id)
 

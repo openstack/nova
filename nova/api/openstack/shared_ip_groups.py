@@ -17,28 +17,12 @@
 
 from webob import exc
 
-from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 
 
-def _translate_keys(inst):
-    """ Coerces a shared IP group instance into proper dictionary format """
-    return dict(sharedIpGroup=inst)
-
-
-def _translate_detail_keys(inst):
-    """ Coerces a shared IP group instance into proper dictionary format with
-    correctly mapped attributes """
-    return dict(sharedIpGroups=inst)
-
-
-class Controller(common.OpenstackController):
+class Controller(object):
     """ The Shared IP Groups Controller for the Openstack API """
-
-    _serialization_metadata = {
-        'application/xml': {
-            'attributes': {
-                'sharedIpGroup': []}}}
 
     def index(self, req):
         """ Returns a list of Shared IP Groups for the user """
@@ -48,7 +32,7 @@ class Controller(common.OpenstackController):
         """ Shows in-depth information on a specific Shared IP Group """
         raise faults.Fault(exc.HTTPNotImplemented())
 
-    def update(self, req, id):
+    def update(self, req, id, body):
         """ You can't update a Shared IP Group """
         raise faults.Fault(exc.HTTPNotImplemented())
 
@@ -60,6 +44,10 @@ class Controller(common.OpenstackController):
         """ Returns a complete list of Shared IP Groups """
         raise faults.Fault(exc.HTTPNotImplemented())
 
-    def create(self, req):
+    def create(self, req, body):
         """ Creates a new Shared IP group """
         raise faults.Fault(exc.HTTPNotImplemented())
+
+
+def create_resource():
+    return wsgi.Resource(Controller())

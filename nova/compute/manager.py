@@ -162,9 +162,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         data = {'launched_at': launched_at or datetime.datetime.utcnow()}
         self.db.instance_update(context, instance_id, data)
 
-    def _update_image_id(self, context, instance_id, image_id):
+    def _update_image_ref(self, context, instance_id, image_ref):
         """Update the image_id for the given instance."""
-        data = {'image_id': image_id}
+        data = {'image_ref': image_ref}
         self.db.instance_update(context, instance_id, data)
 
     def get_console_topic(self, context, **kwargs):
@@ -221,6 +221,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
         instance_ref.injected_files = kwargs.get('injected_files', [])
+        instance_ref.admin_pass = kwargs.get('admin_password', None)
         if instance_ref['name'] in self.driver.list_instances():
             raise exception.Error(_("Instance has already been created"))
         LOG.audit(_("instance %s: starting..."), instance_id,
@@ -234,7 +235,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'networking')
 
-        is_vpn = instance_ref['image_id'] == str(FLAGS.vpn_image_id)
+        is_vpn = instance_ref['image_ref'] == str(FLAGS.vpn_image_id)
         # NOTE(vish): This could be a cast because we don't do anything
         #             with the address currently, but I'm leaving it as
         #             a call to ensure that network setup completes.  We
@@ -330,7 +331,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
-    def rebuild_instance(self, context, instance_id, image_id):
+    def rebuild_instance(self, context, instance_id, **kwargs):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -338,7 +339,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         :param context: `nova.RequestContext` object
         :param instance_id: Instance identifier (integer)
-        :param image_id: Image identifier (integer)
+        :param image_ref: Image identifier (href or integer)
         """
         context = context.elevated()
 
@@ -348,10 +349,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id, power_state.BUILDING)
 
         self.driver.destroy(instance_ref)
-        instance_ref.image_id = image_id
+        image_ref = kwargs.get('image_ref')
+        instance_ref.image_ref = image_ref
+        instance_ref.injected_files = kwargs.get('injected_files', [])
         self.driver.spawn(instance_ref)
 
-        self._update_image_id(context, instance_id, image_id)
+        self._update_image_ref(context, instance_id, image_ref)
         self._update_launched_at(context, instance_id)
         self._update_state(context, instance_id)
 
@@ -405,22 +408,28 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def set_admin_password(self, context, instance_id, new_pass=None):
-        """Set the root/admin password for an instance on this host."""
+        """Set the root/admin password for an instance on this host.
+
+        This is generally only called by API password resets after an
+        image has been built.
+        """
+
         context = context.elevated()
 
         if new_pass is None:
             # Generate a random password
             new_pass = utils.generate_password(FLAGS.password_length)
 
-        while True:
+        max_tries = 10
+
+        for i in xrange(max_tries):
             instance_ref = self.db.instance_get(context, instance_id)
             instance_id = instance_ref["id"]
             instance_state = instance_ref["state"]
             expected_state = power_state.RUNNING
 
             if instance_state != expected_state:
-                time.sleep(5)
-                continue
+                raise exception.Error(_('Instance is not running'))
             else:
                 try:
                     self.driver.set_admin_password(instance_ref, new_pass)
@@ -436,6 +445,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 except Exception, e:
                     # Catch all here because this could be anything.
                     LOG.exception(e)
+                    if i == max_tries - 1:
+                        # At some point this exception may make it back
+                        # to the API caller, and we don't want to reveal
+                        # too much.  The real exception is logged above
+                        raise exception.Error(_('Internal error'))
+                    time.sleep(1)
                     continue
 
     @exception.wrap_exception
@@ -628,7 +643,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance_type = self.db.instance_type_get_by_flavor_id(context,
                 migration_ref['new_flavor_id'])
         self.db.instance_update(context, instance_id,
-               dict(instance_type=instance_type['name'],
+               dict(instance_type_id=instance_type['id'],
                     memory_mb=instance_type['memory_mb'],
                     vcpus=instance_type['vcpus'],
                     local_gb=instance_type['local_gb']))
