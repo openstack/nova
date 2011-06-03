@@ -59,7 +59,8 @@ class AuthMiddleware(wsgi.Middleware):
         try:
             account = req.headers["X-Auth-Project-Id"]
         except KeyError:
-            # FIXME: It needed only for compatibility
+            # FIXME(usrleon): It needed only for compatibility
+            # while osapi clients don't use this header
             accounts = self.auth.get_projects(user=user)
             if accounts:
                 account = accounts[0]
