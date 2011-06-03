@@ -61,7 +61,8 @@ class SchedulerTestCase(test.TestCase):
     """Test case for scheduler"""
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
-        self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
+        driver = 'nova.tests.scheduler.test_scheduler.TestDriver'
+        self.flags(scheduler_driver=driver)
 
     def _create_compute_service(self):
         """Create compute-manager(ComputeNode and Service record)."""

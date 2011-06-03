@@ -486,6 +486,15 @@ class SchedulerHostFilterNotFound(NotFound):
     message = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
+class SchedulerCostFunctionNotFound(NotFound):
+    message = _("Scheduler cost function %(cost_fn_str)s could"
+                " not be found.")
+
+
+class SchedulerWeightFlagNotFound(NotFound):
+    message = _("Scheduler weight flag not found: %(flag_name)s")
+
+
 class InstanceMetadataNotFound(NotFound):
     message = _("Instance %(instance_id)s has no metadata with "
                 "key %(metadata_key)s.")
