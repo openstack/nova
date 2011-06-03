@@ -65,6 +65,7 @@ class Connection(carrot_connection.BrokerConnection):
         if new or not hasattr(cls, '_instance'):
             params = dict(hostname=FLAGS.rabbit_host,
                           port=FLAGS.rabbit_port,
+                          ssl=FLAGS.rabbit_use_ssl,
                           userid=FLAGS.rabbit_userid,
                           password=FLAGS.rabbit_password,
                           virtual_host=FLAGS.rabbit_virtual_host)

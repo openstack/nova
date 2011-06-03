@@ -20,14 +20,13 @@
 Handles all requests relating to volumes.
 """
 
-import datetime
 
-from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import rpc
+from nova import utils
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -39,7 +38,14 @@ LOG = logging.getLogger('nova.volume')
 class API(base.Base):
     """API for interacting with the volume manager."""
 
-    def create(self, context, size, name, description):
+    def create(self, context, size, snapshot_id, name, description):
+        if snapshot_id != None:
+            snapshot = self.get_snapshot(context, snapshot_id)
+            if snapshot['status'] != "available":
+                raise exception.ApiError(
+                    _("Snapshot status must be available"))
+            size = snapshot['volume_size']
+
         if quota.allowed_volumes(context, 1, size) < 1:
             pid = context.project_id
             LOG.warn(_("Quota exceeeded for %(pid)s, tried to create"
@@ -51,6 +57,7 @@ class API(base.Base):
             'size': size,
             'user_id': context.user_id,
             'project_id': context.project_id,
+            'snapshot_id': snapshot_id,
             'availability_zone': FLAGS.storage_availability_zone,
             'status': "creating",
             'attach_status': "detached",
@@ -62,14 +69,15 @@ class API(base.Base):
                  FLAGS.scheduler_topic,
                  {"method": "create_volume",
                   "args": {"topic": FLAGS.volume_topic,
-                           "volume_id": volume['id']}})
+                           "volume_id": volume['id'],
+                           "snapshot_id": snapshot_id}})
         return volume
 
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
         host = volume['host']

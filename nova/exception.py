@@ -65,7 +65,7 @@ class BuildInProgress(Error):
 
 class DBError(Error):
     """Wraps an implementation specific exception."""
-    def __init__(self, inner_exception):
+    def __init__(self, inner_exception=None):
         self.inner_exception = inner_exception
         super(DBError, self).__init__(str(inner_exception))
 
@@ -122,7 +122,7 @@ class NotAuthorized(NovaException):
     message = _("Not authorized.")
 
     def __init__(self, *args, **kwargs):
-        super(NotFound, self).__init__(**kwargs)
+        super(NotAuthorized, self).__init__(**kwargs)
 
 
 class AdminRequired(NotAuthorized):
@@ -289,6 +289,15 @@ class ISCSITargetNotFoundForVolume(NotFound):
 
 class DiskNotFound(NotFound):
     message = _("No disk at %(location)s")
+
+
+class InvalidImageRef(Invalid):
+    message = _("Invalid image href %(image_href)s.")
+
+
+class ListingImageRefsNotSupported(Invalid):
+    message = _("Some images have been stored via hrefs."
+        + " This version of the api does not support displaying image hrefs.")
 
 
 class ImageNotFound(NotFound):
@@ -473,9 +482,17 @@ class ZoneNotFound(NotFound):
     message = _("Zone %(zone_id)s could not be found.")
 
 
-class SchedulerHostFilterDriverNotFound(NotFound):
-    message = _("Scheduler Host Filter Driver %(driver_name)s could"
+class SchedulerHostFilterNotFound(NotFound):
+    message = _("Scheduler Host Filter %(filter_name)s could not be found.")
+
+
+class SchedulerCostFunctionNotFound(NotFound):
+    message = _("Scheduler cost function %(cost_fn_str)s could"
                 " not be found.")
+
+
+class SchedulerWeightFlagNotFound(NotFound):
+    message = _("Scheduler weight flag not found: %(flag_name)s")
 
 
 class InstanceMetadataNotFound(NotFound):
