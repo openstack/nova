@@ -902,6 +902,39 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
+    def test_create_image_v1_1_xml_serialization(self):
+
+        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        req.headers["accept"] = "application/xml"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        resp_xml = minidom.parseString(response.body.replace("  ", ""))
+        expected_href = "http://localhost/v1.1/images/123"
+        expected_image = minidom.parseString("""
+            <image
+                   created="None"
+                   id="123"
+                   name="None"
+                   serverRef="http://localhost/v1.1/servers/123"
+                   status="ACTIVE"
+                   updated="None"
+                   xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <links>
+                    <link href="%(expected_href)s" rel="self"/>
+                    <link href="%(expected_href)s" rel="bookmark"
+                        type="application/json" />
+                    <link href="%(expected_href)s" rel="bookmark"
+                        type="application/xml" />
+                </links>
+            </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected_image.toxml(), resp_xml.toxml())
+
     def test_create_image_v1_1_no_server_ref(self):
 
         body = dict(image=dict(name='Backup 1'))
