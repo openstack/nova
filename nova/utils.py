@@ -299,7 +299,7 @@ def  get_my_linklocal(interface):
 
 
 def utcnow():
-    """Overridable version of datetime.datetime.utcnow."""
+    """Overridable version of utils.utcnow."""
     if utcnow.override_time:
         return utcnow.override_time
     return datetime.datetime.utcnow()

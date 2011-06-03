@@ -36,6 +36,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 """
 
+import hashlib
 import multiprocessing
 import os
 import random
@@ -57,6 +58,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import utils
 from nova import vnc
@@ -378,7 +380,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
-    def snapshot(self, instance, image_id):
+    def snapshot(self, instance, image_href):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+, the qemu_img flag is
@@ -386,12 +388,15 @@ class LibvirtConnection(driver.ComputeDriver):
         to support this command.
 
         """
-        image_service = utils.import_object(FLAGS.image_service)
         virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
-        base = image_service.show(elevated, instance['image_id'])
-        snapshot = image_service.show(elevated, image_id)
+        (image_service, image_id) = nova.image.get_image_service(
+            instance['image_ref'])
+        base = image_service.show(elevated, image_id)
+        (snapshot_image_service, snapshot_image_id) = \
+            nova.image.get_image_service(image_href)
+        snapshot = snapshot_image_service.show(elevated, snapshot_image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
@@ -441,7 +446,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # Upload that image to the image service
         with open(out_path) as image_file:
             image_service.update(elevated,
-                                 image_id,
+                                 image_href,
                                  metadata,
                                  image_file)
 
@@ -787,7 +792,7 @@ class LibvirtConnection(driver.ComputeDriver):
         project = manager.AuthManager().get_project(inst['project_id'])
 
         if not disk_images:
-            disk_images = {'image_id': inst['image_id'],
+            disk_images = {'image_id': inst['image_ref'],
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
 
@@ -808,7 +813,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                   user=user,
                                   project=project)
 
-        root_fname = '%08x' % int(disk_images['image_id'])
+        root_fname = hashlib.sha1(disk_images['image_id']).hexdigest()
         size = FLAGS.minimum_root_size
 
         inst_type_id = inst['instance_type_id']
@@ -883,7 +888,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if key or net:
             inst_name = inst['name']
-            img_id = inst.image_id
+            img_id = inst.image_ref
             if key:
                 LOG.info(_('instance %(inst_name)s: injecting key into'
                         ' image %(img_id)s') % locals())

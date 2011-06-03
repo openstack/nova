@@ -42,8 +42,6 @@ intact.
 
 """
 
-import datetime
-
 
 from nova import context
 from nova import exception
@@ -127,7 +125,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                   volume_ref['id'], {'status': 'error'})
             raise
 
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context,
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})

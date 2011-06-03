@@ -86,7 +86,7 @@ RRD_VALUES = {
         ]}
 
 
-utcnow = datetime.datetime.utcnow
+utcnow = utils.utcnow
 
 
 LOG = logging.getLogger('nova.compute.monitor')

@@ -161,7 +161,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
-                     'image_id':      '123456',
+                     'image_ref':     '123456',
                      'instance_type_id': '5'}  # m1.small
 
     def lazy_load_library_exists(self):

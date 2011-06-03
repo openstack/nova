@@ -41,7 +41,7 @@ class _FakeImageService(service.BaseImageService):
         # NOTE(justinsb): The OpenStack API can't upload an image?
         # So, make sure we've got one..
         timestamp = datetime.datetime(2011, 01, 01, 01, 02, 03)
-        image = {'id': '123456',
+        image1 = {'id': '123456',
                  'name': 'fakeimage123456',
                  'created_at': timestamp,
                  'updated_at': timestamp,
@@ -51,7 +51,52 @@ class _FakeImageService(service.BaseImageService):
                  'properties': {'kernel_id': FLAGS.null_kernel,
                                 'ramdisk_id': FLAGS.null_kernel,
                                 'architecture': 'x86_64'}}
-        self.create(None, image)
+
+        image2 = {'id': 'fake',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
+
+        image3 = {'id': '2',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
+
+        image4 = {'id': '1',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
+
+        image5 = {'id': '3',
+                 'name': 'fakeimage123456',
+                 'created_at': timestamp,
+                 'updated_at': timestamp,
+                 'status': 'active',
+                 'container_format': 'ami',
+                 'disk_format': 'raw',
+                 'properties': {'kernel_id': FLAGS.null_kernel,
+                                'ramdisk_id': FLAGS.null_kernel}}
+
+        self.create(None, image1)
+        self.create(None, image2)
+        self.create(None, image3)
+        self.create(None, image4)
+        self.create(None, image5)
         super(_FakeImageService, self).__init__()
 
     def index(self, context, filters=None):
@@ -68,8 +113,7 @@ class _FakeImageService(service.BaseImageService):
         Returns a dict containing image data for the given opaque image id.
 
         """
-        image_id = int(image_id)
-        image = self.images.get(image_id)
+        image = self.images.get(str(image_id))
         if image:
             return copy.deepcopy(image)
         LOG.warn('Unable to find image id %s.  Have images: %s',
@@ -83,9 +127,10 @@ class _FakeImageService(service.BaseImageService):
 
         """
         try:
-            image_id = int(metadata['id'])
+            image_id = metadata['id']
         except KeyError:
             image_id = random.randint(0, 2 ** 31 - 1)
+        image_id = str(image_id)
 
         if self.images.get(image_id):
             raise exception.Duplicate()
@@ -100,7 +145,6 @@ class _FakeImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
-        image_id = int(image_id)
         if not self.images.get(image_id):
             raise exception.ImageNotFound(image_id=image_id)
         self.images[image_id] = copy.deepcopy(metadata)
@@ -111,7 +155,6 @@ class _FakeImageService(service.BaseImageService):
         :raises: ImageNotFound if the image does not exist.
 
         """
-        image_id = int(image_id)
         removed = self.images.pop(image_id, None)
         if not removed:
             raise exception.ImageNotFound(image_id=image_id)

@@ -55,8 +55,7 @@ class VMWareAPIVMTestCase(test.TestCase):
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
-        glance_stubs.stubout_glance_client(self.stubs,
-                                           glance_stubs.FakeGlance)
+        glance_stubs.stubout_glance_client(self.stubs)
         self.conn = vmwareapi_conn.get_connection(False)
 
     def _create_instance_in_the_db(self):
@@ -64,7 +63,7 @@ class VMWareAPIVMTestCase(test.TestCase):
                   'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
-                  'image_id': "1",
+                  'image_ref': "1",
                   'kernel_id': "1",
                   'ramdisk_id': "1",
                   'instance_type': 'm1.large',

@@ -33,3 +33,5 @@ suds==0.4
 coverage
 nosexcover
 GitPython
+paramiko
+nova_adminclient
