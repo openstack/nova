@@ -26,6 +26,7 @@ import time
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import network
 from nova import quota
@@ -58,9 +59,9 @@ class API(base.Base):
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
-        if not image_service:
-            image_service = utils.import_object(FLAGS.image_service)
-        self.image_service = image_service
+        self.image_service = image_service or \
+                nova.image.get_default_image_service()
+
         if not network_api:
             network_api = network.API()
         self.network_api = network_api
@@ -129,7 +130,7 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
     def create(self, context, instance_type,
-               image_id, kernel_id=None, ramdisk_id=None,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
@@ -160,7 +161,8 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        image = self.image_service.show(context, image_id)
+        (image_service, image_id) = nova.image.get_image_service(image_href)
+        image = image_service.show(context, image_id)
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
@@ -180,9 +182,9 @@ class API(base.Base):
         logging.debug("Using Kernel=%s, Ramdisk=%s" %
                        (kernel_id, ramdisk_id))
         if kernel_id:
-            self.image_service.show(context, kernel_id)
+            image_service.show(context, kernel_id)
         if ramdisk_id:
-            self.image_service.show(context, ramdisk_id)
+            image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -203,7 +205,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'image_id': image_id,
+            'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,
@@ -529,8 +531,8 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_id, name=None, metadata=None,
-                files_to_inject=None):
+    def rebuild(self, context, instance_id, image_href, name=None,
+            metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
 
@@ -550,7 +552,7 @@ class API(base.Base):
         self.db.instance_update(context, instance_id, values)
 
         rebuild_params = {
-            "image_id": image_id,
+            "image_ref": image_href,
             "injected_files": files_to_inject,
         }
 

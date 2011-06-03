@@ -159,7 +159,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -774,13 +774,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == str(FLAGS.vpn_image_id):
+                if instance['image_ref'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self.image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_ref'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -899,7 +899,7 @@ class CloudController(object):
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
-            image_id=self._get_image(context, kwargs['image_id'])['id'],
+            image_href=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
@@ -975,7 +975,12 @@ class CloudController(object):
     def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
-        return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        try:
+            return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        except ValueError:
+            #TODO(wwolf): once we have ec2_id -> glance_id mapping
+            # in place, this wont be necessary
+            return "ami-00000000"
 
     def _get_image(self, context, ec2_id):
         try:

@@ -84,7 +84,7 @@ class ComputeTestCase(test.TestCase):
     def _create_instance(self, params={}):
         """Create a test instance"""
         inst = {}
-        inst['image_id'] = 1
+        inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id
@@ -150,7 +150,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
         try:
             self.assertEqual(len(db.security_group_get_by_instance(
@@ -168,7 +168,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
         try:
             db.instance_destroy(self.context, ref[0]['id'])
@@ -184,7 +184,7 @@ class ComputeTestCase(test.TestCase):
         ref = self.compute_api.create(
                 self.context,
                 instance_type=instance_types.get_default_instance_type(),
-                image_id=None,
+                image_href=None,
                 security_group=['testgroup'])
 
         try:

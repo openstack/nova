@@ -32,6 +32,7 @@ from xml.dom import minidom
 import glance.client
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
@@ -455,8 +456,8 @@ class VMHelper(HelperBase):
         # DISK restores
         sr_ref = safe_find_sr(session)
 
-        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-        meta, image_file = client.get_image(image)
+        glance_client, image_id = nova.image.get_glance_client(image)
+        meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
         LOG.debug(_("Size for image %(image)s:%(virtual_size)d") % locals())
@@ -515,10 +516,10 @@ class VMHelper(HelperBase):
                              ImageType.DISK_RAW: 'DISK_RAW',
                              ImageType.DISK_VHD: 'DISK_VHD'}
             disk_format = pretty_format[image_type]
-            image_id = instance.image_id
+            image_ref = instance.image_ref
             instance_id = instance.id
             LOG.debug(_("Detected %(disk_format)s format for image "
-                        "%(image_id)s, instance %(instance_id)s") % locals())
+                        "%(image_ref)s, instance %(instance_id)s") % locals())
 
         def determine_from_glance():
             glance_disk_format2nova_type = {
@@ -527,8 +528,9 @@ class VMHelper(HelperBase):
                 'ari': ImageType.KERNEL_RAMDISK,
                 'raw': ImageType.DISK_RAW,
                 'vhd': ImageType.DISK_VHD}
-            client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-            meta = client.get_image_meta(instance.image_id)
+            image_ref = instance.image_ref
+            glance_client, image_id = nova.image.get_glance_client(image_ref)
+            meta = glance_client.get_image_meta(image_id)
             disk_format = meta['disk_format']
             try:
                 return glance_disk_format2nova_type[disk_format]
