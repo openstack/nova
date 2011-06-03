@@ -38,16 +38,16 @@ class FakeZoneAwareScheduler(zone_aware_scheduler.ZoneAwareScheduler):
 class FakeZoneManager(zone_manager.ZoneManager):
     def __init__(self):
         self.service_states = {
-                        'host1': {
-                            'compute': {'ram': 1000}
-                         },
-                         'host2': {
-                            'compute': {'ram': 2000}
-                         },
-                         'host3': {
-                            'compute': {'ram': 3000}
-                         }
-                     }
+            'host1': {
+                'compute': {'ram': 1000},
+            },
+            'host2': {
+                'compute': {'ram': 2000},
+            },
+            'host3': {
+                'compute': {'ram': 3000},
+            },
+        }
 
 
 class FakeEmptyZoneManager(zone_manager.ZoneManager):
@@ -116,4 +116,6 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         sched.set_zone_manager(zm)
 
         fake_context = {}
-        self.assertRaises(driver.NoValidHost, sched.schedule, fake_context, {})
+        self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
+                          fake_context, 1,
+                          dict(host_filter=None, instance_type={}))

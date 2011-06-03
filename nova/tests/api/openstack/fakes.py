@@ -38,6 +38,7 @@ from nova.api.openstack import auth
 from nova.api.openstack import versions
 from nova.api.openstack import limits
 from nova.auth.manager import User, Project
+import nova.image.fake
 from nova.image import glance
 from nova.image import local
 from nova.image import service
@@ -104,10 +105,12 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True):
 
 
 def stub_out_image_service(stubs):
-    def fake_image_show(meh, context, id):
-        return dict(kernelId=1, ramdiskId=1)
-
-    stubs.Set(local.LocalImageService, 'show', fake_image_show)
+    def fake_get_image_service(image_href):
+        image_id = int(str(image_href).split('/')[-1])
+        return (nova.image.fake.FakeImageService(), image_id)
+    stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
+    stubs.Set(nova.image, 'get_default_image_service',
+        lambda: nova.image.fake.FakeImageService())
 
 
 def stub_out_auth(stubs):
@@ -166,11 +169,11 @@ def stub_out_glance(stubs, initial_fixtures=None):
         def __init__(self, initial_fixtures):
             self.fixtures = initial_fixtures or []
 
-        def fake_get_images(self):
+        def fake_get_images(self, filters=None):
             return [dict(id=f['id'], name=f['name'])
                     for f in self.fixtures]
 
-        def fake_get_images_detailed(self):
+        def fake_get_images_detailed(self, filters=None):
             return copy.deepcopy(self.fixtures)
 
         def fake_get_image_meta(self, image_id):
@@ -208,7 +211,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         def _find_image(self, image_id):
             for f in self.fixtures:
-                if f['id'] == image_id:
+                if str(f['id']) == str(image_id):
                     return f
             return None
 

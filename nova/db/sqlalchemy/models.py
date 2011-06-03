@@ -184,11 +184,11 @@ class Instance(BASE, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    image_id = Column(String(255))
+    image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
 
-#    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))
@@ -287,6 +287,8 @@ class Volume(BASE, NovaBase):
     user_id = Column(String(255))
     project_id = Column(String(255))
 
+    snapshot_id = Column(String(255))
+
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     size = Column(Integer)
     availability_zone = Column(String(255))  # TODO(vish): foreign key?
@@ -327,6 +329,31 @@ class Quota(BASE, NovaBase):
 
     resource = Column(String(255))
     hard_limit = Column(Integer, nullable=True)
+
+
+class Snapshot(BASE, NovaBase):
+    """Represents a block storage device that can be attached to a vm."""
+    __tablename__ = 'snapshots'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @property
+    def name(self):
+        return FLAGS.snapshot_name_template % self.id
+
+    @property
+    def volume_name(self):
+        return FLAGS.volume_name_template % self.volume_id
+
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+
+    volume_id = Column(Integer)
+    status = Column(String(255))
+    progress = Column(String(255))
+    volume_size = Column(Integer)
+
+    display_name = Column(String(255))
+    display_description = Column(String(255))
 
 
 class ExportDevice(BASE, NovaBase):
