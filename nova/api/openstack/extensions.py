@@ -137,7 +137,6 @@ class ActionExtensionResource(wsgi.Resource):
 
     def __init__(self, application):
         controller = ActionExtensionController(application)
-        #super(ActionExtensionResource, self).__init__(controller)
         wsgi.Resource.__init__(self, controller)
 
     def add_action(self, action_name, handler):
@@ -165,7 +164,6 @@ class RequestExtensionResource(wsgi.Resource):
 
     def __init__(self, application):
         controller = RequestExtensionController(application)
-        #super(RequestExtensionResource, self).__init__(controller)
         wsgi.Resource.__init__(self, controller)
 
     def add_handler(self, handler):
