@@ -22,7 +22,6 @@ and as a WSGI layer
 
 import copy
 import json
-import datetime
 import os
 import shutil
 import tempfile
