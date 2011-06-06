@@ -209,6 +209,7 @@ class FloatingIP(object):
 
         rpc.called by network_api
         """
+        LOG.debug("#"*80)
         instance_id = kwargs.get('instance_id')
         LOG.debug(_("floating IP deallocation for instance |%s|"), instance_id,
                                                                context=context)

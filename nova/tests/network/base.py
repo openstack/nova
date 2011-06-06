@@ -68,7 +68,7 @@ class TestFuncs(object):
                                                 instance_id=instance_id,
                                                 project_id=project_id,
                                                 instance_type_id=type_id)
-        static_info = [({'bridge': 'fa0'},
+        static_info = [({'bridge': 'fa0', 'id': 0},
                         {'broadcast': '192.168.0.255',
                          'dns': ['192.168.0.1'],
                          'gateway': '192.168.0.1',
@@ -85,4 +85,41 @@ class TestFuncs(object):
         self.assertEqual(static_info, nw)
 
     def test_deallocate_for_instance(self):
-        pass
+        instance_id = 0
+        network_id = 0
+        self.network.add_fixed_ip_to_instance(self.context,
+                                              instance_id=instance_id,
+                                              network_id=network_id)
+        self.assertTrue(db.fixed_ip_get_all_by_instance(self.context,
+                                                        instance_id))
+        self.network.deallocate_for_instance(self.context,
+                                             instance_id=instance_id)
+        self.assertFalse(db.fixed_ip_get_all_by_instance(self.context,
+                                                         instance_id))
+
+    def test_lease_release_fixed_ip(self):
+        instance_id = 0
+        project_id = 0
+        type_id = 0
+        nw = self.network.allocate_for_instance(self.context,
+                                                instance_id=instance_id,
+                                                project_id=project_id,
+                                                instance_type_id=type_id)
+        self.assertTrue(nw)
+        self.assertTrue(nw[0])
+        network_id = nw[0][0]['id']
+
+        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        mac = db.mac_address_get_by_instance_and_network(self.context,
+                                                         instance_id,
+                                                         network_id)
+        self.assertTrue(ips)
+        address = ips[0]['address']
+
+        self.network.lease_fixed_ip(self.context, mac['address'], address)
+        ip = db.fixed_ip_get_by_address(self.context, address)
+        self.assertTrue(ip['leased'])
+
+        self.network.release_fixed_ip(self.context, mac['address'], address)
+        ip = db.fixed_ip_get_by_address(self.context, address)
+        self.assertFalse(ip['leased'])

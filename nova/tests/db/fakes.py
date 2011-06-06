@@ -69,7 +69,10 @@ def stub_out_db_network_api(stubs, host='localhost'):
                        'network_id': 0,
                        'address': '192.168.0.100',
                        'instance': False,
-                       'instance_id': 0}
+                       'instance_id': 0,
+                       'allocated': False,
+                       'mac_address_id': 0,
+                       'mac_addres': None}
 
     flavor_fields = {'id': 0,
                      'rxtx_cap': 3}
@@ -88,10 +91,10 @@ def stub_out_db_network_api(stubs, host='localhost'):
                           'instance_id': 0,
                           'network': FakeModel(network_fields)}
 
-    networks = {0: network_fields}
-    fixed_ips = {0: fixed_ip_fields}
-    floating_ips = {0: floating_ip_fields}
-    mac_addresses = {0: mac_address_fields}
+    fixed_ips = [fixed_ip_fields]
+    floating_ips = [floating_ip_fields]
+    mac_addresses = [mac_address_fields]
+    networks = [network_fields]
 
     def fake_floating_ip_allocate_address(context, host, project_id):
         floating_ip_fields['project_id'] = project_id
@@ -139,79 +142,113 @@ def stub_out_db_network_api(stubs, host='localhost'):
             return fixed_ip_fields['address']
 
     def fake_fixed_ip_create(context, values):
-        #if values['addres
-        return values['address']
+        if values['address'] == fixed_ip_fields['address']:
+            return fixed_ip_fields['address']
 
     def fake_fixed_ip_disassociate(context, address):
-        pass
+        if fixed_ip_fields['address'] == address:
+            fixed_ip_fields['instance'] = None
+            fixed_ip_fields['instance_id'] = None
 
     def fake_fixed_ip_disassociate_all_by_timeout(context, host, time):
-        return 1
+        return 0
 
     def fake_fixed_ip_get_all_by_instance(context, instance_id):
-        return [FakeModel(fixed_ip_fields)]
+        if fixed_ip_fields['instance_id'] == instance_id:
+            return [FakeModel(fixed_ip_fields)]
 
     def fake_fixed_ip_get_by_address(context, address):
-        ip = dict(fixed_ip_fields)
-        ip['address'] = address
-        return FakeModel(ip)
+        if fixed_ip_fields['address'] == address:
+            return FakeModel(fixed_ip_fields)
 
     def fake_fixed_ip_get_network(context, address):
-        return FakeModel(network_fields)
+        if fixed_ip_fields['address'] == address and \
+           fixed_ip_fields['network_id'] == network_fields['id']:
+            return FakeModel(network_fields)
 
     def fake_fixed_ip_update(context, address, values):
-        pass
+        if fixed_ip_fields['address'] == address:
+            for key in values:
+                fixed_ip_fields[key] = values[key]
+                if key == 'mac_address_id':
+                    mac = filter(lambda x: x['id'] == values[key],
+                                 mac_addresses)
+                    if not mac:
+                        continue
+                    fixed_ip_fields['mac_address'] = FakeModel(mac[0])
 
     def fake_instance_type_get_by_id(context, id):
-        return FakeModel(flavor_fields)
+        if flavor_fields['id'] == id:
+            return FakeModel(flavor_fields)
 
     def fake_mac_address_create(context, values):
-        return FakeModel(values)
+        mac = dict(mac_address_fields)
+        mac['id'] = max([m['id'] for m in mac_addresses] or [-1]) + 1
+        for key in values:
+            mac[key] = values[key]
+        return FakeModel(mac)
 
     def fake_mac_address_delete_by_instance(context, instance_id):
-        pass
+        addresses = [m for m in mac_addresses \
+                     if m['instance_id'] == instance_id]
+        try:
+            for address in addresses:
+                mac_addresses.remove(address)
+        except ValueError:
+            pass
 
     def fake_mac_address_get_all_by_instance(context, instance_id):
-        mac = dict(mac_address_fields)
-        mac['instance_id'] = instance_id
-        return [FakeModel(mac)]
+        return [FakeModel(m) for m in mac_addresses \
+                if m['instance_id'] == instance_id]
 
     def fake_mac_address_get_by_instance_and_network(context, instance_id,
                                                      network_id):
-        mac = dict(mac_address_fields)
-        mac['instance_id'] = instance_id
-        mac['network_id'] = network_id
-        return FakeModel(mac)
+        mac = filter(lambda m: m['instance_id'] == instance_id \
+                           and m['network_id'] == network_id,
+                     mac_addresses)
+        if not mac:
+            return None
+        return FakeModel(mac[0])
 
-    def fake_network_create_safe(context, net):
-        return True
-
-    def fake_network_get(context, network_id):
+    def fake_network_create_safe(context, values):
         net = dict(network_fields)
-        net['network_id'] = network_id
+        net['id'] = max([n['id'] for n in networks] or [-1]) + 1
+        for key in values:
+            net[key] = values[key]
         return FakeModel(net)
 
+    def fake_network_get(context, network_id):
+        net = filter(lambda n: n['id'] == network_id, networks)
+        if not net:
+            return None
+        return FakeModel(net[0])
+
     def fake_network_get_all(context):
-        return [FakeModel(network_fields)]
+        return [FakeModel(n) for n in networks]
 
     def fake_network_get_all_by_host(context, host):
-        net = dict(network_fields)
-        net['host'] = host
-        return [FakeModel(net)]
+        nets = filter(lambda n: n['host'] == host, networks)
+        return [FakeModel(n) for n in nets]
 
     def fake_network_get_all_by_instance(context, instance_id):
-        return [FakeModel(network_fields)]
+        nets = filter(lambda n: n['instance_id'] == instance_id, networks)
+        return [FakeModel(n) for n in nets]
 
     def fake_network_set_host(context, network_id, host_id):
+        nets = filter(lambda n: n['id'] == network_id, networks)
+        for net in nets:
+            net['host'] = host_id
         return host_id
 
-    def fake_network_update(context, network_id, net):
-        pass
+    def fake_network_update(context, network_id, values):
+        nets = filter(lambda n: n['id'] == network_id, networks)
+        for net in nets:
+            for key in values:
+                net[key] = values[key]
 
     def fake_project_get_networks(context, project_id):
-        net = dict(network_fields)
-        net['project_id'] = project_id
-        return [FakeModel(net)]
+        return [FakeModel(n) for n in networks \
+                if n['project_id'] == project_id]
 
     def fake_queue_get_for(context, topic, node):
         return "%s.%s" % (topic, node)
