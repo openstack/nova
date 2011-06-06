@@ -251,10 +251,10 @@ class FakeSessionForMigrationTests(fake.SessionBase):
     def __init__(self, uri):
         super(FakeSessionForMigrationTests, self).__init__(uri)
 
-    def VDI_get_by_uuid(*args):
+    def VDI_get_by_uuid(self, *args):
         return 'hurr'
 
-    def VDI_resize_online(*args):
+    def VDI_resize_online(self, *args):
         pass
 
     def VM_start(self, _1, ref, _2, _3):
