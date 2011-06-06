@@ -99,11 +99,11 @@ class _FakeImageService(service.BaseImageService):
         self.create(None, image5)
         super(_FakeImageService, self).__init__()
 
-    def index(self, context, filters=None):
+    def index(self, context, filters=None, marker=None, limit=None):
         """Returns list of images."""
         return copy.deepcopy(self.images.values())
 
-    def detail(self, context, filters=None):
+    def detail(self, context, filters=None, marker=None, limit=None):
         """Return list of detailed image information."""
         return copy.deepcopy(self.images.values())
 
