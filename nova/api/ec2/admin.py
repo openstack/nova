@@ -21,7 +21,6 @@ Admin API controller, exposed through http via the api worker.
 """
 
 import base64
-import datetime
 
 from nova import db
 from nova import exception
@@ -305,7 +304,7 @@ class AdminController(object):
             * Volume Count
         """
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         rv = []
         for host in [service['host'] for service in services]:

@@ -17,16 +17,17 @@
 ZoneManager oversees all communications with child Zones.
 """
 
+import datetime
 import novaclient
 import thread
 import traceback
 
-from datetime import datetime
 from eventlet import greenpool
 
 from nova import db
 from nova import flags
 from nova import log as logging
+from nova import utils
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('zone_db_check_interval', 60,
@@ -42,7 +43,7 @@ class ZoneState(object):
         self.name = None
         self.capabilities = None
         self.attempt = 0
-        self.last_seen = datetime.min
+        self.last_seen = datetime.datetime.min
         self.last_exception = None
         self.last_exception_time = None
 
@@ -56,7 +57,7 @@ class ZoneState(object):
     def update_metadata(self, zone_metadata):
         """Update zone metadata after successful communications with
            child zone."""
-        self.last_seen = datetime.now()
+        self.last_seen = utils.utcnow()
         self.attempt = 0
         self.name = zone_metadata.get("name", "n/a")
         self.capabilities = ", ".join(["%s=%s" % (k, v)
@@ -72,7 +73,7 @@ class ZoneState(object):
         """Something went wrong. Check to see if zone should be
            marked as offline."""
         self.last_exception = exception
-        self.last_exception_time = datetime.now()
+        self.last_exception_time = utils.utcnow()
         api_url = self.api_url
         logging.warning(_("'%(exception)s' error talking to "
                           "zone %(api_url)s") % locals())
@@ -104,7 +105,7 @@ def _poll_zone(zone):
 class ZoneManager(object):
     """Keeps the zone states updated."""
     def __init__(self):
-        self.last_zone_db_check = datetime.min
+        self.last_zone_db_check = datetime.datetime.min
         self.zone_states = {}  # { <zone_id> : ZoneState }
         self.service_states = {}  # { <host> : { <service> : { cap k : v }}}
         self.green_pool = greenpool.GreenPool()
@@ -158,10 +159,10 @@ class ZoneManager(object):
 
     def ping(self, context=None):
         """Ping should be called periodically to update zone status."""
-        diff = datetime.now() - self.last_zone_db_check
+        diff = utils.utcnow() - self.last_zone_db_check
         if diff.seconds >= FLAGS.zone_db_check_interval:
             logging.debug(_("Updating zone cache from db."))
-            self.last_zone_db_check = datetime.now()
+            self.last_zone_db_check = utils.utcnow()
             self._refresh_from_db(context)
         self._poll_zones(context)
 
