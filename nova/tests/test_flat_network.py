@@ -18,7 +18,7 @@
 """
 Unit Tests for flat network code
 """
-import IPy
+import netaddr
 import os
 import unittest
 
@@ -45,8 +45,8 @@ class FlatNetworkTestCase(base.NetworkTestCase):
 
         self.context._project = self.projects[0]
         self.context.project_id = self.projects[0].id
-        pubnet = IPy.IP(flags.FLAGS.floating_range)
-        address = str(pubnet[0])
+        pubnet = netaddr.IPRange(flags.FLAGS.floating_range)
+        address = str(list(pubnet)[0])
         try:
             db.floating_ip_get_by_address(context.get_admin_context(), address)
         except exception.NotFound:
