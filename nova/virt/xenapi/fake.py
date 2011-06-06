@@ -51,13 +51,13 @@ A fake XenAPI SDK.
 """
 
 
-import datetime
 import uuid
 
 from pprint import pformat
 
 from nova import exception
 from nova import log as logging
+from nova import utils
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',
@@ -540,7 +540,7 @@ class SessionBase(object):
         except Failure, exc:
             task['error_info'] = exc.details
             task['status'] = 'failed'
-        task['finished'] = datetime.datetime.now()
+        task['finished'] = utils.utcnow()
         return task_ref
 
     def _check_session(self, params):

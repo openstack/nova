@@ -16,7 +16,6 @@
 #    under the License.
 
 import copy
-import datetime
 import json
 import random
 import string
@@ -38,6 +37,7 @@ from nova.api.openstack import auth
 from nova.api.openstack import versions
 from nova.api.openstack import limits
 from nova.auth.manager import User, Project
+import nova.image.fake
 from nova.image import glance
 from nova.image import local
 from nova.image import service
@@ -104,10 +104,12 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True):
 
 
 def stub_out_image_service(stubs):
-    def fake_image_show(meh, context, id):
-        return dict(kernelId=1, ramdiskId=1)
-
-    stubs.Set(local.LocalImageService, 'show', fake_image_show)
+    def fake_get_image_service(image_href):
+        image_id = int(str(image_href).split('/')[-1])
+        return (nova.image.fake.FakeImageService(), image_id)
+    stubs.Set(nova.image, 'get_image_service', fake_get_image_service)
+    stubs.Set(nova.image, 'get_default_image_service',
+        lambda: nova.image.fake.FakeImageService())
 
 
 def stub_out_auth(stubs):
@@ -140,7 +142,8 @@ def stub_out_networking(stubs):
 
 def stub_out_compute_api_snapshot(stubs):
     def snapshot(self, context, instance_id, name):
-        return 123
+        return dict(id='123', status='ACTIVE',
+                    properties=dict(instance_id='123'))
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
@@ -208,7 +211,7 @@ def stub_out_glance(stubs, initial_fixtures=None):
 
         def _find_image(self, image_id):
             for f in self.fixtures:
-                if f['id'] == image_id:
+                if str(f['id']) == str(image_id):
                     return f
             return None
 
@@ -253,7 +256,7 @@ class FakeAuthDatabase(object):
 
     @staticmethod
     def auth_token_create(context, token):
-        fake_token = FakeToken(created_at=datetime.datetime.now(), **token)
+        fake_token = FakeToken(created_at=utils.utcnow(), **token)
         FakeAuthDatabase.data[fake_token.token_hash] = fake_token
         FakeAuthDatabase.data['id_%i' % fake_token.id] = fake_token
         return fake_token

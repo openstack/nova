@@ -253,10 +253,10 @@ class CloudTestCase(test.TestCase):
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_id': 1,
+                                                  'image_ref': 1,
                                                   'host': 'host1'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_id': 1,
+                                                  'image_ref': 1,
                                                   'host': 'host2'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'availability_zone': 'zone1',
@@ -462,6 +462,7 @@ class CloudTestCase(test.TestCase):
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
+
         def fake_show_no_state(self, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}}
@@ -476,6 +477,7 @@ class CloudTestCase(test.TestCase):
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
         run_instances = self.cloud.run_instances
+
         def fake_show_decrypt(self, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'decrypting'}}
@@ -487,7 +489,7 @@ class CloudTestCase(test.TestCase):
 
     def test_terminate_instances(self):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_id': 1,
+                                                  'image_ref': 1,
                                                   'host': 'host1'})
         terminate_instances = self.cloud.terminate_instances
         # valid instance_id
