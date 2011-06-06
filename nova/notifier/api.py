@@ -11,9 +11,8 @@
 #    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
-#    under the License.import datetime
+#    under the License.
 
-import datetime
 import uuid
 
 from nova import flags
@@ -64,7 +63,7 @@ def notify(publisher_id, event_type, priority, payload):
 
     {'message_id': str(uuid.uuid4()),
      'publisher_id': 'compute.host1',
-     'timestamp': datetime.datetime.utcnow(),
+     'timestamp': utils.utcnow(),
      'priority': 'WARN',
      'event_type': 'compute.create_instance',
      'payload': {'instance_id': 12, ... }}
@@ -79,5 +78,5 @@ def notify(publisher_id, event_type, priority, payload):
                    event_type=event_type,
                    priority=priority,
                    payload=payload,
-                   timestamp=str(datetime.datetime.utcnow()))
+                   timestamp=str(utils.utcnow()))
     driver.notify(msg)

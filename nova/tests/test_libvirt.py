@@ -724,6 +724,31 @@ class LibvirtConnTestCase(test.TestCase):
         super(LibvirtConnTestCase, self).tearDown()
 
 
+class NWFilterFakes:
+    def __init__(self):
+        self.filters = {}
+
+    def nwfilterLookupByName(self, name):
+        if name in self.filters:
+            return self.filters[name]
+        raise libvirt.libvirtError('Filter Not Found')
+
+    def filterDefineXMLMock(self, xml):
+        class FakeNWFilterInternal:
+            def __init__(self, parent, name):
+                self.name = name
+                self.parent = parent
+
+            def undefine(self):
+                del self.parent.filters[self.name]
+                pass
+        tree = xml_to_tree(xml)
+        name = tree.get('name')
+        if name not in self.filters:
+            self.filters[name] = FakeNWFilterInternal(self, name)
+        return True
+
+
 class IptablesFirewallTestCase(test.TestCase):
     def setUp(self):
         super(IptablesFirewallTestCase, self).setUp()
@@ -740,6 +765,20 @@ class IptablesFirewallTestCase(test.TestCase):
         self.fake_libvirt_connection = FakeLibvirtConnection()
         self.fw = firewall.IptablesFirewallDriver(
                       get_connection=lambda: self.fake_libvirt_connection)
+
+    def lazy_load_library_exists(self):
+        """check if libvirt is available."""
+        # try to connect libvirt. if fail, skip test.
+        try:
+            import libvirt
+            import libxml2
+        except ImportError:
+            return False
+        global libvirt
+        libvirt = __import__('libvirt')
+        connection.libvirt = __import__('libvirt')
+        connection.libxml2 = __import__('libxml2')
+        return True
 
     def tearDown(self):
         self.manager.delete_project(self.project)
@@ -946,6 +985,40 @@ class IptablesFirewallTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.fw.do_refresh_security_group_rules("fake")
 
+    def test_unfilter_instance_undefines_nwfilter(self):
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        admin_ctxt = context.get_admin_context()
+
+        fakefilter = NWFilterFakes()
+        self.fw.nwfilter._conn.nwfilterDefineXML =\
+                               fakefilter.filterDefineXMLMock
+        self.fw.nwfilter._conn.nwfilterLookupByName =\
+                               fakefilter.nwfilterLookupByName
+
+        instance_ref = self._create_instance_ref()
+        inst_id = instance_ref['id']
+        instance = db.instance_get(self.context, inst_id)
+
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
+        self.fw.setup_basic_filtering(instance)
+        self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
+        original_filter_count = len(fakefilter.filters)
+        self.fw.unfilter_instance(instance)
+
+        # should undefine just the instance filter
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 1)
+
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
+
 
 class NWFilterTestCase(test.TestCase):
     def setUp(self):
@@ -1122,3 +1195,37 @@ class NWFilterTestCase(test.TestCase):
                                                  network_info,
                                                  "fake")
         self.assertEquals(len(result), 3)
+
+    def test_unfilter_instance_undefines_nwfilters(self):
+        admin_ctxt = context.get_admin_context()
+
+        fakefilter = NWFilterFakes()
+        self.fw._conn.nwfilterDefineXML = fakefilter.filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter.nwfilterLookupByName
+
+        instance_ref = self._create_instance()
+        inst_id = instance_ref['id']
+
+        self.security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group(self.context, inst_id,
+                                       self.security_group.id)
+
+        instance = db.instance_get(self.context, inst_id)
+
+        ip = '10.11.12.13'
+        network_ref = db.project_get_network(self.context, 'fake')
+        fixed_ip = {'address': ip, 'network_id': network_ref['id']}
+        db.fixed_ip_create(admin_ctxt, fixed_ip)
+        db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
+                                            'instance_id': inst_id})
+        self.fw.setup_basic_filtering(instance)
+        self.fw.prepare_instance_filter(instance)
+        self.fw.apply_instance_filter(instance)
+        original_filter_count = len(fakefilter.filters)
+        self.fw.unfilter_instance(instance)
+
+        # should undefine 2 filters: instance and instance-secgroup
+        self.assertEqual(original_filter_count - len(fakefilter.filters), 2)
+
+        db.instance_destroy(admin_ctxt, instance_ref['id'])
