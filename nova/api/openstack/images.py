@@ -99,7 +99,7 @@ class Controller(object):
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = body["image"]["serverId"]
+            server_id = self._server_id_from_req_data(body)
             image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
@@ -110,6 +110,9 @@ class Controller(object):
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
         raise NotImplementedError
+
+    def _server_id_from_req_data(self, data):
+        raise NotImplementedError()
 
 
 class ControllerV10(Controller):
@@ -145,6 +148,9 @@ class ControllerV10(Controller):
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
+
+    def _server_id_from_req_data(self, data):
+        return data['image']['serverId']
 
 
 class ControllerV11(Controller):
@@ -183,6 +189,9 @@ class ControllerV11(Controller):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
+    def _server_id_from_req_data(self, data):
+        return data['image']['serverRef']
+
 
 def create_resource(version='1.0'):
     controller = {
@@ -198,7 +207,7 @@ def create_resource(version='1.0'):
     metadata = {
         "attributes": {
             "image": ["id", "name", "updated", "created", "status",
-                      "serverId", "progress"],
+                      "serverId", "progress", "serverRef"],
             "link": ["rel", "type", "href"],
         },
     }

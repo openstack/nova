@@ -142,7 +142,8 @@ def stub_out_networking(stubs):
 
 def stub_out_compute_api_snapshot(stubs):
     def snapshot(self, context, instance_id, name):
-        return 123
+        return dict(id='123', status='ACTIVE',
+                    properties=dict(instance_id='123'))
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
