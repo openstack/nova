@@ -501,7 +501,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         if mac_address != mac:
             raise exception.Error(_('IP %(address)s leased to bad'
                     ' mac %(mac_address)s vs %(mac)s') % locals())
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip_ref['address'],
                                 {'leased': True,

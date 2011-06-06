@@ -51,13 +51,13 @@ A fake XenAPI SDK.
 """
 
 
-import datetime
 import uuid
 
 from pprint import pformat
 
 from nova import exception
 from nova import log as logging
+from nova import utils
 
 
 _CLASSES = ['host', 'network', 'session', 'SR', 'VBD',
@@ -159,7 +159,10 @@ def after_VBD_create(vbd_ref, vbd_rec):
     vbd_rec['device'] = ''
     vm_ref = vbd_rec['VM']
     vm_rec = _db_content['VM'][vm_ref]
-    vm_rec['VBDs'] = [vbd_ref]
+    if vm_rec.get('VBDs', None):
+        vm_rec['VBDs'].append(vbd_ref)
+    else:
+        vm_rec['VBDs'] = [vbd_ref]
 
     vm_name_label = _db_content['VM'][vm_ref]['name_label']
     vbd_rec['vm_name_label'] = vm_name_label
@@ -537,7 +540,7 @@ class SessionBase(object):
         except Failure, exc:
             task['error_info'] = exc.details
             task['status'] = 'failed'
-        task['finished'] = datetime.datetime.now()
+        task['finished'] = utils.utcnow()
         return task_ref
 
     def _check_session(self, params):

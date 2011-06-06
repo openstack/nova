@@ -151,7 +151,7 @@ class HyperVConnection(driver.ComputeDriver):
         base_vhd_filename = os.path.join(FLAGS.instances_path,
                                          instance.name)
         vhdfile = "%s.vhd" % (base_vhd_filename)
-        images.fetch(instance['image_id'], vhdfile, user, project)
+        images.fetch(instance['image_ref'], vhdfile, user, project)
 
         try:
             self._create_vm(instance)

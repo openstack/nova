@@ -47,6 +47,8 @@ flags.DEFINE_string('instance_name_template', 'instance-%08x',
                     'Template string to be used to generate instance names')
 flags.DEFINE_string('volume_name_template', 'volume-%08x',
                     'Template string to be used to generate instance names')
+flags.DEFINE_string('snapshot_name_template', 'snapshot-%08x',
+                    'Template string to be used to generate snapshot names')
 
 
 IMPL = utils.LazyPluggable(FLAGS['db_backend'],
@@ -465,7 +467,7 @@ def instance_create(context, values):
 
 
 def instance_data_get_for_project(context, project_id):
-    """Get (instance_count, core_count) for project."""
+    """Get (instance_count, total_cores, total_ram) for project."""
     return IMPL.instance_data_get_for_project(context, project_id)
 
 
@@ -926,6 +928,43 @@ def volume_update(context, volume_id, values):
 
     """
     return IMPL.volume_update(context, volume_id, values)
+
+
+####################
+
+
+def snapshot_create(context, values):
+    """Create a snapshot from the values dictionary."""
+    return IMPL.snapshot_create(context, values)
+
+
+def snapshot_destroy(context, snapshot_id):
+    """Destroy the snapshot or raise if it does not exist."""
+    return IMPL.snapshot_destroy(context, snapshot_id)
+
+
+def snapshot_get(context, snapshot_id):
+    """Get a snapshot or raise if it does not exist."""
+    return IMPL.snapshot_get(context, snapshot_id)
+
+
+def snapshot_get_all(context):
+    """Get all snapshots."""
+    return IMPL.snapshot_get_all(context)
+
+
+def snapshot_get_all_by_project(context, project_id):
+    """Get all snapshots belonging to a project."""
+    return IMPL.snapshot_get_all_by_project(context, project_id)
+
+
+def snapshot_update(context, snapshot_id, values):
+    """Set the given properties on an snapshot and update it.
+
+    Raises NotFound if snapshot does not exist.
+
+    """
+    return IMPL.snapshot_update(context, snapshot_id, values)
 
 
 ####################

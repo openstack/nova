@@ -23,7 +23,6 @@ datastore.
 """
 
 import base64
-import datetime
 import IPy
 import os
 import urllib
@@ -159,7 +158,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -235,7 +234,7 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -283,14 +282,50 @@ class CloudController(object):
                            owner=None,
                            restorable_by=None,
                            **kwargs):
-        return {'snapshotSet': [{'snapshotId': 'fixme',
-                                 'volumeId': 'fixme',
-                                 'status': 'fixme',
-                                 'startTime': 'fixme',
-                                 'progress': 'fixme',
-                                 'ownerId': 'fixme',
-                                 'volumeSize': 0,
-                                 'description': 'fixme'}]}
+        if snapshot_id:
+            snapshots = []
+            for ec2_id in snapshot_id:
+                internal_id = ec2utils.ec2_id_to_id(ec2_id)
+                snapshot = self.volume_api.get_snapshot(
+                    context,
+                    snapshot_id=internal_id)
+                snapshots.append(snapshot)
+        else:
+            snapshots = self.volume_api.get_all_snapshots(context)
+        snapshots = [self._format_snapshot(context, s) for s in snapshots]
+        return {'snapshotSet': snapshots}
+
+    def _format_snapshot(self, context, snapshot):
+        s = {}
+        s['snapshotId'] = ec2utils.id_to_ec2_id(snapshot['id'], 'snap-%08x')
+        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'],
+                                              'vol-%08x')
+        s['status'] = snapshot['status']
+        s['startTime'] = snapshot['created_at']
+        s['progress'] = snapshot['progress']
+        s['ownerId'] = snapshot['project_id']
+        s['volumeSize'] = snapshot['volume_size']
+        s['description'] = snapshot['display_description']
+
+        s['display_name'] = snapshot['display_name']
+        s['display_description'] = snapshot['display_description']
+        return s
+
+    def create_snapshot(self, context, volume_id, **kwargs):
+        LOG.audit(_("Create snapshot of volume %s"), volume_id,
+                  context=context)
+        volume_id = ec2utils.ec2_id_to_id(volume_id)
+        snapshot = self.volume_api.create_snapshot(
+                context,
+                volume_id=volume_id,
+                name=kwargs.get('display_name'),
+                description=kwargs.get('display_description'))
+        return self._format_snapshot(context, snapshot)
+
+    def delete_snapshot(self, context, snapshot_id, **kwargs):
+        snapshot_id = ec2utils.ec2_id_to_id(snapshot_id)
+        self.volume_api.delete_snapshot(context, snapshot_id=snapshot_id)
+        return True
 
     def describe_key_pairs(self, context, key_name=None, **kwargs):
         key_pairs = db.key_pair_get_all_by_user(context, context.user_id)
@@ -559,7 +594,7 @@ class CloudController(object):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
@@ -619,16 +654,30 @@ class CloudController(object):
                                    'volumeId': v['volumeId']}]
         else:
             v['attachmentSet'] = [{}]
+        if volume.get('snapshot_id') != None:
+            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'],
+                                                    'snap-%08x')
+        else:
+            v['snapshotId'] = None
 
         v['display_name'] = volume['display_name']
         v['display_description'] = volume['display_description']
         return v
 
-    def create_volume(self, context, size, **kwargs):
-        LOG.audit(_("Create volume of %s GB"), size, context=context)
+    def create_volume(self, context, **kwargs):
+        size = kwargs.get('size')
+        if kwargs.get('snapshot_id') != None:
+            snapshot_id = ec2utils.ec2_id_to_id(kwargs['snapshot_id'])
+            LOG.audit(_("Create volume from snapshot %s"), snapshot_id,
+                      context=context)
+        else:
+            snapshot_id = None
+            LOG.audit(_("Create volume of %s GB"), size, context=context)
+
         volume = self.volume_api.create(
                 context,
                 size=size,
+                snapshot_id=snapshot_id,
                 name=kwargs.get('display_name'),
                 description=kwargs.get('display_description'))
         # TODO(vish): Instance should be None at db layer instead of
@@ -724,13 +773,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == str(FLAGS.vpn_image_id):
+                if instance['image_ref'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self.image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_ref'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -849,7 +898,7 @@ class CloudController(object):
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
-            image_id=self._get_image(context, kwargs['image_id'])['id'],
+            image_href=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
@@ -925,7 +974,12 @@ class CloudController(object):
     def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
-        return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        try:
+            return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        except ValueError:
+            #TODO(wwolf): once we have ec2_id -> glance_id mapping
+            # in place, this wont be necessary
+            return "ami-00000000"
 
     def _get_image(self, context, ec2_id):
         try:

@@ -73,6 +73,12 @@ flags.DEFINE_string('auth_driver', 'nova.auth.dbdriver.DbDriver',
 LOG = logging.getLogger('nova.auth.manager')
 
 
+if FLAGS.memcached_servers:
+    import memcache
+else:
+    from nova import fakememcache as memcache
+
+
 class AuthBase(object):
     """Base class for objects relating to auth
 
@@ -206,6 +212,7 @@ class AuthManager(object):
     """
 
     _instance = None
+    mc = None
 
     def __new__(cls, *args, **kwargs):
         """Returns the AuthManager singleton"""
@@ -222,13 +229,8 @@ class AuthManager(object):
         self.network_manager = utils.import_object(FLAGS.network_manager)
         if driver or not getattr(self, 'driver', None):
             self.driver = utils.import_class(driver or FLAGS.auth_driver)
-
-        if FLAGS.memcached_servers:
-            import memcache
-        else:
-            from nova import fakememcache as memcache
-        self.mc = memcache.Client(FLAGS.memcached_servers,
-                                  debug=0)
+        if AuthManager.mc is None:
+            AuthManager.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
 
     def authenticate(self, access, signature, params, verb='GET',
                      server_string='127.0.0.1:8773', path='/',

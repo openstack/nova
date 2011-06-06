@@ -47,6 +47,7 @@ mac_addresses = Table('mac_addresses', meta,
 
 # Don't autoload this table since sqlite will have issues when
 # adding the column
+#TODO(tr3buchet)[wishful thinking]: remove support for sqlite
 fixed_ips = Table('fixed_ips', meta,
         Column('created_at', DateTime(timezone=False),
                default=datetime.datetime.utcnow),
