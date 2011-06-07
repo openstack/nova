@@ -134,7 +134,7 @@ class API(base.Base):
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
     def _check_create_parameters(self, context, instance_type,
-               image_id, kernel_id=None, ramdisk_id=None,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
@@ -300,7 +300,7 @@ class API(base.Base):
                            "injected_files": injected_files}})
 
     def create_all_at_once(self, context, instance_type,
-               image_id, kernel_id=None, ramdisk_id=None,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
@@ -312,7 +312,7 @@ class API(base.Base):
         num_instances, base_options, security_groups = \
                     self._check_create_parameters(
                                context, instance_type,
-                               image_id, kernel_id, ramdisk_id,
+                               image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
                                display_name, display_description,
                                key_name, key_data, security_group,
@@ -328,7 +328,7 @@ class API(base.Base):
         return base_options['reservation_id']
 
     def create(self, context, instance_type,
-               image_id, kernel_id=None, ramdisk_id=None,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
@@ -346,7 +346,7 @@ class API(base.Base):
         num_instances, base_options, security_groups = \
                     self._check_create_parameters(
                                context, instance_type,
-                               image_id, kernel_id, ramdisk_id,
+                               image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
                                display_name, display_description,
                                key_name, key_data, security_group,

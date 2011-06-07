@@ -210,11 +210,14 @@ class ZonesTest(test.TestCase):
 
         req = webob.Request.blank('/v1.0/zones/select')
         req.method = 'POST'
+        req.headers["Content-Type"] = "application/json"
         # Select queries end up being JSON encoded twice.
         # Once to a string and again as an HTTP POST Body
         req.body = json.dumps(json.dumps({}))
 
+        print "********** BODY", req.body
         res = req.get_response(fakes.wsgi_app())
+        print "********** RES", res
         res_dict = json.loads(res.body)
         self.assertEqual(res.status_int, 200)
 

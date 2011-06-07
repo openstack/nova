@@ -58,12 +58,7 @@ def check_encryption_key(func):
     return wrapped
 
 
-class Controller(common.OpenstackController):
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "zone": ["id", "api_url", "name", "capabilities"]}}}
+class Controller(object):
 
     def index(self, req):
         """Return all zones in brief"""
@@ -114,12 +109,12 @@ class Controller(common.OpenstackController):
         return dict(zone=_scrub_zone(zone))
 
     @check_encryption_key
-    def select(self, req):
+    def select(self, req, body):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        json_specs = json.loads(req.body)
-        specs = json.loads(json_specs)
+        print "**** ZONES ", body
+        specs = json.loads(body)
         build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
