@@ -28,8 +28,8 @@ class FlatNetworkTestCase(base.NetworkTestCase, base.TestFuncs):
     network_manager = 'nova.network.manager.FlatManager'
 
 
-#class FlatDHCPNetworkTestCase(base.NetworkTestCase, base.TestFuncs):
-#    network_manager = 'nova.network.manager.FlatDHCPManager'
+class FlatDHCPNetworkTestCase(base.NetworkTestCase, base.TestFuncs):
+    network_manager = 'nova.network.manager.FlatDHCPManager'
 
 
 class VlanNetworkTestCase(base.NetworkTestCase, base.TestFuncs):

@@ -38,6 +38,8 @@ class FakeModel(object):
             return self.values[key]
         else:
             raise NotImplementedError()
+    def __repr__(self):
+        return '<FakeModel: %s>' % self.values
 
 
 def stub_out(stubs, funcs):
@@ -49,7 +51,7 @@ def stub_out(stubs, funcs):
         stubs.Set(db, func_name, func)
 
 
-def stub_out_db_network_api(stubs, host='localhost'):
+def stub_out_db_network_api(stubs):
     network_fields = {'id': 0,
                       'cidr': '192.168.0.0/24',
                       'netmask': '255.255.255.0',
@@ -64,7 +66,8 @@ def stub_out_db_network_api(stubs, host='localhost'):
                       'gateway_v6': 'dead:beef::1',
                       'dns': '192.168.0.1',
                       'vlan': None,
-                      'host': host}
+                      'host': None,
+                      'vpn_public_address': '192.168.0.2'}
 
     fixed_ip_fields = {'id': 0,
                        'network_id': 0,
@@ -73,7 +76,8 @@ def stub_out_db_network_api(stubs, host='localhost'):
                        'instance_id': 0,
                        'allocated': False,
                        'mac_address_id': 0,
-                       'mac_addres': None}
+                       'mac_address': None,
+                       'floating_ips': []}
 
     flavor_fields = {'id': 0,
                      'rxtx_cap': 3}
@@ -152,47 +156,69 @@ def stub_out_db_network_api(stubs, host='localhost'):
             ips[0]['auto_assigned'] = True
 
     def fake_fixed_ip_associate(context, address, instance_id):
-        if fixed_ip_fields['address'] == address and \
-           not fixed_ip_fields['instance']:
-            fixed_ip_fields['instance'] = True
-            fixed_ip_fields['instance_id'] = instance_id
+        ips = filter(lambda i: i['address'] == address,
+                     fixed_ips)
+        if not ips:
+            raise db.NoMoreAddresses()
+        ips[0]['instance'] = True
+        ips[0]['instance_id'] = instance_id
 
     def fake_fixed_ip_associate_pool(context, network_id, instance_id):
-        if fixed_ip_fields['network_id'] == network_id and \
-           not fixed_ip_fields['instance']:
-            fixed_ip_fields['instance'] = True
-            fixed_ip_fields['instance_id'] = instance_id
-            return fixed_ip_fields['address']
+        ips = filter(lambda i: (i['network_id'] == network_id \
+                             or i['network_id'] is None) \
+                            and not i['instance'],
+                     fixed_ips)
+        if not ips:
+            raise db.NoMoreAddresses()
+        ips[0]['instance'] = True
+        ips[0]['instance_id'] = instance_id
+        return ips[0]['address']
 
     def fake_fixed_ip_create(context, values):
-        if values['address'] == fixed_ip_fields['address']:
-            return fixed_ip_fields['address']
+        ip = dict(fixed_ip_fields)
+        ip['id'] = max([i['id'] for i in fixed_ips] or [-1]) + 1
+        for key in values:
+            ip[key] = values[key]
+        return ip['address']
 
     def fake_fixed_ip_disassociate(context, address):
-        if fixed_ip_fields['address'] == address:
-            fixed_ip_fields['instance'] = None
-            fixed_ip_fields['instance_id'] = None
+        ips = filter(lambda i: i['address'] == address,
+                     fixed_ips)
+        if ips:
+            ips[0]['instance_id'] = None
+            ips[0]['instance'] = None
+            ips[0]['mac_address'] = None
+            ips[0]['mac_address_id'] = None
 
     def fake_fixed_ip_disassociate_all_by_timeout(context, host, time):
         return 0
 
     def fake_fixed_ip_get_all_by_instance(context, instance_id):
-        if fixed_ip_fields['instance_id'] == instance_id:
-            return [FakeModel(fixed_ip_fields)]
+        ips = filter(lambda i: i['instance_id'] == instance_id,
+                     fixed_ips)
+        return [FakeModel(i) for i in ips]
 
     def fake_fixed_ip_get_by_address(context, address):
-        if fixed_ip_fields['address'] == address:
-            return FakeModel(fixed_ip_fields)
+        ips = filter(lambda i: i['address'] == address,
+                     fixed_ips)
+        if ips:
+            return FakeModel(ips[0])
 
     def fake_fixed_ip_get_network(context, address):
-        if fixed_ip_fields['address'] == address and \
-           fixed_ip_fields['network_id'] == network_fields['id']:
-            return FakeModel(network_fields)
+        ips = filter(lambda i: i['address'] == address,
+                     fixed_ips)
+        if ips:
+            nets = filter(lambda n: n['id'] == ips[0]['network_id'],
+                          networks)
+            if nets:
+                return FakeModel(nets[0])
 
     def fake_fixed_ip_update(context, address, values):
-        if fixed_ip_fields['address'] == address:
+        ips = filter(lambda i: i['address'] == address,
+                     fixed_ips)
+        if ips:
             for key in values:
-                fixed_ip_fields[key] = values[key]
+                ips[0][key] = values[key]
                 if key == 'mac_address_id':
                     mac = filter(lambda x: x['id'] == values[key],
                                  mac_addresses)

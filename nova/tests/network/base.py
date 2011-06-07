@@ -48,11 +48,14 @@ class NetworkTestCase(test.TestCase):
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
         reload(db)
-
+        
 
 class TestFuncs(object):
+    def _compare_fields(self, dict1, dict2, fields):
+        for field in fields:
+            self.assertEqual(dict1[field], dict2[field])
+
     def test_set_network_hosts(self):
-        db_fakes.stub_out_db_network_api(self.stubs, host=None)
         self.network.set_network_hosts(self.context)
 
     def test_set_network_host(self):
@@ -64,6 +67,7 @@ class TestFuncs(object):
         instance_id = 0
         project_id = 0
         type_id = 0
+        self.network.set_network_hosts(self.context)
         nw = self.network.allocate_for_instance(self.context,
                                                 instance_id=instance_id,
                                                 project_id=project_id,
@@ -82,25 +86,34 @@ class TestFuncs(object):
                          'label': 'fake',
                          'mac': 'DE:AD:BE:EF:00:00',
                          'rxtx_cap': 3})]
-        self.assertEqual(static_info, nw)
+
+        self._compare_fields(nw[0][0], static_info[0][0], ('bridge',))
+        self._compare_fields(nw[0][1], static_info[0][1], ('ips',
+                                                           'broadcast',
+                                                           'gateway',
+                                                           'ip6s'))
 
     def test_deallocate_for_instance(self):
         instance_id = 0
         network_id = 0
+        self.network.set_network_hosts(self.context)
         self.network.add_fixed_ip_to_instance(self.context,
                                               instance_id=instance_id,
                                               network_id=network_id)
-        self.assertTrue(db.fixed_ip_get_all_by_instance(self.context,
-                                                        instance_id))
+        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        for ip in ips:
+            self.assertTrue(ip['allocated'])
         self.network.deallocate_for_instance(self.context,
                                              instance_id=instance_id)
-        self.assertFalse(db.fixed_ip_get_all_by_instance(self.context,
-                                                         instance_id))
+        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        for ip in ips:
+            self.assertFalse(ip['allocated'])
 
     def test_lease_release_fixed_ip(self):
         instance_id = 0
         project_id = 0
         type_id = 0
+        self.network.set_network_hosts(self.context)
         nw = self.network.allocate_for_instance(self.context,
                                                 instance_id=instance_id,
                                                 project_id=project_id,
@@ -115,6 +128,10 @@ class TestFuncs(object):
                                                          network_id)
         self.assertTrue(ips)
         address = ips[0]['address']
+
+        db.fixed_ip_associate(self.context, address, instance_id)
+        db.fixed_ip_update(self.context, address,
+                           {'mac_address_id': mac['id']})
 
         self.network.lease_fixed_ip(self.context, mac['address'], address)
         ip = db.fixed_ip_get_by_address(self.context, address)
