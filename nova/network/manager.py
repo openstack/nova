@@ -86,6 +86,7 @@ flags.DEFINE_string('floating_range', '4.4.4.0/24',
                     'Floating IP address block')
 flags.DEFINE_string('fixed_range', '10.0.0.0/8', 'Fixed IP address block')
 flags.DEFINE_string('fixed_range_v6', 'fd00::/48', 'Fixed IPv6 address block')
+flags.DEFINE_string('gateway_v6', None, 'Default IPv6 gateway')
 flags.DEFINE_integer('cnt_vpn_clients', 0,
                      'Number of addresses reserved for vpn clients')
 flags.DEFINE_string('network_driver', 'nova.network.linux_net',
@@ -292,7 +293,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         return host
 
     def create_networks(self, context, cidr, num_networks, network_size,
-                        cidr_v6, label, *args, **kwargs):
+                        cidr_v6, gateway_v6, label, *args, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)
@@ -324,7 +325,13 @@ class NetworkManager(manager.SchedulerDependentManager):
                                      significant_bits_v6)
                 net['cidr_v6'] = cidr_v6
                 project_net_v6 = IPy.IP(cidr_v6)
-                net['gateway_v6'] = str(project_net_v6[1])
+
+                if gateway_v6:
+                    # use a pre-defined gateway if one is provided
+                    net['gateway_v6'] = str(gateway_v6)
+                else:
+                    net['gateway_v6'] = str(project_net_v6[1])
+
                 net['netmask_v6'] = str(project_net_v6.prefixlen())
 
             network_ref = self.db.network_create_safe(context, net)
