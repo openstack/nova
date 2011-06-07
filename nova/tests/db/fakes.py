@@ -82,7 +82,6 @@ def stub_out_db_network_api(stubs, host='localhost'):
                           'fixed_ip_id': 0,
                           'fixed_ip': None,
                           'project_id': 'fake',
-                          'host': host,
                           'auto_assigned': False}
 
     mac_address_fields = {'id': 0,
@@ -96,7 +95,7 @@ def stub_out_db_network_api(stubs, host='localhost'):
     mac_addresses = [mac_address_fields]
     networks = [network_fields]
 
-    def fake_floating_ip_allocate_address(context, host, project_id):
+    def fake_floating_ip_allocate_address(context, project_id):
         floating_ip_fields['project_id'] = project_id
         return FakeModel(floating_ip_fields)
 
