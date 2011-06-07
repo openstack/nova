@@ -210,10 +210,8 @@ class LibvirtConnTestCase(test.TestCase):
         connection.LibvirtConnection._conn = fake
 
     def fake_lookup(self, instance_name):
-        class FakeVirtDomain(object):
 
-            def __init__(self):
-                pass
+        class FakeVirtDomain(object):
 
             def snapshotCreateXML(self, *args):
                 return None
