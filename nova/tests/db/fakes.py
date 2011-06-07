@@ -20,6 +20,7 @@
 import time
 
 from nova import db
+from nova import exception
 from nova import test
 from nova import utils
 
@@ -96,36 +97,59 @@ def stub_out_db_network_api(stubs, host='localhost'):
     networks = [network_fields]
 
     def fake_floating_ip_allocate_address(context, project_id):
-        floating_ip_fields['project_id'] = project_id
-        return FakeModel(floating_ip_fields)
+        ips = filter(lambda i: i['fixed_ip_id'] == None \
+                           and i['project_id'] == None,
+                     floating_ips)
+        if not ips:
+            raise db.NoMoreAddresses()
+        ips[0]['project_id'] = project_id
+        return FakeModel(ips[0]['address'])
 
-    def fake_floating_ip_deallocate(context, floating_address):
-        floating_ip_fields['project_id'] = None
-        floating_ip_fields['auto_assigned'] = False
+    def fake_floating_ip_deallocate(context, address):
+        ips = filter(lambda i: i['address'] == address,
+                     floating_ips)
+        if ips:
+            ips[0]['project_id'] = None
+            ips[0]['auto_assigned'] = False
 
     def fake_floating_ip_disassociate(context, address):
-        if floating_ip_fields['address'] == address:
-            fixed_ip = floating_ip_fields['fixed_ip']['address']
-            floating_ip_fields['fixed_ip'] = None
-            return fixed_ip
+        ips = filter(lambda i: i['address'] == address,
+                     floating_ips)
+        if ips:
+            fixed_ip_address = None
+            if ips[0]['fixed_ip']:
+                fixed_ip_address = ips[0]['fixed_ip']['address']
+            ips[0]['fixed_ip'] = None
+            return fixed_ip_address
 
     def fake_floating_ip_fixed_ip_associate(context, floating_address,
                                             fixed_address):
-        if fixed_ip_fields['address'] == fixed_address and \
-           floating_ip_fields['address'] == floating_address:
-            floating_ip_fields['fixed_ip'] = FakeModel(fixed_ip_fields)
+        float = filter(lambda i: i['address'] == floating_address,
+                       floating_ips)
+        fixed = filter(lambda i: i['address'] == fixed_address,
+                       fixed_ips)
+        if float and fixed:
+            float[0]['fixed_ip'] = fixed[0]
+            float[0]['fixed_ip_id'] = fixed[0]['id']
 
     def fake_floating_ip_get_all_by_host(context, host):
-        if floating_ip_fields['host'] == host:
-            return [FakeModel(floating_ip_fields)]
+        # TODO(jkoelker): Once we get the patches that remove host from
+        #                 the floating_ip table, we'll need to stub 
+        #                 this out
+        pass
 
     def fake_floating_ip_get_by_address(context, address):
-        if floating_ip_fields['address'] == address:
-            return FakeModel(floating_ip_fields)
+        ips = filter(lambda i: i['address'] == address,
+                     floating_ips)
+        if not ips:
+            raise exception.FloatingIpNotFound(address=address)
+        return FakeModel(ips[0])
 
-    def fake_floating_ip_set_auto_assigned(contex, public_ip):
-        if floating_ip_fields['fixed_ip']['address'] == public_ip:
-            floating_ip_fields['auto_assigned'] = True
+    def fake_floating_ip_set_auto_assigned(contex, address):
+        ips = filter(lambda i: i['address'] == address,
+                     floating_ips)
+        if ips:
+            ips[0]['auto_assigned'] = True
 
     def fake_fixed_ip_associate(context, address, instance_id):
         if fixed_ip_fields['address'] == address and \
