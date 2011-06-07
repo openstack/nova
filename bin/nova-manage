@@ -513,7 +513,7 @@ class FloatingIpCommands(object):
     def create(self, host, range):
         """Creates floating ips for host by range
         arguments: host ip_range"""
-        for address in netaddr.IPRange(range):
+        for address in netaddr.IPNetwork(range):
             db.floating_ip_create(context.get_admin_context(),
                                   {'address': str(address),
                                    'host': host})
@@ -521,7 +521,7 @@ class FloatingIpCommands(object):
     def delete(self, ip_range):
         """Deletes floating ips by range
         arguments: range"""
-        for address in netaddr.IPRange(ip_range):
+        for address in netaddr.IPNetwork(ip_range):
             db.floating_ip_destroy(context.get_admin_context(),
                                    str(address))
 
