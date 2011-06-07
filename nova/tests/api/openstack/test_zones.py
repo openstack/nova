@@ -215,9 +215,7 @@ class ZonesTest(test.TestCase):
         # Once to a string and again as an HTTP POST Body
         req.body = json.dumps(json.dumps({}))
 
-        print "********** BODY", req.body
         res = req.get_response(fakes.wsgi_app())
-        print "********** RES", res
         res_dict = json.loads(res.body)
         self.assertEqual(res.status_int, 200)
 

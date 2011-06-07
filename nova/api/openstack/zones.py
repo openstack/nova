@@ -113,7 +113,6 @@ class Controller(object):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        print "**** ZONES ", body
         specs = json.loads(body)
         build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)

@@ -22,6 +22,7 @@ across zones. There are two expansion points to this class for:
 
 import operator
 import json
+
 import M2Crypto
 import novaclient
 
