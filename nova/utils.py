@@ -142,7 +142,7 @@ def execute(*cmd, **kwargs):
             env = os.environ.copy()
             if addl_env:
                 env.update(addl_env)
-            _PIPE = subprocess.PIPE #pylint: disable=E1101
+            _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
                                    stdin=_PIPE,
                                    stdout=_PIPE,
@@ -153,8 +153,8 @@ def execute(*cmd, **kwargs):
                 result = obj.communicate(process_input)
             else:
                 result = obj.communicate()
-            obj.stdin.close() #pylint: disable=E1101
-            _returncode = obj.returncode #pylint: disable=E1101
+            obj.stdin.close()  # pylint: disable=E1101
+            _returncode = obj.returncode  # pylint: disable=E1101
             if _returncode:
                 LOG.debug(_('Result was %s') % _returncode)
                 if type(check_exit_code) == types.IntType \

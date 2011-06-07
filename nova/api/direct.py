@@ -324,7 +324,7 @@ class Limited(object):
 
     def __init__(self, proxy):
         self._proxy = proxy
-        if not self.__doc__: #pylint: disable=E0203
+        if not self.__doc__:  # pylint: disable=E0203
             self.__doc__ = proxy.__doc__
         if not self._allowed:
             self._allowed = []
