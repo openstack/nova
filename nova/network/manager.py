@@ -229,8 +229,6 @@ class FloatingIP(object):
         # call the next inherited class's deallocate_for_instance()
         # which is currently the NetworkManager version
         # call this after so floating IPs are handled first
-        LOG.debug('*'*20)
-        LOG.debug('%s' % super(FloatingIP, self).deallocate_for_instance)
         super(FloatingIP, self).deallocate_for_instance(context, **kwargs)
 
     def allocate_floating_ip(self, context, project_id):
