@@ -139,7 +139,7 @@ class LdapDriver(object):
         self.__cache = None
         return False
 
-    def __local_cache(key_fmt):
+    def __local_cache(key_fmt): #pylint: disable=E0213
         """Wrap function to cache it's result in self.__cache.
         Works only with functions with one fixed argument.
         """
