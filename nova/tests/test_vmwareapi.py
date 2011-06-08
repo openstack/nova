@@ -69,7 +69,7 @@ class VMWareAPIVMTestCase(test.TestCase):
                   'instance_type': 'm1.large',
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   }
-        self.instance = db.instance_create(values)
+        self.instance = db.instance_create(None, values)
 
     def _create_vm(self):
         """Create and spawn the VM."""
