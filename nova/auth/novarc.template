@@ -14,4 +14,5 @@ alias ec2-bundle-image="ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_P
 alias ec2-upload-bundle="ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${NOVA_CERT}"
 export NOVA_API_KEY="%(access)s"
 export NOVA_USERNAME="%(user)s"
+export NOVA_PROJECT_ID="%(project)s"
 export NOVA_URL="%(os)s"
