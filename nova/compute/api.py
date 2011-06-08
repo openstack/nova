@@ -55,11 +55,6 @@ def generate_default_hostname(instance_id):
 class API(base.Base):
     """API for interacting with the compute manager."""
 
-    # Should we create instances all-at-once or as single-shot requests.
-    # Different schedulers use different approaches.
-    # This is cached across all API instances.
-    should_create_all_at_once = None  # None implies uninitialized.
-
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
