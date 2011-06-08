@@ -193,8 +193,7 @@ class FloatingIP(object):
                                                              public_ip)
 
             # get the first fixed_ip belonging to the instance
-            fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
-                                                             instance_id)
+            fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
             fixed_ip = fixed_ips[0] if fixed_ips else None
 
             # call to correct network host to associate the floating ip
@@ -213,8 +212,7 @@ class FloatingIP(object):
         LOG.debug(_("floating IP deallocation for instance |%s|"), instance_id,
                                                                context=context)
 
-        fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
-                                                         instance_id)
+        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
         # add to kwargs so we can pass to super to save a db lookup there
         kwargs['fixed_ips'] = fixed_ips
         for fixed_ip in fixed_ips:
@@ -368,7 +366,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         """
         instance_id = kwargs.pop('instance_id')
         fixed_ips = kwargs.get('fixed_ips') or \
-                  self.db.fixed_ip_get_all_by_instance(context, instance_id)
+                  self.db.fixed_ip_get_by_instance(context, instance_id)
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
         # deallocate mac addresses
@@ -388,10 +386,8 @@ class NetworkManager(manager.SchedulerDependentManager):
         and info = dict containing pertinent networking data
         """
         # TODO(tr3buchet) should handle floating IPs as well?
-        fixed_ips = self.db.fixed_ip_get_all_by_instance(context,
-                                                         instance_id)
-        vifs = self.db.virtual_interface_get_all_by_instance(context,
-                                                             instance_id)
+        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        vifs = self.db.virtual_interface_get_by_instance(context, instance_id)
         flavor = self.db.instance_type_get_by_id(context,
                                                  instance_type_id)
         network_info = []

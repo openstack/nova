@@ -138,7 +138,7 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_instance_get_fixed_address_v6(context, instance_id):
         return FakeModel(fixed_ip_fields).address
 
-    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+    def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
     stubs.Set(db, 'network_get_by_instance', fake_network_get_by_instance)
@@ -153,5 +153,5 @@ def stub_out_db_instance_api(stubs, injected=True):
         fake_instance_get_fixed_address_v6)
     stubs.Set(db, 'network_get_all_by_instance',
         fake_network_get_all_by_instance)
-    stubs.Set(db, 'fixed_ip_get_all_by_instance',
-        fake_fixed_ip_get_all_by_instance)
+    stubs.Set(db, 'fixed_ip_get_by_instance',
+        fake_fixed_ip_get_by_instance)

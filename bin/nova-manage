@@ -562,6 +562,9 @@ class NetworkCommands(object):
                    [network_size=FLAG], [vlan_start=FLAG],
                    [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
                    [flat_network_bridge=FLAG], [bridge_interface=FLAG]
+        If you wish to use a later argument fill in the gaps with 0s
+        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
+            network create private 10.0.0.0/8 1 15
         """
         if not label:
             msg = _('a label (ex: public) is required to create networks.')

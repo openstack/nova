@@ -741,7 +741,7 @@ def fixed_ip_get_instance(context, address):
 
 
 @require_context
-def fixed_ip_get_all_by_instance(context, instance_id):
+def fixed_ip_get_by_instance(context, instance_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
                  filter_by(instance_id=instance_id).\
@@ -1151,7 +1151,7 @@ def instance_get_fixed_addresses(context, instance_id):
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         try:
-            fixed_ips = fixed_ip_get_all_by_instance(context, instance_id)
+            fixed_ips = fixed_ip_get_by_instance(context, instance_id)
         except exception.NotFound:
             return []
         return [fixed_ip.address for fixed_ip in fixed_ips]
@@ -1170,8 +1170,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         prefixes = [ref.cidr_v6 for ref in
                     sorted(network_refs, key=lambda ref: ref.id)]
         # get vifs associated with instance
-        vif_refs = virtual_interface_get_all_by_instance(context,
-                                                         instance_ref.id)
+        vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
         # compile list of the mac_addresses for vifs sorted by network id
         macs = [vif_ref['address'] for vif_ref in
                 sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
@@ -1185,7 +1184,7 @@ def instance_get_fixed_addresses_v6(context, instance_id):
 
 @require_context
 def instance_get_floating_address(context, instance_id):
-    fixed_ip_refs = fixed_ip_get_all_by_instance(context, instance_id)
+    fixed_ip_refs = fixed_ip_get_by_instance(context, instance_id)
     if not fixed_ip_refs:
         return None
     # NOTE(tr3buchet): this only gets the first fixed_ip
