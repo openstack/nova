@@ -46,6 +46,7 @@ class NovaBase(object):
     updated_at = Column(DateTime, onupdate=utils.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
+    metadata = None
 
     def save(self, session=None):
         """Save this object."""

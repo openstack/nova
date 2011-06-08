@@ -142,24 +142,26 @@ def execute(*cmd, **kwargs):
             env = os.environ.copy()
             if addl_env:
                 env.update(addl_env)
+            _PIPE = subprocess.PIPE  # pylint: disable=E1101
             obj = subprocess.Popen(cmd,
-                                   stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE,
+                                   stdin=_PIPE,
+                                   stdout=_PIPE,
+                                   stderr=_PIPE,
                                    env=env)
             result = None
             if process_input is not None:
                 result = obj.communicate(process_input)
             else:
                 result = obj.communicate()
-            obj.stdin.close()
-            if obj.returncode:
-                LOG.debug(_('Result was %s') % obj.returncode)
+            obj.stdin.close()  # pylint: disable=E1101
+            _returncode = obj.returncode  # pylint: disable=E1101
+            if _returncode:
+                LOG.debug(_('Result was %s') % _returncode)
                 if type(check_exit_code) == types.IntType \
-                        and obj.returncode != check_exit_code:
+                        and _returncode != check_exit_code:
                     (stdout, stderr) = result
                     raise exception.ProcessExecutionError(
-                            exit_code=obj.returncode,
+                            exit_code=_returncode,
                             stdout=stdout,
                             stderr=stderr,
                             cmd=' '.join(cmd))
