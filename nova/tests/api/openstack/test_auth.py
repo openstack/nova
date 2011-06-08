@@ -208,6 +208,7 @@ class Test(test.TestCase):
         result = req.get_response(fakes.wsgi_app())
         self.assertEqual(result.status, '401 Unauthorized')
 
+
 class TestFunctional(test.TestCase):
     def test_token_expiry(self):
         ctx = context.get_admin_context()
