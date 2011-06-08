@@ -793,7 +793,7 @@ class CloudController(object):
                 if instance['fixed_ip']['network'] and 'use_v6' in kwargs:
                     i['dnsNameV6'] = ipv6.to_global(
                         instance['fixed_ip']['network']['cidr_v6'],
-                        instance['fixed_ip']['mac_address']['address'],
+                        instance['fixed_ip']['virtual_interface']['address'],
                         instance['project_id'])
 
             i['privateDnsName'] = fixed_addr

@@ -19,15 +19,16 @@ from sqlalchemy import *
 from migrate import *
 
 from nova import log as logging
+from nova import utils
 
 meta = MetaData()
 
-# mac address table to add to DB
-mac_addresses = Table('mac_addresses', meta,
+# virtual interface table to add to DB
+virtual_interfaces = Table('virtual_interfaces', meta,
         Column('created_at', DateTime(timezone=False),
-               default=datetime.datetime.utcnow),
+               default=utils.utcnow()),
         Column('updated_at', DateTime(timezone=False),
-               onupdate=datetime.datetime.utcnow),
+               onupdate=utils.utcnow()),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(),  primary_key=True, nullable=False),
@@ -43,16 +44,20 @@ mac_addresses = Table('mac_addresses', meta,
                Integer(),
                ForeignKey('instances.id'),
                nullable=False),
+        Column('port_id',
+               String(length=255, convert_unicode=False, assert_unicode=None,
+                      unicode_error=None, _warn_on_bytestring=False),
+               unique=True, nullable=True),
         )
 
 # Don't autoload this table since sqlite will have issues when
-# adding the column
+# adding a column with a foreign key
 #TODO(tr3buchet)[wishful thinking]: remove support for sqlite
 fixed_ips = Table('fixed_ips', meta,
         Column('created_at', DateTime(timezone=False),
-               default=datetime.datetime.utcnow),
+               default=utils.utcnow()),
         Column('updated_at', DateTime(timezone=False),
-               onupdate=datetime.datetime.utcnow),
+               onupdate=utils.utcnow()),
         Column('deleted_at', DateTime(timezone=False)),
         Column('deleted', Boolean(create_constraint=True, name=None)),
         Column('id', Integer(), primary_key=True),
@@ -74,11 +79,11 @@ interface = Column('bridge_interface',
                           nullable=True)
 
 
-# mac_address column to add to fixed_ips table
-mac_address = Column('mac_address_id',
-                     Integer(),
-                     ForeignKey('mac_addresses.id'),
-                     nullable=True)
+# virtual interface id column to add to fixed_ips table
+virtual_interface_id = Column('virtual_interface_id',
+                       Integer(),
+                       ForeignKey('virtual_interfaces.id'),
+                       nullable=True)
 
 
 def upgrade(migrate_engine):
@@ -93,25 +98,25 @@ def upgrade(migrate_engine):
     # values will have to be set manually before running nova
     try:
         networks.create_column(interface)
-    except Exception as e:
+    except Exception:
         logging.error(_("interface column not added to networks table"))
-        raise e
+        raise
 
-    # create mac_addresses table
+    # create virtual_interfaces table
     try:
-        mac_addresses.create()
-    except Exception as e:
-        logging.error(_("Table |%s| not created!"), repr(mac_addresses))
-        raise e
+        virtual_interfaces.create()
+    except Exception:
+        logging.error(_("Table |%s| not created!"), repr(virtual_interfaces))
+        raise
 
-    # add mac_address column to fixed_ips table
+    # add virtual_interface_id column to fixed_ips table
     try:
-        fixed_ips.create_column(mac_address)
-    except Exception as e:
-        logging.error(_("mac_address column not added to fixed_ips table"))
-        raise e
+        fixed_ips.create_column(virtual_interface_id)
+    except Exception:
+        logging.error(_("VIF column not added to fixed_ips table"))
+        raise
 
-    # populate the mac_addresses table
+    # populate the virtual_interfaces table
     # extract data from existing instance and fixed_ip tables
     s = select([instances.c.id, instances.c.mac_address,
                 fixed_ips.c.network_id],
@@ -122,18 +127,18 @@ def upgrade(migrate_engine):
 
     # insert data into the table
     if join_list:
-        i = mac_addresses.insert()
+        i = virtual_interfaces.insert()
         i.execute(join_list)
 
-    # populate the fixed_ips mac_address column
+    # populate the fixed_ips virtual_interface_id column
     s = select([fixed_ips.c.id, fixed_ips.c.instance_id],
                fixed_ips.c.instance_id != None)
 
     for row in s.execute():
-        m = select([mac_addresses.c.id].\
-            where(mac_addresses.c.instance_id == row['instance_id'])).\
+        m = select([virtual_interfaces.c.id].\
+            where(virtual_interfaces.c.instance_id == row['instance_id'])).\
             as_scalar()
-        u = fixed_ips.update().values(mac_address_id=m).\
+        u = fixed_ips.update().values(virtual_interface_id=m).\
             where(fixed_ips.c.id == row['id'])
         u.execute()
 

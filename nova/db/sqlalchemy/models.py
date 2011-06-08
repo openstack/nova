@@ -524,9 +524,10 @@ class FixedIp(BASE, NovaBase):
     address = Column(String(255))
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=True)
     network = relationship(Network, backref=backref('fixed_ips'))
-    mac_address_id = Column(Integer, ForeignKey('mac_addresses.id'),
-                                                nullable=True)
-    mac_address = relationship(MacAddress, backref=backref('fixed_ips'))
+    virtual_interface_id = Column(Integer, ForeignKey('virtual_interfaces.id'),
+                                                                 nullable=True)
+    virtual_interface = relationship(VirtualInterface,
+                                     backref=backref('fixed_ips'))
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=True)
     instance = relationship(Instance,
                             backref=backref('fixed_ips'),
@@ -556,15 +557,18 @@ class FloatingIp(BASE, NovaBase):
     auto_assigned = Column(Boolean, default=False, nullable=False)
 
 
-class MacAddress(BASE, NovaBase):
-    """Represents a mac address used by an instance"""
-    __tablename__ = 'mac_addresses'
+class VirtualInterface(BASE, NovaBase):
+    """Represents a virtual interface on an instance"""
+    __tablename__ = 'virtual_interfaces'
     id = Column(Integer, primary_key=True)
     address = Column(String(255), unique=True)
     network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
-    network = relationship(Network, backref=backref('mac_addresses'))
+    network = relationship(Network, backref=backref('virtual_interfaces'))
+    port_id = Column(String(255), unique=True, nullable=True)
+
+    # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
     instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
-    instance = relationship(Instance, backref=backref('mac_addresses'))
+    instance = relationship(Instance, backref=backref('virtual_interfaces'))
 
 
 class AuthToken(BASE, NovaBase):

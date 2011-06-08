@@ -605,13 +605,13 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def add_fixed_ip_to_instance(self, context, instance_id, network_id):
-        """calls network_api to add new fixed_ip to instance"""
+        """calls network_api to add new fixed_ip to instance
+        then injects the new network info and resets instance networking
+        """
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
                                                            network_id)
-        instance = self.db.instance_get(context, instance_id)
-        network_info = self.network_api.get_instance_nw_info(context, instance)
-        self.driver.inject_network_info(instance, network_info)
-        self.driver.reset_networking(instance)
+        self.inject_network_info(context, instance_id)
+        self.reset_network(context, instance_id)
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -717,16 +717,14 @@ class ComputeManager(manager.SchedulerDependentManager):
     @checks_instance_lock
     def reset_network(self, context, instance_id):
         """Reset networking on the given instance."""
-        context = context.elevated()
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         LOG.debug(_('instance %s: reset network'), instance_id,
                                                    context=context)
-        self.driver.reset_network(instance_ref)
+        self.driver.reset_network(instance)
 
     @checks_instance_lock
     def inject_network_info(self, context, instance_id):
         """Inject network info for the given instance."""
-        context = context.elevated()
         LOG.debug(_('instance %s: inject network info'), instance_id,
                                                          context=context)
         instance = self.db.instance_get(context, instance_id)

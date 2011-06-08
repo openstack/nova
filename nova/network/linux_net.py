@@ -659,7 +659,7 @@ def _host_lease(fixed_ip_ref):
     seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
 
     return '%d %s %s %s *' % (seconds_since_epoch + FLAGS.dhcp_lease_time,
-                              fixed_ip_ref['mac_address']['address'],
+                              fixed_ip_ref['virtual_interface']['address'],
                               fixed_ip_ref['address'],
                               instance_ref['hostname'] or '*')
 
@@ -667,7 +667,7 @@ def _host_lease(fixed_ip_ref):
 def _host_dhcp(fixed_ip_ref):
     """Return a host string for an address in dhcp-host format."""
     instance_ref = fixed_ip_ref['instance']
-    return '%s,%s.%s,%s' % (fixed_ip_ref['mac_address']['address'],
+    return '%s,%s.%s,%s' % (fixed_ip_ref['virtual_interface']['address'],
                                    instance_ref['hostname'],
                                    FLAGS.dhcp_domain,
                                    fixed_ip_ref['address'])
