@@ -60,9 +60,7 @@ def is_user_context(context):
 
 
 def authorize_project_context(context, project_id):
-    """Ensures that the request context has permission to access the
-       given project.
-    """
+    """Ensures a request has permission to access the given project."""
     if is_user_context(context):
         if not context.project:
             raise exception.NotAuthorized()
@@ -71,9 +69,7 @@ def authorize_project_context(context, project_id):
 
 
 def authorize_user_context(context, user_id):
-    """Ensures that the request context has permission to access the
-       given user.
-    """
+    """Ensures a request has permission to access the given user."""
     if is_user_context(context):
         if not context.user:
             raise exception.NotAuthorized()
@@ -89,9 +85,12 @@ def can_read_deleted(context):
 
 
 def require_admin_context(f):
-    """Decorator used to indicate that the method requires an
-       administrator context.
+    """Decorator to require admin request context.
+
+    The first argument to the wrapped function must be the context.
+
     """
+
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]):
             raise exception.AdminRequired()
@@ -100,12 +99,19 @@ def require_admin_context(f):
 
 
 def require_context(f):
-    """Decorator used to indicate that the method requires either
-       an administrator or normal user context.
+    """Decorator to require *any* user or admin context.
+
+    This does no authorization for user or project access matching, see
+    :py:func:`authorize_project_context` and
+    :py:func:`authorize_user_context`.
+
+    The first argument to the wrapped function must be the context.
+
     """
+
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
-            raise exception.AdminRequired()
+            raise exception.NotAuthorized()
         return f(*args, **kwargs)
     return wrapper
 
@@ -737,7 +743,7 @@ def fixed_ip_get_all_by_instance(context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False)
     if not rv:
-        raise exception.NoFloatingIpsFoundForInstance(instance_id=instance_id)
+        raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
     return rv
 
 
@@ -1121,7 +1127,7 @@ def key_pair_destroy_all_by_user(context, user_id):
     with session.begin():
         session.query(models.KeyPair).\
                 filter_by(user_id=user_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -1653,7 +1659,7 @@ def volume_destroy(context, volume_id):
     with session.begin():
         session.query(models.Volume).\
                 filter_by(id=volume_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.ExportDevice).\
@@ -1811,7 +1817,7 @@ def snapshot_destroy(context, snapshot_id):
     with session.begin():
         session.query(models.Snapshot).\
                 filter_by(id=snapshot_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -1966,17 +1972,17 @@ def security_group_destroy(context, security_group_id):
     with session.begin():
         session.query(models.SecurityGroup).\
                 filter_by(id=security_group_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(security_group_id=security_group_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
                 filter_by(group_id=security_group_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -1987,11 +1993,11 @@ def security_group_destroy_all(context, session=None):
         session = get_session()
     with session.begin():
         session.query(models.SecurityGroup).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -2672,7 +2678,7 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
                             "instance_id": instance_id,
-                            "deleted": 0})
+                            "deleted": False})
         meta_ref.save(session=session)
 
     return metadata

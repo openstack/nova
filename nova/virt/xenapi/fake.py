@@ -340,10 +340,6 @@ class SessionBase(object):
             return
         db_ref['xenstore_data'][key] = None
 
-    def network_get_all_records_where(self, _1, _2):
-        # TODO (salvatore-orlando): filter table on _2
-        return _db_content['network']
-
     def VM_add_to_xenstore_data(self, _1, vm_ref, key, value):
         db_ref = _db_content['VM'][vm_ref]
         if not 'xenstore_data' in db_ref:
@@ -354,7 +350,7 @@ class SessionBase(object):
         #Always return 12GB available
         return 12 * 1024 * 1024 * 1024
 
-    def host_call_plugin(*args):
+    def host_call_plugin(self, *args):
         return 'herp'
 
     def network_get_all_records_where(self, _1, filter):
