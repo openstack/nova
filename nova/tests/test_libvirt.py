@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import eventlet
 import mox
 import os
@@ -125,6 +126,7 @@ class CacheConcurrencyTestCase(test.TestCase):
 
 
 class LibvirtConnTestCase(test.TestCase):
+
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
         connection._late_load_cheetah()
@@ -207,6 +209,29 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
         connection.LibvirtConnection._conn = fake
 
+    def fake_lookup(self, instance_name):
+
+        class FakeVirtDomain(object):
+
+            def snapshotCreateXML(self, *args):
+                return None
+
+            def XMLDesc(self, *args):
+                return """
+                    <domain type='kvm'>
+                        <devices>
+                            <disk type='file'>
+                                <source file='filename'/>
+                            </disk>
+                        </devices>
+                    </domain>
+                """
+
+        return FakeVirtDomain()
+
+    def fake_execute(self, *args):
+        open(args[-1], "a").close()
+
     def create_service(self, **kwargs):
         service_ref = {'host': kwargs.get('host', 'dummy'),
                        'binary': 'nova-compute',
@@ -283,37 +308,10 @@ class LibvirtConnTestCase(test.TestCase):
         self._check_xml_and_container(instance_data)
 
     def test_snapshot(self):
+        if not self.lazy_load_library_exists():
+            return
+
         FLAGS.image_service = 'nova.image.fake.FakeImageService'
-
-        # Only file-based instance storages are supported at the moment
-        test_xml = """
-            <domain type='kvm'>
-                <devices>
-                    <disk type='file'>
-                        <source file='filename'/>
-                    </disk>
-                </devices>
-            </domain>
-            """
-
-        class FakeVirtDomain(object):
-
-            def __init__(self):
-                pass
-
-            def snapshotCreateXML(self, *args):
-                return None
-
-            def XMLDesc(self, *args):
-                return test_xml
-
-        def fake_lookup(instance_name):
-            if instance_name == instance_ref.name:
-                return FakeVirtDomain()
-
-        def fake_execute(*args):
-            # Touch filename to pass 'with open(out_path)'
-            open(args[-1], "a").close()
 
         # Start test
         image_service = utils.import_object(FLAGS.image_service)
@@ -330,9 +328,49 @@ class LibvirtConnTestCase(test.TestCase):
         recv_meta = image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
-        connection.LibvirtConnection._conn.lookupByName = fake_lookup
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
         self.mox.StubOutWithMock(connection.utils, 'execute')
-        connection.utils.execute = fake_execute
+        connection.utils.execute = self.fake_execute
+
+        self.mox.ReplayAll()
+
+        conn = connection.LibvirtConnection(False)
+        conn.snapshot(instance_ref, recv_meta['id'])
+
+        snapshot = image_service.show(context, recv_meta['id'])
+        self.assertEquals(snapshot['properties']['image_state'], 'available')
+        self.assertEquals(snapshot['status'], 'active')
+        self.assertEquals(snapshot['name'], snapshot_name)
+
+    def test_snapshot_no_image_architecture(self):
+        if not self.lazy_load_library_exists():
+            return
+
+        FLAGS.image_service = 'nova.image.fake.FakeImageService'
+
+        # Start test
+        image_service = utils.import_object(FLAGS.image_service)
+
+        # Assign image_ref = 2 from nova/images/fakes for testing different
+        # base image
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["image_ref"] = "2"
+
+        # Assuming that base image already exists in image_service
+        instance_ref = db.instance_create(self.context, test_instance)
+        properties = {'instance_id': instance_ref['id'],
+                      'user_id': str(self.context.user_id)}
+        snapshot_name = 'test-snap'
+        sent_meta = {'name': snapshot_name, 'is_public': False,
+                     'status': 'creating', 'properties': properties}
+        # Create new image. It will be updated in snapshot method
+        # To work with it from snapshot, the single image_service is needed
+        recv_meta = image_service.create(context, sent_meta)
+
+        self.mox.StubOutWithMock(connection.LibvirtConnection, '_conn')
+        connection.LibvirtConnection._conn.lookupByName = self.fake_lookup
+        self.mox.StubOutWithMock(connection.utils, 'execute')
+        connection.utils.execute = self.fake_execute
 
         self.mox.ReplayAll()
 
