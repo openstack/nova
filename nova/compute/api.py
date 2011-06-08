@@ -166,6 +166,9 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        vm_mode = None
+        if 'properties' in image and 'vm_mode' in image['properties']:
+            vm_mode = image['properties']['vm_mode']
 
         if kernel_id is None:
             kernel_id = image['properties'].get('kernel_id', None)
@@ -224,7 +227,8 @@ class API(base.Base):
             'locked': False,
             'metadata': metadata,
             'availability_zone': availability_zone,
-            'os_type': os_type}
+            'os_type': os_type,
+            'vm_mode': vm_mode}
         elevated = context.elevated()
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)

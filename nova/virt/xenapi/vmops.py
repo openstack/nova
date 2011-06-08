@@ -160,9 +160,14 @@ class VMOps(object):
         # Create the VM ref and attach the first disk
         first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                 vdis[0]['vdi_uuid'])
-        use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                instance.id, first_vdi_ref, disk_image_type,
-                instance.os_type)
+        if instance.vm_mode in ('pv', 'PV'):
+            use_pv_kernel = True
+        elif instance.vm_mode in ('hv', 'HV', 'hvm', 'HVM'):
+            use_pv_kernel = False
+        else:
+            use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                    instance.id, first_vdi_ref, disk_image_type,
+                    instance.os_type)
         vm_ref = VMHelper.create_vm(self._session, instance,
                 kernel, ramdisk, use_pv_kernel)
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
