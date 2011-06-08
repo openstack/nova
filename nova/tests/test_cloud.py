@@ -115,6 +115,16 @@ class CloudTestCase(test.TestCase):
                                   public_ip=address)
         db.floating_ip_destroy(self.context, address)
 
+    def test_allocate_address(self):
+        address = "10.10.10.10"
+        allocate = self.cloud.allocate_address
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': self.network.host})
+        self.assertEqual(allocate(self.context)['publicIp'], address)
+        db.floating_ip_destroy(self.context, address)
+        self.assertRaises(rpc.RemoteError, allocate, self.context)
+
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
