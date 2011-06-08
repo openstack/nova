@@ -381,3 +381,5 @@ DEFINE_string('zone_name', 'nova', 'name of this zone')
 DEFINE_list('zone_capabilities',
                 ['hypervisor=xenserver;kvm', 'os=linux;windows'],
                  'Key/Multi-value list representng capabilities of this zone')
+DEFINE_string('build_plan_encryption_key', None,
+        '128bit (hex) encryption key for scheduler build plans.')
