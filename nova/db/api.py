@@ -1247,3 +1247,26 @@ def instance_metadata_delete(context, instance_id, key):
 def instance_metadata_update_or_create(context, instance_id, metadata):
     """Create or update instance metadata."""
     IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+
+
+####################
+
+
+def agent_build_create(context, values):
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os, architecture)
+
+
+def agent_build_get_all(context):
+    return IMPL.agent_build_get_all(context)
+
+
+def agent_build_destroy(context, agent_update_id):
+    IMPL.agent_build_destroy(context, agent_update_id)
+
+
+def agent_build_update(context, agent_build_id, values):
+    IMPL.agent_build_update(context, agent_build_id, values)

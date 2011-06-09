@@ -1082,6 +1082,50 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class AgentBuildCommands(object):
+    """Class for managing agent builds."""
+
+    def create(self, os, architecture, version, url, md5hash, hypervisor='xen'):
+        """creates a new agent build
+        arguments: os architecture version url md5hash [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build = db.agent_build_create(ctxt,
+                                            {'hypervisor': hypervisor,
+                                             'os': os,
+                                             'architecture': architecture,
+                                             'version': version,
+                                             'url': url,
+                                             'md5hash': md5hash})
+
+    def delete(self, os, architecture, hypervisor='xen'):
+        """deletes an existing agent build
+        arguments: os architecture [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_destroy(ctxt, agent_build_ref['id'])
+
+    def list(self):
+        """lists all agent builds
+        arguments: <none>"""
+        # TODO(johannes.erdfelt): Make the output easier to read
+        ctxt = context.get_admin_context()
+        for agent_build in db.agent_build_get_all(ctxt):
+            print agent_build.hypervisor, agent_build.os, agent_build.architecture, agent_build.version, agent_build.url, agent_build.md5hash
+
+    def modify(self, os, architecture, version, url, md5hash, hypervisor='xen'):
+        """update an existing agent build
+        arguments: os architecture version url md5hash [hypervisor='xen']
+        """
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_update(ctxt, agent_build_ref['id'],
+                              {'version': version,
+                               'url': url,
+                               'md5hash': md5hash})
+
+
 class ConfigCommands(object):
     """Class for exposing the flags defined by flag_file(s)."""
 
@@ -1094,6 +1138,7 @@ class ConfigCommands(object):
 
 CATEGORIES = [
     ('account', AccountCommands),
+    ('agent', AgentBuildCommands),
     ('config', ConfigCommands),
     ('db', DbCommands),
     ('fixed', FixedIpCommands),
