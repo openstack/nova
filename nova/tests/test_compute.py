@@ -90,7 +90,6 @@ class ComputeTestCase(test.TestCase):
         inst['project_id'] = self.project.id
         type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
         inst['instance_type_id'] = type_id
-        inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
@@ -433,7 +432,7 @@ class ComputeTestCase(test.TestCase):
 
         dbmock = self.mox.CreateMock(db)
         dbmock.instance_get(c, i_id).AndReturn(instance_ref)
-        dbmock.instance_get_fixed_address(c, i_id).AndReturn(None)
+        dbmock.instance_get_fixed_addresses(c, i_id).AndReturn(None)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -453,7 +452,7 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             vid = i_ref['volumes'][i]['id']
             volmock.setup_compute_volume(c, vid).InAnyOrder('g1')
@@ -481,7 +480,7 @@ class ComputeTestCase(test.TestCase):
         drivermock = self.mox.CreateMock(self.compute_driver)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         self.mox.StubOutWithMock(compute_manager.LOG, 'info')
         compute_manager.LOG.info(_("%s has no volume."), i_ref['hostname'])
         netmock.setup_compute_network(c, i_ref['id'])
@@ -511,7 +510,7 @@ class ComputeTestCase(test.TestCase):
         volmock = self.mox.CreateMock(self.volume_manager)
 
         dbmock.instance_get(c, i_ref['id']).AndReturn(i_ref)
-        dbmock.instance_get_fixed_address(c, i_ref['id']).AndReturn('dummy')
+        dbmock.instance_get_fixed_addresses(c, i_ref['id']).AndReturn('dummy')
         for i in range(len(i_ref['volumes'])):
             volmock.setup_compute_volume(c, i_ref['volumes'][i]['id'])
         for i in range(FLAGS.live_migration_retry_count):

@@ -1,155 +1,142 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2010 United States Government as represented by the
-# Administrator of the National Aeronautics and Space Administration.
+# Copyright 2011 Rackspace
 # All Rights Reserved.
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
-"""
-Base class of Unit Tests for all network models
-"""
-import IPy
-import os
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 
 from nova import context
 from nova import db
-from nova import exception
 from nova import flags
-from nova import ipv6
 from nova import log as logging
 from nova import test
 from nova import utils
 from nova.auth import manager
+from nova.tests.db import fakes as db_fakes
 
 FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.tests.network')
 
 
 class NetworkTestCase(test.TestCase):
-    """Test cases for network code"""
     def setUp(self):
         super(NetworkTestCase, self).setUp()
-        # NOTE(vish): if you change these flags, make sure to change the
-        #             flags in the corresponding section in nova-dhcpbridge
         self.flags(connection_type='fake',
                    fake_call=True,
-                   fake_network=True)
+                   fake_network=True,
+                   network_manager=self.network_manager)
         self.manager = manager.AuthManager()
-        self.user = self.manager.create_user('netuser', 'netuser', 'netuser')
+        self.user = self.manager.create_user('netuser',
+                                             'netuser',
+                                             'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
+        db_fakes.stub_out_db_network_api(self.stubs)
+        self.network.db = db
         self.context = context.RequestContext(project=None, user=self.user)
-        for i in range(FLAGS.num_networks):
-            name = 'project%s' % i
-            project = self.manager.create_project(name, 'netuser', name)
-            self.projects.append(project)
-            # create the necessary network data for the project
-            user_context = context.RequestContext(project=self.projects[i],
-                                                     user=self.user)
-            host = self.network.get_network_host(user_context.elevated())
-        instance_ref = self._create_instance(0)
-        self.instance_id = instance_ref['id']
-        instance_ref = self._create_instance(1)
-        self.instance2_id = instance_ref['id']
 
     def tearDown(self):
-        # TODO(termie): this should really be instantiating clean datastores
-        #               in between runs, one failure kills all the tests
-        db.instance_destroy(context.get_admin_context(), self.instance_id)
-        db.instance_destroy(context.get_admin_context(), self.instance2_id)
-        for project in self.projects:
-            self.manager.delete_project(project)
-        self.manager.delete_user(self.user)
         super(NetworkTestCase, self).tearDown()
+        reload(db)
 
-    def _create_instance(self, project_num, mac=None):
-        if not mac:
-            mac = utils.generate_mac()
-        project = self.projects[project_num]
-        self.context._project = project
-        self.context.project_id = project.id
-        return db.instance_create(self.context,
-                                  {'project_id': project.id,
-                                   'mac_address': mac})
 
-    def _create_address(self, project_num, instance_id=None):
-        """Create an address in given project num"""
-        if instance_id is None:
-            instance_id = self.instance_id
-        self.context._project = self.projects[project_num]
-        self.context.project_id = self.projects[project_num].id
-        return self.network.allocate_fixed_ip(self.context, instance_id)
+class TestFuncs(object):
+    def _compare_fields(self, dict1, dict2, fields):
+        for field in fields:
+            self.assertEqual(dict1[field], dict2[field])
 
-    def _deallocate_address(self, project_num, address):
-        self.context._project = self.projects[project_num]
-        self.context.project_id = self.projects[project_num].id
-        self.network.deallocate_fixed_ip(self.context, address)
+    def test_set_network_hosts(self):
+        self.network.set_network_hosts(self.context)
 
-    def _is_allocated_in_project(self, address, project_id):
-        """Returns true if address is in specified project"""
-        project_net = db.network_get_by_bridge(context.get_admin_context(),
-                                           FLAGS.flat_network_bridge)
-        network = db.fixed_ip_get_network(context.get_admin_context(),
-                                          address)
-        instance = db.fixed_ip_get_instance(context.get_admin_context(),
-                                            address)
-        # instance exists until release
-        return instance is not None and network['id'] == project_net['id']
+    def test_set_network_host(self):
+        host = self.network.host
+        self.assertEqual(self.network.set_network_host(self.context, 0),
+                         host)
 
-    def test_private_ipv6(self):
-        """Make sure ipv6 is OK"""
-        if FLAGS.use_ipv6:
-            instance_ref = self._create_instance(0)
-            address = self._create_address(0, instance_ref['id'])
-            network_ref = db.project_get_network(
-                                                 context.get_admin_context(),
-                                                 self.context.project_id)
-            address_v6 = db.instance_get_fixed_address_v6(
-                                                 context.get_admin_context(),
-                                                 instance_ref['id'])
-            self.assertEqual(instance_ref['mac_address'],
-                             ipv6.to_mac(address_v6))
-            instance_ref2 = db.fixed_ip_get_instance_v6(
-                                                 context.get_admin_context(),
-                                                 address_v6)
-            self.assertEqual(instance_ref['id'], instance_ref2['id'])
-            self.assertEqual(address_v6,
-                             ipv6.to_global(network_ref['cidr_v6'],
-                                            instance_ref['mac_address'],
-                                            'test'))
-            self._deallocate_address(0, address)
-            db.instance_destroy(context.get_admin_context(),
-                                instance_ref['id'])
+    def test_allocate_for_instance(self):
+        instance_id = 0
+        project_id = 0
+        type_id = 0
+        self.network.set_network_hosts(self.context)
+        nw = self.network.allocate_for_instance(self.context,
+                                                instance_id=instance_id,
+                                                project_id=project_id,
+                                                instance_type_id=type_id)
+        static_info = [({'bridge': 'fa0', 'id': 0},
+                        {'broadcast': '192.168.0.255',
+                         'dns': ['192.168.0.1'],
+                         'gateway': '192.168.0.1',
+                         'gateway6': 'dead:beef::1',
+                         'ip6s': [{'enabled': '1',
+                                   'ip': 'dead:beef::dcad:beff:feef:0',
+                                         'netmask': '64'}],
+                         'ips': [{'enabled': '1',
+                                  'ip': '192.168.0.100',
+                                  'netmask': '255.255.255.0'}],
+                         'label': 'fake',
+                         'mac': 'DE:AD:BE:EF:00:00',
+                         'rxtx_cap': 3})]
 
-    def test_available_ips(self):
-        """Make sure the number of available ips for the network is correct
+        self._compare_fields(nw[0][0], static_info[0][0], ('bridge',))
+        self._compare_fields(nw[0][1], static_info[0][1], ('ips',
+                                                           'broadcast',
+                                                           'gateway',
+                                                           'ip6s'))
 
-        The number of available IP addresses depends on the test
-        environment's setup.
+    def test_deallocate_for_instance(self):
+        instance_id = 0
+        network_id = 0
+        self.network.set_network_hosts(self.context)
+        self.network.add_fixed_ip_to_instance(self.context,
+                                              instance_id=instance_id,
+                                              network_id=network_id)
+        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        for ip in ips:
+            self.assertTrue(ip['allocated'])
+        self.network.deallocate_for_instance(self.context,
+                                             instance_id=instance_id)
+        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        for ip in ips:
+            self.assertFalse(ip['allocated'])
 
-        Network size is set in test fixture's setUp method.
+    def test_lease_release_fixed_ip(self):
+        instance_id = 0
+        project_id = 0
+        type_id = 0
+        self.network.set_network_hosts(self.context)
+        nw = self.network.allocate_for_instance(self.context,
+                                                instance_id=instance_id,
+                                                project_id=project_id,
+                                                instance_type_id=type_id)
+        self.assertTrue(nw)
+        self.assertTrue(nw[0])
+        network_id = nw[0][0]['id']
 
-        There are ips reserved at the bottom and top of the range.
-        services (network, gateway, CloudPipe, broadcast)
-        """
-        network = db.project_get_network(context.get_admin_context(),
-                                         self.projects[0].id)
-        net_size = flags.FLAGS.network_size
-        admin_context = context.get_admin_context()
-        total_ips = (db.network_count_available_ips(admin_context,
-                                                    network['id']) +
-                     db.network_count_reserved_ips(admin_context,
-                                                   network['id']) +
-                     db.network_count_allocated_ips(admin_context,
-                                                    network['id']))
-        self.assertEqual(total_ips, net_size)
+        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        mac = db.mac_address_get_by_instance_and_network(self.context,
+                                                         instance_id,
+                                                         network_id)
+        self.assertTrue(ips)
+        address = ips[0]['address']
+
+        db.fixed_ip_associate(self.context, address, instance_id)
+        db.fixed_ip_update(self.context, address,
+                           {'mac_address_id': mac['id']})
+
+        self.network.lease_fixed_ip(self.context, mac['address'], address)
+        ip = db.fixed_ip_get_by_address(self.context, address)
+        self.assertTrue(ip['leased'])
+
+        self.network.release_fixed_ip(self.context, mac['address'], address)
+        ip = db.fixed_ip_get_by_address(self.context, address)
+        self.assertFalse(ip['leased'])

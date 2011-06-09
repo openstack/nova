@@ -55,6 +55,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+from nova import ipv6
 from nova import log as logging
 from nova import manager
 from nova import quota
@@ -120,7 +121,7 @@ class RPCAllocateFixedIP(object):
     used since they share code to RPC.call allocate_fixed_ip on the
     correct network host to configure dnsmasq
     """
-    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
+    def _allocate_fixed_ips(self, context, instance_id, networks):
         """calls allocate_fixed_ip once for each network"""
         green_pool = greenpool.GreenPool()
 
@@ -129,27 +130,26 @@ class RPCAllocateFixedIP(object):
                 # need to call allocate_fixed_ip to correct network host
                 topic = self.db.queue_get_for(context, FLAGS.network_topic,
                                                            network['host'])
-                args = kwargs
+                args = {}
                 args['instance_id'] = instance_id
-                args['network_id'] = network_id
+                args['network_id'] = network['id']
 
                 green_pool.spawn_n(rpc.call, context, topic,
                                    {'method': '_rpc_allocate_fixed_ip',
                                     'args': args})
             else:
                 # i am the correct host, run here
-                self.allocate_fixed_ip(context, instance_id, network, **kwargs)
+                self.allocate_fixed_ip(context, instance_id, network)
 
         # wait for all of the allocates (if any) to finish
         green_pool.waitall()
 
-    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id,
-                                                           **kwargs):
+    def _rpc_allocate_fixed_ip(self, context, instance_id, network_id):
         """sits in between _allocate_fixed_ips and allocate_fixed_ip to
         perform network lookup on the far side of rpc
         """
         network = self.db.network_get(context, network_id)
-        self.allocate_fixed_ip(context, instance_id, network, **kwargs)
+        self.allocate_fixed_ip(context, instance_id, network)
 
 
 class FloatingIP(object):
@@ -182,8 +182,8 @@ class FloatingIP(object):
         # call the next inherited class's allocate_for_instance()
         # which is currently the NetworkManager version
         # do this first so fixed ip is already allocated
-        super(FloatingIP, self).allocate_for_instance(context, **kwargs)
-        if FLAGS.auto_assign_floating_ip:
+        ips = super(FloatingIP, self).allocate_for_instance(context, **kwargs)
+        if hasattr(FLAGS, 'auto_assign_floating_ip'):
             # allocate a floating ip (public_ip is just the address string)
             public_ip = self.allocate_floating_ip(context, project_id)
             # set auto_assigned column to true for the floating ip
@@ -201,6 +201,7 @@ class FloatingIP(object):
                                               floating_ip,
                                               fixed_ip,
                                               affect_auto_assigned=True)
+        return ips
 
     def deallocate_for_instance(self, context, **kwargs):
         """handles deallocating floating IP resources for an instance
@@ -231,6 +232,7 @@ class FloatingIP(object):
 
     def allocate_floating_ip(self, context, project_id):
         """Gets an floating ip from the pool."""
+        LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_('Quota exceeeded for %s, tried to allocate '
                        'address'),
@@ -239,7 +241,6 @@ class FloatingIP(object):
                                      'allocate any more addresses'))
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
-                                                    self.host,
                                                     project_id)
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
@@ -354,8 +355,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         networks = self._get_networks_for_instance(admin_context, instance_id,
                                                                   project_id)
         self._allocate_mac_addresses(context, instance_id, networks)
-        self._allocate_fixed_ips(admin_context, instance_id, networks,
-                                                             **kwargs)
+        self._allocate_fixed_ips(admin_context, instance_id, networks)
         return self.get_instance_nw_info(context, instance_id, type_id)
 
     def deallocate_for_instance(self, context, **kwargs):
@@ -409,8 +409,9 @@ class NetworkManager(manager.SchedulerDependentManager):
 
             def ip6_dict():
                 return {
-                    "ip": utils.to_global_ipv6(network['cidr_v6'],
-                                               vif['address']),
+                    "ip": ipv6.to_global(network['cidr_v6'],
+                                         vif['address'],
+                                         network['project_id']),
                     "netmask": network['netmask_v6'],
                     "enabled": "1"}
             network_dict = {
@@ -625,7 +626,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                                               'address': address,
                                               'reserved': reserved})
 
-    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
+    def _allocate_fixed_ips(self, context, instance_id, networks):
         """calls allocate_fixed_ip once for each network"""
         raise NotImplementedError()
 
@@ -671,10 +672,10 @@ class FlatManager(NetworkManager):
 
     timeout_fixed_ips = False
 
-    def _allocate_fixed_ips(self, context, instance_id, networks, **kwargs):
+    def _allocate_fixed_ips(self, context, instance_id, networks):
         """calls allocate_fixed_ip once for each network"""
         for network in networks:
-            self.allocate_fixed_ip(context, instance_id, network, **kwargs)
+            self.allocate_fixed_ip(context, instance_id, network)
 
     def deallocate_fixed_ip(self, context, address, **kwargs):
         """Returns a fixed ip to the pool."""
@@ -726,12 +727,11 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
             self.driver.ensure_bridge(network['bridge'],
                                       network['bridge_interface'])
 
-    def allocate_fixed_ip(self, context, instance_id, network, **kwargs):
+    def allocate_fixed_ip(self, context, instance_id, network):
         """Allocate flat_network fixed_ip, then setup dhcp for this network."""
         address = super(FlatDHCPManager, self).allocate_fixed_ip(context,
                                                                  instance_id,
-                                                                 network,
-                                                                 **kwargs)
+                                                                 network)
         if not FLAGS.fake_network:
             self.driver.update_dhcp(context, network['id'])
 
@@ -750,7 +750,7 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
                 self.driver.update_ra(context, network_id)
 
 
-class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
+class VlanManager(RPCAllocateFixedIP, FloatingIP, NetworkManager):
     """Vlan network with dhcp.
 
     VlanManager is the most complicated.  It will create a host-managed
@@ -773,7 +773,7 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
         self.driver.init_host()
         self.driver.ensure_metadata_ip()
 
-        super(VlanManager, self).init_host()
+        NetworkManager.init_host(self)
         self.init_host_floating_ips()
 
         self.driver.metadata_forward()
@@ -835,7 +835,7 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
                   '%(num_networks)s. Network size is %(network_size)s') %
                   kwargs)
 
-        super(VlanManager, self).create_networks(context, vpn=True, **kwargs)
+        NetworkManager.create_networks(self, context, vpn=True, **kwargs)
 
     def _on_set_network_host(self, context, network_id):
         """Called when this host becomes the host for a network."""
@@ -854,7 +854,8 @@ class VlanManager(NetworkManager, RPCAllocateFixedIP, FloatingIP):
 
         # NOTE(vish): only ensure this forward if the address hasn't been set
         #             manually.
-        if address == FLAGS.vpn_ip:
+        if address == FLAGS.vpn_ip and hasattr(self.driver,
+                                               "ensure_vlan_forward"):
             self.driver.ensure_vlan_forward(FLAGS.vpn_ip,
                                             network['vpn_public_port'],
                                             network['vpn_private_address'])

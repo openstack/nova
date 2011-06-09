@@ -70,16 +70,12 @@ class FakeZoneAwareScheduler(zone_aware_scheduler.ZoneAwareScheduler):
 class FakeZoneManager(zone_manager.ZoneManager):
     def __init__(self):
         self.service_states = {
-            'host1': {
-                'compute': {'ram': 1000},
-            },
-            'host2': {
-                'compute': {'ram': 2000},
-            },
-            'host3': {
-                'compute': {'ram': 3000},
-            },
-        }
+                        'host1': {
+                            'compute': {'ram': 1000}},
+                         'host2': {
+                            'compute': {'ram': 2000}},
+                         'host3': {
+                            'compute': {'ram': 3000}}}
 
 
 class FakeEmptyZoneManager(zone_manager.ZoneManager):
