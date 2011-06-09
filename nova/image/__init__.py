@@ -84,12 +84,10 @@ def get_image_service(image_href):
     :returns: a tuple of the form (image_service, image_id)
 
     """
-    print "******** XX"
     image_href = image_href or 0
     if str(image_href).isdigit():
         return (get_default_image_service(), int(image_href))
 
-    print "******** X"
     (glance_client, image_id) = get_glance_client(image_href)
     image_service = nova.image.glance.GlanceImageService(glance_client)
     return (image_service, image_id)

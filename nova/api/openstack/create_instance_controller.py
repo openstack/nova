@@ -76,7 +76,6 @@ class OpenstackCreateInstanceController(object):
         [instance dicts] vs. reservation_id). So the handling of the
         return type from this method is left to the caller.
         """
-        print "************************ A"
         if not body:
             return (None, faults.Fault(exc.HTTPUnprocessableEntity()))
 
@@ -84,7 +83,6 @@ class OpenstackCreateInstanceController(object):
 
         password = self._get_server_admin_password(body['server'])
 
-        print "************************ B"
         key_name = None
         key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
@@ -93,15 +91,11 @@ class OpenstackCreateInstanceController(object):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
-        print "************************ C"
         image_href = self._image_ref_from_req_data(body)
         try:
-            print "************************ Ca"
             image_service, image_id = nova.image.get_image_service(image_href)
-            print "************************ Cb"
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
                                                 req, image_id)
-            print "************************ Ce"
             images = set([str(x['id']) for x in image_service.index(context)])
             assert str(image_id) in images
         except Exception, e:
@@ -109,7 +103,6 @@ class OpenstackCreateInstanceController(object):
                                                                     locals())
             return (None, faults.Fault(exc.HTTPBadRequest(msg)))
 
-        print "************************ D"
         personality = body['server'].get('personality')
 
         injected_files = []
@@ -118,7 +111,6 @@ class OpenstackCreateInstanceController(object):
 
         flavor_id = self._flavor_id_from_req_data(body)
 
-        print "************************ E"
         if not 'name' in body['server']:
             msg = _("Server name is not defined")
             return (None, exc.HTTPBadRequest(msg))

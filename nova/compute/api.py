@@ -361,7 +361,6 @@ class API(base.Base):
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context,
                                     base_options, security_groups, num=num)
-            print "*********** INSTANCE = ", instance
             instances.append(instance)
             instance_id = instance['id']
 
