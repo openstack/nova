@@ -402,8 +402,7 @@ class LibvirtConnection(driver.ComputeDriver):
                     'is_public': False,
                     'status': 'active',
                     'name': snapshot['name'],
-                    'properties': {'architecture':
-                                        base['properties']['architecture'],
+                    'properties': {
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
@@ -411,6 +410,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                    'ramdisk_id': instance['ramdisk_id'],
                                    }
                     }
+        if 'architecture' in base['properties']:
+            arch = base['properties']['architecture']
+            metadata['properties']['architecture'] = arch
 
         # Make the snapshot
         snapshot_name = uuid.uuid4().hex

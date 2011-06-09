@@ -96,6 +96,7 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+flags.DECLARE('gateway_v6', 'nova.network.manager')
 flags.DECLARE('images_path', 'nova.image.local')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
@@ -545,13 +546,10 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
-    def create(self, fixed_range=None, num_networks=None,
-               network_size=None, vlan_start=None,
-               vpn_start=None, fixed_range_v6=None, label='public'):
-        """Creates fixed ips for host by range
-        arguments: fixed_range=FLAG, [num_networks=FLAG],
-                   [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG], [fixed_range_v6=FLAG]"""
+    def create(self, fixed_range=None, num_networks=None, network_size=None,
+            vlan_start=None, vpn_start=None, fixed_range_v6=None,
+            gateway_v6=None, label='public'):
+        """Creates fixed ips for host by range"""
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
                     'required to create networks.')
@@ -567,6 +565,8 @@ class NetworkCommands(object):
             vpn_start = FLAGS.vpn_start
         if not fixed_range_v6:
             fixed_range_v6 = FLAGS.fixed_range_v6
+        if not gateway_v6:
+            gateway_v6 = FLAGS.gateway_v6
         net_manager = utils.import_object(FLAGS.network_manager)
         try:
             net_manager.create_networks(context.get_admin_context(),
@@ -576,6 +576,7 @@ class NetworkCommands(object):
                                         vlan_start=int(vlan_start),
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
+                                        gateway_v6=gateway_v6,
                                         label=label)
         except ValueError, e:
             print e
