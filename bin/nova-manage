@@ -62,6 +62,8 @@ import sys
 import time
 
 import IPy
+from inspect import getargspec
+from optparse import OptionParser
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -1133,14 +1135,18 @@ def main():
     matches = lazy_match(action, actions)
     action, fn = matches[0]
 
-    fn_args, fn_kwargs = [], {}
-    for arg in argv:
-        if '=' in arg:
-            key, value = arg.split('=')
-            fn_kwargs[key] = value
-        else:
-            fn_args.append(arg)
-
+    func_args = getargspec(fn).args
+    parser = OptionParser()
+    for arg in func_args:
+        dasharg = "--%s" % arg
+        parser.add_option(dasharg)
+    
+    (opts, fn_args) = parser.parse_args(argv)
+    fn_kwargs = vars(opts)
+    for k, v in fn_kwargs.items():
+        if v is None:
+            del fn_kwargs[k]
+            
     # call the action with the remaining arguments
     try:
         fn(*fn_args, **fn_kwargs)
