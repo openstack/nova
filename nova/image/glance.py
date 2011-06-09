@@ -60,13 +60,21 @@ class GlanceImageService(service.BaseImageService):
     SERVICE_IMAGE_ATTRS = service.BaseImageService.BASE_IMAGE_ATTRS +\
                           GLANCE_ONLY_ATTRS
 
-    @property
-    def client(self):
+    _client = None
+
+    def _get_client(self):
         # NOTE(sirp): we want to load balance each request across glance
         # servers. Since GlanceImageService is a long-lived object, `client`
         # is made to choose a new server each time via this property.
+        if self._client is not None:
+            return self._client
         glance_host, glance_port = pick_glance_api_server()
         return GlanceClient(glance_host, glance_port)
+
+    def _set_client(self, client):
+        self._client = client
+
+    client = property(_get_client, _set_client)
 
     def index(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of images available."""
