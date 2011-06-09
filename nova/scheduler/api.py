@@ -84,7 +84,7 @@ def get_zone_capabilities(context):
 def select(context, specs=None):
     """Returns a list of hosts."""
     return _call_scheduler('select', context=context,
-            params={"specs": specs})
+            params={"request_spec": specs})
 
 
 def update_service_capabilities(context, service_name, host, capabilities):
