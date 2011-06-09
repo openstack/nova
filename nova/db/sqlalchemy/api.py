@@ -26,6 +26,7 @@ from nova import exception
 from nova import flags
 from nova import ipv6
 from nova import utils
+from nova import log as logging
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy.session import get_session
 from sqlalchemy import or_
@@ -37,6 +38,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.sql.expression import literal_column
 
 FLAGS = flags.FLAGS
+LOG = logging.getLogger("nova.db.sqlalchemy")
 
 
 def is_admin_context(context):
@@ -431,12 +433,11 @@ def certificate_update(context, certificate_id, values):
 
 
 @require_context
-def floating_ip_allocate_address(context, host, project_id):
+def floating_ip_allocate_address(context, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
     with session.begin():
         floating_ip_ref = session.query(models.FloatingIp).\
-                                  filter_by(host=host).\
                                   filter_by(fixed_ip_id=None).\
                                   filter_by(project_id=None).\
                                   filter_by(deleted=False).\
@@ -1192,7 +1193,7 @@ def instance_get_floating_address(context, instance_id):
     if not fixed_ip_refs[0].floating_ips:
         return None
     # NOTE(vish): this just returns the first floating ip
-    return fixed_ip_ref[0].floating_ips[0]['address']
+    return fixed_ip_refs[0].floating_ips[0]['address']
 
 
 @require_admin_context
@@ -1505,7 +1506,7 @@ def network_get(context, network_id, session=None):
 def network_get_all(context):
     session = get_session()
     result = session.query(models.Network).\
-                 filter_by(deleted=False)
+                 filter_by(deleted=False).all()
     if not result:
         raise exception.NoNetworksFound()
     return result
@@ -2516,7 +2517,8 @@ def project_get_networks(context, project_id, associate=True):
     session = get_session()
     result = session.query(models.Network).\
                      filter_by(project_id=project_id).\
-                     filter_by(deleted=False)
+                     filter_by(deleted=False).all()
+
     if not result:
         if not associate:
             return []

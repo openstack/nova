@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-Tests For Scheduler Host Filters.
+Tests For Scheduler Host Filter Drivers.
 """
 
 import json
@@ -31,7 +31,7 @@ class FakeZoneManager:
 
 
 class HostFilterTestCase(test.TestCase):
-    """Test case for host filters."""
+    """Test case for host filter drivers."""
 
     def _host_caps(self, multiplier):
         # Returns host capabilities in the following way:
@@ -57,8 +57,8 @@ class HostFilterTestCase(test.TestCase):
                 'host_name-label': 'xs-%s' % multiplier}
 
     def setUp(self):
-        self.old_flag = FLAGS.default_host_filter
-        FLAGS.default_host_filter = \
+        self.old_flag = FLAGS.default_host_filter_driver
+        FLAGS.default_host_filter_driver = \
                             'nova.scheduler.host_filter.AllHostsFilter'
         self.instance_type = dict(name='tiny',
                 memory_mb=50,
@@ -76,52 +76,51 @@ class HostFilterTestCase(test.TestCase):
         self.zone_manager.service_states = states
 
     def tearDown(self):
-        FLAGS.default_host_filter = self.old_flag
+        FLAGS.default_host_filter_driver = self.old_flag
 
-    def test_choose_filter(self):
-        # Test default filter ...
-        hf = host_filter.choose_host_filter()
-        self.assertEquals(hf._full_name(),
+    def test_choose_driver(self):
+        # Test default driver ...
+        driver = host_filter.choose_driver()
+        self.assertEquals(driver._full_name(),
                         'nova.scheduler.host_filter.AllHostsFilter')
-        # Test valid filter ...
-        hf = host_filter.choose_host_filter(
-                        'nova.scheduler.host_filter.InstanceTypeFilter')
-        self.assertEquals(hf._full_name(),
-                        'nova.scheduler.host_filter.InstanceTypeFilter')
-        # Test invalid filter ...
+        # Test valid driver ...
+        driver = host_filter.choose_driver(
+                        'nova.scheduler.host_filter.FlavorFilter')
+        self.assertEquals(driver._full_name(),
+                        'nova.scheduler.host_filter.FlavorFilter')
+        # Test invalid driver ...
         try:
-            host_filter.choose_host_filter('does not exist')
-            self.fail("Should not find host filter.")
-        except exception.SchedulerHostFilterNotFound:
+            host_filter.choose_driver('does not exist')
+            self.fail("Should not find driver")
+        except exception.SchedulerHostFilterDriverNotFound:
             pass
 
-    def test_all_host_filter(self):
-        hf = host_filter.AllHostsFilter()
-        cooked = hf.instance_type_to_filter(self.instance_type)
-        hosts = hf.filter_hosts(self.zone_manager, cooked)
+    def test_all_host_driver(self):
+        driver = host_filter.AllHostsFilter()
+        cooked = driver.instance_type_to_filter(self.instance_type)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(10, len(hosts))
         for host, capabilities in hosts:
             self.assertTrue(host.startswith('host'))
 
-    def test_instance_type_filter(self):
-        hf = host_filter.InstanceTypeFilter()
+    def test_flavor_driver(self):
+        driver = host_filter.FlavorFilter()
         # filter all hosts that can support 50 ram and 500 disk
-        name, cooked = hf.instance_type_to_filter(self.instance_type)
-        self.assertEquals('nova.scheduler.host_filter.InstanceTypeFilter',
-                          name)
-        hosts = hf.filter_hosts(self.zone_manager, cooked)
+        name, cooked = driver.instance_type_to_filter(self.instance_type)
+        self.assertEquals('nova.scheduler.host_filter.FlavorFilter', name)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
         self.assertEquals('host05', just_hosts[0])
         self.assertEquals('host10', just_hosts[5])
 
-    def test_json_filter(self):
-        hf = host_filter.JsonFilter()
+    def test_json_driver(self):
+        driver = host_filter.JsonFilter()
         # filter all hosts that can support 50 ram and 500 disk
-        name, cooked = hf.instance_type_to_filter(self.instance_type)
+        name, cooked = driver.instance_type_to_filter(self.instance_type)
         self.assertEquals('nova.scheduler.host_filter.JsonFilter', name)
-        hosts = hf.filter_hosts(self.zone_manager, cooked)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
         self.assertEquals(6, len(hosts))
         just_hosts = [host for host, caps in hosts]
         just_hosts.sort()
@@ -133,16 +132,12 @@ class HostFilterTestCase(test.TestCase):
         raw = ['or',
                    ['and',
                        ['<', '$compute.host_memory_free', 30],
-                       ['<', '$compute.disk_available', 300],
-                   ],
+                       ['<', '$compute.disk_available', 300]],
                    ['and',
                        ['>', '$compute.host_memory_free', 70],
-                       ['>', '$compute.disk_available', 700],
-                   ],
-              ]
-
+                       ['>', '$compute.disk_available', 700]]]
         cooked = json.dumps(raw)
-        hosts = hf.filter_hosts(self.zone_manager, cooked)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
 
         self.assertEquals(5, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -151,10 +146,9 @@ class HostFilterTestCase(test.TestCase):
             self.assertEquals('host%02d' % index, host)
 
         raw = ['not',
-                  ['=', '$compute.host_memory_free', 30],
-              ]
+                  ['=', '$compute.host_memory_free', 30], ]
         cooked = json.dumps(raw)
-        hosts = hf.filter_hosts(self.zone_manager, cooked)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
 
         self.assertEquals(9, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -164,7 +158,7 @@ class HostFilterTestCase(test.TestCase):
 
         raw = ['in', '$compute.host_memory_free', 20, 40, 60, 80, 100]
         cooked = json.dumps(raw)
-        hosts = hf.filter_hosts(self.zone_manager, cooked)
+        hosts = driver.filter_hosts(self.zone_manager, cooked)
 
         self.assertEquals(5, len(hosts))
         just_hosts = [host for host, caps in hosts]
@@ -176,30 +170,30 @@ class HostFilterTestCase(test.TestCase):
         raw = ['unknown command', ]
         cooked = json.dumps(raw)
         try:
-            hf.filter_hosts(self.zone_manager, cooked)
+            driver.filter_hosts(self.zone_manager, cooked)
             self.fail("Should give KeyError")
         except KeyError, e:
             pass
 
-        self.assertTrue(hf.filter_hosts(self.zone_manager, json.dumps([])))
-        self.assertTrue(hf.filter_hosts(self.zone_manager, json.dumps({})))
-        self.assertTrue(hf.filter_hosts(self.zone_manager, json.dumps(
+        self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps([])))
+        self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps({})))
+        self.assertTrue(driver.filter_hosts(self.zone_manager, json.dumps(
                 ['not', True, False, True, False])))
 
         try:
-            hf.filter_hosts(self.zone_manager, json.dumps(
+            driver.filter_hosts(self.zone_manager, json.dumps(
                 'not', True, False, True, False))
             self.fail("Should give KeyError")
         except KeyError, e:
             pass
 
-        self.assertFalse(hf.filter_hosts(self.zone_manager,
-                json.dumps(['=', '$foo', 100])))
-        self.assertFalse(hf.filter_hosts(self.zone_manager,
-                json.dumps(['=', '$.....', 100])))
-        self.assertFalse(hf.filter_hosts(self.zone_manager,
-                json.dumps(
-            ['>', ['and', ['or', ['not', ['<', ['>=', ['<=', ['in', ]]]]]]]])))
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['=', '$foo', 100])))
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['=', '$.....', 100])))
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+            ['>', ['and', ['or', ['not', ['<', ['>=',
+                ['<=', ['in', ]]]]]]]])))
 
-        self.assertFalse(hf.filter_hosts(self.zone_manager,
-                json.dumps(['=', {}, ['>', '$missing....foo']])))
+        self.assertFalse(driver.filter_hosts(self.zone_manager, json.dumps(
+                ['=', {}, ['>', '$missing....foo']])))

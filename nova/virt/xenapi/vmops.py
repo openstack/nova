@@ -837,6 +837,7 @@ class VMOps(object):
 
     def create_vifs(self, vm_ref, network_info):
         """Creates vifs for an instance."""
+
         logging.debug(_("creating vif(s) for vm: |%s|"), vm_ref)
 
         # this function raises if vm_ref is not a vm_opaque_ref

@@ -18,8 +18,6 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-import pickle
-
 from nova import db
 from nova import exception
 from nova import flags

@@ -227,8 +227,7 @@ class JsonFilter(HostFilter):
         required_disk = instance_type['local_gb']
         query = ['and',
                     ['>=', '$compute.host_memory_free', required_ram],
-                    ['>=', '$compute.disk_available', required_disk],
-                ]
+                    ['>=', '$compute.disk_available', required_disk]]
         return (self._full_name(), json.dumps(query))
 
     def _parse_string(self, string, host, services):

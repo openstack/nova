@@ -855,9 +855,10 @@ class API(base.Base):
         # in its info, if this changes, the next few lines will need to
         # accomodate the info containing floating as well as fixed ip addresses
         fixed_ip_addrs = []
-        for (network, info) in self.network_api.get_instance_nw_info(context,
-                                                                     instance):
-            fixed_ip_addrs.extend([ip_dict.ip for ip_dict in info['ips']])
+        for info in self.network_api.get_instance_nw_info(context,
+                                                          instance):
+            ips = info[1]['ips']
+            fixed_ip_addrs.extend([ip_dict['ip'] for ip_dict in ips])
 
         # TODO(tr3buchet): this will associate the floating IP with the first
         # fixed_ip (lowest id) an instance has. This should be changed to
