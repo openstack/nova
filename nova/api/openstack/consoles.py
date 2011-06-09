@@ -19,8 +19,8 @@ from webob import exc
 
 from nova import console
 from nova import exception
-from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 
 
 def _translate_keys(cons):
@@ -43,17 +43,11 @@ def _translate_detail_keys(cons):
     return dict(console=info)
 
 
-class Controller(common.OpenstackController):
-    """The Consoles Controller for the Openstack API"""
-
-    _serialization_metadata = {
-        'application/xml': {
-            'attributes': {
-                'console': []}}}
+class Controller(object):
+    """The Consoles controller for the Openstack API"""
 
     def __init__(self):
         self.console_api = console.API()
-        super(Controller, self).__init__()
 
     def index(self, req, server_id):
         """Returns a list of consoles for this instance"""
@@ -63,9 +57,8 @@ class Controller(common.OpenstackController):
         return dict(consoles=[_translate_keys(console)
                               for console in consoles])
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
         """Creates a new console"""
-        #info = self._deserialize(req.body, req.get_content_type())
         self.console_api.create_console(
                                 req.environ['nova.context'],
                                 int(server_id))
@@ -94,3 +87,17 @@ class Controller(common.OpenstackController):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
         return exc.HTTPAccepted()
+
+
+def create_resource():
+    metadata = {
+        'attributes': {
+            'console': [],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

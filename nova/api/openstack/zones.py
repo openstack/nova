@@ -27,6 +27,8 @@ from nova.scheduler import api
 
 from nova.api.openstack import create_instance_controller as controller
 from nova.api.openstack import common
+from nova.api.openstack import wsgi
+
 
 FLAGS = flags.FLAGS
 
@@ -61,11 +63,11 @@ def check_encryption_key(func):
 
 
 class Controller(controller.OpenstackCreateInstanceController):
-
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "zone": ["id", "api_url", "name", "capabilities"]}}}
+    """Controller for Zone resources. Since we can also create instances
+    via /zone/boot, this controller is derived from
+    OpenstackCreateInstanceController, which contains all the logic for
+    doing that (shared with Servers).
+    """
 
     def __init__(self):
         self.compute_api = compute.API()
@@ -109,28 +111,26 @@ class Controller(controller.OpenstackCreateInstanceController):
         api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
-    def create(self, req):
+    def create(self, req, body):
         """Create a child zone entry."""
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
-        zone = api.zone_create(context, env["zone"])
+        zone = api.zone_create(context, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def update(self, req, id):
+    def update(self, req, id, body):
         """Update a child zone entry."""
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
-        zone = api.zone_update(context, zone_id, env["zone"])
+        zone = api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def boot(self, req):
+    def boot(self, req, body):
         """Creates a new server for a given user while being Zone aware.
 
         Returns a reservation ID (a UUID).
         """
-        extra_values, result = \
-                self.create_instance(req, self.compute_api.create_all_at_once)
+        extra_values, result = self.create_instance(req, body,
+                                    self.compute_api.create_all_at_once)
         if extra_values is None:
             return result  # a Fault.
 
@@ -138,12 +138,11 @@ class Controller(controller.OpenstackCreateInstanceController):
         return {'reservation_id': reservation_id}
 
     @check_encryption_key
-    def select(self, req):
+    def select(self, req, body):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        json_specs = json.loads(req.body)
-        specs = json.loads(json_specs)
+        specs = json.loads(body)
         build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
@@ -168,3 +167,23 @@ class Controller(controller.OpenstackCreateInstanceController):
 
     def _flavor_id_from_req_data(self, data):
         return data['server']['flavorId']
+
+
+def create_resource():
+    metadata = {
+        "attributes": {
+            "zone": ["id", "api_url", "name", "capabilities"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10,
+                                                  metadata=metadata),
+    }
+
+    deserializers = {
+        'application/xml': controller.ServerXMLDeserializer(),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers,
+                         deserializers=deserializers)

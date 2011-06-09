@@ -22,6 +22,7 @@ across zones. There are two expansion points to this class for:
 
 import operator
 import json
+
 import M2Crypto
 import novaclient
 
@@ -160,14 +161,15 @@ class ZoneAwareScheduler(driver.Scheduler):
                                                request_spec, kwargs)
 
     def schedule_run_instance(self, context, instance_id, request_spec,
-                                        *args, **kwargs):
+                              *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
         1. Create a Build Plan and then provision, or
         2. Use the Build Plan information in the request parameters
            to simply create the instance (either in this zone or
-           a child zone)."""
+           a child zone).
+        """
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
@@ -194,7 +196,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Select returns a list of weights and zone/host information
         corresponding to the best hosts to service the request. Any
         child zone information has been encrypted so as not to reveal
-        anything about the children."""
+        anything about the children.
+        """
         return self._schedule(context, "compute", request_spec,
                               *args, **kwargs)
 
@@ -222,6 +225,9 @@ class ZoneAwareScheduler(driver.Scheduler):
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
+        # TODO(sirp): weigh_hosts should also be a function of 'topic' or
+        # resources, so that we can apply different objective functions to it
+
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
@@ -245,10 +251,16 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def filter_hosts(self, num, request_spec):
         """Derived classes must override this method and return
-           a list of hosts in [(hostname, capability_dict)] format."""
-        raise NotImplemented()
+           a list of hosts in [(hostname, capability_dict)] format.
+        """
+        # NOTE(sirp): The default logic is the equivalent to AllHostsFilter
+        service_states = self.zone_manager.service_states
+        return [(host, services)
+                for host, services in service_states.iteritems()]
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """Derived classes must override this method and return
-           a lists of hosts in [{weight, hostname}] format."""
-        raise NotImplemented()
+        """Derived classes may override this to provide more sophisticated
+        scheduling objectives
+        """
+        # NOTE(sirp): The default logic is the same as the NoopCostFunction
+        return [dict(weight=1, hostname=host) for host, caps in hosts]

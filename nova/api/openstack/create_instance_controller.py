@@ -26,13 +26,14 @@ from xml.dom import minidom
 from nova import exception
 from nova import flags
 from nova import log as logging
+import nova.image
 from nova import quota
 from nova import utils
-from nova import wsgi
 
 from nova.compute import instance_types
 from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 from nova.auth import manager as auth_manager
 
 
@@ -40,7 +41,7 @@ LOG = logging.getLogger('nova.api.openstack.create_instance_controller')
 FLAGS = flags.FLAGS
 
 
-class OpenstackCreateInstanceController(common.OpenstackController):
+class OpenstackCreateInstanceController(object):
     """This is the base class for OS API Controllers that
     are capable of creating instances (currently Servers and Zones).
 
@@ -53,17 +54,19 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         self._image_service = utils.import_object(FLAGS.image_service)
         super(OpenstackCreateInstanceController, self).__init__()
 
-    def _image_id_from_req_data(self, data):
-        raise NotImplementedError()
+    # Default to the 1.0 naming scheme.
+
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageId']
 
     def _flavor_id_from_req_data(self, data):
-        raise NotImplementedError()
+        return data['server']['flavorId']
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
         return utils.generate_password(16)
 
-    def create_instance(self, req, create_method):
+    def create_instance(self, req, body, create_method):
         """Creates a new server for the given user. The approach
         used depends on the create_method. For example, the standard
         POST /server call uses compute.api.create(), while
@@ -73,14 +76,15 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         [instance dicts] vs. reservation_id). So the handling of the
         return type from this method is left to the caller.
         """
-        env = self._deserialize_create(req)
-        if not env:
+        print "************************ A"
+        if not body:
             return (None, faults.Fault(exc.HTTPUnprocessableEntity()))
 
         context = req.environ['nova.context']
 
-        password = self._get_server_admin_password(env['server'])
+        password = self._get_server_admin_password(body['server'])
 
+        print "************************ B"
         key_name = None
         key_data = None
         key_pairs = auth_manager.AuthManager.get_key_pairs(context)
@@ -89,42 +93,52 @@ class OpenstackCreateInstanceController(common.OpenstackController):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
-        requested_image_id = self._image_id_from_req_data(env)
+        print "************************ C"
+        image_href = self._image_ref_from_req_data(body)
         try:
-            image_id = common.get_image_id_from_image_hash(self._image_service,
-                context, requested_image_id)
-        except:
-            msg = _("Can not find requested image")
+            print "************************ Ca"
+            image_service, image_id = nova.image.get_image_service(image_href)
+            print "************************ Cb"
+            kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
+                                                req, image_id)
+            print "************************ Ce"
+            images = set([str(x['id']) for x in image_service.index(context)])
+            assert str(image_id) in images
+        except Exception, e:
+            msg = _("Cannot find requested image %(image_href)s: %(e)s" %
+                                                                    locals())
             return (None, faults.Fault(exc.HTTPBadRequest(msg)))
 
-        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-            req, image_id)
+        print "************************ D"
+        personality = body['server'].get('personality')
 
-        personality = env['server'].get('personality')
         injected_files = []
         if personality:
             injected_files = self._get_injected_files(personality)
 
-        flavor_id = self._flavor_id_from_req_data(env)
+        flavor_id = self._flavor_id_from_req_data(body)
 
-        if not 'name' in env['server']:
+        print "************************ E"
+        if not 'name' in body['server']:
             msg = _("Server name is not defined")
             return (None, exc.HTTPBadRequest(msg))
-        name = env['server']['name']
+
+        zone_blob = body['server'].get('blob')
+        name = body['server']['name']
         self._validate_server_name(name)
         name = name.strip()
 
-        zone_blob = env['server'].get('blob')
-        reservation_id = env['server'].get('reservation_id')
-
-        inst_type = instance_types.get_instance_type_by_flavor_id(flavor_id)
-        extra_values = {
-            'instance_type': inst_type,
-            'image_id': requested_image_id,
-            'password': password
-        }
+        reservation_id = body['server'].get('reservation_id')
 
         try:
+            inst_type = \
+                    instance_types.get_instance_type_by_flavor_id(flavor_id)
+            extra_values = {
+                'instance_type': inst_type,
+                'image_ref': image_href,
+                'password': password
+            }
+
             return (extra_values,
                     create_method(context,
                                   inst_type,
@@ -135,7 +149,7 @@ class OpenstackCreateInstanceController(common.OpenstackController):
                                   display_description=name,
                                   key_name=key_name,
                                   key_data=key_data,
-                                  metadata=env['server'].get('metadata', {}),
+                                  metadata=body['server'].get('metadata', {}),
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
@@ -144,6 +158,9 @@ class OpenstackCreateInstanceController(common.OpenstackController):
                 )
         except quota.QuotaError as error:
             self._handle_quota_error(error)
+        except exception.ImageNotFound as error:
+            msg = _("Can not find requested image")
+            return faults.Fault(exc.HTTPBadRequest(msg))
 
         # Let the caller deal with unhandled exceptions.
 
@@ -252,7 +269,7 @@ class OpenstackCreateInstanceController(common.OpenstackController):
         return injected_files
 
 
-class ServerCreateRequestXMLDeserializer(object):
+class ServerXMLDeserializer(wsgi.XMLDeserializer):
     """
     Deserializer to handle xml-formatted server create requests.
 
@@ -260,7 +277,7 @@ class ServerCreateRequestXMLDeserializer(object):
     and personality attributes
     """
 
-    def deserialize(self, string):
+    def create(self, string):
         """Deserialize an xml-formatted server create request"""
         dom = minidom.parseString(string)
         server = self._extract_server(dom)

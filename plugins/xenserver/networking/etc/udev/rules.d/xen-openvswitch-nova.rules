@@ -1,0 +1,3 @@
+SUBSYSTEM=="xen-backend", KERNEL=="vif*", RUN+="/etc/xensource/scripts/ovs_configure_vif_flows.py $env{ACTION} %k all"
+# is this one needed?
+#SUBSYSTEM=="net",         KERNEL=="tap*", RUN+="/etc/xensource/scripts/ovs_configure_vif_flows.py $env{ACTION} %k all"
