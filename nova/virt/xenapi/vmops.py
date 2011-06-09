@@ -219,12 +219,14 @@ class VMOps(object):
         agent_build = db.agent_build_get_by_triple(ctx, 'xen',
                               instance.os_type, instance.architecture)
         if agent_build:
-            LOG.info(_('Latest agent build for %s/%s/%s is %s') % (
-                      agent_build['hypervisor'], agent_build['os'],
-                      agent_build['architecture'], agent_build['version']))
+            LOG.info(_('Latest agent build for %(hypervisor)s/%(os)s' + \
+                       '/%(architecture)s is %(version)s') % agent_build)
         else:
-            LOG.info(_('No agent build found for %s/%s/%s') % (
-                      'xen', instance.os_type, instance.architecture))
+            LOG.info(_('No agent build found for %(hypervisor)s/%(os)s' + \
+                       '/%(architecture)s') % {
+                        'hypervisor': 'xen',
+                        'os': instance.os_type,
+                        'architecture': instance.architecture})
 
         def _check_agent_version():
             version = self.get_agent_version(instance)
