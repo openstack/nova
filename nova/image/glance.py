@@ -20,6 +20,7 @@
 from __future__ import absolute_import
 
 import datetime
+import random
 
 from glance.common import exception as glance_exception
 
@@ -39,6 +40,15 @@ FLAGS = flags.FLAGS
 GlanceClient = utils.import_class('glance.client.Client')
 
 
+def pick_glance_api_server():
+    """Return which Glance API server to use for the request
+
+        Returns (host, port)
+    """
+    host, port = random.choice(FLAGS.glance_api_servers)
+    return host, port
+
+
 class GlanceImageService(service.BaseImageService):
     """Provides storage and retrieval of disk image objects within Glance."""
 
@@ -50,13 +60,13 @@ class GlanceImageService(service.BaseImageService):
     SERVICE_IMAGE_ATTRS = service.BaseImageService.BASE_IMAGE_ATTRS +\
                           GLANCE_ONLY_ATTRS
 
-    def __init__(self, client=None):
-        # FIXME(sirp): can we avoid dependency-injection here by using
-        # stubbing out a fake?
-        if client is None:
-            self.client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
-        else:
-            self.client = client
+    @property
+    def client(self):
+        # NOTE(sirp): we want to load balance each request across glance
+        # servers. Since GlanceImageService is a long-lived object, `client`
+        # is made to choose a new server each time via this property.
+        glance_host, glance_port = pick_glance_api_server()
+        return GlanceClient(glance_host, glance_port)
 
     def index(self, context, filters=None, marker=None, limit=None):
         """Calls out to Glance for a list of images available."""
