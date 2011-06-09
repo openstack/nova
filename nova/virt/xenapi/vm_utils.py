@@ -581,7 +581,8 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        url = images.image_url(image)
+        url = "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
+                                                 image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         if image_type == ImageType.KERNEL_RAMDISK:
             fn = 'get_kernel'

@@ -45,7 +45,9 @@ def pick_glance_api_server():
 
         Returns (host, port)
     """
-    host, port = random.choice(FLAGS.glance_api_servers)
+    host_port = random.choice(FLAGS.glance_api_servers)
+    host, port_str = host_port.split(':')
+    port = int(port_str)
     return host, port
 
 
@@ -60,7 +62,8 @@ class GlanceImageService(service.BaseImageService):
     SERVICE_IMAGE_ATTRS = service.BaseImageService.BASE_IMAGE_ATTRS +\
                           GLANCE_ONLY_ATTRS
 
-    _client = None
+    def __init__(self, client=None):
+        self._client = client
 
     def _get_client(self):
         # NOTE(sirp): we want to load balance each request across glance

@@ -17,7 +17,6 @@
 
 
 import datetime
-import stubout
 import unittest
 
 from nova import context
@@ -61,15 +60,9 @@ class BaseGlanceTest(unittest.TestCase):
     NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22)
 
     def setUp(self):
-        self.stubs = stubout.StubOutForTesting()
         self.client = StubGlanceClient(None)
-        self.service = glance.GlanceImageService()
-        self.stubs.Set(self.service, 'client', self.client)
+        self.service = glance.GlanceImageService(client=self.client)
         self.context = context.RequestContext(None, None)
-
-    def tearDown(self):
-        self.stubs.UnsetAll()
-        super(BaseGlanceTest, self).tearDown()
 
     def assertDateTimesFilled(self, image_meta):
         self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
