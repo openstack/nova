@@ -119,7 +119,7 @@ class VMRCSessionConsole(VMRCConsole):
         """
         vms = vim_session._call_method(vim_util, 'get_objects',
                     'VirtualMachine', ['name'])
-        vm_ref = NoneV
+        vm_ref = None
         for vm in vms:
             if vm.propSet[0].val == instance_name:
                 vm_ref = vm.obj

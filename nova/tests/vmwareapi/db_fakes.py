@@ -52,7 +52,7 @@ def stub_out_db_instance_api(stubs):
             else:
                 raise NotImplementedError()
 
-    def fake_instance_create(values):
+    def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
 
         type_data = INSTANCE_TYPES[values['instance_type']]

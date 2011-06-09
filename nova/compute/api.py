@@ -206,6 +206,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': reservation_id,
+            'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,
@@ -360,6 +361,7 @@ class API(base.Base):
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context,
                                     base_options, security_groups, num=num)
+            print "*********** INSTANCE = ", instance
             instances.append(instance)
             instance_id = instance['id']
 
