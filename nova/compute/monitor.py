@@ -36,6 +36,7 @@ from twisted.application import service
 
 from nova import flags
 from nova import log as logging
+from nova import utils
 from nova.virt import connection as virt_connection
 
 

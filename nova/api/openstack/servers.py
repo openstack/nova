@@ -153,6 +153,7 @@ class Controller(object):
             msg = _("Server name is not defined")
             return exc.HTTPBadRequest(msg)
 
+        zone_blob = body['server'].get('blob')
         name = body['server']['name']
         self._validate_server_name(name)
         name = name.strip()
@@ -172,7 +173,8 @@ class Controller(object):
                 key_data=key_data,
                 metadata=body['server'].get('metadata', {}),
                 injected_files=injected_files,
-                admin_password=password)
+                admin_password=password,
+                zone_blob=zone_blob)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
