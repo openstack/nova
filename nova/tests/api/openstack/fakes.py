@@ -353,6 +353,11 @@ class FakeAuthManager(object):
         return user.admin
 
     def is_project_member(self, user, project):
+        if not isinstance(project, Project):
+            try:
+                project = self.get_project(project)
+            except exc.NotFound:
+                raise webob.exc.HTTPUnauthorized()
         return ((user.id in project.member_ids) or
                 (user.id == project.project_manager_id))
 
