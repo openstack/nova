@@ -43,6 +43,10 @@ GlanceClient = utils.import_class('glance.client.Client')
 def pick_glance_api_server():
     """Return which Glance API server to use for the request
 
+    This method provides a very primitive form of load-balancing suitable for
+    testing and sandbox environments. In production, it would be better to use
+    one IP and route that to a real load-balancer.
+
         Returns (host, port)
     """
     host_port = random.choice(FLAGS.glance_api_servers)
