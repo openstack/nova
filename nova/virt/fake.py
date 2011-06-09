@@ -225,6 +225,21 @@ class FakeConnection(driver.ComputeDriver):
         """
         pass
 
+    def agent_update(self, instance, url, md5hash):
+        """
+        Update agent on the specified instance.
+
+        The first parameter is an instance of nova.compute.service.Instance,
+        and so the instance is being specified as instance.name. The second
+        parameter is the URL of the agent to be fetched and updated on the
+        instance; the third is the md5 hash of the file for verification
+        purposes.
+
+        The work will be done asynchronously.  This function returns a
+        task that allows the caller to detect when it is complete.
+        """
+        pass
+
     def rescue(self, instance):
         """
         Rescue the specified instance.

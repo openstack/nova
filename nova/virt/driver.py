@@ -234,6 +234,10 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def agent_update(self, instance, url, md5hash):
+        """Update agent on the VM instance."""
+        raise NotImplementedError()
+
     def inject_network_info(self, instance):
         """inject network info for specified instance"""
         raise NotImplementedError()
