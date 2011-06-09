@@ -876,8 +876,11 @@ class CloudController(object):
         try:
             public_ip = self.network_api.allocate_floating_ip(context)
             return {'publicIp': public_ip}
-        except rpc.RemoteError:
-            raise exception.NoFloatingIpsDefined
+        except rpc.RemoteError as ex:
+            if ex.exc_type == 'NoMoreAddresses':
+                raise exception.NoFloatingIpsDefined
+            else:
+                raise
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
