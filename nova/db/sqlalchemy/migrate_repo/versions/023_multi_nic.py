@@ -47,43 +47,21 @@ virtual_interfaces = Table('virtual_interfaces', meta,
         Column('port_id',
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False),
-               unique=True, nullable=True),
+               unique=True),
         )
 
-# Don't autoload this table since sqlite will have issues when
-# adding a column with a foreign key
-#TODO(tr3buchet)[wishful thinking]: remove support for sqlite
-fixed_ips = Table('fixed_ips', meta,
-        Column('created_at', DateTime(timezone=False),
-               default=utils.utcnow()),
-        Column('updated_at', DateTime(timezone=False),
-               onupdate=utils.utcnow()),
-        Column('deleted_at', DateTime(timezone=False)),
-        Column('deleted', Boolean(create_constraint=True, name=None)),
-        Column('id', Integer(), primary_key=True),
-        Column('address', String(255)),
-        Column('network_id', Integer(), ForeignKey('networks.id'),
-               nullable=True),
-        Column('instance_id', Integer(), ForeignKey('instances.id'),
-               nullable=True),
-        Column('allocated', Boolean(), default=False),
-        Column('leased', Boolean(), default=False),
-        Column('reserved', Boolean(), default=False),
-        )
 
 # bridge_interface column to add to networks table
 interface = Column('bridge_interface',
                    String(length=255, convert_unicode=False,
                           assert_unicode=None, unicode_error=None,
-                          _warn_on_bytestring=False),
-                          nullable=True)
+                          _warn_on_bytestring=False))
 
 
 # virtual interface id column to add to fixed_ips table
+# foreignkey added in next migration
 virtual_interface_id = Column('virtual_interface_id',
-                       Integer(),
-                       ForeignKey('virtual_interfaces.id'),
-                       nullable=True)
+                       Integer())
 
 
 def upgrade(migrate_engine):
@@ -92,6 +70,7 @@ def upgrade(migrate_engine):
     # grab tables and (column for dropping later)
     instances = Table('instances', meta, autoload=True)
     networks = Table('networks', meta, autoload=True)
+    fixed_ips = Table('fixed_ips', meta, autoload=True)
     c = instances.columns['mac_address']
 
     # add interface column to networks table
