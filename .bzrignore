@@ -13,3 +13,6 @@ nova/vcsversion.py
 clean.sqlite
 run_tests.log
 tests.sqlite
+nova/tests/instance-*
+tags
+

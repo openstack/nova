@@ -105,6 +105,21 @@ flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
 
+# Decorators for actions
+def positionargs(*args, **kwargs):
+    def _decorator(func):
+        req = args[-1]
+        func.__dict__['arguments'] = ' '.join("%s" % i for i in args[:req])
+        func.__dict__['optargs'] =  ' '.join("%s" % i for i in args[req:-1])
+        return func
+    return _decorator
+
+def optionargs(*args, **kwargs):
+    def _decorator(func):
+        func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
+        return func
+    return _decorator
+
 def param2id(object_id):
     """Helper function to convert various id types to internal id.
     args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
@@ -515,7 +530,11 @@ class FloatingIpCommands(object):
 
 class NetworkCommands(object):
     """Class for managing networks."""
-
+    @optionargs('--project', dest="project_id", help='Project for network')
+    @optionargs('--vlan', dest="vlan_start", help='VLAN ID')
+    @positionargs('fixed_range', 'num_networks',
+               'network_size', 'vlan_start', 'vpn_start', 
+               'fixed_range_v6', 'label', 'project_id', 1)
     def create(self, fixed_range=None, num_networks=None,
                network_size=None, vlan_start=None, vpn_start=None, 
                fixed_range_v6=None, label='public', project_id=None):
@@ -1135,25 +1154,25 @@ def main():
     matches = lazy_match(action, actions)
     action, fn = matches[0]
 
-    func_args = getargspec(fn).args
-    parser = OptionParser()
-    for arg in func_args:
-        dasharg = "--%s" % arg
-        parser.add_option(dasharg)
-    
+    usage = "%prog " + "%s %s %s [%s] [options]" % (sys.argv[2],
+                        sys.argv[3], fn.arguments, fn.optargs)
+    parser = OptionParser(usage=usage)
+    for ar, kw in fn.options:
+        parser.add_option(*ar, **kw)
     (opts, fn_args) = parser.parse_args(argv)
     fn_kwargs = vars(opts)
+
     for k, v in fn_kwargs.items():
         if v is None:
             del fn_kwargs[k]
-            
+
     # call the action with the remaining arguments
     try:
         fn(*fn_args, **fn_kwargs)
         sys.exit(0)
     except TypeError:
         print _("Possible wrong number of arguments supplied")
-        print "%s %s: %s" % (category, action, fn.__doc__)
+        print ""
         raise
     except Exception:
         print _("Command failed, please check log for more info")
