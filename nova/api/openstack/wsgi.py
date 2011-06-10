@@ -348,16 +348,20 @@ class Resource(wsgi.Application):
         LOG.debug("%(method)s %(url)s" % {"method": request.method,
                                           "url": request.url})
 
+        print "CALL"
         try:
             action, action_args, accept = self.deserializer.deserialize(
                                                                       request)
         except exception.InvalidContentType:
             return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
 
+        print "CALL2"
         action_result = self.dispatch(request, action, action_args)
+        print "ACTION RESULT:", action_result, isinstance(action_result, str)
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict:
+            print "DICT"
             response = self.serializer.serialize(action_result, accept)
         else:
             response = action_result
