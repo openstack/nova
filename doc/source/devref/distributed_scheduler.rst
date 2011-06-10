@@ -14,10 +14,14 @@
       License for the specific language governing permissions and limitations
       under the License.
 
+      Source for illustrations in doc/source/image_src/zone_distsched_illustrations.odp
+      (OpenOffice Impress format) Illustrations are "exported" to png and then scaled
+      to 400x300 or 640x480 as needed and placed in the doc/source/images directory.
+      
 Distributed Scheduler
 =====================
 
-The Scheduler is akin to a Dating Service. Requests for the creation of new instances come in and the most applicable Compute nodes are selected from a large pool of potential candidates. In a small deployment we may be happy with the currently available Change Scheduler which randomly selects a Host from the available pool. Or if you need something a little more fancy you may want to use the Availability Zone Scheduler, which selects Compute hosts from a logical partitioning of available hosts (within a single Zone). 
+The Scheduler is akin to a Dating Service. Requests for the creation of new instances come in and the most applicable Compute nodes are selected from a large pool of potential candidates. In a small deployment we may be happy with the currently available Chance Scheduler which randomly selects a Host from the available pool. Or if you need something a little more fancy you may want to use the Availability Zone Scheduler, which selects Compute hosts from a logical partitioning of available hosts (within a single Zone). 
 
     .. image:: /images/dating_service.png 
 
@@ -27,13 +31,13 @@ This is the purpose of the Distributed Scheduler (DS). The DS utilizes the Capab
 
 So, how does this all work?
 
-This document will explain the strategy employed by the `ZoneAwareScheduler` and its derivations. You should read the Zones documentation before reading this.
+This document will explain the strategy employed by the `ZoneAwareScheduler` and its derivations. You should read the :doc:`devguide/zones` documentation before reading this.
 
     .. image:: /images/zone_aware_scheduler.png 
 
 Costs & Weights
 ---------------
-When deciding where to place an Instance, we compare a Weighted Cost for each Host. The Weighting, currently, is just the sum of each Cost. Costs are nothing more than integers from `0 - max_int`. Costs are computed by looking at the various Capabilities of the Host relative to the specs of the Instance being asked for. Trying to putting a plain vanilla instance on a high performance host should have a very high cost. But putting a vanilla instance on a vanilla Host should have a low cost. 
+When deciding where to place an Instance, we compare a Weighted Cost for each Host. The Weighting, currently, is just the sum of each Cost. Costs are nothing more than integers from `0 - max_int`. Costs are computed by looking at the various Capabilities of the Host relative to the specs of the Instance being asked for. Trying to put a plain vanilla instance on a high performance host should have a very high cost. But putting a vanilla instance on a vanilla Host should have a low cost. 
 
 Some Costs are more esoteric. Consider a rule that says we should prefer Hosts that don't already have an instance on it that is owned by the user requesting it (to mitigate against machine failures). Here we have to look at all the other Instances on the host to compute our cost. 
 
@@ -107,7 +111,7 @@ The Catch
 ---------
 This all seems pretty straightforward but, like most things, there's a catch. Zones are expected to operate in complete isolation from each other. Each Zone has its own AMQP service, database and set of Nova services. But, for security reasons Zones should never leak information about the architectural layout internally. That means Zones cannot leak information about hostnames or service IP addresses outside of its world.
 
-When `POST /zones/select` is called to estimate which compute node to use, time passes until the `POST /servers` call is issued. If we only passed the weight back from the `select` we would have to re-compute the appropriate compute node for the create command ... and we could end up with a different host. Somehow we need to remember the results of our computations and pass them outside of the Zone. Now, we could store this information in the local database and return a reference to it, but remember that the vast majority of weights are going be ignored. Storing them in the database would result in a flood of disk access and then we have to clean up all these entries periodically. Recall that there are going to be many many `select` calls issued to child Zones asking for estimates. 
+When `POST /zones/select` is called to estimate which compute node to use, time passes until the `POST /servers` call is issued. If we only passed the weight back from the `select` we would have to re-compute the appropriate compute node for the create command ... and we could end up with a different host. Somehow we need to remember the results of our computations and pass them outside of the Zone. Now, we could store this information in the local database and return a reference to it, but remember that the vast majority of weights are going to be ignored. Storing them in the database would result in a flood of disk access and then we have to clean up all these entries periodically. Recall that there are going to be many many `select` calls issued to child Zones asking for estimates. 
 
 Instead, we take a rather innovative approach to the problem. We encrypt all the child zone internal details and pass them back the to parent Zone. If the parent zone decides to use a child Zone for the instance it simply passes the encrypted data back to the child during the `POST /servers` call as an extra parameter. The child Zone can then decrypt the hint and go directly to the Compute node previously selected. If the estimate isn't used, it is simply discarded by the parent. It's for this reason that it is so important that each Zone defines a unique encryption key via `--build_plan_encryption_key`
 
@@ -122,7 +126,7 @@ NOTE: The features described in this section are related to the up-coming 'merge
 
 The OpenStack API allows a user to list all the instances they own via the `GET /servers/` command or the details on a particular instance via `GET /servers/###`. This mechanism is usually sufficient since OS API only allows for creating one instance at a time, unlike the EC2 API which allows you to specify a quantity of instances to be created.
 
-NOTE: currently the `GET /servers` command is not Zone-aware since all operations done in child Zones are done via a single administrative account. Therefore, asking a child Zone to `GET /servers` would return all the active instances ... and that would be what the user intended. Later, when the Keystone Auth system is integrated with Nova, this functionality will be enabled. 
+NOTE: currently the `GET /servers` command is not Zone-aware since all operations done in child Zones are done via a single administrative account. Therefore, asking a child Zone to `GET /servers` would return all the active instances ... and that would not be what the user intended. Later, when the Keystone Auth system is integrated with Nova, this functionality will be enabled. 
 
 We could use the OS API 1.1 Extensions mechanism to accept a `num_instances` parameter, but this would result in a different return code. Instead of getting back an `Instance` record, we would be getting back a `reservation_id`. So, instead, we've implemented a new command `POST /zones/boot` command which is nearly identical to `POST /servers` except that it takes a `num_instances` parameter and returns a `reservation_id`. Perhaps in OS API 2.x we can unify these approaches. 
 
@@ -149,7 +153,7 @@ Every `ZoneAwareScheduler` derivation must also override the `weigh_hosts` metho
 
 Simple Zone Aware Scheduling
 ----------------------------
-The easiest way to get started with the `ZoneAwareScheduler` is to use the `nova.scheduler.host_filter.HostFilterScheduler`. This scheduler uses the default Host Filter as and the `weight_hosts` method simply returns a weight of 1 for all hosts. But, from this, you can see calls being routed from Zone to Zone and follow the flow of things. 
+The easiest way to get started with the `ZoneAwareScheduler` is to use the `nova.scheduler.host_filter.HostFilterScheduler`. This scheduler uses the default Host Filter and the `weight_hosts` method simply returns a weight of 1 for all hosts. But, from this, you can see calls being routed from Zone to Zone and follow the flow of things. 
 
 The `--scheduler_driver` flag is how you specify the scheduler class name.
 
