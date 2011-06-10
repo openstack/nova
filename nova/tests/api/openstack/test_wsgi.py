@@ -171,11 +171,11 @@ class XMLDeserializerTest(test.TestCase):
 class ResponseSerializerTest(test.TestCase):
     def setUp(self):
         class JSONSerializer(object):
-            def serialize(self, data):
+            def serialize(self, data, action='default'):
                 return 'pew_json'
 
         class XMLSerializer(object):
-            def serialize(self, data):
+            def serialize(self, data, action='default'):
                 return 'pew_xml'
 
         self.serializers = {
@@ -211,11 +211,11 @@ class ResponseSerializerTest(test.TestCase):
 class RequestDeserializerTest(test.TestCase):
     def setUp(self):
         class JSONDeserializer(object):
-            def deserialize(self, data):
+            def deserialize(self, data, action='default'):
                 return 'pew_json'
 
         class XMLDeserializer(object):
-            def deserialize(self, data):
+            def deserialize(self, data, action='default'):
                 return 'pew_xml'
 
         self.deserializers = {

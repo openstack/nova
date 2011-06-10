@@ -189,7 +189,10 @@ class DictSerializer(object):
 
     def serialize(self, data, action='default'):
         """Find local serialization method and encode response body."""
-        action_method = getattr(self, action, self.default)
+        if action is None:
+            action_method = self.default
+        else:
+            action_method = getattr(self, action, self.default)
         return action_method(data)
 
     def default(self, data):
@@ -296,7 +299,7 @@ class ResponseSerializer(object):
         }
         self.serializers.update(serializers or {})
 
-    def serialize(self, response_data, content_type):
+    def serialize(self, response_data, content_type, action='default'):
         """Serialize a dict into a string and wrap in a wsgi.Request object.
 
         :param response_data: dict produced by the Controller
@@ -307,7 +310,7 @@ class ResponseSerializer(object):
         response.headers['Content-Type'] = content_type
 
         serializer = self.get_serializer(content_type)
-        response.body = serializer.serialize(response_data)
+        response.body = serializer.serialize(response_data, action)
 
         return response
 
@@ -358,7 +361,7 @@ class Resource(wsgi.Application):
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict:
-            response = self.serializer.serialize(action_result, accept)
+            response = self.serializer.serialize(action_result, accept, action)
         else:
             response = action_result
 
