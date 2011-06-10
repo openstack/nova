@@ -123,7 +123,7 @@ class CloudTestCase(test.TestCase):
                                'host': self.network.host})
         self.assertEqual(allocate(self.context)['publicIp'], address)
         db.floating_ip_destroy(self.context, address)
-        self.assertRaises(exception.NoFloatingIpsDefined,
+        self.assertRaises(exception.NoMoreFloatingIps,
                           allocate,
                           self.context)
 
