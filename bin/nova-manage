@@ -61,6 +61,8 @@ import sys
 import time
 
 import IPy
+from inspect import getargspec
+from optparse import OptionParser
 
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
@@ -103,6 +105,21 @@ flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
+
+# Decorators for actions
+def positionargs(*args, **kwargs):
+    def _decorator(func):
+        req = args[-1]
+        func.__dict__['arguments'] = ' '.join("%s" % i for i in args[:req])
+        func.__dict__['optargs'] =  ' '.join("%s" % i for i in args[req:-1])
+        return func
+    return _decorator
+
+def optionargs(*args, **kwargs):
+    def _decorator(func):
+        func.__dict__.setdefault('options', []).insert(0, (args, kwargs))
+        return func
+    return _decorator
 
 def param2id(object_id):
     """Helper function to convert various id types to internal id.
@@ -546,10 +563,16 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
+    @optionargs('--project', dest="project_id", help='Project for network')
+    @optionargs('--vlan', dest="vlan_start", help='VLAN ID')
+    @positionargs('fixed_range', 'num_networks',
+               'network_size', 'vlan_start', 'vpn_start', 
+               'fixed_range_v6', 'gateway_v6', 'label', 'project_id', 1)
     def create(self, fixed_range=None, num_networks=None, network_size=None,
             vlan_start=None, vpn_start=None, fixed_range_v6=None,
-            gateway_v6=None, label='public'):
+            gateway_v6=None, label='public', project_id=None):
         """Creates fixed ips for host by range"""
+
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
                     'required to create networks.')
@@ -577,7 +600,8 @@ class NetworkCommands(object):
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
                                         gateway_v6=gateway_v6,
-                                        label=label)
+                                        label=label,
+                                        project_id=project_id)
         except ValueError, e:
             print e
             raise e
@@ -1174,13 +1198,26 @@ def main():
     action = argv.pop(0)
     matches = lazy_match(action, actions)
     action, fn = matches[0]
+
+    usage = "%prog " + "%s %s %s [%s] [options]" % (sys.argv[2],
+                        sys.argv[3], fn.arguments, fn.optargs)
+    parser = OptionParser(usage=usage)
+    for ar, kw in fn.options:
+        parser.add_option(*ar, **kw)
+    (opts, fn_args) = parser.parse_args(argv)
+    fn_kwargs = vars(opts)
+
+    for k, v in fn_kwargs.items():
+        if v is None:
+            del fn_kwargs[k]
+
     # call the action with the remaining arguments
     try:
-        fn(*argv)
+        fn(*fn_args, **fn_kwargs)
         sys.exit(0)
     except TypeError:
         print _("Possible wrong number of arguments supplied")
-        print "%s %s: %s" % (category, action, fn.__doc__)
+        print ""
         raise
     except Exception:
         print _("Command failed, please check log for more info")
