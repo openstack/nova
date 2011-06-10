@@ -535,7 +535,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def create_networks(self, context, label, cidr, num_networks,
                         network_size, cidr_v6, gateway_v6, bridge,
-                        bridge_interface, *args, **kwargs):
+                        bridge_interface, **kwargs):
         """Create networks based on parameters."""
         fixed_net = IPy.IP(cidr)
         fixed_net_v6 = IPy.IP(cidr_v6)

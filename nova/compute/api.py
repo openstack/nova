@@ -216,8 +216,7 @@ class API(base.Base):
         groups, MAC address, etc). This will called by create()
         in the majority of situations, but all-at-once style
         Schedulers may initiate the call."""
-        instance = dict(mac_address=utils.generate_mac(),
-                        launch_index=num,
+        instance = dict(launch_index=num,
                         **base_options)
         instance = self.db.instance_create(context, instance)
         instance_id = instance['id']

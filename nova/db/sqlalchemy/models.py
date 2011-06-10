@@ -517,6 +517,20 @@ class Network(BASE, NovaBase):
     host = Column(String(255))  # , ForeignKey('hosts.id'))
 
 
+class VirtualInterface(BASE, NovaBase):
+    """Represents a virtual interface on an instance"""
+    __tablename__ = 'virtual_interfaces'
+    id = Column(Integer, primary_key=True)
+    address = Column(String(255), unique=True)
+    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
+    network = relationship(Network, backref=backref('virtual_interfaces'))
+    port_id = Column(String(255), unique=True, nullable=True)
+
+    # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance, backref=backref('virtual_interfaces'))
+
+
 # TODO(vish): can these both come from the same baseclass?
 class FixedIp(BASE, NovaBase):
     """Represents a fixed ip for an instance."""
@@ -556,20 +570,6 @@ class FloatingIp(BASE, NovaBase):
     project_id = Column(String(255))
     host = Column(String(255))  # , ForeignKey('hosts.id'))
     auto_assigned = Column(Boolean, default=False, nullable=False)
-
-
-class VirtualInterface(BASE, NovaBase):
-    """Represents a virtual interface on an instance"""
-    __tablename__ = 'virtual_interfaces'
-    id = Column(Integer, primary_key=True)
-    address = Column(String(255), unique=True)
-    network_id = Column(Integer, ForeignKey('networks.id'), nullable=False)
-    network = relationship(Network, backref=backref('virtual_interfaces'))
-    port_id = Column(String(255), unique=True, nullable=True)
-
-    # TODO(tr3buchet): cut the cord, removed foreign key and backrefs
-    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
-    instance = relationship(Instance, backref=backref('virtual_interfaces'))
 
 
 class AuthToken(BASE, NovaBase):
