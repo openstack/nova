@@ -242,7 +242,7 @@ class FloatingIP(object):
                                      'allocate any more addresses'))
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
-                                                    self.host
+                                                    self.host,
                                                     project_id)
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
