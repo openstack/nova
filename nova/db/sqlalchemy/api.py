@@ -433,7 +433,7 @@ def certificate_update(context, certificate_id, values):
 
 
 @require_context
-def floating_ip_allocate_address(context, project_id):
+def floating_ip_allocate_address(context, host, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
     with session.begin():
@@ -448,6 +448,7 @@ def floating_ip_allocate_address(context, project_id):
         if not floating_ip_ref:
             raise db.NoMoreAddresses()
         floating_ip_ref['project_id'] = project_id
+        floating_ip_ref['host'] = host
         session.add(floating_ip_ref)
     return floating_ip_ref['address']
 
@@ -496,6 +497,7 @@ def floating_ip_deallocate(context, address):
                                                      address,
                                                      session=session)
         floating_ip_ref['project_id'] = None
+        floating_ip_ref['host'] = None
         floating_ip_ref['auto_assigned'] = False
         floating_ip_ref.save(session=session)
 

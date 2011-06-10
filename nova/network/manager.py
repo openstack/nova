@@ -232,6 +232,7 @@ class FloatingIP(object):
 
     def allocate_floating_ip(self, context, project_id):
         """Gets an floating ip from the pool."""
+        # NOTE(tr3buchet): all networks hosts in zone now use the same pool
         LOG.debug("QUOTA: %s" % quota.allowed_floating_ips(context, 1))
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_('Quota exceeeded for %s, tried to allocate '
@@ -241,6 +242,7 @@ class FloatingIP(object):
                                      'allocate any more addresses'))
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
+                                                    self.host
                                                     project_id)
 
     def associate_floating_ip(self, context, floating_address, fixed_address):

@@ -518,13 +518,12 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
-    def create(self, host, range):
-        """Creates floating ips for host by range
-        arguments: host ip_range"""
+    def create(self, range):
+        """Creates floating ips for zone by range
+        arguments: ip_range"""
         for address in IPy.IP(range):
             db.floating_ip_create(context.get_admin_context(),
-                                  {'address': str(address),
-                                   'host': host})
+                                  {'address': str(address)})
 
     def delete(self, ip_range):
         """Deletes floating ips by range
@@ -535,7 +534,8 @@ class FloatingIpCommands(object):
 
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
-        arguments: [host]"""
+        arguments: [host]
+        Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
         if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
