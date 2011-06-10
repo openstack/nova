@@ -141,7 +141,7 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
             except Exception as e:
                 if type(e) in errors_to_ignore:
                     return None
-                raise e
+                raise
 
         res = pool.spawn(_error_trap, *args, **kwargs)
         results.append((zone, res))
