@@ -878,7 +878,7 @@ class CloudController(object):
             return {'publicIp': public_ip}
         except rpc.RemoteError as ex:
             if ex.exc_type == 'NoMoreAddresses':
-                raise exception.NoFloatingIpsDefined
+                raise exception.NoFloatingIpsDefined()
             else:
                 raise
 
