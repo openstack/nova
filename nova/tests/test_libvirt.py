@@ -1058,7 +1058,6 @@ class IptablesFirewallTestCase(test.TestCase):
 
         db.instance_destroy(admin_ctxt, instance_ref['id'])
 
-
     def test_provider_firewall_rules(self):
         # setup basic instance data
         instance_ref = self._create_instance_ref()
