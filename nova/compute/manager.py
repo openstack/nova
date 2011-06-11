@@ -921,11 +921,13 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.update_available_resource(context, self.host)
 
-    def pre_live_migration(self, context, instance_id, time=None):
+    def pre_live_migration(self, context, instance_id, time=None,
+                           block_migration=False, **kwargs):
         """Preparations for live migration at dest host.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param block_migration: if true, prepare for block migration
 
         """
         if not time:
@@ -977,17 +979,24 @@ class ComputeManager(manager.SchedulerDependentManager):
         # onto destination host.
         self.driver.ensure_filtering_rules_for_instance(instance_ref)
 
-    def live_migration(self, context, instance_id, dest):
+        # Preparation for block migration
+        if block_migration:
+            self.driver.pre_block_migration(context,
+                                            instance_ref,
+                                            kwargs.get('disk'))
+
+    def live_migration(self, context, instance_id,
+                       dest, block_migration=False):
         """Executing live migration.
 
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param dest: destination host
+        :param block_migration: if true, do block migration
 
         """
         # Get instance for error handling.
         instance_ref = self.db.instance_get(context, instance_id)
-        i_name = instance_ref.name
 
         try:
             # Checking volume node is working correctly when any volumes
@@ -998,13 +1007,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                           {"method": "check_for_export",
                            "args": {'instance_id': instance_id}})
 
-            # Asking dest host to preparing live migration.
+            args = {}
+            args['instance_id'] = instance_id
+            if block_migration:
+                args['block_migration'] = block_migration
+                args['disk'] = \
+                    self.driver.get_instance_disk_info(context, instance_ref)
+
             rpc.call(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": "pre_live_migration",
-                      "args": {'instance_id': instance_id}})
+                      "args": args})
 
         except Exception:
+            i_name = instance_ref.name
             msg = _("Pre live migration for %(i_name)s failed at %(dest)s")
             LOG.error(msg % locals())
             self.recover_live_migration(context, instance_ref)
@@ -1015,9 +1031,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         # nothing must be recovered in this version.
         self.driver.live_migration(context, instance_ref, dest,
                                    self.post_live_migration,
-                                   self.recover_live_migration)
+                                   self.recover_live_migration,
+                                   block_migration)
 
-    def post_live_migration(self, ctxt, instance_ref, dest):
+    def post_live_migration(self, ctxt, instance_ref,
+                            dest, block_migration=False):
         """Post operations for live migration.
 
         This method is called from live_migration
@@ -1068,6 +1086,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # Restore instance/volume state
         self.recover_live_migration(ctxt, instance_ref, dest)
+        # No instance booting at source host, but instance dir
+        # must be deleted for preparing next block migration
+        if block_migration:
+            self.driver.destroy(instance_ref)
 
         LOG.info(_('Migrating %(i_name)s to %(dest)s finished successfully.')
                  % locals())
@@ -1075,14 +1097,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
+    def recover_live_migration(self, ctxt, instance_ref, host=None,
+                               dest=None, delete=True):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param host: DB column value is updated by this hostname.
                      If none, the host instance currently running is selected.
-
+        :param dest:
+            This method is called from live migration src host.
+            This param specifies destination host.
+        :param delete:
+            If true, ask destination host to remove instance dir,
+            since empty disk image was created for block migration
         """
         if not host:
             host = instance_ref['host']
@@ -1100,6 +1128,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.db.volume_update(ctxt, volume_id, {'status': 'in-use'})
             if dest:
                 volume_api.remove_from_compute(ctxt, volume_id, dest)
+
+        # TODO: Block migration needs empty image at destination host
+        # before migration starts, so if any failure occurs,
+        # any empty images has to be deleted. but not sure adding below
+        # method is appropreate here. for now, admin has to delete manually.
+        # rpc.call(ctxt,
+        #          self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+        #          {"method": "self.driver.destroy",
+        #           "args": {'instance':instance_ref})
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""

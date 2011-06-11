@@ -20,6 +20,7 @@ import os
 import re
 import shutil
 import sys
+import tempfile
 
 from xml.etree.ElementTree import fromstring as xml_to_tree
 from xml.dom.minidom import parseString as xml_to_dom
@@ -672,6 +673,95 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(volume_ref['status'] == 'in-use')
 
         db.volume_destroy(self.context, volume_ref['id'])
+        db.instance_destroy(self.context, instance_ref['id'])
+
+    def test_pre_block_migration_works_correctly(self):
+        """Confirms pre_block_migration works correctly."""
+
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        # Replace instances_path since this testcase creates tmpfile
+        tmpdir = tempfile.mkdtemp()
+        store = FLAGS.instances_path
+        FLAGS.instances_path = tmpdir
+
+        # Test data
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyjson = '[{"path": "%s/disk", "local_gb": 10, "type": "raw"}]'
+
+        # Preparing mocks
+        # qemu-img should be mockd since test environment might not have
+        # large disk space.
+        self.mox.StubOutWithMock(utils, "execute")
+        utils.execute('sudo', 'qemu-img', 'create', '-f', 'raw',
+                      '%s/%s/disk' % (tmpdir, instance_ref.name), 10)
+
+        self.mox.ReplayAll()
+        conn = connection.LibvirtConnection(False)
+        conn.pre_block_migration(self.context, instance_ref,
+                                 dummyjson % tmpdir)
+
+        self.assertTrue(os.path.exists('%s/%s/libvirt.xml' %
+                                       (tmpdir, instance_ref.name)))
+
+        shutil.rmtree(tmpdir)
+        db.instance_destroy(self.context, instance_ref['id'])
+        # Restore FLAGS.instances_path
+        FLAGS.instances_path = store
+
+    def test_get_instance_disk_info_works_correctly(self):
+        """Confirms pre_block_migration works correctly."""
+        # Skip if non-libvirt environment
+        if not self.lazy_load_library_exists():
+            return
+
+        # Test data
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='file'><driver type='raw'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "<disk type='file'><driver type='qcow2'/>"
+                    "<source file='/test/disk.local'/>"
+                    "<target dev='vdb' bus='virtio'/></disk>"
+                    "</devices></domain>")
+
+        ret = ("image: /test/disk\nfile format: raw\n"
+               "virtual size: 20G (21474836480 bytes)\ndisk size: 3.1G\n")
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "XMLDesc")
+        vdmock.XMLDesc(0).AndReturn(dummyxml)
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref.name:
+                return vdmock
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+
+        self.mox.StubOutWithMock(os.path, "getsize")
+        # based on above testdata, one is raw image, so getsize is mocked.
+        os.path.getsize("/test/disk").AndReturn(10 * 1024 * 1024 * 1024)
+        # another is qcow image, so qemu-img should be mocked.
+        self.mox.StubOutWithMock(utils, "execute")
+        utils.execute('sudo', 'qemu-img', 'info', '/test/disk.local').\
+            AndReturn((ret, ''))
+
+        self.mox.ReplayAll()
+        conn = connection.LibvirtConnection(False)
+        info = conn.get_instance_disk_info(self.context, instance_ref)
+        info = utils.loads(info)
+
+        self.assertTrue(info[0]['type'] == 'raw' and
+                        info[1]['type'] == 'qcow2' and
+                        info[0]['path'] == '/test/disk' and
+                        info[1]['path'] == '/test/disk.local' and
+                        info[0]['local_gb'] == 10 and
+                        info[1]['local_gb'] == 20)
+
         db.instance_destroy(self.context, instance_ref['id'])
 
     def test_spawn_with_network_info(self):

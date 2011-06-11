@@ -545,7 +545,8 @@ class ComputeTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
         self.compute.driver.live_migration(c, i_ref, i_ref['host'],
                                   self.compute.post_live_migration,
-                                  self.compute.recover_live_migration)
+                                  self.compute.recover_live_migration,
+                                  False)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()
@@ -622,7 +623,8 @@ class ComputeTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
         self.compute.driver.live_migration(c, i_ref, i_ref['host'],
                                   self.compute.post_live_migration,
-                                  self.compute.recover_live_migration)
+                                  self.compute.recover_live_migration,
+                                  False)
 
         self.compute.db = dbmock
         self.mox.ReplayAll()

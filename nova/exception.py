@@ -211,6 +211,11 @@ class DestinationHypervisorTooOld(Invalid):
                 "has been provided.")
 
 
+class DestinatioinDiskExists(Invalid):
+    message = _("The supplied disk path (%(path)s) already exists, "
+                "it is expected not to exist.")
+
+
 class InvalidDevicePath(Invalid):
     message = _("The supplied device path (%(path)s) is invalid.")
 
