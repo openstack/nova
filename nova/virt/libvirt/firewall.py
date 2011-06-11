@@ -590,13 +590,13 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv4_rules += ['-m state --state ' 'INVALID -j DROP']
         ipv6_rules += ['-m state --state ' 'INVALID -j DROP']
 
-        # Pass through provider-wide drops
-        ipv4_rules += ['-j $provider']
-        ipv6_rules += ['-j $provider']
-
         # Allow established connections
         ipv4_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
         ipv6_rules += ['-m state --state ESTABLISHED,RELATED -j ACCEPT']
+
+        # Pass through provider-wide drops
+        ipv4_rules += ['-j $provider']
+        ipv6_rules += ['-j $provider']
 
         dhcp_servers = [network['gateway'] for (network, _m) in network_info]
 
