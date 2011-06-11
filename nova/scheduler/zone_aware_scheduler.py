@@ -21,14 +21,28 @@ across zones. There are two expansion points to this class for:
 """
 
 import operator
+import json
 
+import M2Crypto
+import novaclient
+
+from nova import crypto
 from nova import db
+from nova import exception
+from nova import flags
 from nova import log as logging
 from nova import rpc
+
 from nova.scheduler import api
 from nova.scheduler import driver
 
+FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.scheduler.zone_aware_scheduler')
+
+
+class InvalidBlob(exception.NovaException):
+    message = _("Ill-formed or incorrectly routed 'blob' data sent "
+                "to instance create request.")
 
 
 class ZoneAwareScheduler(driver.Scheduler):
@@ -38,8 +52,114 @@ class ZoneAwareScheduler(driver.Scheduler):
         """Call novaclient zone method. Broken out for testing."""
         return api.call_zone_method(context, method, specs=specs)
 
+    def _provision_resource_locally(self, context, item, instance_id, kwargs):
+        """Create the requested resource in this Zone."""
+        host = item['hostname']
+        kwargs['instance_id'] = instance_id
+        rpc.cast(context,
+                 db.queue_get_for(context, "compute", host),
+                 {"method": "run_instance",
+                  "args": kwargs})
+        LOG.debug(_("Provisioning locally via compute node %(host)s")
+                            % locals())
+
+    def _decrypt_blob(self, blob):
+        """Returns the decrypted blob or None if invalid. Broken out
+        for testing."""
+        decryptor = crypto.decryptor(FLAGS.build_plan_encryption_key)
+        try:
+            json_entry = decryptor(blob)
+            return json.dumps(entry)
+        except M2Crypto.EVP.EVPError:
+            pass
+        return None
+
+    def _ask_child_zone_to_create_instance(self, context, zone_info,
+                                           request_spec, kwargs):
+        """Once we have determined that the request should go to one
+        of our children, we need to fabricate a new POST /servers/
+        call with the same parameters that were passed into us.
+
+        Note that we have to reverse engineer from our args to get back the
+        image, flavor, ipgroup, etc. since the original call could have
+        come in from EC2 (which doesn't use these things)."""
+
+        instance_type = request_spec['instance_type']
+        instance_properties = request_spec['instance_properties']
+
+        name = instance_properties['display_name']
+        image_id = instance_properties['image_id']
+        meta = instance_properties['metadata']
+        flavor_id = instance_type['flavorid']
+
+        files = kwargs['injected_files']
+        ipgroup = None  # Not supported in OS API ... yet
+
+        child_zone = zone_info['child_zone']
+        child_blob = zone_info['child_blob']
+        zone = db.zone_get(context, child_zone)
+        url = zone.api_url
+        LOG.debug(_("Forwarding instance create call to child zone %(url)s")
+                    % locals())
+        nova = None
+        try:
+            nova = novaclient.OpenStack(zone.username, zone.password, url)
+            nova.authenticate()
+        except novaclient.exceptions.BadRequest, e:
+            raise exception.NotAuthorized(_("Bad credentials attempting "
+                            "to talk to zone at %(url)s.") % locals())
+
+        nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
+                            child_blob)
+
+    def _provision_resource_from_blob(self, context, item, instance_id,
+                                          request_spec, kwargs):
+        """Create the requested resource locally or in a child zone
+           based on what is stored in the zone blob info.
+
+           Attempt to decrypt the blob to see if this request is:
+           1. valid, and
+           2. intended for this zone or a child zone.
+
+           Note: If we have "blob" that means the request was passed
+           into us from a parent zone. If we have "child_blob" that
+           means we gathered the info from one of our children.
+           It's possible that, when we decrypt the 'blob' field, it
+           contains "child_blob" data. In which case we forward the
+           request."""
+
+        host_info = None
+        if "blob" in item:
+            # Request was passed in from above. Is it for us?
+            host_info = self._decrypt_blob(item['blob'])
+        elif "child_blob" in item:
+            # Our immediate child zone provided this info ...
+            host_info = item
+
+        if not host_info:
+            raise InvalidBlob()
+
+        # Valid data ... is it for us?
+        if 'child_zone' in host_info and 'child_blob' in host_info:
+            self._ask_child_zone_to_create_instance(context, host_info,
+                                                    request_spec, kwargs)
+        else:
+            self._provision_resource_locally(context, host_info,
+                                             instance_id, kwargs)
+
+    def _provision_resource(self, context, item, instance_id, request_spec,
+                           kwargs):
+        """Create the requested resource in this Zone or a child zone."""
+        if "hostname" in item:
+            self._provision_resource_locally(context, item, instance_id,
+                            kwargs)
+            return
+
+        self._provision_resource_from_blob(context, item, instance_id,
+                                               request_spec, kwargs)
+
     def schedule_run_instance(self, context, instance_id, request_spec,
-                                        *args, **kwargs):
+                              *args, **kwargs):
         """This method is called from nova.compute.api to provision
         an instance. However we need to look at the parameters being
         passed in to see if this is a request to:
@@ -51,8 +171,10 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # TODO(sandy): We'll have to look for richer specs at some point.
 
-        if 'blob' in request_spec:
-            self.provision_resource(context, request_spec, instance_id, kwargs)
+        blob = request_spec.get('blob')
+        if blob:
+            self._provision_resource(context, request_spec, instance_id,
+                                    request_spec, kwargs)
             return None
 
         # Create build plan and provision ...
@@ -61,27 +183,12 @@ class ZoneAwareScheduler(driver.Scheduler):
             raise driver.NoValidHost(_('No hosts were available'))
 
         for item in build_plan:
-            self.provision_resource(context, item, instance_id, kwargs)
+            self._provision_resource(context, item, instance_id, request_spec,
+                                    kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
         return None
-
-    def provision_resource(self, context, item, instance_id, kwargs):
-        """Create the requested resource in this Zone or a child zone."""
-        if "hostname" in item:
-            host = item['hostname']
-            kwargs['instance_id'] = instance_id
-            rpc.cast(context,
-                     db.queue_get_for(context, "compute", host),
-                     {"method": "run_instance",
-                      "args": kwargs})
-            LOG.debug(_("Casted to compute %(host)s for run_instance")
-                                % locals())
-        else:
-            # TODO(sandy) Provision in child zone ...
-            LOG.warning(_("Provision to Child Zone not supported (yet)"))
-            pass
 
     def select(self, context, request_spec, *args, **kwargs):
         """Select returns a list of weights and zone/host information
@@ -116,22 +223,25 @@ class ZoneAwareScheduler(driver.Scheduler):
         # Filter local hosts based on requirements ...
         host_list = self.filter_hosts(num_instances, request_spec)
 
+        # TODO(sirp): weigh_hosts should also be a function of 'topic' or
+        # resources, so that we can apply different objective functions to it
+
         # then weigh the selected hosts.
         # weighted = [{weight=weight, name=hostname}, ...]
         weighted = self.weigh_hosts(num_instances, request_spec, host_list)
 
         # Next, tack on the best weights from the child zones ...
+        json_spec = json.dumps(request_spec)
         child_results = self._call_zone_method(context, "select",
-                specs=request_spec)
+                specs=json_spec)
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to
                 # it later if needed. This implicitly builds a zone
                 # path structure.
-                host_dict = {
-                        "weight": weighting["weight"],
-                        "child_zone": child_zone,
-                        "child_blob": weighting["blob"]}
+                host_dict = {"weight": weighting["weight"],
+                             "child_zone": child_zone,
+                             "child_blob": weighting["blob"]}
                 weighted.append(host_dict)
 
         weighted.sort(key=operator.itemgetter('weight'))
@@ -139,12 +249,16 @@ class ZoneAwareScheduler(driver.Scheduler):
 
     def filter_hosts(self, num, request_spec):
         """Derived classes must override this method and return
-        a list of hosts in [(hostname, capability_dict)] format.
+           a list of hosts in [(hostname, capability_dict)] format.
         """
-        raise NotImplemented()
+        # NOTE(sirp): The default logic is the equivalent to AllHostsFilter
+        service_states = self.zone_manager.service_states
+        return [(host, services)
+                for host, services in service_states.iteritems()]
 
     def weigh_hosts(self, num, request_spec, hosts):
-        """Derived classes must override this method and return
-        a lists of hosts in [{weight, hostname}] format.
+        """Derived classes may override this to provide more sophisticated
+        scheduling objectives
         """
-        raise NotImplemented()
+        # NOTE(sirp): The default logic is the same as the NoopCostFunction
+        return [dict(weight=1, hostname=host) for host, caps in hosts]

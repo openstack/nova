@@ -35,6 +35,37 @@ XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 
+def get_pagination_params(request):
+    """Return marker, limit tuple from request.
+
+    :param request: `wsgi.Request` possibly containing 'marker' and 'limit'
+                    GET variables. 'marker' is the id of the last element
+                    the client has seen, and 'limit' is the maximum number
+                    of items to return. If 'limit' is not specified, 0, or
+                    > max_limit, we default to max_limit. Negative values
+                    for either marker or limit will cause
+                    exc.HTTPBadRequest() exceptions to be raised.
+
+    """
+    try:
+        marker = int(request.GET.get('marker', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if marker < 0:
+        raise webob.exc.HTTPBadRequest(_('marker param must be positive'))
+
+    return(marker, limit)
+
+
 def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
     Return a slice of items according to requested offset and limit.
@@ -71,19 +102,10 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
 
 def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     """Return a slice of items according to the requested marker and limit."""
+    (marker, limit) = get_pagination_params(request)
 
-    try:
-        marker = int(request.GET.get('marker', 0))
-    except ValueError:
-        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
-
-    try:
-        limit = int(request.GET.get('limit', max_limit))
-    except ValueError:
-        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
-
-    if limit < 0:
-        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+    if limit == 0:
+        limit = max_limit
 
     limit = min(max_limit, limit)
     start_index = 0
@@ -97,34 +119,6 @@ def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
             raise webob.exc.HTTPBadRequest(_('marker [%s] not found' % marker))
     range_end = start_index + limit
     return items[start_index:range_end]
-
-
-def get_image_id_from_image_hash(image_service, context, image_hash):
-    """Given an Image ID Hash, return an objectstore Image ID.
-
-    image_service - reference to objectstore compatible image service.
-    context - security context for image service requests.
-    image_hash - hash of the image ID.
-    """
-
-    # FIX(sandy): This is terribly inefficient. It pulls all images
-    # from objectstore in order to find the match. ObjectStore
-    # should have a numeric counterpart to the string ID.
-    try:
-        items = image_service.detail(context)
-    except NotImplementedError:
-        items = image_service.index(context)
-    for image in items:
-        image_id = image['id']
-        try:
-            if abs(hash(image_id)) == int(image_hash):
-                return image_id
-        except ValueError:
-            msg = _("Requested image_id has wrong format: %s,"
-                    "should have numerical format") % image_id
-            LOG.error(msg)
-            raise Exception(msg)
-    raise exception.ImageNotFound(image_id=image_hash)
 
 
 def get_id_from_href(href):

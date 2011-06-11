@@ -26,17 +26,16 @@ from eventlet import greenthread
 from nova import context
 from nova import crypto
 from nova import db
+from nova import exception
 from nova import flags
 from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
-from nova import exception
 from nova.auth import manager
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
 from nova.image import local
-from nova.exception import NotFound
 
 
 FLAGS = flags.FLAGS
@@ -68,7 +67,7 @@ class CloudTestCase(test.TestCase):
 
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
-                    'type': 'machine'}}
+                    'type': 'machine', 'image_state': 'available'}}
 
         self.stubs.Set(local.LocalImageService, 'show', fake_show)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
@@ -115,6 +114,18 @@ class CloudTestCase(test.TestCase):
         self.cloud.release_address(self.context,
                                   public_ip=address)
         db.floating_ip_destroy(self.context, address)
+
+    def test_allocate_address(self):
+        address = "10.10.10.10"
+        allocate = self.cloud.allocate_address
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': self.network.host})
+        self.assertEqual(allocate(self.context)['publicIp'], address)
+        db.floating_ip_destroy(self.context, address)
+        self.assertRaises(exception.NoMoreFloatingIps,
+                          allocate,
+                          self.context)
 
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
@@ -254,10 +265,10 @@ class CloudTestCase(test.TestCase):
     def test_describe_instances(self):
         """Makes sure describe_instances works and filters results."""
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_id': 1,
+                                                  'image_ref': 1,
                                                   'host': 'host1'})
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_id': 1,
+                                                  'image_ref': 1,
                                                   'host': 'host2'})
         comp1 = db.service_create(self.context, {'host': 'host1',
                                                  'availability_zone': 'zone1',
@@ -290,7 +301,7 @@ class CloudTestCase(test.TestCase):
                     'type': 'machine'}}]
 
         def fake_show_none(meh, context, id):
-            raise NotFound
+            raise exception.ImageNotFound(image_id='bad_image_id')
 
         self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
         # list all
@@ -308,7 +319,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.UnsetAll()
         self.stubs.Set(local.LocalImageService, 'show', fake_show_none)
         self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show_none)
-        self.assertRaises(NotFound, describe_images,
+        self.assertRaises(exception.ImageNotFound, describe_images,
                           self.context, ['ami-fake'])
 
     def test_describe_image_attribute(self):
@@ -445,9 +456,67 @@ class CloudTestCase(test.TestCase):
         self._create_key('test')
         self.cloud.delete_key_pair(self.context, 'test')
 
+    def test_run_instances(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+        result = run_instances(self.context, **kwargs)
+        instance = result['instancesSet'][0]
+        self.assertEqual(instance['imageId'], 'ami-00000001')
+        self.assertEqual(instance['displayName'], 'Server 1')
+        self.assertEqual(instance['instanceId'], 'i-00000001')
+        self.assertEqual(instance['instanceState']['name'], 'networking')
+        self.assertEqual(instance['instanceType'], 'm1.small')
+
+    def test_run_instances_image_state_none(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+
+        def fake_show_no_state(self, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}}
+
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_no_state)
+        self.assertRaises(exception.ApiError, run_instances,
+                          self.context, **kwargs)
+
+    def test_run_instances_image_state_invalid(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+
+        def fake_show_decrypt(self, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine', 'image_state': 'decrypting'}}
+
+        self.stubs.UnsetAll()
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
+        self.assertRaises(exception.ApiError, run_instances,
+                          self.context, **kwargs)
+
+    def test_run_instances_image_status_active(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+
+        def fake_show_stat_active(self, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}, 'status': 'active'}
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_stat_active)
+
+        result = run_instances(self.context, **kwargs)
+        self.assertEqual(len(result['instancesSet']), 1)
+
     def test_terminate_instances(self):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_id': 1,
+                                                  'image_ref': 1,
                                                   'host': 'host1'})
         terminate_instances = self.cloud.terminate_instances
         # valid instance_id

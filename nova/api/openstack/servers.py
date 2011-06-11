@@ -22,6 +22,7 @@ from xml.dom import minidom
 from nova import compute
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import quota
 from nova import utils
@@ -51,13 +52,21 @@ class Controller(object):
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
-        return self._items(req, is_detail=False)
+        try:
+            servers = self._items(req, is_detail=False)
+        except exception.Invalid as err:
+            return exc.HTTPBadRequest(str(err))
+        return servers
 
     def detail(self, req):
         """ Returns a list of server details for a given user """
-        return self._items(req, is_detail=True)
+        try:
+            servers = self._items(req, is_detail=True)
+        except exception.Invalid as err:
+            return exc.HTTPBadRequest(str(err))
+        return servers
 
-    def _image_id_from_req_data(self, data):
+    def _image_ref_from_req_data(self, data):
         raise NotImplementedError()
 
     def _flavor_id_from_req_data(self, data):
@@ -121,18 +130,19 @@ class Controller(object):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
-        requested_image_id = self._image_id_from_req_data(body)
+        image_href = self._image_ref_from_req_data(body)
         try:
-            image_id = common.get_image_id_from_image_hash(self._image_service,
-                context, requested_image_id)
+            image_service, image_id = nova.image.get_image_service(image_href)
+            kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
+                req, image_service, image_id)
+            images = set([str(x['id']) for x in image_service.index(context)])
+            assert str(image_id) in images
         except:
-            msg = _("Can not find requested image")
+            msg = _("Cannot find requested image %s") % image_href
             return faults.Fault(exc.HTTPBadRequest(msg))
 
-        kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
-            req, image_id)
-
         personality = body['server'].get('personality')
+
         injected_files = []
         if personality:
             injected_files = self._get_injected_files(personality)
@@ -143,6 +153,7 @@ class Controller(object):
             msg = _("Server name is not defined")
             return exc.HTTPBadRequest(msg)
 
+        zone_blob = body['server'].get('blob')
         name = body['server']['name']
         self._validate_server_name(name)
         name = name.strip()
@@ -153,7 +164,7 @@ class Controller(object):
             (inst,) = self.compute_api.create(
                 context,
                 inst_type,
-                image_id,
+                image_href,
                 kernel_id=kernel_id,
                 ramdisk_id=ramdisk_id,
                 display_name=name,
@@ -162,12 +173,16 @@ class Controller(object):
                 key_data=key_data,
                 metadata=body['server'].get('metadata', {}),
                 injected_files=injected_files,
-                admin_password=password)
+                admin_password=password,
+                zone_blob=zone_blob)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
+        except exception.ImageNotFound as error:
+            msg = _("Can not find requested image")
+            return faults.Fault(exc.HTTPBadRequest(msg))
 
         inst['instance_type'] = inst_type
-        inst['image_id'] = requested_image_id
+        inst['image_ref'] = image_href
 
         builder = self._get_view_builder(req)
         server = builder.build(inst, is_detail=True)
@@ -505,17 +520,15 @@ class Controller(object):
                 error=item.error))
         return dict(actions=actions)
 
-    def _get_kernel_ramdisk_from_image(self, req, image_id):
+    def _get_kernel_ramdisk_from_image(self, req, image_service, image_id):
         """Fetch an image from the ImageService, then if present, return the
         associated kernel and ramdisk image IDs.
         """
         context = req.environ['nova.context']
-        image_meta = self._image_service.show(context, image_id)
+        image_meta = image_service.show(context, image_id)
         # NOTE(sirp): extracted to a separate method to aid unit-testing, the
         # new method doesn't need a request obj or an ImageService stub
-        kernel_id, ramdisk_id = self._do_get_kernel_ramdisk_from_image(
-            image_meta)
-        return kernel_id, ramdisk_id
+        return self._do_get_kernel_ramdisk_from_image(image_meta)
 
     @staticmethod
     def  _do_get_kernel_ramdisk_from_image(image_meta):
@@ -546,7 +559,7 @@ class Controller(object):
 
 
 class ControllerV10(Controller):
-    def _image_id_from_req_data(self, data):
+    def _image_ref_from_req_data(self, data):
         return data['server']['imageId']
 
     def _flavor_id_from_req_data(self, data):
@@ -604,9 +617,8 @@ class ControllerV10(Controller):
 
 
 class ControllerV11(Controller):
-    def _image_id_from_req_data(self, data):
-        href = data['server']['imageRef']
-        return common.get_id_from_href(href)
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageRef']
 
     def _flavor_id_from_req_data(self, data):
         href = data['server']['flavorRef']
@@ -686,13 +698,12 @@ class ControllerV11(Controller):
         instance_id = int(instance_id)
 
         try:
-            image_ref = info["rebuild"]["imageRef"]
+            image_href = info["rebuild"]["imageRef"]
         except (KeyError, TypeError):
             msg = _("Could not parse imageRef from request.")
             LOG.debug(msg)
             return faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
-        image_id = common.get_id_from_href(image_ref)
         personalities = info["rebuild"].get("personality", [])
         metadata = info["rebuild"].get("metadata")
         name = info["rebuild"].get("name")
@@ -702,7 +713,7 @@ class ControllerV11(Controller):
         self._decode_personalities(personalities)
 
         try:
-            self.compute_api.rebuild(context, instance_id, image_id, name,
+            self.compute_api.rebuild(context, instance_id, image_href, name,
                                      metadata, personalities)
         except exception.BuildInProgress:
             msg = _("Instance %d is currently being rebuilt.") % instance_id

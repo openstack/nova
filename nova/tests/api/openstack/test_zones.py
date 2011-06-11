@@ -21,7 +21,6 @@ import json
 import nova.db
 from nova import context
 from nova import crypto
-from nova import exception
 from nova import flags
 from nova import test
 from nova.api.openstack import zones
@@ -210,6 +209,11 @@ class ZonesTest(test.TestCase):
         self.stubs.Set(api, 'select', zone_select)
 
         req = webob.Request.blank('/v1.0/zones/select')
+        req.method = 'POST'
+        req.headers["Content-Type"] = "application/json"
+        # Select queries end up being JSON encoded twice.
+        # Once to a string and again as an HTTP POST Body
+        req.body = json.dumps(json.dumps({}))
 
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)

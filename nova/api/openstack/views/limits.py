@@ -29,9 +29,6 @@ class ViewBuilder(object):
     def _build_rate_limit(self, rate_limit):
         raise NotImplementedError()
 
-    def _build_absolute_limits(self, absolute_limit):
-        raise NotImplementedError()
-
     def build(self, rate_limits, absolute_limits):
         rate_limits = self._build_rate_limits(rate_limits)
         absolute_limits = self._build_absolute_limits(absolute_limits)
@@ -66,12 +63,6 @@ class ViewBuilder(object):
                 for name in limit_names[name]:
                     limits[name] = value
         return limits
-
-    def _build_rate_limits(self, rate_limits):
-        raise NotImplementedError()
-
-    def _build_rate_limit(self, rate_limit):
-        raise NotImplementedError()
 
 
 class ViewBuilderV10(ViewBuilder):

@@ -18,6 +18,7 @@ import webob.exc
 from nova import compute
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log
 from nova import utils
 from nova.api.openstack import common
@@ -40,35 +41,11 @@ class Controller(object):
 
         :param compute_service: `nova.compute.api:API`
         :param image_service: `nova.image.service:BaseImageService`
-        """
-        _default_service = utils.import_object(flags.FLAGS.image_service)
 
+        """
         self._compute_service = compute_service or compute.API()
-        self._image_service = image_service or _default_service
-
-    def index(self, req):
-        """Return an index listing of images available to the request.
-
-        :param req: `wsgi.Request` object
-        """
-        context = req.environ['nova.context']
-        filters = self._get_filters(req)
-        images = self._image_service.index(context, filters)
-        images = common.limited(images, req)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=False) for image in images])
-
-    def detail(self, req):
-        """Return a detailed index listing of images available to the request.
-
-        :param req: `wsgi.Request` object.
-        """
-        context = req.environ['nova.context']
-        filters = self._get_filters(req)
-        images = self._image_service.detail(context, filters)
-        images = common.limited(images, req)
-        builder = self.get_builder(req).build
-        return dict(images=[builder(image, detail=True) for image in images])
+        self._image_service = image_service or \
+                nova.image.get_default_image_service()
 
     def _get_filters(self, req):
         """
@@ -88,20 +65,14 @@ class Controller(object):
         """Return detailed information about a specific image.
 
         :param req: `wsgi.Request` object
-        :param id: Image identifier (integer)
+        :param id: Image identifier
         """
         context = req.environ['nova.context']
 
         try:
-            image_id = int(id)
-        except ValueError:
+            image = self._image_service.show(context, id)
+        except (exception.NotFound, exception.InvalidImageRef):
             explanation = _("Image not found.")
-            raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
-
-        try:
-            image = self._image_service.show(context, image_id)
-        except exception.NotFound:
-            explanation = _("Image '%d' not found.") % (image_id)
             raise faults.Fault(webob.exc.HTTPNotFound(explanation=explanation))
 
         return dict(image=self.get_builder(req).build(image, detail=True))
@@ -112,9 +83,8 @@ class Controller(object):
         :param req: `wsgi.Request` object
         :param id: Image identifier (integer)
         """
-        image_id = id
         context = req.environ['nova.context']
-        self._image_service.delete(context, image_id)
+        self._image_service.delete(context, id)
         return webob.exc.HTTPNoContent()
 
     def create(self, req, body):
@@ -129,7 +99,7 @@ class Controller(object):
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = body["image"]["serverId"]
+            server_id = self._server_id_from_req_data(body)
             image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
@@ -141,6 +111,9 @@ class Controller(object):
         """Indicates that you must use a Controller subclass."""
         raise NotImplementedError
 
+    def _server_id_from_req_data(self, data):
+        raise NotImplementedError()
+
 
 class ControllerV10(Controller):
     """Version 1.0 specific controller logic."""
@@ -150,6 +123,35 @@ class ControllerV10(Controller):
         base_url = request.application_url
         return images_view.ViewBuilderV10(base_url)
 
+    def index(self, req):
+        """Return an index listing of images available to the request.
+
+        :param req: `wsgi.Request` object
+
+        """
+        context = req.environ['nova.context']
+        filters = self._get_filters(req)
+        images = self._image_service.index(context, filters)
+        images = common.limited(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=False) for image in images])
+
+    def detail(self, req):
+        """Return a detailed index listing of images available to the request.
+
+        :param req: `wsgi.Request` object.
+
+        """
+        context = req.environ['nova.context']
+        filters = self._get_filters(req)
+        images = self._image_service.detail(context, filters)
+        images = common.limited(images, req)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=True) for image in images])
+
+    def _server_id_from_req_data(self, data):
+        return data['image']['serverId']
+
 
 class ControllerV11(Controller):
     """Version 1.1 specific controller logic."""
@@ -158,6 +160,37 @@ class ControllerV11(Controller):
         """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
+
+    def index(self, req):
+        """Return an index listing of images available to the request.
+
+        :param req: `wsgi.Request` object
+
+        """
+        context = req.environ['nova.context']
+        filters = self._get_filters(req)
+        (marker, limit) = common.get_pagination_params(req)
+        images = self._image_service.index(
+            context, filters=filters, marker=marker, limit=limit)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=False) for image in images])
+
+    def detail(self, req):
+        """Return a detailed index listing of images available to the request.
+
+        :param req: `wsgi.Request` object.
+
+        """
+        context = req.environ['nova.context']
+        filters = self._get_filters(req)
+        (marker, limit) = common.get_pagination_params(req)
+        images = self._image_service.detail(
+            context, filters=filters, marker=marker, limit=limit)
+        builder = self.get_builder(req).build
+        return dict(images=[builder(image, detail=True) for image in images])
+
+    def _server_id_from_req_data(self, data):
+        return data['image']['serverRef']
 
 
 def create_resource(version='1.0'):
@@ -174,7 +207,7 @@ def create_resource(version='1.0'):
     metadata = {
         "attributes": {
             "image": ["id", "name", "updated", "created", "status",
-                      "serverId", "progress"],
+                      "serverId", "progress", "serverRef"],
             "link": ["rel", "type", "href"],
         },
     }

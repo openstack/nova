@@ -311,7 +311,7 @@ class AdminController(object):
             * Volume Count
         """
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         rv = []
         for host in [service['host'] for service in services]:
@@ -331,10 +331,6 @@ class AdminController(object):
             rv.append(host_dict(host, compute, instances, volume, volumes,
                                 now))
         return {'hosts': rv}
-
-    def describe_host(self, _context, name, **_kwargs):
-        """Returns status info for single node."""
-        return host_dict(db.host_get(name))
 
     def _provider_fw_rule_exists(self, context, rule):
         # TODO(todd): we call this repeatedly, can we filter by protocol?

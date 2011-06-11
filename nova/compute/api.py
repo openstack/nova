@@ -18,7 +18,6 @@
 
 """Handles all requests relating to instances (guest vms)."""
 
-import datetime
 import eventlet
 import re
 import time
@@ -26,6 +25,7 @@ import time
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import network
 from nova import quota
@@ -58,9 +58,9 @@ class API(base.Base):
     def __init__(self, image_service=None, network_api=None,
                  volume_api=None, hostname_factory=generate_default_hostname,
                  **kwargs):
-        if not image_service:
-            image_service = utils.import_object(FLAGS.image_service)
-        self.image_service = image_service
+        self.image_service = image_service or \
+                nova.image.get_default_image_service()
+
         if not network_api:
             network_api = network.API()
         self.network_api = network_api
@@ -128,18 +128,16 @@ class API(base.Base):
                 LOG.warn(msg)
                 raise quota.QuotaError(msg, "MetadataLimitExceeded")
 
-    def create(self, context, instance_type,
-               image_id, kernel_id=None, ramdisk_id=None,
+    def _check_create_parameters(self, context, instance_type,
+               image_href, kernel_id=None, ramdisk_id=None,
                min_count=1, max_count=1,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None,
-               admin_password=None):
-        """Create the number and type of instances requested.
+               injected_files=None, admin_password=None, zone_blob=None):
+        """Verify all the input parameters regardless of the provisioning
+        strategy being performed."""
 
-        Verifies that quota and other arguments are valid.
-        """
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 
@@ -160,7 +158,8 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, metadata)
         self._check_injected_file_quota(context, injected_files)
 
-        image = self.image_service.show(context, image_id)
+        (image_service, image_id) = nova.image.get_image_service(image_href)
+        image = image_service.show(context, image_id)
 
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
@@ -180,9 +179,9 @@ class API(base.Base):
         logging.debug("Using Kernel=%s, Ramdisk=%s" %
                        (kernel_id, ramdisk_id))
         if kernel_id:
-            self.image_service.show(context, kernel_id)
+            image_service.show(context, kernel_id)
         if ramdisk_id:
-            self.image_service.show(context, ramdisk_id)
+            image_service.show(context, ramdisk_id)
 
         if security_group is None:
             security_group = ['default']
@@ -203,7 +202,7 @@ class API(base.Base):
 
         base_options = {
             'reservation_id': utils.generate_uid('r'),
-            'image_id': image_id,
+            'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
             'state': 0,
@@ -224,62 +223,144 @@ class API(base.Base):
             'metadata': metadata,
             'availability_zone': availability_zone,
             'os_type': os_type}
+
+        return (num_instances, base_options, security_groups)
+
+    def create_db_entry_for_new_instance(self, context, base_options,
+             security_groups, num=1):
+        """Create an entry in the DB for this new instance,
+        including any related table updates (such as security
+        groups, MAC address, etc). This will called by create()
+        in the majority of situations, but all-at-once style
+        Schedulers may initiate the call."""
+        instance = dict(mac_address=utils.generate_mac(),
+                        launch_index=num,
+                        **base_options)
+        instance = self.db.instance_create(context, instance)
+        instance_id = instance['id']
+
         elevated = context.elevated()
-        instances = []
-        LOG.debug(_("Going to run %s instances..."), num_instances)
-        for num in range(num_instances):
-            instance = dict(mac_address=utils.generate_mac(),
-                            launch_index=num,
-                            **base_options)
-            instance = self.db.instance_create(context, instance)
-            instance_id = instance['id']
+        if not security_groups:
+            security_groups = []
+        for security_group_id in security_groups:
+            self.db.instance_add_security_group(elevated,
+                                                instance_id,
+                                                security_group_id)
 
-            elevated = context.elevated()
-            if not security_groups:
-                security_groups = []
-            for security_group_id in security_groups:
-                self.db.instance_add_security_group(elevated,
-                                                    instance_id,
-                                                    security_group_id)
+        # Set sane defaults if not specified
+        updates = dict(hostname=self.hostname_factory(instance_id))
+        if (not hasattr(instance, 'display_name') or
+                instance.display_name is None):
+            updates['display_name'] = "Server %s" % instance_id
 
-            # Set sane defaults if not specified
-            updates = dict(hostname=self.hostname_factory(instance_id))
-            if (not hasattr(instance, 'display_name') or
-                    instance.display_name is None):
-                updates['display_name'] = "Server %s" % instance_id
-
-            instance = self.update(context, instance_id, **updates)
-            instances.append(instance)
-
-            pid = context.project_id
-            uid = context.user_id
-            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
-                    " instance %(instance_id)s") % locals())
-
-            # NOTE(sandy): For now we're just going to pass in the
-            # instance_type record to the scheduler. In a later phase
-            # we'll be ripping this whole for-loop out and deferring the
-            # creation of the Instance record. At that point all this will
-            # change.
-            rpc.cast(context,
-                     FLAGS.scheduler_topic,
-                     {"method": "run_instance",
-                      "args": {"topic": FLAGS.compute_topic,
-                               "instance_id": instance_id,
-                               "request_spec": {
-                                        'instance_type': instance_type,
-                                        'filter':
-                                            'nova.scheduler.host_filter.'
-                                            'InstanceTypeFilter',
-                               },
-                               "availability_zone": availability_zone,
-                               "injected_files": injected_files,
-                               "admin_password": admin_password,
-                              },
-                     })
+        instance = self.update(context, instance_id, **updates)
 
         for group_id in security_groups:
             self.trigger_security_group_members_refresh(elevated, group_id)
+
+        return instance
+
+    def _ask_scheduler_to_create_instance(self, context, base_options,
+                                          instance_type, zone_blob,
+                                          availability_zone, injected_files,
+                                          admin_password,
+                                          instance_id=None, num_instances=1):
+        """Send the run_instance request to the schedulers for processing."""
+        pid = context.project_id
+        uid = context.user_id
+        if instance_id:
+            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
+                    " instance %(instance_id)s (single-shot)") % locals())
+        else:
+            LOG.debug(_("Casting to scheduler for %(pid)s/%(uid)s's"
+                    " (all-at-once)") % locals())
+
+        filter_class = 'nova.scheduler.host_filter.InstanceTypeFilter'
+        request_spec = {
+            'instance_properties': base_options,
+            'instance_type': instance_type,
+            'filter': filter_class,
+            'blob': zone_blob,
+            'num_instances': num_instances
+        }
+
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "run_instance",
+                  "args": {"topic": FLAGS.compute_topic,
+                           "instance_id": instance_id,
+                           "request_spec": request_spec,
+                           "availability_zone": availability_zone,
+                           "admin_password": admin_password,
+                           "injected_files": injected_files}})
+
+    def create_all_at_once(self, context, instance_type,
+               image_href, kernel_id=None, ramdisk_id=None,
+               min_count=1, max_count=1,
+               display_name='', display_description='',
+               key_name=None, key_data=None, security_group='default',
+               availability_zone=None, user_data=None, metadata={},
+               injected_files=None, admin_password=None, zone_blob=None):
+        """Provision the instances by passing the whole request to
+        the Scheduler for execution. Returns a Reservation ID
+        related to the creation of all of these instances."""
+        num_instances, base_options, security_groups = \
+                    self._check_create_parameters(
+                               context, instance_type,
+                               image_href, kernel_id, ramdisk_id,
+                               min_count, max_count,
+                               display_name, display_description,
+                               key_name, key_data, security_group,
+                               availability_zone, user_data, metadata,
+                               injected_files, admin_password, zone_blob)
+
+        self._ask_scheduler_to_create_instance(context, base_options,
+                                      instance_type, zone_blob,
+                                      availability_zone, injected_files,
+                                      admin_password,
+                                      num_instances=num_instances)
+
+        return base_options['reservation_id']
+
+    def create(self, context, instance_type,
+               image_href, kernel_id=None, ramdisk_id=None,
+               min_count=1, max_count=1,
+               display_name='', display_description='',
+               key_name=None, key_data=None, security_group='default',
+               availability_zone=None, user_data=None, metadata={},
+               injected_files=None, admin_password=None, zone_blob=None):
+        """
+        Provision the instances by sending off a series of single
+        instance requests to the Schedulers. This is fine for trival
+        Scheduler drivers, but may remove the effectiveness of the
+        more complicated drivers.
+
+        Returns a list of instance dicts.
+        """
+
+        num_instances, base_options, security_groups = \
+                    self._check_create_parameters(
+                               context, instance_type,
+                               image_href, kernel_id, ramdisk_id,
+                               min_count, max_count,
+                               display_name, display_description,
+                               key_name, key_data, security_group,
+                               availability_zone, user_data, metadata,
+                               injected_files, admin_password, zone_blob)
+
+        instances = []
+        LOG.debug(_("Going to run %s instances..."), num_instances)
+        for num in range(num_instances):
+            instance = self.create_db_entry_for_new_instance(context,
+                                    base_options, security_groups, num=num)
+            instances.append(instance)
+            instance_id = instance['id']
+
+            self._ask_scheduler_to_create_instance(context, base_options,
+                                          instance_type, zone_blob,
+                                          availability_zone, injected_files,
+                                          admin_password,
+                                          instance_id=instance_id)
 
         return [dict(x.iteritems()) for x in instances]
 
@@ -415,7 +496,7 @@ class API(base.Base):
                     instance['id'],
                     state_description='terminating',
                     state=0,
-                    terminated_at=datetime.datetime.utcnow())
+                    terminated_at=utils.utcnow())
 
         host = instance['host']
         if host:
@@ -525,9 +606,10 @@ class API(base.Base):
         :returns: A dict containing image metadata
         """
         properties = {'instance_id': str(instance_id),
-                      'user_id': str(context.user_id)}
+                      'user_id': str(context.user_id),
+                      'image_state': 'creating'}
         sent_meta = {'name': name, 'is_public': False,
-                     'properties': properties}
+                     'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
         params = {'image_id': recv_meta['id']}
         self._cast_compute_message('snapshot_instance', context, instance_id,
@@ -538,8 +620,8 @@ class API(base.Base):
         """Reboot the given instance."""
         self._cast_compute_message('reboot_instance', context, instance_id)
 
-    def rebuild(self, context, instance_id, image_id, name=None, metadata=None,
-                files_to_inject=None):
+    def rebuild(self, context, instance_id, image_href, name=None,
+            metadata=None, files_to_inject=None):
         """Rebuild the given instance with the provided metadata."""
         instance = db.api.instance_get(context, instance_id)
 
@@ -559,7 +641,7 @@ class API(base.Base):
         self.db.instance_update(context, instance_id, values)
 
         rebuild_params = {
-            "image_id": image_id,
+            "image_ref": image_href,
             "injected_files": files_to_inject,
         }
 

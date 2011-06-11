@@ -21,9 +21,22 @@ import select
 from eventlet import greenpool
 from eventlet import greenthread
 
+from nova import exception
 from nova import test
 from nova import utils
 from nova.utils import parse_mailmap, str_dict_replace
+
+
+class ExceptionTestCase(test.TestCase):
+    @staticmethod
+    def _raise_exc(exc):
+        raise exc()
+
+    def test_exceptions_raise(self):
+        for name in dir(exception):
+            exc = getattr(exception, name)
+            if isinstance(exc, type):
+                self.assertRaises(exc, self._raise_exc, exc)
 
 
 class ProjectTestCase(test.TestCase):

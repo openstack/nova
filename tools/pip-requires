@@ -33,3 +33,4 @@ suds==0.4
 coverage
 nosexcover
 GitPython
+paramiko
