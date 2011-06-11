@@ -377,3 +377,15 @@ class AdminController(object):
         blocks = [{'cidr': b} for b in blocks]
         return {'externalIpBlockInfo':
                 list(sorted(blocks, key=lambda k: k['cidr']))}
+
+    def remove_external_address_block(self, context, cidr):
+        LOG.audit(_('Removing ip block from %s'), cidr, context=context)
+        cidr = urllib.unquote(cidr).decode()
+        # raise if invalid
+        IPy.IP(cidr)
+        rules = db.provider_fw_rule_get_all_by_cidr(context, cidr)
+        for rule in rules:
+            db.provider_fw_rule_destroy(context, rule['id'])
+        if rules:
+            self.compute_api.trigger_provider_fw_rules_refresh(context)
+        return {'status': 'OK', 'message': 'Deleted %s rules' % len(rules)}
