@@ -17,6 +17,7 @@ Tests for Crypto module.
 """
 
 import mox
+import stubout
 
 from nova import crypto
 from nova import db
@@ -53,20 +54,31 @@ class SymmetricKeyTestCase(test.TestCase):
 
 class RevokeCertsTest(test.TestCase):
 
+    def setUp(self):
+        super(RevokeCertsTest, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(RevokeCertsTest, self).tearDown()
+
     def test_revoke_certs_by_user_and_project(self):
         user_id = 'test_user'
         project_id = 2
         file_name = 'test_file'
 
-        certificates = [{"user_id": user_id, "project_id": project_id,
-        "file_name": file_name}]
+        def mock_certificate_get_all_by_user_and_project(context, 
+                                                         user_id,
+                                                         project_id):
 
-        self.mox.StubOutWithMock(db, 'certificate_get_all_by_user_and_project')
-        db.certificate_get_all_by_user_and_project(mox.IgnoreArg(), \
-            user_id, project_id).AndReturn(certificates)
+            return [{"user_id": user_id, "project_id": project_id, 
+                                          "file_name": file_name}]
+
+        self.stubs.Set(db, 'certificate_get_all_by_user_and_project', 
+                                    mock_certificate_get_all_by_user_and_project)
 
         self.mox.StubOutWithMock(crypto, 'revoke_cert')
-        crypto.revoke_cert(project_id, mox.IgnoreArg())
+        crypto.revoke_cert(project_id, file_name)
 
         self.mox.ReplayAll()
 
@@ -79,12 +91,13 @@ class RevokeCertsTest(test.TestCase):
         project_id = 2
         file_name = 'test_file'
 
-        certificates = [{"user_id": user_id, "project_id": project_id,
-        "file_name": file_name}]
+        def mock_certificate_get_all_by_user(context, user_id): 
 
-        self.mox.StubOutWithMock(db, 'certificate_get_all_by_user')
-        db.certificate_get_all_by_user(mox.IgnoreArg(), \
-            user_id).AndReturn(certificates)
+            return [{"user_id": user_id, "project_id": project_id, 
+                                          "file_name": file_name}]
+
+        self.stubs.Set(db, 'certificate_get_all_by_user', 
+                                    mock_certificate_get_all_by_user)
 
         self.mox.StubOutWithMock(crypto, 'revoke_cert')
         crypto.revoke_cert(project_id, mox.IgnoreArg())
@@ -100,12 +113,13 @@ class RevokeCertsTest(test.TestCase):
         project_id = 2
         file_name = 'test_file'
 
-        certificates = [{"user_id": user_id, "project_id": project_id,
-        "file_name": file_name}]
+        def mock_certificate_get_all_by_project(context, project_id):
 
-        self.mox.StubOutWithMock(db, 'certificate_get_all_by_project')
-        db.certificate_get_all_by_project(mox.IgnoreArg(), \
-                project_id).AndReturn(certificates)
+            return [{"user_id": user_id, "project_id": project_id, 
+                                          "file_name": file_name}]
+
+        self.stubs.Set(db, 'certificate_get_all_by_project', 
+                                    mock_certificate_get_all_by_project)
 
         self.mox.StubOutWithMock(crypto, 'revoke_cert')
         crypto.revoke_cert(project_id, mox.IgnoreArg())
