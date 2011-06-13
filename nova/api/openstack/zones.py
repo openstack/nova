@@ -130,10 +130,12 @@ class Controller(controller.OpenstackCreateInstanceController):
 
         Returns a reservation ID (a UUID).
         """
-        extra_values, result = self.create_instance(req, body,
+        result = None
+        try:
+            extra_values, result = self.create_instance(req, body,
                                     self.compute_api.create_all_at_once)
-        if extra_values is None:
-            return result  # a Fault.
+        except faults.Fault, f:
+            return f
 
         reservation_id = result
         return {'reservation_id': reservation_id}

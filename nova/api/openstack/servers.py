@@ -108,10 +108,13 @@ class Controller(base_controller.OpenstackCreateInstanceController):
 
     def create(self, req, body):
         """ Creates a new server for a given user """
-        extra_values, result = \
-                self.create_instance(req, body, self.compute_api.create)
-        if extra_values is None:
-            return result  # a Fault.
+        extra_values = None
+        result = None
+        try:
+            extra_values, result = \
+                    self.create_instance(req, body, self.compute_api.create)
+        except faults.Fault, f:
+            return f
 
         instances = result
 

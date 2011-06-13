@@ -39,6 +39,14 @@ LOG = logging.getLogger('nova.api.openstack.create_instance_controller')
 FLAGS = flags.FLAGS
 
 
+class CreateFault(exception.NovaException):
+    message = _("Invalid parameters given to create_instance.")
+
+    def __init__(self, fault):
+        self.fault = fault
+        super(CreateFault, self).__init__()
+
+
 class OpenstackCreateInstanceController(object):
     """This is the base class for OS API Controllers that
     are capable of creating instances (currently Servers and Zones).
@@ -75,7 +83,7 @@ class OpenstackCreateInstanceController(object):
         return type from this method is left to the caller.
         """
         if not body:
-            return (None, faults.Fault(exc.HTTPUnprocessableEntity()))
+            raise faults.Fault(exc.HTTPUnprocessableEntity())
 
         context = req.environ['nova.context']
 
@@ -99,7 +107,7 @@ class OpenstackCreateInstanceController(object):
         except Exception, e:
             msg = _("Cannot find requested image %(image_href)s: %(e)s" %
                                                                     locals())
-            return (None, faults.Fault(exc.HTTPBadRequest(msg)))
+            raise faults.Fault(exc.HTTPBadRequest(msg))
 
         personality = body['server'].get('personality')
 
@@ -111,7 +119,7 @@ class OpenstackCreateInstanceController(object):
 
         if not 'name' in body['server']:
             msg = _("Server name is not defined")
-            return (None, exc.HTTPBadRequest(msg))
+            raise exc.HTTPBadRequest(msg)
 
         zone_blob = body['server'].get('blob')
         name = body['server']['name']
@@ -150,7 +158,7 @@ class OpenstackCreateInstanceController(object):
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
-            return faults.Fault(exc.HTTPBadRequest(msg))
+            raise faults.Fault(exc.HTTPBadRequest(msg))
 
         # Let the caller deal with unhandled exceptions.
 
