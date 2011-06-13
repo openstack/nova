@@ -61,8 +61,7 @@ class TextDeserializer(object):
     def deserialize(self, datastring, action='default'):
         """Find local deserialization method and parse request body."""
         action_method = getattr(self, str(action), self.default)
-        output = action_method(datastring)
-        return output
+        return action_method(datastring)
 
     def default(self, datastring):
         """Default deserialization code should live here"""
@@ -191,8 +190,7 @@ class DictSerializer(object):
     def serialize(self, data, action='default'):
         """Find local serialization method and encode response body."""
         action_method = getattr(self, str(action), self.default)
-        output = action_method(data)
-        return output
+        return action_method(data)
 
     def default(self, data):
         """Default serialization code should live here"""
