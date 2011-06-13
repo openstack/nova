@@ -38,7 +38,7 @@ class Controller(object):
         return dict(metadata=meta_dict)
 
     def _check_body(self, body):
-        if not body:
+        if body == None or body == "":
             expl = _('No Request Body')
             raise exc.HTTPBadRequest(explanation=expl)
 
