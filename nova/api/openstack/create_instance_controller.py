@@ -19,7 +19,6 @@ import base64
 import re
 import webob
 
-from urlparse import urlparse
 from webob import exc
 from xml.dom import minidom
 
@@ -31,7 +30,6 @@ from nova import quota
 from nova import utils
 
 from nova.compute import instance_types
-from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 from nova.auth import manager as auth_manager

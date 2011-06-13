@@ -17,7 +17,6 @@ import base64
 import traceback
 
 from webob import exc
-from xml.dom import minidom
 
 from nova import compute
 from nova import exception
@@ -32,7 +31,6 @@ import nova.api.openstack.views.flavors
 import nova.api.openstack.views.images
 import nova.api.openstack.views.servers
 from nova.api.openstack import wsgi
-from nova.auth import manager as auth_manager
 import nova.api.openstack
 from nova.scheduler import api as scheduler_api
 

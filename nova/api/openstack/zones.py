@@ -69,8 +69,9 @@ class Controller(controller.OpenstackCreateInstanceController):
     doing that (shared with Servers).
     """
 
-    def __init__(self):
+    def __init__(self, version):
         self.compute_api = compute.API()
+        self.version = version
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -160,16 +161,18 @@ class Controller(controller.OpenstackCreateInstanceController):
                 blob=cipher_text))
         return cooked
 
-    # Assume OS 1.0 functionality for these overrides.
-
-    def _image_id_from_req_data(self, data):
-        return data['server']['imageId']
+    def _image_ref_from_req_data(self, data):
+        if self.version == '1.0':
+            return data['server']['imageId']
+        return data['server']['imageRef']
 
     def _flavor_id_from_req_data(self, data):
-        return data['server']['flavorId']
+        if self.version == '1.0':
+            return data['server']['flavorId']
+        return data['server']['flavorRef']
 
 
-def create_resource():
+def create_resource(version):
     metadata = {
         "attributes": {
             "zone": ["id", "api_url", "name", "capabilities"],
@@ -185,5 +188,5 @@ def create_resource():
         'application/xml': controller.ServerXMLDeserializer(),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers,
+    return wsgi.Resource(Controller(version), serializers=serializers,
                          deserializers=deserializers)
