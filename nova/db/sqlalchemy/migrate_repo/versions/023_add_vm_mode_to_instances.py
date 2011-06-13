@@ -18,9 +18,7 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 
 meta = MetaData()
 
-instances = Table('instances', meta,
-        Column('id', Integer(),  primary_key=True, nullable=False),
-        )
+instances = Table('instances', meta, autoload=True)
 
 instances_vm_mode = Column('vm_mode',
                            String(length=255, convert_unicode=False,
