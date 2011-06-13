@@ -96,7 +96,6 @@ class DictSerializerTest(test.TestCase):
         self.assertEqual(serializer.serialize({}, None), 'trousers')
 
 
-
 class XMLDictSerializerTest(test.TestCase):
     def test_xml(self):
         input_dict = dict(servers=dict(a=(2, 3)))
