@@ -466,7 +466,8 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['imageId'], 'ami-00000001')
         self.assertEqual(instance['displayName'], 'Server 1')
         self.assertEqual(instance['instanceId'], 'i-00000001')
-        self.assertEqual(instance['instanceState']['name'], 'networking')
+        self.assertTrue(instance['instanceState']['name'] in
+                        ['networking', 'scheduling'])
         self.assertEqual(instance['instanceType'], 'm1.small')
 
     def test_run_instances_image_state_none(self):
