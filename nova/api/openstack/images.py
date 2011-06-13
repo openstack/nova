@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 import webob.exc
 
 from nova import compute
@@ -22,7 +20,6 @@ from nova import exception
 from nova import flags
 from nova import log
 from nova import utils
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.api.openstack.views import images as images_view
@@ -31,8 +28,10 @@ from nova.api.openstack.views import images as images_view
 LOG = log.getLogger('nova.api.openstack.images')
 FLAGS = flags.FLAGS
 
+SUPPORTED_FILTERS = ['name', 'status']
 
-class Controller(wsgi.Controller):
+
+class Controller(common.OpenstackController):
     """Base `wsgi.Controller` for retrieving/displaying images."""
 
     _serialization_metadata = {
@@ -62,7 +61,8 @@ class Controller(wsgi.Controller):
         :param req: `wsgi.Request` object
         """
         context = req.environ['nova.context']
-        images = self._image_service.index(context)
+        filters = self._get_filters(req)
+        images = self._image_service.index(context, filters)
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=False) for image in images])
@@ -73,10 +73,25 @@ class Controller(wsgi.Controller):
         :param req: `wsgi.Request` object.
         """
         context = req.environ['nova.context']
-        images = self._image_service.detail(context)
+        filters = self._get_filters(req)
+        images = self._image_service.detail(context, filters)
         images = common.limited(images, req)
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
+
+    def _get_filters(self, req):
+        """
+        Return a dictionary of query param filters from the request
+
+        :param req: the Request object coming from the wsgi layer
+        :retval a dict of key/value filters
+        """
+        filters = {}
+        for param in req.str_params:
+            if param in SUPPORTED_FILTERS or param.startswith('property-'):
+                filters[param] = req.str_params.get(param)
+
+        return filters
 
     def show(self, req, id):
         """Return detailed information about a specific image.
@@ -130,7 +145,7 @@ class Controller(wsgi.Controller):
             raise webob.exc.HTTPBadRequest()
 
         image = self._compute_service.snapshot(context, server_id, image_name)
-        return self.get_builder(req).build(image, detail=True)
+        return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
@@ -153,3 +168,6 @@ class ControllerV11(Controller):
         """Property to get the ViewBuilder class we need to use."""
         base_url = request.application_url
         return images_view.ViewBuilderV11(base_url)
+
+    def get_default_xmlns(self, req):
+        return common.XML_NS_V11

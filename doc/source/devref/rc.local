@@ -1,0 +1,36 @@
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+####### These lines go at the end of /etc/rc.local #######
+. /lib/lsb/init-functions
+
+echo Downloading payload from userdata
+wget http://169.254.169.254/latest/user-data -O /tmp/payload.b64
+echo Decrypting base64 payload
+openssl enc -d -base64 -in /tmp/payload.b64 -out /tmp/payload.zip
+
+mkdir -p /tmp/payload
+echo Unzipping payload file
+unzip -o /tmp/payload.zip -d /tmp/payload/
+
+# if the autorun.sh script exists, run it
+if [ -e /tmp/payload/autorun.sh ]; then
+  echo Running autorun.sh
+  cd /tmp/payload
+  sh /tmp/payload/autorun.sh
+
+else
+  echo rc.local : No autorun script to run
+fi
+
+
+exit 0

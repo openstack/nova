@@ -16,6 +16,8 @@
 
 """Stubouts, mocks and fixtures for the test suite"""
 
+import eventlet
+import json
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import volume_utils
@@ -28,29 +30,6 @@ def stubout_instance_snapshot(stubs):
     @classmethod
     def fake_fetch_image(cls, session, instance_id, image, user, project,
                          type):
-        # Stubout wait_for_task
-        def fake_wait_for_task(self, task, id):
-            class FakeEvent:
-
-                def send(self, value):
-                    self.rv = value
-
-                def wait(self):
-                    return self.rv
-
-            done = FakeEvent()
-            self._poll_task(id, task, done)
-            rv = done.wait()
-            return rv
-
-        def fake_loop(self):
-            pass
-
-        stubs.Set(xenapi_conn.XenAPISession, 'wait_for_task',
-                  fake_wait_for_task)
-
-        stubs.Set(xenapi_conn.XenAPISession, '_stop_loop', fake_loop)
-
         from nova.virt.xenapi.fake import create_vdi
         name_label = "instance-%s" % instance_id
         #TODO: create fake SR record
@@ -59,14 +38,9 @@ def stubout_instance_snapshot(stubs):
                              sr_ref=sr_ref, sharable=False)
         vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
         vdi_uuid = vdi_rec['uuid']
-        return vdi_uuid
+        return [dict(vdi_type='os', vdi_uuid=vdi_uuid)]
 
     stubs.Set(vm_utils.VMHelper, 'fetch_image', fake_fetch_image)
-
-    def fake_parse_xmlrpc_value(val):
-        return val
-
-    stubs.Set(xenapi_conn, '_parse_xmlrpc_value', fake_parse_xmlrpc_value)
 
     def fake_wait_for_vhd_coalesce(session, instance_id, sr_ref, vdi_ref,
                               original_parent_uuid):
@@ -174,19 +148,48 @@ def stubout_loopingcall_start(stubs):
     stubs.Set(utils.LoopingCall, 'start', fake_start)
 
 
+def stubout_loopingcall_delay(stubs):
+    def fake_start(self, interval, now=True):
+        self._running = True
+        eventlet.sleep(1)
+        self.f(*self.args, **self.kw)
+        # This would fail before parallel xenapi calls were fixed
+        assert self._running == False
+    stubs.Set(utils.LoopingCall, 'start', fake_start)
+
+
 class FakeSessionForVMTests(fake.SessionBase):
     """ Stubs out a XenAPISession for VM tests """
     def __init__(self, uri):
         super(FakeSessionForVMTests, self).__init__(uri)
 
-    def host_call_plugin(self, _1, _2, plugin, fn, args):
+    def host_call_plugin(self, _1, _2, plugin, method, _5):
         # copy_kernel_vdi returns nothing
         if fn == 'copy_kernel_vdi':
             return
         sr_ref = fake.get_all('SR')[0]
         vdi_ref = fake.create_vdi('', False, sr_ref, False)
         vdi_rec = fake.get_record('VDI', vdi_ref)
-        return '<string>%s</string>' % vdi_rec['uuid']
+        if plugin == "glance" and method == "download_vhd":
+            ret_str = json.dumps([dict(vdi_type='os',
+                    vdi_uuid=vdi_rec['uuid'])])
+        else:
+            ret_str = vdi_rec['uuid']
+        return '<string>%s</string>' % ret_str
+
+    def host_call_plugin_swap(self, _1, _2, plugin, method, _5):
+        sr_ref = fake.get_all('SR')[0]
+        vdi_ref = fake.create_vdi('', False, sr_ref, False)
+        vdi_rec = fake.get_record('VDI', vdi_ref)
+        if plugin == "glance" and method == "download_vhd":
+            swap_vdi_ref = fake.create_vdi('', False, sr_ref, False)
+            swap_vdi_rec = fake.get_record('VDI', swap_vdi_ref)
+            ret_str = json.dumps(
+                    [dict(vdi_type='os', vdi_uuid=vdi_rec['uuid']),
+                    dict(vdi_type='swap', vdi_uuid=swap_vdi_rec['uuid'])])
+        else:
+            ret_str = vdi_rec['uuid']
+        return '<string>%s</string>' % ret_str
 
     def VM_start(self, _1, ref, _2, _3):
         vm = fake.get_record('VM', ref)

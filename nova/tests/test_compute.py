@@ -21,6 +21,7 @@ Tests For Compute
 
 import datetime
 import mox
+import stubout
 
 from nova import compute
 from nova import context
@@ -50,6 +51,10 @@ class FakeTime(object):
 
     def sleep(self, t):
         self.counter += t
+
+
+def nop_report_driver_status(self):
+    pass
 
 
 class ComputeTestCase(test.TestCase):
@@ -84,7 +89,8 @@ class ComputeTestCase(test.TestCase):
         inst['launch_time'] = '10'
         inst['user_id'] = self.user.id
         inst['project_id'] = self.project.id
-        inst['instance_type'] = 'm1.tiny'
+        type_id = instance_types.get_instance_type_by_name('m1.tiny')['id']
+        inst['instance_type_id'] = type_id
         inst['mac_address'] = utils.generate_mac()
         inst['ami_launch_index'] = 0
         inst.update(params)
@@ -132,7 +138,7 @@ class ComputeTestCase(test.TestCase):
         cases = [dict(), dict(display_name=None)]
         for instance in cases:
             ref = self.compute_api.create(self.context,
-                FLAGS.default_instance_type, None, **instance)
+                instance_types.get_default_instance_type(), None, **instance)
             try:
                 self.assertNotEqual(ref[0]['display_name'], None)
             finally:
@@ -143,7 +149,7 @@ class ComputeTestCase(test.TestCase):
         group = self._create_group()
         ref = self.compute_api.create(
                 self.context,
-                instance_type=FLAGS.default_instance_type,
+                instance_type=instance_types.get_default_instance_type(),
                 image_id=None,
                 security_group=['testgroup'])
         try:
@@ -161,7 +167,7 @@ class ComputeTestCase(test.TestCase):
 
         ref = self.compute_api.create(
                 self.context,
-                instance_type=FLAGS.default_instance_type,
+                instance_type=instance_types.get_default_instance_type(),
                 image_id=None,
                 security_group=['testgroup'])
         try:
@@ -177,7 +183,7 @@ class ComputeTestCase(test.TestCase):
 
         ref = self.compute_api.create(
                 self.context,
-                instance_type=FLAGS.default_instance_type,
+                instance_type=instance_types.get_default_instance_type(),
                 image_id=None,
                 security_group=['testgroup'])
 
@@ -328,6 +334,28 @@ class ComputeTestCase(test.TestCase):
 
         self.compute.terminate_instance(self.context, instance_id)
 
+    def test_finish_resize(self):
+        """Contrived test to ensure finish_resize doesn't raise anything"""
+
+        def fake(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.compute.driver, 'finish_resize', fake)
+        context = self.context.elevated()
+        instance_id = self._create_instance()
+        self.compute.prep_resize(context, instance_id, 1)
+        migration_ref = db.migration_get_by_instance_and_status(context,
+                instance_id, 'pre-migrating')
+        try:
+            self.compute.finish_resize(context, instance_id,
+                    int(migration_ref['id']), {})
+        except KeyError, e:
+            # Only catch key errors. We want other reasons for the test to
+            # fail to actually error out so we don't obscure anything
+            self.fail()
+
+        self.compute.terminate_instance(self.context, instance_id)
+
     def test_resize_instance(self):
         """Ensure instance can be migrated/resized"""
         instance_id = self._create_instance()
@@ -359,8 +387,9 @@ class ComputeTestCase(test.TestCase):
         instance_id = self._create_instance()
 
         self.compute.run_instance(self.context, instance_id)
+        inst_type = instance_types.get_instance_type_by_name('m1.xlarge')
         db.instance_update(self.context, instance_id,
-                {'instance_type': 'm1.xlarge'})
+                {'instance_type_id': inst_type['id']})
 
         self.assertRaises(exception.ApiError, self.compute_api.resize,
                 context, instance_id, 1)
@@ -380,8 +409,8 @@ class ComputeTestCase(test.TestCase):
         self.compute.terminate_instance(context, instance_id)
 
     def test_get_by_flavor_id(self):
-        type = instance_types.get_by_flavor_id(1)
-        self.assertEqual(type, 'm1.tiny')
+        type = instance_types.get_instance_type_by_flavor_id(1)
+        self.assertEqual(type['name'], 'm1.tiny')
 
     def test_resize_same_source_fails(self):
         """Ensure instance fails to migrate when source and destination are
@@ -647,6 +676,10 @@ class ComputeTestCase(test.TestCase):
 
     def test_run_kill_vm(self):
         """Detect when a vm is terminated behind the scenes"""
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(compute_manager.ComputeManager,
+                '_report_driver_status', nop_report_driver_status)
+
         instance_id = self._create_instance()
 
         self.compute.run_instance(self.context, instance_id)
@@ -664,4 +697,5 @@ class ComputeTestCase(test.TestCase):
 
         instances = db.instance_get_all(context.get_admin_context())
         LOG.info(_("After force-killing instances: %s"), instances)
-        self.assertEqual(len(instances), 0)
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(power_state.SHUTOFF, instances[0]['state'])

@@ -18,7 +18,6 @@ from webob import exc
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova import wsgi
 from nova.api.openstack import common
 from nova.api.openstack import faults
 from nova.auth import manager
@@ -35,7 +34,7 @@ def _translate_keys(user):
                 admin=user.admin)
 
 
-class Controller(wsgi.Controller):
+class Controller(common.OpenstackController):
 
     _serialization_metadata = {
         'application/xml': {
@@ -49,7 +48,7 @@ class Controller(wsgi.Controller):
         """We cannot depend on the db layer to check for admin access
            for the auth manager, so we do it here"""
         if not context.is_admin:
-            raise exception.NotAuthorized(_("Not admin user"))
+            raise exception.AdminRequired()
 
     def index(self, req):
         """Return all users in brief"""

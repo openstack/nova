@@ -40,7 +40,11 @@ class InstanceTypeTestCase(test.TestCase):
         max_flavorid = session.query(models.InstanceTypes).\
                                      order_by("flavorid desc").\
                                      first()
+        max_id = session.query(models.InstanceTypes).\
+                                     order_by("id desc").\
+                                     first()
         self.flavorid = max_flavorid["flavorid"] + 1
+        self.id = max_id["id"] + 1
         self.name = str(int(time.time()))
 
     def test_instance_type_create_then_delete(self):
@@ -53,7 +57,7 @@ class InstanceTypeTestCase(test.TestCase):
                             'instance type was not created')
         instance_types.destroy(self.name)
         self.assertEqual(1,
-                    instance_types.get_instance_type(self.name)["deleted"])
+                    instance_types.get_instance_type(self.id)["deleted"])
         self.assertEqual(starting_inst_list, instance_types.get_all_types())
         instance_types.purge(self.name)
         self.assertEqual(len(starting_inst_list),
@@ -71,16 +75,25 @@ class InstanceTypeTestCase(test.TestCase):
     def test_invalid_create_args_should_fail(self):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(
-                exception.InvalidInputException,
+                exception.InvalidInput,
                 instance_types.create, self.name, 0, 1, 120, self.flavorid)
         self.assertRaises(
-                exception.InvalidInputException,
+                exception.InvalidInput,
                 instance_types.create, self.name, 256, -1, 120, self.flavorid)
         self.assertRaises(
-                exception.InvalidInputException,
+                exception.InvalidInput,
                 instance_types.create, self.name, 256, 1, "aa", self.flavorid)
 
     def test_non_existant_inst_type_shouldnt_delete(self):
         """Ensures that instance type creation fails with invalid args"""
         self.assertRaises(exception.ApiError,
                           instance_types.destroy, "sfsfsdfdfs")
+
+    def test_repeated_inst_types_should_raise_api_error(self):
+        """Ensures that instance duplicates raises ApiError"""
+        new_name = self.name + "dup"
+        instance_types.create(new_name, 256, 1, 120, self.flavorid + 1)
+        instance_types.destroy(new_name)
+        self.assertRaises(
+                exception.ApiError,
+                instance_types.create, new_name, 256, 1, 120, self.flavorid)

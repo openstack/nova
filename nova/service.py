@@ -17,26 +17,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Generic Node baseclass for all workers that run on hosts
-"""
+"""Generic Node baseclass for all workers that run on hosts."""
 
+import greenlet
 import inspect
 import os
-import sys
-import time
 
-from eventlet import event
 from eventlet import greenthread
-from eventlet import greenpool
-
-from sqlalchemy.exc import OperationalError
 
 from nova import context
 from nova import db
 from nova import exception
-from nova import log as logging
 from nova import flags
+from nova import log as logging
 from nova import rpc
 from nova import utils
 from nova import version
@@ -79,7 +72,7 @@ class Service(object):
 
     def start(self):
         vcs_string = version.version_string_with_vcs()
-        logging.audit(_("Starting %(topic)s node (version %(vcs_string)s)"),
+        logging.audit(_('Starting %(topic)s node (version %(vcs_string)s)'),
                       {'topic': self.topic, 'vcs_string': vcs_string})
         self.manager.init_host()
         self.model_disconnected = False
@@ -95,27 +88,37 @@ class Service(object):
         if 'nova-compute' == self.binary:
             self.manager.update_available_resource(ctxt)
 
-        conn1 = rpc.Connection.instance(new=True)
-        conn2 = rpc.Connection.instance(new=True)
-        conn3 = rpc.Connection.instance(new=True)
+        self.conn = rpc.Connection.instance(new=True)
+        logging.debug("Creating Consumer connection for Service %s" %
+                      self.topic)
+
+        # Share this same connection for these Consumers
+        consumer_all = rpc.TopicAdapterConsumer(
+                connection=self.conn,
+                topic=self.topic,
+                proxy=self)
+        consumer_node = rpc.TopicAdapterConsumer(
+                connection=self.conn,
+                topic='%s.%s' % (self.topic, self.host),
+                proxy=self)
+        fanout = rpc.FanoutAdapterConsumer(
+                connection=self.conn,
+                topic=self.topic,
+                proxy=self)
+        consumer_set = rpc.ConsumerSet(
+                connection=self.conn,
+                consumer_list=[consumer_all, consumer_node, fanout])
+
+        # Wait forever, processing these consumers
+        def _wait():
+            try:
+                consumer_set.wait()
+            finally:
+                consumer_set.close()
+
+        self.consumer_set_thread = greenthread.spawn(_wait)
+
         if self.report_interval:
-            consumer_all = rpc.TopicAdapterConsumer(
-                    connection=conn1,
-                    topic=self.topic,
-                    proxy=self)
-            consumer_node = rpc.TopicAdapterConsumer(
-                    connection=conn2,
-                    topic='%s.%s' % (self.topic, self.host),
-                    proxy=self)
-            fanout = rpc.FanoutAdapterConsumer(
-                    connection=conn3,
-                    topic=self.topic,
-                    proxy=self)
-
-            self.timers.append(consumer_all.attach_to_eventlet())
-            self.timers.append(consumer_node.attach_to_eventlet())
-            self.timers.append(fanout.attach_to_eventlet())
-
             pulse = utils.LoopingCall(self.report_state)
             pulse.start(interval=self.report_interval, now=False)
             self.timers.append(pulse)
@@ -140,29 +143,24 @@ class Service(object):
         return getattr(manager, key)
 
     @classmethod
-    def create(cls,
-               host=None,
-               binary=None,
-               topic=None,
-               manager=None,
-               report_interval=None,
-               periodic_interval=None):
+    def create(cls, host=None, binary=None, topic=None, manager=None,
+               report_interval=None, periodic_interval=None):
         """Instantiates class and passes back application object.
 
-        Args:
-            host, defaults to FLAGS.host
-            binary, defaults to basename of executable
-            topic, defaults to bin_name - "nova-" part
-            manager, defaults to FLAGS.<topic>_manager
-            report_interval, defaults to FLAGS.report_interval
-            periodic_interval, defaults to FLAGS.periodic_interval
+        :param host: defaults to FLAGS.host
+        :param binary: defaults to basename of executable
+        :param topic: defaults to bin_name - 'nova-' part
+        :param manager: defaults to FLAGS.<topic>_manager
+        :param report_interval: defaults to FLAGS.report_interval
+        :param periodic_interval: defaults to FLAGS.periodic_interval
+
         """
         if not host:
             host = FLAGS.host
         if not binary:
             binary = os.path.basename(inspect.stack()[-1][1])
         if not topic:
-            topic = binary.rpartition("nova-")[2]
+            topic = binary.rpartition('nova-')[2]
         if not manager:
             manager = FLAGS.get('%s_manager' % topic, None)
         if not report_interval:
@@ -175,14 +173,19 @@ class Service(object):
         return service_obj
 
     def kill(self):
-        """Destroy the service object in the datastore"""
+        """Destroy the service object in the datastore."""
         self.stop()
         try:
             db.service_destroy(context.get_admin_context(), self.service_id)
         except exception.NotFound:
-            logging.warn(_("Service killed that has no database entry"))
+            logging.warn(_('Service killed that has no database entry'))
 
     def stop(self):
+        self.consumer_set_thread.kill()
+        try:
+            self.consumer_set_thread.wait()
+        except greenlet.GreenletExit:
+            pass
         for x in self.timers:
             try:
                 x.stop()
@@ -198,7 +201,7 @@ class Service(object):
                 pass
 
     def periodic_tasks(self):
-        """Tasks to be run at a periodic interval"""
+        """Tasks to be run at a periodic interval."""
         self.manager.periodic_tasks(context.get_admin_context())
 
     def report_state(self):
@@ -208,8 +211,8 @@ class Service(object):
             try:
                 service_ref = db.service_get(ctxt, self.service_id)
             except exception.NotFound:
-                logging.debug(_("The service database object disappeared, "
-                                "Recreating it."))
+                logging.debug(_('The service database object disappeared, '
+                                'Recreating it.'))
                 self._create_service_ref(ctxt)
                 service_ref = db.service_get(ctxt, self.service_id)
 
@@ -218,23 +221,24 @@ class Service(object):
                              {'report_count': service_ref['report_count'] + 1})
 
             # TODO(termie): make this pattern be more elegant.
-            if getattr(self, "model_disconnected", False):
+            if getattr(self, 'model_disconnected', False):
                 self.model_disconnected = False
-                logging.error(_("Recovered model server connection!"))
+                logging.error(_('Recovered model server connection!'))
 
         # TODO(vish): this should probably only catch connection errors
         except Exception:  # pylint: disable=W0702
-            if not getattr(self, "model_disconnected", False):
+            if not getattr(self, 'model_disconnected', False):
                 self.model_disconnected = True
-                logging.exception(_("model server went away"))
+                logging.exception(_('model server went away'))
 
 
 class WsgiService(object):
     """Base class for WSGI based services.
 
     For each api you define, you must also define these flags:
-    :<api>_listen:            The address on which to listen
-    :<api>_listen_port:       The port on which to listen
+    :<api>_listen: The address on which to listen
+    :<api>_listen_port: The port on which to listen
+
     """
 
     def __init__(self, conf, apis):
@@ -248,15 +252,20 @@ class WsgiService(object):
     def wait(self):
         self.wsgi_app.wait()
 
+    def get_socket_info(self, api_name):
+        """Returns the (host, port) that an API was started on."""
+        return self.wsgi_app.socket_info[api_name]
+
 
 class ApiService(WsgiService):
-    """Class for our nova-api service"""
+    """Class for our nova-api service."""
+
     @classmethod
     def create(cls, conf=None):
         if not conf:
             conf = wsgi.paste_config_file(FLAGS.api_paste_config)
             if not conf:
-                message = (_("No paste configuration found for: %s"),
+                message = (_('No paste configuration found for: %s'),
                            FLAGS.api_paste_config)
                 raise exception.Error(message)
         api_endpoints = ['ec2', 'osapi']
@@ -280,11 +289,11 @@ def serve(*services):
         FLAGS.ParseNewFlags()
 
     name = '_'.join(x.binary for x in services)
-    logging.debug(_("Serving %s"), name)
-    logging.debug(_("Full set of FLAGS:"))
+    logging.debug(_('Serving %s'), name)
+    logging.debug(_('Full set of FLAGS:'))
     for flag in FLAGS:
         flag_get = FLAGS.get(flag, None)
-        logging.debug("%(flag)s : %(flag_get)s" % locals())
+        logging.debug('%(flag)s : %(flag_get)s' % locals())
 
     for x in services:
         x.start()
@@ -315,20 +324,22 @@ def serve_wsgi(cls, conf=None):
 
 
 def _run_wsgi(paste_config_file, apis):
-    logging.debug(_("Using paste.deploy config at: %s"), paste_config_file)
+    logging.debug(_('Using paste.deploy config at: %s'), paste_config_file)
     apps = []
     for api in apis:
         config = wsgi.load_paste_configuration(paste_config_file, api)
         if config is None:
-            logging.debug(_("No paste configuration for app: %s"), api)
+            logging.debug(_('No paste configuration for app: %s'), api)
             continue
-        logging.debug(_("App Config: %(api)s\n%(config)r") % locals())
-        logging.info(_("Running %s API"), api)
+        logging.debug(_('App Config: %(api)s\n%(config)r') % locals())
+        logging.info(_('Running %s API'), api)
         app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app, getattr(FLAGS, "%s_listen_port" % api),
-                     getattr(FLAGS, "%s_listen" % api)))
+        apps.append((app,
+                     getattr(FLAGS, '%s_listen_port' % api),
+                     getattr(FLAGS, '%s_listen' % api),
+                     api))
     if len(apps) == 0:
-        logging.error(_("No known API applications configured in %s."),
+        logging.error(_('No known API applications configured in %s.'),
                       paste_config_file)
         return
 

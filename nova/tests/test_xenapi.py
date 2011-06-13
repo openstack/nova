@@ -16,7 +16,9 @@
 
 """Test suite for XenAPI."""
 
+import eventlet
 import functools
+import json
 import os
 import re
 import stubout
@@ -80,7 +82,7 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'image_id': 1,
                   'kernel_id': 2,
                   'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
+                  'instance_type_id': '3',  # m1.large
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
@@ -197,6 +199,28 @@ class XenAPIVMTestCase(test.TestCase):
         self.context = context.RequestContext('fake', 'fake', False)
         self.conn = xenapi_conn.get_connection(False)
 
+    def test_parallel_builds(self):
+        stubs.stubout_loopingcall_delay(self.stubs)
+
+        def _do_build(id, proj, user, *args):
+            values = {
+                'id': id,
+                'project_id': proj,
+                'user_id': user,
+                'image_id': 1,
+                'kernel_id': 2,
+                'ramdisk_id': 3,
+                'instance_type_id': '3',  # m1.large
+                'mac_address': 'aa:bb:cc:dd:ee:ff',
+                'os_type': 'linux'}
+            instance = db.instance_create(self.context, values)
+            self.conn.spawn(instance)
+
+        gt1 = eventlet.spawn(_do_build, 1, self.project.id, self.user.id)
+        gt2 = eventlet.spawn(_do_build, 2, self.project.id, self.user.id)
+        gt1.wait()
+        gt2.wait()
+
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
         self.assertEquals(instances, [])
@@ -289,11 +313,11 @@ class XenAPIVMTestCase(test.TestCase):
                                         'enabled':'1'}],
                                 'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
                                           'netmask': '120',
-                                          'enabled': '1',
-                                          'gateway': 'fe80::a00:1'}],
+                                          'enabled': '1'}],
                                 'mac': 'aa:bb:cc:dd:ee:ff',
                                 'dns': ['10.0.0.2'],
-                                'gateway': '10.0.0.1'})
+                                'gateway': '10.0.0.1',
+                                'gateway6': 'fe80::a00:1'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
@@ -340,7 +364,7 @@ class XenAPIVMTestCase(test.TestCase):
                 self.fail('Found unexpected VDI:%s' % vdi_ref)
 
     def _test_spawn(self, image_id, kernel_id, ramdisk_id,
-                    instance_type="m1.large", os_type="linux",
+                    instance_type_id="3", os_type="linux",
                     instance_id=1, check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
@@ -349,7 +373,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'image_id': image_id,
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
-                  'instance_type': instance_type,
+                  'instance_type_id': instance_type_id,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': os_type}
         instance = db.instance_create(self.context, values)
@@ -361,7 +385,7 @@ class XenAPIVMTestCase(test.TestCase):
         FLAGS.xenapi_image_service = 'glance'
         self.assertRaises(Exception,
                           self._test_spawn,
-                          1, 2, 3, "m1.xlarge")
+                          1, 2, 3, "4")  # m1.xlarge
 
     def test_spawn_fail_cleanup_1(self):
         """Simulates an error while downloading an image.
@@ -410,6 +434,29 @@ class XenAPIVMTestCase(test.TestCase):
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
                          os_type="linux")
         self.check_vm_params_for_linux()
+
+    def test_spawn_vhd_glance_swapdisk(self):
+        # Change the default host_call_plugin to one that'll return
+        # a swap disk
+        orig_func = stubs.FakeSessionForVMTests.host_call_plugin
+
+        stubs.FakeSessionForVMTests.host_call_plugin = \
+                stubs.FakeSessionForVMTests.host_call_plugin_swap
+
+        try:
+            # We'll steal the above glance linux test
+            self.test_spawn_vhd_glance_linux()
+        finally:
+            # Make sure to put this back
+            stubs.FakeSessionForVMTests.host_call_plugin = orig_func
+
+        # We should have 2 VBDs.
+        self.assertEqual(len(self.vm['VBDs']), 2)
+        # Now test that we have 1.
+        self.tearDown()
+        self.setUp()
+        self.test_spawn_vhd_glance_linux()
+        self.assertEqual(len(self.vm['VBDs']), 1)
 
     def test_spawn_vhd_glance_windows(self):
         FLAGS.xenapi_image_service = 'glance'
@@ -556,15 +603,16 @@ class XenAPIVMTestCase(test.TestCase):
     def _create_instance(self):
         """Creates and spawns a test instance."""
         stubs.stubout_loopingcall_start(self.stubs)
-        values = {'id': 1,
-                  'project_id': self.project.id,
-                  'user_id': self.user.id,
-                  'image_id': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'instance_type': 'm1.large',
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'}
+        values = {
+            'id': 1,
+            'project_id': self.project.id,
+            'user_id': self.user.id,
+            'image_id': 1,
+            'kernel_id': 2,
+            'ramdisk_id': 3,
+            'instance_type_id': '3',  # m1.large
+            'mac_address': 'aa:bb:cc:dd:ee:ff',
+            'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
         return instance
@@ -584,11 +632,29 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
         bob_shared = self.bob.compute_shared(alice_pub)
         self.assertEquals(alice_shared, bob_shared)
 
-    def test_encryption(self):
-        msg = "This is a top-secret message"
-        enc = self.alice.encrypt(msg)
+    def _test_encryption(self, message):
+        enc = self.alice.encrypt(message)
+        self.assertFalse(enc.endswith('\n'))
         dec = self.bob.decrypt(enc)
-        self.assertEquals(dec, msg)
+        self.assertEquals(dec, message)
+
+    def test_encrypt_simple_message(self):
+        self._test_encryption('This is a simple message.')
+
+    def test_encrypt_message_with_newlines_at_end(self):
+        self._test_encryption('This message has a newline at the end.\n')
+
+    def test_encrypt_many_newlines_at_end(self):
+        self._test_encryption('Message with lotsa newlines.\n\n\n')
+
+    def test_encrypt_newlines_inside_message(self):
+        self._test_encryption('Message\nwith\ninterior\nnewlines.')
+
+    def test_encrypt_with_leading_newlines(self):
+        self._test_encryption('\n\nMessage with leading newlines.')
+
+    def test_encrypt_really_long_message(self):
+        self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
 
     def tearDown(self):
         super(XenAPIDiffieHellmanTestCase, self).tearDown()
@@ -619,7 +685,7 @@ class XenAPIMigrateInstance(test.TestCase):
                   'kernel_id': None,
                   'ramdisk_id': None,
                   'local_gb': 5,
-                  'instance_type': 'm1.large',
+                  'instance_type_id': '3',  # m1.large
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
@@ -704,3 +770,52 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_VHD
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_VHD)
+
+
+class FakeXenApi(object):
+    """Fake XenApi for testing HostState."""
+
+    class FakeSR(object):
+        def get_record(self, ref):
+            return {'virtual_allocation': 10000,
+                    'physical_utilisation': 20000}
+
+    SR = FakeSR()
+
+
+class FakeSession(object):
+    """Fake Session class for HostState testing."""
+
+    def async_call_plugin(self, *args):
+        return None
+
+    def wait_for_task(self, *args):
+        vm = {'total': 10,
+              'overhead': 20,
+              'free': 30,
+              'free-computed': 40}
+        return json.dumps({'host_memory': vm})
+
+    def get_xenapi(self):
+        return FakeXenApi()
+
+
+class HostStateTestCase(test.TestCase):
+    """Tests HostState, which holds metrics from XenServer that get
+    reported back to the Schedulers."""
+
+    def _fake_safe_find_sr(self, session):
+        """None SR ref since we're ignoring it in FakeSR."""
+        return None
+
+    def test_host_state(self):
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(vm_utils, 'safe_find_sr', self._fake_safe_find_sr)
+        host_state = xenapi_conn.HostState(FakeSession())
+        stats = host_state._stats
+        self.assertEquals(stats['disk_total'], 10000)
+        self.assertEquals(stats['disk_used'], 20000)
+        self.assertEquals(stats['host_memory_total'], 10)
+        self.assertEquals(stats['host_memory_overhead'], 20)
+        self.assertEquals(stats['host_memory_free'], 30)
+        self.assertEquals(stats['host_memory_free_computed'], 40)

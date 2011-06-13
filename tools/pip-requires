@@ -2,7 +2,7 @@ SQLAlchemy==0.6.3
 pep8==0.5.0
 pylint==0.19
 IPy==0.70
-Cheetah==2.4.2.1
+Cheetah==2.4.4
 M2Crypto==0.20.2
 amqplib==0.6.1
 anyjson==0.2.4
@@ -17,9 +17,7 @@ redis==2.0.0
 routes==1.12.3
 WebOb==0.9.8
 wsgiref==0.1.2
-zope.interface==3.6.1
-mox==0.5.0
--f http://pymox.googlecode.com/files/mox-0.5.0.tar.gz
+mox==0.5.3
 greenlet==0.3.1
 nose
 bzr
@@ -32,3 +30,6 @@ sphinx
 glance
 nova-adminclient
 suds==0.4
+coverage
+nosexcover
+GitPython

@@ -28,6 +28,7 @@ import shutil
 import tempfile
 import xml.dom.minidom as minidom
 
+import mox
 import stubout
 import webob
 
@@ -72,6 +73,18 @@ class _BaseImageServiceTests(test.TestCase):
         self.assertNotEquals(None, image_id)
         self.assertRaises(exception.NotFound,
                           self.service.show,
+                          self.context,
+                          'bad image id')
+
+    def test_create_and_show_non_existing_image_by_name(self):
+        fixture = self._make_fixture('test image')
+        num_images = len(self.service.index(self.context))
+
+        image_id = self.service.create(self.context, fixture)['id']
+
+        self.assertNotEquals(None, image_id)
+        self.assertRaises(exception.ImageNotFound,
+                          self.service.show_by_name,
                           self.context,
                           'bad image id')
 
@@ -146,7 +159,7 @@ class LocalImageServiceTest(_BaseImageServiceTests):
         for x in [1, 2, 3]:
             tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
         # create some valid image directories names
-        for x in ["1485baed", "1a60f0ee",  "3123a73d"]:
+        for x in ["1485baed", "1a60f0ee", "3123a73d"]:
             os.makedirs(os.path.join(self.tempdir, x))
         found_image_ids = self.service._ids()
         self.assertEqual(True, isinstance(found_image_ids, list))
@@ -335,7 +348,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     name="public image"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
-                    status="ACTIVE" />
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
@@ -353,7 +367,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     name="None"
                     updated="%(expected_now)s"
                     created="%(expected_now)s"
-                    status="ACTIVE" />
+                    status="ACTIVE"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0" />
         """ % (locals()))
 
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
@@ -372,7 +387,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 name="public image"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE">
+                status="ACTIVE"
+                xmlns="http://docs.openstack.org/compute/api/v1.1">
             <links>
                 <link href="%(expected_href)s" rel="self"/>
                 <link href="%(expected_href)s" rel="bookmark"
@@ -408,7 +424,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(404, response.status_int)
 
         expected = minidom.parseString("""
-            <itemNotFound code="404">
+            <itemNotFound code="404"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <message>
                     Image not found.
                 </message>
@@ -441,8 +458,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = request.get_response(fakes.wsgi_app())
         self.assertEqual(404, response.status_int)
 
+        # NOTE(justinsb): I believe this should still use the v1.0 XSD,
+        # because the element hasn't changed definition
         expected = minidom.parseString("""
-            <itemNotFound code="404">
+            <itemNotFound code="404"
+                    xmlns="http://docs.rackspacecloud.com/servers/api/v1.0">
                 <message>
                     Image not found.
                 </message>
@@ -531,7 +551,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup', 'serverId': 42,
+            'name': 'killed backup',
+            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -577,7 +598,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
-            'serverId': 42,
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -599,7 +620,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
-            'serverId': 42,
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -622,7 +643,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
-            'serverId': 42,
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -643,7 +664,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup', 'serverId': 42,
+            'name': 'killed backup',
+            'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -686,6 +708,146 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         ]
 
         self.assertDictListMatch(expected, response_list)
+
+    def test_image_filter_with_name(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'name': 'testname'}
+        image_service.index(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?name=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_with_status(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.index(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?status=ACTIVE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_with_property(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'property-test': '3'}
+        image_service.index(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?property-test=3')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_filter_not_supported(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.index(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_no_filters(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {}
+        image_service.index(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.index(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_name(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'name': 'testname'}
+        image_service.detail(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?name=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_status(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.detail(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?status=ACTIVE')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_with_property(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'property-test': '3'}
+        image_service.detail(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?property-test=3')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_filter_not_supported(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {'status': 'ACTIVE'}
+        image_service.detail(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail?status=ACTIVE&UNSUPPORTEDFILTER=testname')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
+
+    def test_image_detail_no_filters(self):
+        mocker = mox.Mox()
+        image_service = mocker.CreateMockAnything()
+        context = object()
+        filters = {}
+        image_service.detail(context, filters).AndReturn([])
+        mocker.ReplayAll()
+        request = webob.Request.blank(
+            '/v1.1/images/detail')
+        request.environ['nova.context'] = context
+        controller = images.ControllerV11(image_service=image_service)
+        controller.detail(request)
+        mocker.VerifyAll()
 
     def test_get_image_found(self):
         req = webob.Request.blank('/v1.0/images/123')
