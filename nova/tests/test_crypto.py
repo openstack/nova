@@ -67,15 +67,15 @@ class RevokeCertsTest(test.TestCase):
         project_id = 2
         file_name = 'test_file'
 
-        def mock_certificate_get_all_by_user_and_project(context, 
+        def mock_certificate_get_all_by_user_and_project(context,
                                                          user_id,
                                                          project_id):
 
-            return [{"user_id": user_id, "project_id": project_id, 
+            return [{"user_id": user_id, "project_id": project_id,
                                           "file_name": file_name}]
 
-        self.stubs.Set(db, 'certificate_get_all_by_user_and_project', 
-                                    mock_certificate_get_all_by_user_and_project)
+        self.stubs.Set(db, 'certificate_get_all_by_user_and_project',
+                           mock_certificate_get_all_by_user_and_project)
 
         self.mox.StubOutWithMock(crypto, 'revoke_cert')
         crypto.revoke_cert(project_id, file_name)
@@ -91,12 +91,12 @@ class RevokeCertsTest(test.TestCase):
         project_id = 2
         file_name = 'test_file'
 
-        def mock_certificate_get_all_by_user(context, user_id): 
+        def mock_certificate_get_all_by_user(context, user_id):
 
-            return [{"user_id": user_id, "project_id": project_id, 
+            return [{"user_id": user_id, "project_id": project_id,
                                           "file_name": file_name}]
 
-        self.stubs.Set(db, 'certificate_get_all_by_user', 
+        self.stubs.Set(db, 'certificate_get_all_by_user',
                                     mock_certificate_get_all_by_user)
 
         self.mox.StubOutWithMock(crypto, 'revoke_cert')
@@ -115,10 +115,10 @@ class RevokeCertsTest(test.TestCase):
 
         def mock_certificate_get_all_by_project(context, project_id):
 
-            return [{"user_id": user_id, "project_id": project_id, 
+            return [{"user_id": user_id, "project_id": project_id,
                                           "file_name": file_name}]
 
-        self.stubs.Set(db, 'certificate_get_all_by_project', 
+        self.stubs.Set(db, 'certificate_get_all_by_project',
                                     mock_certificate_get_all_by_project)
 
         self.mox.StubOutWithMock(crypto, 'revoke_cert')
