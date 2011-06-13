@@ -225,7 +225,7 @@ class XMLDictSerializer(DictSerializer):
         if not xmlns and self.xmlns:
             node.setAttribute('xmlns', self.xmlns)
 
-        return node.toprettyxml(indent='    ')
+        return node.toprettyxml(indent='    ', encoding='utf-8')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""

@@ -33,6 +33,7 @@ import glance.client
 from nova import exception
 from nova import flags
 import nova.image
+from nova.image import glance as glance_image_service
 from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
@@ -358,10 +359,12 @@ class VMHelper(HelperBase):
 
         os_type = instance.os_type or FLAGS.default_os_type
 
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
-                  'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port,
+                  'glance_host': glance_host,
+                  'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
                   'os_type': os_type}
 
@@ -409,9 +412,11 @@ class VMHelper(HelperBase):
         # here (under Python 2.6+) and pass them as arguments
         uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
 
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
         params = {'image_id': image,
-                  'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port,
+                  'glance_host': glance_host,
+                  'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
                   'sr_path': cls.get_sr_path(session)}
 
@@ -576,7 +581,8 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        url = images.image_url(image)
+        url = "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
+                                                 image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         if image_type == ImageType.KERNEL_RAMDISK:
             fn = 'get_kernel'
