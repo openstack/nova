@@ -270,8 +270,10 @@ DEFINE_list('region_list',
 DEFINE_string('connection_type', 'libvirt', 'libvirt, xenapi or fake')
 DEFINE_string('aws_access_key_id', 'admin', 'AWS Access ID')
 DEFINE_string('aws_secret_access_key', 'admin', 'AWS Access Key')
-DEFINE_integer('glance_port', 9292, 'glance port')
-DEFINE_string('glance_host', '$my_ip', 'glance host')
+# NOTE(sirp): my_ip interpolation doesn't work within nested structures
+DEFINE_list('glance_api_servers',
+            ['127.0.0.1:9292'],
+            'list of glance api servers available to nova (host:port)')
 DEFINE_integer('s3_port', 3333, 's3 port')
 DEFINE_string('s3_host', '$my_ip', 's3 host (for infrastructure)')
 DEFINE_string('s3_dmz', '$my_ip', 's3 dmz ip (for instances)')
