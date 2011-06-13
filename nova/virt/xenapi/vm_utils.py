@@ -157,7 +157,6 @@ class VMHelper(HelperBase):
                 rec['PV_ramdisk'] = ramdisk
             else:
                 # 2. Use kernel within the image
-                rec['PV_args'] = 'clocksource=jiffies'
                 rec['PV_bootloader'] = 'pygrub'
         else:
             # 3. Using hardware virtualization
