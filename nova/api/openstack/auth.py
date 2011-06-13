@@ -49,19 +49,22 @@ class AuthMiddleware(wsgi.Middleware):
         if not self.has_authentication(req):
             return self.authenticate(req)
         user = self.get_user_by_authentication(req)
-        accounts = self.auth.get_projects(user=user)
         if not user:
             token = req.headers["X-Auth-Token"]
             msg = _("%(user)s could not be found with token '%(token)s'")
             LOG.warn(msg % locals())
             return faults.Fault(webob.exc.HTTPUnauthorized())
 
-        if accounts:
-            #we are punting on this til auth is settled,
-            #and possibly til api v1.1 (mdragon)
-            account = accounts[0]
-        else:
-            return faults.Fault(webob.exc.HTTPUnauthorized())
+        try:
+            account = req.headers["X-Auth-Project-Id"]
+        except KeyError:
+            # FIXME(usrleon): It needed only for compatibility
+            # while osapi clients don't use this header
+            accounts = self.auth.get_projects(user=user)
+            if accounts:
+                account = accounts[0]
+            else:
+                return faults.Fault(webob.exc.HTTPUnauthorized())
 
         if not self.auth.is_admin(user) and \
            not self.auth.is_project_member(user, account):

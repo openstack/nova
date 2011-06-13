@@ -35,7 +35,7 @@ class Versions(wsgi.Resource):
             'application/xml': wsgi.XMLDictSerializer(metadata=metadata),
         }
 
-        super(Versions, self).__init__(None, serializers=serializers)
+        wsgi.Resource.__init__(self, None, serializers=serializers)
 
     def dispatch(self, request, *args):
         """Respond to a request for all OpenStack API versions."""
