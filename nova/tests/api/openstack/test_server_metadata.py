@@ -89,6 +89,7 @@ class ServerMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
+        self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value1', res_dict['metadata']['key1'])
 
     def test_index_no_data(self):
@@ -99,6 +100,7 @@ class ServerMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
+        self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual(0, len(res_dict['metadata']))
 
     def test_show(self):
@@ -109,6 +111,7 @@ class ServerMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
+        self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value5', res_dict['key5'])
 
     def test_show_meta_not_found(self):
@@ -140,7 +143,18 @@ class ServerMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
+        self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value1', res_dict['metadata']['key1'])
+
+    def test_create_empty_body(self):
+        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+                       return_create_instance_metadata)
+        req = webob.Request.blank('/v1.1/servers/1/meta')
+        req.environ['api.version'] = '1.1'
+        req.method = 'POST'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)
 
     def test_update_item(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
@@ -152,8 +166,19 @@ class ServerMetaDataTest(unittest.TestCase):
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, res.status_int)
+        self.assertEqual('application/json', res.headers['Content-Type'])
         res_dict = json.loads(res.body)
         self.assertEqual('value1', res_dict['key1'])
+
+    def test_update_item_empty_body(self):
+        self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',
+                       return_create_instance_metadata)
+        req = webob.Request.blank('/v1.1/servers/1/meta/key1')
+        req.environ['api.version'] = '1.1'
+        req.method = 'PUT'
+        req.headers["content-type"] = "application/json"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, res.status_int)
 
     def test_update_item_too_many_keys(self):
         self.stubs.Set(nova.db.api, 'instance_metadata_update_or_create',

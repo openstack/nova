@@ -37,12 +37,18 @@ class Controller(object):
             meta_dict[key] = value
         return dict(metadata=meta_dict)
 
+    def _check_body(self, body):
+        if body == None or body == "":
+            expl = _('No Request Body')
+            raise exc.HTTPBadRequest(explanation=expl)
+
     def index(self, req, server_id):
         """ Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
         return self._get_metadata(context, server_id)
 
     def create(self, req, server_id, body):
+        self._check_body(body)
         context = req.environ['nova.context']
         metadata = body.get('metadata')
         try:
@@ -51,9 +57,10 @@ class Controller(object):
                                                                 metadata)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
-        return req.body
+        return body
 
     def update(self, req, server_id, id, body):
+        self._check_body(body)
         context = req.environ['nova.context']
         if not id in body:
             expl = _('Request body and URI mismatch')
@@ -68,7 +75,7 @@ class Controller(object):
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        return req.body
+        return body
 
     def show(self, req, server_id, id):
         """ Return a single metadata item """

@@ -60,10 +60,8 @@ class BaseGlanceTest(unittest.TestCase):
     NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22)
 
     def setUp(self):
-        # FIXME(sirp): we can probably use stubs library here rather than
-        # dependency injection
         self.client = StubGlanceClient(None)
-        self.service = glance.GlanceImageService(self.client)
+        self.service = glance.GlanceImageService(client=self.client)
         self.context = context.RequestContext(None, None)
 
     def assertDateTimesFilled(self, image_meta):

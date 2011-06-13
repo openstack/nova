@@ -39,6 +39,7 @@ from nova import flags
 from nova import ipv6
 from nova import log as logging
 from nova import network
+from nova import rpc
 from nova import utils
 from nova import volume
 from nova.api.ec2 import ec2utils
@@ -872,8 +873,14 @@ class CloudController(object):
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
-        public_ip = self.network_api.allocate_floating_ip(context)
-        return {'publicIp': public_ip}
+        try:
+            public_ip = self.network_api.allocate_floating_ip(context)
+            return {'publicIp': public_ip}
+        except rpc.RemoteError as ex:
+            if ex.exc_type == 'NoMoreAddresses':
+                raise exception.NoMoreFloatingIps()
+            else:
+                raise
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
