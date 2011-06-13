@@ -89,6 +89,13 @@ class DictSerializerTest(test.TestCase):
         serializer.default = lambda x: 'trousers'
         self.assertEqual(serializer.serialize({}, 'update'), 'trousers')
 
+    def test_dispatch_action_None(self):
+        serializer = wsgi.DictSerializer()
+        serializer.create = lambda x: 'pants'
+        serializer.default = lambda x: 'trousers'
+        self.assertEqual(serializer.serialize({}, None), 'trousers')
+
+
 
 class XMLDictSerializerTest(test.TestCase):
     def test_xml(self):
@@ -122,6 +129,12 @@ class TextDeserializerTest(test.TestCase):
         deserializer.create = lambda x: 'pants'
         deserializer.default = lambda x: 'trousers'
         self.assertEqual(deserializer.deserialize({}, 'update'), 'trousers')
+
+    def test_dispatch_action_None(self):
+        deserializer = wsgi.TextDeserializer()
+        deserializer.create = lambda x: 'pants'
+        deserializer.default = lambda x: 'trousers'
+        self.assertEqual(deserializer.deserialize({}, None), 'trousers')
 
 
 class JSONDeserializerTest(test.TestCase):
