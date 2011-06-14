@@ -43,7 +43,8 @@ class NetworkTestCase(test.TestCase):
         self.network = utils.import_object(FLAGS.network_manager)
         db_fakes.stub_out_db_network_api(self.stubs)
         self.network.db = db
-        self.context = context.RequestContext(project=None, user=self.user)
+        self.network.network_api.db = db
+        self.context = context.RequestContext(project='fake', user=self.user)
 
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
@@ -65,7 +66,7 @@ class TestFuncs(object):
 
     def test_allocate_for_instance(self):
         instance_id = 0
-        project_id = 0
+        project_id = self.context.project_id
         type_id = 0
         self.network.set_network_hosts(self.context)
         nw = self.network.allocate_for_instance(self.context,
@@ -111,7 +112,7 @@ class TestFuncs(object):
 
     def test_lease_release_fixed_ip(self):
         instance_id = 0
-        project_id = 0
+        project_id = self.context.project_id
         type_id = 0
         self.network.set_network_hosts(self.context)
         nw = self.network.allocate_for_instance(self.context,

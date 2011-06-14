@@ -101,7 +101,7 @@ def stub_out_db_network_api(stubs):
     virtual_interfacees = [virtual_interface_fields]
     networks = [network_fields]
 
-    def fake_floating_ip_allocate_address(context, host, project_id):
+    def fake_floating_ip_allocate_address(context, project_id):
         ips = filter(lambda i: i['fixed_ip_id'] == None \
                            and i['project_id'] == None,
                      floating_ips)
