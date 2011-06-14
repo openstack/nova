@@ -247,7 +247,7 @@ def stub_out_db_network_api(stubs):
         except ValueError:
             pass
 
-    def fake_virtual_interface_get_all_by_instance(context, instance_id):
+    def fake_virtual_interface_get_by_instance(context, instance_id):
         return [FakeModel(m) for m in virtual_interfacees \
                 if m['instance_id'] == instance_id]
 
@@ -323,7 +323,7 @@ def stub_out_db_network_api(stubs):
              fake_instance_type_get_by_id,
              fake_virtual_interface_create,
              fake_virtual_interface_delete_by_instance,
-             fake_virtual_interface_get_all_by_instance,
+             fake_virtual_interface_get_by_instance,
              fake_virtual_interface_get_by_instance_and_network,
              fake_network_create_safe,
              fake_network_get,
