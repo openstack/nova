@@ -166,7 +166,7 @@ class VMOps(object):
             use_pv_kernel = True
         elif vm_mode in ('hv', 'hvm'):
             use_pv_kernel = False
-            vm_mode = 'hvm'	# Normalize
+            vm_mode = 'hvm'  # Normalize
         else:
             use_pv_kernel = VMHelper.determine_is_pv(self._session,
                     instance.id, first_vdi_ref, disk_image_type,
