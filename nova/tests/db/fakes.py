@@ -105,6 +105,7 @@ def stub_out_db_network_api(stubs):
         ips = filter(lambda i: i['fixed_ip_id'] == None \
                            and i['project_id'] == None,
                      floating_ips)
+        print "A" * 20, "|%s|" % floating_ips
         if not ips:
             raise db.NoMoreAddresses()
         ips[0]['project_id'] = project_id
