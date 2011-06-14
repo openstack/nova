@@ -588,4 +588,4 @@ class MigrationError(NovaException):
 
 
 class MalformedRequestBody(NovaException):
-    message = _("Malformed message body") + ": %(reason)s"
+    message = _("Malformed message body: %(reason)s")

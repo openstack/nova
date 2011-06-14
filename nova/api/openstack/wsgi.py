@@ -77,7 +77,7 @@ class JSONDeserializer(TextDeserializer):
             return utils.loads(datastring)
         except ValueError:
             raise exception.MalformedRequestBody(
-                               "malformed JSON in request body")
+                               reason=_("malformed JSON in request body"))
 
 
 class XMLDeserializer(TextDeserializer):
@@ -98,7 +98,7 @@ class XMLDeserializer(TextDeserializer):
             return {node.nodeName: self._from_xml_node(node, plurals)}
         except ExpatError:
             raise exception.MalformedRequestBody(
-                                    "malformed XML in request Body")
+                                    reason=_("malformed XML in request body"))
 
     def _from_xml_node(self, node, listnames):
         """Convert a minidom node to a simple Python type.
