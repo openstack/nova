@@ -81,7 +81,9 @@ class APIRouter(base_wsgi.Router):
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)
 
-    def _setup_routes(self, mapper, version='1.0'):
+    def _setup_routes(self, mapper, version):
+        """Routes common to all versions."""
+
         server_members = self.server_members
         server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
@@ -98,14 +100,6 @@ class APIRouter(base_wsgi.Router):
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
 
-            mapper.resource("zone", "zones",
-                        controller=zones.create_resource(version),
-                        collection={'detail': 'GET',
-                                    'info': 'GET',
-                                    'select': 'POST',
-                                    'boot': 'POST'
-                                   })
-
             mapper.resource("user", "users",
                         controller=users.create_resource(),
                         collection={'detail': 'GET'})
@@ -114,10 +108,18 @@ class APIRouter(base_wsgi.Router):
                             controller=accounts.create_resource(),
                             collection={'detail': 'GET'})
 
-        mapper.resource("console", "consoles",
+            mapper.resource("console", "consoles",
                         controller=consoles.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+
+            mapper.resource("zone", "zones",
+                        controller=zones.create_resource(version),
+                        collection={'detail': 'GET',
+                                    'info': 'GET',
+                                    'select': 'POST',
+                                    'boot': 'POST'
+                                   })
 
         super(APIRouter, self).__init__(mapper)
 
@@ -126,7 +128,7 @@ class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV10, self)._setup_routes(mapper, version='1.0')
+        super(APIRouterV10, self)._setup_routes(mapper, '1.0')
         mapper.resource("server", "servers",
                         controller=servers.create_resource('1.0'),
                         collection={'detail': 'GET'},
@@ -162,7 +164,7 @@ class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV11, self)._setup_routes(mapper, version='1.1')
+        super(APIRouterV11, self)._setup_routes(mapper, '1.1')
         mapper.resource("server", "servers",
                         controller=servers.create_resource('1.1'),
                         collection={'detail': 'GET'},
