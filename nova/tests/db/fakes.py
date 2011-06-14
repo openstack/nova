@@ -72,6 +72,7 @@ def stub_out_db_network_api(stubs):
 
     fixed_ip_fields = {'id': 0,
                        'network_id': 0,
+                       'network': FakeModel(network_fields),
                        'address': '192.168.0.100',
                        'instance': False,
                        'instance_id': 0,
