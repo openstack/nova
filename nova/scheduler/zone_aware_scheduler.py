@@ -91,6 +91,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         image_id = instance_properties['image_id']
         meta = instance_properties['metadata']
         flavor_id = instance_type['flavorid']
+        reservation_id = instance_properties['reservation_id']
 
         files = kwargs['injected_files']
         ipgroup = None  # Not supported in OS API ... yet
@@ -99,7 +100,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
         url = zone.api_url
-        LOG.debug(_("Forwarding instance create call to child zone %(url)s")
+        LOG.debug(_("Forwarding instance create call to child zone %(url)s"
+                    ". ReservationID=%(reservation_id)s")
                     % locals())
         nova = None
         try:
@@ -110,7 +112,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                             "to talk to zone at %(url)s.") % locals())
 
         nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
-                            child_blob)
+                            child_blob, reservation_id=reservation_id)
 
     def _provision_resource_from_blob(self, context, item, instance_id,
                                           request_spec, kwargs):
