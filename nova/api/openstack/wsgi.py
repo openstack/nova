@@ -2,8 +2,10 @@
 import json
 import webob
 from xml.dom import minidom
+from xml.parsers.expat import ExpatError
 
 from nova import exception
+import faults
 from nova import log as logging
 from nova import utils
 from nova import wsgi
@@ -71,7 +73,11 @@ class TextDeserializer(object):
 class JSONDeserializer(TextDeserializer):
 
     def default(self, datastring):
-        return utils.loads(datastring)
+        try:
+            return utils.loads(datastring)
+        except ValueError:
+            raise exception.MalformedRequestBody(
+                               reason=_("malformed JSON in request body"))
 
 
 class XMLDeserializer(TextDeserializer):
@@ -86,8 +92,13 @@ class XMLDeserializer(TextDeserializer):
 
     def default(self, datastring):
         plurals = set(self.metadata.get('plurals', {}))
-        node = minidom.parseString(datastring).childNodes[0]
-        return {node.nodeName: self._from_xml_node(node, plurals)}
+
+        try:
+            node = minidom.parseString(datastring).childNodes[0]
+            return {node.nodeName: self._from_xml_node(node, plurals)}
+        except ExpatError:
+            raise exception.MalformedRequestBody(
+                                    reason=_("malformed XML in request body"))
 
     def _from_xml_node(self, node, listnames):
         """Convert a minidom node to a simple Python type.
@@ -353,6 +364,10 @@ class Resource(wsgi.Application):
                                                                       request)
         except exception.InvalidContentType:
             return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
+        except exception.MalformedRequestBody:
+            explanation = _("Malformed request body")
+            return faults.Fault(webob.exc.HTTPBadRequest(
+                                            explanation=explanation))
 
         action_result = self.dispatch(request, action, action_args)
 
