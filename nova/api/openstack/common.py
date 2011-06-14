@@ -26,8 +26,6 @@ from nova import log as logging
 
 
 LOG = logging.getLogger('nova.api.openstack.common')
-
-
 FLAGS = flags.FLAGS
 
 
