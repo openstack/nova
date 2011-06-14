@@ -123,20 +123,20 @@ class TestFuncs(object):
         network_id = nw[0][0]['id']
 
         ips = db.fixed_ip_get_by_instance(self.context, instance_id)
-        mac = db.mac_address_get_by_instance_and_network(self.context,
-                                                         instance_id,
-                                                         network_id)
+        vif = db.virtual_interface_get_by_instance_and_network(self.context,
+                                                               instance_id,
+                                                               network_id)
         self.assertTrue(ips)
         address = ips[0]['address']
 
         db.fixed_ip_associate(self.context, address, instance_id)
         db.fixed_ip_update(self.context, address,
-                           {'mac_address_id': mac['id']})
+                           {'virtual_interface_id': vif['id']})
 
-        self.network.lease_fixed_ip(self.context, mac['address'], address)
+        self.network.lease_fixed_ip(self.context, vif['address'], address)
         ip = db.fixed_ip_get_by_address(self.context, address)
         self.assertTrue(ip['leased'])
 
-        self.network.release_fixed_ip(self.context, mac['address'], address)
+        self.network.release_fixed_ip(self.context, vif['address'], address)
         ip = db.fixed_ip_get_by_address(self.context, address)
         self.assertFalse(ip['leased'])
