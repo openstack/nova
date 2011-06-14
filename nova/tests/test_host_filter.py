@@ -57,8 +57,8 @@ class HostFilterTestCase(test.TestCase):
                 'host_name-label': 'xs-%s' % multiplier}
 
     def setUp(self):
-        self.old_flag = FLAGS.default_host_filter_driver
-        FLAGS.default_host_filter_driver = \
+        self.old_flag = FLAGS.default_host_filter
+        FLAGS.default_host_filter = \
                             'nova.scheduler.host_filter.AllHostsFilter'
         self.instance_type = dict(name='tiny',
                 memory_mb=50,
@@ -76,7 +76,7 @@ class HostFilterTestCase(test.TestCase):
         self.zone_manager.service_states = states
 
     def tearDown(self):
-        FLAGS.default_host_filter_driver = self.old_flag
+        FLAGS.default_host_filter = self.old_flag
 
     def test_choose_driver(self):
         # Test default driver ...
