@@ -85,7 +85,7 @@ def stub_out_db_network_api(stubs):
 
     floating_ip_fields = {'id': 0,
                           'address': '192.168.1.100',
-                          'fixed_ip_id': 0,
+                          'fixed_ip_id': None,
                           'fixed_ip': None,
                           'project_id': None,
                           'auto_assigned': False}
@@ -108,7 +108,7 @@ def stub_out_db_network_api(stubs):
         if not ips:
             raise db.NoMoreAddresses()
         ips[0]['project_id'] = project_id
-        return FakeModel(ips[0]['address'])
+        return FakeModel(ips[0])
 
     def fake_floating_ip_deallocate(context, address):
         ips = filter(lambda i: i['address'] == address,
@@ -144,6 +144,9 @@ def stub_out_db_network_api(stubs):
         pass
 
     def fake_floating_ip_get_by_address(context, address):
+        if isinstance(address, FakeModel):
+            # NOTE(tr3buchet): yo dawg, i heard you like addresses
+            address = address['address']
         ips = filter(lambda i: i['address'] == address,
                      floating_ips)
         if not ips:
