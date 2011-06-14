@@ -2,10 +2,10 @@
 import json
 import webob
 from xml.dom import minidom
-from xml.parsers.expat import ExpatError
+from xml.parsers import expat
 
-from nova import exception
 import faults
+from nova import exception
 from nova import log as logging
 from nova import utils
 from nova import wsgi
@@ -96,7 +96,7 @@ class XMLDeserializer(TextDeserializer):
         try:
             node = minidom.parseString(datastring).childNodes[0]
             return {node.nodeName: self._from_xml_node(node, plurals)}
-        except ExpatError:
+        except expat.ExpatError:
             raise exception.MalformedRequestBody(
                                     reason=_("malformed XML in request body"))
 
