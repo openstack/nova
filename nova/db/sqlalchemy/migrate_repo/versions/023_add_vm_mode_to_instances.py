@@ -18,8 +18,6 @@ from sqlalchemy import Column, Integer, MetaData, String, Table
 
 meta = MetaData()
 
-instances = Table('instances', meta, autoload=True)
-
 instances_vm_mode = Column('vm_mode',
                            String(length=255, convert_unicode=False,
                                   assert_unicode=None, unicode_error=None,
@@ -32,10 +30,16 @@ def upgrade(migrate_engine):
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
 
+    instances = Table('instances', meta, autoload=True,
+                      autoload_with=migrate_engine)
+
     instances.create_column(instances_vm_mode)
 
 
 def downgrade(migrate_engine):
     meta.bind = migrate_engine
+
+    instances = Table('instances', meta, autoload=True,
+                      autoload_with=migrate_engine)
 
     instances.drop_column('vm_mode')
