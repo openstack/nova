@@ -108,11 +108,6 @@ class APIRouter(base_wsgi.Router):
                             controller=accounts.create_resource(),
                             collection={'detail': 'GET'})
 
-            mapper.resource("console", "consoles",
-                        controller=consoles.create_resource(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
-
             mapper.resource("zone", "zones",
                         controller=zones.create_resource(version),
                         collection={'detail': 'GET',
@@ -120,6 +115,27 @@ class APIRouter(base_wsgi.Router):
                                     'select': 'POST',
                                     'boot': 'POST'
                                    })
+
+        mapper.resource("console", "consoles",
+                    controller=consoles.create_resource(),
+                    parent_resource=dict(member_name='server',
+                    collection_name='servers'))
+
+        mapper.resource("server", "servers",
+                        controller=servers.create_resource(version),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
+
+        mapper.resource("image", "images",
+                        controller=images.create_resource(version),
+                        collection={'detail': 'GET'})
+
+        mapper.resource("limit", "limits",
+                        controller=limits.create_resource(version))
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.create_resource(version),
+                        collection={'detail': 'GET'})
 
         super(APIRouter, self).__init__(mapper)
 
@@ -129,17 +145,8 @@ class APIRouterV10(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV10, self)._setup_routes(mapper, '1.0')
-        mapper.resource("server", "servers",
-                        controller=servers.create_resource('1.0'),
-                        collection={'detail': 'GET'},
-                        member=self.server_members)
-
         mapper.resource("image", "images",
                         controller=images.create_resource('1.0'),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("flavor", "flavors",
-                        controller=flavors.create_resource('1.0'),
                         collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
@@ -150,9 +157,6 @@ class APIRouterV10(APIRouter):
                         controller=backup_schedules.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
-
-        mapper.resource("limit", "limits",
-                        controller=limits.create_resource('1.0'))
 
         mapper.resource("ip", "ips", controller=ips.create_resource(),
                         collection=dict(public='GET', private='GET'),
@@ -165,15 +169,6 @@ class APIRouterV11(APIRouter):
 
     def _setup_routes(self, mapper):
         super(APIRouterV11, self)._setup_routes(mapper, '1.1')
-        mapper.resource("server", "servers",
-                        controller=servers.create_resource('1.1'),
-                        collection={'detail': 'GET'},
-                        member=self.server_members)
-
-        mapper.resource("image", "images",
-                        controller=images.create_resource('1.1'),
-                        collection={'detail': 'GET'})
-
         mapper.resource("image_meta", "meta",
                         controller=image_metadata.create_resource(),
                         parent_resource=dict(member_name='image',
@@ -183,10 +178,3 @@ class APIRouterV11(APIRouter):
                         controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
-
-        mapper.resource("flavor", "flavors",
-                        controller=flavors.create_resource('1.1'),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("limit", "limits",
-                        controller=limits.create_resource('1.1'))
