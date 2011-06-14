@@ -69,7 +69,6 @@ class Controller(object):
     def __init__(self):
         self.compute_api = compute.API()
         self.helper = helper.CreateInstanceHelper(self)
-        super(Controller, self).__init__()
 
     def index(self, req):
         """Return all zones in brief"""

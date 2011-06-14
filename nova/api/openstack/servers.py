@@ -45,7 +45,6 @@ class Controller(object):
     def __init__(self):
         self.compute_api = compute.API()
         self.helper = helper.CreateInstanceHelper(self)
-        super(Controller, self).__init__()
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
