@@ -462,7 +462,7 @@ class CloudTestCase(test.TestCase):
             pass
 
         self.stubs.Set(rpc, 'cast', stub_cast)
-        
+
         kwargs = {'image_id': FLAGS.default_image,
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
