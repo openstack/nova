@@ -457,6 +457,12 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
+        # stub out the rpc call
+        def stub_cast(*args, **kwargs):
+            pass
+
+        self.stubs.Set(rpc, 'cast', stub_cast)
+        
         kwargs = {'image_id': FLAGS.default_image,
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
@@ -466,8 +472,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['imageId'], 'ami-00000001')
         self.assertEqual(instance['displayName'], 'Server 1')
         self.assertEqual(instance['instanceId'], 'i-00000001')
-        self.assertTrue(instance['instanceState']['name'] in
-                        ['networking', 'scheduling'])
+        self.assertEqual(instance['instanceState']['name'], 'scheduling')
         self.assertEqual(instance['instanceType'], 'm1.small')
 
     def test_run_instances_image_state_none(self):
