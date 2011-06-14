@@ -281,7 +281,7 @@ class API(base.Base):
             'instance_type': instance_type,
             'filter': filter_class,
             'blob': zone_blob,
-            'num_instances': num_instances
+            'num_instances': num_instances,
         }
 
         rpc.cast(context,
