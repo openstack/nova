@@ -73,14 +73,14 @@ def _setup_networking(instance_id, ip='1.2.3.4'):
     network_ref = db.project_get_networks(ctxt,
                                            'fake',
                                            associate=True)[0]
-    mac_address = {'address': '56:12:12:12:12:12',
-                   'network_id': network_ref['id'],
-                   'instance_id': instance_id}
-    mac_ref = db.mac_address_create(ctxt, mac_address)
+    vif = {'address': '56:12:12:12:12:12',
+           'network_id': network_ref['id'],
+           'instance_id': instance_id}
+    vif_ref = db.virtual_interface_create(ctxt, vif)
 
     fixed_ip = {'address': ip,
                 'network_id': network_ref['id'],
-                'mac_address_id': mac_ref['id']}
+                'virtual_interface_id': vif_ref['id']}
     db.fixed_ip_create(ctxt, fixed_ip)
     db.fixed_ip_update(ctxt, ip, {'allocated': True,
                                         'instance_id': instance_id})
@@ -182,7 +182,6 @@ class LibvirtConnTestCase(test.TestCase):
     test_instance = {'memory_kb':     '1024000',
                      'basepath':      '/some/path',
                      'bridge_name':   'br100',
-                     'mac_address':   '02:12:34:46:56:67',
                      'vcpus':         2,
                      'project_id':    'fake',
                      'bridge':        'br101',
@@ -431,13 +430,13 @@ class LibvirtConnTestCase(test.TestCase):
         network_ref = db.project_get_networks(context.get_admin_context(),
                                              self.project.id)[0]
 
-        mac_address = {'address': '56:12:12:12:12:12',
-                       'network_id': network_ref['id'],
-                       'instance_id': instance_ref['id']}
-        mac_ref = db.mac_address_create(self.context, mac_address)
+        vif = {'address': '56:12:12:12:12:12',
+               'network_id': network_ref['id'],
+               'instance_id': instance_ref['id']}
+        vif_ref = db.virtual_interface_create(self.context, vif)
         fixed_ip = {'address': self.test_ip,
                     'network_id': network_ref['id'],
-                    'mac_address_id': mac_ref['id']}
+                    'virtual_interface_id': vif_ref['id']}
 
         ctxt = context.get_admin_context()
         fixed_ip_ref = db.fixed_ip_create(ctxt, fixed_ip)
@@ -891,14 +890,14 @@ class IptablesFirewallTestCase(test.TestCase):
         network_ref = db.project_get_networks(self.context,
                                                'fake',
                                                associate=True)[0]
-        mac_address = {'address': '56:12:12:12:12:12',
-                       'network_id': network_ref['id'],
-                       'instance_id': instance_ref['id']}
-        mac_ref = db.mac_address_create(self.context, mac_address)
+        vif = {'address': '56:12:12:12:12:12',
+               'network_id': network_ref['id'],
+               'instance_id': instance_ref['id']}
+        vif_ref = db.virtual_interface_create(self.context, vif)
 
         fixed_ip = {'address': ip,
                     'network_id': network_ref['id'],
-                    'mac_address_id': mac_ref['id']}
+                    'virtual_interface_id': vif_ref['id']}
         admin_ctxt = context.get_admin_context()
         db.fixed_ip_create(admin_ctxt, fixed_ip)
         db.fixed_ip_update(admin_ctxt, ip, {'allocated': True,
@@ -1165,7 +1164,6 @@ class NWFilterTestCase(test.TestCase):
         return db.instance_create(self.context,
                                   {'user_id': 'fake',
                                    'project_id': 'fake',
-                                   'mac_address': '00:A0:C9:14:C8:29',
                                    'instance_type_id': 1})
 
     def _create_instance_type(self, params={}):
