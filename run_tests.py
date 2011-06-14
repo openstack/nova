@@ -56,9 +56,11 @@ To run a single test module:
 """
 
 import gettext
+import heapq
 import os
 import unittest
 import sys
+import time
 
 gettext.install('nova', unicode=1)
 
@@ -185,7 +187,10 @@ class _NullColorizer(object):
 
 class NovaTestResult(result.TextTestResult):
     def __init__(self, *args, **kw):
+        self.show_elapsed = kw.pop('show_elapsed')
         result.TextTestResult.__init__(self, *args, **kw)
+        self.num_slow_tests = 5
+        self.slow_tests = []  # this is a fixed-sized heap
         self._last_case = None
         self.colorizer = None
         # NOTE(vish): reset stdout for the terminal check
@@ -200,25 +205,48 @@ class NovaTestResult(result.TextTestResult):
     def getDescription(self, test):
         return str(test)
 
+    def _handleElapsedTime(self, test):
+        self.elapsed_time = time.time() - self.start_time
+        item = (self.elapsed_time, test)
+        # Record only the n-slowest tests using heap
+        if len(self.slow_tests) >= self.num_slow_tests:
+            heapq.heappushpop(self.slow_tests, item)
+        else:
+            heapq.heappush(self.slow_tests, item)
+
+    def _writeElapsedTime(self, test):
+        if self.elapsed_time >= 3.0:
+            color = 'red'
+        elif self.elapsed_time >= 1.0:
+            color = 'yellow'
+        else:
+            color = 'green'
+
+        self.stream.write(' ' * 10)
+        self.colorizer.write("%.2f" % self.elapsed_time, color)
+        self.stream.write(' secs')
+
+    def _writeResult(self, test, long_result, color, short_result):
+        if self.showAll:
+            self.colorizer.write(long_result, color)
+            if self.show_elapsed:
+                self._writeElapsedTime(test)
+            self.stream.writeln()
+        elif self.dots:
+            self.stream.write(short_result)
+            self.stream.flush()
+
     # NOTE(vish): copied from unittest with edit to add color
     def addSuccess(self, test):
         unittest.TestResult.addSuccess(self, test)
-        if self.showAll:
-            self.colorizer.write("OK", 'green')
-            self.stream.writeln()
-        elif self.dots:
-            self.stream.write('.')
-            self.stream.flush()
+        self._handleElapsedTime(test)
+        self._writeResult(test, 'OK', 'green', '.')
 
     # NOTE(vish): copied from unittest with edit to add color
     def addFailure(self, test, err):
         unittest.TestResult.addFailure(self, test, err)
-        if self.showAll:
-            self.colorizer.write("FAIL", 'red')
-            self.stream.writeln()
-        elif self.dots:
-            self.stream.write('F')
-            self.stream.flush()
+        self._handleElapsedTime(test)
+        self._writeResult(test, 'FAIL', 'red', 'F')
 
     # NOTE(vish): copied from nose with edit to add color
     def addError(self, test, err):
@@ -226,6 +254,7 @@ class NovaTestResult(result.TextTestResult):
         errorClasses. If the exception is a registered class, the
         error will be added to the list for that class, not errors.
         """
+        self._handleElapsedTime(test)
         stream = getattr(self, 'stream', None)
         ec, ev, tb = err
         try:
@@ -252,14 +281,11 @@ class NovaTestResult(result.TextTestResult):
         self.errors.append((test, exc_info))
         test.passed = False
         if stream is not None:
-            if self.showAll:
-                self.colorizer.write("ERROR", 'red')
-                self.stream.writeln()
-            elif self.dots:
-                stream.write('E')
+            self._writeResult(test, 'ERROR', 'red', 'E')
 
     def startTest(self, test):
         unittest.TestResult.startTest(self, test)
+        self.start_time = time.time()
         current_case = test.test.__class__.__name__
 
         if self.showAll:
@@ -273,21 +299,38 @@ class NovaTestResult(result.TextTestResult):
 
 
 class NovaTestRunner(core.TextTestRunner):
+    def __init__(self, *args, **kwargs):
+        self.show_elapsed = kwargs.pop('show_elapsed')
+        core.TextTestRunner.__init__(self, *args, **kwargs)
+
     def _makeResult(self):
         return NovaTestResult(self.stream,
                               self.descriptions,
                               self.verbosity,
-                              self.config)
+                              self.config,
+                              show_elapsed=self.show_elapsed)
+
+    def run(self, test):
+        result_ = core.TextTestRunner.run(self, test)
+        if self.show_elapsed:
+            self.stream.writeln("Slowest %i tests:" % result_.num_slow_tests)
+            for elapsed_time, test in reversed(sorted(result_.slow_tests)):
+                time_str = "%.2f secs" % elapsed_time
+                self.stream.writeln("    %s %s" % (time_str.ljust(10), test))
+        return result_
 
 
 if __name__ == '__main__':
     logging.setup()
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much
+    show_elapsed = False
     argv = []
     for x in sys.argv:
         if x.startswith('test_'):
             argv.append('nova.tests.%s' % x)
+        elif x.startswith('--show-elapsed'):
+            show_elapsed = True
         else:
             argv.append(x)
 
@@ -300,5 +343,6 @@ if __name__ == '__main__':
 
     runner = NovaTestRunner(stream=c.stream,
                             verbosity=c.verbosity,
-                            config=c)
+                            config=c,
+                            show_elapsed=show_elapsed)
     sys.exit(not core.run(config=c, testRunner=runner, argv=argv))
