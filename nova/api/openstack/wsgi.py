@@ -76,7 +76,8 @@ class JSONDeserializer(TextDeserializer):
         try:
             return utils.loads(datastring)
         except ValueError:
-            raise exception.MalformedRequestBody()
+            raise exception.MalformedRequestBody(
+                               "malformed JSON in request body")
 
 
 class XMLDeserializer(TextDeserializer):
@@ -96,7 +97,8 @@ class XMLDeserializer(TextDeserializer):
             node = minidom.parseString(datastring).childNodes[0]
             return {node.nodeName: self._from_xml_node(node, plurals)}
         except ExpatError:
-            raise exception.MalformedRequestBody()
+            raise exception.MalformedRequestBody(
+                                    "malformed XML in request Body")
 
     def _from_xml_node(self, node, listnames):
         """Convert a minidom node to a simple Python type.
@@ -363,7 +365,7 @@ class Resource(wsgi.Application):
         except exception.InvalidContentType:
             return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
         except exception.MalformedRequestBody:
-            explanation = _("Malformed request")
+            explanation = _("Malformed request body")
             return faults.Fault(webob.exc.HTTPBadRequest(
                                             explanation=explanation))
 
