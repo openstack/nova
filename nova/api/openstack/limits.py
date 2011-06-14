@@ -99,7 +99,7 @@ def create_resource(version='1.0'):
 
     serializers = {
         'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
-                                                  metadata=metadata)
+                                                  metadata=metadata),
     }
 
     return wsgi.Resource(controller, serializers=serializers)
