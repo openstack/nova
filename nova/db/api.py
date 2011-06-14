@@ -373,21 +373,14 @@ def fixed_ip_get_by_address(context, address):
     return IMPL.fixed_ip_get_by_address(context, address)
 
 
-def fixed_ip_get_all_by_instance(context, instance_id):
+def fixed_ip_get_by_instance(context, instance_id):
     """Get fixed ips by instance or raise if none exist."""
-    return IMPL.fixed_ip_get_all_by_instance(context, instance_id)
+    return IMPL.fixed_ip_get_by_instance(context, instance_id)
 
 
-def fixed_ip_get_by_instance_and_network(context, instance_id,
-                                             network_id):
-    """Get fixed ips by instance and network or raise if none exist."""
-    return IMPL.fixed_ip_get_by_instance_and_network(context, instance_id,
-                                                     network_id)
-
-
-def fixed_ip_get_all_by_mac_address(context, mac_address_id):
-    """Get fixed ips by mac_address or raise if none exist."""
-    return IMPL.fixed_ip_get_all_by_mac_address(context, mac_address_id)
+def fixed_ip_get_by_virtual_interface(context, vif_id):
+    """Get fixed ips by virtual interface or raise if none exist."""
+    return IMPL.fixed_ip_get_by_virtual_interface(context, vif_id)
 
 
 def fixed_ip_get_instance(context, address):
@@ -412,50 +405,52 @@ def fixed_ip_update(context, address, values):
 ####################
 
 
-def mac_address_create(context, values):
-    """create a new mac address record in teh database"""
-    return IMPL.mac_address_create(context, values)
+def virtual_interface_create(context, values):
+    """create a virtual interface record in the database"""
+    return IMPL.virtual_interface_create(context, values)
 
 
-def mac_address_get(context, mac_address_id):
-    """gets a mac address from the table"""
-    return IMPL.mac_address_get(context, mac_address_id)
+def virtual_interface_get(context, vif_id):
+    """gets a virtual interface from the table"""
+    return IMPL.virtual_interface_get(context, vif_id)
 
 
-def mac_address_get_by_address(context, address):
-    """gets a mac address from the table"""
-    return IMPL.mac_address_get_by_address(context, address)
+def virtual_interface_get_by_address(context, address):
+    """gets a virtual interface from the table filtering on address"""
+    return IMPL.virtual_interface_get_by_address(context, address)
 
 
-def mac_address_get_by_fixed_ip(context, fixed_ip_id):
-    """gets a mac address for a fixed_ip"""
-    return IMPL.mac_address_get_by_fixed_ip(context, fixed_ip_id)
+def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
+    """gets the virtual interface fixed_ip is associated with"""
+    return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
 
 
-def mac_address_get_all_by_instance(context, instance_id):
-    """gets all mac addresses for instance"""
-    return IMPL.mac_address_get_all_by_instance(context, instance_id)
+def virtual_interface_get_by_instance(context, instance_id):
+    """gets all virtual_interfaces for instance"""
+    return IMPL.virtual_interface_get_by_instance(context, instance_id)
 
 
-def mac_address_get_by_instance_and_network(context, instance_id, network_id):
-    """gets all mac addresses for instance"""
-    return IMPL.mac_address_get_by_instance_and_network(context, instance_id,
-                                                                 network_id)
+def virtual_interface_get_by_instance_and_network(context, instance_id,
+                                                           network_id):
+    """gets all virtual interfaces for instance"""
+    return IMPL.virtual_interfaces_get_by_instance_and_network(context,
+                                                               instance_id,
+                                                               network_id)
 
 
-def mac_address_get_all_by_network(context, network_id):
-    """gets all mac addresses for instance"""
-    return IMPL.mac_address_get_all_by_network(context, network_id)
+def virtual_interface_get_by_network(context, network_id):
+    """gets all virtual interfaces on network"""
+    return IMPL.virtual_interface_get_by_network(context, network_id)
 
 
-def mac_address_delete(context, mac_address):
-    """delete mac address record in teh database"""
-    return IMPL.mac_address_delete(context, mac_address)
+def virtual_interface_delete(context, vif_id):
+    """delete virtual interface record from the database"""
+    return IMPL.virtual_interface_delete(context, vif_id)
 
 
-def mac_address_delete_by_instance(context, instance_id):
-    """delete mac address record in teh database"""
-    return IMPL.mac_address_delete_by_instance(context, instance_id)
+def virtual_interface_delete_by_instance(context, instance_id):
+    """delete virtual interface records associated with instance """
+    return IMPL.virtual_interface_delete_by_instance(context, instance_id)
 
 
 ####################

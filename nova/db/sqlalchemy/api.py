@@ -62,9 +62,7 @@ def is_user_context(context):
 
 
 def authorize_project_context(context, project_id):
-    """Ensures that the request context has permission to access the
-       given project.
-    """
+    """Ensures a request has permission to access the given project."""
     if is_user_context(context):
         if not context.project:
             raise exception.NotAuthorized()
@@ -73,9 +71,7 @@ def authorize_project_context(context, project_id):
 
 
 def authorize_user_context(context, user_id):
-    """Ensures that the request context has permission to access the
-       given user.
-    """
+    """Ensures a request has permission to access the given user."""
     if is_user_context(context):
         if not context.user:
             raise exception.NotAuthorized()
@@ -91,9 +87,12 @@ def can_read_deleted(context):
 
 
 def require_admin_context(f):
-    """Decorator used to indicate that the method requires an
-       administrator context.
+    """Decorator to require admin request context.
+
+    The first argument to the wrapped function must be the context.
+
     """
+
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]):
             raise exception.AdminRequired()
@@ -102,12 +101,19 @@ def require_admin_context(f):
 
 
 def require_context(f):
-    """Decorator used to indicate that the method requires either
-       an administrator or normal user context.
+    """Decorator to require *any* user or admin context.
+
+    This does no authorization for user or project access matching, see
+    :py:func:`authorize_project_context` and
+    :py:func:`authorize_user_context`.
+
+    The first argument to the wrapped function must be the context.
+
     """
+
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
-            raise exception.AdminRequired()
+            raise exception.NotAuthorized()
         return f(*args, **kwargs)
     return wrapper
 
@@ -427,7 +433,7 @@ def certificate_update(context, certificate_id, values):
 
 
 @require_context
-def floating_ip_allocate_address(context, project_id):
+def floating_ip_allocate_address(context, host, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
     with session.begin():
@@ -442,6 +448,7 @@ def floating_ip_allocate_address(context, project_id):
         if not floating_ip_ref:
             raise db.NoMoreAddresses()
         floating_ip_ref['project_id'] = project_id
+        floating_ip_ref['host'] = host
         session.add(floating_ip_ref)
     return floating_ip_ref['address']
 
@@ -490,6 +497,7 @@ def floating_ip_deallocate(context, address):
                                                      address,
                                                      session=session)
         floating_ip_ref['project_id'] = None
+        floating_ip_ref['host'] = None
         floating_ip_ref['auto_assigned'] = False
         floating_ip_ref.save(session=session)
 
@@ -660,7 +668,7 @@ def fixed_ip_disassociate(context, address):
                                                address,
                                                session=session)
         fixed_ip_ref.instance = None
-        fixed_ip_ref.mac_address = None
+        fixed_ip_ref.virtual_interface = None
         fixed_ip_ref.save(session=session)
 
 
@@ -676,7 +684,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.instance_id != None).\
                      filter_by(allocated=0).\
                      update({'instance_id': None,
-                             'mac_address_id': None,
+                             'virtual_interface_id': None,
                              'leased': 0,
                              'updated_at': utils.utcnow()},
                              synchronize_session='fetch')
@@ -736,7 +744,7 @@ def fixed_ip_get_instance(context, address):
 
 
 @require_context
-def fixed_ip_get_all_by_instance(context, instance_id):
+def fixed_ip_get_by_instance(context, instance_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
                  filter_by(instance_id=instance_id).\
@@ -748,28 +756,14 @@ def fixed_ip_get_all_by_instance(context, instance_id):
 
 
 @require_context
-def fixed_ip_get_by_instance_and_network(context, instance_id,
-                                             network_id):
+def fixed_ip_get_by_virtual_interface(context, vif_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
-                 filter_by(instance_id=instance_id).\
-                 filter_by(network_id=network_id).\
-                 filter_by(deleted=False).\
-                 first()
-    if not rv:
-        raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
-    return rv
-
-
-@require_context
-def fixed_ip_get_all_by_mac_address(context, mac_address_id):
-    session = get_session()
-    rv = session.query(models.FixedIp).\
-                 filter_by(mac_address_id=mac_address_id).\
+                 filter_by(virtual_interface_id=vif_id).\
                  filter_by(deleted=False).\
                  all()
     if not rv:
-        raise exception.NoFixedIpFoundForMacAddress(mac_id=mac_id)
+        raise exception.NoFixedIpFoundForVirtualInterface(vif_id=vif_id)
     return rv
 
 
@@ -780,12 +774,12 @@ def fixed_ip_get_instance_v6(context, address):
     # convert IPv6 address to mac
     mac = ipv6.to_mac(address)
 
-    # get mac address row
-    mac_ref = mac_address_get_by_address(context, mac)
+    # get virtual interface
+    vif_ref = virtual_interface_get_by_address(context, mac)
 
-    # look up instance based on instance_id from mac address row
+    # look up instance based on instance_id from vif row
     result = session.query(models.Instance).\
-                     filter_by(id=mac_ref.instance_id)
+                     filter_by(id=vif_ref['instance_id'])
     return result
 
 
@@ -810,145 +804,146 @@ def fixed_ip_update(context, address, values):
 
 
 @require_context
-def mac_address_create(context, values):
-    """create a new mac address record in teh database
+def virtual_interface_create(context, values):
+    """create a new virtual interface record in teh database
 
     context = request context object
     values = dict containing column values
     """
-    mac_address_ref = models.MacAddress()
-    mac_address_ref.update(values)
-    mac_address_ref.save()
-    return mac_address_ref
+    vif_ref = models.VirtualInterface()
+    vif_ref.update(values)
+    vif_ref.save()
+
+    return vif_ref
 
 
 @require_context
-def mac_address_get(context, mac_address_id):
-    """gets a mac address from the table
+def virtual_interface_get(context, vif_id):
+    """gets a virtual interface from the table
 
     context = request context object
-    mac_address_id = id of the mac_address
+    vif_id = id of the virtual interface
     """
     session = get_session()
-    with session.begin():
-        mac_address_ref = session.query(models.MacAddress).\
-                                  filter_by(id=mac_address_id).\
-                                  options(joinedload('network')).\
-                                  options(joinedload('instance')).\
-                                  first()
-        return mac_address_ref
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(id=vif_id).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
 
 
 @require_context
-def mac_address_get_by_address(context, address):
-    """gets a mac address from the table
+def virtual_interface_get_by_address(context, address):
+    """gets a virtual interface from the table
 
     context = request context object
-    address = the mac you're looking to get
+    address = the address of the interface you're looking to get
     """
     session = get_session()
-    with session.begin():
-        mac_address_ref = session.query(models.MacAddress).\
-                                  filter_by(address=address).\
-                                  options(joinedload('network')).\
-                                  options(joinedload('instance')).\
-                                  first()
-        return mac_address_ref
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(address=address).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
 
 
 @require_context
-def mac_address_get_by_fixed_ip(context, fixed_ip_id):
-    """gets a mac address for a fixed_ip
+def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
+    """gets the virtual interface fixed_ip is associated with
 
     context = request context object
-    fixed_ip_id = id of the fixed_ip you're looking to get mac for
+    fixed_ip_id = id of the fixed_ip
     """
     session = get_session()
-    with session.begin():
-        mac_address_ref = session.query(models.MacAddress).\
-                                  filter_by(fixed_ip_id=fixed_ip_id).\
-                                  options(joinedload('fixed_ips')).\
-                                  options(joinedload('network')).\
-                                  options(joinedload('instance')).\
-                                  first()
-        return mac_address_ref
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(fixed_ip_id=fixed_ip_id).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
 
 
 @require_context
-def mac_address_get_all_by_instance(context, instance_id):
-    """gets all mac addresses for instance
+def virtual_interface_get_by_instance(context, instance_id):
+    """gets all virtual interfaces for instance
 
     context = request context object
-    instance_id = instance to retreive macs for
+    instance_id = id of the instance to retreive vifs for
     """
     session = get_session()
-    with session.begin():
-        mac_address_refs = session.query(models.MacAddress).\
-                                   filter_by(instance_id=instance_id).\
-                                   options(joinedload('network')).\
-                                   options(joinedload('instance')).\
-                                   all()
-        return mac_address_refs
+    vif_refs = session.query(models.VirtualInterface).\
+                       filter_by(instance_id=instance_id).\
+                       options(joinedload('network')).\
+                       options(joinedload('instance')).\
+                       options(joinedload('fixed_ips')).\
+                       all()
+    return vif_refs
 
 
 @require_context
-def mac_address_get_by_instance_and_network(context, instance_id,
-                                                     network_id):
-    """gets mac address for instance that's associated with network"""
+def virtual_interface_get_by_instance_and_network(context, instance_id,
+                                                           network_id):
+    """gets virtual interface for instance that's associated with network"""
     session = get_session()
-    with session.begin():
-        mac_address_ref = session.query(models.MacAddress).\
-                                   filter_by(instance_id=instance_id).\
-                                   filter_by(network_id=network_id).\
-                                   options(joinedload('network')).\
-                                   options(joinedload('instance')).\
-                                   first()
-        return mac_address_ref
+    vif_ref = session.query(models.VirtualInterface).\
+                      filter_by(instance_id=instance_id).\
+                      filter_by(network_id=network_id).\
+                      options(joinedload('network')).\
+                      options(joinedload('instance')).\
+                      options(joinedload('fixed_ips')).\
+                      first()
+    return vif_ref
 
 
 @require_admin_context
-def mac_address_get_all_by_network(context, network_id):
-    """gets all mac addresses for instance
+def virtual_interface_get_by_network(context, network_id):
+    """gets all virtual_interface on network
 
     context = request context object
-    network_id = network to retreive macs for
+    network_id = network to retreive vifs for
     """
     session = get_session()
-    with session.begin():
-        mac_address_refs = session.query(models.MacAddress).\
-                                   filter_by(network_id=network_id).\
-                                   options(joinedload('network')).\
-                                   options(joinedload('instance')).\
-                                   all()
-        return mac_address_refs
+    vif_refs = session.query(models.VirtualInterface).\
+                       filter_by(network_id=network_id).\
+                       options(joinedload('network')).\
+                       options(joinedload('instance')).\
+                       options(joinedload('fixed_ips')).\
+                       all()
+    return vif_refs
 
 
 @require_context
-def mac_address_delete(context, address):
-    """delete mac address record in teh database
+def virtual_interface_delete(context, vif_id):
+    """delete virtual interface record from teh database
 
     context = request context object
-    instance_id = instance to remove macs for
+    vif_id = id of vif to delete
     """
-    mac_address = mac_address_get_by_address(address)
+    vif_ref = virtual_interface_get(context, vif_id)
     session = get_session()
     with session.begin():
-        for fixed_ip in mac_address['fixed_ips']:
-            fixed_ip.mac_address = None
-        session.delete(mac_address)
+        # disassociate any fixed_ips from this interface
+        for fixed_ip in vif_ref['fixed_ips']:
+            fixed_ip.virtual_interface = None
+        session.delete(vif_ref)
 
 
 @require_context
-def mac_address_delete_by_instance(context, instance_id):
-    """delete mac address records in the database that are associated
+def virtual_interface_delete_by_instance(context, instance_id):
+    """delete virtual interface records that are associated
     with the instance given by instance_id
 
     context = request context object
-    instance_id = instance to remove macs for
+    instance_id = id of instance
     """
-    refs = mac_address_get_all_by_instance(instance_id)
-    for ref in refs:
-        self.mac_address_delete(ref)
+    vif_refs = virtual_interface_get_by_instance(context, instance_id)
+    for vif_ref in vif_refs:
+        self.virtual_interface_delete(vif_ref['id'])
 
 
 ###################
@@ -1026,7 +1021,7 @@ def instance_get(context, instance_id, session=None):
     if is_admin_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ips.floating_ips')).\
-                         options(joinedload('mac_addresses')).\
+                         options(joinedload('virtual_interfaces')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload_all('fixed_ips.network')).\
@@ -1038,7 +1033,7 @@ def instance_get(context, instance_id, session=None):
     elif is_user_context(context):
         result = session.query(models.Instance).\
                          options(joinedload_all('fixed_ips.floating_ips')).\
-                         options(joinedload('mac_addresses')).\
+                         options(joinedload('virtual_interfaces')).\
                          options(joinedload_all('security_groups.rules')).\
                          options(joinedload('volumes')).\
                          options(joinedload('metadata')).\
@@ -1058,7 +1053,7 @@ def instance_get_all(context):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('mac_addresses')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1072,7 +1067,7 @@ def instance_get_all_by_user(context, user_id):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('mac_addresses')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('metadata')).\
@@ -1087,7 +1082,7 @@ def instance_get_all_by_host(context, host):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('mac_addresses')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
@@ -1103,7 +1098,7 @@ def instance_get_all_by_project(context, project_id):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('mac_addresses')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ips.network')).\
                    options(joinedload('instance_type')).\
@@ -1119,7 +1114,7 @@ def instance_get_all_by_reservation(context, reservation_id):
     if is_admin_context(context):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ips.floating_ips')).\
-                       options(joinedload('mac_addresses')).\
+                       options(joinedload('virtual_interfaces')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('instance_type')).\
@@ -1129,7 +1124,7 @@ def instance_get_all_by_reservation(context, reservation_id):
     elif is_user_context(context):
         return session.query(models.Instance).\
                        options(joinedload_all('fixed_ips.floating_ips')).\
-                       options(joinedload('mac_addresses')).\
+                       options(joinedload('virtual_interfaces')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ips.network')).\
                        options(joinedload('instance_type')).\
@@ -1144,7 +1139,7 @@ def instance_get_project_vpn(context, project_id):
     session = get_session()
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ips.floating_ips')).\
-                   options(joinedload('mac_addresses')).\
+                   options(joinedload('virtual_interfaces')).\
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
@@ -1159,7 +1154,7 @@ def instance_get_fixed_addresses(context, instance_id):
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         try:
-            fixed_ips = fixed_ip_get_all_by_instance(context, instance_id)
+            fixed_ips = fixed_ip_get_by_instance(context, instance_id)
         except exception.NotFound:
             return []
         return [fixed_ip.address for fixed_ip in fixed_ips]
@@ -1177,22 +1172,22 @@ def instance_get_fixed_addresses_v6(context, instance_id):
         # compile a list of cidr_v6 prefixes sorted by network id
         prefixes = [ref.cidr_v6 for ref in
                     sorted(network_refs, key=lambda ref: ref.id)]
-        # get mac rows associated with instance
-        mac_refs = mac_address_get_all_by_instance(context, instance_ref.id)
-        # compile of list of the mac_addresses sorted by network id
-        macs = [ref.mac_address for ref in
-                sorted(mac_refs, key=lambda ref: ref.network_id)]
-        # get project ids from instance
+        # get vifs associated with instance
+        vif_refs = virtual_interface_get_by_instance(context, instance_ref.id)
+        # compile list of the mac_addresses for vifs sorted by network id
+        macs = [vif_ref['address'] for vif_ref in
+                sorted(vif_refs, key=lambda vif_ref: vif_ref['network_id'])]
+        # get project id from instance
         project_id = instance_ref.project_id
         # combine prefixes, macs, and project_id into (prefix,mac,p_id) tuples
         prefix_mac_tuples = zip(prefixes, macs, [project_id for m in macs])
-        # return list containing ipv6 address for each pair
+        # return list containing ipv6 address for each tuple
         return [ipv6.to_global_ipv6(*t) for t in prefix_mac_tuples]
 
 
 @require_context
 def instance_get_floating_address(context, instance_id):
-    fixed_ip_refs = fixed_ip_get_all_by_instance(context, instance_id)
+    fixed_ip_refs = fixed_ip_get_by_instance(context, instance_id)
     if not fixed_ip_refs:
         return None
     # NOTE(tr3buchet): this only gets the first fixed_ip
@@ -1329,7 +1324,7 @@ def key_pair_destroy_all_by_user(context, user_id):
     with session.begin():
         session.query(models.KeyPair).\
                 filter_by(user_id=user_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -1875,7 +1870,7 @@ def volume_destroy(context, volume_id):
     with session.begin():
         session.query(models.Volume).\
                 filter_by(id=volume_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.ExportDevice).\
@@ -2033,7 +2028,7 @@ def snapshot_destroy(context, snapshot_id):
     with session.begin():
         session.query(models.Snapshot).\
                 filter_by(id=snapshot_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -2188,17 +2183,17 @@ def security_group_destroy(context, security_group_id):
     with session.begin():
         session.query(models.SecurityGroup).\
                 filter_by(id=security_group_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(security_group_id=security_group_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
                 filter_by(group_id=security_group_id).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -2209,11 +2204,11 @@ def security_group_destroy_all(context, session=None):
         session = get_session()
     with session.begin():
         session.query(models.SecurityGroup).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
-                update({'deleted': 1,
+                update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
@@ -2907,7 +2902,7 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
                             "instance_id": instance_id,
-                            "deleted": 0})
+                            "deleted": False})
         meta_ref.save(session=session)
 
     return metadata

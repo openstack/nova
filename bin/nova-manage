@@ -96,6 +96,7 @@ flags.DECLARE('network_size', 'nova.network.manager')
 flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
+flags.DECLARE('gateway_v6', 'nova.network.manager')
 flags.DECLARE('images_path', 'nova.image.local')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
@@ -517,13 +518,12 @@ class FixedIpCommands(object):
 class FloatingIpCommands(object):
     """Class for managing floating ip."""
 
-    def create(self, host, range):
-        """Creates floating ips for host by range
-        arguments: host ip_range"""
+    def create(self, range):
+        """Creates floating ips for zone by range
+        arguments: ip_range"""
         for address in IPy.IP(range):
             db.floating_ip_create(context.get_admin_context(),
-                                  {'address': str(address),
-                                   'host': host})
+                                  {'address': str(address)})
 
     def delete(self, ip_range):
         """Deletes floating ips by range
@@ -534,7 +534,8 @@ class FloatingIpCommands(object):
 
     def list(self, host=None):
         """Lists all floating ips (optionally by host)
-        arguments: [host]"""
+        arguments: [host]
+        Note: if host is given, only active floating IPs are returned"""
         ctxt = context.get_admin_context()
         if host is None:
             floating_ips = db.floating_ip_get_all(ctxt)
@@ -552,16 +553,23 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
-    def create(self, fixed_range=None, num_networks=None,
+    def create(self, label=None, fixed_range=None, num_networks=None,
                network_size=None, vlan_start=None,
-               vpn_start=None, fixed_range_v6=None, label='public',
+               vpn_start=None, fixed_range_v6=None, gateway_v6=None,
                flat_network_bridge=None, bridge_interface=None):
         """Creates fixed ips for host by range
-        arguments: fixed_range=FLAG, [num_networks=FLAG],
+        arguments: label, fixed_range, [num_networks=FLAG],
                    [network_size=FLAG], [vlan_start=FLAG],
-                   [vpn_start=FLAG], [fixed_range_v6=FLAG],
-                   [label='public'], [flat_network_bridge=FLAG,
-                   [bridge_interface=FLAG]"""
+                   [vpn_start=FLAG], [fixed_range_v6=FLAG], [gateway_v6=FLAG],
+                   [flat_network_bridge=FLAG], [bridge_interface=FLAG]
+        If you wish to use a later argument fill in the gaps with 0s
+        Ex: network create private 10.0.0.0/8 1 15 0 0 0 0 xenbr1 eth1
+            network create private 10.0.0.0/8 1 15
+        """
+        if not label:
+            msg = _('a label (ex: public) is required to create networks.')
+            print msg
+            raise TypeError(msg)
         if not fixed_range:
             msg = _('Fixed range in the form of 10.0.0.0/8 is '
                     'required to create networks.')
@@ -581,17 +589,20 @@ class NetworkCommands(object):
             flat_network_bridge = FLAGS.flat_network_bridge
         if not bridge_interface:
             bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
+        if not gateway_v6:
+            gateway_v6 = FLAGS.gateway_v6
         net_manager = utils.import_object(FLAGS.network_manager)
 
         try:
             net_manager.create_networks(context.get_admin_context(),
+                                        label=label,
                                         cidr=fixed_range,
                                         num_networks=int(num_networks),
                                         network_size=int(network_size),
                                         vlan_start=int(vlan_start),
                                         vpn_start=int(vpn_start),
                                         cidr_v6=fixed_range_v6,
-                                        label=label,
+                                        gateway_v6=gateway_v6,
                                         bridge=flat_network_bridge,
                                         bridge_interface=bridge_interface)
         except ValueError, e:
@@ -1098,24 +1109,35 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class ConfigCommands(object):
+    """Class for exposing the flags defined by flag_file(s)."""
+
+    def __init__(self):
+        pass
+
+    def list(self):
+        print FLAGS.FlagsIntoString()
+
+
 CATEGORIES = [
-    ('user', UserCommands),
     ('account', AccountCommands),
-    ('project', ProjectCommands),
-    ('role', RoleCommands),
-    ('shell', ShellCommands),
-    ('vpn', VpnCommands),
-    ('fixed', FixedIpCommands),
-    ('floating', FloatingIpCommands),
-    ('network', NetworkCommands),
-    ('vm', VmCommands),
-    ('service', ServiceCommands),
+    ('config', ConfigCommands),
     ('db', DbCommands),
-    ('volume', VolumeCommands),
+    ('fixed', FixedIpCommands),
+    ('flavor', InstanceTypeCommands),
+    ('floating', FloatingIpCommands),
     ('instance_type', InstanceTypeCommands),
     ('image', ImageCommands),
-    ('flavor', InstanceTypeCommands),
-    ('version', VersionCommands)]
+    ('network', NetworkCommands),
+    ('project', ProjectCommands),
+    ('role', RoleCommands),
+    ('service', ServiceCommands),
+    ('shell', ShellCommands),
+    ('user', UserCommands),
+    ('version', VersionCommands),
+    ('vm', VmCommands),
+    ('volume', VolumeCommands),
+    ('vpn', VpnCommands)]
 
 
 def lazy_match(name, key_value_tuples):

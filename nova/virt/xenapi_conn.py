@@ -265,9 +265,9 @@ class XenAPIConnection(driver.ComputeDriver):
         """reset networking for specified instance"""
         self._vmops.reset_network(instance)
 
-    def inject_network_info(self, instance):
+    def inject_network_info(self, instance, network_info):
         """inject network info for specified instance"""
-        self._vmops.inject_network_info(instance)
+        self._vmops.inject_network_info(instance, network_info)
 
     def get_info(self, instance_id):
         """Return data about VM instance"""

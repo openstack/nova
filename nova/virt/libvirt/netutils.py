@@ -53,8 +53,7 @@ def get_network_info(instance):
     # we should cache network_info
     admin_context = context.get_admin_context()
 
-    ip_addresses = db.fixed_ip_get_all_by_instance(admin_context,
-                                                   instance['id'])
+    ip_addresses = db.fixed_ip_get_by_instance(admin_context, instance['id'])
     networks = db.network_get_all_by_instance(admin_context,
                                               instance['id'])
     flavor = db.instance_type_get_by_id(admin_context,

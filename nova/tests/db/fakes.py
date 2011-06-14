@@ -38,6 +38,7 @@ class FakeModel(object):
             return self.values[key]
         else:
             raise NotImplementedError()
+
     def __repr__(self):
         return '<FakeModel: %s>' % self.values
 
@@ -138,7 +139,7 @@ def stub_out_db_network_api(stubs):
 
     def fake_floating_ip_get_all_by_host(context, host):
         # TODO(jkoelker): Once we get the patches that remove host from
-        #                 the floating_ip table, we'll need to stub 
+        #                 the floating_ip table, we'll need to stub
         #                 this out
         pass
 
@@ -436,7 +437,7 @@ def stub_out_db_instance_api(stubs, injected=True):
     def fake_instance_get_fixed_addresses_v6(context, instance_id):
         return [FakeModel(fixed_ip_fields).address]
 
-    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+    def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
     funcs = [fake_network_get_by_instance,
@@ -447,5 +448,5 @@ def stub_out_db_instance_api(stubs, injected=True):
              fake_instance_get_fixed_addresses,
              fake_instance_get_fixed_addresses_v6,
              fake_network_get_all_by_instance,
-             fake_fixed_ip_get_all_by_instance]
+             fake_fixed_ip_get_by_instance]
     stub_out(stubs, funcs)

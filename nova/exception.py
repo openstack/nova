@@ -96,10 +96,6 @@ def wrap_exception(f):
     return _wrap
 
 
-class MacAddress(Error):
-    pass
-
-
 class NovaException(Exception):
     """Base Nova Exception
 
@@ -120,6 +116,10 @@ class NovaException(Exception):
 
     def __str__(self):
         return self._error_string
+
+
+class VirtualInterface(Exception):
+    message = _("Attempt to create virtual interface failed")
 
 
 class NotAuthorized(NovaException):
@@ -364,8 +364,8 @@ class NoFixedIpsFoundForInstance(NotFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
 
-class NoFixedIpsFoundForMacAddress(NotFound):
-    message = _("Mac Address %(mac_id)s has zero associated fixed ips.")
+class NoFixedIpsFoundForVirtualInterface(NotFound):
+    message = _("Virtual interface %(vif_id)s has zero associated fixed ips.")
 
 
 class NoFixedIpFound(NotFound):

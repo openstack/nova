@@ -35,6 +35,37 @@ XML_NS_V10 = 'http://docs.rackspacecloud.com/servers/api/v1.0'
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
 
+def get_pagination_params(request):
+    """Return marker, limit tuple from request.
+
+    :param request: `wsgi.Request` possibly containing 'marker' and 'limit'
+                    GET variables. 'marker' is the id of the last element
+                    the client has seen, and 'limit' is the maximum number
+                    of items to return. If 'limit' is not specified, 0, or
+                    > max_limit, we default to max_limit. Negative values
+                    for either marker or limit will cause
+                    exc.HTTPBadRequest() exceptions to be raised.
+
+    """
+    try:
+        marker = int(request.GET.get('marker', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
+
+    try:
+        limit = int(request.GET.get('limit', 0))
+    except ValueError:
+        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
+
+    if limit < 0:
+        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+
+    if marker < 0:
+        raise webob.exc.HTTPBadRequest(_('marker param must be positive'))
+
+    return(marker, limit)
+
+
 def limited(items, request, max_limit=FLAGS.osapi_max_limit):
     """
     Return a slice of items according to requested offset and limit.
@@ -71,19 +102,10 @@ def limited(items, request, max_limit=FLAGS.osapi_max_limit):
 
 def limited_by_marker(items, request, max_limit=FLAGS.osapi_max_limit):
     """Return a slice of items according to the requested marker and limit."""
+    (marker, limit) = get_pagination_params(request)
 
-    try:
-        marker = int(request.GET.get('marker', 0))
-    except ValueError:
-        raise webob.exc.HTTPBadRequest(_('marker param must be an integer'))
-
-    try:
-        limit = int(request.GET.get('limit', max_limit))
-    except ValueError:
-        raise webob.exc.HTTPBadRequest(_('limit param must be an integer'))
-
-    if limit < 0:
-        raise webob.exc.HTTPBadRequest(_('limit param must be positive'))
+    if limit == 0:
+        limit = max_limit
 
     limit = min(max_limit, limit)
     start_index = 0

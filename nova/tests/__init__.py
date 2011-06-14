@@ -56,11 +56,13 @@ def setup():
     ctxt = context.get_admin_context()
     network = network_manager.VlanManager()
     bridge_interface = FLAGS.flat_interface or FLAGS.vlan_interface
-    network.create_networks(ctxt, cidr=FLAGS.fixed_range,
+    network.create_networks(ctxt,
+                            label='test',
+                            cidr=FLAGS.fixed_range,
                             num_networks=FLAGS.num_networks,
                             network_size=FLAGS.network_size,
                             cidr_v6=FLAGS.fixed_range_v6,
-                            label='test',
+                            gateway_v6=FLAGS.gateway_v6,
                             bridge=FLAGS.flat_network_bridge,
                             bridge_interface=bridge_interface,
                             vpn_start=FLAGS.vpn_start,

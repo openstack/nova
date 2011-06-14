@@ -48,7 +48,7 @@ class NetworkTestCase(test.TestCase):
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
         reload(db)
-        
+
 
 class TestFuncs(object):
     def _compare_fields(self, dict1, dict2, fields):
