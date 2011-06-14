@@ -16,6 +16,7 @@
 Tests For Zone Aware Scheduler.
 """
 
+from nova import exception
 from nova import test
 from nova.scheduler import driver
 from nova.scheduler import zone_aware_scheduler
@@ -90,6 +91,41 @@ def fake_empty_call_zone_method(context, method, specs):
     return []
 
 
+# Hmm, I should probably be using mox for this.
+was_called = False
+
+
+def fake_provision_resource(context, item, instance_id, request_spec, kwargs):
+    global was_called
+    was_called = True
+
+
+def fake_ask_child_zone_to_create_instance(context, zone_info,
+                                           request_spec, kwargs):
+    global was_called
+    was_called = True
+
+
+def fake_provision_resource_locally(context, item, instance_id, kwargs):
+    global was_called
+    was_called = True
+
+
+def fake_provision_resource_from_blob(context, item, instance_id,
+                                      request_spec, kwargs):
+    global was_called
+    was_called = True
+
+
+def fake_decrypt_blob_returns_local_info(blob):
+    return {'foo': True}  # values aren't important.
+
+
+def fake_decrypt_blob_returns_child_info(blob):
+    return {'child_zone': True,
+            'child_blob': True}  # values aren't important. Keys are.
+
+
 def fake_call_zone_method(context, method, specs):
     return [
         ('zone1', [
@@ -149,4 +185,112 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         fake_context = {}
         self.assertRaises(driver.NoValidHost, sched.schedule_run_instance,
                           fake_context, 1,
-                          dict(host_filter=None, instance_type={}))
+                          dict(host_filter=None,
+                               request_spec={'instance_type': {}}))
+
+    def test_schedule_do_not_schedule_with_hint(self):
+        """
+        Check the local/child zone routing in the run_instance() call.
+        If the zone_blob hint was passed in, don't re-schedule.
+        """
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        was_called = False
+        self.stubs.Set(sched, '_provision_resource', fake_provision_resource)
+        request_spec = {
+                'instance_properties': {},
+                'instance_type': {},
+                'filter_driver': 'nova.scheduler.host_filter.AllHostsFilter',
+                'blob': "Non-None blob data",
+            }
+
+        result = sched.schedule_run_instance(None, 1, request_spec)
+        self.assertEquals(None, result)
+        self.assertTrue(was_called)
+
+    def test_provision_resource_local(self):
+        """Provision a resource locally or remotely."""
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        was_called = False
+        self.stubs.Set(sched, '_provision_resource_locally',
+                       fake_provision_resource_locally)
+
+        request_spec = {'hostname': "foo"}
+        sched._provision_resource(None, request_spec, 1, request_spec, {})
+        self.assertTrue(was_called)
+
+    def test_provision_resource_remote(self):
+        """Provision a resource locally or remotely."""
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        was_called = False
+        self.stubs.Set(sched, '_provision_resource_from_blob',
+                       fake_provision_resource_from_blob)
+
+        request_spec = {}
+        sched._provision_resource(None, request_spec, 1, request_spec, {})
+        self.assertTrue(was_called)
+
+    def test_provision_resource_from_blob_empty(self):
+        """Provision a resource locally or remotely given no hints."""
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        request_spec = {}
+        self.assertRaises(zone_aware_scheduler.InvalidBlob,
+                          sched._provision_resource_from_blob,
+                          None, {}, 1, {}, {})
+
+    def test_provision_resource_from_blob_with_local_blob(self):
+        """
+        Provision a resource locally or remotely when blob hint passed in.
+        """
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        was_called = False
+        self.stubs.Set(sched, '_decrypt_blob',
+                       fake_decrypt_blob_returns_local_info)
+        self.stubs.Set(sched, '_provision_resource_locally',
+                       fake_provision_resource_locally)
+
+        request_spec = {'blob': "Non-None blob data"}
+
+        sched._provision_resource_from_blob(None, request_spec, 1,
+                                            request_spec, {})
+        self.assertTrue(was_called)
+
+    def test_provision_resource_from_blob_with_child_blob(self):
+        """
+        Provision a resource locally or remotely when child blob hint
+        passed in.
+        """
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        self.stubs.Set(sched, '_decrypt_blob',
+                       fake_decrypt_blob_returns_child_info)
+        was_called = False
+        self.stubs.Set(sched, '_ask_child_zone_to_create_instance',
+                       fake_ask_child_zone_to_create_instance)
+
+        request_spec = {'blob': "Non-None blob data"}
+
+        sched._provision_resource_from_blob(None, request_spec, 1,
+                                            request_spec, {})
+        self.assertTrue(was_called)
+
+    def test_provision_resource_from_blob_with_immediate_child_blob(self):
+        """
+        Provision a resource locally or remotely when blob hint passed in
+        from an immediate child.
+        """
+        global was_called
+        sched = FakeZoneAwareScheduler()
+        was_called = False
+        self.stubs.Set(sched, '_ask_child_zone_to_create_instance',
+                       fake_ask_child_zone_to_create_instance)
+
+        request_spec = {'child_blob': True, 'child_zone': True}
+
+        sched._provision_resource_from_blob(None, request_spec, 1,
+                                            request_spec, {})
+        self.assertTrue(was_called)

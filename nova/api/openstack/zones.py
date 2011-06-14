@@ -27,9 +27,6 @@ from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('build_plan_encryption_key',
-        None,
-        '128bit (hex) encryption key for scheduler build plans.')
 
 
 LOG = logging.getLogger('nova.api.openstack.zones')
@@ -51,6 +48,14 @@ def _exclude_keys(item, keys):
 def _scrub_zone(zone):
     return _exclude_keys(zone, ('username', 'password', 'created_at',
                     'deleted', 'deleted_at', 'updated_at'))
+
+
+def check_encryption_key(func):
+    def wrapped(*args, **kwargs):
+        if not FLAGS.build_plan_encryption_key:
+            raise exception.Error(_("--build_plan_encryption_key not set"))
+        return func(*args, **kwargs)
+    return wrapped
 
 
 class Controller(object):
@@ -103,19 +108,13 @@ class Controller(object):
         zone = api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def select(self, req):
+    @check_encryption_key
+    def select(self, req, body):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        qs = req.environ['QUERY_STRING']
-        param_dict = urlparse.parse_qs(qs)
-        param_dict.pop("fresh", None)
-        # parse_qs returns a dict where the values are lists,
-        # since query strings can have multiple values for the
-        # same key. We need to convert that to single values.
-        for key in param_dict:
-            param_dict[key] = param_dict[key][0]
-        build_plan = api.select(ctx, specs=param_dict)
+        specs = json.loads(body)
+        build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
 
@@ -123,9 +122,6 @@ class Controller(object):
         """Remove all the confidential data and return a sanitized
         version of the build plan. Include an encrypted full version
         of the weighting entry so we can get back to it later."""
-        if not FLAGS.build_plan_encryption_key:
-            raise exception.FlagNotSet(flag='build_plan_encryption_key')
-
         encryptor = crypto.encryptor(FLAGS.build_plan_encryption_key)
         cooked = []
         for entry in build_plan:

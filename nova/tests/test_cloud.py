@@ -115,6 +115,18 @@ class CloudTestCase(test.TestCase):
                                   public_ip=address)
         db.floating_ip_destroy(self.context, address)
 
+    def test_allocate_address(self):
+        address = "10.10.10.10"
+        allocate = self.cloud.allocate_address
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'host': self.network.host})
+        self.assertEqual(allocate(self.context)['publicIp'], address)
+        db.floating_ip_destroy(self.context, address)
+        self.assertRaises(exception.NoMoreFloatingIps,
+                          allocate,
+                          self.context)
+
     def test_associate_disassociate_address(self):
         """Verifies associate runs cleanly without raising an exception"""
         address = "10.10.10.10"
@@ -486,6 +498,21 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
         self.assertRaises(exception.ApiError, run_instances,
                           self.context, **kwargs)
+
+    def test_run_instances_image_status_active(self):
+        kwargs = {'image_id': FLAGS.default_image,
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1}
+        run_instances = self.cloud.run_instances
+
+        def fake_show_stat_active(self, context, id):
+            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
+                    'type': 'machine'}, 'status': 'active'}
+
+        self.stubs.Set(local.LocalImageService, 'show', fake_show_stat_active)
+
+        result = run_instances(self.context, **kwargs)
+        self.assertEqual(len(result['instancesSet']), 1)
 
     def test_terminate_instances(self):
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
