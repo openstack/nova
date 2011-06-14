@@ -87,7 +87,7 @@ def stub_out_db_network_api(stubs):
                           'address': '192.168.1.100',
                           'fixed_ip_id': 0,
                           'fixed_ip': None,
-                          'project_id': 'fake',
+                          'project_id': None,
                           'auto_assigned': False}
 
     virtual_interface_fields = {'id': 0,
@@ -105,7 +105,6 @@ def stub_out_db_network_api(stubs):
         ips = filter(lambda i: i['fixed_ip_id'] == None \
                            and i['project_id'] == None,
                      floating_ips)
-        print "A" * 20, "|%s|" % floating_ips
         if not ips:
             raise db.NoMoreAddresses()
         ips[0]['project_id'] = project_id
