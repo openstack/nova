@@ -585,3 +585,7 @@ class InstanceExists(Duplicate):
 
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
+
+
+class MalformedRequestBody(NovaException):
+    message = _("Malformed message body") + ": %(reason)s"
