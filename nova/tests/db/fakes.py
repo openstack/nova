@@ -194,7 +194,7 @@ def stub_out_db_network_api(stubs):
     def fake_fixed_ip_disassociate_all_by_timeout(context, host, time):
         return 0
 
-    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+    def fake_fixed_ip_get_by_instance(context, instance_id):
         ips = filter(lambda i: i['instance_id'] == instance_id,
                      fixed_ips)
         return [FakeModel(i) for i in ips]
@@ -315,7 +315,7 @@ def stub_out_db_network_api(stubs):
              fake_fixed_ip_create,
              fake_fixed_ip_disassociate,
              fake_fixed_ip_disassociate_all_by_timeout,
-             fake_fixed_ip_get_all_by_instance,
+             fake_fixed_ip_get_by_instance,
              fake_fixed_ip_get_by_address,
              fake_fixed_ip_get_network,
              fake_fixed_ip_update,
