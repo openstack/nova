@@ -5,6 +5,7 @@ from xml.dom import minidom
 from xml.parsers.expat import ExpatError
 
 from nova import exception
+import faults
 from nova import log as logging
 from nova import utils
 from nova import wsgi
@@ -362,7 +363,9 @@ class Resource(wsgi.Application):
         except exception.InvalidContentType:
             return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
         except exception.MalformedRequestBody:
-            return webob.exc.HTTPBadRequest(_("Malformed request"))
+            explanation = _("Malformed request")
+            return faults.Fault(webob.exc.HTTPBadRequest(
+                                            explanation=explanation))
 
         action_result = self.dispatch(request, action, action_args)
 
