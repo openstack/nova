@@ -67,13 +67,10 @@ function run_pep8 {
   srcfiles=`find bin -type f ! -name "nova.conf*"`
   srcfiles+=" `find tools/*`"
   srcfiles+=" nova setup.py plugins/xenserver/xenapi/etc/xapi.d/plugins/glance"
-  pep8 --repeat --show-pep8 --show-source --exclude=vcsversion.py ${srcfiles}
+  # Just run PEP8 in current environment
+  ${wrapper} pep8 --repeat --show-pep8 --show-source \
+  --exclude=vcsversion.py ${srcfiles}
 }
-
-if [ $just_pep8 -eq 1 ]; then
-    run_pep8
-    exit
-fi
 
 NOSETESTS="python run_tests.py $noseargs"
 
@@ -101,6 +98,11 @@ then
       fi
     fi
   fi
+fi
+
+if [ $just_pep8 -eq 1 ]; then
+    run_pep8
+    exit
 fi
 
 run_tests || exit

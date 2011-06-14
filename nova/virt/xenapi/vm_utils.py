@@ -33,6 +33,8 @@ from xml.dom import minidom
 import glance.client
 from nova import exception
 from nova import flags
+import nova.image
+from nova.image import glance as glance_image_service
 from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
@@ -83,13 +85,13 @@ class ImageType:
     DISK = 2
     DISK_RAW = 3
     DISK_VHD = 4
-    
+
     KERNEL_STR = "kernel"
     RAMDISK_STR = "ramdisk"
     DISK_STR = "os"
     DISK_RAW_STR = "os_raw"
     DISK_VHD_STR = "vhd"
-    
+
     @classmethod
     def pretty_format(cls, image_type):
         if image_type == ImageType.KERNEL:
@@ -115,7 +117,7 @@ class ImageType:
             return ImageType.DISK_RAW
         elif image_type == ImageType.DISK_VHD_STR:
             return ImageType.VHD
-        
+
 
 class VMHelper(HelperBase):
     """
@@ -400,10 +402,12 @@ class VMHelper(HelperBase):
 
         os_type = instance.os_type or FLAGS.default_os_type
 
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
-                  'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port,
+                  'glance_host': glance_host,
+                  'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
                   'os_type': os_type}
 
@@ -451,9 +455,11 @@ class VMHelper(HelperBase):
         # pass them as arguments
         uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
 
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
         params = {'image_id': image,
-                  'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port,
+                  'glance_host': glance_host,
+                  'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
                   'sr_path': cls.get_sr_path(session)}
 
@@ -499,8 +505,8 @@ class VMHelper(HelperBase):
         LOG.debug(_("Fetching image %(image)s") % locals())
         sr_ref = safe_find_sr(session)
 
-        client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-        meta, image_file = client.get_image(image)
+        glance_client, image_id = nova.image.get_glance_client(image)
+        meta, image_file = glance_client.get_image(image_id)
         virtual_size = int(meta['size'])
         vdi_size = virtual_size
         #vdi_type = 'file' # will be set to os if image_type==ImageType.DISK
@@ -511,7 +517,7 @@ class VMHelper(HelperBase):
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
             #vdi_type = 'os'
-        elif image_type == ImageType.KERNEL_RAMDISK and \
+        elif image_type in (ImageType.KERNEL, ImageType.RAMDISK) and \
              vdi_size > FLAGS.max_kernel_ramdisk_size:
             max_size = FLAGS.max_kernel_ramdisk_size
             raise exception.Error(
@@ -529,7 +535,7 @@ class VMHelper(HelperBase):
                                    lambda dev:
                                    _stream_disk(dev, image_type,
                                                 virtual_size, image_file))
-            if image_type == ImageType.KERNEL_RAMDISK:
+            if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
                 #we need to invoke a plugin for copying VDI's
                 #content into proper path
                 LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
@@ -554,9 +560,10 @@ class VMHelper(HelperBase):
             # Looking for XenAPI and OS failures
             LOG.exception(_("instance %s: Failed to fetch glance image"),
                           instance_id, exc_info=sys.exc_info())
-            e.args = e.args + ([dict(vdi_type=ImageType.pretty_format(image_type),
+            e.args = e.args + ([dict(vdi_type=ImageType.
+                                              pretty_format(image_type),
                                     vdi_uuid=vdi_uuid,
-                                    file=filename)],)            
+                                    file=filename)],)        
             raise e
 
     @classmethod
@@ -578,20 +585,21 @@ class VMHelper(HelperBase):
                              ImageType.DISK_RAW: 'DISK_RAW',
                              ImageType.DISK_VHD: 'DISK_VHD'}
             disk_format = pretty_format[image_type]
-            image_id = instance.image_id
+            image_ref = instance.image_ref
             instance_id = instance.id
             LOG.debug(_("Detected %(disk_format)s format for image "
-                        "%(image_id)s, instance %(instance_id)s") % locals())
+                        "%(image_ref)s, instance %(instance_id)s") % locals())
 
         def determine_from_glance():
-            glance_disk_format2nova_type = {'ami': ImageType.DISK,
-                                            'raw': ImageType.DISK_RAW,
-                                            'vhd': ImageType.DISK_VHD,
-                                            'aki': ImageType.KERNEL,
-                                            'ari': ImageType.RAMDISK}
-
-            client = glance.client.Client(FLAGS.glance_host, FLAGS.glance_port)
-            meta = client.get_image_meta(instance.image_id)
+            glance_disk_format2nova_type = {
+                'ami': ImageType.DISK,
+                'aki': ImageType.KERNEL,
+                'ari': ImageType.RAMDISK,
+                'raw': ImageType.DISK_RAW,
+                'vhd': ImageType.DISK_VHD}
+            image_ref = instance.image_ref
+            glance_client, image_id = nova.image.get_glance_client(image_ref)
+            meta = glance_client.get_image_meta(image_id)
             disk_format = meta['disk_format']
             try:
                 return glance_disk_format2nova_type[disk_format]
@@ -619,7 +627,7 @@ class VMHelper(HelperBase):
                             image_type):
         """Fetch image from glance based on image type.
 
-        Returns: A single filename if image_type is KERNEL_RAMDISK
+        Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
         if image_type == ImageType.DISK_VHD:
@@ -634,10 +642,11 @@ class VMHelper(HelperBase):
                                  secret, image_type):
         """Fetch an image from objectstore.
 
-        Returns: A single filename if image_type is KERNEL_RAMDISK
+        Returns: A single filename if image_type is KERNEL or RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        url = images.image_url(image)
+        url = "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
+                                                 image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             fn = 'get_kernel'
@@ -655,7 +664,7 @@ class VMHelper(HelperBase):
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
         uuid_or_fn = session.wait_for_task(task, instance_id)
-        if image_type != ImageType.KERNEL_RAMDISK:
+        if not image_type in (ImageType.KERNEL, ImageType.RAMDISK):
             return [dict(vdi_type='os', vdi_uuid=uuid_or_fn)]
         return uuid_or_fn
 
@@ -1106,6 +1115,8 @@ def _stream_disk(dev, image_type, virtual_size, image_file):
     if image_type == ImageType.DISK:
         offset = MBR_SIZE_BYTES
         _write_partition(virtual_size, dev)
+
+    utils.execute('sudo', 'chown', os.getuid(), '/dev/%s' % dev)
 
     with open('/dev/%s' % dev, 'wb') as f:
         f.seek(offset)

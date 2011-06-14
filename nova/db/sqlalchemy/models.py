@@ -19,8 +19,6 @@
 SQLAlchemy models for nova data.
 """
 
-import datetime
-
 from sqlalchemy.orm import relationship, backref, object_mapper
 from sqlalchemy import Column, Integer, String, schema
 from sqlalchemy import ForeignKey, DateTime, Boolean, Text
@@ -33,6 +31,7 @@ from nova.db.sqlalchemy.session import get_session
 from nova import auth
 from nova import exception
 from nova import flags
+from nova import utils
 
 
 FLAGS = flags.FLAGS
@@ -43,10 +42,11 @@ class NovaBase(object):
     """Base class for Nova Models."""
     __table_args__ = {'mysql_engine': 'InnoDB'}
     __table_initialized__ = False
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=utils.utcnow)
+    updated_at = Column(DateTime, onupdate=utils.utcnow)
     deleted_at = Column(DateTime)
     deleted = Column(Boolean, default=False)
+    metadata = None
 
     def save(self, session=None):
         """Save this object."""
@@ -64,7 +64,7 @@ class NovaBase(object):
     def delete(self, session=None):
         """Delete this object."""
         self.deleted = True
-        self.deleted_at = datetime.datetime.utcnow()
+        self.deleted_at = utils.utcnow()
         self.save(session=session)
 
     def __setitem__(self, key, value):
@@ -184,11 +184,11 @@ class Instance(BASE, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    image_id = Column(String(255))
+    image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))
 
-#    image_id = Column(Integer, ForeignKey('images.id'), nullable=True)
+#    image_ref = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    kernel_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk_id = Column(Integer, ForeignKey('images.id'), nullable=True)
 #    ramdisk = relationship(Ramdisk, backref=backref('instances', order_by=id))

@@ -25,6 +25,7 @@ import M2Crypto
 import os
 import pickle
 import subprocess
+import sys
 import uuid
 
 from nova import context
@@ -101,7 +102,7 @@ class VMOps(object):
         if not vm_ref:
             vm_ref = VMHelper.lookup(self._session, instance.name)
         if vm_ref is None:
-            raise exception(_('Attempted to power on non-existent instance'
+            raise Exception(_('Attempted to power on non-existent instance'
             ' bad instance id %s') % instance.id)
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
@@ -111,11 +112,12 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         vdis = VMHelper.fetch_image(self._session,
-                instance.id, instance.image_id, user, project,
+                instance.id, instance.image_ref, user, project,
                 disk_image_type)
         return vdis
 
     def spawn(self, instance, network_info=None):
+        vdis = None
         try:
             vdis = self._create_disks(instance)
             vm_ref = self._create_vm(instance, vdis, network_info)
@@ -153,20 +155,18 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
 
         disk_image_type = VMHelper.determine_disk_image_type(instance)
-
+        kernel = None
+        ramdisk = None
         try:
-            kernel = None
             if instance.kernel_id:
                 kernel = VMHelper.fetch_image(self._session, instance.id,
                         instance.kernel_id, user, project,
-                        ImageType.KERNEL_RAMDISK)
-    
-            ramdisk = None
+                        ImageType.KERNEL)[0]
             if instance.ramdisk_id:
                 ramdisk = VMHelper.fetch_image(self._session, instance.id,
                         instance.ramdisk_id, user, project,
-                        ImageType.KERNEL_RAMDISK)
-    
+                        ImageType.RAMDISK)[0]
+
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                     vdis[0]['vdi_uuid'])
@@ -186,22 +186,15 @@ class VMOps(object):
 
             if vm_create_error.args:
                 last_arg = vm_create_error.args[-1]
-            if isinstance(last_arg, dict):
+            if isinstance(last_arg, list):
                 resources = last_arg
             else:
                 vm_create_error.args = vm_create_error.args + (resources,)
-            #FIX HERE!!!
-            
+
             if kernel:
-                resources.append(dict(vdi_type=ImageType.
-                                               pretty_format(image_type),
-                                      vdi_uuid=None,
-                                      file=kernel))
+                resources.append(kernel)
             if ramdisk:
-                resources.append(dict(vdi_type=ImageType.
-                                               pretty_format(image_type),
-                                      vdi_uuid=None,
-                                      file=ramdisk))
+                resources.append(ramdisk)
 
             raise vm_create_error
 
@@ -305,6 +298,8 @@ class VMOps(object):
                                       file=None))
 
         LOG.debug(_("Resources to remove:%s"), resources)
+        kernel_file = None
+        ramdisk_file = None
 
         for item in resources:
             vdi_type = item['vdi_type']
@@ -319,17 +314,17 @@ class VMOps(object):
                 except self.XenAPI.Failure:
                     # vdi already deleted
                     LOG.debug(_("Skipping VDI destroy for %s"), vdi_to_remove)
-            kernel_file = None
-            ramdisk_file = None
             if item['file']:
                 # there is also a file to remove
-                files_to_remove[vdi_type] = item['file']
+                if vdi_type == ImageType.KERNEL_STR:
+                    kernel_file = item['file']
+                elif vdi_type == ImageType.RAMDISK_STR:
+                    ramdisk_file = item['file']
 
-        if files_to_remove:
+        if kernel_file or ramdisk_file:
             LOG.debug(_("Removing kernel/ramdisk files from dom0"))
-            self._destroy_kernel_ramdisk_plugin_call(
-                    files_to_remove.get(ImageType.KERNEL_STR, None),
-                    files_to_remove.get(ImageType.RAMDISK_STR, None))
+            self._destroy_kernel_ramdisk_plugin_call(kernel_file,
+                                                     ramdisk_file)
 
     def _get_vm_opaque_ref(self, instance_or_vm):
         """

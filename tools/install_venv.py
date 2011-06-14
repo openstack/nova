@@ -36,7 +36,7 @@ PY_VERSION = "python%s.%s" % (sys.version_info[0], sys.version_info[1])
 
 
 def die(message, *args):
-    print >>sys.stderr, message % args
+    print >> sys.stderr, message % args
     sys.exit(1)
 
 

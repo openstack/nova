@@ -244,7 +244,7 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port, os_type):
     conn = httplib.HTTPConnection(glance_host, glance_port)
     # NOTE(sirp): httplib under python2.4 won't accept a file-like object
     # to request
-    conn.putrequest('PUT', '/images/%s' % image_id)
+    conn.putrequest('PUT', '/v1/images/%s' % image_id)
 
     # NOTE(sirp): There is some confusion around OVF. Here's a summary of
     # where we currently stand:

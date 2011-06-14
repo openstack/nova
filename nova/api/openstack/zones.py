@@ -22,13 +22,11 @@ from nova import exception
 from nova import flags
 from nova import log as logging
 from nova.api.openstack import common
+from nova.api.openstack import wsgi
 from nova.scheduler import api
 
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('build_plan_encryption_key',
-        None,
-        '128bit (hex) encryption key for scheduler build plans.')
 
 
 LOG = logging.getLogger('nova.api.openstack.zones')
@@ -52,12 +50,15 @@ def _scrub_zone(zone):
                     'deleted', 'deleted_at', 'updated_at'))
 
 
-class Controller(common.OpenstackController):
+def check_encryption_key(func):
+    def wrapped(*args, **kwargs):
+        if not FLAGS.build_plan_encryption_key:
+            raise exception.Error(_("--build_plan_encryption_key not set"))
+        return func(*args, **kwargs)
+    return wrapped
 
-    _serialization_metadata = {
-        'application/xml': {
-            "attributes": {
-                "zone": ["id", "api_url", "name", "capabilities"]}}}
+
+class Controller(object):
 
     def index(self, req):
         """Return all zones in brief"""
@@ -96,32 +97,24 @@ class Controller(common.OpenstackController):
         api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
-    def create(self, req):
+    def create(self, req, body):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
-        zone = api.zone_create(context, env["zone"])
+        zone = api.zone_create(context, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def update(self, req, id):
+    def update(self, req, id, body):
         context = req.environ['nova.context']
-        env = self._deserialize(req.body, req.get_content_type())
         zone_id = int(id)
-        zone = api.zone_update(context, zone_id, env["zone"])
+        zone = api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
-    def select(self, req):
+    @check_encryption_key
+    def select(self, req, body):
         """Returns a weighted list of costs to create instances
            of desired capabilities."""
         ctx = req.environ['nova.context']
-        qs = req.environ['QUERY_STRING']
-        param_dict = urlparse.parse_qs(qs)
-        param_dict.pop("fresh", None)
-        # parse_qs returns a dict where the values are lists,
-        # since query strings can have multiple values for the
-        # same key. We need to convert that to single values.
-        for key in param_dict:
-            param_dict[key] = param_dict[key][0]
-        build_plan = api.select(ctx, specs=param_dict)
+        specs = json.loads(body)
+        build_plan = api.select(ctx, specs=specs)
         cooked = self._scrub_build_plan(build_plan)
         return {"weights": cooked}
 
@@ -129,9 +122,6 @@ class Controller(common.OpenstackController):
         """Remove all the confidential data and return a sanitized
         version of the build plan. Include an encrypted full version
         of the weighting entry so we can get back to it later."""
-        if not FLAGS.build_plan_encryption_key:
-            raise exception.FlagNotSet(flag='build_plan_encryption_key')
-
         encryptor = crypto.encryptor(FLAGS.build_plan_encryption_key)
         cooked = []
         for entry in build_plan:
@@ -140,3 +130,18 @@ class Controller(common.OpenstackController):
             cooked.append(dict(weight=entry['weight'],
                 blob=cipher_text))
         return cooked
+
+
+def create_resource():
+    metadata = {
+        "attributes": {
+            "zone": ["id", "api_url", "name", "capabilities"],
+        },
+    }
+
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V10,
+                                                  metadata=metadata),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)

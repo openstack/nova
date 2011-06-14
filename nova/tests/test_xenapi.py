@@ -79,7 +79,7 @@ class XenAPIVolumeTestCase(test.TestCase):
         self.values = {'id': 1,
                   'project_id': 'fake',
                   'user_id': 'fake',
-                  'image_id': 1,
+                  'image_ref': 1,
                   'kernel_id': 2,
                   'ramdisk_id': 3,
                   'instance_type_id': '3',  # m1.large
@@ -193,8 +193,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_determine_is_pv_objectstore(self.stubs)
         self.stubs.Set(VMOps, 'reset_network', reset_network)
         stubs.stub_out_vm_methods(self.stubs)
-        glance_stubs.stubout_glance_client(self.stubs,
-                                           glance_stubs.FakeGlance)
+        glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
         self.context = context.RequestContext('fake', 'fake', False)
         self.conn = xenapi_conn.get_connection(False)
@@ -207,7 +206,7 @@ class XenAPIVMTestCase(test.TestCase):
                 'id': id,
                 'project_id': proj,
                 'user_id': user,
-                'image_id': 1,
+                'image_ref': 1,
                 'kernel_id': 2,
                 'ramdisk_id': 3,
                 'instance_type_id': '3',  # m1.large
@@ -351,26 +350,14 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(self.vm['HVM_boot_params'], {})
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
-    def _list_vdis(self):
-        url = FLAGS.xenapi_connection_url
-        username = FLAGS.xenapi_connection_username
-        password = FLAGS.xenapi_connection_password
-        session = xenapi_conn.XenAPISession(url, username, password)
-        return session.call_xenapi('VDI.get_all')
-
-    def _check_vdis(self, start_list, end_list):
-        for vdi_ref in end_list:
-            if not vdi_ref in start_list:
-                self.fail('Found unexpected VDI:%s' % vdi_ref)
-
-    def _test_spawn(self, image_id, kernel_id, ramdisk_id,
+    def _test_spawn(self, image_ref, kernel_id, ramdisk_id,
                     instance_type_id="3", os_type="linux",
                     instance_id=1, check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
-                  'image_id': image_id,
+                  'image_ref': image_ref,
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
                   'instance_type_id': instance_type_id,
@@ -607,7 +594,7 @@ class XenAPIVMTestCase(test.TestCase):
             'id': 1,
             'project_id': self.project.id,
             'user_id': self.user.id,
-            'image_id': 1,
+            'image_ref': 1,
             'kernel_id': 2,
             'ramdisk_id': 3,
             'instance_type_id': '3',  # m1.large
@@ -681,7 +668,7 @@ class XenAPIMigrateInstance(test.TestCase):
         self.values = {'id': 1,
                   'project_id': self.project.id,
                   'user_id': self.user.id,
-                  'image_id': 1,
+                  'image_ref': 1,
                   'kernel_id': None,
                   'ramdisk_id': None,
                   'local_gb': 5,
@@ -692,8 +679,7 @@ class XenAPIMigrateInstance(test.TestCase):
         fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
-        glance_stubs.stubout_glance_client(self.stubs,
-                                           glance_stubs.FakeGlance)
+        glance_stubs.stubout_glance_client(self.stubs)
 
     def tearDown(self):
         super(XenAPIMigrateInstance, self).tearDown()
@@ -719,8 +705,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
     """Unit tests for code that detects the ImageType."""
     def setUp(self):
         super(XenAPIDetermineDiskImageTestCase, self).setUp()
-        glance_stubs.stubout_glance_client(self.stubs,
-                                           glance_stubs.FakeGlance)
+        glance_stubs.stubout_glance_client(self.stubs)
 
         class FakeInstance(object):
             pass
@@ -737,7 +722,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
     def test_instance_disk(self):
         """If a kernel is specified, the image type is DISK (aka machine)."""
         FLAGS.xenapi_image_service = 'objectstore'
-        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_MACHINE
+        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_MACHINE
         self.fake_instance.kernel_id = glance_stubs.FakeGlance.IMAGE_KERNEL
         self.assert_disk_type(vm_utils.ImageType.DISK)
 
@@ -747,7 +732,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         DISK_RAW is assumed.
         """
         FLAGS.xenapi_image_service = 'objectstore'
-        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_RAW
+        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_RAW
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
 
@@ -757,7 +742,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         this case will be 'raw'.
         """
         FLAGS.xenapi_image_service = 'glance'
-        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_RAW
+        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_RAW
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_RAW)
 
@@ -767,7 +752,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         this case will be 'vhd'.
         """
         FLAGS.xenapi_image_service = 'glance'
-        self.fake_instance.image_id = glance_stubs.FakeGlance.IMAGE_VHD
+        self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_VHD
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_VHD)
 

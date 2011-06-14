@@ -429,7 +429,6 @@ class XenAPISession(object):
         """Stubout point. This can be replaced with a mock session."""
         return self.XenAPI.Session(url)
 
-
     def _unwrap_plugin_exceptions(self, func, *args, **kwargs):
         """Parse exception details"""
         try:

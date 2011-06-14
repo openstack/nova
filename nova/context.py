@@ -18,7 +18,6 @@
 
 """RequestContext: context for requests that persist through all of nova."""
 
-import datetime
 import random
 
 from nova import exception
