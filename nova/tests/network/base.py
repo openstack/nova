@@ -100,12 +100,12 @@ class TestFuncs(object):
         self.network.add_fixed_ip_to_instance(self.context,
                                               instance_id=instance_id,
                                               network_id=network_id)
-        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        ips = db.fixed_ip_get_by_instance(self.context, instance_id)
         for ip in ips:
             self.assertTrue(ip['allocated'])
         self.network.deallocate_for_instance(self.context,
                                              instance_id=instance_id)
-        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        ips = db.fixed_ip_get_by_instance(self.context, instance_id)
         for ip in ips:
             self.assertFalse(ip['allocated'])
 
@@ -122,7 +122,7 @@ class TestFuncs(object):
         self.assertTrue(nw[0])
         network_id = nw[0][0]['id']
 
-        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        ips = db.fixed_ip_get_by_instance(self.context, instance_id)
         mac = db.mac_address_get_by_instance_and_network(self.context,
                                                          instance_id,
                                                          network_id)
