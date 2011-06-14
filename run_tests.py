@@ -185,6 +185,22 @@ class _NullColorizer(object):
         self.stream.write(text)
 
 
+def classify_test_speed(elapsed_time):
+    if elapsed_time > 1.0:
+        return 'slow'
+    elif elapsed_time > 0.25:
+        return 'sluggish'
+    else:
+        return 'fast'
+
+
+def get_elapsed_time_color(elapsed_time):
+    color_map = {'slow': 'red', 'sluggish': 'yellow', 'fast': 'green'}
+    slowness = classify_test_speed(elapsed_time)
+    color = color_map[slowness]
+    return color
+
+
 class NovaTestResult(result.TextTestResult):
     def __init__(self, *args, **kw):
         self.show_elapsed = kw.pop('show_elapsed')
@@ -215,15 +231,8 @@ class NovaTestResult(result.TextTestResult):
             heapq.heappush(self.slow_tests, item)
 
     def _writeElapsedTime(self, test):
-        if self.elapsed_time >= 3.0:
-            color = 'red'
-        elif self.elapsed_time >= 1.0:
-            color = 'yellow'
-        else:
-            color = 'green'
-
-        self.stream.write(' ' * 10)
-        self.colorizer.write("%.2f" % self.elapsed_time, color)
+        color = get_elapsed_time_color(self.elapsed_time)
+        self.colorizer.write("  %.2f" % self.elapsed_time, color)
         self.stream.write(' secs')
 
     def _writeResult(self, test, long_result, color, short_result):
@@ -310,13 +319,22 @@ class NovaTestRunner(core.TextTestRunner):
                               self.config,
                               show_elapsed=self.show_elapsed)
 
+    def _writeSlowTests(self, result_):
+        # Pare out 'fast' tests
+        slow_tests = [item for item in result_.slow_tests
+                      if classify_test_speed(item[0]) != 'fast']
+
+        slow_total_time = sum(item[0] for item in slow_tests)
+        self.stream.writeln("Slowest %i tests took %.2f secs:"
+                            % (len(slow_tests), slow_total_time))
+        for elapsed_time, test in sorted(slow_tests, reverse=True):
+            time_str = "%.2f secs" % elapsed_time
+            self.stream.writeln("    %s %s" % (time_str.ljust(10), test))
+
     def run(self, test):
         result_ = core.TextTestRunner.run(self, test)
         if self.show_elapsed:
-            self.stream.writeln("Slowest %i tests:" % result_.num_slow_tests)
-            for elapsed_time, test in reversed(sorted(result_.slow_tests)):
-                time_str = "%.2f secs" % elapsed_time
-                self.stream.writeln("    %s %s" % (time_str.ljust(10), test))
+            self._writeSlowTests(result_)
         return result_
 
 
