@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -35,7 +33,7 @@ from nova.api.openstack import wsgi
 from nova.auth import manager as auth_manager
 
 
-LOG = logging.getLogger('nova.api.openstack.create_instance_controller')
+LOG = logging.getLogger('nova.api.openstack.create_instance_helper')
 FLAGS = flags.FLAGS
 
 
@@ -47,7 +45,7 @@ class CreateFault(exception.NovaException):
         super(CreateFault, self).__init__()
 
 
-class OpenstackCreateInstanceController(object):
+class CreateInstanceHelper(object):
     """This is the base class for OS API Controllers that
     are capable of creating instances (currently Servers and Zones).
 
@@ -55,22 +53,11 @@ class OpenstackCreateInstanceController(object):
     to move this code back into servers.py
     """
 
-    def __init__(self):
+    def __init__(self, controller):
         """We need the image service to create an instance."""
+        self.controller = controller
         self._image_service = utils.import_object(FLAGS.image_service)
-        super(OpenstackCreateInstanceController, self).__init__()
-
-    # Default to the 1.0 naming scheme.
-
-    def _image_ref_from_req_data(self, data):
-        return data['server']['imageId']
-
-    def _flavor_id_from_req_data(self, data):
-        return data['server']['flavorId']
-
-    def _get_server_admin_password(self, server):
-        """ Determine the admin password for a server on creation """
-        return utils.generate_password(16)
+        super(CreateInstanceHelper, self).__init__()
 
     def create_instance(self, req, body, create_method):
         """Creates a new server for the given user. The approach
@@ -87,7 +74,7 @@ class OpenstackCreateInstanceController(object):
 
         context = req.environ['nova.context']
 
-        password = self._get_server_admin_password(body['server'])
+        password = self.controller._get_server_admin_password(body['server'])
 
         key_name = None
         key_data = None
@@ -97,7 +84,7 @@ class OpenstackCreateInstanceController(object):
             key_name = key_pair['name']
             key_data = key_pair['public_key']
 
-        image_href = self._image_ref_from_req_data(body)
+        image_href = self.controller._image_ref_from_req_data(body)
         try:
             image_service, image_id = nova.image.get_image_service(image_href)
             kernel_id, ramdisk_id = self._get_kernel_ramdisk_from_image(
@@ -115,7 +102,7 @@ class OpenstackCreateInstanceController(object):
         if personality:
             injected_files = self._get_injected_files(personality)
 
-        flavor_id = self._flavor_id_from_req_data(body)
+        flavor_id = self.controller._flavor_id_from_req_data(body)
 
         if not 'name' in body['server']:
             msg = _("Server name is not defined")
@@ -265,6 +252,21 @@ class OpenstackCreateInstanceController(object):
                 raise exc.HTTPBadRequest(explanation=expl)
             injected_files.append((path, contents))
         return injected_files
+
+    def _get_server_admin_password_old_style(self, server):
+        """ Determine the admin password for a server on creation """
+        return utils.generate_password(16)
+
+    def _get_server_admin_password_new_style(self, server):
+        """ Determine the admin password for a server on creation """
+        password = server.get('adminPass')
+
+        if password is None:
+            return utils.generate_password(16)
+        if not isinstance(password, basestring) or password == '':
+            msg = _("Invalid adminPass")
+            raise exc.HTTPBadRequest(msg)
+        return password
 
 
 class ServerXMLDeserializer(wsgi.XMLDeserializer):

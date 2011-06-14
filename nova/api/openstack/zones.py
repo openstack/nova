@@ -25,8 +25,9 @@ from nova import log as logging
 from nova.compute import api as compute
 from nova.scheduler import api
 
-from nova.api.openstack import create_instance_controller as controller
+from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import common
+from nova.api.openstack import faults
 from nova.api.openstack import wsgi
 
 
@@ -62,16 +63,12 @@ def check_encryption_key(func):
     return wrapped
 
 
-class Controller(controller.OpenstackCreateInstanceController):
-    """Controller for Zone resources. Since we can also create instances
-    via /zone/boot, this controller is derived from
-    OpenstackCreateInstanceController, which contains all the logic for
-    doing that (shared with Servers).
-    """
+class Controller(object):
+    """Controller for Zone resources."""
 
-    def __init__(self, version):
+    def __init__(self):
         self.compute_api = compute.API()
-        self.version = version
+        self.helper = helper.CreateInstanceHelper(self)
         super(Controller, self).__init__()
 
     def index(self, req):
@@ -132,7 +129,7 @@ class Controller(controller.OpenstackCreateInstanceController):
         """
         result = None
         try:
-            extra_values, result = self.create_instance(req, body,
+            extra_values, result = self.helper.create_instance(req, body,
                                     self.compute_api.create_all_at_once)
         except faults.Fault, f:
             return f
@@ -164,17 +161,36 @@ class Controller(controller.OpenstackCreateInstanceController):
         return cooked
 
     def _image_ref_from_req_data(self, data):
-        if self.version == '1.0':
-            return data['server']['imageId']
+        return data['server']['imageId']
+
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorId']
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_old_style(server)
+
+
+class ControllerV11(object):
+    """Controller for 1.1 Zone resources."""
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_new_style(server)
+
+    def _image_ref_from_req_data(self, data):
         return data['server']['imageRef']
 
     def _flavor_id_from_req_data(self, data):
-        if self.version == '1.0':
-            return data['server']['flavorId']
         return data['server']['flavorRef']
 
 
 def create_resource(version):
+    controller = {
+        '1.0': Controller,
+        '1.1': ControllerV11,
+    }[version]()
+
     metadata = {
         "attributes": {
             "zone": ["id", "api_url", "name", "capabilities"],
@@ -187,8 +203,8 @@ def create_resource(version):
     }
 
     deserializers = {
-        'application/xml': controller.ServerXMLDeserializer(),
+        'application/xml': helper.ServerXMLDeserializer(),
     }
 
-    return wsgi.Resource(Controller(version), serializers=serializers,
+    return wsgi.Resource(controller, serializers=serializers,
                          deserializers=deserializers)
