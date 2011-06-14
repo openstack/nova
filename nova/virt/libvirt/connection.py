@@ -1555,12 +1555,28 @@ class LibvirtConnection(driver.ComputeDriver):
             raise exception.DestinatioinDiskExists(path=instance_dir)
         os.mkdir(instance_dir)
 
-        for disk in disk_info:
-            base = os.path.basename(disk['path'])
+        for info in disk_info:
+            base = os.path.basename(info['path'])
             # Get image type and create empty disk image.
             instance_disk = os.path.join(instance_dir, base)
-            utils.execute('sudo', 'qemu-img', 'create', '-f', disk['type'],
-                          instance_disk, str(disk['local_gb'])+'G')
+            utils.execute('sudo', 'qemu-img', 'create', '-f', info['type'],
+                          instance_disk, str(info['local_gb']) + 'G')
+
+        # if image has kernel and ramdisk, just download
+        # following normal way.
+        if instance_ref['kernel_id']:
+            user = manager.AuthManager().get_user(instance_ref['user_id'])
+            project = manager.AuthManager().get_project(
+                instance_ref['project_id'])
+            self._fetch_image(os.path.join(instance_dir, 'kernel'),
+                              instance_ref['kernel_id'],
+                              user,
+                              project)
+            if instance_ref['ramdisk_id']:
+                self._fetch_image(os.path.join(instance_dir, 'ramdisk'),
+                                  instance_ref['ramdisk_id'],
+                                  user,
+                                  project)
 
         # block migration does not migrate libvirt.xml,
         # to avoid any confusion of admins, create it now.
