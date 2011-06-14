@@ -331,7 +331,7 @@ class XenAPIVMTestCase(test.TestCase):
 
     def check_vm_params_for_linux(self):
         self.assertEquals(self.vm['platform']['nx'], 'false')
-        self.assertEquals(self.vm['PV_args'], 'clocksource=jiffies')
+        self.assertEquals(self.vm['PV_args'], '')
         self.assertEquals(self.vm['PV_bootloader'], 'pygrub')
 
         # check that these are not set

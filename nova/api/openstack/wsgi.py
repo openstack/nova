@@ -60,7 +60,7 @@ class TextDeserializer(object):
 
     def deserialize(self, datastring, action='default'):
         """Find local deserialization method and parse request body."""
-        action_method = getattr(self, action, self.default)
+        action_method = getattr(self, str(action), self.default)
         return action_method(datastring)
 
     def default(self, datastring):
@@ -189,7 +189,7 @@ class DictSerializer(object):
 
     def serialize(self, data, action='default'):
         """Find local serialization method and encode response body."""
-        action_method = getattr(self, action, self.default)
+        action_method = getattr(self, str(action), self.default)
         return action_method(data)
 
     def default(self, data):
@@ -225,7 +225,7 @@ class XMLDictSerializer(DictSerializer):
         if not xmlns and self.xmlns:
             node.setAttribute('xmlns', self.xmlns)
 
-        return node.toprettyxml(indent='    ')
+        return node.toprettyxml(indent='    ', encoding='utf-8')
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
@@ -296,7 +296,7 @@ class ResponseSerializer(object):
         }
         self.serializers.update(serializers or {})
 
-    def serialize(self, response_data, content_type):
+    def serialize(self, response_data, content_type, action='default'):
         """Serialize a dict into a string and wrap in a wsgi.Request object.
 
         :param response_data: dict produced by the Controller
@@ -307,7 +307,7 @@ class ResponseSerializer(object):
         response.headers['Content-Type'] = content_type
 
         serializer = self.get_serializer(content_type)
-        response.body = serializer.serialize(response_data)
+        response.body = serializer.serialize(response_data, action)
 
         return response
 
@@ -358,7 +358,7 @@ class Resource(wsgi.Application):
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict:
-            response = self.serializer.serialize(action_result, accept)
+            response = self.serializer.serialize(action_result, accept, action)
         else:
             response = action_result
 
