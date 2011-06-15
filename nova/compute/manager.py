@@ -240,8 +240,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, bdm['id'], {'volume_id': vol['id']})
                 bdm['volume_id'] = vol['id']
 
-            assert ((bdm['snapshot_id'] is None) or
-                    (bdm['volume_id'] is not None))
+            if not ((bdm['snapshot_id'] is None) or
+                    (bdm['volume_id'] is not None)):
+                LOG.error(_('corrupted state of block device mapping '
+                            'id: %(id)s '
+                            'snapshot: %(snapshot_id) volume: %(vollume_id)') %
+                          {'id': bdm['id'],
+                           'snapshot_id': bdm['snapshot'],
+                           'volume_id': bdm['volume_id']})
+                raise exception.ApiError(_('broken block device mapping %d') %
+                                         bdm['id'])
 
             if bdm['volume_id'] is not None:
                 volume_api.check_attach(context,
