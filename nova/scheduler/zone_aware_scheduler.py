@@ -185,7 +185,11 @@ class ZoneAwareScheduler(driver.Scheduler):
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
 
-        for item in build_plan:
+        for num in xrange(request_spec['num_instances']):
+            if not build_plan:
+                break
+
+            item = build_plan.pop(0)
             self._provision_resource(context, item, instance_id, request_spec,
                                     kwargs)
 
