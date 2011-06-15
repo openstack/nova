@@ -166,7 +166,6 @@ class VMOps(object):
                 ramdisk = VMHelper.fetch_image(self._session, instance.id,
                         instance.ramdisk_id, user, project,
                         ImageType.RAMDISK)[0]
-
             # Create the VM ref and attach the first disk
             first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                     vdis[0]['vdi_uuid'])
@@ -174,7 +173,9 @@ class VMOps(object):
                     instance.id, first_vdi_ref, disk_image_type,
                     instance.os_type)
             vm_ref = VMHelper.create_vm(self._session, instance,
-                    kernel['file'], ramdisk['file'], use_pv_kernel)
+                    kernel and kernel.get('file', None) or None,
+                    ramdisk and ramdisk.get('file', None) or None,
+                    use_pv_kernel)
         except (self.XenAPI.Failure, OSError, IOError) as vm_create_error:
             # collect resources to clean up
             # _handle_spawn_error will remove unused resources
@@ -288,6 +289,7 @@ class VMOps(object):
 
     def _handle_spawn_error(self, vdis, spawn_error):
         # extract resource dictionary from spawn error
+        resources = []
         if spawn_error.args:
             last_arg = spawn_error.args[-1]
             resources = last_arg

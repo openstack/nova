@@ -151,7 +151,7 @@ class FakeSessionForVMTests(fake.SessionBase):
 
     def host_call_plugin(self, _1, _2, plugin, method, _5):
         # copy_kernel_vdi returns nothing
-        if fn == 'copy_kernel_vdi':
+        if method == 'copy_kernel_vdi':
             return
         sr_ref = fake.get_all('SR')[0]
         vdi_ref = fake.create_vdi('', False, sr_ref, False)

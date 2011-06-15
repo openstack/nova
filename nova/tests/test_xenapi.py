@@ -350,6 +350,18 @@ class XenAPIVMTestCase(test.TestCase):
         self.assertEquals(self.vm['HVM_boot_params'], {})
         self.assertEquals(self.vm['HVM_boot_policy'], '')
 
+    def _list_vdis(self):
+        url = FLAGS.xenapi_connection_url
+        username = FLAGS.xenapi_connection_username
+        password = FLAGS.xenapi_connection_password
+        session = xenapi_conn.XenAPISession(url, username, password)
+        return session.call_xenapi('VDI.get_all')
+
+    def _check_vdis(self, start_list, end_list):
+        for vdi_ref in end_list:
+            if not vdi_ref in start_list:
+                self.fail('Found unexpected VDI:%s' % vdi_ref)
+
     def _test_spawn(self, image_ref, kernel_id, ramdisk_id,
                     instance_type_id="3", os_type="linux",
                     instance_id=1, check_injection=False):

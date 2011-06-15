@@ -503,6 +503,7 @@ class VMHelper(HelperBase):
         # VHD disk, it may be worth using the plugin for both VHD and RAW and
         # DISK restores
         LOG.debug(_("Fetching image %(image)s") % locals())
+        LOG.debug(_("Image Type: %s"), ImageType.pretty_format(image_type))
         sr_ref = safe_find_sr(session)
 
         glance_client, image_id = nova.image.get_glance_client(image)
@@ -512,7 +513,6 @@ class VMHelper(HelperBase):
         #vdi_type = 'file' # will be set to os if image_type==ImageType.DISK
         LOG.debug(_("Size for image %(image)s:" +
                     "%(virtual_size)d") % locals())
-
         if image_type == ImageType.DISK:
             # Make room for MBR.
             vdi_size += MBR_SIZE_BYTES
@@ -531,6 +531,7 @@ class VMHelper(HelperBase):
         try:
             filename = None
             vdi_uuid = session.get_xenapi().VDI.get_uuid(vdi_ref)
+            LOG.debug("HERE-1")
             with_vdi_attached_here(session, vdi_ref, False,
                                    lambda dev:
                                    _stream_disk(dev, image_type,
@@ -538,6 +539,7 @@ class VMHelper(HelperBase):
             if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
                 #we need to invoke a plugin for copying VDI's
                 #content into proper path
+                LOG.debug("HERE-2")
                 LOG.debug(_("Copying VDI %s to /boot/guest on dom0"), vdi_ref)
                 fn = "copy_kernel_vdi"
                 args = {}
@@ -563,7 +565,7 @@ class VMHelper(HelperBase):
             e.args = e.args + ([dict(vdi_type=ImageType.
                                               pretty_format(image_type),
                                     vdi_uuid=vdi_uuid,
-                                    file=filename)],)        
+                                    file=filename)],)
             raise e
 
     @classmethod
@@ -663,10 +665,15 @@ class VMHelper(HelperBase):
             if image_type == ImageType.DISK_RAW:
                 args['raw'] = 'true'
         task = session.async_call_plugin('objectstore', fn, args)
-        uuid_or_fn = session.wait_for_task(task, instance_id)
-        if not image_type in (ImageType.KERNEL, ImageType.RAMDISK):
-            return [dict(vdi_type='os', vdi_uuid=uuid_or_fn)]
-        return uuid_or_fn
+        vdi_uuid = None
+        filename = None
+        if image_type in (ImageType.KERNEL, ImageType.RAMDISK):
+            filename = session.wait_for_task(task, instance_id)
+        else:
+            vdi_uuid = session.wait_for_task(task, instance_id)
+        return [dict(vdi_type=ImageType.pretty_format(image_type),
+                     vdi_uuid=vdi_uuid,
+                     file=filename)]
 
     @classmethod
     def determine_is_pv(cls, session, instance_id, vdi_ref, disk_image_type,
