@@ -376,7 +376,7 @@ class XenAPIVMTestCase(test.TestCase):
                   'os_type': os_type}
         if create_record:
             instance = db.instance_create(self.context, values)
-            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': True},
                               {'broadcast': '192.168.0.255',
                                'dns': ['192.168.0.1'],
                                'gateway': '192.168.0.1',
@@ -472,11 +472,11 @@ class XenAPIVMTestCase(test.TestCase):
             index = config.index('auto eth0')
             self.assertEquals(config[index + 1:index + 8], [
                 'iface eth0 inet static',
-                'address 10.0.0.3',
+                'address 192.168.0.100',
                 'netmask 255.255.255.0',
-                'broadcast 10.0.0.255',
-                'gateway 10.0.0.1',
-                'dns-nameservers 10.0.0.2',
+                'broadcast 192.168.0.255',
+                'gateway 192.168.0.1',
+                'dns-nameservers 192.168.0.1',
                 ''])
             self._tee_executed = True
             return '', ''
