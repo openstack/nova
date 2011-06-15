@@ -67,8 +67,10 @@ def stub_max_server_metadata():
         metadata['metadata']['key%i' % num] = "blah"
     return metadata
 
+
 def return_server(context, server_id):
     return {'id': server_id}
+
 
 def return_server_nonexistant(context, server_id):
     raise exception.InstanceNotFound()
