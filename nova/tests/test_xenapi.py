@@ -209,10 +209,23 @@ class XenAPIVMTestCase(test.TestCase):
                 'kernel_id': 2,
                 'ramdisk_id': 3,
                 'instance_type_id': '3',  # m1.large
-                'mac_address': 'aa:bb:cc:dd:ee:ff',
                 'os_type': 'linux'}
+            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                              {'broadcast': '192.168.0.255',
+                               'dns': ['192.168.0.1'],
+                               'gateway': '192.168.0.1',
+                               'gateway6': 'dead:beef::1',
+                               'ip6s': [{'enabled': '1',
+                                         'ip': 'dead:beef::dcad:beff:feef:0',
+                                               'netmask': '64'}],
+                               'ips': [{'enabled': '1',
+                                        'ip': '192.168.0.100',
+                                        'netmask': '255.255.255.0'}],
+                               'label': 'fake',
+                               'mac': 'DE:AD:BE:EF:00:00',
+                               'rxtx_cap': 3})]
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance, {})
+            self.conn.spawn(instance, network_info)
 
         gt1 = eventlet.spawn(_do_build, 1, self.project.id, self.user.id)
         gt2 = eventlet.spawn(_do_build, 2, self.project.id, self.user.id)
@@ -360,11 +373,24 @@ class XenAPIVMTestCase(test.TestCase):
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
                   'instance_type_id': instance_type_id,
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': os_type}
         if create_record:
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance, None)
+            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                              {'broadcast': '192.168.0.255',
+                               'dns': ['192.168.0.1'],
+                               'gateway': '192.168.0.1',
+                               'gateway6': 'dead:beef::1',
+                               'ip6s': [{'enabled': '1',
+                                         'ip': 'dead:beef::dcad:beff:feef:0',
+                                               'netmask': '64'}],
+                               'ips': [{'enabled': '1',
+                                        'ip': '192.168.0.100',
+                                        'netmask': '255.255.255.0'}],
+                               'label': 'fake',
+                               'mac': 'DE:AD:BE:EF:00:00',
+                               'rxtx_cap': 3})]
+            self.conn.spawn(instance, network_info)
         else:
             instance = db.instance_get(self.context, instance_id)
         self.create_vm_record(self.conn, os_type, instance_id)
