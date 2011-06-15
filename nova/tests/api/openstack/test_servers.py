@@ -1872,7 +1872,8 @@ class TestServerInstanceCreation(test.TestCase):
                     self.injected_files = kwargs['injected_files']
                 else:
                     self.injected_files = None
-                return [{'id': '1234', 'display_name': 'fakeinstance'}]
+                return [{'id': '1234', 'display_name': 'fakeinstance',
+                         'uuid': FAKE_UUID}]
 
             def set_admin_password(self, *args, **kwargs):
                 pass
