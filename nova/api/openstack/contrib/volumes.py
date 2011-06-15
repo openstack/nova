@@ -301,7 +301,7 @@ class Volumes(extensions.ExtensionDescriptor):
         return "Volumes"
 
     def get_alias(self):
-        return "OS-VOLUMES"
+        return "os-volumes"
 
     def get_description(self):
         return "Volumes support"
