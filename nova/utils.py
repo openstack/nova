@@ -35,6 +35,7 @@ import struct
 import sys
 import time
 import types
+import uuid
 from xml.sax import saxutils
 
 from eventlet import event
@@ -726,3 +727,7 @@ def parse_server_string(server_str):
     except:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
+
+
+def gen_uuid():
+    return uuid.uuid4()

@@ -52,6 +52,10 @@ FLAGS.verbose = True
 FAKE_UUID = 'abcd-abcd-abcd-abcd'
 
 
+def fake_gen_uuid():
+    return FAKE_UUID
+
+
 def return_server_by_id(context, id):
     return stub_instance(id)
 
@@ -206,6 +210,7 @@ class ServersTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
+        self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
         self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
         self.stubs.Set(nova.db.api, 'instance_get_by_uuid',
@@ -615,10 +620,21 @@ class ServersTest(test.TestCase):
         self.assertEqual(1, server['id'])
         self.assertEqual(2, server['flavorId'])
         self.assertEqual(3, server['imageId'])
+        self.assertEqual(FAKE_UUID, server['uuid'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance(self):
         self._test_create_instance_helper()
+
+    def test_create_instance_has_uuid(self):
+        """Tests at the db-layer instead of API layer since that's where the
+           UUID is generated
+        """
+        ctxt = context.RequestContext(1, 1)
+        values = {}
+        instance = nova.db.api.instance_create(ctxt, values)
+        expected = FAKE_UUID
+        self.assertEqual(instance['uuid'], expected)
 
     def test_create_instance_via_zones(self):
         """Server generated ReservationID"""

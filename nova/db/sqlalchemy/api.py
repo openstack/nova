@@ -797,6 +797,8 @@ def instance_create(context, values):
     values['metadata'] = _metadata_refs(values.get('metadata'))
 
     instance_ref = models.Instance()
+    instance_ref['uuid'] = str(utils.gen_uuid())
+
     instance_ref.update(values)
 
     session = get_session()
