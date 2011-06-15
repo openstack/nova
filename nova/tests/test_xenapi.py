@@ -328,8 +328,7 @@ class XenAPIVMTestCase(test.TestCase):
                                         'ip': '192.168.0.100',
                                         'netmask': '255.255.255.0'}],
                                'label': 'fake',
-                               'mac': 'DE:AD:BE:EF:00:00',
-                               'rxtx_cap': 3})
+                               'mac': 'DE:AD:BE:EF:00:00'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
