@@ -445,7 +445,7 @@ class API(base.Base):
 
     @scheduler_api.reroute_compute("stop")
     def stop(self, context, instance_id):
-        """Stop an instnace."""
+        """Stop an instance."""
         LOG.debug(_("Going to try to stop %s"), instance_id)
 
         instance = self._get_instance(context, instance_id, 'stopping')
@@ -464,7 +464,7 @@ class API(base.Base):
                     instance_id, host)
 
     def start(self, context, instance_id):
-        """Start an instnace."""
+        """Start an instance."""
         LOG.debug(_("Going to try to start %s"), instance_id)
         instance = self._get_instance(context, instance_id, 'starting')
         if instance['state_description'] != 'stopped':

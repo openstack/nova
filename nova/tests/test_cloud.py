@@ -535,7 +535,7 @@ class CloudTestCase(test.TestCase):
         self._wait_for_state(elevated, instance_id, is_deleted)
 
     def test_stop_start_instance(self):
-        """Makes sure stop/start instnace works"""
+        """Makes sure stop/start instance works"""
         # enforce periodic tasks run in short time to avoid wait for 60s.
         self._restart_compute_service(periodic_interval=0.3)
 

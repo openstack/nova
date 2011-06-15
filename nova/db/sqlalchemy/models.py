@@ -371,7 +371,7 @@ class BlockDeviceMapping(BASE, NovaBase):
                                               'False)')
     device_name = Column(String(255), nullable=False)
 
-    # default=False for compatilibity of the existing code.
+    # default=False for compatibility of the existing code.
     # With EC2 API,
     # default True for ami specified device.
     # default False for created with other timing.
@@ -391,7 +391,7 @@ class BlockDeviceMapping(BASE, NovaBase):
                           foreign_keys=volume_id)
     volume_size = Column(Integer, nullable=True)
     
-    # for no device to supress devices.
+    # for no device to suppress devices.
     no_device = Column(Boolean, nullable=True)
 
 

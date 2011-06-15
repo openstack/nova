@@ -949,14 +949,16 @@ class CloudController(object):
         return True
 
     def stop_instances(self, context, instance_id, **kwargs):
-        """Stop each instance in instace_id"""
-        LOG.debug(_("Going to stop instnces"))
+        """Stop each instances in instance_id.
+        Here instance_id is a list of instance ids"""
+        LOG.debug(_("Going to stop instances"))
         self._do_instances(self.compute_api.stop, context, instance_id)
         return True
 
     def start_instances(self, context, instance_id, **kwargs):
-        """Start each instance in instace_id"""
-        LOG.debug(_("Going to start instnces"))
+        """Start each instances in instance_id.
+        Here instance_id is a list of instance ids"""
+        LOG.debug(_("Going to start instances"))
         self._do_instances(self.compute_api.start, context, instance_id)
         return True
 

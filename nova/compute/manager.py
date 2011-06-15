@@ -238,8 +238,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # TODO(yamahata): default name and description
                     vol = volume_api.create(context, bdm['volume_size'],
                                             bdm['snapshot_id'], '', '')
-                    # TODO(yamahata): creatning volume simulteneously
-                    #                 reduce creation time?
+                    # TODO(yamahata): creating volume simultaneously
+                    #                 reduces creation time?
                     volume_api.wait_creation(context, vol['id'])
                     self.db.block_device_mapping_update(
                         context, bdm['id'], {'volume_id': vol['id']})
@@ -258,11 +258,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                  'mount_device':
                                                  bdm['device_name']})
                 elif bdm['virtual_name'] is not None:
-                    # TODO(yamahata)
+                    # TODO(yamahata): ephemeral/swap device support
                     LOG.debug(_('block_device_mapping: '
                                 'ephemeral device is not supported yet'))
                 else:
-                    # TODO(yamahata)
+                    # TODO(yamahata): NoDevice support
                     assert bdm['no_device']
                     LOG.debug(_('block_device_mapping: '
                                 'no device is not supported yet'))
@@ -414,7 +414,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def stop_instance(self, context, instance_id):
         """Stopping an instance on this host."""
         self._shutdown_instance(context, instance_id, 'Stopping')
-        # instance state will be updated to stopped by _poll_istance_states()
+        # instance state will be updated to stopped by _poll_instance_states()
 
     @exception.wrap_exception
     @checks_instance_lock
@@ -887,7 +887,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.get_vnc_console(instance_ref)
 
     def _attach_volume_boot(self, context, instance_id, volume_id, mountpoint):
-        """Attach a volume to an instnace at boot time. So actual attach
+        """Attach a volume to an instance at boot time. So actual attach
         is done by instance creation"""
 
         # TODO(yamahata):

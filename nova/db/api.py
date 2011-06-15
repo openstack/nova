@@ -934,7 +934,7 @@ def block_device_mapping_update(context, bdm_id, values):
     return IMPL.block_device_mapping_update(context, bdm_id, values)
 
 def block_device_mapping_get_all_by_instance(context, instance_id):
-    """Get all block device mapping blonging to a instance"""
+    """Get all block device mapping belonging to a instance"""
     return IMPL.block_device_mapping_get_all_by_instance(context, instance_id)
 
 
