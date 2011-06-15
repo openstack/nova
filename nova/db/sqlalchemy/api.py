@@ -19,7 +19,6 @@
 Implementation of SQLAlchemy backend.
 """
 
-import datetime
 import warnings
 
 from nova import db
@@ -61,9 +60,7 @@ def is_user_context(context):
 
 
 def authorize_project_context(context, project_id):
-    """Ensures that the request context has permission to access the
-       given project.
-    """
+    """Ensures a request has permission to access the given project."""
     if is_user_context(context):
         if not context.project:
             raise exception.NotAuthorized()
@@ -72,9 +69,7 @@ def authorize_project_context(context, project_id):
 
 
 def authorize_user_context(context, user_id):
-    """Ensures that the request context has permission to access the
-       given user.
-    """
+    """Ensures a request has permission to access the given user."""
     if is_user_context(context):
         if not context.user:
             raise exception.NotAuthorized()
@@ -90,9 +85,12 @@ def can_read_deleted(context):
 
 
 def require_admin_context(f):
-    """Decorator used to indicate that the method requires an
-       administrator context.
+    """Decorator to require admin request context.
+
+    The first argument to the wrapped function must be the context.
+
     """
+
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]):
             raise exception.AdminRequired()
@@ -101,12 +99,19 @@ def require_admin_context(f):
 
 
 def require_context(f):
-    """Decorator used to indicate that the method requires either
-       an administrator or normal user context.
+    """Decorator to require *any* user or admin context.
+
+    This does no authorization for user or project access matching, see
+    :py:func:`authorize_project_context` and
+    :py:func:`authorize_user_context`.
+
+    The first argument to the wrapped function must be the context.
+
     """
+
     def wrapper(*args, **kwargs):
         if not is_admin_context(args[0]) and not is_user_context(args[0]):
-            raise exception.AdminRequired()
+            raise exception.NotAuthorized()
         return f(*args, **kwargs)
     return wrapper
 
@@ -674,7 +679,7 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter_by(allocated=0).\
                      update({'instance_id': None,
                              'leased': 0,
-                             'updated_at': datetime.datetime.utcnow()},
+                             'updated_at': utils.utcnow()},
                              synchronize_session='fetch')
     return result
 
@@ -738,7 +743,7 @@ def fixed_ip_get_all_by_instance(context, instance_id):
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False)
     if not rv:
-        raise exception.NoFloatingIpsFoundForInstance(instance_id=instance_id)
+        raise exception.NoFixedIpsFoundForInstance(instance_id=instance_id)
     return rv
 
 
@@ -771,6 +776,15 @@ def fixed_ip_update(context, address, values):
 
 
 ###################
+def _metadata_refs(metadata_dict):
+    metadata_refs = []
+    if metadata_dict:
+        for k, v in metadata_dict.iteritems():
+            metadata_ref = models.InstanceMetadata()
+            metadata_ref['key'] = k
+            metadata_ref['value'] = v
+            metadata_refs.append(metadata_ref)
+    return metadata_refs
 
 
 @require_context
@@ -780,15 +794,7 @@ def instance_create(context, values):
     context - request context object
     values - dict containing column values.
     """
-    metadata = values.get('metadata')
-    metadata_refs = []
-    if metadata:
-        for k, v in metadata.iteritems():
-            metadata_ref = models.InstanceMetadata()
-            metadata_ref['key'] = k
-            metadata_ref['value'] = v
-            metadata_refs.append(metadata_ref)
-    values['metadata'] = metadata_refs
+    values['metadata'] = _metadata_refs(values.get('metadata'))
 
     instance_ref = models.Instance()
     instance_ref.update(values)
@@ -819,17 +825,17 @@ def instance_destroy(context, instance_id):
         session.query(models.Instance).\
                 filter_by(id=instance_id).\
                 update({'deleted': True,
-                        'deleted_at': datetime.datetime.utcnow(),
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(instance_id=instance_id).\
                 update({'deleted': True,
-                        'deleted_at': datetime.datetime.utcnow(),
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.InstanceMetadata).\
                 filter_by(instance_id=instance_id).\
                 update({'deleted': True,
-                        'deleted_at': datetime.datetime.utcnow(),
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -974,7 +980,7 @@ def instance_get_project_vpn(context, project_id):
                    options(joinedload('security_groups')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
-                   filter_by(image_id=str(FLAGS.vpn_image_id)).\
+                   filter_by(image_ref=str(FLAGS.vpn_image_id)).\
                    filter_by(deleted=can_read_deleted(context)).\
                    first()
 
@@ -1029,6 +1035,11 @@ def instance_set_state(context, instance_id, state, description=None):
 @require_context
 def instance_update(context, instance_id, values):
     session = get_session()
+    metadata = values.get('metadata')
+    if metadata is not None:
+        instance_metadata_delete_all(context, instance_id)
+        instance_metadata_update_or_create(context, instance_id,
+                                           values.pop('metadata'))
     with session.begin():
         instance_ref = instance_get(context, instance_id, session=session)
         instance_ref.update(values)
@@ -1135,8 +1146,8 @@ def key_pair_destroy_all_by_user(context, user_id):
     with session.begin():
         session.query(models.KeyPair).\
                 filter_by(user_id=user_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -1667,8 +1678,8 @@ def volume_destroy(context, volume_id):
     with session.begin():
         session.query(models.Volume).\
                 filter_by(id=volume_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.ExportDevice).\
                 filter_by(volume_id=volume_id).\
@@ -1825,8 +1836,8 @@ def snapshot_destroy(context, snapshot_id):
     with session.begin():
         session.query(models.Snapshot).\
                 filter_by(id=snapshot_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -1922,8 +1933,8 @@ def block_device_mapping_destroy(context, bdm_id):
     with session.begin():
         session.query(models.BlockDeviceMapping).\
                 filter_by(id=bdm_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -1936,8 +1947,8 @@ def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
         filter_by(instance_id=instance_id).\
         filter_by(volume_id=volume_id).\
         filter_by(deleted=False).\
-        update({'deleted': 1,
-                'deleted_at': datetime.datetime.utcnow(),
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
                 'updated_at': literal_column('updated_at')})
 
 
@@ -2040,18 +2051,18 @@ def security_group_destroy(context, security_group_id):
     with session.begin():
         session.query(models.SecurityGroup).\
                 filter_by(id=security_group_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupInstanceAssociation).\
                 filter_by(security_group_id=security_group_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
                 filter_by(group_id=security_group_id).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -2061,12 +2072,12 @@ def security_group_destroy_all(context, session=None):
         session = get_session()
     with session.begin():
         session.query(models.SecurityGroup).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
         session.query(models.SecurityGroupIngressRule).\
-                update({'deleted': 1,
-                        'deleted_at': datetime.datetime.utcnow(),
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
 
@@ -2700,7 +2711,18 @@ def instance_metadata_delete(context, instance_id, key):
         filter_by(key=key).\
         filter_by(deleted=False).\
         update({'deleted': True,
-                'deleted_at': datetime.datetime.utcnow(),
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def instance_metadata_delete_all(context, instance_id):
+    session = get_session()
+    session.query(models.InstanceMetadata).\
+        filter_by(instance_id=instance_id).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
                 'updated_at': literal_column('updated_at')})
 
 
@@ -2723,6 +2745,9 @@ def instance_metadata_get_item(context, instance_id, key):
 @require_context
 def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
+
+    original_metadata = instance_metadata_get(context, instance_id)
+
     meta_ref = None
     for key, value in metadata.iteritems():
         try:
@@ -2732,6 +2757,7 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
             meta_ref = models.InstanceMetadata()
         meta_ref.update({"key": key, "value": value,
                             "instance_id": instance_id,
-                            "deleted": 0})
+                            "deleted": False})
         meta_ref.save(session=session)
+
     return metadata

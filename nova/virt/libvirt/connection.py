@@ -36,6 +36,7 @@ Supports KVM, LXC, QEMU, UML, and XEN.
 
 """
 
+import hashlib
 import multiprocessing
 import os
 import random
@@ -58,6 +59,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import utils
 from nova import vnc
@@ -383,7 +385,7 @@ class LibvirtConnection(driver.ComputeDriver):
         virt_dom.detachDevice(xml)
 
     @exception.wrap_exception
-    def snapshot(self, instance, image_id):
+    def snapshot(self, instance, image_href):
         """Create snapshot from a running VM instance.
 
         This command only works with qemu 0.14+, the qemu_img flag is
@@ -391,17 +393,22 @@ class LibvirtConnection(driver.ComputeDriver):
         to support this command.
 
         """
-        image_service = utils.import_object(FLAGS.image_service)
         virt_dom = self._lookup_by_name(instance['name'])
         elevated = context.get_admin_context()
 
-        base = image_service.show(elevated, instance['image_id'])
+        (image_service, image_id) = nova.image.get_image_service(
+            instance['image_ref'])
+        base = image_service.show(elevated, image_id)
+        (snapshot_image_service, snapshot_image_id) = \
+            nova.image.get_image_service(image_href)
+        snapshot = snapshot_image_service.show(elevated, snapshot_image_id)
 
         metadata = {'disk_format': base['disk_format'],
                     'container_format': base['container_format'],
                     'is_public': False,
-                    'name': '%s.%s' % (base['name'], image_id),
-                    'properties': {'architecture': base['architecture'],
+                    'status': 'active',
+                    'name': snapshot['name'],
+                    'properties': {
                                    'kernel_id': instance['kernel_id'],
                                    'image_location': 'snapshot',
                                    'image_state': 'available',
@@ -409,6 +416,9 @@ class LibvirtConnection(driver.ComputeDriver):
                                    'ramdisk_id': instance['ramdisk_id'],
                                    }
                     }
+        if 'architecture' in base['properties']:
+            arch = base['properties']['architecture']
+            metadata['properties']['architecture'] = arch
 
         # Make the snapshot
         snapshot_name = uuid.uuid4().hex
@@ -443,7 +453,7 @@ class LibvirtConnection(driver.ComputeDriver):
         # Upload that image to the image service
         with open(out_path) as image_file:
             image_service.update(elevated,
-                                 image_id,
+                                 image_href,
                                  metadata,
                                  image_file)
 
@@ -493,19 +503,27 @@ class LibvirtConnection(driver.ComputeDriver):
 
     @exception.wrap_exception
     def pause(self, instance, callback):
-        raise exception.ApiError("pause not supported for libvirt.")
+        """Pause VM instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.suspend()
 
     @exception.wrap_exception
     def unpause(self, instance, callback):
-        raise exception.ApiError("unpause not supported for libvirt.")
+        """Unpause paused VM instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.resume()
 
     @exception.wrap_exception
     def suspend(self, instance, callback):
-        raise exception.ApiError("suspend not supported for libvirt")
+        """Suspend the specified instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.managedSave(0)
 
     @exception.wrap_exception
     def resume(self, instance, callback):
-        raise exception.ApiError("resume not supported for libvirt")
+        """resume the specified instance"""
+        dom = self._lookup_by_name(instance.name)
+        dom.create()
 
     @exception.wrap_exception
     def rescue(self, instance):
@@ -785,7 +803,7 @@ class LibvirtConnection(driver.ComputeDriver):
         project = manager.AuthManager().get_project(inst['project_id'])
 
         if not disk_images:
-            disk_images = {'image_id': inst['image_id'],
+            disk_images = {'image_id': inst['image_ref'],
                            'kernel_id': inst['kernel_id'],
                            'ramdisk_id': inst['ramdisk_id']}
 
@@ -806,7 +824,7 @@ class LibvirtConnection(driver.ComputeDriver):
                                   user=user,
                                   project=project)
 
-        root_fname = '%08x' % int(disk_images['image_id'])
+        root_fname = hashlib.sha1(disk_images['image_id']).hexdigest()
         size = FLAGS.minimum_root_size
 
         inst_type_id = inst['instance_type_id']
@@ -884,7 +902,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         if key or net:
             inst_name = inst['name']
-            img_id = inst.image_id
+            img_id = inst.image_ref
             if key:
                 LOG.info(_('instance %(inst_name)s: injecting key into'
                         ' image %(img_id)s') % locals())
@@ -999,6 +1017,7 @@ class LibvirtConnection(driver.ComputeDriver):
         if FLAGS.vnc_enabled:
             if FLAGS.libvirt_type != 'lxc':
                 xml_info['vncserver_host'] = FLAGS.vncserver_host
+                xml_info['vnc_keymap'] = FLAGS.vnc_keymap
         if not rescue:
             if instance['kernel_id']:
                 xml_info['kernel'] = xml_info['basepath'] + "/kernel"

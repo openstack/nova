@@ -18,6 +18,7 @@
 import hashlib
 import os
 
+from nova import exception
 from nova.compute import power_state
 import nova.compute
 import nova.context
@@ -41,12 +42,15 @@ class ViewBuilder(object):
 
     def build(self, inst, is_detail):
         """Return a dict that represenst a server."""
-        if is_detail:
-            server = self._build_detail(inst)
+        if inst.get('_is_precooked', False):
+            server = dict(server=inst)
         else:
-            server = self._build_simple(inst)
+            if is_detail:
+                server = self._build_detail(inst)
+            else:
+                server = self._build_simple(inst)
 
-        self._build_extra(server, inst)
+            self._build_extra(server, inst)
 
         return server
 
@@ -78,6 +82,7 @@ class ViewBuilder(object):
 
         ctxt = nova.context.get_admin_context()
         compute_api = nova.compute.API()
+
         if compute_api.has_finished_migration(ctxt, inst['id']):
             inst_dict['status'] = 'RESIZE-CONFIRM'
 
@@ -112,8 +117,11 @@ class ViewBuilderV10(ViewBuilder):
     """Model an Openstack API V1.0 server response."""
 
     def _build_image(self, response, inst):
-        if 'image_id' in dict(inst):
-            response['imageId'] = inst['image_id']
+        if 'image_ref' in dict(inst):
+            image_ref = inst['image_ref']
+            if str(image_ref).startswith('http'):
+                raise exception.ListingImageRefsNotSupported()
+            response['imageId'] = int(image_ref)
 
     def _build_flavor(self, response, inst):
         if 'instance_type' in dict(inst):
@@ -130,9 +138,11 @@ class ViewBuilderV11(ViewBuilder):
         self.base_url = base_url
 
     def _build_image(self, response, inst):
-        if "image_id" in dict(inst):
-            image_id = inst.get("image_id")
-            response["imageRef"] = self.image_builder.generate_href(image_id)
+        if 'image_ref' in dict(inst):
+            image_href = inst['image_ref']
+            if str(image_href).isdigit():
+                image_href = int(image_href)
+            response['imageRef'] = image_href
 
     def _build_flavor(self, response, inst):
         if "instance_type" in dict(inst):

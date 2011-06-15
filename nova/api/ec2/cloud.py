@@ -23,7 +23,6 @@ datastore.
 """
 
 import base64
-import datetime
 import IPy
 import os
 import urllib
@@ -40,6 +39,7 @@ from nova import flags
 from nova import ipv6
 from nova import log as logging
 from nova import network
+from nova import rpc
 from nova import utils
 from nova import volume
 from nova.api.ec2 import ec2utils
@@ -137,6 +137,13 @@ class CloudController(object):
             return services[0]['availability_zone']
         return 'unknown zone'
 
+    def _get_image_state(self, image):
+        # NOTE(vish): fallback status if image_state isn't set
+        state = image.get('status')
+        if state == 'active':
+            state = 'available'
+        return image['properties'].get('image_state', state)
+
     def get_metadata(self, address):
         ctxt = context.get_admin_context()
         instance_ref = self.compute_api.get_all(ctxt, fixed_ip=address)
@@ -159,7 +166,7 @@ class CloudController(object):
         floating_ip = db.instance_get_floating_address(ctxt,
                                                        instance_ref['id'])
         ec2_id = ec2utils.id_to_ec2_id(instance_ref['id'])
-        image_ec2_id = self.image_ec2_id(instance_ref['image_id'])
+        image_ec2_id = self.image_ec2_id(instance_ref['image_ref'])
         data = {
             'user-data': base64.b64decode(instance_ref['user_data']),
             'meta-data': {
@@ -235,7 +242,7 @@ class CloudController(object):
                                         'zoneState': 'available'}]}
 
         services = db.service_get_all(context, False)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         hosts = []
         for host in [service['host'] for service in services]:
             if not host in hosts:
@@ -287,7 +294,9 @@ class CloudController(object):
             snapshots = []
             for ec2_id in snapshot_id:
                 internal_id = ec2utils.ec2_id_to_id(ec2_id)
-                snapshot = self.volume_api.get_snapshot(context, snapshot_id=internal_id)
+                snapshot = self.volume_api.get_snapshot(
+                    context,
+                    snapshot_id=internal_id)
                 snapshots.append(snapshot)
         else:
             snapshots = self.volume_api.get_all_snapshots(context)
@@ -297,7 +306,8 @@ class CloudController(object):
     def _format_snapshot(self, context, snapshot):
         s = {}
         s['snapshotId'] = ec2utils.id_to_ec2_id(snapshot['id'], 'snap-%08x')
-        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'], 'vol-%08x')
+        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'],
+                                              'vol-%08x')
         s['status'] = snapshot['status']
         s['startTime'] = snapshot['created_at']
         s['progress'] = snapshot['progress']
@@ -310,7 +320,8 @@ class CloudController(object):
         return s
 
     def create_snapshot(self, context, volume_id, **kwargs):
-        LOG.audit(_("Create snapshot of volume %s"), volume_id, context=context)
+        LOG.audit(_("Create snapshot of volume %s"), volume_id,
+                  context=context)
         volume_id = ec2utils.ec2_id_to_id(volume_id)
         snapshot = self.volume_api.create_snapshot(
                 context,
@@ -591,7 +602,7 @@ class CloudController(object):
         instance_id = ec2utils.ec2_id_to_id(ec2_id)
         output = self.compute_api.get_console_output(
                 context, instance_id=instance_id)
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         return {"InstanceId": ec2_id,
                 "Timestamp": now,
                 "output": base64.b64encode(output)}
@@ -652,7 +663,8 @@ class CloudController(object):
         else:
             v['attachmentSet'] = [{}]
         if volume.get('snapshot_id') != None:
-            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'], 'snap-%08x')
+            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'],
+                                                    'snap-%08x')
         else:
             v['snapshotId'] = None
 
@@ -661,14 +673,15 @@ class CloudController(object):
         return v
 
     def create_volume(self, context, **kwargs):
-        size = kwargs.get('size');
+        size = kwargs.get('size')
         if kwargs.get('snapshot_id') != None:
             snapshot_id = ec2utils.ec2_id_to_id(kwargs['snapshot_id'])
-            LOG.audit(_("Create volume from snapshot %s"), snapshot_id, context=context)
+            LOG.audit(_("Create volume from snapshot %s"), snapshot_id,
+                      context=context)
         else:
             snapshot_id = None
             LOG.audit(_("Create volume of %s GB"), size, context=context)
-            
+
         volume = self.volume_api.create(
                 context,
                 size=size,
@@ -768,13 +781,13 @@ class CloudController(object):
             instances = self.compute_api.get_all(context, **kwargs)
         for instance in instances:
             if not context.is_admin:
-                if instance['image_id'] == str(FLAGS.vpn_image_id):
+                if instance['image_ref'] == str(FLAGS.vpn_image_id):
                     continue
             i = {}
             instance_id = instance['id']
             ec2_id = ec2utils.id_to_ec2_id(instance_id)
             i['instanceId'] = ec2_id
-            i['imageId'] = self.image_ec2_id(instance['image_id'])
+            i['imageId'] = self.image_ec2_id(instance['image_ref'])
             i['instanceState'] = {
                 'code': instance['state'],
                 'name': instance['state_description']}
@@ -860,8 +873,14 @@ class CloudController(object):
 
     def allocate_address(self, context, **kwargs):
         LOG.audit(_("Allocate address"), context=context)
-        public_ip = self.network_api.allocate_floating_ip(context)
-        return {'publicIp': public_ip}
+        try:
+            public_ip = self.network_api.allocate_floating_ip(context)
+            return {'publicIp': public_ip}
+        except rpc.RemoteError as ex:
+            if ex.exc_type == 'NoMoreAddresses':
+                raise exception.NoMoreFloatingIps()
+            else:
+                raise
 
     def release_address(self, context, public_ip, **kwargs):
         LOG.audit(_("Release address %s"), public_ip, context=context)
@@ -908,10 +927,21 @@ class CloudController(object):
                     bdm['volume_id'] = id
                 ebs.setdefault('delete_on_termination', True)
                 bdm.update(ebs)
+
+        image = self._get_image(context, kwargs['image_id'])
+
+        if image:
+            image_state = self._get_image_state(image)
+        else:
+            raise exception.ImageNotFound(image_id=kwargs['image_id'])
+
+        if image_state != 'available':
+            raise exception.ApiError(_('Image must be available'))
+
         instances = self.compute_api.create(context,
             instance_type=instance_types.get_instance_type_by_name(
                 kwargs.get('instance_type', None)),
-            image_id=self._get_image(context, kwargs['image_id'])['id'],
+            image_href=self._get_image(context, kwargs['image_id'])['id'],
             min_count=int(kwargs.get('min_count', max_count)),
             max_count=max_count,
             kernel_id=kwargs.get('kernel_id'),
@@ -1004,7 +1034,12 @@ class CloudController(object):
     def image_ec2_id(image_id, image_type='ami'):
         """Returns image ec2_id using id and three letter type."""
         template = image_type + '-%08x'
-        return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        try:
+            return ec2utils.id_to_ec2_id(int(image_id), template=template)
+        except ValueError:
+            #TODO(wwolf): once we have ec2_id -> glance_id mapping
+            # in place, this wont be necessary
+            return "ami-00000000"
 
     def _get_image(self, context, ec2_id):
         try:
@@ -1035,11 +1070,8 @@ class CloudController(object):
                                               get('image_location'), name)
         else:
             i['imageLocation'] = image['properties'].get('image_location')
-        # NOTE(vish): fallback status if image_state isn't set
-        state = image.get('status')
-        if state == 'active':
-            state = 'available'
-        i['imageState'] = image['properties'].get('image_state', state)
+
+        i['imageState'] = self._get_image_state(image)
         i['displayName'] = name
         i['description'] = image.get('description')
         display_mapping = {'aki': 'kernel',

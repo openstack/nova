@@ -20,7 +20,6 @@
 Handles all requests relating to volumes.
 """
 
-import datetime
 
 from eventlet import greenthread
 
@@ -30,6 +29,7 @@ from nova import flags
 from nova import log as logging
 from nova import quota
 from nova import rpc
+from nova import utils
 from nova.db import base
 
 FLAGS = flags.FLAGS
@@ -45,7 +45,8 @@ class API(base.Base):
         if snapshot_id != None:
             snapshot = self.get_snapshot(context, snapshot_id)
             if snapshot['status'] != "available":
-                raise exception.ApiError(_("Snapshot status must be available"))
+                raise exception.ApiError(
+                    _("Snapshot status must be available"))
             if not size:
                 size = snapshot['volume_size']
 
@@ -88,7 +89,7 @@ class API(base.Base):
         volume = self.get(context, volume_id)
         if volume['status'] != "available":
             raise exception.ApiError(_("Volume status must be available"))
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context, volume_id, {'status': 'deleting',
                                                    'terminated_at': now})
         host = volume['host']

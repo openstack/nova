@@ -42,8 +42,6 @@ intact.
 
 """
 
-import datetime
-
 
 from nova import context
 from nova import exception
@@ -112,8 +110,9 @@ class VolumeManager(manager.SchedulerDependentManager):
                 model_update = self.driver.create_volume(volume_ref)
             else:
                 snapshot_ref = self.db.snapshot_get(context, snapshot_id)
-                model_update = self.driver.create_volume_from_snapshot(volume_ref,
-                                                                       snapshot_ref)
+                model_update = self.driver.create_volume_from_snapshot(
+                    volume_ref,
+                    snapshot_ref)
             if model_update:
                 self.db.volume_update(context, volume_ref['id'], model_update)
 
@@ -126,7 +125,7 @@ class VolumeManager(manager.SchedulerDependentManager):
                                   volume_ref['id'], {'status': 'error'})
             raise
 
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         self.db.volume_update(context,
                               volume_ref['id'], {'status': 'available',
                                                  'launched_at': now})
@@ -174,7 +173,8 @@ class VolumeManager(manager.SchedulerDependentManager):
             LOG.debug(_("snapshot %(snap_name)s: creating") % locals())
             model_update = self.driver.create_snapshot(snapshot_ref)
             if model_update:
-                self.db.snapshot_update(context, snapshot_ref['id'], model_update)
+                self.db.snapshot_update(context, snapshot_ref['id'],
+                                        model_update)
 
         except Exception:
             self.db.snapshot_update(context,

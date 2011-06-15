@@ -1,4 +1,6 @@
-NOVA_KEY_DIR=$(pushd $(dirname $BASH_SOURCE)>/dev/null; pwd; popd>/dev/null)
+NOVARC=$(readlink -f "${BASH_SOURCE:-${0}}" 2>/dev/null) ||
+    NOVARC=$(python -c 'import os,sys; print os.path.abspath(os.path.realpath(sys.argv[1]))' "${BASH_SOURCE:-${0}}")
+NOVA_KEY_DIR=${NOVARC%%/*}
 export EC2_ACCESS_KEY="%(access)s:%(project)s"
 export EC2_SECRET_KEY="%(secret)s"
 export EC2_URL="%(ec2)s"
@@ -12,4 +14,5 @@ alias ec2-bundle-image="ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_P
 alias ec2-upload-bundle="ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${NOVA_CERT}"
 export NOVA_API_KEY="%(access)s"
 export NOVA_USERNAME="%(user)s"
+export NOVA_PROJECT_ID="%(project)s"
 export NOVA_URL="%(os)s"

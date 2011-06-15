@@ -21,10 +21,9 @@
 Simple Scheduler
 """
 
-import datetime
-
 from nova import db
 from nova import flags
+from nova import utils
 from nova.scheduler import driver
 from nova.scheduler import chance
 
@@ -54,7 +53,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow
-            now = datetime.datetime.utcnow()
+            now = utils.utcnow()
             db.instance_update(context, instance_id, {'host': host,
                                                       'scheduled_at': now})
             return host
@@ -66,7 +65,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
-                now = datetime.datetime.utcnow()
+                now = utils.utcnow()
                 db.instance_update(context,
                                    instance_id,
                                    {'host': service['host'],
@@ -96,7 +95,7 @@ class SimpleScheduler(chance.ChanceScheduler):
 
             # TODO(vish): this probably belongs in the manager, if we
             #             can generalize this somehow
-            now = datetime.datetime.utcnow()
+            now = utils.utcnow()
             db.volume_update(context, volume_id, {'host': host,
                                                   'scheduled_at': now})
             return host
@@ -109,7 +108,7 @@ class SimpleScheduler(chance.ChanceScheduler):
             if self.service_is_up(service):
                 # NOTE(vish): this probably belongs in the manager, if we
                 #             can generalize this somehow
-                now = datetime.datetime.utcnow()
+                now = utils.utcnow()
                 db.volume_update(context,
                                  volume_id,
                                  {'host': service['host'],
