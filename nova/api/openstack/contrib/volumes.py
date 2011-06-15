@@ -317,12 +317,12 @@ class Volumes(extensions.ExtensionDescriptor):
 
         # NOTE(justinsb): No way to provide singular name ('volume')
         # Does this matter?
-        res = extensions.ResourceExtension('volumes',
+        res = extensions.ResourceExtension('os-volumes',
                                         VolumeController(),
                                         collection_actions={'detail': 'GET'})
         resources.append(res)
 
-        res = extensions.ResourceExtension('volume_attachments',
+        res = extensions.ResourceExtension('os-volume_attachments',
                                            VolumeAttachmentController(),
                                            parent=dict(
                                                 member_name='server',
