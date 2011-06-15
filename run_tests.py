@@ -334,13 +334,13 @@ if __name__ == '__main__':
     logging.setup()
     # If any argument looks like a test name but doesn't have "nova.tests" in
     # front of it, automatically add that so we don't have to type as much
-    show_elapsed = False
+    show_elapsed = True
     argv = []
     for x in sys.argv:
         if x.startswith('test_'):
             argv.append('nova.tests.%s' % x)
-        elif x.startswith('--show-elapsed'):
-            show_elapsed = True
+        elif x.startswith('--hide-elapsed'):
+            show_elapsed = False
         else:
             argv.append(x)
 
