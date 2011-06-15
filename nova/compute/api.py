@@ -553,7 +553,7 @@ class API(base.Base):
                     instance['id'],
                     state_description='stopping',
                     state=power_state.NOSTATE,
-                    terminated_at=datetime.datetime.utcnow())
+                    terminated_at=utils.utcnow())
 
         host = instance['host']
         if host:
