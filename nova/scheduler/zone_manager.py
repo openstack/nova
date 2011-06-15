@@ -89,7 +89,8 @@ class ZoneState(object):
 
 def _call_novaclient(zone):
     """Call novaclient. Broken out for testing purposes."""
-    client = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
+    client = novaclient.OpenStack(zone.username, zone.password, None,
+                                  zone.api_url)
     return client.zones.info()._info
 
 

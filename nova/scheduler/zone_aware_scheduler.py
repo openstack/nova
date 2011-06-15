@@ -105,7 +105,8 @@ class ZoneAwareScheduler(driver.Scheduler):
                     % locals())
         nova = None
         try:
-            nova = novaclient.OpenStack(zone.username, zone.password, url)
+            nova = novaclient.OpenStack(zone.username, zone.password, None,
+                                        url)
             nova.authenticate()
         except novaclient.exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
