@@ -150,12 +150,13 @@ class API(base.Base):
                availability_zone=None, user_data=None, metadata={},
                injected_files=None,
                admin_password=None,
-               block_device_mapping=[]):
+               block_device_mapping=None):
         """Create the number and type of instances requested.
 
         Verifies that quota and other arguments are valid.
 
         """
+        block_device_mapping = block_device_mapping or []
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
 

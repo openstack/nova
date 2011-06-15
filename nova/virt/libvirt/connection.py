@@ -562,9 +562,10 @@ class LibvirtConnection(driver.ComputeDriver):
     # NOTE(ilyaalekseyev): Implementation like in multinics
     # for xenapi(tr3buchet)
     @exception.wrap_exception
-    def spawn(self, instance, network_info=None, block_device_mapping=[]):
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
         xml = self.to_xml(instance, False, network_info=network_info,
                           block_device_mapping=block_device_mapping)
+        block_device_mapping = block_device_mapping or []
         self.firewall_driver.setup_basic_filtering(instance, network_info)
         self.firewall_driver.prepare_instance_filter(instance, network_info)
         self._create_image(instance, xml, network_info=network_info,
@@ -750,7 +751,8 @@ class LibvirtConnection(driver.ComputeDriver):
         # TODO(vish): should we format disk by default?
 
     def _create_image(self, inst, libvirt_xml, suffix='', disk_images=None,
-                        network_info=None, block_device_mapping=[]):
+                        network_info=None, block_device_mapping=None):
+        block_device_mapping = block_device_mapping or []
         if not network_info:
             network_info = netutils.get_network_info(inst)
 
@@ -951,7 +953,8 @@ class LibvirtConnection(driver.ComputeDriver):
         return False
 
     def _prepare_xml_info(self, instance, rescue=False, network_info=None,
-                          block_device_mapping=[]):
+                          block_device_mapping=None):
+        block_device_mapping = block_device_mapping or []
         # TODO(adiantum) remove network_info creation code
         # when multinics will be completed
         if not network_info:
@@ -1006,7 +1009,8 @@ class LibvirtConnection(driver.ComputeDriver):
         return xml_info
 
     def to_xml(self, instance, rescue=False, network_info=None,
-               block_device_mapping=[]):
+               block_device_mapping=None):
+        block_device_mapping = block_device_mapping or []
         # TODO(termie): cache?
         LOG.debug(_('instance %s: starting toXML method'), instance['name'])
         xml_info = self._prepare_xml_info(instance, rescue, network_info,
