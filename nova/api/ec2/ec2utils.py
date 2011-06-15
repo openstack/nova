@@ -61,9 +61,10 @@ def _try_convert(value):
         return ''
     if value == 'None':
         return None
-    if value.lower() == 'true':
+    lowered_value = value.lower()
+    if lowered_value == 'true':
         return True
-    if value.lower() == 'false':
+    if lowered_value == 'false':
         return False
     valueneg = value[1:] if value[0] == '-' else value
     if valueneg == '0':
