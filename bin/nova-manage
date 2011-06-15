@@ -1106,15 +1106,34 @@ class AgentBuildCommands(object):
                                   hypervisor, os, architecture)
         db.agent_build_destroy(ctxt, agent_build_ref['id'])
 
-    def list(self):
+    def list(self, hypervisor=None):
         """lists all agent builds
         arguments: <none>"""
-        # TODO(johannes.erdfelt): Make the output easier to read
+        fmt = "%-10s  %-8s  %12s  %s"
         ctxt = context.get_admin_context()
+        by_hypervisor = {}
         for agent_build in db.agent_build_get_all(ctxt):
-            print agent_build.hypervisor, agent_build.os, agent_build.architecture, agent_build.version, agent_build.url, agent_build.md5hash
+            buildlist = by_hypervisor.get(agent_build.hypervisor)
+            if not buildlist:
+                buildlist = by_hypervisor[agent_build.hypervisor] = []
 
-    def modify(self, os, architecture, version, url, md5hash, hypervisor='xen'):
+            buildlist.append(agent_build)
+
+        for key, buildlist in by_hypervisor.iteritems():
+            if hypervisor and key != hypervisor:
+                continue
+
+            print "Hypervisor: %s" % key
+            print fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32)
+            for agent_build in buildlist:
+                print fmt % (agent_build.os, agent_build.architecture,
+                             agent_build.version, agent_build.md5hash)
+                print '    %s' % agent_build.url
+
+            print
+
+    def modify(self, os, architecture, version, url, md5hash,
+               hypervisor='xen'):
         """update an existing agent build
         arguments: os architecture version url md5hash [hypervisor='xen']
         """
