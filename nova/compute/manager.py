@@ -596,10 +596,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # reload the updated instance ref
         # FIXME(mdietz): is there reload functionality?
-        instance_ref = self.db.instance_get(context, instance_id)
+        instance = self.db.instance_get(context, instance_id)
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
-        self.driver.finish_resize(instance_ref, disk_info, network_info)
+        self.driver.finish_resize(instance, disk_info, network_info)
 
         self.db.migration_update(context, migration_id,
                 {'status': 'finished', })
