@@ -579,7 +579,7 @@ class XenAPIVMTestCase(test.TestCase):
             vif_rec = xenapi_fake.get_record('VIF', vif_ref)
             self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
             self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
-                              str(4 * 1024))
+                              str(3 * 1024))
 
     def test_rescue(self):
         self.flags(xenapi_inject_image=False)
