@@ -83,7 +83,6 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'kernel_id': 2,
                   'ramdisk_id': 3,
                   'instance_type_id': '3',  # m1.large
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
     def _create_volume(self, size='0'):
@@ -587,10 +586,23 @@ class XenAPIVMTestCase(test.TestCase):
             'kernel_id': 2,
             'ramdisk_id': 3,
             'instance_type_id': '3',  # m1.large
-            'mac_address': 'aa:bb:cc:dd:ee:ff',
             'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
-        self.conn.spawn(instance, None)
+        network_info = [({'bridge': 'fa0', 'id': 0},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+        self.conn.spawn(instance, network_info)
         return instance
 
 
@@ -662,7 +674,6 @@ class XenAPIMigrateInstance(test.TestCase):
                   'ramdisk_id': None,
                   'local_gb': 5,
                   'instance_type_id': '3',  # m1.large
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
         fake_utils.stub_out_utils_execute(self.stubs)
