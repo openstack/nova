@@ -10,7 +10,7 @@ function usage {
   echo "  -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added."
   echo "  -p, --pep8               Just run pep8"
   echo "  -h, --help               Print this usage message"
-  echo "  --show-elapsed           Print elapsed time for tests along with slowest tests"
+  echo "  --show-elapsed           Print elapsed time in seconds for tests along with slowest tests"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
   echo "      If no virtualenv is found, the script will ask if you would like to create one.  If you "

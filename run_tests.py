@@ -185,20 +185,13 @@ class _NullColorizer(object):
         self.stream.write(text)
 
 
-def classify_test_speed(elapsed_time):
-    if elapsed_time > 1.0:
-        return 'slow'
-    elif elapsed_time > 0.25:
-        return 'sluggish'
-    else:
-        return 'fast'
-
-
 def get_elapsed_time_color(elapsed_time):
-    color_map = {'slow': 'red', 'sluggish': 'yellow', 'fast': 'green'}
-    slowness = classify_test_speed(elapsed_time)
-    color = color_map[slowness]
-    return color
+    if elapsed_time > 1.0:
+        return 'red'
+    elif elapsed_time > 0.25:
+        return 'yellow'
+    else:
+        return 'green'
 
 
 class NovaTestResult(result.TextTestResult):
@@ -233,7 +226,6 @@ class NovaTestResult(result.TextTestResult):
     def _writeElapsedTime(self, test):
         color = get_elapsed_time_color(self.elapsed_time)
         self.colorizer.write("  %.2f" % self.elapsed_time, color)
-        self.stream.write(' secs')
 
     def _writeResult(self, test, long_result, color, short_result):
         if self.showAll:
@@ -322,13 +314,13 @@ class NovaTestRunner(core.TextTestRunner):
     def _writeSlowTests(self, result_):
         # Pare out 'fast' tests
         slow_tests = [item for item in result_.slow_tests
-                      if classify_test_speed(item[0]) != 'fast']
+                      if get_elapsed_time_color(item[0]) != 'green']
 
         slow_total_time = sum(item[0] for item in slow_tests)
         self.stream.writeln("Slowest %i tests took %.2f secs:"
                             % (len(slow_tests), slow_total_time))
         for elapsed_time, test in sorted(slow_tests, reverse=True):
-            time_str = "%.2f secs" % elapsed_time
+            time_str = "%.2f" % elapsed_time
             self.stream.writeln("    %s %s" % (time_str.ljust(10), test))
 
     def run(self, test):
