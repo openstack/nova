@@ -313,22 +313,23 @@ class XenAPIVMTestCase(test.TestCase):
 
         if check_injection:
             xenstore_data = self.vm['xenstore_data']
-            key = 'vm-data/networking/aabbccddeeff'
+            key = 'vm-data/networking/DEADBEEF0000'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
             self.assertEquals(tcpip_data,
-                              {'label': 'fake_flat_network',
-                               'broadcast': '10.0.0.255',
-                               'ips': [{'ip': '10.0.0.3',
-                                        'netmask':'255.255.255.0',
-                                        'enabled':'1'}],
-                                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
-                                          'netmask': '120',
-                                          'enabled': '1'}],
-                                'mac': 'aa:bb:cc:dd:ee:ff',
-                                'dns': ['10.0.0.2'],
-                                'gateway': '10.0.0.1',
-                                'gateway6': 'fe80::a00:1'})
+                              {'broadcast': '192.168.0.255',
+                               'dns': ['192.168.0.1'],
+                               'gateway': '192.168.0.1',
+                               'gateway6': 'dead:beef::1',
+                               'ip6s': [{'enabled': '1',
+                                         'ip': 'dead:beef::dcad:beff:feef:0',
+                                               'netmask': '64'}],
+                               'ips': [{'enabled': '1',
+                                        'ip': '192.168.0.100',
+                                        'netmask': '255.255.255.0'}],
+                               'label': 'fake',
+                               'mac': 'DE:AD:BE:EF:00:00',
+                               'rxtx_cap': 3})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
