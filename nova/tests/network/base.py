@@ -36,10 +36,9 @@ class NetworkTestCase(test.TestCase):
                    fake_network=True,
                    network_manager=self.network_manager)
         self.manager = manager.AuthManager()
-        if not hasattr(self, 'user'):
-            self.user = self.manager.create_user('netuser',
-                                                 'netuser',
-                                                 'netuser')
+        self.user = self.manager.create_user('netuser',
+                                             'netuser',
+                                             'netuser')
         self.projects = []
         self.network = utils.import_object(FLAGS.network_manager)
         db_fakes.stub_out_db_network_api(self.stubs)
@@ -49,6 +48,7 @@ class NetworkTestCase(test.TestCase):
 
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
+        self.manager.delete_user(self.user['id'])
         reload(db)
 
 
