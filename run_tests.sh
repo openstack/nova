@@ -25,6 +25,7 @@ function process_option {
     -N|--no-virtual-env) let always_venv=0; let never_venv=1;;
     -f|--force) let force=1;;
     -p|--pep8) let just_pep8=1;;
+    -*) noseopts="$noseopts $1";;
     *) noseargs="$noseargs $1"
   esac
 }
@@ -35,6 +36,7 @@ always_venv=0
 never_venv=0
 force=0
 noseargs=
+noseopts=
 wrapper=""
 just_pep8=0
 
@@ -73,7 +75,7 @@ function run_pep8 {
   --exclude=vcsversion.py ${srcfiles}
 }
 
-NOSETESTS="python run_tests.py $noseargs"
+NOSETESTS="python run_tests.py $noseopts $noseargs"
 
 if [ $never_venv -eq 0 ]
 then
@@ -108,7 +110,10 @@ fi
 
 run_tests || exit
 
-# Also run pep8 if no options were provided.
+# NOTE(sirp): we only want to run pep8 when we're running the full-test suite,
+# not when we're running tests individually. To handle this, we need to
+# distinguish between options (noseopts), which begin with a '-', and
+# arguments (noseargs).
 if [ -z "$noseargs" ]; then
   run_pep8
 fi
