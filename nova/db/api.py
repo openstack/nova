@@ -1259,7 +1259,8 @@ def agent_build_create(context, values):
 
 def agent_build_get_by_triple(context, hypervisor, os, architecture):
     """Get agent build by hypervisor/OS/architecture triple."""
-    return IMPL.agent_build_get_by_triple(context, hypervisor, os, architecture)
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
 
 
 def agent_build_get_all(context):

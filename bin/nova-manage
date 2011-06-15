@@ -1085,7 +1085,8 @@ class ImageCommands(object):
 class AgentBuildCommands(object):
     """Class for managing agent builds."""
 
-    def create(self, os, architecture, version, url, md5hash, hypervisor='xen'):
+    def create(self, os, architecture, version, url, md5hash,
+                hypervisor='xen'):
         """creates a new agent build
         arguments: os architecture version url md5hash [hypervisor='xen']"""
         ctxt = context.get_admin_context()

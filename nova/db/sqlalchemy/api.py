@@ -2693,7 +2693,8 @@ def agent_build_create(context, values):
 
 
 @require_admin_context
-def agent_build_get_by_triple(context, hypervisor, os, architecture, session=None):
+def agent_build_get_by_triple(context, hypervisor, os, architecture,
+                              session=None):
     if not session:
         session = get_session()
     return session.query(models.AgentBuild).\
