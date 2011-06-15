@@ -15,21 +15,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import exception
 from nova import volume
 
 
 def terminate_volumes(db, context, instance_id):
     """delete volumes of delete_on_termination=True in block device mapping"""
-    try:
-        bdms = db.block_device_mapping_get_all_by_instance(
-            context, instance_id)
-    except exception.NotFound:
-        pass
-    else:
-        volume_api = volume.API()
-        for bdm in bdms:
-            #LOG.debug(_("terminating bdm %s") % bdm)
-            if bdm['volume_id'] and bdm['delete_on_termination']:
-                volume_api.delete(context, bdm['volume_id'])
-            db.block_device_mapping_destroy(context, bdm['id'])
+    volume_api = volume.API()
+    for bdm in db.block_device_mapping_get_all_by_instance(context,
+                                                           instance_id):
+        #LOG.debug(_("terminating bdm %s") % bdm)
+        if bdm['volume_id'] and bdm['delete_on_termination']:
+            volume_api.delete(context, bdm['volume_id'])
+        db.block_device_mapping_destroy(context, bdm['id'])

@@ -1912,7 +1912,7 @@ def block_device_mapping_get_all_by_instance(context, instance_id):
              filter_by(deleted=False).\
              all()
     if not result:
-        raise exception.NotFound()
+        return []
     return result
 
 

@@ -223,49 +223,44 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    power_state.NOSTATE,
                                    'block_device_mapping')
 
+        volume_api = volume.API()
         block_device_mapping = []
-        try:
-            bdms = self.db.block_device_mapping_get_all_by_instance(
-                context, instance_id)
-        except exception.NotFound:
-            pass
-        else:
-            volume_api = volume.API()
-            for bdm in bdms:
-                LOG.debug(_("setting up bdm %s"), bdm)
-                if ((bdm['snapshot_id'] is not None) and
-                    (bdm['volume_id'] is None)):
-                    # TODO(yamahata): default name and description
-                    vol = volume_api.create(context, bdm['volume_size'],
-                                            bdm['snapshot_id'], '', '')
-                    # TODO(yamahata): creating volume simultaneously
-                    #                 reduces creation time?
-                    volume_api.wait_creation(context, vol['id'])
-                    self.db.block_device_mapping_update(
-                        context, bdm['id'], {'volume_id': vol['id']})
-                    bdm['volume_id'] = vol['id']
+        for bdm in self.db.block_device_mapping_get_all_by_instance(
+            context, instance_id):
+            LOG.debug(_("setting up bdm %s"), bdm)
+            if ((bdm['snapshot_id'] is not None) and
+                (bdm['volume_id'] is None)):
+                # TODO(yamahata): default name and description
+                vol = volume_api.create(context, bdm['volume_size'],
+                                        bdm['snapshot_id'], '', '')
+                # TODO(yamahata): creating volume simultaneously
+                #                 reduces creation time?
+                volume_api.wait_creation(context, vol['id'])
+                self.db.block_device_mapping_update(
+                    context, bdm['id'], {'volume_id': vol['id']})
+                bdm['volume_id'] = vol['id']
 
-                assert ((bdm['snapshot_id'] is None) or
-                        (bdm['volume_id'] is not None))
+            assert ((bdm['snapshot_id'] is None) or
+                    (bdm['volume_id'] is not None))
 
-                if bdm['volume_id'] is not None:
-                    volume_api.check_attach(context,
-                                            volume_id=bdm['volume_id'])
-                    dev_path = self._attach_volume_boot(context, instance_id,
-                                                        bdm['volume_id'],
-                                                        bdm['device_name'])
-                    block_device_mapping.append({'device_path': dev_path,
-                                                 'mount_device':
-                                                 bdm['device_name']})
-                elif bdm['virtual_name'] is not None:
-                    # TODO(yamahata): ephemeral/swap device support
-                    LOG.debug(_('block_device_mapping: '
-                                'ephemeral device is not supported yet'))
-                else:
-                    # TODO(yamahata): NoDevice support
-                    assert bdm['no_device']
-                    LOG.debug(_('block_device_mapping: '
-                                'no device is not supported yet'))
+            if bdm['volume_id'] is not None:
+                volume_api.check_attach(context,
+                                        volume_id=bdm['volume_id'])
+                dev_path = self._attach_volume_boot(context, instance_id,
+                                                    bdm['volume_id'],
+                                                    bdm['device_name'])
+                block_device_mapping.append({'device_path': dev_path,
+                                             'mount_device':
+                                             bdm['device_name']})
+            elif bdm['virtual_name'] is not None:
+                # TODO(yamahata): ephemeral/swap device support
+                LOG.debug(_('block_device_mapping: '
+                            'ephemeral device is not supported yet'))
+            else:
+                # TODO(yamahata): NoDevice support
+                assert bdm['no_device']
+                LOG.debug(_('block_device_mapping: '
+                            'no device is not supported yet'))
 
         return block_device_mapping
 
