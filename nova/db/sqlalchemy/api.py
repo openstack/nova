@@ -839,7 +839,6 @@ def instance_destroy(context, instance_id):
                         'updated_at': literal_column('updated_at')})
 
 
-
 @require_context
 def instance_get_by_uuid(context, uuid, session=None):
     partial = _instance_get(context, session=session)

@@ -56,7 +56,6 @@ def return_server_by_id(context, id):
     return stub_instance(id)
 
 
-
 def return_server_by_uuid(context, uuid):
     # NOTE(sirp): hard-coding the ID to 1 for now
     id = 1

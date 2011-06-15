@@ -510,7 +510,7 @@ class API(base.Base):
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
         # NOTE(sirp): id used to be exclusively integer IDs; now we're
-        # accepting both UUIDs and integer IDs. The handling of this 
+        # accepting both UUIDs and integer IDs. The handling of this
         # is done in db/sqlalchemy/api/instance_get
         try:
             int(instance_id)
