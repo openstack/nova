@@ -75,7 +75,7 @@ class ViewBuilder(object):
         }
 
         inst_dict = {
-            'id': int(inst['id']),
+            'id': inst['id'],
             'name': inst['display_name'],
             'addresses': self.addresses_builder.build(inst),
             'status': power_mapping[inst.get('state')]}
@@ -99,6 +99,7 @@ class ViewBuilder(object):
         self._build_image(inst_dict, inst)
         self._build_flavor(inst_dict, inst)
 
+        inst_dict['uuid'] = inst['uuid']
         return dict(server=inst_dict)
 
     def _build_image(self, response, inst):

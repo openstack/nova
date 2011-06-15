@@ -839,38 +839,48 @@ def instance_destroy(context, instance_id):
                         'updated_at': literal_column('updated_at')})
 
 
+
+@require_context
+def instance_get_by_uuid(context, uuid, session=None):
+    partial = _instance_get(context, session=session)
+    result = partial.filter_by(uuid=uuid)
+    result = result.first()
+    if not result:
+        # FIXME(sirp): it would be nice if InstanceNotFound would accept a
+        # uuid parameter as well
+        raise exception.InstanceNotFound(instance_id=uuid)
+    return result
+
+
 @require_context
 def instance_get(context, instance_id, session=None):
-    if not session:
-        session = get_session()
-    result = None
-
-    if is_admin_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('security_groups.rules')).\
-                         options(joinedload('volumes')).\
-                         options(joinedload_all('fixed_ip.network')).\
-                         options(joinedload('metadata')).\
-                         options(joinedload('instance_type')).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('security_groups.rules')).\
-                         options(joinedload('volumes')).\
-                         options(joinedload('metadata')).\
-                         options(joinedload('instance_type')).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=False).\
-                         first()
+    partial = _instance_get(context, session=session)
+    result = partial.filter_by(id=instance_id)
+    result = result.first()
     if not result:
         raise exception.InstanceNotFound(instance_id=instance_id)
-
     return result
+
+
+@require_context
+def _instance_get(context, session=None):
+    if not session:
+        session = get_session()
+
+    partial = session.query(models.Instance).\
+                     options(joinedload_all('fixed_ip.floating_ips')).\
+                     options(joinedload_all('security_groups.rules')).\
+                     options(joinedload('volumes')).\
+                     options(joinedload_all('fixed_ip.network')).\
+                     options(joinedload('metadata')).\
+                     options(joinedload('instance_type'))
+
+    if is_admin_context(context):
+        partial = partial.filter_by(deleted=can_read_deleted(context))
+    elif is_user_context(context):
+        partial = partial.filter_by(project_id=context.project_id).\
+                        filter_by(deleted=False)
+    return partial
 
 
 @require_admin_context

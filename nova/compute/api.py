@@ -509,8 +509,25 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
-        rv = self.db.instance_get(context, instance_id)
-        return dict(rv.iteritems())
+        # NOTE(sirp): id used to be exclusively integer IDs; now we're
+        # accepting both UUIDs and integer IDs. The handling of this 
+        # is done in db/sqlalchemy/api/instance_get
+        try:
+            int(instance_id)
+            uuid_like = False
+        except ValueError:
+            uuid_like = True
+
+        if uuid_like:
+            uuid = instance_id
+            try:
+                instance = self.db.instance_get_by_uuid(context, uuid)
+            except Exception as e:
+                raise Exception(e)
+        else:
+            instance = self.db.instance_get(context, instance_id)
+
+        return dict(instance.iteritems())
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):

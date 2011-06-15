@@ -49,8 +49,15 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
-def return_server(context, id):
+def return_server_by_id(context, id):
     return stub_instance(id)
+
+
+
+def return_server_by_uuid(context, uuid):
+    # NOTE(sirp): hard-coding the ID to 1 for now
+    id = 1
+    return stub_instance(id, uuid=uuid)
 
 
 def return_server_with_addresses(private, public):
@@ -111,7 +118,7 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
-                  host=None, power_state=0, reservation_id=""):
+                  host=None, power_state=0, reservation_id="", uuid=""):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -129,7 +136,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         server_name = "reservation_%s" % (reservation_id, )
 
     instance = {
-        "id": id,
+        "id": int(id),
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
@@ -157,7 +164,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "display_name": server_name,
         "display_description": "",
         "locked": False,
-        "metadata": metadata}
+        "metadata": metadata,
+        "uuid": uuid}
 
     instance["fixed_ip"] = {
         "address": private_address,
@@ -197,7 +205,9 @@ class ServersTest(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(nova.db.api, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
@@ -227,6 +237,14 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server1')
+
+    def test_get_server_by_uuid(self):
+        req = webob.Request.blank('/v1.0/servers/abcd-abcd-abcd-abcd')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['uuid'], 'abcd-abcd-abcd-abcd')
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
