@@ -49,6 +49,9 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
+FAKE_UUID = 'abcd-abcd-abcd-abcd'
+
+
 def return_server_by_id(context, id):
     return stub_instance(id)
 
@@ -240,11 +243,11 @@ class ServersTest(test.TestCase):
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_uuid(self):
-        req = webob.Request.blank('/v1.0/servers/abcd-abcd-abcd-abcd')
+        req = webob.Request.blank('/v1.0/servers/%s' % FAKE_UUID)
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
-        self.assertEqual(res_dict['server']['uuid'], 'abcd-abcd-abcd-abcd')
+        self.assertEqual(res_dict['server']['uuid'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
@@ -558,7 +561,8 @@ class ServersTest(test.TestCase):
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
-            return {'id': '1', 'display_name': 'server_test'}
+            return {'id': 1, 'display_name': 'server_test',
+                    'uuid': FAKE_UUID}
 
         def server_update(context, id, params):
             return instance_create(context, id)

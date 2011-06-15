@@ -520,10 +520,7 @@ class API(base.Base):
 
         if uuid_like:
             uuid = instance_id
-            try:
-                instance = self.db.instance_get_by_uuid(context, uuid)
-            except Exception as e:
-                raise Exception(e)
+            instance = self.db.instance_get_by_uuid(context, uuid)
         else:
             instance = self.db.instance_get(context, instance_id)
 
