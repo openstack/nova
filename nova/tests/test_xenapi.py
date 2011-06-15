@@ -588,7 +588,7 @@ class XenAPIVMTestCase(test.TestCase):
             'instance_type_id': '3',  # m1.large
             'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
-        network_info = [({'bridge': 'fa0', 'id': 0},
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
                            'dns': ['192.168.0.1'],
                            'gateway': '192.168.0.1',
