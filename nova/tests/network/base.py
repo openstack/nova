@@ -48,7 +48,7 @@ class NetworkTestCase(test.TestCase):
 
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
-        self.manager.delete_user(self.user['id'])
+        self.manager.delete_user(self.user.id)
         reload(db)
 
 

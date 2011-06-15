@@ -687,7 +687,22 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
-        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
+        network_info = [({'bridge': 'fa0', 'id': 0},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
+                                                           network_info)
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):

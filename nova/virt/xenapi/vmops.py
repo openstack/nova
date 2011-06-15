@@ -88,13 +88,13 @@ class VMOps(object):
         vm_ref = VMHelper.lookup(self._session, instance.name)
         self._start(instance, vm_ref)
 
-    def finish_resize(self, instance, disk_info):
+    def finish_resize(self, instance, disk_info, network_info):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
         vm_ref = self._create_vm(instance,
                 [dict(vdi_type='os', vdi_uuid=vdi_uuid)])
         self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref)
+        self._spawn(instance, vm_ref, network_info)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
