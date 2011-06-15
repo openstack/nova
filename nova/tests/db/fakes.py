@@ -68,6 +68,7 @@ def stub_out_db_network_api(stubs):
                       'dns': '192.168.0.1',
                       'vlan': None,
                       'host': None,
+                      'injected': False,
                       'vpn_public_address': '192.168.0.2'}
 
     fixed_ip_fields = {'id': 0,
