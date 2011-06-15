@@ -420,7 +420,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                     "enabled": "1"}
             network_dict = {
                 'bridge': network['bridge'],
-                'id': network['id']}
+                'id': network['id'],
+                'injected': network['injected']}
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],

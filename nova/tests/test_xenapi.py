@@ -687,7 +687,7 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
-        network_info = [({'bridge': 'fa0', 'id': 0},
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
                           {'broadcast': '192.168.0.255',
                            'dns': ['192.168.0.1'],
                            'gateway': '192.168.0.1',
