@@ -200,9 +200,27 @@ class RedirectResult(exception.Error):
 
 
 class reroute_compute(object):
-    """Decorator used to indicate that the method should
-       delegate the call the child zones if the db query
-       can't find anything."""
+    """
+    reroute_compute is responsible for trying to lookup a resource in the
+    current zone and if it's not found there, delegating the call to the
+    child zones.
+
+    Since reroute_compute will be making 'cross-zone' calls, the ID for the
+    object must come in as a UUID-- if we receive an integer ID, we bail.
+
+    The steps involved are:
+
+        1. Validate that item_id is UUID like
+
+        2. Lookup item by UUID in the zone local database
+
+        3. If the item was found, then extract integer ID, and pass that to
+           the wrapped method. (This ensures that zone-local code can
+           continue to use integer IDs).
+        
+        4. If the item was not found, we delgate the call to a child zone
+           using the UUID.
+    """
     def __init__(self, method_name):
         self.method_name = method_name
 

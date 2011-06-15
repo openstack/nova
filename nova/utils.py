@@ -731,3 +731,11 @@ def parse_server_string(server_str):
 
 def gen_uuid():
     return uuid.uuid4()
+
+
+def is_uuid_like(val):
+    try:
+        int(val)
+        return False
+    except ValueError:
+        return True

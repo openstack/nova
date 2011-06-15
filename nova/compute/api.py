@@ -512,13 +512,7 @@ class API(base.Base):
         # NOTE(sirp): id used to be exclusively integer IDs; now we're
         # accepting both UUIDs and integer IDs. The handling of this
         # is done in db/sqlalchemy/api/instance_get
-        try:
-            int(instance_id)
-            uuid_like = False
-        except ValueError:
-            uuid_like = True
-
-        if uuid_like:
+        if utils.is_uuid_like(instance_id):
             uuid = instance_id
             instance = self.db.instance_get_by_uuid(context, uuid)
         else:
