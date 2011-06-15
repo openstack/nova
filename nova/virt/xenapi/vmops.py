@@ -92,9 +92,10 @@ class VMOps(object):
         vdi_uuid = self.link_disks(instance, disk_info['base_copy'],
                 disk_info['cow'])
         vm_ref = self._create_vm(instance,
-                [dict(vdi_type='os', vdi_uuid=vdi_uuid)])
+                                 [dict(vdi_type='os', vdi_uuid=vdi_uuid)],
+                                 network_info)
         self.resize_instance(instance, vdi_uuid)
-        self._spawn(instance, vm_ref, network_info)
+        self._spawn(instance, vm_ref)
 
     def _start(self, instance, vm_ref=None):
         """Power on a VM instance"""
