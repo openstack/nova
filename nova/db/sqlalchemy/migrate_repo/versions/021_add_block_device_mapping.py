@@ -60,7 +60,8 @@ block_device_mapping = Table('block_device_mapping', meta,
                Integer(),
                ForeignKey('snapshots.id'),
                nullable=True),
-        Column('volume_id', Integer(), ForeignKey('volumes.id'), nullable=True),
+        Column('volume_id', Integer(), ForeignKey('volumes.id'),
+               nullable=True),
         Column('volume_size', Integer(), nullable=True),
         Column('no_device',
                Boolean(create_constraint=True, name=None),
@@ -79,7 +80,8 @@ def upgrade(migrate_engine):
         logging.exception('Exception while creating table')
         meta.drop_all(tables=[block_device_mapping])
         raise
-    
+
+
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
     block_device_mapping.drop()

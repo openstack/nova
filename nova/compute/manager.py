@@ -1300,7 +1300,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 vm_state = vm_instance.state
                 vms_not_found_in_db.remove(name)
 
-                
             if (db_instance['state_description'] in ['migrating', 'stopping']):
                 # A situation which db record exists, but no instance"
                 # sometimes occurs while live-migration at src compute,

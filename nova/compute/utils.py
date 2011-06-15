@@ -18,6 +18,7 @@
 from nova import exception
 from nova import volume
 
+
 def terminate_volumes(db, context, instance_id):
     """delete volumes of delete_on_termination=True in block device mapping"""
     try:

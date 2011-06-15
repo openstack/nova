@@ -264,7 +264,7 @@ class API(base.Base):
             # BlockDeviceMapping
             for bdm in block_device_mapping:
                 LOG.debug(_('bdm %s'), bdm)
-                assert bdm.has_key('device_name')
+                assert 'device_name' in bdm
                 values = {
                     'instance_id': instance_id,
                     'device_name': bdm['device_name'],
@@ -451,7 +451,7 @@ class API(base.Base):
         instance = self._get_instance(context, instance_id, 'stopping')
         if not _is_able_to_shutdown(instance, instance_id):
             return
-        
+
         self.update(context,
                     instance['id'],
                     state_description='stopping',

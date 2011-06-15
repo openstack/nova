@@ -541,7 +541,7 @@ class CloudTestCase(test.TestCase):
 
         kwargs = {'image_id': 'ami-1',
                   'instance_type': FLAGS.default_instance_type,
-                  'max_count': 1,}
+                  'max_count': 1, }
         instance_id = self._run_instance_wait(**kwargs)
 
         # a running instance can't be started. It is just ignored.
@@ -553,7 +553,7 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         self.assertTrue(result)
         self._wait_for_stopped(instance_id)
-        
+
         result = self.cloud.start_instances(self.context, [instance_id])
         greenthread.sleep(0.3)
         self.assertTrue(result)
@@ -563,18 +563,18 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         self.assertTrue(result)
         self._wait_for_stopped(instance_id)
-        
+
         result = self.cloud.terminate_instances(self.context, [instance_id])
         greenthread.sleep(0.3)
         self.assertTrue(result)
-        
+
         self._restart_compute_service()
 
     def _volume_create(self):
         kwargs = {'status': 'available',
                   'host': self.volume.host,
                   'size': 1,
-                  'attach_status': 'detached',}
+                  'attach_status': 'detached', }
         return db.volume_create(self.context, kwargs)
 
     def _assert_volume_attached(self, vol, instance_id, mountpoint):
@@ -582,7 +582,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(vol['mountpoint'], mountpoint)
         self.assertEqual(vol['status'], "in-use")
         self.assertEqual(vol['attach_status'], "attached")
-        
+
     def _assert_volume_detached(self, vol):
         self.assertEqual(vol['instance_id'], None)
         self.assertEqual(vol['mountpoint'], None)
@@ -604,8 +604,8 @@ class CloudTestCase(test.TestCase):
                                             'volume_id': vol1['id'],
                                             'delete_on_termination': False,},
                                            {'device_name': '/dev/vdc',
-                                            'volume_id': vol2['id'], 
-                                            'delete_on_termination': True,},
+                                            'volume_id': vol2['id'],
+                                            'delete_on_termination': True, },
                                            ]}
         ec2_instance_id = self._run_instance_wait(**kwargs)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
@@ -629,7 +629,7 @@ class CloudTestCase(test.TestCase):
         self._assert_volume_detached(vol)
         vol = db.volume_get(self.context, vol2['id'])
         self._assert_volume_detached(vol)
-            
+
         self.cloud.start_instances(self.context, [ec2_instance_id])
         self._wait_for_running(ec2_instance_id)
         vols = db.volume_get_all_by_instance(self.context, instance_id)
@@ -654,7 +654,7 @@ class CloudTestCase(test.TestCase):
         admin_ctxt = context.get_admin_context(read_deleted=True)
         vol = db.volume_get(admin_ctxt, vol2['id'])
         self.assertTrue(vol['deleted'])
-        
+
         self._restart_compute_service()
 
     def test_stop_with_attached_volume(self):
@@ -669,7 +669,7 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/vdb',
                                             'volume_id': vol1['id'],
-                                            'delete_on_termination': True,},]}
+                                            'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance_wait(**kwargs)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
 
@@ -695,7 +695,7 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         vol = db.volume_get(self.context, vol1['id'])
         self._assert_volume_detached(vol)
-        
+
         result = self.cloud.stop_instances(self.context, [ec2_instance_id])
         self.assertTrue(result)
         self._wait_for_stopped(ec2_instance_id)
@@ -703,7 +703,7 @@ class CloudTestCase(test.TestCase):
         for vol_id in (vol1['id'], vol2['id']):
             vol = db.volume_get(self.context, vol_id)
             self._assert_volume_detached(vol)
-            
+
         self.cloud.start_instances(self.context, [ec2_instance_id])
         self._wait_for_running(ec2_instance_id)
         vols = db.volume_get_all_by_instance(self.context, instance_id)
@@ -723,15 +723,15 @@ class CloudTestCase(test.TestCase):
             self.assertEqual(vol['id'], vol_id)
             self._assert_volume_detached(vol)
             db.volume_destroy(self.context, vol_id)
-        
+
         self._restart_compute_service()
-        
+
     def _create_snapshot(self, ec2_volume_id):
         result = self.cloud.create_snapshot(self.context,
                                             volume_id=ec2_volume_id)
         greenthread.sleep(0.3)
         return result['snapshotId']
-        
+
     def test_run_with_snapshot(self):
         """Makes sure run/stop/start instance with snapshot works."""
         vol = self._volume_create()
@@ -747,10 +747,10 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/vdb',
                                             'snapshot_id': snapshot1_id,
-                                            'delete_on_termination': False,},
+                                            'delete_on_termination': False, },
                                            {'device_name': '/dev/vdc',
                                             'snapshot_id': snapshot2_id,
-                                            'delete_on_termination': True,},],}
+                                            'delete_on_termination': True}]}
         ec2_instance_id = self._run_instance_wait(**kwargs)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
 
@@ -778,14 +778,14 @@ class CloudTestCase(test.TestCase):
         greenthread.sleep(0.3)
         self._wait_for_terminate(ec2_instance_id)
 
-        greenthread.sleep(0.3)        
+        greenthread.sleep(0.3)
         admin_ctxt = context.get_admin_context(read_deleted=False)
         vol = db.volume_get(admin_ctxt, vol1_id)
         self._assert_volume_detached(vol)
         self.assertFalse(vol['deleted'])
         db.volume_destroy(self.context, vol1_id)
 
-        greenthread.sleep(0.3)        
+        greenthread.sleep(0.3)
         admin_ctxt = context.get_admin_context(read_deleted=True)
         vol = db.volume_get(admin_ctxt, vol2_id)
         self.assertTrue(vol['deleted'])

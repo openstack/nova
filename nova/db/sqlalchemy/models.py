@@ -385,12 +385,12 @@ class BlockDeviceMapping(BASE, NovaBase):
     # outer join
     snapshot = relationship(Snapshot,
                             foreign_keys=snapshot_id)
-    
+
     volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
     volume = relationship(Volume,
                           foreign_keys=volume_id)
     volume_size = Column(Integer, nullable=True)
-    
+
     # for no device to suppress devices.
     no_device = Column(Boolean, nullable=True)
 

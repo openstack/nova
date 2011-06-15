@@ -942,8 +942,9 @@ class LibvirtConnection(driver.ComputeDriver):
 
         return result
 
-    root_mount_device = 'vda' # FIXME for now. it's hard coded.
-    local_mount_device = 'vdb' # FIXME for now. it's hard coded.
+    root_mount_device = 'vda'  # FIXME for now. it's hard coded.
+    local_mount_device = 'vdb'  # FIXME for now. it's hard coded.
+
     def _volume_in_mapping(self, mount_device, block_device_mapping):
         mount_device_ = _strip_dev(mount_device)
         for vol in block_device_mapping:

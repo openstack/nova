@@ -929,9 +929,11 @@ def block_device_mapping_create(context, values):
     """Create an entry of block device mapping"""
     return IMPL.block_device_mapping_create(context, values)
 
+
 def block_device_mapping_update(context, bdm_id, values):
     """Create an entry of block device mapping"""
     return IMPL.block_device_mapping_update(context, bdm_id, values)
+
 
 def block_device_mapping_get_all_by_instance(context, instance_id):
     """Get all block device mapping belonging to a instance"""

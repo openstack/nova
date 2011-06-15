@@ -934,7 +934,7 @@ class CloudController(object):
     def _do_instances(self, action, context, instance_id):
         for ec2_id in instance_id:
             self._do_instance(action, context, ec2_id)
-        
+
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""

@@ -832,6 +832,7 @@ def instance_destroy(context, instance_id):
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
 
+
 @require_context
 def instance_stop(context, instance_id):
     session = get_session()
@@ -1892,6 +1893,7 @@ def block_device_mapping_create(context, values):
     with session.begin():
         bdm_ref.save(session=session)
 
+
 @require_context
 def block_device_mapping_update(context, bdm_id, values):
     session = get_session()
@@ -1900,6 +1902,7 @@ def block_device_mapping_update(context, bdm_id, values):
                 filter_by(id=bdm_id).\
                 filter_by(deleted=False).\
                 update(values)
+
 
 @require_context
 def block_device_mapping_get_all_by_instance(context, instance_id):
@@ -1912,6 +1915,7 @@ def block_device_mapping_get_all_by_instance(context, instance_id):
         raise exception.NotFound()
     return result
 
+
 @require_context
 def block_device_mapping_destroy(context, bdm_id):
     session = get_session()
@@ -1921,6 +1925,7 @@ def block_device_mapping_destroy(context, bdm_id):
                 update({'deleted': 1,
                         'deleted_at': datetime.datetime.utcnow(),
                         'updated_at': literal_column('updated_at')})
+
 
 @require_context
 def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
