@@ -261,6 +261,8 @@ class Authorizer(wsgi.Middleware):
                 'TerminateInstances': ['projectmanager', 'sysadmin'],
                 'RebootInstances': ['projectmanager', 'sysadmin'],
                 'UpdateInstance': ['projectmanager', 'sysadmin'],
+                'StartInstances': ['projectmanager', 'sysadmin'],
+                'StopInstances': ['projectmanager', 'sysadmin'],
                 'DeleteVolume': ['projectmanager', 'sysadmin'],
                 'DescribeImages': ['all'],
                 'DeregisterImage': ['projectmanager', 'sysadmin'],
