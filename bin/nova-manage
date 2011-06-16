@@ -1087,7 +1087,7 @@ class AgentBuildCommands(object):
 
     def create(self, os, architecture, version, url, md5hash,
                 hypervisor='xen'):
-        """creates a new agent build
+        """Creates a new agent build.
         arguments: os architecture version url md5hash [hypervisor='xen']"""
         ctxt = context.get_admin_context()
         agent_build = db.agent_build_create(ctxt,
@@ -1099,7 +1099,7 @@ class AgentBuildCommands(object):
                                              'md5hash': md5hash})
 
     def delete(self, os, architecture, hypervisor='xen'):
-        """deletes an existing agent build
+        """Deletes an existing agent build.
         arguments: os architecture [hypervisor='xen']"""
         ctxt = context.get_admin_context()
         agent_build_ref = db.agent_build_get_by_triple(ctxt,
@@ -1107,7 +1107,7 @@ class AgentBuildCommands(object):
         db.agent_build_destroy(ctxt, agent_build_ref['id'])
 
     def list(self, hypervisor=None):
-        """lists all agent builds
+        """Lists all agent builds.
         arguments: <none>"""
         fmt = "%-10s  %-8s  %12s  %s"
         ctxt = context.get_admin_context()
@@ -1134,7 +1134,7 @@ class AgentBuildCommands(object):
 
     def modify(self, os, architecture, version, url, md5hash,
                hypervisor='xen'):
-        """update an existing agent build
+        """Update an existing agent build.
         arguments: os architecture version url md5hash [hypervisor='xen']
         """
         ctxt = context.get_admin_context()
