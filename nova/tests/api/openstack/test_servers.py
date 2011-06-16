@@ -64,6 +64,7 @@ def return_server_by_uuid(context, uuid):
     id = 1
     return stub_instance(id, uuid=uuid)
 
+
 def return_server_with_addresses(private, public):
     def _return_server(context, id):
         return stub_instance(id, private_address=private,

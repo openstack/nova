@@ -259,16 +259,17 @@ class reroute_compute(object):
                     LOG.debug(_("Instance %(item_uuid)s not found "
                                         "locally: '%(e)s'" % locals()))
                 else:
-                    # NOTE(sirp): since we're not re-routing in this case, and we
-                    # we were passed a UUID, we need to replace that UUID with an
-                    # integer ID in the argument list so that the zone-local code
-                    # can continue to use integer IDs.
+                    # NOTE(sirp): since we're not re-routing in this case, and
+                    # we we were passed a UUID, we need to replace that UUID
+                    # with an integer ID in the argument list so that the
+                    # zone-local code can continue to use integer IDs.
                     item_id = instance['id']
                     args = list(args)      # needs to be mutable to replace
                     self.replace_uuid_with_id(args, kwargs, item_id)
 
             if attempt_reroute:
-                return self._route_to_child_zones(context, collection, item_uuid)
+                return self._route_to_child_zones(context, collection,
+                        item_uuid)
             else:
                 return f(*args, **kwargs)
 
