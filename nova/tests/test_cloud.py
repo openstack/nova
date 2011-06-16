@@ -171,7 +171,7 @@ class CloudTestCase(test.TestCase):
         vol2 = db.volume_create(self.context, {})
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
-        volume_id = ec2utils.id_to_ec2_id(vol2['id'], 'vol-%08x')
+        volume_id = ec2utils.id_to_ec2_vol_id(vol2['id'])
         result = self.cloud.describe_volumes(self.context,
                                              volume_id=[volume_id])
         self.assertEqual(len(result['volumeSet']), 1)
@@ -187,7 +187,7 @@ class CloudTestCase(test.TestCase):
         snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
                                                  'volume_size': vol['size'],
                                                  'status': "available"})
-        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+        snapshot_id = ec2utils.id_to_ec2_snap_id(snap['id'])
 
         result = self.cloud.create_volume(self.context,
                                           snapshot_id=snapshot_id)
@@ -224,7 +224,7 @@ class CloudTestCase(test.TestCase):
         snap2 = db.snapshot_create(self.context, {'volume_id': vol['id']})
         result = self.cloud.describe_snapshots(self.context)
         self.assertEqual(len(result['snapshotSet']), 2)
-        snapshot_id = ec2utils.id_to_ec2_id(snap2['id'], 'snap-%08x')
+        snapshot_id = ec2utils.id_to_ec2_snap_id(snap2['id'])
         result = self.cloud.describe_snapshots(self.context,
                                                snapshot_id=[snapshot_id])
         self.assertEqual(len(result['snapshotSet']), 1)
@@ -238,7 +238,7 @@ class CloudTestCase(test.TestCase):
     def test_create_snapshot(self):
         """Makes sure create_snapshot works."""
         vol = db.volume_create(self.context, {'status': "available"})
-        volume_id = ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x')
+        volume_id = ec2utils.id_to_ec2_vol_id(vol['id'])
 
         result = self.cloud.create_snapshot(self.context,
                                             volume_id=volume_id)
@@ -255,7 +255,7 @@ class CloudTestCase(test.TestCase):
         vol = db.volume_create(self.context, {'status': "available"})
         snap = db.snapshot_create(self.context, {'volume_id': vol['id'],
                                                   'status': "available"})
-        snapshot_id = ec2utils.id_to_ec2_id(snap['id'], 'snap-%08x')
+        snapshot_id = ec2utils.id_to_ec2_snap_id(snap['id'])
 
         result = self.cloud.delete_snapshot(self.context,
                                             snapshot_id=snapshot_id)
@@ -553,7 +553,7 @@ class CloudTestCase(test.TestCase):
     def test_update_of_volume_display_fields(self):
         vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context,
-                                 ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 ec2utils.id_to_ec2_vol_id(vol['id']),
                                  display_name='c00l v0lum3')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual('c00l v0lum3', vol['display_name'])
@@ -562,7 +562,7 @@ class CloudTestCase(test.TestCase):
     def test_update_of_volume_wont_update_private_fields(self):
         vol = db.volume_create(self.context, {})
         self.cloud.update_volume(self.context,
-                                 ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x'),
+                                 ec2utils.id_to_ec2_vol_id(vol['id']),
                                  mountpoint='/not/here')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])
@@ -804,7 +804,7 @@ class CloudTestCase(test.TestCase):
     def test_run_with_snapshot(self):
         """Makes sure run/stop/start instance with snapshot works."""
         vol = self._volume_create()
-        ec2_volume_id = ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x')
+        ec2_volume_id = ec2utils.id_to_ec2_vol_id(vol['id'])
 
         ec2_snapshot1_id = self._create_snapshot(ec2_volume_id)
         snapshot1_id = ec2utils.ec2_id_to_id(ec2_snapshot1_id)

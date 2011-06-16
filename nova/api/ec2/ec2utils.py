@@ -34,6 +34,17 @@ def id_to_ec2_id(instance_id, template='i-%08x'):
     return template % instance_id
 
 
+def id_to_ec2_snap_id(instance_id):
+    """Convert an snapshot ID (int) to an ec2 snapshot ID
+    (snap-[base 16 number])"""
+    return id_to_ec2_id(instance_id, 'snap-%08x')
+
+
+def id_to_ec2_vol_id(instance_id):
+    """Convert an volume ID (int) to an ec2 volume ID (vol-[base 16 number])"""
+    return id_to_ec2_id(instance_id, 'vol-%08x')
+
+
 _c2u = re.compile('(((?<=[a-z])[A-Z])|([A-Z](?![A-Z]|$)))')
 
 

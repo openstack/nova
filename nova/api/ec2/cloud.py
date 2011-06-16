@@ -305,9 +305,8 @@ class CloudController(object):
 
     def _format_snapshot(self, context, snapshot):
         s = {}
-        s['snapshotId'] = ec2utils.id_to_ec2_id(snapshot['id'], 'snap-%08x')
-        s['volumeId'] = ec2utils.id_to_ec2_id(snapshot['volume_id'],
-                                              'vol-%08x')
+        s['snapshotId'] = ec2utils.id_to_ec2_snap_id(snapshot['id'])
+        s['volumeId'] = ec2utils.id_to_ec2_vol_id(snapshot['volume_id'])
         s['status'] = snapshot['status']
         s['startTime'] = snapshot['created_at']
         s['progress'] = snapshot['progress']
@@ -641,7 +640,7 @@ class CloudController(object):
             instance_data = '%s[%s]' % (instance_ec2_id,
                                         volume['instance']['host'])
         v = {}
-        v['volumeId'] = ec2utils.id_to_ec2_id(volume['id'], 'vol-%08x')
+        v['volumeId'] = ec2utils.id_to_ec2_vol_id(volume['id'])
         v['status'] = volume['status']
         v['size'] = volume['size']
         v['availabilityZone'] = volume['availability_zone']
@@ -663,8 +662,7 @@ class CloudController(object):
         else:
             v['attachmentSet'] = [{}]
         if volume.get('snapshot_id') != None:
-            v['snapshotId'] = ec2utils.id_to_ec2_id(volume['snapshot_id'],
-                                                    'snap-%08x')
+            v['snapshotId'] = ec2utils.id_to_ec2_snap_id(volume['snapshot_id'])
         else:
             v['snapshotId'] = None
 
@@ -727,7 +725,7 @@ class CloudController(object):
                 'instanceId': ec2utils.id_to_ec2_id(instance_id),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
+                'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def detach_volume(self, context, volume_id, **kwargs):
         volume_id = ec2utils.ec2_id_to_id(volume_id)
@@ -739,7 +737,7 @@ class CloudController(object):
                 'instanceId': ec2utils.id_to_ec2_id(instance['id']),
                 'requestId': context.request_id,
                 'status': volume['attach_status'],
-                'volumeId': ec2utils.id_to_ec2_id(volume_id, 'vol-%08x')}
+                'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def _convert_to_set(self, lst, label):
         if lst is None or lst == []:
