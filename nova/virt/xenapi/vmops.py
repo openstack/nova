@@ -101,7 +101,7 @@ class VMOps(object):
         if not vm_ref:
             vm_ref = VMHelper.lookup(self._session, instance.name)
         if vm_ref is None:
-            raise exception(_('Attempted to power on non-existent instance'
+            raise Exception(_('Attempted to power on non-existent instance'
             ' bad instance id %s') % instance.id)
         LOG.debug(_("Starting instance %s"), instance.name)
         self._session.call_xenapi('VM.start', vm_ref, False, False)
@@ -111,7 +111,7 @@ class VMOps(object):
         project = AuthManager().get_project(instance.project_id)
         disk_image_type = VMHelper.determine_disk_image_type(instance)
         vdis = VMHelper.fetch_image(self._session,
-                instance.id, instance.image_id, user, project,
+                instance.id, instance.image_ref, user, project,
                 disk_image_type)
         return vdis
 
@@ -160,9 +160,24 @@ class VMOps(object):
         # Create the VM ref and attach the first disk
         first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                 vdis[0]['vdi_uuid'])
-        use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                instance.id, first_vdi_ref, disk_image_type,
-                instance.os_type)
+
+        vm_mode = instance.vm_mode and instance.vm_mode.lower()
+        if vm_mode == 'pv':
+            use_pv_kernel = True
+        elif vm_mode in ('hv', 'hvm'):
+            use_pv_kernel = False
+            vm_mode = 'hvm'  # Normalize
+        else:
+            use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                    instance.id, first_vdi_ref, disk_image_type,
+                    instance.os_type)
+            vm_mode = use_pv_kernel and 'pv' or 'hvm'
+
+        if instance.vm_mode != vm_mode:
+            # Update database with normalized (or determined) value
+            db.instance_update(context.get_admin_context(),
+                               instance['id'], {'vm_mode': vm_mode})
+
         vm_ref = VMHelper.create_vm(self._session, instance,
                 kernel, ramdisk, use_pv_kernel)
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,

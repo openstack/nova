@@ -61,7 +61,8 @@ class SchedulerTestCase(test.TestCase):
     """Test case for scheduler"""
     def setUp(self):
         super(SchedulerTestCase, self).setUp()
-        self.flags(scheduler_driver='nova.tests.test_scheduler.TestDriver')
+        driver = 'nova.tests.scheduler.test_scheduler.TestDriver'
+        self.flags(scheduler_driver=driver)
 
     def _create_compute_service(self):
         """Create compute-manager(ComputeNode and Service record)."""
@@ -196,7 +197,7 @@ class ZoneSchedulerTestCase(test.TestCase):
         service.topic = 'compute'
         service.id = kwargs['id']
         service.availability_zone = kwargs['zone']
-        service.created_at = datetime.datetime.utcnow()
+        service.created_at = utils.utcnow()
         return service
 
     def test_with_two_zones(self):
@@ -290,7 +291,7 @@ class SimpleDriverTestCase(test.TestCase):
         dic['host'] = kwargs.get('host', 'dummy')
         s_ref = db.service_create(self.context, dic)
         if 'created_at' in kwargs.keys() or 'updated_at' in kwargs.keys():
-            t = datetime.datetime.utcnow() - datetime.timedelta(0)
+            t = utils.utcnow() - datetime.timedelta(0)
             dic['created_at'] = kwargs.get('created_at', t)
             dic['updated_at'] = kwargs.get('updated_at', t)
             db.service_update(self.context, s_ref['id'], dic)
@@ -401,7 +402,7 @@ class SimpleDriverTestCase(test.TestCase):
                                    FLAGS.compute_manager)
         compute1.start()
         s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         delta = datetime.timedelta(seconds=FLAGS.service_down_time * 2)
         past = now - delta
         db.service_update(self.context, s1['id'], {'updated_at': past})
@@ -542,7 +543,7 @@ class SimpleDriverTestCase(test.TestCase):
     def test_wont_sechedule_if_specified_host_is_down(self):
         compute1 = self.start_service('compute', host='host1')
         s1 = db.service_get_by_args(self.context, 'host1', 'nova-compute')
-        now = datetime.datetime.utcnow()
+        now = utils.utcnow()
         delta = datetime.timedelta(seconds=FLAGS.service_down_time * 2)
         past = now - delta
         db.service_update(self.context, s1['id'], {'updated_at': past})
@@ -692,7 +693,7 @@ class SimpleDriverTestCase(test.TestCase):
         dic = {'instance_id': instance_id, 'size': 1}
         v_ref = db.volume_create(self.context, {'instance_id': instance_id,
                                                 'size': 1})
-        t1 = datetime.datetime.utcnow() - datetime.timedelta(1)
+        t1 = utils.utcnow() - datetime.timedelta(1)
         dic = {'created_at': t1, 'updated_at': t1, 'binary': 'nova-volume',
                'topic': 'volume', 'report_count': 0}
         s_ref = db.service_create(self.context, dic)
@@ -709,7 +710,7 @@ class SimpleDriverTestCase(test.TestCase):
         """Confirms src-compute node is alive."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
-        t = datetime.datetime.utcnow() - datetime.timedelta(10)
+        t = utils.utcnow() - datetime.timedelta(10)
         s_ref = self._create_compute_service(created_at=t, updated_at=t,
                                              host=i_ref['host'])
 
@@ -737,7 +738,7 @@ class SimpleDriverTestCase(test.TestCase):
         """Confirms exception raises in case dest host does not exist."""
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
-        t = datetime.datetime.utcnow() - datetime.timedelta(10)
+        t = utils.utcnow() - datetime.timedelta(10)
         s_ref = self._create_compute_service(created_at=t, updated_at=t,
                                              host=i_ref['host'])
 
@@ -796,7 +797,7 @@ class SimpleDriverTestCase(test.TestCase):
         # mocks for live_migration_common_check()
         instance_id = self._create_instance()
         i_ref = db.instance_get(self.context, instance_id)
-        t1 = datetime.datetime.utcnow() - datetime.timedelta(10)
+        t1 = utils.utcnow() - datetime.timedelta(10)
         s_ref = self._create_compute_service(created_at=t1, updated_at=t1,
                                              host=dest)
 
@@ -1109,10 +1110,4 @@ class CallZoneMethodTest(test.TestCase):
     def test_call_zone_method_generates_exception(self):
         context = {}
         method = 'raises_exception'
-        results = api.call_zone_method(context, method)
-
-        # FIXME(sirp): for now the _error_trap code is catching errors and
-        # converting them to a ("ERROR", "string") tuples. The code (and this
-        # test) should eventually handle real exceptions.
-        expected = [(1, ('ERROR', 'testing'))]
-        self.assertEqual(expected, results)
+        self.assertRaises(Exception, api.call_zone_method, context, method)

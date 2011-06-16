@@ -78,7 +78,7 @@ def WrapTwistedOptions(wrapped):
             self._absorbParameters()
             self._absorbHandlers()
 
-            super(TwistedOptionsToFlags, self).__init__()
+            wrapped.__init__(self)
 
         def _absorbFlags(self):
             twistd_flags = []
@@ -163,12 +163,12 @@ def WrapTwistedOptions(wrapped):
         def parseArgs(self, *args):
             # TODO(termie): figure out a decent way of dealing with args
             #return
-            super(TwistedOptionsToFlags, self).parseArgs(*args)
+            wrapped.parseArgs(self, *args)
 
         def postOptions(self):
             self._doHandlers()
 
-            super(TwistedOptionsToFlags, self).postOptions()
+            wrapped.postOptions(self)
 
         def __getitem__(self, key):
             key = key.replace('-', '_')

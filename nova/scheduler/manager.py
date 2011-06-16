@@ -70,6 +70,14 @@ class SchedulerManager(manager.Manager):
         self.zone_manager.update_service_capabilities(service_name,
                             host, capabilities)
 
+    def select(self, context=None, *args, **kwargs):
+        """Select a list of hosts best matching the provided specs."""
+        return self.driver.select(context, *args, **kwargs)
+
+    def get_scheduler_rules(self, context=None, *args, **kwargs):
+        """Ask the driver how requests should be made of it."""
+        return self.driver.get_scheduler_rules(context, *args, **kwargs)
+
     def _schedule(self, method, context, topic, *args, **kwargs):
         """Tries to call schedule_* method on the driver to retrieve host.
 
@@ -80,7 +88,9 @@ class SchedulerManager(manager.Manager):
         try:
             host = getattr(self.driver, driver_method)(elevated, *args,
                                                        **kwargs)
-        except AttributeError:
+        except AttributeError, e:
+            LOG.warning(_("Driver Method %(driver_method)s missing: %(e)s."
+                            "Reverting to schedule()") % locals())
             host = self.driver.schedule(elevated, topic, *args, **kwargs)
 
         if not host:

@@ -19,12 +19,11 @@ from webob import exc
 
 from nova import compute
 from nova import quota
-from nova import wsgi
-from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 
 
-class Controller(common.OpenstackController):
+class Controller(object):
     """ The server metadata API controller for the Openstack API """
 
     def __init__(self):
@@ -38,26 +37,31 @@ class Controller(common.OpenstackController):
             meta_dict[key] = value
         return dict(metadata=meta_dict)
 
+    def _check_body(self, body):
+        if body == None or body == "":
+            expl = _('No Request Body')
+            raise exc.HTTPBadRequest(explanation=expl)
+
     def index(self, req, server_id):
         """ Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
         return self._get_metadata(context, server_id)
 
-    def create(self, req, server_id):
+    def create(self, req, server_id, body):
+        self._check_body(body)
         context = req.environ['nova.context']
-        data = self._deserialize(req.body, req.get_content_type())
-        metadata = data.get('metadata')
+        metadata = body.get('metadata')
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
                                                                 metadata)
         except quota.QuotaError as error:
             self._handle_quota_error(error)
-        return req.body
+        return body
 
-    def update(self, req, server_id, id):
+    def update(self, req, server_id, id, body):
+        self._check_body(body)
         context = req.environ['nova.context']
-        body = self._deserialize(req.body, req.get_content_type())
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -71,7 +75,7 @@ class Controller(common.OpenstackController):
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
-        return req.body
+        return body
 
     def show(self, req, server_id, id):
         """ Return a single metadata item """
@@ -92,3 +96,11 @@ class Controller(common.OpenstackController):
         if error.code == "MetadataLimitExceeded":
             raise exc.HTTPBadRequest(explanation=error.message)
         raise error
+
+
+def create_resource():
+    serializers = {
+        'application/xml': wsgi.XMLDictSerializer(xmlns=wsgi.XMLNS_V11),
+    }
+
+    return wsgi.Resource(Controller(), serializers=serializers)
