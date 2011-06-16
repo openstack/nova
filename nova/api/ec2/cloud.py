@@ -1010,7 +1010,8 @@ class CloudController(object):
         if kwargs.get('ramdisk_id'):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
-        _parse_block_device_mapping(bdm)
+        for bdm in kwargs.get('block_device_mapping', []):
+            _parse_block_device_mapping(bdm)
 
         image = self._get_image(context, kwargs['image_id'])
 
