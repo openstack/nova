@@ -223,6 +223,9 @@ def certificate_update(context, certificate_id, values):
 
 ###################
 
+def floating_ip_get(context, floating_ip_id):
+    return IMPL.floating_ip_get(context, floating_ip_id)
+
 
 def floating_ip_allocate_address(context, host, project_id):
     """Allocate free floating ip and return the address.
