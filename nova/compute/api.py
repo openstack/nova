@@ -250,7 +250,7 @@ class API(base.Base):
             'vm_mode': vm_mode,
             'root_device_name': root_device_name}
 
-        return (num_instances, base_options, security_groups)
+        return (num_instances, base_options, security_groups, image)
 
     def _update_image_block_device_mapping(self, elevated_context, instance_id,
                                            mappings):
@@ -303,7 +303,7 @@ class API(base.Base):
 
             self.db.block_device_mapping_create(elevated_context, values)
 
-    def create_db_entry_for_new_instance(self, context, base_options,
+    def create_db_entry_for_new_instance(self, context, image, base_options,
              security_groups, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security
@@ -393,7 +393,7 @@ class API(base.Base):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options, security_groups = \
+        num_instances, base_options, security_groups, image = \
                     self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
@@ -429,7 +429,7 @@ class API(base.Base):
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options, security_groups = \
+        num_instances, base_options, security_groups, image = \
                     self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
@@ -444,7 +444,7 @@ class API(base.Base):
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
-            instance = self.create_db_entry_for_new_instance(context,
+            instance = self.create_db_entry_for_new_instance(context, image,
                                     base_options, security_groups,
                                     block_device_mapping, num=num)
             instances.append(instance)
