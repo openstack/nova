@@ -942,7 +942,7 @@ def virtual_interface_delete_by_instance(context, instance_id):
     """
     vif_refs = virtual_interface_get_by_instance(context, instance_id)
     for vif_ref in vif_refs:
-        self.virtual_interface_delete(vif_ref['id'])
+        virtual_interface_delete(vif_ref['id'])
 
 
 ###################
