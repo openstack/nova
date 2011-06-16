@@ -257,7 +257,6 @@ class VMOps(object):
                 LOG.info(_('Updating Agent to %s') % agent_build['version'])
                 ret = self.agent_update(instance, agent_build['url'],
                               agent_build['md5hash'])
-                LOG.info('Agent Update returned: %s' % ret)
 
         def _inject_files():
             injected_files = instance.injected_files
