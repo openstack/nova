@@ -693,7 +693,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     def get_diagnostics(self, context, instance_id):
         """Retrieve diagnostics for an instance on this host."""
         instance_ref = self.db.instance_get(context, instance_id)
-
         if instance_ref["state"] == power_state.RUNNING:
             LOG.audit(_("instance %s: retrieving diagnostics"), instance_id,
                       context=context)

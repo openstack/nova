@@ -225,10 +225,6 @@ class reroute_compute(object):
     def __init__(self, method_name):
         self.method_name = method_name
 
-
-    def _route_local():
-        pass
-
     def _route_to_child_zones(context, collection, item_uuid):
         if not FLAGS.enable_zone_routing:
             raise InstanceNotFound(instance_id=item_uuid)
@@ -255,8 +251,7 @@ class reroute_compute(object):
             if utils.is_uuid_like(item_id_or_uuid):
                 item_uuid = item_id_or_uuid
                 try:
-                    instance = self.db.instance_get_by_uuid(
-                                            context, item_uuid)
+                    instance = db.instance_get_by_uuid(context, item_uuid)
                 except exception.InstanceNotFound, e:
                     # NOTE(sirp): since a UUID was passed in, we can attempt
                     # to reroute to a child zone
@@ -269,10 +264,11 @@ class reroute_compute(object):
                     # integer ID in the argument list so that the zone-local code
                     # can continue to use integer IDs.
                     item_id = instance['id']
-                    self.replace_uuid_with_id(args, kwargs, replacement_id)
+                    args = list(args)      # needs to be mutable to replace
+                    self.replace_uuid_with_id(args, kwargs, item_id)
 
             if attempt_reroute:
-                self._route_to_child_zones(context, collection, item_uuid)
+                return self._route_to_child_zones(context, collection, item_uuid)
             else:
                 return f(*args, **kwargs)
 
@@ -303,6 +299,8 @@ class reroute_compute(object):
         if 'instance_id' in kwargs:
             kwargs['instance_id'] = replacement_id
         elif len(args) > 1:
+            # NOTE(sirp): args comes in as a tuple, so we need to convert it
+            # to a list to mutate it, and then convert it back to a tuple
             args.pop(2)
             args.insert(2, replacement_id)
 

@@ -233,7 +233,7 @@ class Instance(BASE, NovaBase):
 
     os_type = Column(String(255))
     vm_mode = Column(String(255))
-    uuid = Column(String(32))
+    uuid = Column(String(36))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
