@@ -255,7 +255,7 @@ class VMOps(object):
 
             if _cmp_version(version, agent_build['version']) < 0:
                 LOG.info(_('Updating Agent to %s') % agent_build['version'])
-                ret = self.agent_update(instance, agent_build['url'],
+                self.agent_update(instance, agent_build['url'],
                               agent_build['md5hash'])
 
         def _inject_files():
