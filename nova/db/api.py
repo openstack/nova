@@ -224,13 +224,13 @@ def certificate_update(context, certificate_id, values):
 ###################
 
 
-def floating_ip_allocate_address(context, host, project_id):
+def floating_ip_allocate_address(context, project_id):
     """Allocate free floating ip and return the address.
 
     Raises if one is not available.
 
     """
-    return IMPL.floating_ip_allocate_address(context, host, project_id)
+    return IMPL.floating_ip_allocate_address(context, project_id)
 
 
 def floating_ip_create(context, values):
@@ -433,9 +433,9 @@ def virtual_interface_get_by_instance(context, instance_id):
 def virtual_interface_get_by_instance_and_network(context, instance_id,
                                                            network_id):
     """gets all virtual interfaces for instance"""
-    return IMPL.virtual_interfaces_get_by_instance_and_network(context,
-                                                               instance_id,
-                                                               network_id)
+    return IMPL.virtual_interface_get_by_instance_and_network(context,
+                                                              instance_id,
+                                                              network_id)
 
 
 def virtual_interface_get_by_network(context, network_id):

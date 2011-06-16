@@ -396,6 +396,10 @@ class NoFloatingIpsDefinedForInstance(NoFloatingIpsDefined):
     message = _("Zero floating ips defined for instance %(instance_id)s.")
 
 
+class NoMoreFloatingIps(NotFound):
+    message = _("Zero floating ips available.")
+
+
 class KeypairNotFound(NotFound):
     message = _("Keypair %(keypair_name)s not found for user %(user_id)s")
 

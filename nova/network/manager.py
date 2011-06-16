@@ -197,7 +197,7 @@ class FloatingIP(object):
             fixed_ip = fixed_ips[0] if fixed_ips else None
 
             # call to correct network host to associate the floating ip
-            network_api.associate_floating_ip(context,
+            self.network_api.associate_floating_ip(context,
                                               floating_ip,
                                               fixed_ip,
                                               affect_auto_assigned=True)
@@ -220,10 +220,12 @@ class FloatingIP(object):
             # disassociate floating ips related to fixed_ip
             for floating_ip in fixed_ip.floating_ips:
                 address = floating_ip['address']
-                network_api.disassociate_floating_ip(context, address)
+                self.network_api.disassociate_floating_ip(context, address)
                 # deallocate if auto_assigned
                 if floating_ip['auto_assigned']:
-                    network_api.release_floating_ip(context, address, True)
+                    self.network_api.release_floating_ip(context,
+                                                         address,
+                                                         True)
 
         # call the next inherited class's deallocate_for_instance()
         # which is currently the NetworkManager version
@@ -242,7 +244,6 @@ class FloatingIP(object):
                                      'allocate any more addresses'))
         # TODO(vish): add floating ips through manage command
         return self.db.floating_ip_allocate_address(context,
-                                                    self.host,
                                                     project_id)
 
     def associate_floating_ip(self, context, floating_address, fixed_address):
@@ -284,6 +285,7 @@ class NetworkManager(manager.SchedulerDependentManager):
         if not network_driver:
             network_driver = FLAGS.network_driver
         self.driver = utils.import_object(network_driver)
+        self.network_api = network_api.API()
         super(NetworkManager, self).__init__(service_name='network',
                                                 *args, **kwargs)
 
@@ -418,7 +420,8 @@ class NetworkManager(manager.SchedulerDependentManager):
                     "enabled": "1"}
             network_dict = {
                 'bridge': network['bridge'],
-                'id': network['id']}
+                'id': network['id'],
+                'injected': network['injected']}
             info = {
                 'label': network['label'],
                 'gateway': network['gateway'],

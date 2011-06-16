@@ -68,16 +68,18 @@ def stub_out_db_network_api(stubs):
                       'dns': '192.168.0.1',
                       'vlan': None,
                       'host': None,
+                      'injected': False,
                       'vpn_public_address': '192.168.0.2'}
 
     fixed_ip_fields = {'id': 0,
                        'network_id': 0,
+                       'network': FakeModel(network_fields),
                        'address': '192.168.0.100',
                        'instance': False,
                        'instance_id': 0,
                        'allocated': False,
-                       'mac_address_id': 0,
-                       'mac_address': None,
+                       'virtual_interface_id': 0,
+                       'virtual_interface': None,
                        'floating_ips': []}
 
     flavor_fields = {'id': 0,
@@ -85,20 +87,20 @@ def stub_out_db_network_api(stubs):
 
     floating_ip_fields = {'id': 0,
                           'address': '192.168.1.100',
-                          'fixed_ip_id': 0,
+                          'fixed_ip_id': None,
                           'fixed_ip': None,
-                          'project_id': 'fake',
+                          'project_id': None,
                           'auto_assigned': False}
 
-    mac_address_fields = {'id': 0,
-                          'address': 'DE:AD:BE:EF:00:00',
-                          'network_id': 0,
-                          'instance_id': 0,
-                          'network': FakeModel(network_fields)}
+    virtual_interface_fields = {'id': 0,
+                                'address': 'DE:AD:BE:EF:00:00',
+                                'network_id': 0,
+                                'instance_id': 0,
+                                'network': FakeModel(network_fields)}
 
     fixed_ips = [fixed_ip_fields]
     floating_ips = [floating_ip_fields]
-    mac_addresses = [mac_address_fields]
+    virtual_interfacees = [virtual_interface_fields]
     networks = [network_fields]
 
     def fake_floating_ip_allocate_address(context, project_id):
@@ -108,7 +110,7 @@ def stub_out_db_network_api(stubs):
         if not ips:
             raise db.NoMoreAddresses()
         ips[0]['project_id'] = project_id
-        return FakeModel(ips[0]['address'])
+        return FakeModel(ips[0])
 
     def fake_floating_ip_deallocate(context, address):
         ips = filter(lambda i: i['address'] == address,
@@ -144,6 +146,9 @@ def stub_out_db_network_api(stubs):
         pass
 
     def fake_floating_ip_get_by_address(context, address):
+        if isinstance(address, FakeModel):
+            # NOTE(tr3buchet): yo dawg, i heard you like addresses
+            address = address['address']
         ips = filter(lambda i: i['address'] == address,
                      floating_ips)
         if not ips:
@@ -188,13 +193,13 @@ def stub_out_db_network_api(stubs):
         if ips:
             ips[0]['instance_id'] = None
             ips[0]['instance'] = None
-            ips[0]['mac_address'] = None
-            ips[0]['mac_address_id'] = None
+            ips[0]['virtual_interface'] = None
+            ips[0]['virtual_interface_id'] = None
 
     def fake_fixed_ip_disassociate_all_by_timeout(context, host, time):
         return 0
 
-    def fake_fixed_ip_get_all_by_instance(context, instance_id):
+    def fake_fixed_ip_get_by_instance(context, instance_id):
         ips = filter(lambda i: i['instance_id'] == instance_id,
                      fixed_ips)
         return [FakeModel(i) for i in ips]
@@ -220,45 +225,46 @@ def stub_out_db_network_api(stubs):
         if ips:
             for key in values:
                 ips[0][key] = values[key]
-                if key == 'mac_address_id':
-                    mac = filter(lambda x: x['id'] == values[key],
-                                 mac_addresses)
-                    if not mac:
+                if key == 'virtual_interface_id':
+                    vif = filter(lambda x: x['id'] == values[key],
+                                 virtual_interfacees)
+                    if not vif:
                         continue
-                    fixed_ip_fields['mac_address'] = FakeModel(mac[0])
+                    fixed_ip_fields['virtual_interface'] = FakeModel(vif[0])
 
     def fake_instance_type_get_by_id(context, id):
         if flavor_fields['id'] == id:
             return FakeModel(flavor_fields)
 
-    def fake_mac_address_create(context, values):
-        mac = dict(mac_address_fields)
-        mac['id'] = max([m['id'] for m in mac_addresses] or [-1]) + 1
+    def fake_virtual_interface_create(context, values):
+        vif = dict(virtual_interface_fields)
+        vif['id'] = max([m['id'] for m in virtual_interfacees] or [-1]) + 1
         for key in values:
-            mac[key] = values[key]
-        return FakeModel(mac)
+            vif[key] = values[key]
+        return FakeModel(vif)
 
-    def fake_mac_address_delete_by_instance(context, instance_id):
-        addresses = [m for m in mac_addresses \
+    def fake_virtual_interface_delete_by_instance(context, instance_id):
+        addresses = [m for m in virtual_interfacees \
                      if m['instance_id'] == instance_id]
         try:
             for address in addresses:
-                mac_addresses.remove(address)
+                virtual_interfacees.remove(address)
         except ValueError:
             pass
 
-    def fake_mac_address_get_all_by_instance(context, instance_id):
-        return [FakeModel(m) for m in mac_addresses \
+    def fake_virtual_interface_get_by_instance(context, instance_id):
+        return [FakeModel(m) for m in virtual_interfacees \
                 if m['instance_id'] == instance_id]
 
-    def fake_mac_address_get_by_instance_and_network(context, instance_id,
-                                                     network_id):
-        mac = filter(lambda m: m['instance_id'] == instance_id \
-                           and m['network_id'] == network_id,
-                     mac_addresses)
-        if not mac:
+    def fake_virtual_interface_get_by_instance_and_network(context,
+                                                           instance_id,
+                                                           network_id):
+        vif = filter(lambda m: m['instance_id'] == instance_id and \
+                               m['network_id'] == network_id,
+                     virtual_interfacees)
+        if not vif:
             return None
-        return FakeModel(mac[0])
+        return FakeModel(vif[0])
 
     def fake_network_create_safe(context, values):
         net = dict(network_fields)
@@ -315,15 +321,15 @@ def stub_out_db_network_api(stubs):
              fake_fixed_ip_create,
              fake_fixed_ip_disassociate,
              fake_fixed_ip_disassociate_all_by_timeout,
-             fake_fixed_ip_get_all_by_instance,
+             fake_fixed_ip_get_by_instance,
              fake_fixed_ip_get_by_address,
              fake_fixed_ip_get_network,
              fake_fixed_ip_update,
              fake_instance_type_get_by_id,
-             fake_mac_address_create,
-             fake_mac_address_delete_by_instance,
-             fake_mac_address_get_all_by_instance,
-             fake_mac_address_get_by_instance_and_network,
+             fake_virtual_interface_create,
+             fake_virtual_interface_delete_by_instance,
+             fake_virtual_interface_get_by_instance,
+             fake_virtual_interface_get_by_instance_and_network,
              fake_network_create_safe,
              fake_network_get,
              fake_network_get_all,

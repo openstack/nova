@@ -43,10 +43,12 @@ class NetworkTestCase(test.TestCase):
         self.network = utils.import_object(FLAGS.network_manager)
         db_fakes.stub_out_db_network_api(self.stubs)
         self.network.db = db
-        self.context = context.RequestContext(project=None, user=self.user)
+        self.network.network_api.db = db
+        self.context = context.RequestContext(project='fake', user=self.user)
 
     def tearDown(self):
         super(NetworkTestCase, self).tearDown()
+        self.manager.delete_user(self.user.id)
         reload(db)
 
 
@@ -65,7 +67,7 @@ class TestFuncs(object):
 
     def test_allocate_for_instance(self):
         instance_id = 0
-        project_id = 0
+        project_id = self.context.project_id
         type_id = 0
         self.network.set_network_hosts(self.context)
         nw = self.network.allocate_for_instance(self.context,
@@ -100,18 +102,18 @@ class TestFuncs(object):
         self.network.add_fixed_ip_to_instance(self.context,
                                               instance_id=instance_id,
                                               network_id=network_id)
-        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        ips = db.fixed_ip_get_by_instance(self.context, instance_id)
         for ip in ips:
             self.assertTrue(ip['allocated'])
         self.network.deallocate_for_instance(self.context,
                                              instance_id=instance_id)
-        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
+        ips = db.fixed_ip_get_by_instance(self.context, instance_id)
         for ip in ips:
             self.assertFalse(ip['allocated'])
 
     def test_lease_release_fixed_ip(self):
         instance_id = 0
-        project_id = 0
+        project_id = self.context.project_id
         type_id = 0
         self.network.set_network_hosts(self.context)
         nw = self.network.allocate_for_instance(self.context,
@@ -122,21 +124,21 @@ class TestFuncs(object):
         self.assertTrue(nw[0])
         network_id = nw[0][0]['id']
 
-        ips = db.fixed_ip_get_all_by_instance(self.context, instance_id)
-        mac = db.mac_address_get_by_instance_and_network(self.context,
-                                                         instance_id,
-                                                         network_id)
+        ips = db.fixed_ip_get_by_instance(self.context, instance_id)
+        vif = db.virtual_interface_get_by_instance_and_network(self.context,
+                                                               instance_id,
+                                                               network_id)
         self.assertTrue(ips)
         address = ips[0]['address']
 
         db.fixed_ip_associate(self.context, address, instance_id)
         db.fixed_ip_update(self.context, address,
-                           {'mac_address_id': mac['id']})
+                           {'virtual_interface_id': vif['id']})
 
-        self.network.lease_fixed_ip(self.context, mac['address'], address)
+        self.network.lease_fixed_ip(self.context, vif['address'], address)
         ip = db.fixed_ip_get_by_address(self.context, address)
         self.assertTrue(ip['leased'])
 
-        self.network.release_fixed_ip(self.context, mac['address'], address)
+        self.network.release_fixed_ip(self.context, vif['address'], address)
         ip = db.fixed_ip_get_by_address(self.context, address)
         self.assertFalse(ip['leased'])

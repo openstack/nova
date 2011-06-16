@@ -83,7 +83,6 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'kernel_id': 2,
                   'ramdisk_id': 3,
                   'instance_type_id': '3',  # m1.large
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
     def _create_volume(self, size='0'):
@@ -210,10 +209,23 @@ class XenAPIVMTestCase(test.TestCase):
                 'kernel_id': 2,
                 'ramdisk_id': 3,
                 'instance_type_id': '3',  # m1.large
-                'mac_address': 'aa:bb:cc:dd:ee:ff',
                 'os_type': 'linux'}
+            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                              {'broadcast': '192.168.0.255',
+                               'dns': ['192.168.0.1'],
+                               'gateway': '192.168.0.1',
+                               'gateway6': 'dead:beef::1',
+                               'ip6s': [{'enabled': '1',
+                                         'ip': 'dead:beef::dcad:beff:feef:0',
+                                               'netmask': '64'}],
+                               'ips': [{'enabled': '1',
+                                        'ip': '192.168.0.100',
+                                        'netmask': '255.255.255.0'}],
+                               'label': 'fake',
+                               'mac': 'DE:AD:BE:EF:00:00',
+                               'rxtx_cap': 3})]
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance, {})
+            self.conn.spawn(instance, network_info)
 
         gt1 = eventlet.spawn(_do_build, 1, self.project.id, self.user.id)
         gt2 = eventlet.spawn(_do_build, 2, self.project.id, self.user.id)
@@ -301,22 +313,22 @@ class XenAPIVMTestCase(test.TestCase):
 
         if check_injection:
             xenstore_data = self.vm['xenstore_data']
-            key = 'vm-data/networking/aabbccddeeff'
+            key = 'vm-data/networking/DEADBEEF0000'
             xenstore_value = xenstore_data[key]
             tcpip_data = ast.literal_eval(xenstore_value)
             self.assertEquals(tcpip_data,
-                              {'label': 'fake_flat_network',
-                               'broadcast': '10.0.0.255',
-                               'ips': [{'ip': '10.0.0.3',
-                                        'netmask':'255.255.255.0',
-                                        'enabled':'1'}],
-                                'ip6s': [{'ip': 'fe80::a8bb:ccff:fedd:eeff',
-                                          'netmask': '120',
-                                          'enabled': '1'}],
-                                'mac': 'aa:bb:cc:dd:ee:ff',
-                                'dns': ['10.0.0.2'],
-                                'gateway': '10.0.0.1',
-                                'gateway6': 'fe80::a00:1'})
+                              {'broadcast': '192.168.0.255',
+                               'dns': ['192.168.0.1'],
+                               'gateway': '192.168.0.1',
+                               'gateway6': 'dead:beef::1',
+                               'ip6s': [{'enabled': '1',
+                                         'ip': 'dead:beef::dcad:beff:feef:0',
+                                               'netmask': '64'}],
+                               'ips': [{'enabled': '1',
+                                        'ip': '192.168.0.100',
+                                        'netmask': '255.255.255.0'}],
+                               'label': 'fake',
+                               'mac': 'DE:AD:BE:EF:00:00'})
 
     def check_vm_params_for_windows(self):
         self.assertEquals(self.vm['platform']['nx'], 'true')
@@ -331,7 +343,7 @@ class XenAPIVMTestCase(test.TestCase):
 
     def check_vm_params_for_linux(self):
         self.assertEquals(self.vm['platform']['nx'], 'false')
-        self.assertEquals(self.vm['PV_args'], 'clocksource=jiffies')
+        self.assertEquals(self.vm['PV_args'], '')
         self.assertEquals(self.vm['PV_bootloader'], 'pygrub')
 
         # check that these are not set
@@ -361,11 +373,24 @@ class XenAPIVMTestCase(test.TestCase):
                   'kernel_id': kernel_id,
                   'ramdisk_id': ramdisk_id,
                   'instance_type_id': instance_type_id,
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': os_type}
         if create_record:
             instance = db.instance_create(self.context, values)
-            self.conn.spawn(instance, None)
+            network_info = [({'bridge': 'fa0', 'id': 0, 'injected': True},
+                              {'broadcast': '192.168.0.255',
+                               'dns': ['192.168.0.1'],
+                               'gateway': '192.168.0.1',
+                               'gateway6': 'dead:beef::1',
+                               'ip6s': [{'enabled': '1',
+                                         'ip': 'dead:beef::dcad:beff:feef:0',
+                                               'netmask': '64'}],
+                               'ips': [{'enabled': '1',
+                                        'ip': '192.168.0.100',
+                                        'netmask': '255.255.255.0'}],
+                               'label': 'fake',
+                               'mac': 'DE:AD:BE:EF:00:00',
+                               'rxtx_cap': 3})]
+            self.conn.spawn(instance, network_info)
         else:
             instance = db.instance_get(self.context, instance_id)
         self.create_vm_record(self.conn, os_type, instance_id)
@@ -447,11 +472,11 @@ class XenAPIVMTestCase(test.TestCase):
             index = config.index('auto eth0')
             self.assertEquals(config[index + 1:index + 8], [
                 'iface eth0 inet static',
-                'address 10.0.0.3',
+                'address 192.168.0.100',
                 'netmask 255.255.255.0',
-                'broadcast 10.0.0.255',
-                'gateway 10.0.0.1',
-                'dns-nameservers 10.0.0.2',
+                'broadcast 192.168.0.255',
+                'gateway 192.168.0.1',
+                'dns-nameservers 192.168.0.1',
                 ''])
             self._tee_executed = True
             return '', ''
@@ -554,7 +579,7 @@ class XenAPIVMTestCase(test.TestCase):
             vif_rec = xenapi_fake.get_record('VIF', vif_ref)
             self.assertEquals(vif_rec['qos_algorithm_type'], 'ratelimit')
             self.assertEquals(vif_rec['qos_algorithm_params']['kbps'],
-                              str(4 * 1024))
+                              str(3 * 1024))
 
     def test_rescue(self):
         self.flags(xenapi_inject_image=False)
@@ -587,10 +612,23 @@ class XenAPIVMTestCase(test.TestCase):
             'kernel_id': 2,
             'ramdisk_id': 3,
             'instance_type_id': '3',  # m1.large
-            'mac_address': 'aa:bb:cc:dd:ee:ff',
             'os_type': 'linux'}
         instance = db.instance_create(self.context, values)
-        self.conn.spawn(instance, None)
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+        self.conn.spawn(instance, network_info)
         return instance
 
 
@@ -662,7 +700,6 @@ class XenAPIMigrateInstance(test.TestCase):
                   'ramdisk_id': None,
                   'local_gb': 5,
                   'instance_type_id': '3',  # m1.large
-                  'mac_address': 'aa:bb:cc:dd:ee:ff',
                   'os_type': 'linux'}
 
         fake_utils.stub_out_utils_execute(self.stubs)
@@ -687,7 +724,22 @@ class XenAPIMigrateInstance(test.TestCase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForMigrationTests)
         stubs.stubout_loopingcall_start(self.stubs)
         conn = xenapi_conn.get_connection(False)
-        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'))
+        network_info = [({'bridge': 'fa0', 'id': 0, 'injected': False},
+                          {'broadcast': '192.168.0.255',
+                           'dns': ['192.168.0.1'],
+                           'gateway': '192.168.0.1',
+                           'gateway6': 'dead:beef::1',
+                           'ip6s': [{'enabled': '1',
+                                     'ip': 'dead:beef::dcad:beff:feef:0',
+                                           'netmask': '64'}],
+                           'ips': [{'enabled': '1',
+                                    'ip': '192.168.0.100',
+                                    'netmask': '255.255.255.0'}],
+                           'label': 'fake',
+                           'mac': 'DE:AD:BE:EF:00:00',
+                           'rxtx_cap': 3})]
+        conn.finish_resize(instance, dict(base_copy='hurr', cow='durr'),
+                                                           network_info)
 
 
 class XenAPIDetermineDiskImageTestCase(test.TestCase):

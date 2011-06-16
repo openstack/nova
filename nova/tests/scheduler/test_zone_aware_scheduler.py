@@ -197,7 +197,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
                 'instance_properties': {},
                 'instance_type': {},
                 'filter_driver': 'nova.scheduler.host_filter.AllHostsFilter',
-                'blob': "Non-None blob data"
+                'blob': "Non-None blob data",
             }
 
         result = sched.schedule_run_instance(None, 1, request_spec)

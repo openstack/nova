@@ -184,13 +184,6 @@ class Instance(BASE, NovaBase):
     def project(self):
         return auth.manager.AuthManager().get_project(self.project_id)
 
-    #TODO{tr3buchet): i don't like this shim.....
-    # prevents breaking ec2 api
-    # should go away with zones when ec2 api doesn't have compute db access
-    @property
-    def fixed_ip(self):
-        return self.fixed_ips[0] if self.fixed_ips else None
-
     image_ref = Column(String(255))
     kernel_id = Column(String(255))
     ramdisk_id = Column(String(255))

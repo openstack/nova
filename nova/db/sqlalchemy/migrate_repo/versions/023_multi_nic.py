@@ -48,7 +48,7 @@ virtual_interfaces = Table('virtual_interfaces', meta,
                String(length=255, convert_unicode=False, assert_unicode=None,
                       unicode_error=None, _warn_on_bytestring=False),
                unique=True),
-        )
+        mysql_engine='InnoDB')
 
 
 # bridge_interface column to add to networks table
