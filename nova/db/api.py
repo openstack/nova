@@ -1251,19 +1251,19 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
 ####################
 
 
-def instance_type_metadata_get(context, instance_type_id):
-    """Get all metadata for an instance type."""
-    return IMPL.instance_type_metadata_get(context, instance_type_id)
+def instance_type_extra_specs_get(context, instance_type_id):
+    """Get all extra specs for an instance type."""
+    return IMPL.instance_type_extra_specs_get(context, instance_type_id)
 
 
-def instance_type_metadata_delete(context, instance_type_id, key):
-    """Delete the given metadata item."""
-    IMPL.instance_type_metadata_delete(context, instance_type_id, key)
+def instance_type_extra_specs_delete(context, instance_type_id, key):
+    """Delete the given extra specs item."""
+    IMPL.instance_type_extra_specs_delete(context, instance_type_id, key)
 
 
-def instance_type_metadata_update_or_create(context, instance_type_id,
-                                            metadata):
-    """Create or update instance type metadata. This adds or modifies the
-    key/value pairs specified in the metadata dict argument"""
-    IMPL.instance_type_metadata_update_or_create(context, instance_type_id,
-                                                 metadata)
+def instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                               extra_specs):
+    """Create or update instance type extra specs. This adds or modifies the
+    key/value pairs specified in the extra specs dict argument"""
+    IMPL.instance_type_extra_specs_update_or_create(context, instance_type_id,
+                                                    extra_specs)

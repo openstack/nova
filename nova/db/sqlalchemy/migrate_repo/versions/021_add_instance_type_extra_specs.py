@@ -30,7 +30,7 @@ instance_types = Table('instance_types', meta,
 # New Tables
 #
 
-instance_type_metadata_table = Table('instance_type_metadata', meta,
+instance_type_extra_specs_table = Table('instance_type_extra_specs', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
         Column('deleted_at', DateTime(timezone=False)),
@@ -52,7 +52,7 @@ def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine;
     # bind migrate_engine to your metadata
     meta.bind = migrate_engine
-    for table in (instance_type_metadata_table, ):
+    for table in (instance_type_extra_specs_table, ):
         try:
             table.create()
         except Exception:
@@ -63,5 +63,5 @@ def upgrade(migrate_engine):
 
 def downgrade(migrate_engine):
     # Operations to reverse the above upgrade go here.
-    for table in (instance_type_metadata_table, ):
+    for table in (instance_type_extra_specs_table, ):
         table.drop()
