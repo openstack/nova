@@ -32,7 +32,7 @@ def upgrade(migrate_engine):
 
     rows = migrate_engine.execute(instances.select())
     for row in rows:
-        instance_uuid = uuid.uuid4().hex
+        instance_uuid = uuid.uuid4()
         migrate_engine.execute(instances.update().values(uuid=instance_uuid))
 
 
