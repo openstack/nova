@@ -227,6 +227,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         for bdm in self.db.block_device_mapping_get_all_by_instance(
             context, instance_id):
             LOG.debug(_("setting up bdm %s"), bdm)
+
+            if bdm['no_device']:
+                continue
+            if bdm['virtual_name']:
+                # TODO(yamahata):
+                # block devices for swap and ephemeralN will be
+                # created by virt driver locally in compute node.
+                assert (bdm['virtual_name'] == 'swap' or
+                        bdm['virtual_name'].startswith('ephemeral'))
+                continue
+
             if ((bdm['snapshot_id'] is not None) and
                 (bdm['volume_id'] is None)):
                 # TODO(yamahata): default name and description
@@ -259,15 +270,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 block_device_mapping.append({'device_path': dev_path,
                                              'mount_device':
                                              bdm['device_name']})
-            elif bdm['virtual_name'] is not None:
-                # TODO(yamahata): ephemeral/swap device support
-                LOG.debug(_('block_device_mapping: '
-                            'ephemeral device is not supported yet'))
-            else:
-                # TODO(yamahata): NoDevice support
-                assert bdm['no_device']
-                LOG.debug(_('block_device_mapping: '
-                            'no device is not supported yet'))
 
         return block_device_mapping
 

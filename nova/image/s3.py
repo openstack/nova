@@ -141,6 +141,28 @@ class S3ImageService(service.BaseImageService):
         except Exception:
             arch = 'x86_64'
 
+        # NOTE(yamahata):
+        # EC2 ec2-budlne-image --block-device-mapping accepts
+        # <virtual name>=<device name> where
+        # virtual name = {ami, root, swap, ephemeral<N>}
+        #                where N is no negative integer
+        # device name = the device name seen by guest kernel.
+        # They are converted into
+        # block_device_mapping/mapping/{virtual, device}
+        #
+        # Do NOT confuse this with ec2-register's block device mapping
+        # argument.
+        mappings = []
+        try:
+            block_device_mapping = manifest.findall('machine_configuration/'
+                                                    'block_device_mapping/'
+                                                    'mapping')
+            for bdm in block_device_mapping:
+                mappings.append({'virtual': bdm.find('virtual').text,
+                                 'device': bdm.find('device').text})
+        except Exception:
+            mappings = []
+
         properties = metadata['properties']
         properties['project_id'] = context.project_id
         properties['architecture'] = arch
@@ -150,6 +172,9 @@ class S3ImageService(service.BaseImageService):
 
         if ramdisk_id:
             properties['ramdisk_id'] = ec2utils.ec2_id_to_id(ramdisk_id)
+
+        if mappings:
+            properties['mappings'] = mappings
 
         metadata.update({'disk_format': image_format,
                          'container_format': image_format,

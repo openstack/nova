@@ -135,3 +135,22 @@ def dict_from_dotted_str(items):
                 args[key] = value
 
     return args
+
+
+def properties_root_device_name(properties):
+    """get root device name from image meta data.
+    If it isn't specified, return None.
+    """
+    root_device_name = None
+
+    # NOTE(yamahata): see image_service.s3.s3create()
+    for bdm in properties.get('mappings', []):
+        if bdm['virtual'] == 'root':
+            root_device_name = bdm['device']
+
+    # NOTE(yamahata): register_image's command line can override
+    #                 <machine>.manifest.xml
+    if 'root_device_name' in properties:
+        root_device_name = properties['root_device_name']
+
+    return root_device_name
