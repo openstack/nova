@@ -6,8 +6,6 @@ What is it
 
 Multinic allows an instance to have more than one vif connected to it. Each vif is represenative of a separate network with its own IP block.
 
-<Diagram of virtual machine with 2 vifs & hypervisor with 2 bridges>
-
 Managers
 --------
 
@@ -16,7 +14,7 @@ Each of the 3 network managers are designed to run indipendantly of the compute 
 Flat Manager 
 ------------
 
-<Diagram of Flat Network (basically the one above)>
+    .. image:: /images/multinic_flat.png
 
 The flat manager is most similar to a traditional switched network environment. It assumes that the IP routing, DNS, DHCP (possibly) and bridge creation is handled by something else. That is it makes no attemp to configure any of this. It does keep track of a range of IPs for the instances that are connected to the network to be allocated.
 
