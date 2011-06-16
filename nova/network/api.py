@@ -38,6 +38,11 @@ class API(base.Base):
         rv = self.db.floating_ip_get(context)
         return dict(rv.iteritems())
 
+    def list(self, context):
+        ips = self.db.floating_ip_get_all_by_project(context,
+                                                     context.project_id)
+        return ips
+
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_('Quota exceeeded for %s, tried to allocate '
