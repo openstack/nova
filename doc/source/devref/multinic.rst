@@ -20,10 +20,12 @@ The flat manager is most similar to a traditional switched network environment. 
 
 Each instance will get a fixed ip from each network's pool. The guest operating system may be configured to gather this information through an agent or by the hypervisor injecting the files, or it may ignore it completly and come up with only a layer 2 connection.
 
+Flat manager requires at least one nova-network process running that will listen to the API queue and respond to queries. It does not need to sit on any of the networks but it does keep track of the ip's it hands out to instances.
+
 FlatDHCP Manager
 ----------------
 
-<Diagram of FlatDHCP Manager>
+    .. image:: /images/multinic_dhcp.png
 
 
 
