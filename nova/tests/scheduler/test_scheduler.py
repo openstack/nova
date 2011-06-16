@@ -1109,10 +1109,4 @@ class CallZoneMethodTest(test.TestCase):
     def test_call_zone_method_generates_exception(self):
         context = {}
         method = 'raises_exception'
-        results = api.call_zone_method(context, method)
-
-        # FIXME(sirp): for now the _error_trap code is catching errors and
-        # converting them to a ("ERROR", "string") tuples. The code (and this
-        # test) should eventually handle real exceptions.
-        expected = [(1, ('ERROR', 'testing'))]
-        self.assertEqual(expected, results)
+        self.assertRaises(Exception, api.call_zone_method, context, method)

@@ -31,10 +31,12 @@ from nova import test
 from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
+from nova.api.openstack import create_instance_helper
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
 import nova.db.api
+import nova.scheduler.api
 from nova.db.sqlalchemy.models import Instance
 from nova.db.sqlalchemy.models import InstanceMetadata
 import nova.image.fake
@@ -68,6 +70,34 @@ def return_servers(context, user_id=1):
     return [stub_instance(i, user_id) for i in xrange(5)]
 
 
+def return_servers_by_reservation(context, reservation_id=""):
+    return [stub_instance(i, reservation_id) for i in xrange(5)]
+
+
+def return_servers_by_reservation_empty(context, reservation_id=""):
+    return []
+
+
+def return_servers_from_child_zones_empty(*args, **kwargs):
+    return []
+
+
+def return_servers_from_child_zones(*args, **kwargs):
+    class Server(object):
+        pass
+
+    zones = []
+    for zone in xrange(3):
+        servers = []
+        for server_id in xrange(5):
+            server = Server()
+            server._info = stub_instance(server_id, reservation_id="child")
+            servers.append(server)
+
+        zones.append(("Zone%d" % zone, servers))
+    return zones
+
+
 def return_security_group(context, instance_id, security_group_id):
     pass
 
@@ -81,7 +111,7 @@ def instance_addresses(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
-                  host=None, power_state=0):
+                  host=None, power_state=0, reservation_id=""):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -92,6 +122,11 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
 
     if host is not None:
         host = str(host)
+
+    # ReservationID isn't sent back, hack it in there.
+    server_name = "server%s" % id
+    if reservation_id != "":
+        server_name = "reservation_%s" % (reservation_id, )
 
     instance = {
         "id": id,
@@ -113,13 +148,13 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "host": host,
         "instance_type": dict(inst_type),
         "user_data": "",
-        "reservation_id": "",
+        "reservation_id": reservation_id,
         "mac_address": "",
         "scheduled_at": utils.utcnow(),
         "launched_at": utils.utcnow(),
         "terminated_at": utils.utcnow(),
         "availability_zone": "",
-        "display_name": "server%s" % id,
+        "display_name": server_name,
         "display_description": "",
         "locked": False,
         "metadata": metadata}
@@ -365,6 +400,57 @@ class ServersTest(test.TestCase):
             self.assertEqual(s.get('imageId', None), None)
             i += 1
 
+    def test_get_server_list_with_reservation_id(self):
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+                       return_servers_by_reservation)
+        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
+                       return_servers_from_child_zones)
+        req = webob.Request.blank('/v1.0/servers?reservation_id=foo')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            if '_is_precooked' in s:
+                self.assertEqual(s.get('reservation_id'), 'child')
+            else:
+                self.assertEqual(s.get('name'), 'server%d' % i)
+                i += 1
+
+    def test_get_server_list_with_reservation_id_empty(self):
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+                       return_servers_by_reservation_empty)
+        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
+                       return_servers_from_child_zones_empty)
+        req = webob.Request.blank('/v1.0/servers/detail?reservation_id=foo')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            if '_is_precooked' in s:
+                self.assertEqual(s.get('reservation_id'), 'child')
+            else:
+                self.assertEqual(s.get('name'), 'server%d' % i)
+                i += 1
+
+    def test_get_server_list_with_reservation_id_details(self):
+        self.stubs.Set(nova.db.api, 'instance_get_all_by_reservation',
+                       return_servers_by_reservation)
+        self.stubs.Set(nova.scheduler.api, 'call_zone_method',
+                       return_servers_from_child_zones)
+        req = webob.Request.blank('/v1.0/servers/detail?reservation_id=foo')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+
+        i = 0
+        for s in res_dict['servers']:
+            if '_is_precooked' in s:
+                self.assertEqual(s.get('reservation_id'), 'child')
+            else:
+                self.assertEqual(s.get('name'), 'server%d' % i)
+                i += 1
+
     def test_get_server_list_v1_1(self):
         req = webob.Request.blank('/v1.1/servers')
         res = req.get_response(fakes.wsgi_app())
@@ -485,7 +571,8 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.db.api, 'queue_get_for', queue_get_for)
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
-        self.stubs.Set(nova.api.openstack.servers.Controller,
+        self.stubs.Set(
+            nova.api.openstack.create_instance_helper.CreateInstanceHelper,
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
@@ -513,6 +600,48 @@ class ServersTest(test.TestCase):
 
     def test_create_instance(self):
         self._test_create_instance_helper()
+
+    def test_create_instance_via_zones(self):
+        """Server generated ReservationID"""
+        self._setup_for_create_instance()
+        FLAGS.allow_admin_api = True
+
+        body = dict(server=dict(
+            name='server_test', imageId=3, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}))
+        req = webob.Request.blank('/v1.0/zones/boot')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        reservation_id = json.loads(res.body)['reservation_id']
+        self.assertEqual(res.status_int, 200)
+        self.assertNotEqual(reservation_id, "")
+        self.assertNotEqual(reservation_id, None)
+        self.assertTrue(len(reservation_id) > 1)
+
+    def test_create_instance_via_zones_with_resid(self):
+        """User supplied ReservationID"""
+        self._setup_for_create_instance()
+        FLAGS.allow_admin_api = True
+
+        body = dict(server=dict(
+            name='server_test', imageId=3, flavorId=2,
+            metadata={'hello': 'world', 'open': 'stack'},
+            personality={}, reservation_id='myresid'))
+        req = webob.Request.blank('/v1.0/zones/boot')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+
+        reservation_id = json.loads(res.body)['reservation_id']
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(reservation_id, "myresid")
 
     def test_create_instance_no_key_pair(self):
         fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
@@ -1403,7 +1532,7 @@ class ServersTest(test.TestCase):
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def setUp(self):
-        self.deserializer = servers.ServerXMLDeserializer()
+        self.deserializer = create_instance_helper.ServerXMLDeserializer()
 
     def test_minimal_request(self):
         serial_request = """
@@ -1735,7 +1864,8 @@ class TestServerInstanceCreation(test.TestCase):
 
         compute_api = MockComputeAPI()
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
-        self.stubs.Set(nova.api.openstack.servers.Controller,
+        self.stubs.Set(
+            nova.api.openstack.create_instance_helper.CreateInstanceHelper,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
         return compute_api
 
@@ -1991,6 +2121,6 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
     @staticmethod
     def _get_k_r(image_meta):
         """Rebinding function to a shorter name for convenience"""
-        kernel_id, ramdisk_id = \
-            servers.Controller._do_get_kernel_ramdisk_from_image(image_meta)
+        kernel_id, ramdisk_id = create_instance_helper.CreateInstanceHelper. \
+                                _do_get_kernel_ramdisk_from_image(image_meta)
         return kernel_id, ramdisk_id
