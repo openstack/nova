@@ -271,6 +271,7 @@ class Authorizer(wsgi.Middleware):
                 'DescribeImageAttribute': ['all'],
                 'ModifyImageAttribute': ['projectmanager', 'sysadmin'],
                 'UpdateImage': ['projectmanager', 'sysadmin'],
+                'CreateImage': ['projectmanager', 'sysadmin'],
             },
             'AdminController': {
                 # All actions have the same permission: ['none'] (the default)

@@ -1291,3 +1291,104 @@ class CloudController(object):
         internal_id = ec2utils.ec2_id_to_id(image_id)
         result = self.image_service.update(context, internal_id, dict(kwargs))
         return result
+
+    # TODO(yamahata): race condition
+    # At the moment there is no way to prevent others from
+    # manipulating instances/volumes/snapshots.
+    # As other code doesn't take it into consideration, here we don't
+    # care of it for now. Ostrich algorithm
+    def create_image(self, context, instance_id, **kwargs):
+        # NOTE(yamahata): name/description are ignored by register_image(),
+        #                 do so here
+        #description = kwargs.get('name')
+        #description = kwargs.get('description')
+        no_reboot = kwargs.get('no_reboot', False)
+
+        ec2_instance_id = instance_id
+        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+        instance = self.compute_api.get(context, instance_id)
+
+        # stop the instance if necessary
+        restart_instance = False
+        if not no_reboot:
+            state_description = instance['state_description']
+
+            # if the instance is in subtle state, refuse to proceed.
+            if state_description not in ('running', 'stopping', 'stopped'):
+                raise exception.InstanceNotRunning(instance_id=ec2_instance_id)
+
+            if state_description == 'running':
+                restart_instance = True
+                self.compute_api.stop(context, instance_id=instance_id)
+
+            # wait instance for really stopped
+            while state_description != 'stopped':
+                time.sleep(1)
+                instance = self.compute_api.get(context, instance_id)
+                state_description = instance['state_description']
+                # NOTE(yamahata): timeout and error?
+
+        src_image = self.image_service.show(context, instance['image_id'])
+        properties = src_image['properties']
+        if instance['root_device_name']:
+            properties['root_device_name'] = instance['root_device_name']
+
+        mapping = []
+        bdms = db.block_device_mapping_get_all_by_instance(context,
+                                                           instance_id)
+        for bdm in bdms:
+            if bdm.no_device:
+                continue
+            m = {}
+            for attr in ('device_name', 'snapshot_id', 'volume_id',
+                         'volume_size', 'delete_on_termination', 'no_device',
+                         'virtual_name'):
+                val = getattr(bdm, attr)
+                if val is not None:
+                    m[attr] = val
+
+            volume_id = m.get('volume_id')
+            if m.get('snapshot_id') and volume_id:
+                # create snapshot based on volume_id
+                vol = self.volume_api.get(context, volume_id=volume_id)
+                # NOTE(yamahata): Should we wait for snapshot creation?
+                #                 Linux LVM snapshot creation completes in
+                #                 short time, it doesn't matter for now.
+                snapshot = self.volume_api.create_snapshot(
+                    context, volume_id=volume_id, name=vol['display_name'],
+                    description=vol['display_description'])
+                m['snapshot_id'] = snapshot['id']
+                del m['volume_id']
+
+            if m:
+                mapping.append(m)
+
+        for m in properties.get('mappings', []):
+            virtual_name = m['virtual']
+            if virtual_name in ('ami', 'root'):
+                continue
+
+            assert (virtual_name == 'swap' or
+                    virtual_name.startswith('ephemeral'))
+            device_name = m['device_name']
+            if device_name in [b.device_name for b in mapping
+                               if not b.no_device]:
+                continue
+
+            # NOTE(yamahata): swap and ephemeral devices are specified in
+            #                 AMI, but disabled for this instance by user.
+            #                 So disable those device by no_device.
+            mapping.append({'device_name': device_name, 'no_device': True})
+
+        if mapping:
+            properties['block_device_mapping'] = mapping
+
+        for attr in ('status', 'location', 'id'):
+            del src_image[attr]
+
+        image_id = self._register_image(context, src_image)
+
+        if restart_instance:
+            self.compute_api.start(context, instance_id=instance_id)
+
+        return {'imageId': image_id}
