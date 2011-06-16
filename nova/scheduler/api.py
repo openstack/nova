@@ -300,8 +300,6 @@ class reroute_compute(object):
         if 'instance_id' in kwargs:
             kwargs['instance_id'] = replacement_id
         elif len(args) > 1:
-            # NOTE(sirp): args comes in as a tuple, so we need to convert it
-            # to a list to mutate it, and then convert it back to a tuple
             args.pop(2)
             args.insert(2, replacement_id)
 

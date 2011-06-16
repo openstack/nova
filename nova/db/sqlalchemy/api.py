@@ -843,7 +843,7 @@ def instance_destroy(context, instance_id):
 
 @require_context
 def instance_get_by_uuid(context, uuid, session=None):
-    partial = _instance_get(context, session=session)
+    partial = _build_instance_get(context, session=session)
     result = partial.filter_by(uuid=uuid)
     result = result.first()
     if not result:
@@ -855,7 +855,7 @@ def instance_get_by_uuid(context, uuid, session=None):
 
 @require_context
 def instance_get(context, instance_id, session=None):
-    partial = _instance_get(context, session=session)
+    partial = _build_instance_get(context, session=session)
     result = partial.filter_by(id=instance_id)
     result = result.first()
     if not result:
@@ -864,7 +864,7 @@ def instance_get(context, instance_id, session=None):
 
 
 @require_context
-def _instance_get(context, session=None):
+def _build_instance_get(context, session=None):
     if not session:
         session = get_session()
 
