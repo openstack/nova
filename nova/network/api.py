@@ -34,6 +34,10 @@ LOG = logging.getLogger('nova.network')
 class API(base.Base):
     """API for interacting with the network manager."""
 
+    def get(self, context, id):
+        rv = self.db.floating_ip_get(context)
+        return dict(rv.iteritems())
+
     def allocate_floating_ip(self, context):
         if quota.allowed_floating_ips(context, 1) < 1:
             LOG.warn(_('Quota exceeeded for %s, tried to allocate '
