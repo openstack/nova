@@ -517,7 +517,6 @@ class API(base.Base):
             instance = self.db.instance_get_by_uuid(context, uuid)
         else:
             instance = self.db.instance_get(context, instance_id)
-
         return dict(instance.iteritems())
 
     @scheduler_api.reroute_compute("get")

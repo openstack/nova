@@ -218,20 +218,20 @@ class reroute_compute(object):
         3. If the item was found, then extract integer ID, and pass that to
            the wrapped method. (This ensures that zone-local code can
            continue to use integer IDs).
-        
+
         4. If the item was not found, we delgate the call to a child zone
            using the UUID.
     """
     def __init__(self, method_name):
         self.method_name = method_name
 
-    def _route_to_child_zones(context, collection, item_uuid):
+    def _route_to_child_zones(self, context, collection, item_uuid):
         if not FLAGS.enable_zone_routing:
-            raise InstanceNotFound(instance_id=item_uuid)
+            raise exception.InstanceNotFound(instance_id=item_uuid)
 
         zones = db.zone_get_all(context)
         if not zones:
-            raise InstanceNotFound(instance_id=item_uuid)
+            raise exception.InstanceNotFound(instance_id=item_uuid)
 
         # Ask the children to provide an answer ...
         LOG.debug(_("Asking child zones ..."))
@@ -247,7 +247,7 @@ class reroute_compute(object):
             collection, context, item_id_or_uuid = \
                             self.get_collection_context_and_id(args, kwargs)
 
-            attempt_reroute = False  
+            attempt_reroute = False
             if utils.is_uuid_like(item_id_or_uuid):
                 item_uuid = item_id_or_uuid
                 try:
