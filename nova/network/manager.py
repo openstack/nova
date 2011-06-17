@@ -456,7 +456,7 @@ class NetworkManager(manager.SchedulerDependentManager):
             else:
                 self.db.virtual_interface_delete_by_instance(context,
                                                              instance_id)
-                raise exception.VirtualInterface(_("5 create attempts failed"))
+                raise exception.VirtualInterfaceMacAddressException()
 
     def generate_mac_address(self):
         """Generate a mac address for a vif on an instance."""
