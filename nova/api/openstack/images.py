@@ -101,7 +101,7 @@ class Controller(object):
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = self._server_id_from_req_data(body)
+            server_id = self._server_id_from_req(req, body)
             image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
@@ -116,7 +116,7 @@ class Controller(object):
         """Indicates that you must use a Controller subclass."""
         raise NotImplementedError
 
-    def _server_id_from_req_data(self, data):
+    def _server_id_from_req(self, req, data):
         raise NotImplementedError()
 
     def _get_extra_properties(self, req, data):
@@ -157,7 +157,7 @@ class ControllerV10(Controller):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def _server_id_from_req_data(self, data):
+    def _server_id_from_req(self, req, data):
         try:
             return data['image']['serverId']
         except KeyError:
@@ -201,14 +201,20 @@ class ControllerV11(Controller):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def _server_id_from_req_data(self, data):
+    def _server_id_from_req(self, req, data):
         try:
             server_ref = data['image']['serverRef']
         except KeyError:
             msg = _("Expected serverRef attribute on server entity.")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        return os.path.split(server_ref)[1]
+        head, tail = os.path.split(server_ref)
+
+        if head and head != os.path.join(req.application_url, 'servers'):
+            msg = _("serverRef must match request url")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        return tail
 
     def _get_extra_properties(self, req, data):
         server_ref = data['image']['serverRef']
