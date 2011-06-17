@@ -445,14 +445,14 @@ def floating_forward_rules(floating_ip, fixed_ip):
 
 
 def ensure_vlan_bridge(vlan_num, bridge, bridge_interface, net_attrs=None):
-    """Create a vlan and bridge unless they already exist"""
+    """Create a vlan and bridge unless they already exist."""
     interface = ensure_vlan(vlan_num, bridge_interface)
     ensure_bridge(bridge, interface, net_attrs)
 
 
 @utils.synchronized('ensure_vlan', external=True)
 def ensure_vlan(vlan_num, bridge_interface):
-    """Create a vlan unless it already exists"""
+    """Create a vlan unless it already exists."""
     interface = 'vlan%s' % vlan_num
     if not _device_exists(interface):
         LOG.debug(_('Starting VLAN inteface %s'), interface)

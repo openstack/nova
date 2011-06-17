@@ -804,10 +804,9 @@ def fixed_ip_update(context, address, values):
 
 @require_context
 def virtual_interface_create(context, values):
-    """create a new virtual interface record in teh database
+    """Create a new virtual interface record in teh database.
 
-    context = request context object
-    values = dict containing column values
+    :param values: = dict containing column values
     """
     vif_ref = models.VirtualInterface()
     vif_ref.update(values)
@@ -818,10 +817,9 @@ def virtual_interface_create(context, values):
 
 @require_context
 def virtual_interface_get(context, vif_id):
-    """gets a virtual interface from the table
+    """Gets a virtual interface from the table.
 
-    context = request context object
-    vif_id = id of the virtual interface
+    :param vif_id: = id of the virtual interface
     """
     session = get_session()
     vif_ref = session.query(models.VirtualInterface).\
@@ -835,10 +833,9 @@ def virtual_interface_get(context, vif_id):
 
 @require_context
 def virtual_interface_get_by_address(context, address):
-    """gets a virtual interface from the table
+    """Gets a virtual interface from the table.
 
-    context = request context object
-    address = the address of the interface you're looking to get
+    :param address: = the address of the interface you're looking to get
     """
     session = get_session()
     vif_ref = session.query(models.VirtualInterface).\
@@ -852,10 +849,9 @@ def virtual_interface_get_by_address(context, address):
 
 @require_context
 def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
-    """gets the virtual interface fixed_ip is associated with
+    """Gets the virtual interface fixed_ip is associated with.
 
-    context = request context object
-    fixed_ip_id = id of the fixed_ip
+    :param fixed_ip_id: = id of the fixed_ip
     """
     session = get_session()
     vif_ref = session.query(models.VirtualInterface).\
@@ -869,10 +865,9 @@ def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
 
 @require_context
 def virtual_interface_get_by_instance(context, instance_id):
-    """gets all virtual interfaces for instance
+    """Gets all virtual interfaces for instance.
 
-    context = request context object
-    instance_id = id of the instance to retreive vifs for
+    :param instance_id: = id of the instance to retreive vifs for
     """
     session = get_session()
     vif_refs = session.query(models.VirtualInterface).\
@@ -887,7 +882,7 @@ def virtual_interface_get_by_instance(context, instance_id):
 @require_context
 def virtual_interface_get_by_instance_and_network(context, instance_id,
                                                            network_id):
-    """gets virtual interface for instance that's associated with network"""
+    """Gets virtual interface for instance that's associated with network."""
     session = get_session()
     vif_ref = session.query(models.VirtualInterface).\
                       filter_by(instance_id=instance_id).\
@@ -901,10 +896,9 @@ def virtual_interface_get_by_instance_and_network(context, instance_id,
 
 @require_admin_context
 def virtual_interface_get_by_network(context, network_id):
-    """gets all virtual_interface on network
+    """Gets all virtual_interface on network.
 
-    context = request context object
-    network_id = network to retreive vifs for
+    :param network_id: = network to retreive vifs for
     """
     session = get_session()
     vif_refs = session.query(models.VirtualInterface).\
@@ -918,10 +912,9 @@ def virtual_interface_get_by_network(context, network_id):
 
 @require_context
 def virtual_interface_delete(context, vif_id):
-    """delete virtual interface record from teh database
+    """Delete virtual interface record from teh database.
 
-    context = request context object
-    vif_id = id of vif to delete
+    :param vif_id: = id of vif to delete
     """
     vif_ref = virtual_interface_get(context, vif_id)
     session = get_session()
@@ -934,11 +927,10 @@ def virtual_interface_delete(context, vif_id):
 
 @require_context
 def virtual_interface_delete_by_instance(context, instance_id):
-    """delete virtual interface records that are associated
-    with the instance given by instance_id
+    """Delete virtual interface records that are associated
+    with the instance given by instance_id.
 
-    context = request context object
-    instance_id = id of instance
+    :param instance_id: = id of instance
     """
     vif_refs = virtual_interface_get_by_instance(context, instance_id)
     for vif_ref in vif_refs:
@@ -1366,7 +1358,8 @@ def key_pair_get_all_by_user(context, user_id):
 
 @require_admin_context
 def network_associate(context, project_id, force=False):
-    """associate a project with a network
+    """Associate a project with a network.
+
     called by project_get_networks under certain conditions
     and network manager add_network_to_project()
 

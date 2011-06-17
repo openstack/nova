@@ -512,7 +512,7 @@ class Network(BASE, NovaBase):
 
 
 class VirtualInterface(BASE, NovaBase):
-    """Represents a virtual interface on an instance"""
+    """Represents a virtual interface on an instance."""
     __tablename__ = 'virtual_interfaces'
     id = Column(Integer, primary_key=True)
     address = Column(String(255), unique=True)

@@ -406,50 +406,50 @@ def fixed_ip_update(context, address, values):
 
 
 def virtual_interface_create(context, values):
-    """create a virtual interface record in the database"""
+    """Create a virtual interface record in the database."""
     return IMPL.virtual_interface_create(context, values)
 
 
 def virtual_interface_get(context, vif_id):
-    """gets a virtual interface from the table"""
+    """Gets a virtual interface from the table,"""
     return IMPL.virtual_interface_get(context, vif_id)
 
 
 def virtual_interface_get_by_address(context, address):
-    """gets a virtual interface from the table filtering on address"""
+    """Gets a virtual interface from the table filtering on address."""
     return IMPL.virtual_interface_get_by_address(context, address)
 
 
 def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
-    """gets the virtual interface fixed_ip is associated with"""
+    """Gets the virtual interface fixed_ip is associated with."""
     return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
 
 
 def virtual_interface_get_by_instance(context, instance_id):
-    """gets all virtual_interfaces for instance"""
+    """Gets all virtual_interfaces for instance."""
     return IMPL.virtual_interface_get_by_instance(context, instance_id)
 
 
 def virtual_interface_get_by_instance_and_network(context, instance_id,
                                                            network_id):
-    """gets all virtual interfaces for instance"""
+    """Gets all virtual interfaces for instance."""
     return IMPL.virtual_interface_get_by_instance_and_network(context,
                                                               instance_id,
                                                               network_id)
 
 
 def virtual_interface_get_by_network(context, network_id):
-    """gets all virtual interfaces on network"""
+    """Gets all virtual interfaces on network."""
     return IMPL.virtual_interface_get_by_network(context, network_id)
 
 
 def virtual_interface_delete(context, vif_id):
-    """delete virtual interface record from the database"""
+    """Delete virtual interface record from the database."""
     return IMPL.virtual_interface_delete(context, vif_id)
 
 
 def virtual_interface_delete_by_instance(context, instance_id):
-    """delete virtual interface records associated with instance """
+    """Delete virtual interface records associated with instance."""
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
 
 

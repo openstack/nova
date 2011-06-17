@@ -607,8 +607,9 @@ class ComputeManager(manager.SchedulerDependentManager):
     @exception.wrap_exception
     @checks_instance_lock
     def add_fixed_ip_to_instance(self, context, instance_id, network_id):
-        """calls network_api to add new fixed_ip to instance
-        then injects the new network info and resets instance networking
+        """Calls network_api to add new fixed_ip to instance
+        then injects the new network info and resets instance networking.
+
         """
         self.network_api.add_fixed_ip_to_instance(context, instance_id,
                                                            network_id)

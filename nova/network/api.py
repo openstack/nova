@@ -34,7 +34,7 @@ class API(base.Base):
     """API for interacting with the network manager."""
 
     def allocate_floating_ip(self, context):
-        """adds a floating ip to a project"""
+        """Adds a floating ip to a project."""
         # NOTE(vish): We don't know which network host should get the ip
         #             when we allocate, so just send it to any one.  This
         #             will probably need to move into a network supervisor
@@ -46,7 +46,7 @@ class API(base.Base):
 
     def release_floating_ip(self, context, address,
                             affect_auto_assigned=False):
-        """removes floating ip with address from a project"""
+        """Removes floating ip with address from a project."""
         floating_ip = self.db.floating_ip_get_by_address(context, address)
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
@@ -61,11 +61,12 @@ class API(base.Base):
 
     def associate_floating_ip(self, context, floating_ip, fixed_ip,
                                        affect_auto_assigned=False):
-        """associates a floating ip with a fixed ip
+        """Associates a floating ip with a fixed ip.
+
         ensures floating ip is allocated to the project in context
 
-        fixed_ip is either a fixed_ip object or a string fixed ip address
-        floating_ip is a string floating ip address
+        :param fixed_ip: is either fixed_ip object or a string fixed ip address
+        :param floating_ip: is a string floating ip address
         """
         # NOTE(tr3buchet): i don't like the "either or" argument type
         # funcationility but i've left it alone for now
@@ -100,7 +101,7 @@ class API(base.Base):
 
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
-        """disassociates a floating ip from fixed ip it is associated with"""
+        """Disassociates a floating ip from fixed ip it is associated with."""
         floating_ip = self.db.floating_ip_get_by_address(context, address)
         if not affect_auto_assigned and floating_ip.get('auto_assigned'):
             return
@@ -113,8 +114,9 @@ class API(base.Base):
                   'args': {'floating_address': floating_ip['address']}})
 
     def allocate_for_instance(self, context, instance, **kwargs):
-        """allocates all network structures for an instance
-        returns network info as from get_instance_nw_info() below
+        """Allocates all network structures for an instance.
+
+        :returns: network info as from get_instance_nw_info() below
         """
         args = kwargs
         args['instance_id'] = instance['id']
@@ -125,7 +127,7 @@ class API(base.Base):
                          'args': args})
 
     def deallocate_for_instance(self, context, instance, **kwargs):
-        """deallocates all network structures related to instance"""
+        """Deallocates all network structures related to instance."""
         args = kwargs
         args['instance_id'] = instance['id']
         args['project_id'] = instance['project_id']
@@ -134,7 +136,7 @@ class API(base.Base):
                   'args': args})
 
     def add_fixed_ip_to_instance(self, context, instance_id, network_id):
-        """adds a fixed ip to instance from specified network"""
+        """Adds a fixed ip to instance from specified network."""
         args = {'instance_id': instance_id,
                 'network_id': network_id}
         rpc.cast(context, FLAGS.network_topic,
@@ -142,13 +144,13 @@ class API(base.Base):
                   'args': args})
 
     def add_network_to_project(self, context, project_id):
-        """force adds another network to a project"""
+        """Force adds another network to a project."""
         rpc.cast(context, FLAGS.network_topic,
                  {'method': 'add_network_to_project',
                   'args': {'project_id': project_id}})
 
     def get_instance_nw_info(self, context, instance):
-        """returns all network info related to an instance"""
+        """Returns all network info related to an instance."""
         args = {'instance_id': instance['id'],
                 'instance_type_id': instance['instance_type_id']}
         return rpc.call(context, FLAGS.network_topic,

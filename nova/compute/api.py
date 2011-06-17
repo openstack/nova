@@ -716,14 +716,14 @@ class API(base.Base):
 
     @scheduler_api.reroute_compute("add_fixed_ip")
     def add_fixed_ip(self, context, instance_id, network_id):
-        """add fixed_ip from specified network to given instance"""
+        """Add fixed_ip from specified network to given instance."""
         self._cast_compute_message('add_fixed_ip_to_instance', context,
                                                               instance_id,
                                                               network_id)
 
     #TODO(tr3buchet): how to run this in the correct zone?
     def add_network_to_project(self, context, project_id):
-        """force adds a network to the project"""
+        """Force adds a network to the project."""
         # this will raise if zone doesn't know about project so the decorator
         # can catch it and pass it down
         self.db.project_get(context, project_id)
@@ -873,9 +873,9 @@ class API(base.Base):
         return instance
 
     def associate_floating_ip(self, context, instance_id, address):
-        """makes calls to network_api to associate_floating_ip
+        """Makes calls to network_api to associate_floating_ip.
 
-        address is a string floating ip address
+        :param address: is a string floating ip address
         """
         instance = self.get(context, instance_id)
 
