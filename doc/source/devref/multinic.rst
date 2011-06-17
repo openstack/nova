@@ -11,6 +11,8 @@ Managers
 
 Each of the network managers are designed to run independently of the compute manager. They expose a common API for the compute manager to call to determine and configure the network(s) for an instance. Direct calls to either the network api or especially the DB should be avoided by the virt layers.
 
+On startup a manager looks in the networks table for networks it is assigned and configures itself to support that network. Using the periodic task, they will claim new networks that have no host set. Only one network per network-host will be claimed at a time. This allows for psuedo-loadbalancing if there are multiple network-hosts running.
+
 Flat Manager 
 ------------
 
@@ -27,11 +29,11 @@ FlatDHCP Manager
 
     .. image:: /images/multinic_dhcp.png
 
-FlatDHCP manager builds on the the Flat manager adding dnsmask (DNS and DHCP) and radvd (Router Advertisement) servers on the bridge for that network. The services run on the host that is assigned to that nework. 
+FlatDHCP manager builds on the the Flat manager adding dnsmask (DNS and DHCP) and radvd (Router Advertisement) servers on the bridge for that network. The services run on the host that is assigned to that nework. The FlatDHCP manager will create its bridge as specified when the network was created on the network-host when the network host starts up or when a new network gets allocated to that host. Compute nodes will also create the bridges as necessary and connect instance VIFs to them.
 
 VLAN Manager
 ------------
 
     .. image:: /images/multinic_vlan.png
 
-The VLAN manager sets up forwarding to/from a cloudpipe instance in addition to providing dnsmask (DNS and DHCP) and radvd (Router Advertisement) services for each network.
+The VLAN manager sets up forwarding to/from a cloudpipe instance in addition to providing dnsmask (DNS and DHCP) and radvd (Router Advertisement) services for each network. The manager will create its bridge as specified when the network was created on the network-host when the network host starts up or when a new network gets allocated to that host. Compute nodes will also create the bridges as necessary and conenct instance VIFs to them.
