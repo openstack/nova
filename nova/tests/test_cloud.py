@@ -526,7 +526,9 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_instance_wont_update_private_fields(self):
         inst = db.instance_create(self.context, {})
-        self.cloud.update_instance(self.context, inst['id'],
+        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
+        self.cloud.update_instance(self.context, ec2_id,
+                                   display_name='c00l 1m4g3',
                                    mac_address='DE:AD:BE:EF')
         inst = db.instance_get(self.context, inst['id'])
         self.assertEqual(None, inst['mac_address'])
