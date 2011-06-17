@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os.path
+
 import webob.exc
 
 from nova import compute
@@ -104,7 +106,10 @@ class Controller(object):
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
-        image = self._compute_service.snapshot(context, server_id, image_name)
+        props = self._get_extra_properties(req, body)
+
+        image = self._compute_service.snapshot(context, server_id,
+                                               image_name, props)
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
@@ -113,6 +118,9 @@ class Controller(object):
 
     def _server_id_from_req_data(self, data):
         raise NotImplementedError()
+
+    def _get_extra_properties(self, req, data):
+        return {}
 
 
 class ControllerV10(Controller):
@@ -150,7 +158,11 @@ class ControllerV10(Controller):
         return dict(images=[builder(image, detail=True) for image in images])
 
     def _server_id_from_req_data(self, data):
-        return data['image']['serverId']
+        try:
+            return data['image']['serverId']
+        except KeyError:
+            msg = _("Expected serverId attribute on server entity.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
 
 class ControllerV11(Controller):
@@ -190,7 +202,20 @@ class ControllerV11(Controller):
         return dict(images=[builder(image, detail=True) for image in images])
 
     def _server_id_from_req_data(self, data):
-        return data['image']['serverRef']
+        try:
+            server_ref = data['image']['serverRef']
+        except KeyError:
+            msg = _("Expected serverRef attribute on server entity.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        return os.path.split(server_ref)[1]
+
+    def _get_extra_properties(self, req, data):
+        server_ref = data['image']['serverRef']
+        if not server_ref.startswith('http'):
+            server_ref = os.path.join(req.application_url, 'servers',
+                                      server_ref)
+        return {'instance_ref': server_ref}
 
 
 def create_resource(version='1.0'):

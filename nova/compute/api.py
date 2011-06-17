@@ -619,7 +619,7 @@ class API(base.Base):
         raise exception.Error(_("Unable to find host for Instance %s")
                                 % instance_id)
 
-    def snapshot(self, context, instance_id, name):
+    def snapshot(self, context, instance_id, name, extra_properties=None):
         """Snapshot the given instance.
 
         :returns: A dict containing image metadata
@@ -627,6 +627,7 @@ class API(base.Base):
         properties = {'instance_id': str(instance_id),
                       'user_id': str(context.user_id),
                       'image_state': 'creating'}
+        properties.update(extra_properties or {})
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
