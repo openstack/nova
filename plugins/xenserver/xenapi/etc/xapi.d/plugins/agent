@@ -157,7 +157,6 @@ def inject_file(self, arg_dict):
     return resp
 
 
-@jsonify
 def agent_update(self, arg_dict):
     """Expects an URL and md5sum of the contents, then directs the agent to
     update itself."""
