@@ -14,9 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 from sqlalchemy import Column, Integer, MetaData, String, Table
+
+from nova import utils
 
 
 meta = MetaData()
@@ -32,8 +32,10 @@ def upgrade(migrate_engine):
 
     rows = migrate_engine.execute(instances.select())
     for row in rows:
-        instance_uuid = uuid.uuid4()
-        migrate_engine.execute(instances.update().values(uuid=instance_uuid))
+        instance_uuid = str(utils.gen_uuid())
+        migrate_engine.execute(instances.update()\
+                .where(instances.c.id == row[0])\
+                .values(uuid=instance_uuid))
 
 
 def downgrade(migrate_engine):
