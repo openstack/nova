@@ -974,7 +974,8 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2utils.ec2_id_to_id(instance_id)
-            self.compute_api.update(context, instance_id=instance_id, **kwargs)
+            self.compute_api.update(context, instance_id=instance_id,
+                                    **changes)
         return True
 
     @staticmethod
