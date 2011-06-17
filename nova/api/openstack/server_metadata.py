@@ -43,36 +43,35 @@ class Controller(object):
             expl = _('No Request Body')
             raise exc.HTTPBadRequest(explanation=expl)
 
-    def _check_server_exists(self, context, server_id):
-        try:
-            self.compute_api.routing_get(context, server_id)
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
-
     def index(self, req, server_id):
         """ Returns the list of metadata for a given instance """
         context = req.environ['nova.context']
-        self._check_server_exists(context, server_id)
-        return self._get_metadata(context, server_id)
+        try:
+            return self._get_metadata(context, server_id)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
 
     def create(self, req, server_id, body):
         self._check_body(body)
         context = req.environ['nova.context']
-        self._check_server_exists(context, server_id)
         metadata = body.get('metadata')
         try:
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
                                                                 metadata)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
+
         except quota.QuotaError as error:
             self._handle_quota_error(error)
+
         return body
 
     def update(self, req, server_id, id, body):
         self._check_body(body)
         context = req.environ['nova.context']
-        self._check_server_exists(context, server_id)
         if not id in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
@@ -83,6 +82,10 @@ class Controller(object):
             self.compute_api.update_or_create_instance_metadata(context,
                                                                 server_id,
                                                                 body)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
+
         except quota.QuotaError as error:
             self._handle_quota_error(error)
 
@@ -91,18 +94,26 @@ class Controller(object):
     def show(self, req, server_id, id):
         """ Return a single metadata item """
         context = req.environ['nova.context']
-        self._check_server_exists(context, server_id)
-        data = self._get_metadata(context, server_id)
-        if id in data['metadata']:
+        try:
+            data = self._get_metadata(context, server_id)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
+
+        try:
             return {id: data['metadata'][id]}
-        else:
-            return faults.Fault(exc.HTTPNotFound())
+        except KeyError:
+            msg = _("metadata item %s was not found" % (id))
+            raise exc.HTTPNotFound(explanation=msg)
 
     def delete(self, req, server_id, id):
         """ Deletes an existing metadata """
         context = req.environ['nova.context']
-        self._check_server_exists(context, server_id)
-        self.compute_api.delete_instance_metadata(context, server_id, id)
+        try:
+            self.compute_api.delete_instance_metadata(context, server_id, id)
+        except exception.InstanceNotFound:
+            msg = _('Server %(server_id)s does not exist') % locals()
+            raise exc.HTTPNotFound(explanation=msg)
 
     def _handle_quota_error(self, error):
         """Reraise quota errors as api-specific http exceptions."""

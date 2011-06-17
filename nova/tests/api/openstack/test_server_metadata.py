@@ -144,7 +144,6 @@ class ServerMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/servers/1/meta/key6')
         req.environ['api.version'] = '1.1'
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
         self.assertEqual(404, res.status_int)
 
     def test_delete(self):
@@ -173,8 +172,8 @@ class ServerMetaDataTest(unittest.TestCase):
         req.body = '{"metadata": {"key1": "value1"}}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
+        res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
         self.assertEqual('value1', res_dict['metadata']['key1'])
 
