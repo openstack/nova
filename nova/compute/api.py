@@ -526,6 +526,7 @@ class API(base.Base):
         """Get all instances with this reservation_id, across
         all available Zones (if any).
         """
+        context = context.elevated()
         instances = self.db.instance_get_all_by_reservation(
                                     context, reservation_id)
 
