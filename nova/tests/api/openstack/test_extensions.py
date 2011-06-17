@@ -144,6 +144,13 @@ class ExtensionManagerTest(unittest.TestCase):
         self.assertEqual(200, response.status_int)
         self.assertEqual(response_body, response.body)
 
+    def test_invalid_extensions(self):
+        app = openstack.APIRouterV11()
+        ext_midware = extensions.ExtensionMiddleware(app)
+        ext_mgr = ext_midware.ext_mgr
+        self.assertTrue('FOXNSOX' in ext_mgr.extensions)
+        self.assertTrue('THIRD' not in ext_mgr.extensions)
+
 
 class ActionExtensionTest(unittest.TestCase):
 
