@@ -121,8 +121,7 @@ class CreateInstanceHelper(object):
             extra_values = {
                 'instance_type': inst_type,
                 'image_ref': image_href,
-                'password': password
-            }
+                'password': password}
 
             return (extra_values,
                     create_method(context,
@@ -138,9 +137,7 @@ class CreateInstanceHelper(object):
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
-                                  reservation_id=reservation_id
-                    )
-                )
+                                  reservation_id=reservation_id))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
