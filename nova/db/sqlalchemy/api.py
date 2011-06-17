@@ -446,7 +446,7 @@ def floating_ip_allocate_address(context, project_id):
         # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
         #             then this has concurrency issues
         if not floating_ip_ref:
-            raise db.NoMoreAddresses()
+            raise exception.NoMoreFloatingIps()
         floating_ip_ref['project_id'] = project_id
         session.add(floating_ip_ref)
     return floating_ip_ref['address']
@@ -545,20 +545,26 @@ def floating_ip_set_auto_assigned(context, address):
 @require_admin_context
 def floating_ip_get_all(context):
     session = get_session()
-    return session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.instance')).\
-                   filter_by(deleted=False).\
-                   all()
+    floating_ip_refs = session.query(models.FloatingIp).\
+                               options(joinedload_all('fixed_ip.instance')).\
+                               filter_by(deleted=False).\
+                               all()
+    if not floating_ip_refs:
+        raise exception.NoFloatingIpsDefined()
+    return floating_ip_refs
 
 
 @require_admin_context
 def floating_ip_get_all_by_host(context, host):
     session = get_session()
-    return session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.instance')).\
-                   filter_by(host=host).\
-                   filter_by(deleted=False).\
-                   all()
+    floating_ip_refs = session.query(models.FloatingIp).\
+                               options(joinedload_all('fixed_ip.instance')).\
+                               filter_by(host=host).\
+                               filter_by(deleted=False).\
+                               all()
+    if not floating_ip_refs:
+        raise exception.NoFloatingIpsDefinedForHost(host=host)
+    return floating_ip_refs
 
 
 @require_context
@@ -566,12 +572,15 @@ def floating_ip_get_all_by_project(context, project_id):
     authorize_project_context(context, project_id)
     session = get_session()
     # TODO(tr3buchet): why do we not want auto_assigned floating IPs here?
-    return session.query(models.FloatingIp).\
-                   options(joinedload_all('fixed_ip.instance')).\
-                   filter_by(project_id=project_id).\
-                   filter_by(auto_assigned=False).\
-                   filter_by(deleted=False).\
-                   all()
+    floating_ip_refs = session.query(models.FloatingIp).\
+                               options(joinedload_all('fixed_ip.instance')).\
+                               filter_by(project_id=project_id).\
+                               filter_by(auto_assigned=False).\
+                               filter_by(deleted=False).\
+                               all()
+    if not floating_ip_refs:
+        raise exception.NoFloatingIpFoundForProject(project_id=project_id)
+    return floating_ip_refs
 
 
 @require_context
@@ -587,7 +596,6 @@ def floating_ip_get_by_address(context, address, session=None):
                      first()
     if not result:
         raise exception.FloatingIpNotFound(address=address)
-
     return result
 
 
