@@ -370,6 +370,8 @@ class XenAPIVMTestCase(test.TestCase):
         self.conn.spawn(instance)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
+        self.assert_(instance.os_type)
+        self.assert_(instance.architecture)
 
     def test_spawn_not_enough_memory(self):
         FLAGS.xenapi_image_service = 'glance'
