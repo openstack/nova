@@ -414,9 +414,9 @@ class ExtensionManager(object):
                               'file': ext_path})
                     continue
                 new_ext = new_ext_class()
-                self._add_extension(new_ext)
+                self.add_extension(new_ext)
 
-    def _add_extension(self, ext):
+    def add_extension(self, ext):
         # Do nothing if the extension doesn't check out
         if not self._check_extension(ext):
             return

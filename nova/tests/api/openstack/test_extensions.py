@@ -128,6 +128,11 @@ class ResourceExtensionTest(unittest.TestCase):
         self.assertEqual(response_body, response.body)
 
 
+class InvalidExtension(object):
+    def get_alias(self):
+        return "THIRD"
+
+
 class ExtensionManagerTest(unittest.TestCase):
 
     response_body = "Try to say this Mr. Knox, sir..."
@@ -148,6 +153,7 @@ class ExtensionManagerTest(unittest.TestCase):
         app = openstack.APIRouterV11()
         ext_midware = extensions.ExtensionMiddleware(app)
         ext_mgr = ext_midware.ext_mgr
+        ext_mgr.add_extension(InvalidExtension())
         self.assertTrue('FOXNSOX' in ext_mgr.extensions)
         self.assertTrue('THIRD' not in ext_mgr.extensions)
 
