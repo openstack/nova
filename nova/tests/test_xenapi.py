@@ -83,7 +83,8 @@ class XenAPIVolumeTestCase(test.TestCase):
                   'ramdisk_id': 3,
                   'instance_type_id': '3',  # m1.large
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'}
+                  'os_type': 'linux',
+                  'architecture': 'x86-64'}
 
     def _create_volume(self, size='0'):
         """Create a volume object."""
@@ -210,7 +211,8 @@ class XenAPIVMTestCase(test.TestCase):
                 'ramdisk_id': 3,
                 'instance_type_id': '3',  # m1.large
                 'mac_address': 'aa:bb:cc:dd:ee:ff',
-                'os_type': 'linux'}
+                'os_type': 'linux',
+                'architecture': 'x86-64'}
             instance = db.instance_create(self.context, values)
             self.conn.spawn(instance)
 
@@ -351,7 +353,8 @@ class XenAPIVMTestCase(test.TestCase):
 
     def _test_spawn(self, image_ref, kernel_id, ramdisk_id,
                     instance_type_id="3", os_type="linux",
-                    instance_id=1, check_injection=False):
+                    architecture="x86-64", instance_id=1,
+                    check_injection=False):
         stubs.stubout_loopingcall_start(self.stubs)
         values = {'id': instance_id,
                   'project_id': self.project.id,
@@ -361,7 +364,8 @@ class XenAPIVMTestCase(test.TestCase):
                   'ramdisk_id': ramdisk_id,
                   'instance_type_id': instance_type_id,
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': os_type}
+                  'os_type': os_type,
+                  'architecture': architecture}
         instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
         self.create_vm_record(self.conn, os_type, instance_id)
@@ -390,7 +394,7 @@ class XenAPIVMTestCase(test.TestCase):
     def test_spawn_vhd_glance_linux(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
-                         os_type="linux")
+                         os_type="linux", architecture="x86-64")
         self.check_vm_params_for_linux()
 
     def test_spawn_vhd_glance_swapdisk(self):
@@ -419,7 +423,7 @@ class XenAPIVMTestCase(test.TestCase):
     def test_spawn_vhd_glance_windows(self):
         FLAGS.xenapi_image_service = 'glance'
         self._test_spawn(glance_stubs.FakeGlance.IMAGE_VHD, None, None,
-                         os_type="windows")
+                         os_type="windows", architecture="i386")
         self.check_vm_params_for_windows()
 
     def test_spawn_glance(self):
@@ -570,7 +574,8 @@ class XenAPIVMTestCase(test.TestCase):
             'ramdisk_id': 3,
             'instance_type_id': '3',  # m1.large
             'mac_address': 'aa:bb:cc:dd:ee:ff',
-            'os_type': 'linux'}
+            'os_type': 'linux',
+            'architecture': 'x86-64'}
         instance = db.instance_create(self.context, values)
         self.conn.spawn(instance)
         return instance
@@ -645,7 +650,8 @@ class XenAPIMigrateInstance(test.TestCase):
                   'local_gb': 5,
                   'instance_type_id': '3',  # m1.large
                   'mac_address': 'aa:bb:cc:dd:ee:ff',
-                  'os_type': 'linux'}
+                  'os_type': 'linux',
+                  'architecture': 'x86-64'}
 
         fake_utils.stub_out_utils_execute(self.stubs)
         stubs.stub_out_migration_methods(self.stubs)
@@ -684,6 +690,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance = FakeInstance()
         self.fake_instance.id = 42
         self.fake_instance.os_type = 'linux'
+        self.fake_instance.architecture = 'x86-64'
 
     def assert_disk_type(self, disk_type):
         dt = vm_utils.VMHelper.determine_disk_image_type(
