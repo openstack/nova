@@ -157,7 +157,6 @@ class VMHelper(HelperBase):
                 rec['PV_ramdisk'] = ramdisk
             else:
                 # 2. Use kernel within the image
-                rec['PV_args'] = 'clocksource=jiffies'
                 rec['PV_bootloader'] = 'pygrub'
         else:
             # 3. Using hardware virtualization
@@ -328,12 +327,6 @@ class VMHelper(HelperBase):
         template_vdi_uuids = {'image': parent_uuid,
                               'snap': template_vdi_uuid}
         return template_vm_ref, template_vdi_uuids
-
-    @classmethod
-    def get_sr(cls, session, sr_label='slices'):
-        """Finds the SR named by the given name label and returns
-        the UUID"""
-        return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
 
     @classmethod
     def get_sr_path(cls, session):
@@ -790,8 +783,7 @@ class VMHelper(HelperBase):
     @classmethod
     def scan_default_sr(cls, session):
         """Looks for the system default SR and triggers a re-scan"""
-        #FIXME(sirp/mdietz): refactor scan_default_sr in there
-        sr_ref = cls.get_sr(session)
+        sr_ref = find_sr(session)
         session.call_xenapi('SR.scan', sr_ref)
 
 

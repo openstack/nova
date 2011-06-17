@@ -134,7 +134,8 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, admin_password=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None,
+               reservation_id=None):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed."""
 
@@ -164,6 +165,9 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        vm_mode = None
+        if 'properties' in image and 'vm_mode' in image['properties']:
+            vm_mode = image['properties']['vm_mode']
 
         if kernel_id is None:
             kernel_id = image['properties'].get('kernel_id', None)
@@ -200,8 +204,11 @@ class API(base.Base):
             key_pair = db.key_pair_get(context, context.user_id, key_name)
             key_data = key_pair['public_key']
 
+        if reservation_id is None:
+            reservation_id = utils.generate_uid('r')
+
         base_options = {
-            'reservation_id': utils.generate_uid('r'),
+            'reservation_id': reservation_id,
             'image_ref': image_href,
             'kernel_id': kernel_id or '',
             'ramdisk_id': ramdisk_id or '',
@@ -222,7 +229,8 @@ class API(base.Base):
             'locked': False,
             'metadata': metadata,
             'availability_zone': availability_zone,
-            'os_type': os_type}
+            'os_type': os_type,
+            'vm_mode': vm_mode}
 
         return (num_instances, base_options, security_groups)
 
@@ -281,7 +289,7 @@ class API(base.Base):
             'instance_type': instance_type,
             'filter': filter_class,
             'blob': zone_blob,
-            'num_instances': num_instances
+            'num_instances': num_instances,
         }
 
         rpc.cast(context,
@@ -300,7 +308,8 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, admin_password=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None,
+               reservation_id=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
@@ -312,7 +321,8 @@ class API(base.Base):
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
-                               injected_files, admin_password, zone_blob)
+                               injected_files, admin_password, zone_blob,
+                               reservation_id)
 
         self._ask_scheduler_to_create_instance(context, base_options,
                                       instance_type, zone_blob,
@@ -328,7 +338,8 @@ class API(base.Base):
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
-               injected_files=None, admin_password=None, zone_blob=None):
+               injected_files=None, admin_password=None, zone_blob=None,
+               reservation_id=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -346,7 +357,8 @@ class API(base.Base):
                                display_name, display_description,
                                key_name, key_data, security_group,
                                availability_zone, user_data, metadata,
-                               injected_files, admin_password, zone_blob)
+                               injected_files, admin_password, zone_blob,
+                               reservation_id)
 
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
@@ -510,6 +522,24 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
+    def get_all_across_zones(self, context, reservation_id):
+        """Get all instances with this reservation_id, across
+        all available Zones (if any).
+        """
+        instances = self.db.instance_get_all_by_reservation(
+                                    context, reservation_id)
+
+        children = scheduler_api.call_zone_method(context, "list",
+                                novaclient_collection_name="servers",
+                                reservation_id=reservation_id)
+
+        for zone, servers in children:
+            for server in servers:
+                # Results are ready to send to user. No need to scrub.
+                server._info['_is_precooked'] = True
+                instances.append(server._info)
+        return instances
+
     def get_all(self, context, project_id=None, reservation_id=None,
                 fixed_ip=None):
         """Get all instances filtered by one of the given parameters.
@@ -518,8 +548,7 @@ class API(base.Base):
         all instances in the system.
         """
         if reservation_id is not None:
-            return self.db.instance_get_all_by_reservation(
-                context, reservation_id)
+            return self.get_all_across_zones(context, reservation_id)
 
         if fixed_ip is not None:
             return self.db.fixed_ip_get_instance(context, fixed_ip)

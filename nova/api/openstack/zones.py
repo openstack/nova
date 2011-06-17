@@ -21,9 +21,14 @@ from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
-from nova.api.openstack import common
-from nova.api.openstack import wsgi
+
+from nova.compute import api as compute
 from nova.scheduler import api
+
+from nova.api.openstack import create_instance_helper as helper
+from nova.api.openstack import common
+from nova.api.openstack import faults
+from nova.api.openstack import wsgi
 
 
 FLAGS = flags.FLAGS
@@ -59,6 +64,11 @@ def check_encryption_key(func):
 
 
 class Controller(object):
+    """Controller for Zone resources."""
+
+    def __init__(self):
+        self.compute_api = compute.API()
+        self.helper = helper.CreateInstanceHelper(self)
 
     def index(self, req):
         """Return all zones in brief"""
@@ -93,20 +103,38 @@ class Controller(object):
         return dict(zone=_scrub_zone(zone))
 
     def delete(self, req, id):
+        """Delete a child zone entry."""
         zone_id = int(id)
         api.zone_delete(req.environ['nova.context'], zone_id)
         return {}
 
     def create(self, req, body):
+        """Create a child zone entry."""
         context = req.environ['nova.context']
         zone = api.zone_create(context, body["zone"])
         return dict(zone=_scrub_zone(zone))
 
     def update(self, req, id, body):
+        """Update a child zone entry."""
         context = req.environ['nova.context']
         zone_id = int(id)
         zone = api.zone_update(context, zone_id, body["zone"])
         return dict(zone=_scrub_zone(zone))
+
+    def boot(self, req, body):
+        """Creates a new server for a given user while being Zone aware.
+
+        Returns a reservation ID (a UUID).
+        """
+        result = None
+        try:
+            extra_values, result = self.helper.create_instance(req, body,
+                                    self.compute_api.create_all_at_once)
+        except faults.Fault, f:
+            return f
+
+        reservation_id = result
+        return {'reservation_id': reservation_id}
 
     @check_encryption_key
     def select(self, req, body):
@@ -131,8 +159,37 @@ class Controller(object):
                 blob=cipher_text))
         return cooked
 
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageId']
 
-def create_resource():
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorId']
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_old_style(server)
+
+
+class ControllerV11(object):
+    """Controller for 1.1 Zone resources."""
+
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_new_style(server)
+
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageRef']
+
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorRef']
+
+
+def create_resource(version):
+    controller = {
+        '1.0': Controller,
+        '1.1': ControllerV11,
+    }[version]()
+
     metadata = {
         "attributes": {
             "zone": ["id", "api_url", "name", "capabilities"],
@@ -144,4 +201,9 @@ def create_resource():
                                                   metadata=metadata),
     }
 
-    return wsgi.Resource(Controller(), serializers=serializers)
+    deserializers = {
+        'application/xml': helper.ServerXMLDeserializer(),
+    }
+
+    return wsgi.Resource(controller, serializers=serializers,
+                         deserializers=deserializers)
