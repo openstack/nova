@@ -879,7 +879,8 @@ def get_vdi_for_vm_safely(session, vm_ref):
     else:
         num_vdis = len(vdi_refs)
         if num_vdis != 1:
-            raise exception.Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
+            raise exception.Exception(_("Unexpected number of VDIs"
+                    "(%(num_vdis)s) found"
                     " for VM %(vm_ref)s") % locals())
 
     vdi_ref = vdi_refs[0]
