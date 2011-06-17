@@ -90,8 +90,6 @@ def fetch_image(image, instance, **kwargs):
         func = _get_glance_image
     elif FLAGS.image_service == "nova.image.s3.S3ImageService":
         func = _get_s3_image
-    elif FLAGS.image_service == "nova.image.local.LocalImageService":
-        func = _get_local_image
     else:
         raise NotImplementedError(_("The Image Service %s is not implemented")
                                   % FLAGS.image_service)
@@ -105,8 +103,6 @@ def upload_image(image, instance, **kwargs):
         func = _put_glance_image
     elif FLAGS.image_service == "nova.image.s3.S3ImageService":
         func = _put_s3_image
-    elif FLAGS.image_service == "nova.image.local.LocalImageService":
-        func = _put_local_image
     else:
         raise NotImplementedError(_("The Image Service %s is not implemented")
                                   % FLAGS.image_service)
@@ -191,8 +187,6 @@ def get_vmdk_size_and_properties(image, instance):
         meta_data = glance_client.get_image_meta(image_id)
         size, properties = meta_data["size"], meta_data["properties"]
     elif FLAGS.image_service == "nova.image.s3.S3ImageService":
-        raise NotImplementedError
-    elif FLAGS.image_service == "nova.image.local.LocalImageService":
         raise NotImplementedError
     LOG.debug(_("Got image size of %(size)s for the image %(image)s") %
               locals())

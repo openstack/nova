@@ -97,7 +97,6 @@ flags.DECLARE('vlan_start', 'nova.network.manager')
 flags.DECLARE('vpn_start', 'nova.network.manager')
 flags.DECLARE('fixed_range_v6', 'nova.network.manager')
 flags.DECLARE('gateway_v6', 'nova.network.manager')
-flags.DECLARE('images_path', 'nova.image.local')
 flags.DECLARE('libvirt_type', 'nova.virt.libvirt.connection')
 flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
@@ -1056,16 +1055,6 @@ class ImageCommands(object):
         machine_images = {}
         other_images = {}
         directory = os.path.abspath(directory)
-        # NOTE(vish): If we're importing from the images path dir, attempt
-        #             to move the files out of the way before importing
-        #             so we aren't writing to the same directory. This
-        #             may fail if the dir was a mointpoint.
-        if (FLAGS.image_service == 'nova.image.local.LocalImageService'
-            and directory == os.path.abspath(FLAGS.images_path)):
-            new_dir = "%s_bak" % directory
-            os.rename(directory, new_dir)
-            os.mkdir(directory)
-            directory = new_dir
         for fn in glob.glob("%s/*/info.json" % directory):
             try:
                 image_path = os.path.join(fn.rpartition('/')[0], 'image')

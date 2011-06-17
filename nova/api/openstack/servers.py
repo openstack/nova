@@ -51,7 +51,7 @@ class Controller(object):
         try:
             servers = self._items(req, is_detail=False)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(str(err))
+            return exc.HTTPBadRequest(explanation=str(err))
         return servers
 
     def detail(self, req):
@@ -59,7 +59,7 @@ class Controller(object):
         try:
             servers = self._items(req, is_detail=True)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(str(err))
+            return exc.HTTPBadRequest(explanation=str(err))
         return servers
 
     def _get_view_builder(self, req):
@@ -488,11 +488,11 @@ class ControllerV11(Controller):
         if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             msg = _("No adminPass was specified")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         password = input_dict['changePassword']['adminPass']
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
         return exc.HTTPAccepted()
 
