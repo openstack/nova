@@ -116,8 +116,9 @@ class VMWareVMOps(object):
                                                         net_name)
             if network_ref is None:
                 raise exception.NetworkNotFoundForBridge(bridge=net_name)
-
-        _check_if_network_bridge_exists()
+            return network_ref
+    
+        network_obj = _check_if_network_bridge_exists()
 
         def _get_datastore_ref():
             """Get the datastore list and choose the first local storage."""
@@ -176,7 +177,7 @@ class VMWareVMOps(object):
 
         # Get the create vm config spec
         config_spec = vm_util.get_vm_create_spec(client_factory, instance,
-                                data_store_name, net_name, os_type)
+                                data_store_name, net_name, os_type, network_obj)
 
         def _execute_create_vm():
             """Create VM on ESX host."""

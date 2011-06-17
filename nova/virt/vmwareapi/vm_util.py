@@ -40,7 +40,7 @@ def split_datastore_path(datastore_path):
 
 def get_vm_create_spec(client_factory, instance, data_store_name,
                        network_name="vmnet0",
-                       os_type="otherGuest"):
+                       os_type="otherGuest", network_ref=None):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = instance.name
@@ -89,7 +89,7 @@ def create_controller_spec(client_factory, key):
     return virtual_device_config
 
 
-def create_network_spec(client_factory, network_name, mac_address):
+def create_network_spec(client_factory, network_name, mac_address,network_ref=None):
     """
     Builds a config spec for the addition of a new network
     adapter to the VM.
@@ -101,9 +101,22 @@ def create_network_spec(client_factory, network_name, mac_address):
     # Get the recommended card type for the VM based on the guest OS of the VM
     net_device = client_factory.create('ns0:VirtualPCNet32')
 
-    backing = \
-        client_factory.create('ns0:VirtualEthernetCardNetworkBackingInfo')
-    backing.deviceName = network_name
+    # NOTE: Only works on ESXi if the portgroup binding is set to 
+    # ephemeral. Invalid configuration if set to static and the NIC does
+    # not come up on boot if set to dynamic.
+    backing = None
+    if (network_ref['type'] == "DistributedVirtualPortgroup"):
+        backing = \
+         client_factory.create('ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo')
+        portgroup = \
+         client_factory.create('ns0:DistributedVirtualSwitchPortConnection')
+        portgroup.switchUuid = network_ref['dvsw']
+        portgroup.portgroupKey = network_ref['dvpg']
+        backing.port = portgroup
+    else:
+        backing = \
+         client_factory.create('ns0:VirtualEthernetCardNetworkBackingInfo')
+        backing.deviceName = network_name
 
     connectable_spec = \
         client_factory.create('ns0:VirtualDeviceConnectInfo')
