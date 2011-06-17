@@ -515,7 +515,7 @@ class CloudTestCase(test.TestCase):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'status': 'active'}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_stat_active)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show_stat_active)
 
         result = run_instances(self.context, **kwargs)
         self.assertEqual(len(result['instancesSet']), 1)
