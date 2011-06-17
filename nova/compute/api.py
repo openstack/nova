@@ -298,8 +298,6 @@ class API(base.Base):
 
         return instance
 
-
-
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
                                           availability_zone, injected_files,

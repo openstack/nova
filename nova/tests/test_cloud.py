@@ -671,7 +671,7 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/vdb',
                                             'volume_id': vol1['id'],
-                                            'delete_on_termination': False,},
+                                            'delete_on_termination': False, },
                                            {'device_name': '/dev/vdc',
                                             'volume_id': vol2['id'],
                                             'delete_on_termination': True, },
