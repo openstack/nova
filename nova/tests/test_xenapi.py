@@ -36,9 +36,8 @@ from nova.compute import power_state
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
+from nova.virt.xenapi import vmops
 from nova.virt.xenapi import vm_utils
-from nova.virt.xenapi.vmops import SimpleDH
-from nova.virt.xenapi.vmops import VMOps
 from nova.tests.db import fakes as db_fakes
 from nova.tests.xenapi import stubs
 from nova.tests.glance import stubs as glance_stubs
@@ -191,7 +190,7 @@ class XenAPIVMTestCase(test.TestCase):
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
         stubs.stubout_is_vdi_pv(self.stubs)
-        self.stubs.Set(VMOps, 'reset_network', reset_network)
+        self.stubs.Set(vmops.VMOps, 'reset_network', reset_network)
         stubs.stub_out_vm_methods(self.stubs)
         glance_stubs.stubout_glance_client(self.stubs)
         fake_utils.stub_out_utils_execute(self.stubs)
@@ -581,8 +580,8 @@ class XenAPIDiffieHellmanTestCase(test.TestCase):
     """Unit tests for Diffie-Hellman code."""
     def setUp(self):
         super(XenAPIDiffieHellmanTestCase, self).setUp()
-        self.alice = SimpleDH()
-        self.bob = SimpleDH()
+        self.alice = vmops.SimpleDH()
+        self.bob = vmops.SimpleDH()
 
     def test_shared(self):
         alice_pub = self.alice.get_public()
@@ -727,6 +726,28 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.fake_instance.image_ref = glance_stubs.FakeGlance.IMAGE_VHD
         self.fake_instance.kernel_id = None
         self.assert_disk_type(vm_utils.ImageType.DISK_VHD)
+
+
+class CompareVersionTestCase(test.TestCase):
+    def test_less_than(self):
+        """Test that cmp_version compares a as less than b"""
+        self.assert_(vmops.cmp_version('1.2.3.4', '1.2.3.5') < 0)
+
+    def test_greater_than(self):
+        """Test that cmp_version compares a as greater than b"""
+        self.assert_(vmops.cmp_version('1.2.3.5', '1.2.3.4') > 0)
+
+    def test_equal(self):
+        """Test that cmp_version compares a as equal to b"""
+        self.assert_(vmops.cmp_version('1.2.3.4', '1.2.3.4') == 0)
+
+    def test_non_lexical(self):
+        """Test that cmp_version compares non-lexically"""
+        self.assert_(vmops.cmp_version('1.2.3.10', '1.2.3.4') > 0)
+
+    def test_length(self):
+        """Test that cmp_version compares by length as last resort"""
+        self.assert_(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
 
 
 class FakeXenApi(object):

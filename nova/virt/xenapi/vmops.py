@@ -47,15 +47,18 @@ LOG = logging.getLogger("nova.virt.xenapi.vmops")
 FLAGS = flags.FLAGS
 
 
-def _cmp_version(a, b):
+def cmp_version(a, b):
+    """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
     a = a.split('.')
     b = b.split('.')
 
+    # Compare each individual portion of both version strings
     for va, vb in zip(a, b):
         ret = int(va) - int(vb)
         if ret:
             return ret
 
+    # Fallback to comparing length last
     return len(a) - len(b)
 
 
@@ -253,7 +256,7 @@ class VMOps(object):
             if not agent_build:
                 return
 
-            if _cmp_version(version, agent_build['version']) < 0:
+            if cmp_version(version, agent_build['version']) < 0:
                 LOG.info(_('Updating Agent to %s') % agent_build['version'])
                 self.agent_update(instance, agent_build['url'],
                               agent_build['md5hash'])
