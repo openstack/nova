@@ -128,7 +128,7 @@ class ComputeTestCase(test.TestCase):
         instance_ref = models.Instance()
         instance_ref['id'] = 1
         instance_ref['volumes'] = [vol1, vol2]
-        instance_ref['hostname'] = 'i-00000001'
+        instance_ref['hostname'] = 'hostname-1'
         instance_ref['host'] = 'dummy'
         return instance_ref
 

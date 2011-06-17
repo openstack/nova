@@ -47,9 +47,25 @@ flags.DEFINE_integer('find_host_timeout', 30,
                      'Timeout after NN seconds when looking for a host.')
 
 
-def generate_default_hostname(instance_id):
+def generate_default_hostname(instance):
     """Default function to generate a hostname given an instance reference."""
-    return str(instance_id)
+    display_name = instance['display_name']
+    if display_name is None:
+        return 'server_%d' % (instance['id'],)
+    table = ''
+    deletions = ''
+    for i in xrange(256):
+        c = chr(i)
+        if ('a' <= c <= 'z') or ('0' <= c <= '9') or (c == '-'):
+            table += c
+        elif c == ' ':
+            table += '_'
+        elif ('A' <= c <= 'Z'):
+            table += c.lower()
+        else:
+            table += '\0'
+            deletions += c
+    return display_name.encode('latin-1', 'ignore').translate(table, deletions)
 
 
 class API(base.Base):
@@ -256,10 +272,12 @@ class API(base.Base):
                                                 security_group_id)
 
         # Set sane defaults if not specified
-        updates = dict(hostname=self.hostname_factory(instance_id))
+        updates = {}
         if (not hasattr(instance, 'display_name') or
                 instance.display_name is None):
             updates['display_name'] = "Server %s" % instance_id
+            instance['display_name'] = updates['display_name']
+        updates['hostname'] = self.hostname_factory(instance)
 
         instance = self.update(context, instance_id, **updates)
 

@@ -86,8 +86,7 @@ class CloudController(object):
         self.volume_api = volume.API()
         self.compute_api = compute.API(
                 network_api=self.network_api,
-                volume_api=self.volume_api,
-                hostname_factory=ec2utils.id_to_ec2_id)
+                volume_api=self.volume_api)
         self.setup()
 
     def __str__(self):
