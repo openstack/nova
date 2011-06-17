@@ -287,9 +287,9 @@ def get_dummy_vm_create_spec(client_factory, name, data_store_name):
     return config_spec
 
 
-def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway):
+def get_machine_id_change_spec(client_factory, mac, ip_addr, netmask, gateway, broadcast, dns):
     """Builds the machine id change config spec."""
-    machine_id_str = "%s;%s;%s;%s" % (mac, ip_addr, netmask, gateway)
+    machine_id_str = "%s;%s;%s;%s;%s;%s" % (mac, ip_addr, netmask, gateway, broadcast, dns)
     virtual_machine_config_spec = \
         client_factory.create('ns0:VirtualMachineConfigSpec')
 

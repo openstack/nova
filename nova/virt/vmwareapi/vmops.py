@@ -715,11 +715,14 @@ class VMWareVMOps(object):
         mac_addr = instance.mac_address
         net_mask = network["netmask"]
         gateway = network["gateway"]
+        broadcast = network["broadcast"]
+        dns = network["dns"]
         ip_addr = db.instance_get_fixed_address(context.get_admin_context(),
                                             instance['id'])
         machine_id_chanfge_spec = \
             vm_util.get_machine_id_change_spec(client_factory, mac_addr,
-                                        ip_addr, net_mask, gateway)
+                                               ip_addr, net_mask, gateway,
+                                               broadcast, dns)
         LOG.debug(_("Reconfiguring VM instance %(name)s to set the machine id "
                   "with ip - %(ip_addr)s") %
                   ({'name': instance.name,
