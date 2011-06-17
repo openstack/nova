@@ -94,7 +94,7 @@ class CreateInstanceHelper(object):
         except Exception, e:
             msg = _("Cannot find requested image %(image_href)s: %(e)s" %
                                                                     locals())
-            raise faults.Fault(exc.HTTPBadRequest(msg))
+            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         personality = body['server'].get('personality')
 
@@ -106,7 +106,7 @@ class CreateInstanceHelper(object):
 
         if not 'name' in body['server']:
             msg = _("Server name is not defined")
-            raise exc.HTTPBadRequest(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         zone_blob = body['server'].get('blob')
         name = body['server']['name']
@@ -142,7 +142,7 @@ class CreateInstanceHelper(object):
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
             msg = _("Can not find requested image")
-            raise faults.Fault(exc.HTTPBadRequest(msg))
+            raise faults.Fault(exc.HTTPBadRequest(explanation=msg))
 
         # Let the caller deal with unhandled exceptions.
 
@@ -177,11 +177,11 @@ class CreateInstanceHelper(object):
     def _validate_server_name(self, value):
         if not isinstance(value, basestring):
             msg = _("Server name is not a string or unicode")
-            raise exc.HTTPBadRequest(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
         if value.strip() == '':
             msg = _("Server name is an empty string")
-            raise exc.HTTPBadRequest(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
 
     def _get_kernel_ramdisk_from_image(self, req, image_id):
         """Fetch an image from the ImageService, then if present, return the
@@ -262,7 +262,7 @@ class CreateInstanceHelper(object):
             return utils.generate_password(16)
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
         return password
 
 
