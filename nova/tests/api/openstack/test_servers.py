@@ -49,7 +49,7 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
-FAKE_UUID = 'abcd-abcd-abcd-abcd'
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
 def fake_gen_uuid():

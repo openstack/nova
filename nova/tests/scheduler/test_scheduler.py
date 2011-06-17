@@ -48,8 +48,8 @@ flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
-FAKE_UUID_NOT_FOUND = 'ffff-ffff-ffff-ffff'
-FAKE_UUID = 'abcd-abcd-abcd-abcd'
+FAKE_UUID_NOT_FOUND = 'ffffffff-ffff-ffff-ffff-ffffffffffff'
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
 class TestDriver(driver.Scheduler):
