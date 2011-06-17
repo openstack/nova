@@ -22,21 +22,21 @@ Tests For Compute
 import mox
 import stubout
 
+from nova.auth import manager
 from nova import compute
+from nova.compute import instance_types
+from nova.compute import manager as compute_manager
+from nova.compute import power_state
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import models
 from nova import exception
 from nova import flags
+import nova.image.fake
 from nova import log as logging
 from nova import rpc
 from nova import test
 from nova import utils
-from nova.auth import manager
-from nova.compute import instance_types
-from nova.compute import manager as compute_manager
-from nova.compute import power_state
-from nova.db.sqlalchemy import models
-from nova.image import local
 
 LOG = logging.getLogger('nova.tests.compute')
 FLAGS = flags.FLAGS
@@ -73,7 +73,7 @@ class ComputeTestCase(test.TestCase):
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show)
+        self.stubs.Set(nova.image.fake._FakeImageService, 'show', fake_show)
 
     def tearDown(self):
         self.manager.delete_user(self.user)
