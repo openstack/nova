@@ -66,6 +66,25 @@ class FloatingIPController(object):
         return {'floating_ips' : _translate_floating_ips_view(context,
                                                               floating_ips)}
 
+    def create(self, req, body):
+        context = req.environ['nova.context']
+
+        return {'allocate': None}
+
+    def delete(self,req, id):
+        context = req.environ['nova.context']
+
+        return {'release': None }
+
+    def associate(self, req, id, body):
+        context = req.environ['nova.context']
+
+        return {'associate': None}
+
+    def disassociate(self, req, id, body):
+        context = req.environ['nova.context']
+
+        return {'disassociate': None}
 
 class Floating_ips(extensions.ExtensionDescriptor):
     def get_name(self):
@@ -88,7 +107,9 @@ class Floating_ips(extensions.ExtensionDescriptor):
 
         res = extensions.ResourceExtension('floating_ips',
                                         FloatingIPController(),
-                                        collection_actions={})
+                                        member_actions={
+                                            'associate' : 'POST',
+                                            'disassociate' : 'POST'})
         resources.append(res)
 
         return resources
