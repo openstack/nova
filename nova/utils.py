@@ -734,8 +734,10 @@ def gen_uuid():
 
 
 def is_uuid_like(val):
-    try:
-        int(val)
+    """For our purposes, a UUID is a string in canoical form:
+
+        aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+    """
+    if not isinstance(val, basestring):
         return False
-    except ValueError:
-        return True
+    return (len(val) == 36) and (val.count('-') == 4)
