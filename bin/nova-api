@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
 #
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -18,12 +19,9 @@
 
 """Starter script for Nova API.
 
-Starts both the EC2 and OpenStack APIs in separate processes. Pylint warnings
-about re-imports should be ignored.
+Starts both the EC2 and OpenStack APIs in separate processes.
 
 """
-
-# pylint: disable=W0404
 
 import sys
 import multiprocessing

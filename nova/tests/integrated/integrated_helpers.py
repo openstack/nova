@@ -171,9 +171,6 @@ class _IntegratedTestBase(test.TestCase):
         self.api = self.user.openstack_api
 
     def _start_api_service(self):
-        #ec2 = service.WSGIService("ec2")
-        #ec2.start()
-
         osapi = service.WSGIService("osapi")
         osapi.start()
 
