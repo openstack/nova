@@ -232,45 +232,45 @@ class Service(object):
                 logging.exception(_('model server went away'))
 
 
-class WsgiService(object):
-    """Base class for WSGI based services.
+class WSGIService(object):
+    """Provides ability to launch API from a 'paste' configuration."""
 
-    For each api you define, you must also define these flags:
-    :<api>_listen: The address on which to listen
-    :<api>_listen_port: The port on which to listen
+    def __init__(self, name, config_name=None):
+        """Initialize, but do not start, an API service."""
+        self.name = name
+        self._config_name = config_name or FLAGS.api_paste_config
+        self._config_location = self._find_config()
+        self._config = self._load_config()
+        self.application = self._load_application()
+        host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
+        port = getattr(FLAGS, '%s_listen_port' % name, 0)
+        self.server = wsgi.Server(name, self.application, host, port)
 
-    """
+    def _find_config(self):
+        """Attempt to find 'paste' configuration file."""
+        location = wsgi.paste_config_file(self._config_name)
+        logging.debug(_("Using paste.deploy config at: %s"), location)
+        return location
 
-    def __init__(self, conf, apis):
-        self.conf = conf
-        self.apis = apis
-        self.wsgi_app = None
+    def _load_config(self):
+        """Read and return the 'paste' configuration file."""
+        return wsgi.load_paste_configuration(self._config_location, self.name)
+
+    def _load_application(self):
+        """Using the loaded configuration, return the WSGI application."""
+        return wsgi.load_paste_app(self._config_location, self.name)
 
     def start(self):
-        self.wsgi_app = _run_wsgi(self.conf, self.apis)
+        """Start serving this API using loaded configuration."""
+        self.server.start()
+
+    def stop(self):
+        """Stop serving this API."""
+        self.server.stop()
 
     def wait(self):
-        self.wsgi_app.wait()
-
-    def get_socket_info(self, api_name):
-        """Returns the (host, port) that an API was started on."""
-        return self.wsgi_app.socket_info[api_name]
-
-
-class ApiService(WsgiService):
-    """Class for our nova-api service."""
-
-    @classmethod
-    def create(cls, conf=None):
-        if not conf:
-            conf = wsgi.paste_config_file(FLAGS.api_paste_config)
-            if not conf:
-                message = (_('No paste configuration found for: %s'),
-                           FLAGS.api_paste_config)
-                raise exception.Error(message)
-        api_endpoints = ['ec2', 'osapi']
-        service = cls(conf, api_endpoints)
-        return service
+        """Wait for the service to stop serving this API."""
+        self.server.wait()
 
 
 def serve(*services):
@@ -321,29 +321,3 @@ def serve_wsgi(cls, conf=None):
     service.start()
 
     return service
-
-
-def _run_wsgi(paste_config_file, apis):
-    logging.debug(_('Using paste.deploy config at: %s'), paste_config_file)
-    apps = []
-    for api in apis:
-        config = wsgi.load_paste_configuration(paste_config_file, api)
-        if config is None:
-            logging.debug(_('No paste configuration for app: %s'), api)
-            continue
-        logging.debug(_('App Config: %(api)s\n%(config)r') % locals())
-        logging.info(_('Running %s API'), api)
-        app = wsgi.load_paste_app(paste_config_file, api)
-        apps.append((app,
-                     getattr(FLAGS, '%s_listen_port' % api),
-                     getattr(FLAGS, '%s_listen' % api),
-                     api))
-    if len(apps) == 0:
-        logging.error(_('No known API applications configured in %s.'),
-                      paste_config_file)
-        return
-
-    server = wsgi.Server()
-    for app in apps:
-        server.start(*app)
-    return server

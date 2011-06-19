@@ -171,15 +171,14 @@ class _IntegratedTestBase(test.TestCase):
         self.api = self.user.openstack_api
 
     def _start_api_service(self):
-        api_service = service.ApiService.create()
-        api_service.start()
+        #ec2 = service.WSGIService("ec2")
+        #ec2.start()
 
-        if not api_service:
-            raise Exception("API Service was None")
+        osapi = service.WSGIService("osapi")
+        osapi.start()
 
-        self.api_service = api_service
-
-        host, port = api_service.get_socket_info('osapi')
+        host = osapi.server.host
+        port = osapi.server.port
         self.auth_url = 'http://%s:%s/v1.1' % (host, port)
 
     def tearDown(self):

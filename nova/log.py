@@ -314,3 +314,16 @@ logging.setLoggerClass(NovaLogger)
 def audit(msg, *args, **kwargs):
     """Shortcut for logging to root log with sevrity 'AUDIT'."""
     logging.root.log(AUDIT, msg, *args, **kwargs)
+
+
+class WritableLogger(object):
+    """A thin wrapper that responds to `write` and logs."""
+
+    def __init__(self, logger, level=logging.DEBUG):
+        self.logger = logger
+        self.level = level
+
+    def write(self, msg):
+        self.logger.log(self.level, msg)
+
+

@@ -43,45 +43,44 @@ FLAGS = flags.FLAGS
 LOG = logging.getLogger('nova.wsgi')
 
 
-class WritableLogger(object):
-    """A thin wrapper that responds to `write` and logs."""
-
-    def __init__(self, logger, level=logging.DEBUG):
-        self.logger = logger
-        self.level = level
-
-    def write(self, msg):
-        self.logger.log(self.level, msg)
-
-
 class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
-    def __init__(self, threads=1000):
-        self.pool = eventlet.GreenPool(threads)
-        self.socket_info = {}
+    default_pool_size = 1000
+    logger_name = "eventlet.wsgi.server"
 
-    def start(self, application, port, host='0.0.0.0', key=None, backlog=128):
-        """Run a WSGI server with the given application."""
-        arg0 = sys.argv[0]
-        logging.audit(_('Starting %(arg0)s on %(host)s:%(port)s') % locals())
-        socket = eventlet.listen((host, port), backlog=backlog)
-        self.pool.spawn_n(self._run, application, socket)
-        if key:
-            self.socket_info[key] = socket.getsockname()
+    def __init__(self, name, app, host, port, pool_size=None):
+        self.name = name
+        self.app = app
+        self.host = host
+        self.port = port
+        self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
+        self._log = logging.WritableLogger(logging.getLogger(self.logger_name))
+
+    def _start(self, socket):
+        """Blocking eventlet WSGI server launched from the real 'start'."""
+        eventlet.wsgi.server(socket,
+                             self.app,
+                             custom_pool=self._pool,
+                             log=self._log)
+
+    def start(self, backlog=128):
+        """Serve given WSGI application using the given parameters."""
+        socket = eventlet.listen((self.host, self.port), backlog=backlog)
+        self._server = eventlet.spawn(self._start, socket)
+        (self.host, self.port) = socket.getsockname()
+        LOG.info(_('Starting %(app)s on %(host)s:%(port)s') % self.__dict__)
+
+    def stop(self):
+        """Stop this server by killing the greenthread running it."""
+        self._server.kill()
 
     def wait(self):
-        """Wait until all servers have completed running."""
+        """Wait until server has been stopped."""
         try:
-            self.pool.waitall()
+            self._server.wait()
         except KeyboardInterrupt:
             pass
-
-    def _run(self, application, socket):
-        """Start a WSGI server in a new green thread."""
-        logger = logging.getLogger('eventlet.wsgi.server')
-        eventlet.wsgi.server(socket, application, custom_pool=self.pool,
-                             log=WritableLogger(logger))
 
 
 class Request(webob.Request):
@@ -339,6 +338,8 @@ def paste_config_file(basename):
     for configfile in configfiles:
         if os.path.exists(configfile):
             return configfile
+
+    raise Exception(_("Unable to find paste.deploy config '%s'") % basename)
 
 
 def load_paste_configuration(filename, appname):

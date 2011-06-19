@@ -24,6 +24,8 @@ import gettext
 import os
 import sys
 
+import eventlet.pool
+
 # If ../nova/__init__.py exists, add ../ to Python search path, so that
 # it will override what happens to be installed in /usr/(local/)lib/python...
 possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -46,6 +48,13 @@ LOG = logging.getLogger('nova.api')
 
 FLAGS = flags.FLAGS
 
+
+def launch(service_name):
+    _service = service.WSGIService(service_name)
+    _service.start()
+    _service.wait()
+
+
 if __name__ == '__main__':
     utils.default_flagfile()
     FLAGS(sys.argv)
@@ -57,5 +66,10 @@ if __name__ == '__main__':
         flag_get = FLAGS.get(flag, None)
         LOG.debug("%(flag)s : %(flag_get)s" % locals())
 
-    service = service.serve_wsgi(service.ApiService)
-    service.wait()
+
+    pool = eventlet.pool.Pool()
+    pool.execute(launch, "ec2")
+    pool.execute(launch, "osapi")
+    pool.wait_all()
+
+    print >>sys.stderr, "Exiting..."
