@@ -1133,7 +1133,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # before migration starts, so if any failure occurs,
         # any empty images has to be deleted. but not sure adding below
         # method is appropreate here. for now, admin has to delete manually.
-        # rpc.call(ctxt,
+        # rpc.cast(ctxt,
         #          self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
         #          {"method": "self.driver.destroy",
         #           "args": {'instance':instance_ref})
