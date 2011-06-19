@@ -319,7 +319,7 @@ def audit(msg, *args, **kwargs):
 class WritableLogger(object):
     """A thin wrapper that responds to `write` and logs."""
 
-    def __init__(self, logger, level=logging.DEBUG):
+    def __init__(self, logger, level=logging.INFO):
         self.logger = logger
         self.level = level
 

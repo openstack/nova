@@ -249,7 +249,7 @@ class WSGIService(object):
     def _find_config(self):
         """Attempt to find 'paste' configuration file."""
         location = wsgi.paste_config_file(self._config_name)
-        logging.debug(_("Using paste.deploy config at: %s"), location)
+        logging.info(_("Using paste.deploy config: %s"), location)
         return location
 
     def _load_config(self):

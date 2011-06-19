@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# pylint: disable=C0103
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
+#
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -18,40 +16,53 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""Starter script for Nova API."""
+"""Starter script for Nova API.
+
+Starts both the EC2 and OpenStack APIs in separate processes. Pylint warnings
+about re-imports should be ignored.
+
+"""
+
+# pylint: disable=W0404
 
 import sys
+import multiprocessing
 
-import eventlet.pool
-
-from nova import flags
-from nova import log as logging
-from nova import service
-from nova import utils
-from nova import version
-
-
-LOG = logging.getLogger("nova.api")
-FLAGS = flags.FLAGS
-VERSION = version.version_string_with_vcs()
+import nova.flags
+import nova.log
+import nova.service
+import nova.version
+import nova.utils
 
 
 def launch(service_name):
-    _service = service.WSGIService(service_name)
-    _service.start()
-    _service.wait()
+    """Launch WSGI service with name matching 'paste' config file section."""
+    service = nova.service.WSGIService(service_name)
+    service.start()
+    try:
+        service.wait()
+    except KeyboardInterrupt:
+        service.stop()
 
 
 def main():
-    utils.default_flagfile()
-    FLAGS(sys.argv)
-#    logging.setup()
-    LOG.audit(_("Starting nova-api node (version %s)") % VERSION)
+    """Begin process of launching both EC2 and OSAPI services."""
+    version = nova.version.version_string_with_vcs()
+    logger = nova.log.getLogger("nova.api")
+    logger.audit(_("Starting nova-api node (version %s)") % version)
 
-    pool = eventlet.pool.Pool()
-    pool.execute(launch, "ec2")
-    pool.execute(launch, "osapi")
-    pool.wait_all()
+    nova.flags.FLAGS(sys.argv)
+    nova.utils.default_flagfile()
+
+    pool = multiprocessing.Pool(2)
+    pool.map_async(launch, ["ec2", "osapi"])
+    pool.close()
+
+    try:
+        pool.join()
+    except KeyboardInterrupt:
+        logger.audit(_("Exiting..."))
+        pool.terminate()
 
 
 if __name__ == '__main__':

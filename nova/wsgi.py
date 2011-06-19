@@ -77,10 +77,7 @@ class Server(object):
 
     def wait(self):
         """Wait until server has been stopped."""
-        try:
-            self._server.wait()
-        except KeyboardInterrupt:
-            pass
+        self._server.wait()
 
 
 class Request(webob.Request):
