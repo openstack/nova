@@ -325,5 +325,3 @@ class WritableLogger(object):
 
     def write(self, msg):
         self.logger.log(self.level, msg)
-
-

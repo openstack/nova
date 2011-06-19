@@ -66,10 +66,7 @@ if __name__ == '__main__':
         flag_get = FLAGS.get(flag, None)
         LOG.debug("%(flag)s : %(flag_get)s" % locals())
 
-
     pool = eventlet.pool.Pool()
     pool.execute(launch, "ec2")
     pool.execute(launch, "osapi")
     pool.wait_all()
-
-    print >>sys.stderr, "Exiting..."
