@@ -302,22 +302,3 @@ def serve(*services):
 def wait():
     while True:
         greenthread.sleep(5)
-
-
-def serve_wsgi(cls, conf=None):
-    try:
-        service = cls.create(conf)
-    except Exception:
-        logging.exception('in WsgiService.create()')
-        raise
-    finally:
-        # After we've loaded up all our dynamic bits, check
-        # whether we should print help
-        flags.DEFINE_flag(flags.HelpFlag())
-        flags.DEFINE_flag(flags.HelpshortFlag())
-        flags.DEFINE_flag(flags.HelpXMLFlag())
-        FLAGS.ParseNewFlags()
-
-    service.start()
-
-    return service

@@ -20,33 +20,20 @@
 
 """Starter script for Nova API."""
 
-import gettext
-import os
 import sys
 
 import eventlet.pool
-
-# If ../nova/__init__.py exists, add ../ to Python search path, so that
-# it will override what happens to be installed in /usr/(local/)lib/python...
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir,
-                                   os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'nova', '__init__.py')):
-    sys.path.insert(0, possible_topdir)
-
-gettext.install('nova', unicode=1)
 
 from nova import flags
 from nova import log as logging
 from nova import service
 from nova import utils
 from nova import version
-from nova import wsgi
 
 
-LOG = logging.getLogger('nova.api')
-
+LOG = logging.getLogger("nova.api")
 FLAGS = flags.FLAGS
+VERSION = version.version_string_with_vcs()
 
 
 def launch(service_name):
@@ -55,18 +42,17 @@ def launch(service_name):
     _service.wait()
 
 
-if __name__ == '__main__':
+def main():
     utils.default_flagfile()
     FLAGS(sys.argv)
-    logging.setup()
-    LOG.audit(_("Starting nova-api node (version %s)"),
-              version.version_string_with_vcs())
-    LOG.debug(_("Full set of FLAGS:"))
-    for flag in FLAGS:
-        flag_get = FLAGS.get(flag, None)
-        LOG.debug("%(flag)s : %(flag_get)s" % locals())
+#    logging.setup()
+    LOG.audit(_("Starting nova-api node (version %s)") % VERSION)
 
     pool = eventlet.pool.Pool()
     pool.execute(launch, "ec2")
     pool.execute(launch, "osapi")
     pool.wait_all()
+
+
+if __name__ == '__main__':
+    sys.exit(main())

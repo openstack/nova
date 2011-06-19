@@ -69,7 +69,7 @@ class Server(object):
         socket = eventlet.listen((self.host, self.port), backlog=backlog)
         self._server = eventlet.spawn(self._start, socket)
         (self.host, self.port) = socket.getsockname()
-        LOG.info(_('Starting %(app)s on %(host)s:%(port)s') % self.__dict__)
+        LOG.info(_('Starting %(name)s on %(host)s:%(port)s') % self.__dict__)
 
     def stop(self):
         """Stop this server by killing the greenthread running it."""
