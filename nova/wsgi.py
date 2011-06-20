@@ -21,22 +21,25 @@
 
 import os
 import sys
+
 from xml.dom import minidom
 
 import eventlet
 import eventlet.wsgi
-eventlet.patcher.monkey_patch(all=False, socket=True, time=True)
-import routes
+import greenlet
 import routes.middleware
-import webob
 import webob.dec
 import webob.exc
+
 from paste import deploy
 
 from nova import exception
 from nova import flags
 from nova import log
 from nova import utils
+
+
+eventlet.patcher.monkey_patch(all=False, socket=True, time=True)
 
 
 FLAGS = flags.FLAGS
@@ -95,7 +98,7 @@ class Server(object):
         :returns: None
 
         """
-        LOG.debug(_("Stopping WSGI server."))
+        LOG.info(_("Stopping WSGI server."))
         self._server.kill()
 
     def wait(self):
@@ -106,8 +109,11 @@ class Server(object):
         :returns: None
 
         """
-        LOG.debug(_("Waiting for WSGI server to stop."))
-        self._server.wait()
+        LOG.info(_("Waiting for WSGI server to stop."))
+        try:
+            self._server.wait()
+        except greenlet.GreenletExit:
+            LOG.info(_("WSGI server has stopped."))
 
 
 class Request(webob.Request):

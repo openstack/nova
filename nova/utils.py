@@ -238,8 +238,6 @@ def default_flagfile(filename='nova.conf'):
             filename = "./nova.conf"
             if not os.path.exists(filename):
                 filename = '/etc/nova/nova.conf'
-            if not os.path.exists(filename):
-                return
         flagfile = ['--flagfile=%s' % filename]
         sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
 

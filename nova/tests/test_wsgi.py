@@ -28,7 +28,7 @@ import nova.test
 import nova.wsgi
 
 
-class TestNothingExists(unittest.TestCase):
+class TestLoaderNothingExists(unittest.TestCase):
     """Loader tests where os.path.exists always returns False."""
 
     def setUp(self):
@@ -45,8 +45,8 @@ class TestNothingExists(unittest.TestCase):
         os.path.exists = self._os_path_exists
 
 
-class TestNormalFilesystem(unittest.TestCase):
-    """Loader tests where os.path.exists always returns True."""
+class TestLoaderNormalFilesystem(unittest.TestCase):
+    """Loader tests with normal filesystem (unmodified os.path module)."""
 
     _paste_config = """
 [app:test_app]
@@ -77,3 +77,18 @@ document_root = /tmp
 
     def tearDown(self):
         self.config.close()
+
+
+class TestWSGIServer(unittest.TestCase):
+    """WSGI server tests."""
+
+    def test_no_app(self):
+        server = nova.wsgi.Server("test_app", None)
+        self.assertEquals("test_app", server.name)
+
+    def test_start_random_port(self):
+        server = nova.wsgi.Server("test_random", None)
+        server.start("127.0.0.1", 0)
+        self.assertNotEqual(0, server.port)
+        server.stop()
+        server.wait()
