@@ -33,13 +33,5 @@
 
 import gettext
 
-import log as logging
 
-
-def initialize():
-    gettext.install("nova", unicode=1)
-    logging.setup()
-    logging.debug(_("Initialized logging."))
-
-
-initialize()
+gettext.install("nova", unicode=1)

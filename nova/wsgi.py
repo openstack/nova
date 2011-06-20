@@ -109,7 +109,6 @@ class Server(object):
         :returns: None
 
         """
-        LOG.info(_("Waiting for WSGI server to stop."))
         try:
             self._server.wait()
         except greenlet.GreenletExit:

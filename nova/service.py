@@ -19,9 +19,11 @@
 
 """Generic Node baseclass for all workers that run on hosts."""
 
-import greenlet
 import inspect
+import multiprocessing
 import os
+
+import greenlet
 
 from eventlet import greenthread
 
@@ -51,6 +53,72 @@ flags.DEFINE_string('osapi_listen', "0.0.0.0",
 flags.DEFINE_integer('osapi_listen_port', 8774, 'port for os api to listen')
 flags.DEFINE_string('api_paste_config', "api-paste.ini",
                     'File name for the paste.deploy config for nova-api')
+
+
+class Launcher(object):
+    """Launch one or more services and wait for them to complete."""
+
+    def __init__(self, _flags=None):
+        """Initialize the service launcher.
+
+        :param _flags: Flags to use for the services we're going to load.
+        :returns: None
+
+        """
+        self._services = []
+        self._version = version.version_string_with_vcs()
+        logging.setup()
+        logging.audit(_("Nova Version (%(_version)s)") % self.__dict__)
+        FLAGS(_flags)
+        utils.default_flagfile()
+
+
+    @staticmethod
+    def run_service(service):
+        """Start and wait for a service to finish.
+
+        :param service: Service to run and wait for.
+        :returns: None
+
+        """
+        service.start()
+        try:
+            service.wait()
+        except KeyboardInterrupt:
+            service.stop()
+
+    def launch_service(self, service):
+        """Load and start the given service.
+
+        :param service: The service you would like to start.
+        :returns: None
+
+        """
+        process = multiprocessing.Process(target=self.run_service,
+                                          args=(service,))
+        process.start()
+        self._services.append(process)
+
+    def stop(self):
+        """Stop all services which are currently running.
+
+        :returns: None
+
+        """
+        for service in self._services:
+            if service.is_alive():
+                service.terminate()
+
+    def wait(self):
+        """Waits until all services have been stopped, and then returns.
+
+        :returns: None
+
+        """
+        for service in self._services:
+            service.join()
+            logging.info("Process exited with %d" % service.exitcode)
+
 
 
 class Service(object):

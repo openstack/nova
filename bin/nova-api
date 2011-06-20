@@ -24,44 +24,26 @@ Starts both the EC2 and OpenStack APIs in separate processes.
 """
 
 import sys
-import multiprocessing
 
-import nova.flags
 import nova.log
 import nova.service
 import nova.version
-import nova.utils
-
-
-def launch(service_name):
-    """Launch WSGI service with name matching 'paste' config file section."""
-    service = nova.service.WSGIService(service_name)
-    service.start()
-    try:
-        service.wait()
-    except KeyboardInterrupt:
-        service.stop()
 
 
 def main():
-    """Begin process of launching both EC2 and OSAPI services."""
-    version = nova.version.version_string_with_vcs()
-    logger = nova.log.getLogger("nova.api")
-    logger.audit(_("Starting nova-api node (version %s)") % version)
+    """Launch EC2 and OSAPI services."""
+    ec2 = nova.service.WSGIService("ec2")
+    osapi = nova.service.WSGIService("osapi")
 
-    nova.flags.FLAGS(sys.argv)
-    nova.utils.default_flagfile()
-
-    pool = multiprocessing.Pool(2)
-    pool.map_async(launch, ["ec2", "osapi"])
-    pool.close()
-
+    launcher = nova.service.Launcher(sys.argv)
+    launcher.launch_service(ec2)
+    launcher.launch_service(osapi)
+    
     try:
-        pool.join()
+        launcher.wait()
     except KeyboardInterrupt:
-        logger.audit(_("Exiting..."))
-        pool.terminate()
-
+        launcher.stop()
+        
 
 if __name__ == '__main__':
     sys.exit(main())
