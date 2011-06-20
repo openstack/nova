@@ -33,6 +33,7 @@ from nova import utils
 from nova.auth import manager
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova import exception
 from nova.virt import xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import volume_utils
@@ -228,6 +229,23 @@ class XenAPIVMTestCase(test.TestCase):
     def test_get_diagnostics(self):
         instance = self._create_instance()
         self.conn.get_diagnostics(instance)
+
+    def test_instance_snapshot_fails_with_no_primary_vdi(self):
+        def create_bad_vbd(vm_ref, vdi_ref):
+            vbd_rec = {'VM': vm_ref,
+               'VDI': vdi_ref,
+               'userdevice': 'fake',
+               'currently_attached': False}
+            vbd_ref = xenapi_fake._create_object('VBD', vbd_rec)
+            xenapi_fake.after_VBD_create(vbd_ref, vbd_rec)
+            return vbd_ref
+
+        self.stubs.Set(xenapi_fake, 'create_vbd', create_bad_vbd)
+        stubs.stubout_instance_snapshot(self.stubs)
+        instance = self._create_instance()
+
+        name = "MySnapshot"
+        self.assertRaises(exception.Error, self.conn.snapshot, instance, name)
 
     def test_instance_snapshot(self):
         stubs.stubout_instance_snapshot(self.stubs)

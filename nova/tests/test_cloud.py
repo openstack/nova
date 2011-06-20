@@ -35,7 +35,7 @@ from nova import utils
 from nova.auth import manager
 from nova.api.ec2 import cloud
 from nova.api.ec2 import ec2utils
-from nova.image import local
+from nova.image import fake
 
 
 FLAGS = flags.FLAGS
@@ -56,6 +56,7 @@ class CloudTestCase(test.TestCase):
         self.compute = self.start_service('compute')
         self.scheduter = self.start_service('scheduler')
         self.network = self.start_service('network')
+        self.volume = self.start_service('volume')
         self.image_service = utils.import_object(FLAGS.image_service)
 
         self.manager = manager.AuthManager()
@@ -69,8 +70,8 @@ class CloudTestCase(test.TestCase):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'available'}}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show)
-        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
 
         # NOTE(vish): set up a manual wait so rpc.cast has a chance to finish
         rpc_cast = rpc.cast
@@ -303,7 +304,7 @@ class CloudTestCase(test.TestCase):
         def fake_show_none(meh, context, id):
             raise exception.ImageNotFound(image_id='bad_image_id')
 
-        self.stubs.Set(local.LocalImageService, 'detail', fake_detail)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
         # list all
         result1 = describe_images(self.context)
         result1 = result1['imagesSet'][0]
@@ -317,8 +318,8 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(2, len(result3['imagesSet']))
         # provide an non-existing image_id
         self.stubs.UnsetAll()
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_none)
-        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show_none)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show_none)
+        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show_none)
         self.assertRaises(exception.ImageNotFound, describe_images,
                           self.context, ['ami-fake'])
 
@@ -329,8 +330,8 @@ class CloudTestCase(test.TestCase):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'is_public': True}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show)
-        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
         result = describe_image_attribute(self.context, 'ami-00000001',
                                           'launchPermission')
         self.assertEqual([{'group': 'all'}], result['launchPermission'])
@@ -345,9 +346,9 @@ class CloudTestCase(test.TestCase):
         def fake_update(meh, context, image_id, metadata, data=None):
             return metadata
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show)
-        self.stubs.Set(local.LocalImageService, 'show_by_name', fake_show)
-        self.stubs.Set(local.LocalImageService, 'update', fake_update)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'show_by_name', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'update', fake_update)
         result = modify_image_attribute(self.context, 'ami-00000001',
                                           'launchPermission', 'add',
                                            user_group=['all'])
@@ -359,7 +360,7 @@ class CloudTestCase(test.TestCase):
         def fake_delete(self, context, id):
             return None
 
-        self.stubs.Set(local.LocalImageService, 'delete', fake_delete)
+        self.stubs.Set(fake._FakeImageService, 'delete', fake_delete)
         # valid image
         result = deregister_image(self.context, 'ami-00000001')
         self.assertEqual(result['imageId'], 'ami-00000001')
@@ -369,18 +370,25 @@ class CloudTestCase(test.TestCase):
         def fake_detail_empty(self, context):
             return []
 
-        self.stubs.Set(local.LocalImageService, 'detail', fake_detail_empty)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail_empty)
         self.assertRaises(exception.ImageNotFound, deregister_image,
                           self.context, 'ami-bad001')
 
-    def test_console_output(self):
-        instance_type = FLAGS.default_instance_type
-        max_count = 1
-        kwargs = {'image_id': 'ami-1',
-                  'instance_type': instance_type,
-                  'max_count': max_count}
+    def _run_instance(self, **kwargs):
         rv = self.cloud.run_instances(self.context, **kwargs)
         instance_id = rv['instancesSet'][0]['instanceId']
+        return instance_id
+
+    def _run_instance_wait(self, **kwargs):
+        ec2_instance_id = self._run_instance(**kwargs)
+        self._wait_for_running(ec2_instance_id)
+        return ec2_instance_id
+
+    def test_console_output(self):
+        instance_id = self._run_instance(
+            image_id='ami-1',
+            instance_type=FLAGS.default_instance_type,
+            max_count=1)
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
         self.assertEquals(b64decode(output['output']), 'FAKE CONSOLE?OUTPUT')
@@ -389,9 +397,7 @@ class CloudTestCase(test.TestCase):
         rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_ajax_console(self):
-        kwargs = {'image_id': 'ami-1'}
-        rv = self.cloud.run_instances(self.context, **kwargs)
-        instance_id = rv['instancesSet'][0]['instanceId']
+        instance_id = self._run_instance(image_id='ami-1')
         output = self.cloud.get_ajax_console(context=self.context,
                                              instance_id=[instance_id])
         self.assertEquals(output['url'],
@@ -457,6 +463,12 @@ class CloudTestCase(test.TestCase):
         self.cloud.delete_key_pair(self.context, 'test')
 
     def test_run_instances(self):
+        # stub out the rpc call
+        def stub_cast(*args, **kwargs):
+            pass
+
+        self.stubs.Set(rpc, 'cast', stub_cast)
+
         kwargs = {'image_id': FLAGS.default_image,
                   'instance_type': FLAGS.default_instance_type,
                   'max_count': 1}
@@ -466,7 +478,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['imageId'], 'ami-00000001')
         self.assertEqual(instance['displayName'], 'Server 1')
         self.assertEqual(instance['instanceId'], 'i-00000001')
-        self.assertEqual(instance['instanceState']['name'], 'networking')
+        self.assertEqual(instance['instanceState']['name'], 'scheduling')
         self.assertEqual(instance['instanceType'], 'm1.small')
 
     def test_run_instances_image_state_none(self):
@@ -480,7 +492,7 @@ class CloudTestCase(test.TestCase):
                     'type': 'machine'}}
 
         self.stubs.UnsetAll()
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_no_state)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show_no_state)
         self.assertRaises(exception.ApiError, run_instances,
                           self.context, **kwargs)
 
@@ -495,7 +507,7 @@ class CloudTestCase(test.TestCase):
                     'type': 'machine', 'image_state': 'decrypting'}}
 
         self.stubs.UnsetAll()
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_decrypt)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show_decrypt)
         self.assertRaises(exception.ApiError, run_instances,
                           self.context, **kwargs)
 
@@ -509,7 +521,7 @@ class CloudTestCase(test.TestCase):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine'}, 'status': 'active'}
 
-        self.stubs.Set(local.LocalImageService, 'show', fake_show_stat_active)
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show_stat_active)
 
         result = run_instances(self.context, **kwargs)
         self.assertEqual(len(result['instancesSet']), 1)
@@ -538,7 +550,9 @@ class CloudTestCase(test.TestCase):
 
     def test_update_of_instance_wont_update_private_fields(self):
         inst = db.instance_create(self.context, {})
-        self.cloud.update_instance(self.context, inst['id'],
+        ec2_id = ec2utils.id_to_ec2_id(inst['id'])
+        self.cloud.update_instance(self.context, ec2_id,
+                                   display_name='c00l 1m4g3',
                                    mac_address='DE:AD:BE:EF')
         inst = db.instance_get(self.context, inst['id'])
         self.assertEqual(None, inst['mac_address'])
@@ -560,4 +574,300 @@ class CloudTestCase(test.TestCase):
                                  mountpoint='/not/here')
         vol = db.volume_get(self.context, vol['id'])
         self.assertEqual(None, vol['mountpoint'])
+        db.volume_destroy(self.context, vol['id'])
+
+    def _restart_compute_service(self, periodic_interval=None):
+        """restart compute service. NOTE: fake driver forgets all instances."""
+        self.compute.kill()
+        if periodic_interval:
+            self.compute = self.start_service(
+                'compute', periodic_interval=periodic_interval)
+        else:
+            self.compute = self.start_service('compute')
+
+    def _wait_for_state(self, ctxt, instance_id, predicate):
+        """Wait for an stopping instance to be a given state"""
+        id = ec2utils.ec2_id_to_id(instance_id)
+        while True:
+            info = self.cloud.compute_api.get(context=ctxt, instance_id=id)
+            LOG.debug(info)
+            if predicate(info):
+                break
+            greenthread.sleep(1)
+
+    def _wait_for_running(self, instance_id):
+        def is_running(info):
+            return info['state_description'] == 'running'
+        self._wait_for_state(self.context, instance_id, is_running)
+
+    def _wait_for_stopped(self, instance_id):
+        def is_stopped(info):
+            return info['state_description'] == 'stopped'
+        self._wait_for_state(self.context, instance_id, is_stopped)
+
+    def _wait_for_terminate(self, instance_id):
+        def is_deleted(info):
+            return info['deleted']
+        elevated = self.context.elevated(read_deleted=True)
+        self._wait_for_state(elevated, instance_id, is_deleted)
+
+    def test_stop_start_instance(self):
+        """Makes sure stop/start instance works"""
+        # enforce periodic tasks run in short time to avoid wait for 60s.
+        self._restart_compute_service(periodic_interval=0.3)
+
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1, }
+        instance_id = self._run_instance_wait(**kwargs)
+
+        # a running instance can't be started. It is just ignored.
+        result = self.cloud.start_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
+        self.assertTrue(result)
+
+        result = self.cloud.stop_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
+        self.assertTrue(result)
+        self._wait_for_stopped(instance_id)
+
+        result = self.cloud.start_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
+        self.assertTrue(result)
+        self._wait_for_running(instance_id)
+
+        result = self.cloud.stop_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
+        self.assertTrue(result)
+        self._wait_for_stopped(instance_id)
+
+        result = self.cloud.terminate_instances(self.context, [instance_id])
+        greenthread.sleep(0.3)
+        self.assertTrue(result)
+
+        self._restart_compute_service()
+
+    def _volume_create(self):
+        kwargs = {'status': 'available',
+                  'host': self.volume.host,
+                  'size': 1,
+                  'attach_status': 'detached', }
+        return db.volume_create(self.context, kwargs)
+
+    def _assert_volume_attached(self, vol, instance_id, mountpoint):
+        self.assertEqual(vol['instance_id'], instance_id)
+        self.assertEqual(vol['mountpoint'], mountpoint)
+        self.assertEqual(vol['status'], "in-use")
+        self.assertEqual(vol['attach_status'], "attached")
+
+    def _assert_volume_detached(self, vol):
+        self.assertEqual(vol['instance_id'], None)
+        self.assertEqual(vol['mountpoint'], None)
+        self.assertEqual(vol['status'], "available")
+        self.assertEqual(vol['attach_status'], "detached")
+
+    def test_stop_start_with_volume(self):
+        """Make sure run instance with block device mapping works"""
+
+        # enforce periodic tasks run in short time to avoid wait for 60s.
+        self._restart_compute_service(periodic_interval=0.3)
+
+        vol1 = self._volume_create()
+        vol2 = self._volume_create()
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1,
+                  'block_device_mapping': [{'device_name': '/dev/vdb',
+                                            'volume_id': vol1['id'],
+                                            'delete_on_termination': False, },
+                                           {'device_name': '/dev/vdc',
+                                            'volume_id': vol2['id'],
+                                            'delete_on_termination': True, },
+                                           ]}
+        ec2_instance_id = self._run_instance_wait(**kwargs)
+        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+
+        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        self.assertEqual(len(vols), 2)
+        for vol in vols:
+            self.assertTrue(vol['id'] == vol1['id'] or vol['id'] == vol2['id'])
+
+        vol = db.volume_get(self.context, vol1['id'])
+        self._assert_volume_attached(vol, instance_id, '/dev/vdb')
+
+        vol = db.volume_get(self.context, vol2['id'])
+        self._assert_volume_attached(vol, instance_id, '/dev/vdc')
+
+        result = self.cloud.stop_instances(self.context, [ec2_instance_id])
+        self.assertTrue(result)
+        self._wait_for_stopped(ec2_instance_id)
+
+        vol = db.volume_get(self.context, vol1['id'])
+        self._assert_volume_detached(vol)
+        vol = db.volume_get(self.context, vol2['id'])
+        self._assert_volume_detached(vol)
+
+        self.cloud.start_instances(self.context, [ec2_instance_id])
+        self._wait_for_running(ec2_instance_id)
+        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        self.assertEqual(len(vols), 2)
+        for vol in vols:
+            self.assertTrue(vol['id'] == vol1['id'] or vol['id'] == vol2['id'])
+            self.assertTrue(vol['mountpoint'] == '/dev/vdb' or
+                            vol['mountpoint'] == '/dev/vdc')
+            self.assertEqual(vol['instance_id'], instance_id)
+            self.assertEqual(vol['status'], "in-use")
+            self.assertEqual(vol['attach_status'], "attached")
+
+        self.cloud.terminate_instances(self.context, [ec2_instance_id])
+        greenthread.sleep(0.3)
+
+        admin_ctxt = context.get_admin_context(read_deleted=False)
+        vol = db.volume_get(admin_ctxt, vol1['id'])
+        self.assertFalse(vol['deleted'])
+        db.volume_destroy(self.context, vol1['id'])
+
+        greenthread.sleep(0.3)
+        admin_ctxt = context.get_admin_context(read_deleted=True)
+        vol = db.volume_get(admin_ctxt, vol2['id'])
+        self.assertTrue(vol['deleted'])
+
+        self._restart_compute_service()
+
+    def test_stop_with_attached_volume(self):
+        """Make sure attach info is reflected to block device mapping"""
+        # enforce periodic tasks run in short time to avoid wait for 60s.
+        self._restart_compute_service(periodic_interval=0.3)
+
+        vol1 = self._volume_create()
+        vol2 = self._volume_create()
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1,
+                  'block_device_mapping': [{'device_name': '/dev/vdb',
+                                            'volume_id': vol1['id'],
+                                            'delete_on_termination': True}]}
+        ec2_instance_id = self._run_instance_wait(**kwargs)
+        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+
+        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        self.assertEqual(len(vols), 1)
+        for vol in vols:
+            self.assertEqual(vol['id'], vol1['id'])
+            self._assert_volume_attached(vol, instance_id, '/dev/vdb')
+
+        vol = db.volume_get(self.context, vol2['id'])
+        self._assert_volume_detached(vol)
+
+        self.cloud.compute_api.attach_volume(self.context,
+                                             instance_id=instance_id,
+                                             volume_id=vol2['id'],
+                                             device='/dev/vdc')
+        greenthread.sleep(0.3)
+        vol = db.volume_get(self.context, vol2['id'])
+        self._assert_volume_attached(vol, instance_id, '/dev/vdc')
+
+        self.cloud.compute_api.detach_volume(self.context,
+                                             volume_id=vol1['id'])
+        greenthread.sleep(0.3)
+        vol = db.volume_get(self.context, vol1['id'])
+        self._assert_volume_detached(vol)
+
+        result = self.cloud.stop_instances(self.context, [ec2_instance_id])
+        self.assertTrue(result)
+        self._wait_for_stopped(ec2_instance_id)
+
+        for vol_id in (vol1['id'], vol2['id']):
+            vol = db.volume_get(self.context, vol_id)
+            self._assert_volume_detached(vol)
+
+        self.cloud.start_instances(self.context, [ec2_instance_id])
+        self._wait_for_running(ec2_instance_id)
+        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        self.assertEqual(len(vols), 1)
+        for vol in vols:
+            self.assertEqual(vol['id'], vol2['id'])
+            self._assert_volume_attached(vol, instance_id, '/dev/vdc')
+
+        vol = db.volume_get(self.context, vol1['id'])
+        self._assert_volume_detached(vol)
+
+        self.cloud.terminate_instances(self.context, [ec2_instance_id])
+        greenthread.sleep(0.3)
+
+        for vol_id in (vol1['id'], vol2['id']):
+            vol = db.volume_get(self.context, vol_id)
+            self.assertEqual(vol['id'], vol_id)
+            self._assert_volume_detached(vol)
+            db.volume_destroy(self.context, vol_id)
+
+        self._restart_compute_service()
+
+    def _create_snapshot(self, ec2_volume_id):
+        result = self.cloud.create_snapshot(self.context,
+                                            volume_id=ec2_volume_id)
+        greenthread.sleep(0.3)
+        return result['snapshotId']
+
+    def test_run_with_snapshot(self):
+        """Makes sure run/stop/start instance with snapshot works."""
+        vol = self._volume_create()
+        ec2_volume_id = ec2utils.id_to_ec2_id(vol['id'], 'vol-%08x')
+
+        ec2_snapshot1_id = self._create_snapshot(ec2_volume_id)
+        snapshot1_id = ec2utils.ec2_id_to_id(ec2_snapshot1_id)
+        ec2_snapshot2_id = self._create_snapshot(ec2_volume_id)
+        snapshot2_id = ec2utils.ec2_id_to_id(ec2_snapshot2_id)
+
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': FLAGS.default_instance_type,
+                  'max_count': 1,
+                  'block_device_mapping': [{'device_name': '/dev/vdb',
+                                            'snapshot_id': snapshot1_id,
+                                            'delete_on_termination': False, },
+                                           {'device_name': '/dev/vdc',
+                                            'snapshot_id': snapshot2_id,
+                                            'delete_on_termination': True}]}
+        ec2_instance_id = self._run_instance_wait(**kwargs)
+        instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
+
+        vols = db.volume_get_all_by_instance(self.context, instance_id)
+        self.assertEqual(len(vols), 2)
+        vol1_id = None
+        vol2_id = None
+        for vol in vols:
+            snapshot_id = vol['snapshot_id']
+            if snapshot_id == snapshot1_id:
+                vol1_id = vol['id']
+                mountpoint = '/dev/vdb'
+            elif snapshot_id == snapshot2_id:
+                vol2_id = vol['id']
+                mountpoint = '/dev/vdc'
+            else:
+                self.fail()
+
+            self._assert_volume_attached(vol, instance_id, mountpoint)
+
+        self.assertTrue(vol1_id)
+        self.assertTrue(vol2_id)
+
+        self.cloud.terminate_instances(self.context, [ec2_instance_id])
+        greenthread.sleep(0.3)
+        self._wait_for_terminate(ec2_instance_id)
+
+        greenthread.sleep(0.3)
+        admin_ctxt = context.get_admin_context(read_deleted=False)
+        vol = db.volume_get(admin_ctxt, vol1_id)
+        self._assert_volume_detached(vol)
+        self.assertFalse(vol['deleted'])
+        db.volume_destroy(self.context, vol1_id)
+
+        greenthread.sleep(0.3)
+        admin_ctxt = context.get_admin_context(read_deleted=True)
+        vol = db.volume_get(admin_ctxt, vol2_id)
+        self.assertTrue(vol['deleted'])
+
+        for snapshot_id in (ec2_snapshot1_id, ec2_snapshot2_id):
+            self.cloud.delete_snapshot(self.context, snapshot_id)
+            greenthread.sleep(0.3)
         db.volume_destroy(self.context, vol['id'])
