@@ -370,8 +370,8 @@ class XenAPIVMTestCase(test.TestCase):
         self.conn.spawn(instance)
         self.create_vm_record(self.conn, os_type, instance_id)
         self.check_vm_record(self.conn, check_injection)
-        self.assert_(instance.os_type)
-        self.assert_(instance.architecture)
+        self.assertTrue(instance.os_type)
+        self.assertTrue(instance.architecture)
 
     def test_spawn_not_enough_memory(self):
         FLAGS.xenapi_image_service = 'glance'
@@ -740,23 +740,23 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
 class CompareVersionTestCase(test.TestCase):
     def test_less_than(self):
         """Test that cmp_version compares a as less than b"""
-        self.assert_(vmops.cmp_version('1.2.3.4', '1.2.3.5') < 0)
+        self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.5') < 0)
 
     def test_greater_than(self):
         """Test that cmp_version compares a as greater than b"""
-        self.assert_(vmops.cmp_version('1.2.3.5', '1.2.3.4') > 0)
+        self.assertTrue(vmops.cmp_version('1.2.3.5', '1.2.3.4') > 0)
 
     def test_equal(self):
         """Test that cmp_version compares a as equal to b"""
-        self.assert_(vmops.cmp_version('1.2.3.4', '1.2.3.4') == 0)
+        self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.4') == 0)
 
     def test_non_lexical(self):
         """Test that cmp_version compares non-lexically"""
-        self.assert_(vmops.cmp_version('1.2.3.10', '1.2.3.4') > 0)
+        self.assertTrue(vmops.cmp_version('1.2.3.10', '1.2.3.4') > 0)
 
     def test_length(self):
         """Test that cmp_version compares by length as last resort"""
-        self.assert_(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
+        self.assertTrue(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
 
 
 class FakeXenApi(object):
