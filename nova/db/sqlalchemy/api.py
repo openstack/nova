@@ -18,7 +18,7 @@
 """
 Implementation of SQLAlchemy backend.
 """
-
+import traceback
 import warnings
 
 from nova import db
@@ -839,6 +839,25 @@ def instance_destroy(context, instance_id):
                 update({'deleted': True,
                         'deleted_at': utils.utcnow(),
                         'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def instance_stop(context, instance_id):
+    session = get_session()
+    with session.begin():
+        from nova.compute import power_state
+        session.query(models.Instance).\
+                filter_by(id=instance_id).\
+                update({'host': None,
+                        'state': power_state.SHUTOFF,
+                        'state_description': 'stopped',
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                update({'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
+                filter_by(instance_id=instance_id).\
+                update({'updated_at': literal_column('updated_at')})
 
 
 @require_context
@@ -1894,6 +1913,66 @@ def snapshot_update(context, snapshot_id, values):
 
 
 @require_context
+def block_device_mapping_create(context, values):
+    bdm_ref = models.BlockDeviceMapping()
+    bdm_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        bdm_ref.save(session=session)
+
+
+@require_context
+def block_device_mapping_update(context, bdm_id, values):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+                filter_by(id=bdm_id).\
+                filter_by(deleted=False).\
+                update(values)
+
+
+@require_context
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.BlockDeviceMapping).\
+             filter_by(instance_id=instance_id).\
+             filter_by(deleted=False).\
+             all()
+    if not result:
+        return []
+    return result
+
+
+@require_context
+def block_device_mapping_destroy(context, bdm_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+                filter_by(id=bdm_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+        filter_by(instance_id=instance_id).\
+        filter_by(volume_id=volume_id).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+###################
+
+
+@require_context
 def security_group_get_all(context):
     session = get_session()
     return session.query(models.SecurityGroup).\
@@ -2626,7 +2705,17 @@ def zone_get_all(context):
 
 ####################
 
+
+def require_instance_exists(func):
+    def new_func(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return func(context, instance_id, *args, **kwargs)
+    new_func.__name__ = func.__name__
+    return new_func
+
+
 @require_context
+@require_instance_exists
 def instance_metadata_get(context, instance_id):
     session = get_session()
 
@@ -2642,6 +2731,7 @@ def instance_metadata_get(context, instance_id):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_delete(context, instance_id, key):
     session = get_session()
     session.query(models.InstanceMetadata).\
@@ -2654,6 +2744,7 @@ def instance_metadata_delete(context, instance_id, key):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_delete_all(context, instance_id):
     session = get_session()
     session.query(models.InstanceMetadata).\
@@ -2665,6 +2756,7 @@ def instance_metadata_delete_all(context, instance_id):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_get_item(context, instance_id, key):
     session = get_session()
 
@@ -2681,6 +2773,7 @@ def instance_metadata_get_item(context, instance_id, key):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
 
