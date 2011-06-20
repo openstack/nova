@@ -378,7 +378,8 @@ class Loader(object):
         :raises: `nova.exception.PasteAppNotFound`
 
         """
-        app = deploy.loadapp("config:%s" % self.config_path, name=name)
-        if app is None:
+        try:
+            return deploy.loadapp("config:%s" % self.config_path, name=name)
+        except LookupError as err:
+            LOG.error(err)
             raise exception.PasteAppNotFound(name=name, path=self.config_path)
-        return app
