@@ -476,6 +476,11 @@ def instance_stop(context, instance_id):
     return IMPL.instance_stop(context, instance_id)
 
 
+def instance_get_by_uuid(context, uuid):
+    """Get an instance or raise if it does not exist."""
+    return IMPL.instance_get_by_uuid(context, uuid)
+
+
 def instance_get(context, instance_id):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)

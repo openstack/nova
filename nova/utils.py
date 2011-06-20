@@ -35,6 +35,7 @@ import struct
 import sys
 import time
 import types
+import uuid
 from xml.sax import saxutils
 
 from eventlet import event
@@ -718,3 +719,17 @@ def parse_server_string(server_str):
     except:
         LOG.debug(_('Invalid server_string: %s' % server_str))
         return ('', '')
+
+
+def gen_uuid():
+    return uuid.uuid4()
+
+
+def is_uuid_like(val):
+    """For our purposes, a UUID is a string in canoical form:
+
+        aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+    """
+    if not isinstance(val, basestring):
+        return False
+    return (len(val) == 36) and (val.count('-') == 4)
