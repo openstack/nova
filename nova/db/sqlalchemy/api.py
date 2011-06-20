@@ -18,7 +18,7 @@
 """
 Implementation of SQLAlchemy backend.
 """
-
+import traceback
 import warnings
 
 from nova import db
@@ -2694,7 +2694,17 @@ def zone_get_all(context):
 
 ####################
 
+
+def require_instance_exists(func):
+    def new_func(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return func(context, instance_id, *args, **kwargs)
+    new_func.__name__ = func.__name__
+    return new_func
+
+
 @require_context
+@require_instance_exists
 def instance_metadata_get(context, instance_id):
     session = get_session()
 
@@ -2710,6 +2720,7 @@ def instance_metadata_get(context, instance_id):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_delete(context, instance_id, key):
     session = get_session()
     session.query(models.InstanceMetadata).\
@@ -2722,6 +2733,7 @@ def instance_metadata_delete(context, instance_id, key):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_delete_all(context, instance_id):
     session = get_session()
     session.query(models.InstanceMetadata).\
@@ -2733,6 +2745,7 @@ def instance_metadata_delete_all(context, instance_id):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_get_item(context, instance_id, key):
     session = get_session()
 
@@ -2749,6 +2762,7 @@ def instance_metadata_get_item(context, instance_id, key):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
 
