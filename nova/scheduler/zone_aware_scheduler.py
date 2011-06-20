@@ -48,9 +48,9 @@ class InvalidBlob(exception.NovaException):
 class ZoneAwareScheduler(driver.Scheduler):
     """Base class for creating Zone Aware Schedulers."""
 
-    def _call_zone_method(self, context, method, specs):
+    def _call_zone_method(self, context, method, specs, zones):
         """Call novaclient zone method. Broken out for testing."""
-        return api.call_zone_method(context, method, specs=specs)
+        return api.call_zone_method(context, method, specs=specs, zones=zones)
 
     def _provision_resource_locally(self, context, item, instance_id, kwargs):
         """Create the requested resource in this Zone."""
@@ -160,6 +160,30 @@ class ZoneAwareScheduler(driver.Scheduler):
         self._provision_resource_from_blob(context, item, instance_id,
                                                request_spec, kwargs)
 
+    def _adjust_child_weights(self, child_results, zones):
+        """Apply the Scale and Offset values from the Zone definition
+        to adjust the weights returned from the child zones. Alters
+        child_results in place.
+        """
+        for zone, result in child_results:
+            if not result:
+                continue
+            
+            for zone_rec in zones:
+                if zone_rec['url'] != zone:
+                    continue
+
+                try:
+                    offset = zone_rec['weight_offset']
+                    scale = zone_rec['weight_scale']
+                    raw_weight = zone['weight']
+                    cooked_weight = offset + scale * raw_weight
+                    zone['weight'] = cooked_weight
+                    zone['raw_weight'] = raw_weight
+                except Exception, e:
+                    LOG.exception(_("Bad child zone scaling values for Zone: "
+                                    "%(zone)s") % locals())
+
     def schedule_run_instance(self, context, instance_id, request_spec,
                               *args, **kwargs):
         """This method is called from nova.compute.api to provision
@@ -234,8 +258,10 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         # Next, tack on the best weights from the child zones ...
         json_spec = json.dumps(request_spec)
+        all_zones = db.zone_get_all(context)
         child_results = self._call_zone_method(context, "select",
-                specs=json_spec)
+                specs=json_spec, zones=all_zones)
+        self._adjust_child_weights(child_results, all_zones)
         for child_zone, result in child_results:
             for weighting in result:
                 # Remember the child_zone so we can get back to

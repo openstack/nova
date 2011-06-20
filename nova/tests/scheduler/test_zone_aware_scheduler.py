@@ -16,6 +16,7 @@
 Tests For Zone Aware Scheduler.
 """
 
+from nova import db
 from nova import exception
 from nova import test
 from nova.scheduler import driver
