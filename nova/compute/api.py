@@ -34,6 +34,7 @@ from nova import utils
 from nova import volume
 from nova.compute import instance_types
 from nova.compute import power_state
+from nova.compute.utils import terminate_volumes
 from nova.scheduler import api as scheduler_api
 from nova.db import base
 
@@ -50,6 +51,18 @@ flags.DEFINE_integer('find_host_timeout', 30,
 def generate_default_hostname(instance_id):
     """Default function to generate a hostname given an instance reference."""
     return str(instance_id)
+
+
+def _is_able_to_shutdown(instance, instance_id):
+    states = {'terminating': "Instance %s is already being terminated",
+              'migrating': "Instance %s is being migrated",
+              'stopping': "Instance %s is being stopped"}
+    msg = states.get(instance['state_description'])
+    if msg:
+        LOG.warning(_(msg), instance_id)
+        return False
+
+    return True
 
 
 class API(base.Base):
@@ -239,7 +252,7 @@ class API(base.Base):
         return (num_instances, base_options, security_groups)
 
     def create_db_entry_for_new_instance(self, context, base_options,
-             security_groups, num=1):
+             security_groups, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security
         groups, MAC address, etc). This will called by create()
@@ -258,6 +271,23 @@ class API(base.Base):
             self.db.instance_add_security_group(elevated,
                                                 instance_id,
                                                 security_group_id)
+
+        # NOTE(yamahata)
+        # tell vm driver to attach volume at boot time by updating
+        # BlockDeviceMapping
+        for bdm in block_device_mapping:
+            LOG.debug(_('bdm %s'), bdm)
+            assert 'device_name' in bdm
+            values = {
+                'instance_id': instance_id,
+                'device_name': bdm['device_name'],
+                'delete_on_termination': bdm.get('delete_on_termination'),
+                'virtual_name': bdm.get('virtual_name'),
+                'snapshot_id': bdm.get('snapshot_id'),
+                'volume_id': bdm.get('volume_id'),
+                'volume_size': bdm.get('volume_size'),
+                'no_device': bdm.get('no_device')}
+            self.db.block_device_mapping_create(elevated, values)
 
         # Set sane defaults if not specified
         updates = dict(hostname=self.hostname_factory(instance_id))
@@ -343,7 +373,7 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, block_device_mapping=None):
         """
         Provision the instances by sending off a series of single
         instance requests to the Schedulers. This is fine for trival
@@ -364,11 +394,13 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id)
 
+        block_device_mapping = block_device_mapping or []
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context,
-                                    base_options, security_groups, num=num)
+                                    base_options, security_groups,
+                                    block_device_mapping, num=num)
             instances.append(instance)
             instance_id = instance['id']
 
@@ -478,24 +510,22 @@ class API(base.Base):
         rv = self.db.instance_update(context, instance_id, kwargs)
         return dict(rv.iteritems())
 
+    def _get_instance(self, context, instance_id, action_str):
+        try:
+            return self.get(context, instance_id)
+        except exception.NotFound:
+            LOG.warning(_("Instance %(instance_id)s was not found during "
+                          "%(action_str)s") %
+                        {'instance_id': instance_id, 'action_str': action_str})
+            raise
+
     @scheduler_api.reroute_compute("delete")
     def delete(self, context, instance_id):
         """Terminate an instance."""
         LOG.debug(_("Going to try to terminate %s"), instance_id)
-        try:
-            instance = self.get(context, instance_id)
-        except exception.NotFound:
-            LOG.warning(_("Instance %s was not found during terminate"),
-                        instance_id)
-            raise
+        instance = self._get_instance(context, instance_id, 'terminating')
 
-        if instance['state_description'] == 'terminating':
-            LOG.warning(_("Instance %s is already being terminated"),
-                        instance_id)
-            return
-
-        if instance['state_description'] == 'migrating':
-            LOG.warning(_("Instance %s is being migrated"), instance_id)
+        if not _is_able_to_shutdown(instance, instance_id):
             return
 
         self.update(context,
@@ -509,12 +539,59 @@ class API(base.Base):
             self._cast_compute_message('terminate_instance', context,
                     instance_id, host)
         else:
+            terminate_volumes(self.db, context, instance_id)
             self.db.instance_destroy(context, instance_id)
+
+    @scheduler_api.reroute_compute("stop")
+    def stop(self, context, instance_id):
+        """Stop an instance."""
+        LOG.debug(_("Going to try to stop %s"), instance_id)
+
+        instance = self._get_instance(context, instance_id, 'stopping')
+        if not _is_able_to_shutdown(instance, instance_id):
+            return
+
+        self.update(context,
+                    instance['id'],
+                    state_description='stopping',
+                    state=power_state.NOSTATE,
+                    terminated_at=utils.utcnow())
+
+        host = instance['host']
+        if host:
+            self._cast_compute_message('stop_instance', context,
+                    instance_id, host)
+
+    def start(self, context, instance_id):
+        """Start an instance."""
+        LOG.debug(_("Going to try to start %s"), instance_id)
+        instance = self._get_instance(context, instance_id, 'starting')
+        if instance['state_description'] != 'stopped':
+            _state_description = instance['state_description']
+            LOG.warning(_("Instance %(instance_id)s is not "
+                          "stopped(%(_state_description)s)") % locals())
+            return
+
+        # TODO(yamahata): injected_files isn't supported right now.
+        #                 It is used only for osapi. not for ec2 api.
+        #                 availability_zone isn't used by run_instance.
+        rpc.cast(context,
+                 FLAGS.scheduler_topic,
+                 {"method": "start_instance",
+                  "args": {"topic": FLAGS.compute_topic,
+                           "instance_id": instance_id}})
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
-        rv = self.db.instance_get(context, instance_id)
-        return dict(rv.iteritems())
+        # NOTE(sirp): id used to be exclusively integer IDs; now we're
+        # accepting both UUIDs and integer IDs. The handling of this
+        # is done in db/sqlalchemy/api/instance_get
+        if utils.is_uuid_like(instance_id):
+            uuid = instance_id
+            instance = self.db.instance_get_by_uuid(context, uuid)
+        else:
+            instance = self.db.instance_get(context, instance_id)
+        return dict(instance.iteritems())
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):
@@ -530,6 +607,7 @@ class API(base.Base):
         """Get all instances with this reservation_id, across
         all available Zones (if any).
         """
+        context = context.elevated()
         instances = self.db.instance_get_all_by_reservation(
                                     context, reservation_id)
 

@@ -363,11 +363,11 @@ class Resource(wsgi.Application):
             action, action_args, accept = self.deserializer.deserialize(
                                                                       request)
         except exception.InvalidContentType:
-            return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
+            msg = _("Unsupported Content-Type")
+            return webob.exc.HTTPBadRequest(explanation=msg)
         except exception.MalformedRequestBody:
-            explanation = _("Malformed request body")
-            return faults.Fault(webob.exc.HTTPBadRequest(
-                                            explanation=explanation))
+            msg = _("Malformed request body")
+            return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         action_result = self.dispatch(request, action, action_args)
 

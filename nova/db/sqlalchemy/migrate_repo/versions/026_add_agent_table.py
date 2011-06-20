@@ -1,4 +1,4 @@
-# Copyright 2010 OpenStack LLC.
+# Copyright 2011 OpenStack LLC.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -49,14 +49,6 @@ builds = Table('agent_builds', meta,
         )
 
 
-# Table stub-definitions
-# Just for the ForeignKey and column creation to succeed, these are not the
-# actual definitions of instances or services.
-#
-instances = Table('instances', meta,
-                Column('id', Integer(), primary_key=True, nullable=False),
-                )
-
 #
 # New Column
 #
@@ -73,6 +65,9 @@ def upgrade(migrate_engine):
             table.create()
         except Exception:
             logging.info(repr(table))
+
+    instances = Table('instances', meta, autoload=True,
+                      autoload_with=migrate_engine)
 
     # Add columns to existing tables
     instances.create_column(architecture)

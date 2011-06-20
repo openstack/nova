@@ -909,6 +909,25 @@ class CloudController(object):
         if kwargs.get('ramdisk_id'):
             ramdisk = self._get_image(context, kwargs['ramdisk_id'])
             kwargs['ramdisk_id'] = ramdisk['id']
+        for bdm in kwargs.get('block_device_mapping', []):
+            # NOTE(yamahata)
+            # BlockDevicedMapping.<N>.DeviceName
+            # BlockDevicedMapping.<N>.Ebs.SnapshotId
+            # BlockDevicedMapping.<N>.Ebs.VolumeSize
+            # BlockDevicedMapping.<N>.Ebs.DeleteOnTermination
+            # BlockDevicedMapping.<N>.VirtualName
+            # => remove .Ebs and allow volume id in SnapshotId
+            ebs = bdm.pop('ebs', None)
+            if ebs:
+                ec2_id = ebs.pop('snapshot_id')
+                id = ec2utils.ec2_id_to_id(ec2_id)
+                if ec2_id.startswith('snap-'):
+                    bdm['snapshot_id'] = id
+                elif ec2_id.startswith('vol-'):
+                    bdm['volume_id'] = id
+                ebs.setdefault('delete_on_termination', True)
+                bdm.update(ebs)
+
         image = self._get_image(context, kwargs['image_id'])
 
         if image:
@@ -933,37 +952,54 @@ class CloudController(object):
             user_data=kwargs.get('user_data'),
             security_group=kwargs.get('security_group'),
             availability_zone=kwargs.get('placement', {}).get(
-                                  'AvailabilityZone'))
+                                  'AvailabilityZone'),
+            block_device_mapping=kwargs.get('block_device_mapping', {}))
         return self._format_run_instances(context,
                                           instances[0]['reservation_id'])
+
+    def _do_instance(self, action, context, ec2_id):
+        instance_id = ec2utils.ec2_id_to_id(ec2_id)
+        action(context, instance_id=instance_id)
+
+    def _do_instances(self, action, context, instance_id):
+        for ec2_id in instance_id:
+            self._do_instance(action, context, ec2_id)
 
     def terminate_instances(self, context, instance_id, **kwargs):
         """Terminate each instance in instance_id, which is a list of ec2 ids.
         instance_id is a kwarg so its name cannot be modified."""
         LOG.debug(_("Going to start terminating instances"))
-        for ec2_id in instance_id:
-            instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            self.compute_api.delete(context, instance_id=instance_id)
+        self._do_instances(self.compute_api.delete, context, instance_id)
         return True
 
     def reboot_instances(self, context, instance_id, **kwargs):
         """instance_id is a list of instance ids"""
         LOG.audit(_("Reboot instance %r"), instance_id, context=context)
-        for ec2_id in instance_id:
-            instance_id = ec2utils.ec2_id_to_id(ec2_id)
-            self.compute_api.reboot(context, instance_id=instance_id)
+        self._do_instances(self.compute_api.reboot, context, instance_id)
+        return True
+
+    def stop_instances(self, context, instance_id, **kwargs):
+        """Stop each instances in instance_id.
+        Here instance_id is a list of instance ids"""
+        LOG.debug(_("Going to stop instances"))
+        self._do_instances(self.compute_api.stop, context, instance_id)
+        return True
+
+    def start_instances(self, context, instance_id, **kwargs):
+        """Start each instances in instance_id.
+        Here instance_id is a list of instance ids"""
+        LOG.debug(_("Going to start instances"))
+        self._do_instances(self.compute_api.start, context, instance_id)
         return True
 
     def rescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        instance_id = ec2utils.ec2_id_to_id(instance_id)
-        self.compute_api.rescue(context, instance_id=instance_id)
+        self._do_instance(self.compute_api.rescue, contect, instnace_id)
         return True
 
     def unrescue_instance(self, context, instance_id, **kwargs):
         """This is an extension to the normal ec2_api"""
-        instance_id = ec2utils.ec2_id_to_id(instance_id)
-        self.compute_api.unrescue(context, instance_id=instance_id)
+        self._do_instance(self.compute_api.unrescue, context, instance_id)
         return True
 
     def update_instance(self, context, instance_id, **kwargs):
@@ -974,7 +1010,8 @@ class CloudController(object):
                 changes[field] = kwargs[field]
         if changes:
             instance_id = ec2utils.ec2_id_to_id(instance_id)
-            self.compute_api.update(context, instance_id=instance_id, **kwargs)
+            self.compute_api.update(context, instance_id=instance_id,
+                                    **changes)
         return True
 
     @staticmethod

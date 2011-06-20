@@ -582,6 +582,14 @@ class FakeISCSIDriver(ISCSIDriver):
         """No setup necessary in fake mode."""
         pass
 
+    def discover_volume(self, context, volume):
+        """Discover volume on a remote host."""
+        return "/dev/disk/by-path/volume-id-%d" % volume['id']
+
+    def undiscover_volume(self, volume):
+        """Undiscover volume on a remote host."""
+        pass
+
     @staticmethod
     def fake_execute(cmd, *_args, **_kwargs):
         """Execute that simply logs the command."""
