@@ -62,6 +62,7 @@ from nova import quota
 from nova import utils
 from nova import rpc
 from nova.network import api as network_api
+from sqlalchemy.exc import IntegrityError
 import random
 
 
