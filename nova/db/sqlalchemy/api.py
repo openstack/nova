@@ -797,6 +797,8 @@ def instance_create(context, values):
     values['metadata'] = _metadata_refs(values.get('metadata'))
 
     instance_ref = models.Instance()
+    instance_ref['uuid'] = str(utils.gen_uuid())
+
     instance_ref.update(values)
 
     session = get_session()
@@ -859,37 +861,46 @@ def instance_stop(context, instance_id):
 
 
 @require_context
-def instance_get(context, instance_id, session=None):
-    if not session:
-        session = get_session()
-    result = None
+def instance_get_by_uuid(context, uuid, session=None):
+    partial = _build_instance_get(context, session=session)
+    result = partial.filter_by(uuid=uuid)
+    result = result.first()
+    if not result:
+        # FIXME(sirp): it would be nice if InstanceNotFound would accept a
+        # uuid parameter as well
+        raise exception.InstanceNotFound(instance_id=uuid)
+    return result
 
-    if is_admin_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('security_groups.rules')).\
-                         options(joinedload('volumes')).\
-                         options(joinedload_all('fixed_ip.network')).\
-                         options(joinedload('metadata')).\
-                         options(joinedload('instance_type')).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('security_groups.rules')).\
-                         options(joinedload('volumes')).\
-                         options(joinedload('metadata')).\
-                         options(joinedload('instance_type')).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=False).\
-                         first()
+
+@require_context
+def instance_get(context, instance_id, session=None):
+    partial = _build_instance_get(context, session=session)
+    result = partial.filter_by(id=instance_id)
+    result = result.first()
     if not result:
         raise exception.InstanceNotFound(instance_id=instance_id)
-
     return result
+
+
+@require_context
+def _build_instance_get(context, session=None):
+    if not session:
+        session = get_session()
+
+    partial = session.query(models.Instance).\
+                     options(joinedload_all('fixed_ip.floating_ips')).\
+                     options(joinedload_all('security_groups.rules')).\
+                     options(joinedload('volumes')).\
+                     options(joinedload_all('fixed_ip.network')).\
+                     options(joinedload('metadata')).\
+                     options(joinedload('instance_type'))
+
+    if is_admin_context(context):
+        partial = partial.filter_by(deleted=can_read_deleted(context))
+    elif is_user_context(context):
+        partial = partial.filter_by(project_id=context.project_id).\
+                        filter_by(deleted=False)
+    return partial
 
 
 @require_admin_context

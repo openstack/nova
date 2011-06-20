@@ -163,7 +163,7 @@ def fake_zone_get_all(context):
              weight_offset=1000.0, weight_scale=1.0),
         dict(id=3, api_url='zone3',
              username='admin', password='password',
-             weight_offset=2000.0, weight_scale=1.0),
+             weight_offset=0.0, weight_scale=1000.0),
     ]
 
 
@@ -198,6 +198,26 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         hostnames = [plan_item['name']
                      for plan_item in build_plan if 'name' in plan_item]
         self.assertEqual(3, len(hostnames))
+
+    def test_adjust_child_weights(self):
+        """Make sure the weights returned by child zones are
+        properly adjusted based on the scale/offset in the zone
+        db entries.
+        """
+        sched = FakeZoneAwareScheduler()
+        child_results = fake_call_zone_method(None, None, None, None)
+        zones = fake_zone_get_all(None)
+        sched._adjust_child_weights(child_results, zones)
+        scaled = [130000, 131000, 132000, 3000]
+        for zone, results in child_results:
+            for item in results:
+                w = item['weight']
+                if zone == 'zone1':  # No change
+                    self.assertTrue(w < 1000.0)
+                if zone == 'zone2':  # Offset +1000
+                    self.assertTrue(w >= 1000.0 and w < 2000)
+                if zone == 'zone3':  # Scale x1000
+                    self.assertEqual(scaled.pop(0), w)
 
     def test_empty_zone_aware_scheduler(self):
         """

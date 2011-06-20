@@ -174,16 +174,17 @@ class ZoneAwareScheduler(driver.Scheduler):
                 if zone_rec['api_url'] != zone:
                     continue
 
-                try:
-                    offset = zone_rec['weight_offset']
-                    scale = zone_rec['weight_scale']
-                    raw_weight = zone['weight']
-                    cooked_weight = offset + scale * raw_weight
-                    zone['weight'] = cooked_weight
-                    zone['raw_weight'] = raw_weight
-                except Exception, e:
-                    LOG.exception(_("Bad child zone scaling values for Zone: "
-                                    "%(zone)s") % locals())
+                for item in result:
+                    try:
+                        offset = zone_rec['weight_offset']
+                        scale = zone_rec['weight_scale']
+                        raw_weight = item['weight']
+                        cooked_weight = offset + scale * raw_weight
+                        item['weight'] = cooked_weight
+                        item['raw_weight'] = raw_weight
+                    except Exception, e:
+                        LOG.exception(_("Bad child zone scaling values "
+                                        "for Zone: %(zone)s") % locals())
 
     def schedule_run_instance(self, context, instance_id, request_spec,
                               *args, **kwargs):
