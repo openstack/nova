@@ -251,15 +251,31 @@ class WSGIService(object):
         self.server = wsgi.Server(name, self.application)
 
     def start(self):
-        """Start serving this API using loaded configuration."""
+        """Start serving this service using loaded configuration.
+
+        Also, retrieve updated port number in case '0' was passed in, which
+        indicates a random port should be used.
+
+        :returns: None
+
+        """
         self.server.start(self.host, self.port)
+        self.port = self.server.port
 
     def stop(self):
-        """Stop serving this API."""
+        """Stop serving this API.
+
+        :returns: None
+
+        """
         self.server.stop()
 
     def wait(self):
-        """Wait for the service to stop serving this API."""
+        """Wait for the service to stop serving this API.
+
+        :returns: None
+
+        """
         self.server.wait()
 
 
