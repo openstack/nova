@@ -48,6 +48,10 @@ flags.DECLARE('stub_network', 'nova.compute.manager')
 flags.DECLARE('instances_path', 'nova.compute.manager')
 
 
+FAKE_UUID_NOT_FOUND = 'ffffffff-ffff-ffff-ffff-ffffffffffff'
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
+
 class TestDriver(driver.Scheduler):
     """Scheduler Driver for Tests"""
     def schedule(context, topic, *args, **kwargs):
@@ -926,12 +930,23 @@ def zone_get_all(context):
            ]
 
 
+def fake_instance_get_by_uuid(context, uuid):
+    if FAKE_UUID_NOT_FOUND:
+        raise exception.InstanceNotFound(instance_id=uuid)
+    else:
+        return {'id': 1}
+
+
 class FakeRerouteCompute(api.reroute_compute):
+    def __init__(self, method_name, id_to_return=1):
+        super(FakeRerouteCompute, self).__init__(method_name)
+        self.id_to_return = id_to_return
+
     def _call_child_zones(self, zones, function):
         return []
 
     def get_collection_context_and_id(self, args, kwargs):
-        return ("servers", None, 1)
+        return ("servers", None, self.id_to_return)
 
     def unmarshall_result(self, zone_responses):
         return dict(magic="found me")
@@ -960,6 +975,8 @@ class ZoneRedirectTest(test.TestCase):
         self.stubs = stubout.StubOutForTesting()
 
         self.stubs.Set(db, 'zone_get_all', zone_get_all)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                       fake_instance_get_by_uuid)
 
         self.enable_zone_routing = FLAGS.enable_zone_routing
         FLAGS.enable_zone_routing = True
@@ -976,8 +993,19 @@ class ZoneRedirectTest(test.TestCase):
         except api.RedirectResult, e:
             self.fail(_("Successful database hit should succeed"))
 
-    def test_trap_not_found_locally(self):
+    def test_trap_not_found_locally_id_passed(self):
+        """When an integer ID is not found locally, we cannot reroute to
+        another zone, so just return InstanceNotFound exception
+        """
         decorator = FakeRerouteCompute("foo")
+        self.assertRaises(exception.InstanceNotFound,
+            decorator(go_boom), None, None, 1)
+
+    def test_trap_not_found_locally_uuid_passed(self):
+        """When a UUID is found, if the item isn't found locally, we should
+        try to reroute to a child zone to see if they have it
+        """
+        decorator = FakeRerouteCompute("foo", id_to_return=FAKE_UUID_NOT_FOUND)
         try:
             result = decorator(go_boom)(None, None, 1)
             self.assertFail(_("Should have rerouted."))
