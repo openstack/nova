@@ -62,7 +62,7 @@ document_root = /tmp
         self.loader = nova.wsgi.Loader(self.config.name)
 
     def test_config_found(self):
-       self.assertEquals(self.config.name, self.loader.config_path)
+        self.assertEquals(self.config.name, self.loader.config_path)
 
     def test_app_not_found(self):
         self.assertRaises(

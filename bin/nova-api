@@ -51,8 +51,6 @@ def main():
 
     nova.flags.FLAGS(sys.argv)
     nova.utils.default_flagfile()
-    
-#    launch("osapi")
 
     pool = multiprocessing.Pool(2)
     pool.map_async(launch, ["ec2", "osapi"])

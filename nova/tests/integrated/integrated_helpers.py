@@ -176,7 +176,6 @@ class _IntegratedTestBase(test.TestCase):
         self.auth_url = 'http://%s:%s/v1.1' % (osapi.host, osapi.port)
         LOG.warn(self.auth_url)
 
-
     def tearDown(self):
         self.context.cleanup()
         super(_IntegratedTestBase, self).tearDown()
