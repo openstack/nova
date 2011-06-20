@@ -1573,7 +1573,7 @@ class LibvirtConnection(driver.ComputeDriver):
                 self.get_info(instance_ref.name)['state']
             except exception.NotFound:
                 timer.stop()
-                post_method(ctxt, instance_ref, dest, block_migration)
+                post_method(ctxt, instance_ref, dest)
 
         timer.f = wait_for_live_migration
         timer.start(interval=0.5, now=True)

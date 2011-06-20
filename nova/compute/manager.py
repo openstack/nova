@@ -1220,8 +1220,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."))
 
-    def recover_live_migration(self, ctxt, instance_ref, host=None,
-                               dest=None, delete=True):
+    def recover_live_migration(self, ctxt, instance_ref, host=None, dest=None):
         """Recovers Instance/volume state from migrating -> running.
 
         :param ctxt: security context
@@ -1231,9 +1230,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         :param dest:
             This method is called from live migration src host.
             This param specifies destination host.
-        :param delete:
-            If true, ask destination host to remove instance dir,
-            since empty disk image was created for block migration
         """
         if not host:
             host = instance_ref['host']
@@ -1254,12 +1250,14 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # TODO: Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
-        # any empty images has to be deleted. but not sure adding below
-        # method is appropreate here. for now, admin has to delete manually.
-        # rpc.cast(ctxt,
-        #          self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
-        #          {"method": "self.driver.destroy",
-        #           "args": {'instance':instance_ref})
+        # any empty images has to be deleted.
+        # In current version argument dest != None means this method is
+        # called for error recovering
+        #if dest:
+        #    rpc.cast(ctxt,
+        #             self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+        #             {"method": "self.driver.destroy",
+        #              "args": {'instance':instance_ref})
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
