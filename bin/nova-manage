@@ -257,6 +257,11 @@ class RoleCommands(object):
         """adds role to user
         if project is specified, adds project specific role
         arguments: user, role [project]"""
+        if project:
+            projobj = self.manager.get_project(project)
+            if not projobj.has_member(user):
+                print "%s not a member of %s" % (user, project)
+                return
         self.manager.add_role(user, role, project)
 
     def has(self, user, role, project=None):
