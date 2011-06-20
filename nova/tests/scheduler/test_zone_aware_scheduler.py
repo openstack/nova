@@ -110,7 +110,7 @@ def fake_ask_child_zone_to_create_instance(context, zone_info,
     was_called = True
 
 
-def fake_provision_resource_locally(context, item, instance_id, kwargs):
+def fake_provision_resource_locally(context, build_plan, request_spec):
     global was_called
     was_called = True
 

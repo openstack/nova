@@ -200,18 +200,7 @@ class API(base.Base):
         if ramdisk_id:
             image_service.show(context, ramdisk_id)
 
-        if security_group is None:
-            security_group = ['default']
-        if not type(security_group) is list:
-            security_group = [security_group]
-
-        security_groups = []
         self.ensure_default_security_group(context)
-        for security_group_name in security_group:
-            group = db.security_group_get_by_name(context,
-                                                  context.project_id,
-                                                  security_group_name)
-            security_groups.append(group['id'])
 
         if key_data is None and key_name:
             key_pair = db.key_pair_get(context, context.user_id, key_name)
@@ -245,15 +234,19 @@ class API(base.Base):
             'os_type': os_type,
             'vm_mode': vm_mode}
 
-        return (num_instances, base_options, security_groups)
+        return (num_instances, base_options)
 
     def create_db_entry_for_new_instance(self, context, base_options,
-             security_groups, block_device_mapping, num=1):
+             security_group, block_device_mapping, num=1):
         """Create an entry in the DB for this new instance,
-        including any related table updates (such as security
-        groups, MAC address, etc). This will called by create()
-        in the majority of situations, but all-at-once style
-        Schedulers may initiate the call."""
+        including any related table updates (such as security group,
+        MAC address, etc).
+        
+        This will called by create() in the majority of situations,
+        but create_all_at_once() style Schedulers may initiate the call.
+        If you are changing this method, be sure to update both
+        call paths.
+        """
         instance = dict(mac_address=utils.generate_mac(),
                         launch_index=num,
                         **base_options)
@@ -261,13 +254,24 @@ class API(base.Base):
         instance_id = instance['id']
 
         elevated = context.elevated()
-        if not security_groups:
-            security_groups = []
+        if security_group is None:
+            security_group = ['default']
+        if not type(security_group) is list:
+            security_group = [security_group]
+
+        security_groups = []
+        for security_group_name in security_group:
+            group = db.security_group_get_by_name(context,
+                                                  context.project_id,
+                                                  security_group_name)
+            security_groups.append(group['id'])
+
         for security_group_id in security_groups:
             self.db.instance_add_security_group(elevated,
                                                 instance_id,
                                                 security_group_id)
-
+ 
+        block_device_mapping = block_device_mapping or []
         # NOTE(yamahata)
         # tell vm driver to attach volume at boot time by updating
         # BlockDeviceMapping
@@ -339,12 +343,11 @@ class API(base.Base):
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
                injected_files=None, admin_password=None, zone_blob=None,
-               reservation_id=None):
+               reservation_id=None, block_device_mapping=None):
         """Provision the instances by passing the whole request to
         the Scheduler for execution. Returns a Reservation ID
         related to the creation of all of these instances."""
-        num_instances, base_options, security_groups = \
-                    self._check_create_parameters(
+        num_instances, base_options = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -379,8 +382,7 @@ class API(base.Base):
         Returns a list of instance dicts.
         """
 
-        num_instances, base_options, security_groups = \
-                    self._check_create_parameters(
+        num_instances, base_options = self._check_create_parameters(
                                context, instance_type,
                                image_href, kernel_id, ramdisk_id,
                                min_count, max_count,
@@ -390,12 +392,11 @@ class API(base.Base):
                                injected_files, admin_password, zone_blob,
                                reservation_id)
 
-        block_device_mapping = block_device_mapping or []
         instances = []
         LOG.debug(_("Going to run %s instances..."), num_instances)
         for num in range(num_instances):
             instance = self.create_db_entry_for_new_instance(context,
-                                    base_options, security_groups,
+                                    base_options, security_group,
                                     block_device_mapping, num=num)
             instances.append(instance)
             instance_id = instance['id']
