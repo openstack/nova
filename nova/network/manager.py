@@ -62,7 +62,6 @@ from nova import quota
 from nova import utils
 from nova import rpc
 from nova.network import api as network_api
-from sqlalchemy.exc import IntegrityError
 import random
 
 
@@ -452,7 +451,7 @@ class NetworkManager(manager.SchedulerDependentManager):
                 try:
                     self.db.virtual_interface_create(context, vif)
                     break
-                except IntegrityError:
+                except exception.VirtualInterfaceCreateException:
                     vif['address'] = self.generate_mac_address()
             else:
                 self.db.virtual_interface_delete_by_instance(context,
@@ -711,8 +710,8 @@ class FlatDHCPManager(FloatingIP, RPCAllocateFixedIP, NetworkManager):
     """Flat networking with dhcp.
 
     FlatDHCPManager will start up one dhcp server to give out addresses.
-    It never injects network settings into the guest. Otherwise it behaves
-    like FlatDHCPManager.
+    It never injects network settings into the guest. It also manages bridges.
+    Otherwise it behaves like FlatManager.
 
     """
 

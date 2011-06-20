@@ -816,9 +816,12 @@ def virtual_interface_create(context, values):
 
     :param values: = dict containing column values
     """
-    vif_ref = models.VirtualInterface()
-    vif_ref.update(values)
-    vif_ref.save()
+    try:
+        vif_ref = models.VirtualInterface()
+        vif_ref.update(values)
+        vif_ref.save()
+    except IntegrityError:
+        raise exception.VirtualInterfaceCreateException()
 
     return vif_ref
 

@@ -118,6 +118,10 @@ class NovaException(Exception):
         return self._error_string
 
 
+class VirtualInterfaceCreateException(NovaException):
+    message = _("Virtual Interface creation failed")
+
+
 class VirtualInterfaceMacAddressException(NovaException):
     message = _("5 attempts to create virtual interface"
                 "with unique mac address failed")
