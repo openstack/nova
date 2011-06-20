@@ -35,48 +35,78 @@ from paste import deploy
 
 from nova import exception
 from nova import flags
-from nova import log as logging
+from nova import log
 from nova import utils
 
 
 FLAGS = flags.FLAGS
-LOG = logging.getLogger('nova.wsgi')
+LOG = log.getLogger('nova.wsgi')
 
 
 class Server(object):
     """Server class to manage multiple WSGI sockets and applications."""
 
     default_pool_size = 1000
-    logger_name = "eventlet.wsgi.server"
 
-    def __init__(self, name, app, host, port, pool_size=None):
+    def __init__(self, name, app, pool_size=None):
+        """Initialize, but do not start, a WSGI server.
+
+        :param name: The name to use for logging and other human purposes.
+        :param app: The WSGI application to serve.
+        :param pool_size: Maximum number of eventlets to spawn concurrently.
+        :returns: None
+
+        """
         self.name = name
         self.app = app
-        self.host = host
-        self.port = port
-        self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
-        self._log = logging.WritableLogger(logging.getLogger(self.logger_name))
+        self.pool_size = pool_size or self.default_pool_size
 
     def _start(self, socket):
-        """Blocking eventlet WSGI server launched from the real 'start'."""
-        eventlet.wsgi.server(socket,
-                             self.app,
-                             custom_pool=self._pool,
-                             log=self._log)
+        """Run the blocking eventlet WSGI server.
 
-    def start(self, backlog=128):
-        """Serve given WSGI application using the given parameters."""
-        socket = eventlet.listen((self.host, self.port), backlog=backlog)
+        :param socket: The socket where the WSGI server will serve it's app.
+        :returns: None
+
+        """
+        pool = eventlet.GreenPool(self.pool_size)
+        logger = log.WritableLogger(log.getLogger("eventlet.wsgi.server"))
+        eventlet.wsgi.server(socket, self.app, custom_pool=pool, log=logger)
+
+    def start(self, host, port, backlog=128):
+        """Start serving a WSGI application.
+
+        :param host: IP address to serve the application.
+        :param port: Port number to server the application.
+        :param backlog: Maximum number of queued connections.
+        :returns: None
+
+        """
+        socket = eventlet.listen((host, port), backlog=backlog)
         self._server = eventlet.spawn(self._start, socket)
         (self.host, self.port) = socket.getsockname()
-        LOG.info(_('Starting %(name)s on %(host)s:%(port)s') % self.__dict__)
+        LOG.info(_("Started %(name)s on %(host)s:%(port)s") % self.__dict__)
 
     def stop(self):
-        """Stop this server by killing the greenthread running it."""
+        """Stop this server.
+
+        This is not a very nice action, as currently the method by which a
+        server is stopped is by killing it's eventlet.
+
+        :returns: None
+
+        """
+        LOG.debug(_("Stopping WSGI server."))
         self._server.kill()
 
     def wait(self):
-        """Wait until server has been stopped."""
+        """Block, until the server has stopped.
+
+        Waits on the server's eventlet to finish, then returns.
+
+        :returns: None
+
+        """
+        LOG.debug(_("Waiting for WSGI server to stop."))
         self._server.wait()
 
 
@@ -305,57 +335,50 @@ class Router(object):
         return app
 
 
-def paste_config_file(basename):
-    """Find the best location in the system for a paste config file.
+class Loader(object):
+    """Used to load WSGI applications from paste configurations."""
 
-    Search Order
-    ------------
+    def __init__(self, config_path=None):
+        """Initialize the loader, and attempt to find the config.
 
-    The search for a paste config file honors `FLAGS.state_path`, which in a
-    version checked out from bzr will be the `nova` directory in the top level
-    of the checkout, and in an installation for a package for your distribution
-    will likely point to someplace like /etc/nova.
+        :param config_path: Full or relative path to the paste config.
+        :returns: None
 
-    This method tries to load places likely to be used in development or
-    experimentation before falling back to the system-wide configuration
-    in `/etc/nova/`.
+        """
+        config_path = config_path or FLAGS.api_paste_config
+        self.config_path = self._find_config(config_path)
 
-    * Current working directory
-    * the `etc` directory under state_path, because when working on a checkout
-      from bzr this will point to the default
-    * top level of FLAGS.state_path, for distributions
-    * /etc/nova, which may not be diffrerent from state_path on your distro
+    def _find_config(self, config_path):
+        """Find the paste configuration file using the given hint.
 
-    """
-    configfiles = [basename,
-                   os.path.join(FLAGS.state_path, 'etc', 'nova', basename),
-                   os.path.join(FLAGS.state_path, 'etc', basename),
-                   os.path.join(FLAGS.state_path, basename),
-                   '/etc/nova/%s' % basename]
-    for configfile in configfiles:
-        if os.path.exists(configfile):
-            return configfile
+        :param config_path: Full or relative path to the paste config.
+        :returns: Full path of the paste config, if it exists.
+        :raises: `nova.exception.PasteConfigNotFound`
 
-    raise Exception(_("Unable to find paste.deploy config '%s'") % basename)
+        """
+        possible_locations = [
+            config_path,
+            os.path.join(FLAGS.state_path, "etc", "nova", config_path),
+            os.path.join(FLAGS.state_path, "etc", config_path),
+            os.path.join(FLAGS.state_path, config_path),
+            "/etc/nova/%s" % config_path,
+        ]
 
+        for path in possible_locations:
+            if os.path.exists(path):
+                return os.path.abspath(path)
 
-def load_paste_configuration(filename, appname):
-    """Returns a paste configuration dict, or None."""
-    filename = os.path.abspath(filename)
-    config = None
-    try:
-        config = deploy.appconfig('config:%s' % filename, name=appname)
-    except LookupError:
-        pass
-    return config
+        raise exception.PasteConfigNotFound(path=os.path.abspath(config_path))
 
+    def load_app(self, name):
+        """Return the paste URLMap wrapped WSGI application.
 
-def load_paste_app(filename, appname):
-    """Builds a wsgi app from a paste config, None if app not configured."""
-    filename = os.path.abspath(filename)
-    app = None
-    try:
-        app = deploy.loadapp('config:%s' % filename, name=appname)
-    except LookupError:
-        pass
-    return app
+        :param name: Name of the application to load.
+        :returns: Paste URLMap object wrapping the requested application.
+        :raises: `nova.exception.PasteAppNotFound`
+
+        """
+        app = deploy.loadapp("config:%s" % self.config_path, name=name)
+        if app is None:
+            raise exception.PasteAppNotFound(name=name, path=self.config_path)
+        return app

@@ -235,34 +235,24 @@ class Service(object):
 class WSGIService(object):
     """Provides ability to launch API from a 'paste' configuration."""
 
-    def __init__(self, name, config_name=None):
-        """Initialize, but do not start, an API service."""
+    def __init__(self, name, loader=None):
+        """Initialize, but do not start the WSGI service.
+
+        :param name: The name of the WSGI service given to the loader.
+        :param loader: Loads the WSGI application using the given name.
+        :returns: None
+
+        """
         self.name = name
-        self._config_name = config_name or FLAGS.api_paste_config
-        self._config_location = self._find_config()
-        self._config = self._load_config()
-        self.application = self._load_application()
-        host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
-        port = getattr(FLAGS, '%s_listen_port' % name, 0)
-        self.server = wsgi.Server(name, self.application, host, port)
-
-    def _find_config(self):
-        """Attempt to find 'paste' configuration file."""
-        location = wsgi.paste_config_file(self._config_name)
-        logging.info(_("Using paste.deploy config: %s"), location)
-        return location
-
-    def _load_config(self):
-        """Read and return the 'paste' configuration file."""
-        return wsgi.load_paste_configuration(self._config_location, self.name)
-
-    def _load_application(self):
-        """Using the loaded configuration, return the WSGI application."""
-        return wsgi.load_paste_app(self._config_location, self.name)
+        self.loader = loader or wsgi.Loader()
+        self.application = self.loader.load_app(name)
+        self.host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
+        self.port = getattr(FLAGS, '%s_listen_port' % name, 0)
+        self.server = wsgi.Server(name, self.application)
 
     def start(self):
         """Start serving this API using loaded configuration."""
-        self.server.start()
+        self.server.start(self.host, self.port)
 
     def stop(self):
         """Stop serving this API."""
