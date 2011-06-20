@@ -49,8 +49,20 @@ FLAGS = flags.FLAGS
 FLAGS.verbose = True
 
 
-def return_server(context, id):
+FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+
+
+def fake_gen_uuid():
+    return FAKE_UUID
+
+
+def return_server_by_id(context, id):
     return stub_instance(id)
+
+
+def return_server_by_uuid(context, uuid):
+    id = 1
+    return stub_instance(id, uuid=uuid)
 
 
 def return_server_with_addresses(private, public):
@@ -111,7 +123,8 @@ def instance_address(context, instance_id):
 
 
 def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
-                  host=None, power_state=0, reservation_id=""):
+                  host=None, power_state=0, reservation_id="",
+                  uuid=FAKE_UUID):
     metadata = []
     metadata.append(InstanceMetadata(key='seq', value=id))
 
@@ -129,7 +142,7 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         server_name = "reservation_%s" % (reservation_id, )
 
     instance = {
-        "id": id,
+        "id": int(id),
         "admin_pass": "",
         "user_id": user_id,
         "project_id": "",
@@ -157,7 +170,8 @@ def stub_instance(id, user_id=1, private_address=None, public_addresses=None,
         "display_name": server_name,
         "display_description": "",
         "locked": False,
-        "metadata": metadata}
+        "metadata": metadata,
+        "uuid": uuid}
 
     instance["fixed_ip"] = {
         "address": private_address,
@@ -196,8 +210,11 @@ class ServersTest(test.TestCase):
         fakes.stub_out_auth(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_image_service(self.stubs)
+        self.stubs.Set(utils, 'gen_uuid', fake_gen_uuid)
         self.stubs.Set(nova.db.api, 'instance_get_all', return_servers)
-        self.stubs.Set(nova.db.api, 'instance_get', return_server)
+        self.stubs.Set(nova.db.api, 'instance_get', return_server_by_id)
+        self.stubs.Set(nova.db, 'instance_get_by_uuid',
+                       return_server_by_uuid)
         self.stubs.Set(nova.db.api, 'instance_get_all_by_user',
                        return_servers)
         self.stubs.Set(nova.db.api, 'instance_add_security_group',
@@ -227,6 +244,36 @@ class ServersTest(test.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['name'], 'server1')
+
+    def test_get_server_by_uuid(self):
+        """
+        The steps involved with resolving a UUID are pretty complicated;
+        here's what's happening in this scenario:
+
+        1. Show is calling `routing_get`
+
+        2. `routing_get` is wrapped by `reroute_compute` which does the work
+           of resolving requests to child zones.
+
+        3. `reroute_compute` looks up the UUID by hitting the stub
+           (returns_server_by_uuid)
+
+        4. Since the stub return that the record exists, `reroute_compute`
+           considers the request to be 'zone local', so it replaces the UUID
+           in the argument list with an integer ID and then calls the inner
+           function ('get').
+
+        5. The call to `get` hits the other stub 'returns_server_by_id` which
+           has the UUID set to FAKE_UUID
+
+        So, counterintuitively, we call `get` twice on the `show` command.
+        """
+        req = webob.Request.blank('/v1.0/servers/%s' % FAKE_UUID)
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        self.assertEqual(res_dict['server']['id'], 1)
+        self.assertEqual(res_dict['server']['uuid'], FAKE_UUID)
         self.assertEqual(res_dict['server']['name'], 'server1')
 
     def test_get_server_by_id_v1_1(self):
@@ -540,7 +587,8 @@ class ServersTest(test.TestCase):
     def _setup_for_create_instance(self):
         """Shared implementation for tests below that create instance"""
         def instance_create(context, inst):
-            return {'id': '1', 'display_name': 'server_test'}
+            return {'id': 1, 'display_name': 'server_test',
+                    'uuid': FAKE_UUID}
 
         def server_update(context, id, params):
             return instance_create(context, id)
@@ -594,10 +642,21 @@ class ServersTest(test.TestCase):
         self.assertEqual(1, server['id'])
         self.assertEqual(2, server['flavorId'])
         self.assertEqual(3, server['imageId'])
+        self.assertEqual(FAKE_UUID, server['uuid'])
         self.assertEqual(res.status_int, 200)
 
     def test_create_instance(self):
         self._test_create_instance_helper()
+
+    def test_create_instance_has_uuid(self):
+        """Tests at the db-layer instead of API layer since that's where the
+           UUID is generated
+        """
+        ctxt = context.RequestContext(1, 1)
+        values = {}
+        instance = nova.db.api.instance_create(ctxt, values)
+        expected = FAKE_UUID
+        self.assertEqual(instance['uuid'], expected)
 
     def test_create_instance_via_zones(self):
         """Server generated ReservationID"""
@@ -1850,7 +1909,8 @@ class TestServerInstanceCreation(test.TestCase):
                     self.injected_files = kwargs['injected_files']
                 else:
                     self.injected_files = None
-                return [{'id': '1234', 'display_name': 'fakeinstance'}]
+                return [{'id': '1234', 'display_name': 'fakeinstance',
+                         'uuid': FAKE_UUID}]
 
             def set_admin_password(self, *args, **kwargs):
                 pass
