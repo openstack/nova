@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
 import webob.exc
 import webob.dec
 
@@ -23,6 +25,7 @@ from webob import Request
 from nova import test
 from nova.api import openstack
 from nova.api.openstack import faults
+from nova.tests.api.openstack import fakes
 
 
 class APITest(test.TestCase):
@@ -30,6 +33,24 @@ class APITest(test.TestCase):
     def _wsgi_app(self, inner_app):
         # simpler version of the app than fakes.wsgi_app
         return openstack.FaultWrapper(inner_app)
+
+    def test_malformed_json(self):
+        req = webob.Request.blank('/')
+        req.method = 'POST'
+        req.body = '{'
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
+
+    def test_malformed_xml(self):
+        req = webob.Request.blank('/')
+        req.method = 'POST'
+        req.body = '<hi im not xml>'
+        req.headers["content-type"] = "application/xml"
+
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 400)
 
     def test_exceptions_are_converted_to_faults(self):
 

@@ -81,7 +81,9 @@ class APIRouter(base_wsgi.Router):
         self._setup_routes(mapper)
         super(APIRouter, self).__init__(mapper)
 
-    def _setup_routes(self, mapper, version='1.0'):
+    def _setup_routes(self, mapper, version):
+        """Routes common to all versions."""
+
         server_members = self.server_members
         server_members['action'] = 'POST'
         if FLAGS.allow_admin_api:
@@ -98,14 +100,6 @@ class APIRouter(base_wsgi.Router):
             server_members['reset_network'] = 'POST'
             server_members['inject_network_info'] = 'POST'
 
-            mapper.resource("zone", "zones",
-                        controller=zones.create_resource(version),
-                        collection={'detail': 'GET',
-                                    'info': 'GET',
-                                    'select': 'POST',
-                                    'boot': 'POST'
-                                   })
-
             mapper.resource("user", "users",
                         controller=users.create_resource(),
                         collection={'detail': 'GET'})
@@ -114,10 +108,33 @@ class APIRouter(base_wsgi.Router):
                             controller=accounts.create_resource(),
                             collection={'detail': 'GET'})
 
+            mapper.resource("zone", "zones",
+                        controller=zones.create_resource(version),
+                        collection={'detail': 'GET',
+                                    'info': 'GET',
+                                    'select': 'POST',
+                                    'boot': 'POST'})
+
         mapper.resource("console", "consoles",
-                        controller=consoles.create_resource(),
-                        parent_resource=dict(member_name='server',
-                        collection_name='servers'))
+                    controller=consoles.create_resource(),
+                    parent_resource=dict(member_name='server',
+                    collection_name='servers'))
+
+        mapper.resource("server", "servers",
+                        controller=servers.create_resource(version),
+                        collection={'detail': 'GET'},
+                        member=self.server_members)
+
+        mapper.resource("image", "images",
+                        controller=images.create_resource(version),
+                        collection={'detail': 'GET'})
+
+        mapper.resource("limit", "limits",
+                        controller=limits.create_resource(version))
+
+        mapper.resource("flavor", "flavors",
+                        controller=flavors.create_resource(version),
+                        collection={'detail': 'GET'})
 
         super(APIRouter, self).__init__(mapper)
 
@@ -126,18 +143,9 @@ class APIRouterV10(APIRouter):
     """Define routes specific to OpenStack API V1.0."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV10, self)._setup_routes(mapper, version='1.0')
-        mapper.resource("server", "servers",
-                        controller=servers.create_resource('1.0'),
-                        collection={'detail': 'GET'},
-                        member=self.server_members)
-
+        super(APIRouterV10, self)._setup_routes(mapper, '1.0')
         mapper.resource("image", "images",
                         controller=images.create_resource('1.0'),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("flavor", "flavors",
-                        controller=flavors.create_resource('1.0'),
                         collection={'detail': 'GET'})
 
         mapper.resource("shared_ip_group", "shared_ip_groups",
@@ -149,9 +157,6 @@ class APIRouterV10(APIRouter):
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
 
-        mapper.resource("limit", "limits",
-                        controller=limits.create_resource('1.0'))
-
         mapper.resource("ip", "ips", controller=ips.create_resource(),
                         collection=dict(public='GET', private='GET'),
                         parent_resource=dict(member_name='server',
@@ -162,16 +167,7 @@ class APIRouterV11(APIRouter):
     """Define routes specific to OpenStack API V1.1."""
 
     def _setup_routes(self, mapper):
-        super(APIRouterV11, self)._setup_routes(mapper, version='1.1')
-        mapper.resource("server", "servers",
-                        controller=servers.create_resource('1.1'),
-                        collection={'detail': 'GET'},
-                        member=self.server_members)
-
-        mapper.resource("image", "images",
-                        controller=images.create_resource('1.1'),
-                        collection={'detail': 'GET'})
-
+        super(APIRouterV11, self)._setup_routes(mapper, '1.1')
         mapper.resource("image_meta", "meta",
                         controller=image_metadata.create_resource(),
                         parent_resource=dict(member_name='image',
@@ -181,10 +177,3 @@ class APIRouterV11(APIRouter):
                         controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
-
-        mapper.resource("flavor", "flavors",
-                        controller=flavors.create_resource('1.1'),
-                        collection={'detail': 'GET'})
-
-        mapper.resource("limit", "limits",
-                        controller=limits.create_resource('1.1'))

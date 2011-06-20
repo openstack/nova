@@ -16,7 +16,10 @@
 Tests For Zone Aware Scheduler.
 """
 
-from nova import db
+import stubout
+
+import nova.db
+
 from nova import exception
 from nova import test
 from nova.scheduler import driver
@@ -88,7 +91,7 @@ class FakeEmptyZoneManager(zone_manager.ZoneManager):
         self.service_states = {}
 
 
-def fake_empty_call_zone_method(context, method, specs):
+def fake_empty_call_zone_method(context, method, specs, zones):
     return []
 
 
@@ -127,7 +130,7 @@ def fake_decrypt_blob_returns_child_info(blob):
             'child_blob': True}  # values aren't important. Keys are.
 
 
-def fake_call_zone_method(context, method, specs):
+def fake_call_zone_method(context, method, specs, zones):
     return [
         ('zone1', [
             dict(weight=1, blob='AAAAAAA'),
@@ -150,8 +153,30 @@ def fake_call_zone_method(context, method, specs):
     ]
 
 
+def fake_zone_get_all(context):
+    return [
+        dict(id=1, api_url='zone1',
+             username='admin', password='password',
+             weight_offset=0.0, weight_scale=1.0),
+        dict(id=2, api_url='zone2',
+             username='admin', password='password',
+             weight_offset=1000.0, weight_scale=1.0),
+        dict(id=3, api_url='zone3',
+             username='admin', password='password',
+             weight_offset=2000.0, weight_scale=1.0),
+    ]
+
+
 class ZoneAwareSchedulerTestCase(test.TestCase):
     """Test case for Zone Aware Scheduler."""
+
+    def setUp(self):
+        super(ZoneAwareSchedulerTestCase, self).setUp()
+        self.stubs = stubout.StubOutForTesting()
+ 
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(ZoneAwareSchedulerTestCase, self).tearDown()
 
     def test_zone_aware_scheduler(self):
         """
@@ -160,6 +185,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         """
         sched = FakeZoneAwareScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
 
         zm = FakeZoneManager()
         sched.set_zone_manager(zm)
@@ -179,6 +205,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
         """
         sched = FakeZoneAwareScheduler()
         self.stubs.Set(sched, '_call_zone_method', fake_empty_call_zone_method)
+        self.stubs.Set(nova.db, 'zone_get_all', fake_zone_get_all)
 
         zm = FakeEmptyZoneManager()
         sched.set_zone_manager(zm)
@@ -202,7 +229,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
                 'instance_properties': {},
                 'instance_type': {},
                 'filter_driver': 'nova.scheduler.host_filter.AllHostsFilter',
-                'blob': "Non-None blob data"
+                'blob': "Non-None blob data",
             }
 
         result = sched.schedule_run_instance(None, 1, request_spec)

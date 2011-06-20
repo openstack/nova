@@ -88,7 +88,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
 
         name = instance_properties['display_name']
-        image_id = instance_properties['image_id']
+        image_ref = instance_properties['image_ref']
         meta = instance_properties['metadata']
         flavor_id = instance_type['flavorid']
         reservation_id = instance_properties['reservation_id']
@@ -105,13 +105,14 @@ class ZoneAwareScheduler(driver.Scheduler):
                     % locals())
         nova = None
         try:
-            nova = novaclient.OpenStack(zone.username, zone.password, url)
+            nova = novaclient.OpenStack(zone.username, zone.password, None,
+                                        url)
             nova.authenticate()
         except novaclient.exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
                             "to talk to zone at %(url)s.") % locals())
 
-        nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
+        nova.servers.create(name, image_ref, flavor_id, ipgroup, meta, files,
                             child_blob, reservation_id=reservation_id)
 
     def _provision_resource_from_blob(self, context, item, instance_id,
@@ -170,7 +171,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                 continue
             
             for zone_rec in zones:
-                if zone_rec['url'] != zone:
+                if zone_rec['api_url'] != zone:
                     continue
 
                 try:
@@ -208,7 +209,11 @@ class ZoneAwareScheduler(driver.Scheduler):
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
 
-        for item in build_plan:
+        for num in xrange(request_spec['num_instances']):
+            if not build_plan:
+                break
+
+            item = build_plan.pop(0)
             self._provision_resource(context, item, instance_id, request_spec,
                                     kwargs)
 

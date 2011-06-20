@@ -21,7 +21,7 @@ A Nova deployment is called a Zone. A Zone allows you to partition your deployme
 
 The idea behind Zones is, if a particular deployment is not capable of servicing a particular request, the request may be forwarded to (child) Zones for possible processing. Zones may be nested in a tree fashion. 
 
-Zones only know about their immediate children, they do not know about their parent Zones and may in fact have more than one parent. Likewise, a Zone's children may themselves have child Zones. 
+Zones only know about their immediate children, they do not know about their parent Zones and may in fact have more than one parent. Likewise, a Zone's children may themselves have child Zones and, in those cases, the grandchild's internal structure would not be known to the grand-parent. 
 
 Zones share nothing. They communicate via the public OpenStack API only. No database, queue, user or project definition is shared between Zones. 
 
@@ -99,7 +99,7 @@ You can get the `child zone api url`, `nova api key` and `username` from the `no
   export NOVA_URL="http://192.168.2.120:8774/v1.0/"
 
 
-This equates to a POST operation to `.../zones/` to add a new zone. No connection attempt to the child zone is done when this command. It only puts an entry in the db at this point. After about 30 seconds the `ZoneManager` in the Scheduler services will attempt to talk to the child zone and get its information. 
+This equates to a POST operation to `.../zones/` to add a new zone. No connection attempt to the child zone is done with this command. It only puts an entry in the db at this point. After about 30 seconds the `ZoneManager` in the Scheduler services will attempt to talk to the child zone and get its information. 
 
 Getting a list of child Zones
 -----------------------------

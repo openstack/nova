@@ -24,7 +24,7 @@ from nova import flags
 from nova import log as logging
 from nova import utils
 from nova.api.openstack import common
-from nova.api.openstack import create_instance_controller as base_controller
+from nova.api.openstack import create_instance_helper as helper
 from nova.api.openstack import faults
 import nova.api.openstack.views.addresses
 import nova.api.openstack.views.flavors
@@ -39,19 +39,19 @@ LOG = logging.getLogger('nova.api.openstack.servers')
 FLAGS = flags.FLAGS
 
 
-class Controller(base_controller.OpenstackCreateInstanceController):
+class Controller(object):
     """ The Server API controller for the OpenStack API """
 
     def __init__(self):
         self.compute_api = compute.API()
-        super(Controller, self).__init__()
+        self.helper = helper.CreateInstanceHelper(self)
 
     def index(self, req):
         """ Returns a list of server names and ids for a given user """
         try:
             servers = self._items(req, is_detail=False)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(str(err))
+            return exc.HTTPBadRequest(explanation=str(err))
         return servers
 
     def detail(self, req):
@@ -59,7 +59,7 @@ class Controller(base_controller.OpenstackCreateInstanceController):
         try:
             servers = self._items(req, is_detail=True)
         except exception.Invalid as err:
-            return exc.HTTPBadRequest(str(err))
+            return exc.HTTPBadRequest(explanation=str(err))
         return servers
 
     def _get_view_builder(self, req):
@@ -111,8 +111,8 @@ class Controller(base_controller.OpenstackCreateInstanceController):
         extra_values = None
         result = None
         try:
-            extra_values, result = \
-                    self.create_instance(req, body, self.compute_api.create)
+            extra_values, result = self.helper.create_instance(
+                                    req, body, self.compute_api.create)
         except faults.Fault, f:
             return f
 
@@ -141,7 +141,7 @@ class Controller(base_controller.OpenstackCreateInstanceController):
 
         if 'name' in body['server']:
             name = body['server']['name']
-            self._validate_server_name(name)
+            self.helper._validate_server_name(name)
             update_dict['display_name'] = name.strip()
 
         self._parse_update(ctxt, id, body, update_dict)
@@ -403,6 +403,13 @@ class Controller(base_controller.OpenstackCreateInstanceController):
 
 
 class ControllerV10(Controller):
+
+    def _image_ref_from_req_data(self, data):
+        return data['server']['imageId']
+
+    def _flavor_id_from_req_data(self, data):
+        return data['server']['flavorId']
+
     def _get_view_builder(self, req):
         addresses_builder = nova.api.openstack.views.addresses.ViewBuilderV10()
         return nova.api.openstack.views.servers.ViewBuilderV10(
@@ -453,6 +460,10 @@ class ControllerV10(Controller):
         response.empty_body = True
         return response
 
+    def _get_server_admin_password(self, server):
+        """ Determine the admin password for a server on creation """
+        return self.helper._get_server_admin_password_old_style(server)
+
 
 class ControllerV11(Controller):
     def _image_ref_from_req_data(self, data):
@@ -477,11 +488,11 @@ class ControllerV11(Controller):
         if (not 'changePassword' in input_dict
             or not 'adminPass' in input_dict['changePassword']):
             msg = _("No adminPass was specified")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         password = input_dict['changePassword']['adminPass']
         if not isinstance(password, basestring) or password == '':
             msg = _("Invalid adminPass")
-            return exc.HTTPBadRequest(msg)
+            return exc.HTTPBadRequest(explanation=msg)
         self.compute_api.set_admin_password(context, id, password)
         return exc.HTTPAccepted()
 
@@ -567,14 +578,7 @@ class ControllerV11(Controller):
 
     def _get_server_admin_password(self, server):
         """ Determine the admin password for a server on creation """
-        password = server.get('adminPass')
-
-        if password is None:
-            return utils.generate_password(16)
-        if not isinstance(password, basestring) or password == '':
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(msg)
-        return password
+        return self.helper._get_server_admin_password_new_style(server)
 
 
 def create_resource(version='1.0'):
@@ -610,7 +614,7 @@ def create_resource(version='1.0'):
     }
 
     deserializers = {
-        'application/xml': base_controller.ServerXMLDeserializer(),
+        'application/xml': helper.ServerXMLDeserializer(),
     }
 
     return wsgi.Resource(controller, serializers=serializers,

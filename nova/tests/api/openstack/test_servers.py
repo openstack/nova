@@ -31,7 +31,7 @@ from nova import test
 from nova import utils
 import nova.api.openstack
 from nova.api.openstack import servers
-from nova.api.openstack import create_instance_controller
+from nova.api.openstack import create_instance_helper
 import nova.compute.api
 from nova.compute import instance_types
 from nova.compute import power_state
@@ -570,8 +570,7 @@ class ServersTest(test.TestCase):
         self.stubs.Set(nova.network.manager.VlanManager, 'allocate_fixed_ip',
             fake_method)
         self.stubs.Set(
-            nova.api.openstack.create_instance_controller.\
-                                    OpenstackCreateInstanceController,
+            nova.api.openstack.create_instance_helper.CreateInstanceHelper,
             "_get_kernel_ramdisk_from_image", kernel_ramdisk_mapping)
         self.stubs.Set(nova.compute.api.API, "_find_host", find_host)
 
@@ -1531,7 +1530,7 @@ class ServersTest(test.TestCase):
 class TestServerCreateRequestXMLDeserializer(unittest.TestCase):
 
     def setUp(self):
-        self.deserializer = create_instance_controller.ServerXMLDeserializer()
+        self.deserializer = create_instance_helper.ServerXMLDeserializer()
 
     def test_minimal_request(self):
         serial_request = """
@@ -1863,7 +1862,8 @@ class TestServerInstanceCreation(test.TestCase):
 
         compute_api = MockComputeAPI()
         self.stubs.Set(nova.compute, 'API', make_stub_method(compute_api))
-        self.stubs.Set(nova.api.openstack.servers.Controller,
+        self.stubs.Set(
+            nova.api.openstack.create_instance_helper.CreateInstanceHelper,
             '_get_kernel_ramdisk_from_image', make_stub_method((1, 1)))
         return compute_api
 
@@ -2119,6 +2119,6 @@ class TestGetKernelRamdiskFromImage(test.TestCase):
     @staticmethod
     def _get_k_r(image_meta):
         """Rebinding function to a shorter name for convenience"""
-        kernel_id, ramdisk_id = \
-            servers.Controller._do_get_kernel_ramdisk_from_image(image_meta)
+        kernel_id, ramdisk_id = create_instance_helper.CreateInstanceHelper. \
+                                _do_get_kernel_ramdisk_from_image(image_meta)
         return kernel_id, ramdisk_id

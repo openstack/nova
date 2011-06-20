@@ -106,7 +106,8 @@ def _wrap_method(function, self):
 def _process(func, zone):
     """Worker stub for green thread pool. Give the worker
     an authenticated nova client and zone info."""
-    nova = novaclient.OpenStack(zone.username, zone.password, zone.api_url)
+    nova = novaclient.OpenStack(zone.username, zone.password, None,
+                                zone.api_url)
     nova.authenticate()
     return func(nova, zone)
 
@@ -124,7 +125,7 @@ def call_zone_method(context, method_name, errors_to_ignore=None,
         zones = db.zone_get_all(context)
     for zone in zones:
         try:
-            nova = novaclient.OpenStack(zone.username, zone.password,
+            nova = novaclient.OpenStack(zone.username, zone.password, None,
                     zone.api_url)
             nova.authenticate()
         except novaclient.exceptions.BadRequest, e:
