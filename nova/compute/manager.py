@@ -1249,7 +1249,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if dest:
                 volume_api.remove_from_compute(ctxt, volume_id, dest)
 
-        # TODO: Block migration needs empty image at destination host
+        # Block migration needs empty image at destination host
         # before migration starts, so if any failure occurs,
         # any empty images has to be deleted.
         # In current version argument dest != None means this method is
