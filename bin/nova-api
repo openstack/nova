@@ -27,7 +27,6 @@ import sys
 
 import nova.log
 import nova.service
-import nova.version
 
 
 def main():
