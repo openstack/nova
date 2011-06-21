@@ -161,6 +161,9 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        architecture = None
+        if 'properties' in image and 'arch' in image['properties']:
+            architecture = image['properties']['arch']
         vm_mode = None
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
@@ -226,6 +229,7 @@ class API(base.Base):
             'metadata': metadata,
             'availability_zone': availability_zone,
             'os_type': os_type,
+            'architecture': architecture,
             'vm_mode': vm_mode}
 
         return (num_instances, base_options, security_groups)
