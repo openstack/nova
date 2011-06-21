@@ -734,7 +734,7 @@ class LibvirtConnTestCase(test.TestCase):
         # large disk space.
         self.mox.StubOutWithMock(utils, "execute")
         utils.execute('sudo', 'qemu-img', 'create', '-f', 'raw',
-                      '%s/%s/disk' % (tmpdir, instance_ref.name), 10)
+                      '%s/%s/disk' % (tmpdir, instance_ref.name), '10G')
 
         self.mox.ReplayAll()
         conn = connection.LibvirtConnection(False)
@@ -759,10 +759,10 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, self.test_instance)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
-                    "<disk type='file'><driver type='raw'/>"
+                    "<disk type='file'><driver name='qemu' type='raw'/>"
                     "<source file='/test/disk'/>"
                     "<target dev='vda' bus='virtio'/></disk>"
-                    "<disk type='file'><driver type='qcow2'/>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
                     "<source file='/test/disk.local'/>"
                     "<target dev='vdb' bus='virtio'/></disk>"
                     "</devices></domain>")

@@ -588,6 +588,10 @@ class InstanceExists(Duplicate):
     message = _("Instance %(name)s already exists.")
 
 
+class InvalidSharedStorage(NovaException):
+    message = _("%(path)s is on shared storage: %(reason)s")
+
+
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
 

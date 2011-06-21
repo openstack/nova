@@ -556,7 +556,10 @@ class ComputeTestCase(test.TestCase):
         dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
                              AndReturn(topic)
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}})
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}})
+
         self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
         self.compute.driver.live_migration(c, i_ref, i_ref['host'],
                                   self.compute.post_live_migration,
@@ -582,7 +585,9 @@ class ComputeTestCase(test.TestCase):
         dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
                              AndReturn(topic)
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}}).\
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
         dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
                                                 'state': power_state.RUNNING,
@@ -609,7 +614,9 @@ class ComputeTestCase(test.TestCase):
                              AndReturn(topic)
         self.mox.StubOutWithMock(rpc, 'call')
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}}).\
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}}).\
                             AndRaise(rpc.RemoteError('', '', ''))
         dbmock.instance_update(c, i_ref['id'], {'state_description': 'running',
                                                 'state': power_state.RUNNING,
@@ -634,7 +641,9 @@ class ComputeTestCase(test.TestCase):
         dbmock.queue_get_for(c, FLAGS.compute_topic, i_ref['host']).\
                              AndReturn(topic)
         rpc.call(c, topic, {"method": "pre_live_migration",
-                            "args": {'instance_id': i_ref['id']}})
+                            "args": {'instance_id': i_ref['id'],
+                                     'block_migration': False,
+                                     'disk': None}})
         self.mox.StubOutWithMock(self.compute.driver, 'live_migration')
         self.compute.driver.live_migration(c, i_ref, i_ref['host'],
                                   self.compute.post_live_migration,

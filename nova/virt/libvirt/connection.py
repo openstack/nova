@@ -120,7 +120,7 @@ flags.DEFINE_string('live_migration_flag',
                     'Define live migration behavior.')
 flags.DEFINE_string('block_migration_flag',
                     "VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, "
-                    "VIR_MIGRATE_NON_SHARED_DISK",
+                    "VIR_MIGRATE_NON_SHARED_INC",
                     'Define block migration behavior.')
 flags.DEFINE_integer('live_migration_bandwidth', 0,
                     'Define live migration behavior')
@@ -295,7 +295,10 @@ class LibvirtConnection(driver.ComputeDriver):
                 # NOTE(justinsb): We remove the domain definition. We probably
                 # would do better to keep it if cleanup=False (e.g. volumes?)
                 # (e.g. #2 - not losing machines on failure)
-                virt_dom.undefine()
+                # NOTE(masumotok): Migrated instances does not have domain
+                # definitions.
+                if instance.name in self._conn.listDefinedDomains():
+                    virt_dom.undefine()
             except libvirt.libvirtError as e:
                 errcode = e.get_error_code()
                 LOG.warning(_("Error from libvirt during undefine of "
@@ -334,6 +337,13 @@ class LibvirtConnection(driver.ComputeDriver):
             disk.destroy_container(target, instance, nbd=FLAGS.use_cow_images)
         if os.path.exists(target):
             shutil.rmtree(target)
+
+    def cleanup(self, instance):
+        """ Cleaning up image directory that is created pre_live_migration.
+
+        :param instance: nova.db.sqlalchemy.models.Instance
+        """
+        self._cleanup(instance)
 
     @exception.wrap_exception
     def attach_volume(self, instance_name, device_path, mountpoint):

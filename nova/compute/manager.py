@@ -1045,7 +1045,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.update_available_resource(context, self.host)
 
     def pre_live_migration(self, context, instance_id, time=None,
-                           block_migration=False, **kwargs):
+                           block_migration=False, disk=None):
         """Preparations for live migration at dest host.
 
         :param context: security context
@@ -1106,7 +1106,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if block_migration:
             self.driver.pre_block_migration(context,
                                             instance_ref,
-                                            kwargs.get('disk'))
+                                            disk)
 
     def live_migration(self, context, instance_id,
                        dest, block_migration=False):
@@ -1130,17 +1130,18 @@ class ComputeManager(manager.SchedulerDependentManager):
                           {"method": "check_for_export",
                            "args": {'instance_id': instance_id}})
 
-            args = {}
-            args['instance_id'] = instance_id
             if block_migration:
-                args['block_migration'] = block_migration
-                args['disk'] = \
-                    self.driver.get_instance_disk_info(context, instance_ref)
+                disk = self.driver.get_instance_disk_info(context,
+                                                          instance_ref)
+            else:
+                disk = None
 
             rpc.call(context,
                      self.db.queue_get_for(context, FLAGS.compute_topic, dest),
                      {"method": "pre_live_migration",
-                      "args": args})
+                      "args": {'instance_id': instance_id,
+                               'block_migration': block_migration,
+                               'disk': disk}})
 
         except Exception:
             i_name = instance_ref.name
@@ -1253,11 +1254,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         # any empty images has to be deleted.
         # In current version argument dest != None means this method is
         # called for error recovering
-        #if dest:
-        #    rpc.cast(ctxt,
-        #             self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
-        #             {"method": "self.driver.destroy",
-        #              "args": {'instance':instance_ref})
+        if dest:
+            rpc.cast(ctxt,
+                     self.db.queue_get_for(ctxt, FLAGS.compute_topic, dest),
+                     {"method": "cleanup",
+                      "args": {'instance_id': instance_ref['id']}})
+
+    def cleanup(self, ctxt, instance_id):
+        """ Cleaning up image directory that is created pre_live_migration.
+
+        :param ctxt: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        """
+        instances_ref = self.db.instance_get(ctxt, instance_id)
+        self.driver.cleanup(instance_ref)
 
     def periodic_tasks(self, context=None):
         """Tasks to be run at a periodic interval."""
