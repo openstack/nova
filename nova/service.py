@@ -332,8 +332,8 @@ class WSGIService(object):
         self.name = name
         self.loader = loader or wsgi.Loader()
         self.app = self.loader.load_app(name)
-        self.host = getattr(FLAGS, '%s_listen' % name, None)
-        self.port = getattr(FLAGS, '%s_listen_port' % name, None)
+        self.host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
+        self.port = getattr(FLAGS, '%s_listen_port' % name, 0)
         self.server = wsgi.Server(name,
                                   self.app,
                                   host=self.host,

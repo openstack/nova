@@ -70,8 +70,11 @@ class S3APITestCase(test.TestCase):
         os.mkdir(FLAGS.buckets_path)
 
         router = s3server.S3Application(FLAGS.buckets_path)
-        self.server = wsgi.Server()
-        self.server.start(router, host=FLAGS.s3_host, port=FLAGS.s3_port)
+        self.server = wsgi.Server("S3 Objectstore",
+                                  router,
+                                  host=FLAGS.s3_host,
+                                  port=FLAGS.s3_port)
+        self.server.start()
 
         if not boto.config.has_section('Boto'):
             boto.config.add_section('Boto')
