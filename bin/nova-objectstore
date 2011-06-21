@@ -50,9 +50,9 @@ if __name__ == '__main__':
     FLAGS(sys.argv)
     logging.setup()
     router = s3server.S3Application(FLAGS.buckets_path)
-    server = wsgi.Server("S3 Objectstore", 
-                         router, 
-                         port=FLAGS.s3_port, 
+    server = wsgi.Server("S3 Objectstore",
+                         router,
+                         port=FLAGS.s3_port,
                          host=FLAGS.s3_host)
     server.start()
     server.wait()
