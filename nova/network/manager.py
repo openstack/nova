@@ -423,6 +423,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             network_dict = {
                 'bridge': network['bridge'],
                 'id': network['id'],
+                'cidr': network['cidr'],
+                'cidr_v6': network['cidr_v6'],
                 'injected': network['injected']}
             info = {
                 'label': network['label'],

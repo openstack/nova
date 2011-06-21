@@ -827,12 +827,14 @@ def virtual_interface_create(context, values):
 
 
 @require_context
-def virtual_interface_get(context, vif_id):
+def virtual_interface_get(context, vif_id, session=None):
     """Gets a virtual interface from the table.
 
     :param vif_id: = id of the virtual interface
     """
-    session = get_session()
+    if not session:
+        session = get_session()
+
     vif_ref = session.query(models.VirtualInterface).\
                       filter_by(id=vif_id).\
                       options(joinedload('network')).\
@@ -927,8 +929,8 @@ def virtual_interface_delete(context, vif_id):
 
     :param vif_id: = id of vif to delete
     """
-    vif_ref = virtual_interface_get(context, vif_id)
     session = get_session()
+    vif_ref = virtual_interface_get(context, vif_id, session)
     with session.begin():
         # disassociate any fixed_ips from this interface
         for fixed_ip in vif_ref['fixed_ips']:
@@ -945,7 +947,7 @@ def virtual_interface_delete_by_instance(context, instance_id):
     """
     vif_refs = virtual_interface_get_by_instance(context, instance_id)
     for vif_ref in vif_refs:
-        virtual_interface_delete(vif_ref['id'])
+        virtual_interface_delete(context, vif_ref['id'])
 
 
 ###################
