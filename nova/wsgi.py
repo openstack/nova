@@ -39,7 +39,7 @@ from nova import log as logging
 from nova import utils
 
 
-eventlet.patcher.monkey_patch()
+eventlet.patcher.monkey_patch(socket=True, time=True)
 
 
 FLAGS = flags.FLAGS
@@ -72,7 +72,8 @@ class Server(object):
 
         """
         pool = eventlet.GreenPool(self.pool_size)
-        logger = logging.WritableLogger(logging.getLogger("eventlet.wsgi"))
+        log_name = "eventlet.wsgi.server"
+        logger = logging.WritableLogger(logging.getLogger(log_name))
         eventlet.wsgi.server(socket, self.app, custom_pool=pool, log=logger)
 
     def start(self, host, port, backlog=128):
