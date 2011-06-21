@@ -38,12 +38,12 @@ def main():
     launcher = nova.service.Launcher(sys.argv)
     launcher.launch_service(ec2)
     launcher.launch_service(osapi)
-    
+
     try:
         launcher.wait()
     except KeyboardInterrupt:
         launcher.stop()
-        
+
 
 if __name__ == '__main__':
     sys.exit(main())

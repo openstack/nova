@@ -69,9 +69,8 @@ class Launcher(object):
         self._version = version.version_string_with_vcs()
         logging.setup()
         logging.audit(_("Nova Version (%(_version)s)") % self.__dict__)
-        FLAGS(_flags)
         utils.default_flagfile()
-
+        FLAGS(_flags or [])
 
     @staticmethod
     def run_service(service):
@@ -118,7 +117,6 @@ class Launcher(object):
         for service in self._services:
             service.join()
             logging.info("Process exited with %d" % service.exitcode)
-
 
 
 class Service(object):
