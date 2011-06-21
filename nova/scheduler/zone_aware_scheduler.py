@@ -54,7 +54,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         return api.call_zone_method(context, method, specs=specs, zones=zones)
 
     def _provision_resource_locally(self, context, build_plan_item,
-                                    request_spec):
+                                    request_spec, kwargs):
         """Create the requested resource in this Zone."""
         host = build_plan_item['hostname']
         base_options = request_spec['instance_properties']
@@ -62,10 +62,10 @@ class ZoneAwareScheduler(driver.Scheduler):
         # TODO(sandy): I guess someone needs to add block_device_mapping
         # support at some point? Also, OS API has no concept of security
         # groups.
-        instance = compute_api.create_db_entry_for_new_instance(context,
+        instance = compute_api.API().create_db_entry_for_new_instance(context,
             base_options, None, [])
 
-        instance_id = instance['instance_id']
+        instance_id = instance['id']
         kwargs['instance_id'] = instance_id
 
         rpc.cast(context,
@@ -159,14 +159,15 @@ class ZoneAwareScheduler(driver.Scheduler):
             self._ask_child_zone_to_create_instance(context, host_info,
                                                     request_spec, kwargs)
         else:
-            self._provision_resource_locally(context, host_info, request_spec)
+            self._provision_resource_locally(context, host_info, request_spec,
+                                             kwargs)
 
     def _provision_resource(self, context, build_plan_item, instance_id,
                             request_spec, kwargs):
         """Create the requested resource in this Zone or a child zone."""
         if "hostname" in build_plan_item:
             self._provision_resource_locally(context, build_plan_item,
-                                             request_spec)
+                                             request_spec, kwargs)
             return
 
         self._provision_resource_from_blob(context, build_plan_item,
@@ -225,7 +226,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             if not build_plan:
                 break
 
-            item = build_plan.pop(0)
+            build_plan_item = build_plan.pop(0)
             self._provision_resource(context, build_plan_item, instance_id,
                                      request_spec, kwargs)
 
