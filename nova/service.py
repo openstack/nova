@@ -67,10 +67,31 @@ class Launcher(object):
         """
         self._services = []
         self._version = version.version_string_with_vcs()
+        self._flags = _flags
+        self._setup_logging()
+        self._setup_flags()
+
+    def _setup_logging(self):
+        """Logic to ensure logging is going to work correctly for services.
+
+        :returns: None
+
+        """
         logging.setup()
         logging.audit(_("Nova Version (%(_version)s)") % self.__dict__)
+
+    def _setup_flags(self):
+        """Logic to ensure flags/configuration are correctly set.
+
+        :returns: None
+
+        """
         utils.default_flagfile()
-        FLAGS(_flags or [])
+        FLAGS(self._flags or [])
+        flags.DEFINE_flag(flags.HelpFlag())
+        flags.DEFINE_flag(flags.HelpshortFlag())
+        flags.DEFINE_flag(flags.HelpXMLFlag())
+        FLAGS.ParseNewFlags()
 
     @staticmethod
     def run_service(service):
