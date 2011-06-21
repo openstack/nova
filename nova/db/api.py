@@ -1253,7 +1253,7 @@ def zone_create(context, values):
 
 def zone_update(context, zone_id, values):
     """Update a child Zone entry."""
-    return IMPL.zone_update(context, values)
+    return IMPL.zone_update(context, zone_id, values)
 
 
 def zone_delete(context, zone_id):
