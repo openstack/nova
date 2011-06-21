@@ -158,8 +158,12 @@ class FloatingIP(object):
         """Configures floating ips owned by host."""
 
         admin_context = context.get_admin_context()
-        floating_ips = self.db.floating_ip_get_all_by_host(admin_context,
-                                                           self.host)
+        try:
+            floating_ips = self.db.floating_ip_get_all_by_host(admin_context,
+                                                               self.host)
+        except exception.NotFound:
+            return
+
         for floating_ip in floating_ips:
             if floating_ip.get('fixed_ip', None):
                 fixed_address = floating_ip['fixed_ip']['address']
