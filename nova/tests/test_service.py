@@ -366,6 +366,7 @@ class TestWSGIService(test.TestCase):
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
 
+
 class TestLauncher(test.TestCase):
 
     def setUp(self):
