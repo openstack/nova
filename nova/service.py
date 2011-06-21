@@ -116,7 +116,6 @@ class Launcher(object):
         """
         for service in self._services:
             service.join()
-            logging.info("Process exited with %d" % service.exitcode)
 
 
 class Service(object):

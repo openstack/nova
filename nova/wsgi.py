@@ -39,7 +39,7 @@ from nova import log
 from nova import utils
 
 
-eventlet.patcher.monkey_patch(all=False, socket=True, time=True)
+eventlet.patcher.monkey_patch()
 
 
 FLAGS = flags.FLAGS
