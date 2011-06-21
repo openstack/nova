@@ -241,7 +241,7 @@ class API(base.Base):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         MAC address, etc).
-        
+
         This will called by create() in the majority of situations,
         but create_all_at_once() style Schedulers may initiate the call.
         If you are changing this method, be sure to update both
@@ -270,7 +270,7 @@ class API(base.Base):
             self.db.instance_add_security_group(elevated,
                                                 instance_id,
                                                 security_group_id)
- 
+
         block_device_mapping = block_device_mapping or []
         # NOTE(yamahata)
         # tell vm driver to attach volume at boot time by updating

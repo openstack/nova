@@ -173,7 +173,7 @@ class ZoneAwareSchedulerTestCase(test.TestCase):
     def setUp(self):
         super(ZoneAwareSchedulerTestCase, self).setUp()
         self.stubs = stubout.StubOutForTesting()
- 
+
     def tearDown(self):
         self.stubs.UnsetAll()
         super(ZoneAwareSchedulerTestCase, self).tearDown()
