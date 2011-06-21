@@ -44,9 +44,7 @@ class FakeModel(object):
 
 
 def stub_out(stubs, funcs):
-    """
-    Set the stubs in mapping in the db api
-    """
+    """Set the stubs in mapping in the db api."""
     for func in funcs:
         func_name = '_'.join(func.__name__.split('_')[1:])
         stubs.Set(db, func_name, func)

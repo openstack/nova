@@ -39,7 +39,6 @@ from nova.api.openstack import limits
 from nova.auth.manager import User, Project
 import nova.image.fake
 from nova.image import glance
-from nova.image import local
 from nova.image import service
 from nova.tests import fake_flags
 from nova.wsgi import Router

@@ -118,8 +118,13 @@ class NovaException(Exception):
         return self._error_string
 
 
-class VirtualInterface(Exception):
-    message = _("Attempt to create virtual interface failed")
+class VirtualInterfaceCreateException(NovaException):
+    message = _("Virtual Interface creation failed")
+
+
+class VirtualInterfaceMacAddressException(NovaException):
+    message = _("5 attempts to create virtual interface"
+                "with unique mac address failed")
 
 
 class NotAuthorized(NovaException):
@@ -360,16 +365,16 @@ class DatastoreNotFound(NotFound):
     message = _("Could not find the datastore reference(s) which the VM uses.")
 
 
-class NoFixedIpsFoundForInstance(NotFound):
+class NoFixedIpFound(NotFound):
+    message = _("No fixed IP associated with address %(address)s.")
+
+
+class NoFixedIpsFoundForInstance(NoFixedIpFound):
     message = _("Instance %(instance_id)s has zero fixed ips.")
 
 
-class NoFixedIpsFoundForVirtualInterface(NotFound):
+class NoFixedIpsFoundForVirtualInterface(NoFixedIpFound):
     message = _("Virtual interface %(vif_id)s has zero associated fixed ips.")
-
-
-class NoFixedIpFound(NotFound):
-    message = _("No fixed IP associated with address %(address)s.")
 
 
 class NoFixedIpsDefined(NotFound):
@@ -384,20 +389,20 @@ class FloatingIpNotFound(NotFound):
     message = _("Floating ip not found for address %(address)s.")
 
 
+class NoFloatingIpFoundForProject(FloatingIpNotFound):
+    message = _("Floating ip not found for project %(project_id)s.")
+
+
+class NoMoreFloatingIps(FloatingIpNotFound):
+    message = _("Zero floating ips available.")
+
+
 class NoFloatingIpsDefined(NotFound):
     message = _("Zero floating ips could be found.")
 
 
 class NoFloatingIpsDefinedForHost(NoFloatingIpsDefined):
     message = _("Zero floating ips defined for host %(host)s.")
-
-
-class NoFloatingIpsDefinedForInstance(NoFloatingIpsDefined):
-    message = _("Zero floating ips defined for instance %(instance_id)s.")
-
-
-class NoMoreFloatingIps(NotFound):
-    message = _("Zero floating ips available.")
 
 
 class KeypairNotFound(NotFound):
@@ -605,3 +610,7 @@ class InstanceExists(Duplicate):
 
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
+
+
+class MalformedRequestBody(NovaException):
+    message = _("Malformed message body: %(reason)s")

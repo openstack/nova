@@ -32,25 +32,24 @@ class Controller(object):
         self.compute_api = nova.compute.API()
         self.builder = nova.api.openstack.views.addresses.ViewBuilderV10()
 
-    def index(self, req, server_id):
+    def _get_instance(self, req, server_id):
         try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
+            instance = self.compute_api.get(
+                req.environ['nova.context'], server_id)
         except nova.exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
+        return instance
+
+    def index(self, req, server_id):
+        instance = self._get_instance(req, server_id)
         return {'addresses': self.builder.build(instance)}
 
     def public(self, req, server_id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except nova.exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+        instance = self._get_instance(req, server_id)
         return {'public': self.builder.build_public_parts(instance)}
 
     def private(self, req, server_id):
-        try:
-            instance = self.compute_api.get(req.environ['nova.context'], id)
-        except nova.exception.NotFound:
-            return faults.Fault(exc.HTTPNotFound())
+        instance = self._get_instance(req, server_id)
         return {'private': self.builder.build_private_parts(instance)}
 
     def show(self, req, server_id, id):

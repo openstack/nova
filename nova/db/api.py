@@ -406,50 +406,50 @@ def fixed_ip_update(context, address, values):
 
 
 def virtual_interface_create(context, values):
-    """create a virtual interface record in the database"""
+    """Create a virtual interface record in the database."""
     return IMPL.virtual_interface_create(context, values)
 
 
 def virtual_interface_get(context, vif_id):
-    """gets a virtual interface from the table"""
+    """Gets a virtual interface from the table,"""
     return IMPL.virtual_interface_get(context, vif_id)
 
 
 def virtual_interface_get_by_address(context, address):
-    """gets a virtual interface from the table filtering on address"""
+    """Gets a virtual interface from the table filtering on address."""
     return IMPL.virtual_interface_get_by_address(context, address)
 
 
 def virtual_interface_get_by_fixed_ip(context, fixed_ip_id):
-    """gets the virtual interface fixed_ip is associated with"""
+    """Gets the virtual interface fixed_ip is associated with."""
     return IMPL.virtual_interface_get_by_fixed_ip(context, fixed_ip_id)
 
 
 def virtual_interface_get_by_instance(context, instance_id):
-    """gets all virtual_interfaces for instance"""
+    """Gets all virtual_interfaces for instance."""
     return IMPL.virtual_interface_get_by_instance(context, instance_id)
 
 
 def virtual_interface_get_by_instance_and_network(context, instance_id,
                                                            network_id):
-    """gets all virtual interfaces for instance"""
+    """Gets all virtual interfaces for instance."""
     return IMPL.virtual_interface_get_by_instance_and_network(context,
                                                               instance_id,
                                                               network_id)
 
 
 def virtual_interface_get_by_network(context, network_id):
-    """gets all virtual interfaces on network"""
+    """Gets all virtual interfaces on network."""
     return IMPL.virtual_interface_get_by_network(context, network_id)
 
 
 def virtual_interface_delete(context, vif_id):
-    """delete virtual interface record from the database"""
+    """Delete virtual interface record from the database."""
     return IMPL.virtual_interface_delete(context, vif_id)
 
 
 def virtual_interface_delete_by_instance(context, instance_id):
-    """delete virtual interface records associated with instance """
+    """Delete virtual interface records associated with instance."""
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
 
 
@@ -469,6 +469,16 @@ def instance_data_get_for_project(context, project_id):
 def instance_destroy(context, instance_id):
     """Destroy the instance or raise if it does not exist."""
     return IMPL.instance_destroy(context, instance_id)
+
+
+def instance_stop(context, instance_id):
+    """Stop the instance or raise if it does not exist."""
+    return IMPL.instance_stop(context, instance_id)
+
+
+def instance_get_by_uuid(context, uuid):
+    """Get an instance or raise if it does not exist."""
+    return IMPL.instance_get_by_uuid(context, uuid)
 
 
 def instance_get(context, instance_id):
@@ -960,6 +970,36 @@ def snapshot_update(context, snapshot_id, values):
 
     """
     return IMPL.snapshot_update(context, snapshot_id, values)
+
+
+####################
+
+
+def block_device_mapping_create(context, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_create(context, values)
+
+
+def block_device_mapping_update(context, bdm_id, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_update(context, bdm_id, values)
+
+
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    """Get all block device mapping belonging to a instance"""
+    return IMPL.block_device_mapping_get_all_by_instance(context, instance_id)
+
+
+def block_device_mapping_destroy(context, bdm_id):
+    """Destroy the block device mapping."""
+    return IMPL.block_device_mapping_destroy(context, bdm_id)
+
+
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    """Destroy the block device mapping or raise if it does not exist."""
+    return IMPL.block_device_mapping_destroy_by_instance_and_volume(
+        context, instance_id, volume_id)
 
 
 ####################
