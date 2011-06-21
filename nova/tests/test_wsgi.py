@@ -87,8 +87,9 @@ class TestWSGIServer(unittest.TestCase):
         self.assertEquals("test_app", server.name)
 
     def test_start_random_port(self):
-        server = nova.wsgi.Server("test_random", None)
-        server.start("127.0.0.1", 0)
+        server = nova.wsgi.Server("test_random_port", None, host="127.0.0.1")
+        self.assertEqual(0, server.port)
+        server.start()
         self.assertNotEqual(0, server.port)
         server.stop()
         server.wait()

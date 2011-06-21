@@ -47,47 +47,52 @@ LOG = logging.getLogger('nova.wsgi')
 
 
 class Server(object):
-    """Server class to manage multiple WSGI sockets and applications."""
+    """Server class to manage a WSGI server, serving a WSGI application."""
 
     default_pool_size = 1000
 
-    def __init__(self, name, app, pool_size=None):
+    def __init__(self, name, app, host=None, port=None, pool_size=None):
         """Initialize, but do not start, a WSGI server.
 
-        :param name: The name to use for logging and other human purposes.
+        :param name: Pretty name for logging.
         :param app: The WSGI application to serve.
+        :param host: IP address to serve the application.
+        :param port: Port number to server the application.
         :param pool_size: Maximum number of eventlets to spawn concurrently.
         :returns: None
 
         """
         self.name = name
         self.app = app
-        self.pool_size = pool_size or self.default_pool_size
+        self.host = host or "0.0.0.0"
+        self.port = port or 0
+        self._server = None
+        self._socket = None
+        self._pool = eventlet.GreenPool(pool_size or self.default_pool_size)
+        self._logger = logging.getLogger("eventlet.wsgi.server")
+        self._wsgi_logger = logging.WritableLogger(self._logger)
 
-    def _start(self, socket):
+    def _start(self):
         """Run the blocking eventlet WSGI server.
 
-        :param socket: The socket where the WSGI server will serve it's app.
         :returns: None
 
         """
-        pool = eventlet.GreenPool(self.pool_size)
-        log_name = "eventlet.wsgi.server"
-        logger = logging.WritableLogger(logging.getLogger(log_name))
-        eventlet.wsgi.server(socket, self.app, custom_pool=pool, log=logger)
+        eventlet.wsgi.server(self._socket,
+                             self.app,
+                             custom_pool=self._pool,
+                             log=self._wsgi_logger)
 
-    def start(self, host, port, backlog=128):
+    def start(self, backlog=128):
         """Start serving a WSGI application.
 
-        :param host: IP address to serve the application.
-        :param port: Port number to server the application.
         :param backlog: Maximum number of queued connections.
         :returns: None
 
         """
-        socket = eventlet.listen((host, port), backlog=backlog)
-        self._server = eventlet.spawn(self._start, socket)
-        (self.host, self.port) = socket.getsockname()
+        self._socket = eventlet.listen((self.host, self.port), backlog=backlog)
+        self._server = eventlet.spawn(self._start)
+        (self.host, self.port) = self._socket.getsockname()
         LOG.info(_("Started %(name)s on %(host)s:%(port)s") % self.__dict__)
 
     def stop(self):

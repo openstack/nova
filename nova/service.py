@@ -331,10 +331,13 @@ class WSGIService(object):
         """
         self.name = name
         self.loader = loader or wsgi.Loader()
-        self.application = self.loader.load_app(name)
-        self.host = getattr(FLAGS, '%s_listen' % name, "0.0.0.0")
-        self.port = getattr(FLAGS, '%s_listen_port' % name, 0)
-        self.server = wsgi.Server(name, self.application)
+        self.app = self.loader.load_app(name)
+        self.host = getattr(FLAGS, '%s_listen' % name, None)
+        self.port = getattr(FLAGS, '%s_listen_port' % name, None)
+        self.server = wsgi.Server(name,
+                                  self.app,
+                                  host=self.host,
+                                  port=self.port)
 
     def start(self):
         """Start serving this service using loaded configuration.
@@ -345,7 +348,7 @@ class WSGIService(object):
         :returns: None
 
         """
-        self.server.start(self.host, self.port)
+        self.server.start()
         self.port = self.server.port
 
     def stop(self):
