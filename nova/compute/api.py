@@ -379,6 +379,9 @@ class API(base.Base):
         Scheduler drivers, but may remove the effectiveness of the
         more complicated drivers.
 
+        NOTE: If you change this method, be sure to change
+        create_all_at_once() at the same time!
+
         Returns a list of instance dicts.
         """
 
