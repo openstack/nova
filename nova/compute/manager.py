@@ -562,6 +562,24 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @exception.wrap_exception
     @checks_instance_lock
+    def agent_update(self, context, instance_id, url, md5hash):
+        """Update agent running on an instance on this host."""
+        context = context.elevated()
+        instance_ref = self.db.instance_get(context, instance_id)
+        instance_id = instance_ref['id']
+        instance_state = instance_ref['state']
+        expected_state = power_state.RUNNING
+        if instance_state != expected_state:
+            LOG.warn(_('trying to update agent on a non-running '
+                    'instance: %(instance_id)s (state: %(instance_state)s '
+                    'expected: %(expected_state)s)') % locals())
+        nm = instance_ref['name']
+        msg = _('instance %(nm)s: updating agent to %(url)s') % locals()
+        LOG.audit(msg)
+        self.driver.agent_update(instance_ref, url, md5hash)
+
+    @exception.wrap_exception
+    @checks_instance_lock
     def rescue_instance(self, context, instance_id):
         """Rescue an instance on this host."""
         context = context.elevated()
