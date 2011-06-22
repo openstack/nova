@@ -92,7 +92,9 @@ class XmlConversionTestCase(test.TestCase):
         conv = ec2utils._try_convert
         self.assertEqual(conv('None'), None)
         self.assertEqual(conv('True'), True)
+        self.assertEqual(conv('true'), True)
         self.assertEqual(conv('False'), False)
+        self.assertEqual(conv('false'), False)
         self.assertEqual(conv('0'), 0)
         self.assertEqual(conv('42'), 42)
         self.assertEqual(conv('3.14'), 3.14)
