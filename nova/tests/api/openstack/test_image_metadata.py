@@ -136,7 +136,7 @@ class ImageMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
-        self.assertEqual('value1', res_dict['meta']['key1'])
+        self.assertEqual('value1', res_dict['key1'])
 
     def test_show_xml(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
@@ -210,13 +210,12 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"meta": {"key1": "zz"}}'
+        req.body = '{"key1": "zz"}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
-        print res.body
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
-        self.assertEqual('zz', res_dict['meta']['key1'])
+        self.assertEqual('zz', res_dict['key1'])
 
     def test_update_item_xml(self):
         serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
@@ -241,7 +240,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"meta": {"key1": "value1", "key2": "value2"}}'
+        req.body = '{"key1": "value1", "key2": "value2"}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
@@ -250,7 +249,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/1/meta/bad')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"meta": {"key1": "value1"}}'
+        req.body = '{"key1": "value1"}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
@@ -286,7 +285,7 @@ class ImageMetaDataTest(unittest.TestCase):
         req = webob.Request.blank('/v1.1/images/3/meta/blah')
         req.environ['api.version'] = '1.1'
         req.method = 'PUT'
-        req.body = '{"meta": {"blah": "blah"}}'
+        req.body = '{"blah": "blah"}'
         req.headers["content-type"] = "application/json"
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(400, res.status_int)
