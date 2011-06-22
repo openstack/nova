@@ -264,7 +264,7 @@ class API(base.Base):
         for bdm in mappings:
             LOG.debug(_("bdm %s"), bdm)
 
-            virtual_name = bdm['virtualName']
+            virtual_name = bdm['virtual']
             if virtual_name == 'ami' or virtual_name == 'root':
                 continue
 
@@ -272,9 +272,10 @@ class API(base.Base):
                     virtual_name.startswith('ephemeral'))
             values = {
                 'instance_id': instance_id,
-                'device_name': bdm['deviceName'],
+                'device_name': bdm['device'],
                 'virtual_name': virtual_name, }
-            self.db.block_device_mapping_create(elevated_context, values)
+            self.db.block_device_mapping_update_or_create(elevated_context,
+                                                          values)
 
     def _update_block_device_mapping(self, elevated_context, instance_id,
                                      block_device_mapping):
@@ -285,15 +286,11 @@ class API(base.Base):
             LOG.debug(_('bdm %s'), bdm)
             assert 'device_name' in bdm
 
-            values = {
-                'instance_id': instance_id,
-                'device_name': bdm['device_name'],
-                'delete_on_termination': bdm.get('delete_on_termination'),
-                'virtual_name': bdm.get('virtual_name'),
-                'snapshot_id': bdm.get('snapshot_id'),
-                'volume_id': bdm.get('volume_id'),
-                'volume_size': bdm.get('volume_size'),
-                'no_device': bdm.get('no_device')}
+            values = {'instance_id': instance_id}
+            for key in ('device_name', 'delete_on_termination', 'virtual_name',
+                        'snapshot_id', 'volume_id', 'volume_size',
+                        'no_device'):
+                values[key] = bdm.get(key)
 
             # NOTE(yamahata): NoDevice eliminates devices defined in image
             #                 files by command line option.
@@ -305,7 +302,8 @@ class API(base.Base):
                           'virtual_name'):
                     values[k] = None
 
-            self.db.block_device_mapping_create(elevated_context, values)
+            self.db.block_device_mapping_update_or_create(elevated_context,
+                                                          values)
 
     def create_db_entry_for_new_instance(self, context, image, base_options,
              security_groups, block_device_mapping, num=1):
