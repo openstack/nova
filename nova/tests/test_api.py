@@ -107,6 +107,8 @@ class Ec2utilsTestCase(test.TestCase):
     def test_ec2_id_to_id(self):
         self.assertEqual(ec2utils.ec2_id_to_id('i-0000001e'), 30)
         self.assertEqual(ec2utils.ec2_id_to_id('ami-1d'), 29)
+        self.assertEqual(ec2utils.ec2_id_to_id('snap-0000001c'), 28)
+        self.assertEqual(ec2utils.ec2_id_to_id('vol-0000001b'), 27)
 
     def test_bad_ec2_id(self):
         self.assertRaises(exception.InvalidEc2Id,
@@ -116,7 +118,8 @@ class Ec2utilsTestCase(test.TestCase):
     def test_id_to_ec2_id(self):
         self.assertEqual(ec2utils.id_to_ec2_id(30), 'i-0000001e')
         self.assertEqual(ec2utils.id_to_ec2_id(29, 'ami-%08x'), 'ami-0000001d')
-
+        self.assertEqual(ec2utils.id_to_ec2_snap_id(28), 'snap-0000001c')
+        self.assertEqual(ec2utils.id_to_ec2_vol_id(27), 'vol-0000001b')
 
 class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
