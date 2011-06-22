@@ -978,7 +978,8 @@ class API(base.Base):
                     "unable to associate floating ip") % instance_id
             raise exception.ApiError(msg)
         if len(fixed_ip_addrs) > 1:
-            LOG.warning(_("multiple fixed_ips exist, using the first"))
+            LOG.warning(_("multiple fixed_ips exist, using the first: %s"),
+                                                         fixed_ip_addrs[0])
         self.network_api.associate_floating_ip(context,
                                                floating_ip=address,
                                                fixed_ip=fixed_ip_addrs[0])
