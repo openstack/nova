@@ -45,7 +45,8 @@ LOG = logging.getLogger('nova.tests.cloud')
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()
-        self.flags(connection_type='fake')
+        self.flags(connection_type='fake',
+                   stub_network=True)
 
         self.conn = rpc.Connection.instance()
 
