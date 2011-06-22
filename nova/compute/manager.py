@@ -301,7 +301,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id, power_state.BUILDING)
 
         try:
-            self.driver.spawn(instance_ref, network_info, block_device_mapping)
+            self.driver.spawn(instance, network_info, block_device_mapping)
         except Exception as ex:  # pylint: disable=W0702
             msg = _("Instance '%(instance_id)s' failed to spawn. Is "
                     "virtualization enabled in the BIOS? Details: "
