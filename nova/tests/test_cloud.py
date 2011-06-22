@@ -332,32 +332,7 @@ class CloudTestCase(test.TestCase):
                 if d1[key] == d2[key]:
                     self.assertDictMatch(d1, d2)
 
-    def _assertImageSet(self, result, root_device_type, root_device_name):
-        self.assertEqual(1, len(result['imagesSet']))
-        result = result['imagesSet'][0]
-        self.assertTrue('rootDeviceType' in result)
-        self.assertEqual(result['rootDeviceType'], root_device_type)
-        self.assertTrue('rootDeviceName' in result)
-        self.assertEqual(result['rootDeviceName'], root_device_name)
-        self.assertTrue('blockDeviceMapping' in result)
-
-        return result
-
-    # NOTE(yamahata):
-    # InstanceBlockDeviceMappingItemType
-    # rootDeviceType
-    # rootDeviceName
-    # blockDeviceMapping
-    #  deviceName
-    #  virtualName
-    #  ebs
-    #    snapshotId
-    #    volumeSize
-    #    deleteOnTermination
-    #  noDevice
-    def test_describe_image_mapping(self):
-        """test for rootDeviceName and blockDeiceMapping"""
-        describe_images = self.cloud.describe_images
+    def _setUpImageSet(self):
         mappings1 = [
             {'device': '/dev/sda1', 'virtual': 'root'},
 
@@ -416,39 +391,73 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
         self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
 
+    def _assertImageSet(self, result, root_device_type, root_device_name):
+        self.assertEqual(1, len(result['imagesSet']))
+        result = result['imagesSet'][0]
+        self.assertTrue('rootDeviceType' in result)
+        self.assertEqual(result['rootDeviceType'], root_device_type)
+        self.assertTrue('rootDeviceName' in result)
+        self.assertEqual(result['rootDeviceName'], root_device_name)
+        self.assertTrue('blockDeviceMapping' in result)
+
+        return result
+
+    _expected_root_device_name1 = '/dev/sda1'
+    # NOTE(yamahata): noDevice doesn't make sense when returning mapping
+    #                 It makes sense only when user overriding existing
+    #                 mapping.
+    _expected_bdms1 = [
+        {'deviceName': '/dev/sdb0', 'virtualName': 'ephemeral0'},
+        {'deviceName': '/dev/sdb1', 'ebs': {'snapshotId':
+                                            'snap-00053977'}},
+        {'deviceName': '/dev/sdb2', 'ebs': {'snapshotId':
+                                            'vol-00053977'}},
+        {'deviceName': '/dev/sdb3', 'virtualName': 'ephemeral5'},
+        # {'deviceName': '/dev/sdb4', 'noDevice': True},
+
+        {'deviceName': '/dev/sdc0', 'virtualName': 'swap'},
+        {'deviceName': '/dev/sdc1', 'ebs': {'snapshotId':
+                                            'snap-00bc614e'}},
+        {'deviceName': '/dev/sdc2', 'ebs': {'snapshotId':
+                                            'vol-00bc614e'}},
+        {'deviceName': '/dev/sdc3', 'virtualName': 'ephemeral6'},
+        # {'deviceName': '/dev/sdc4', 'noDevice': True}
+        ]
+
+    _expected_root_device_name2 = '/dev/sdb1'
+    _expected_bdms2 = [{'deviceName': '/dev/sdb1',
+                       'ebs': {'snapshotId': 'snap-00053977'}}]
+
+    # NOTE(yamahata):
+    # InstanceBlockDeviceMappingItemType
+    # rootDeviceType
+    # rootDeviceName
+    # blockDeviceMapping
+    #  deviceName
+    #  virtualName
+    #  ebs
+    #    snapshotId
+    #    volumeSize
+    #    deleteOnTermination
+    #  noDevice
+    def test_describe_image_mapping(self):
+        """test for rootDeviceName and blockDeiceMapping"""
+        describe_images = self.cloud.describe_images
+        self._setUpImageSet()
+
         result = describe_images(self.context, ['ami-00000001'])
-        result = self._assertImageSet(result, 'instance-store', '/dev/sda1')
+        result = self._assertImageSet(result, 'instance-store',
+                                      self._expected_root_device_name1)
 
-        # NOTE(yamahata): noDevice doesn't make sense when returning mapping
-        #                 It makes sense only when user overriding existing
-        #                 mapping.
-        expected_bdms = [
-            {'deviceName': '/dev/sdb0', 'virtualName': 'ephemeral0'},
-            {'deviceName': '/dev/sdb1', 'ebs': {'snapshotId':
-                                                'snap-00053977'}},
-            {'deviceName': '/dev/sdb2', 'ebs': {'snapshotId':
-                                                'vol-00053977'}},
-            {'deviceName': '/dev/sdb3', 'virtualName': 'ephemeral5'},
-            # {'deviceName': '/dev/sdb4', 'noDevice': True},
-
-            {'deviceName': '/dev/sdc0', 'virtualName': 'swap'},
-            {'deviceName': '/dev/sdc1', 'ebs': {'snapshotId':
-                                                'snap-00bc614e'}},
-            {'deviceName': '/dev/sdc2', 'ebs': {'snapshotId':
-                                                'vol-00bc614e'}},
-            {'deviceName': '/dev/sdc3', 'virtualName': 'ephemeral6'},
-            # {'deviceName': '/dev/sdc4', 'noDevice': True}
-            ]
         self.assertDictListUnorderedMatch(result['blockDeviceMapping'],
-                                          expected_bdms, 'deviceName')
+                                          self._expected_bdms1, 'deviceName')
 
         result = describe_images(self.context, ['ami-00000002'])
-        result = self._assertImageSet(result, 'ebs', '/dev/sdb1')
+        result = self._assertImageSet(result, 'ebs',
+                                      self._expected_root_device_name2)
 
-        expected_bdms = [{'deviceName': '/dev/sdb1',
-                          'ebs': {'snapshotId': 'snap-00053977'}}]
         self.assertDictListUnorderedMatch(result['blockDeviceMapping'],
-                                          expected_bdms, 'deviceName')
+                                          self._expected_bdms2, 'deviceName')
 
         self.stubs.UnsetAll()
 
@@ -464,6 +473,32 @@ class CloudTestCase(test.TestCase):
         result = describe_image_attribute(self.context, 'ami-00000001',
                                           'launchPermission')
         self.assertEqual([{'group': 'all'}], result['launchPermission'])
+
+    def test_describe_image_attribute_root_device_name(self):
+        describe_image_attribute = self.cloud.describe_image_attribute
+        self._setUpImageSet()
+
+        result = describe_image_attribute(self.context, 'ami-00000001',
+                                          'rootDeviceName')
+        self.assertEqual(result['rootDeviceName'],
+                         self._expected_root_device_name1)
+        result = describe_image_attribute(self.context, 'ami-00000002',
+                                          'rootDeviceName')
+        self.assertEqual(result['rootDeviceName'],
+                         self._expected_root_device_name2)
+
+    def test_describe_image_attribute_block_device_mapping(self):
+        describe_image_attribute = self.cloud.describe_image_attribute
+        self._setUpImageSet()
+
+        result = describe_image_attribute(self.context, 'ami-00000001',
+                                          'blockDeviceMapping')
+        self.assertDictListUnorderedMatch(result['blockDeviceMapping'],
+                                          self._expected_bdms1, 'deviceName')
+        result = describe_image_attribute(self.context, 'ami-00000002',
+                                          'blockDeviceMapping')
+        self.assertDictListUnorderedMatch(result['blockDeviceMapping'],
+                                          self._expected_bdms2, 'deviceName')
 
     def test_modify_image_attribute(self):
         modify_image_attribute = self.cloud.modify_image_attribute
