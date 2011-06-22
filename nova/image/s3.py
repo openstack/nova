@@ -102,18 +102,7 @@ class S3ImageService(service.BaseImageService):
         key.get_contents_to_filename(local_filename)
         return local_filename
 
-    def _s3_create(self, context, metadata):
-        """Gets a manifext from s3 and makes an image."""
-
-        image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
-
-        image_location = metadata['properties']['image_location']
-        bucket_name = image_location.split('/')[0]
-        manifest_path = image_location[len(bucket_name) + 1:]
-        bucket = self._conn(context).get_bucket(bucket_name)
-        key = bucket.get_key(manifest_path)
-        manifest = key.get_contents_as_string()
-
+    def _s3_parse_manifest(self, context, metadata, manifest):
         manifest = ElementTree.fromstring(manifest)
         image_format = 'ami'
         image_type = 'machine'
@@ -183,6 +172,21 @@ class S3ImageService(service.BaseImageService):
                          'properties': properties})
         metadata['properties']['image_state'] = 'pending'
         image = self.service.create(context, metadata)
+        return manifest, image
+
+    def _s3_create(self, context, metadata):
+        """Gets a manifext from s3 and makes an image."""
+
+        image_path = tempfile.mkdtemp(dir=FLAGS.image_decryption_dir)
+
+        image_location = metadata['properties']['image_location']
+        bucket_name = image_location.split('/')[0]
+        manifest_path = image_location[len(bucket_name) + 1:]
+        bucket = self._conn(context).get_bucket(bucket_name)
+        key = bucket.get_key(manifest_path)
+        manifest = key.get_contents_as_string()
+
+        manifest, image = self._s3_parse_manifest(metadata, context, manifest)
         image_id = image['id']
 
         def delayed_create():
