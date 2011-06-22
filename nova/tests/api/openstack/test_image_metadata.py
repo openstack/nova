@@ -37,6 +37,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image1',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -52,6 +53,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image2',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -67,6 +69,7 @@ class ImageMetaDataTest(unittest.TestCase):
         'name': 'image3',
         'deleted': False,
         'container_format': None,
+        'checksum': None,
         'created_at': '2011-03-22T17:40:15',
         'disk_format': None,
         'updated_at': '2011-03-22T17:40:15',
@@ -103,7 +106,10 @@ class ImageMetaDataTest(unittest.TestCase):
         res = req.get_response(fakes.wsgi_app())
         res_dict = json.loads(res.body)
         self.assertEqual(200, res.status_int)
-        self.assertEqual('value1', res_dict['metadata']['key1'])
+        expected = self.IMAGE_FIXTURES[0]['properties']
+        self.assertEqual(len(expected), len(res_dict['metadata']))
+        for (key, value) in res_dict['metadata'].items():
+            self.assertEqual(value, res_dict['metadata'][key])
 
     def test_show(self):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
