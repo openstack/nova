@@ -323,6 +323,135 @@ class CloudTestCase(test.TestCase):
         self.assertRaises(exception.ImageNotFound, describe_images,
                           self.context, ['ami-fake'])
 
+    def assertDictListUnorderedMatch(self, L1, L2, key):
+        self.assertEqual(len(L1), len(L2))
+        for d1 in L1:
+            self.assertTrue(key in d1)
+            for d2 in L2:
+                self.assertTrue(key in d2)
+                if d1[key] == d2[key]:
+                    self.assertDictMatch(d1, d2)
+
+    def _assertImageSet(self, result, root_device_type, root_device_name):
+        self.assertEqual(1, len(result['imagesSet']))
+        result = result['imagesSet'][0]
+        self.assertTrue('rootDeviceType' in result)
+        self.assertEqual(result['rootDeviceType'], root_device_type)
+        self.assertTrue('rootDeviceName' in result)
+        self.assertEqual(result['rootDeviceName'], root_device_name)
+        self.assertTrue('blockDeviceMapping' in result)
+
+        return result
+
+    # NOTE(yamahata):
+    # InstanceBlockDeviceMappingItemType
+    # rootDeviceType
+    # rootDeviceName
+    # blockDeviceMapping
+    #  deviceName
+    #  virtualName
+    #  ebs
+    #    snapshotId
+    #    volumeSize
+    #    deleteOnTermination
+    #  noDevice
+    def test_describe_image_mapping(self):
+        """test for rootDeviceName and blockDeiceMapping"""
+        describe_images = self.cloud.describe_images
+        mappings1 = [
+            {'device': '/dev/sda1', 'virtual': 'root'},
+
+            {'device': '/dev/sdb0', 'virtual': 'ephemeral0'},
+            {'device': '/dev/sdb1', 'virtual': 'ephemeral1'},
+            {'device': '/dev/sdb2', 'virtual': 'ephemeral2'},
+            {'device': '/dev/sdb3', 'virtual': 'ephemeral3'},
+            {'device': '/dev/sdb4', 'virtual': 'ephemeral4'},
+
+            {'device': '/dev/sdc0', 'virtual': 'swap'},
+            {'device': '/dev/sdc1', 'virtual': 'swap'},
+            {'device': '/dev/sdc2', 'virtual': 'swap'},
+            {'device': '/dev/sdc3', 'virtual': 'swap'},
+            {'device': '/dev/sdc4', 'virtual': 'swap'}]
+        block_device_mapping1 = [
+            {'device_name': '/dev/sdb1', 'snapshot_id': 01234567},
+            {'device_name': '/dev/sdb2', 'volume_id': 01234567},
+            {'device_name': '/dev/sdb3', 'virtual_name': 'ephemeral5'},
+            {'device_name': '/dev/sdb4', 'no_device': True},
+
+            {'device_name': '/dev/sdc1', 'snapshot_id': 12345678},
+            {'device_name': '/dev/sdc2', 'volume_id': 12345678},
+            {'device_name': '/dev/sdc3', 'virtual_name': 'ephemeral6'},
+            {'device_name': '/dev/sdc4', 'no_device': True}]
+        image1 = {
+            'id': 1,
+            'properties': {
+                'kernel_id': 1,
+                'type': 'machine',
+                'mappings': mappings1,
+                'block_device_mapping': block_device_mapping1,
+                }
+            }
+
+        mappings2 = [{'device': '/dev/sda1', 'virtual': 'root'}]
+        block_device_mapping2 = [{'device_name': '/dev/sdb1',
+                                  'snapshot_id': 01234567}]
+        image2 = {
+            'id': 2,
+            'properties': {
+                'kernel_id': 2,
+                'type': 'machine',
+                'root_device_name': '/dev/sdb1',
+                'mappings': mappings2,
+                'block_device_mapping': block_device_mapping2}}
+
+        def fake_show(meh, context, image_id):
+            for i in [image1, image2]:
+                if i['id'] == image_id:
+                    return i
+            raise exception.ImageNotFound(image_id=image_id)
+
+        def fake_detail(meh, context):
+            return [image1, image2]
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.stubs.Set(fake._FakeImageService, 'detail', fake_detail)
+
+        result = describe_images(self.context, ['ami-00000001'])
+        result = self._assertImageSet(result, 'instance-store', '/dev/sda1')
+
+        # NOTE(yamahata): noDevice doesn't make sense when returning mapping
+        #                 It makes sense only when user overriding existing
+        #                 mapping.
+        expected_bdms = [
+            {'deviceName': '/dev/sdb0', 'virtualName': 'ephemeral0'},
+            {'deviceName': '/dev/sdb1', 'ebs': {'snapshotId':
+                                                'snap-00053977'}},
+            {'deviceName': '/dev/sdb2', 'ebs': {'snapshotId':
+                                                'vol-00053977'}},
+            {'deviceName': '/dev/sdb3', 'virtualName': 'ephemeral5'},
+            # {'deviceName': '/dev/sdb4', 'noDevice': True},
+
+            {'deviceName': '/dev/sdc0', 'virtualName': 'swap'},
+            {'deviceName': '/dev/sdc1', 'ebs': {'snapshotId':
+                                                'snap-00bc614e'}},
+            {'deviceName': '/dev/sdc2', 'ebs': {'snapshotId':
+                                                'vol-00bc614e'}},
+            {'deviceName': '/dev/sdc3', 'virtualName': 'ephemeral6'},
+            # {'deviceName': '/dev/sdc4', 'noDevice': True}
+            ]
+        self.assertDictListUnorderedMatch(result['blockDeviceMapping'],
+                                          expected_bdms, 'deviceName')
+
+        result = describe_images(self.context, ['ami-00000002'])
+        result = self._assertImageSet(result, 'ebs', '/dev/sdb1')
+
+        expected_bdms = [{'deviceName': '/dev/sdb1',
+                          'ebs': {'snapshotId': 'snap-00053977'}}]
+        self.assertDictListUnorderedMatch(result['blockDeviceMapping'],
+                                          expected_bdms, 'deviceName')
+
+        self.stubs.UnsetAll()
+
     def test_describe_image_attribute(self):
         describe_image_attribute = self.cloud.describe_image_attribute
 
@@ -679,10 +808,10 @@ class CloudTestCase(test.TestCase):
                   'max_count': 1,
                   'block_device_mapping': [{'device_name': '/dev/vdb',
                                             'volume_id': vol1['id'],
-                                            'delete_on_termination': False, },
+                                            'delete_on_termination': False},
                                            {'device_name': '/dev/vdc',
                                             'volume_id': vol2['id'],
-                                            'delete_on_termination': True, },
+                                            'delete_on_termination': True},
                                            ]}
         ec2_instance_id = self._run_instance_wait(**kwargs)
         instance_id = ec2utils.ec2_id_to_id(ec2_instance_id)
