@@ -226,8 +226,10 @@ def novadir():
     return os.path.abspath(nova.__file__).split('nova/__init__.pyc')[0]
 
 
-def default_flagfile(filename='nova.conf'):
-    for arg in sys.argv:
+def default_flagfile(filename='nova.conf', args=None):
+    if args is None:
+        args = sys.argv
+    for arg in args:
         if arg.find('flagfile') != -1:
             break
     else:
@@ -239,8 +241,8 @@ def default_flagfile(filename='nova.conf'):
             filename = "./nova.conf"
             if not os.path.exists(filename):
                 filename = '/etc/nova/nova.conf'
-        flagfile = ['--flagfile=%s' % filename]
-        sys.argv = sys.argv[:1] + flagfile + sys.argv[1:]
+        flagfile = '--flagfile=%s' % filename
+        args.insert(1, flagfile)
 
 
 def debug(arg):
