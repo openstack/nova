@@ -135,12 +135,29 @@ def _format_block_device_mapping(bdm):
     return item
 
 
-def _format_mappings(mappings, result):
+def _format_mappings(properties, result):
     """Format multiple BlockDeviceMappingItemType"""
+    mappings = [{'virtualName': m['virtual'], 'deviceName': m['device']}
+                for m in properties.get('mappings', [])
+                if (m['virtual'] == 'swap' or
+                    m['virtual'].startswith('ephemeral'))]
+
     block_device_mapping = [_format_block_device_mapping(bdm) for bdm in
-                            mappings]
-    if block_device_mapping:
-        result['blockDeviceMapping'] = block_device_mapping
+                            properties.get('block_device_mapping', [])]
+
+    # NOTE(yamahata): overwrite mappings with block_device_mapping
+    for bdm in block_device_mapping:
+        for i in range(len(mappings)):
+            if bdm['deviceName'] == mappings[i]['deviceName']:
+                del mappings[i]
+                break
+        mappings.append(bdm)
+
+    # NOTE(yamahata): trim ebs.no_device == true. Is this necessary?
+    mappings = [bdm for bdm in mappings if not (bdm.get('noDevice', False))]
+
+    if mappings:
+        result['blockDeviceMapping'] = mappings
 
 
 class CloudController(object):
@@ -1178,7 +1195,7 @@ class CloudController(object):
         i['rootDeviceName'] = (root_device_name or _DEFAULT_ROOT_DEVICE_NAME)
         i['rootDeviceType'] = root_device_type
 
-        _format_mappings(properties.get('block_device_mapping', []), i)
+        _format_mappings(properties, i)
 
         return i
 
@@ -1232,8 +1249,7 @@ class CloudController(object):
 
     def describe_image_attribute(self, context, image_id, attribute, **kwargs):
         def _block_device_mapping_attribute(image, result):
-            _format_mappings(
-                image['properties'].get('block_device_mapping', []), result)
+            _format_mappings(image['properties'], result)
 
         def _launch_permission_attribute(image, result):
             result['launchPermission'] = []
