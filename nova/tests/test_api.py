@@ -142,6 +142,17 @@ class Ec2utilsTestCase(test.TestCase):
 
         self.assertDictMatch(out_dict, expected_dict)
 
+    def test_properties_root_defice_name(self):
+        mappings = [{"device": "/dev/sda1", "virtual": "root"}]
+        properties0 = {'mappings': mappings}
+        properties1 = {'root_device_name': '/dev/sdb', 'mappings': mappings}
+
+        root_device_name = ec2utils.properties_root_device_name(properties0)
+        self.assertEqual(root_device_name, '/dev/sda1')
+
+        root_device_name = ec2utils.properties_root_device_name(properties1)
+        self.assertEqual(root_device_name, '/dev/sdb')
+
 
 class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
