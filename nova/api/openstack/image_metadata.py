@@ -150,7 +150,6 @@ class ImageMetadataXMLSerializer(wsgi.XMLDictSerializer):
         return self._meta_item_to_xml_string(meta_item_dict['meta'])
 
 
-
 def create_resource():
     serializers = {
         'application/xml': ImageMetadataXMLSerializer(),

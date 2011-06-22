@@ -235,7 +235,6 @@ class ImageMetaDataTest(unittest.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
-
     def test_update_item_too_many_keys(self):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
