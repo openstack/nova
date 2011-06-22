@@ -165,6 +165,15 @@ class CloudTestCase(test.TestCase):
                 sec['name'])
         db.security_group_destroy(self.context, sec['id'])
 
+    def test_create_delete_security_group(self):
+        descript = 'test description'
+        create = self.cloud.create_security_group
+        result = create(self.context, 'testgrp', descript)
+        group_descript = result['securityGroupSet'][0]['groupDescription']
+        self.assertEqual(descript, group_descript)
+        delete = self.cloud.delete_security_group
+        self.assertTrue(delete(self.context, 'testgrp'))
+
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
         vol1 = db.volume_create(self.context, {})

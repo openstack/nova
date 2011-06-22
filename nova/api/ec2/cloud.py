@@ -391,15 +391,20 @@ class CloudController(object):
             pass
         return True
 
-    def describe_security_groups(self, context, group_name=None, **kwargs):
+    def describe_security_groups(self, context, group_name=None, group_id=None, **kwargs):
         self.compute_api.ensure_default_security_group(context)
-        if group_name:
+        if group_name or group_id:
             groups = []
-            for name in group_name:
-                group = db.security_group_get_by_name(context,
-                                                      context.project_id,
-                                                      name)
-                groups.append(group)
+            if group_name:
+                for name in group_name:
+                    group = db.security_group_get_by_name(context,
+                                                          context.project_id,
+                                                          name)
+                    groups.append(group)
+            if group_id:
+                for gid in group_id:
+                    group = db.security_group_get(context, context.project_id, name)
+                    groups.append(group)
         elif context.is_admin:
             groups = db.security_group_get_all(context)
         else:
@@ -568,7 +573,7 @@ class CloudController(object):
 
         return source_project_id
 
-    def create_security_group(self, context, group_name, group_description):
+    def create_security_group(self, context, group_name, group_description, group_id=None):
         LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
