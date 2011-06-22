@@ -549,6 +549,10 @@ class GlobalRoleNotAllowed(NotAllowed):
     message = _("Unable to use global role %(role_id)s")
 
 
+class ImageRotationNotAllowed(NovaException):
+    message = _("Rotation is not allowed for snapshots")
+
+
 #TODO(bcwaldon): EOL this exception!
 class Duplicate(NovaException):
     pass

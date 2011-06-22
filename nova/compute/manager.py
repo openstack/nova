@@ -43,6 +43,7 @@ import time
 import functools
 
 from eventlet import greenthread
+from operator import itemgetter
 
 from nova import exception
 from nova import flags
@@ -476,7 +477,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     def snapshot_instance(self, context, instance_id, image_id,
                           image_type='snapshot', rotation=None):
         """Snapshot an instance on this host.
-       
+
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param image_id: glance.db.sqlalchemy.models.Image.Id
@@ -502,13 +503,40 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
-        if rotation:
-            self.rotate_backups(context, instance_id, image_type, rotation)
+        if rotation and image_type == 'snapshot':
+            raise exception.ImageRotationNotAllowed
+        elif rotation:
+            instance_uuid = instance_ref['uuid']
+            self.rotate_backups(context, instance_uuid, image_type, rotation)
 
-    def rotate_backups(self, context, instance_id, image_type, rotation):
+    def rotate_backups(self, context, instance_uuid, image_type, rotation):
+        """Delete excess backups associated to an instance.
+
+        Instances are allowed a fixed number of backups (the rotation number);
+        this method deletes the oldest backups that exceed the rotation
+        threshold.
+
+        :param context: security context
+        :param instance_uuid: string representing uuid of instance
+        :param image_type: snapshot | daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
         """
-        """
-        pass
+        image_service = nova.image.get_default_image_service()
+        filters = {'property-image-type': image_type,
+                   'property-instance-uuid': instance_uuid}
+        images = image_service.detail(context, filters=filters)
+        if len(images) > rotation:
+            # Sort oldest (by created_at) to end of list
+            images.sort(key=itemgetter('created_at'), reverse=True)
+
+            # NOTE(sirp): this deletes all backups that exceed the rotation
+            # limit
+            excess = len(images) - rotation
+            for i in xrange(excess):
+                image = images.pop()
+                image_id = image['id']
+                image_service.delete(context, image_id)
 
     @exception.wrap_exception
     @checks_instance_lock

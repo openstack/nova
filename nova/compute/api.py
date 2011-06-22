@@ -722,7 +722,7 @@ class API(base.Base):
 
     def _snapshot(self, context, instance_id, name, image_type, rotation=None):
         """Snapshot an instance on this host.
-       
+
         :param context: security context
         :param instance_id: nova.db.sqlalchemy.models.Instance.Id
         :param name: string for name of the snapshot
@@ -733,9 +733,8 @@ class API(base.Base):
         instance = db.api.instance_get(context, instance_id)
         properties = {'instance_uuid': instance['uuid'],
                       'user_id': str(context.user_id),
-                      'image_state': 'creating'}
-        if image_type != 'snapshot':
-            properties['backup_type'] = image_type
+                      'image_state': 'creating',
+                      'image_type': image_type}
         sent_meta = {'name': name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
         recv_meta = self.image_service.create(context, sent_meta)
