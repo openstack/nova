@@ -54,12 +54,12 @@ def _create_network_info(count=1, ipv6=None):
     fake_ip = '0.0.0.0/0'
     fake_ip_2 = '0.0.0.1/0'
     fake_ip_3 = '0.0.0.1/0'
-    network = {'gateway': fake,
-               'gateway_v6': fake,
-               'bridge': fake,
+    network = {'bridge': fake,
                'cidr': fake_ip,
                'cidr_v6': fake_ip}
     mapping = {'mac': fake,
+               'gateway': fake,
+               'gateway6': fake,
                'ips': [{'ip': fake_ip}, {'ip': fake_ip}]}
     if ipv6:
         mapping['ip6s'] = [{'ip': fake_ip},
