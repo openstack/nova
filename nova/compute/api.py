@@ -179,6 +179,9 @@ class API(base.Base):
         os_type = None
         if 'properties' in image and 'os_type' in image['properties']:
             os_type = image['properties']['os_type']
+        architecture = None
+        if 'properties' in image and 'arch' in image['properties']:
+            architecture = image['properties']['arch']
         vm_mode = None
         if 'properties' in image and 'vm_mode' in image['properties']:
             vm_mode = image['properties']['vm_mode']
@@ -247,6 +250,7 @@ class API(base.Base):
             'metadata': metadata,
             'availability_zone': availability_zone,
             'os_type': os_type,
+            'architecture': architecture,
             'vm_mode': vm_mode,
             'root_device_name': root_device_name}
 
@@ -345,8 +349,6 @@ class API(base.Base):
             self.trigger_security_group_members_refresh(elevated, group_id)
 
         return instance
-
-
 
     def _ask_scheduler_to_create_instance(self, context, base_options,
                                           instance_type, zone_blob,
@@ -629,8 +631,15 @@ class API(base.Base):
 
     def get(self, context, instance_id):
         """Get a single instance with the given instance_id."""
-        rv = self.db.instance_get(context, instance_id)
-        return dict(rv.iteritems())
+        # NOTE(sirp): id used to be exclusively integer IDs; now we're
+        # accepting both UUIDs and integer IDs. The handling of this
+        # is done in db/sqlalchemy/api/instance_get
+        if utils.is_uuid_like(instance_id):
+            uuid = instance_id
+            instance = self.db.instance_get_by_uuid(context, uuid)
+        else:
+            instance = self.db.instance_get(context, instance_id)
+        return dict(instance.iteritems())
 
     @scheduler_api.reroute_compute("get")
     def routing_get(self, context, instance_id):
@@ -646,6 +655,7 @@ class API(base.Base):
         """Get all instances with this reservation_id, across
         all available Zones (if any).
         """
+        context = context.elevated()
         instances = self.db.instance_get_all_by_reservation(
                                     context, reservation_id)
 

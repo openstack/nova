@@ -419,6 +419,11 @@ def instance_stop(context, instance_id):
     return IMPL.instance_stop(context, instance_id)
 
 
+def instance_get_by_uuid(context, uuid):
+    """Get an instance or raise if it does not exist."""
+    return IMPL.instance_get_by_uuid(context, uuid)
+
+
 def instance_get(context, instance_id):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)
@@ -1282,3 +1287,32 @@ def instance_metadata_delete(context, instance_id, key):
 def instance_metadata_update_or_create(context, instance_id, metadata):
     """Create or update instance metadata."""
     IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+
+
+####################
+
+
+def agent_build_create(context, values):
+    """Create a new agent build entry."""
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    """Get agent build by hypervisor/OS/architecture triple."""
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
+
+
+def agent_build_get_all(context):
+    """Get all agent builds."""
+    return IMPL.agent_build_get_all(context)
+
+
+def agent_build_destroy(context, agent_update_id):
+    """Destroy agent build entry."""
+    IMPL.agent_build_destroy(context, agent_update_id)
+
+
+def agent_build_update(context, agent_build_id, values):
+    """Update agent build entry."""
+    IMPL.agent_build_update(context, agent_build_id, values)
