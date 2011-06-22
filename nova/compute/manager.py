@@ -473,8 +473,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._update_state(context, instance_id)
 
     @exception.wrap_exception
-    def snapshot_instance(self, context, instance_id, image_id):
-        """Snapshot an instance on this host."""
+    def snapshot_instance(self, context, instance_id, image_id,
+                          image_type='snapshot', rotation=None):
+        """Snapshot an instance on this host.
+       
+        :param context: security context
+        :param instance_id: nova.db.sqlalchemy.models.Instance.Id
+        :param image_id: glance.db.sqlalchemy.models.Image.Id
+        :param image_type: snapshot | daily | weekly
+        :param rotation: int representing how many backups to keep around;
+            None if rotation shouldn't be used (as in the case of snapshots)
+        """
         context = context.elevated()
         instance_ref = self.db.instance_get(context, instance_id)
 
@@ -493,6 +502,13 @@ class ComputeManager(manager.SchedulerDependentManager):
                        'expected: %(running)s)') % locals())
 
         self.driver.snapshot(instance_ref, image_id)
+        if rotation:
+            self.rotate_backups(context, instance_id, image_type, rotation)
+
+    def rotate_backups(self, context, instance_id, image_type, rotation):
+        """
+        """
+        pass
 
     @exception.wrap_exception
     @checks_instance_lock
