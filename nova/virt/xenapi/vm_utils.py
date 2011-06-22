@@ -33,6 +33,7 @@ import glance.client
 from nova import exception
 from nova import flags
 import nova.image
+from nova.image import glance as glance_image_service
 from nova import log as logging
 from nova import utils
 from nova.auth.manager import AuthManager
@@ -156,7 +157,6 @@ class VMHelper(HelperBase):
                 rec['PV_ramdisk'] = ramdisk
             else:
                 # 2. Use kernel within the image
-                rec['PV_args'] = 'clocksource=jiffies'
                 rec['PV_bootloader'] = 'pygrub'
         else:
             # 3. Using hardware virtualization
@@ -283,19 +283,16 @@ class VMHelper(HelperBase):
 
     @classmethod
     def get_vdi_for_vm_safely(cls, session, vm_ref):
-        vdi_refs = VMHelper.lookup_vm_vdis(session, vm_ref)
-        if vdi_refs is None:
-            raise Exception(_("No VDIs found for VM %s") % vm_ref)
-        else:
-            num_vdis = len(vdi_refs)
-            if num_vdis != 1:
-                raise Exception(
-                        _("Unexpected number of VDIs (%(num_vdis)s) found"
-                        " for VM %(vm_ref)s") % locals())
-
-        vdi_ref = vdi_refs[0]
-        vdi_rec = session.get_xenapi().VDI.get_record(vdi_ref)
-        return vdi_ref, vdi_rec
+        """Retrieves the primary VDI for a VM"""
+        vbd_refs = session.get_xenapi().VM.get_VBDs(vm_ref)
+        for vbd in vbd_refs:
+            vbd_rec = session.get_xenapi().VBD.get_record(vbd)
+            # Convention dictates the primary VDI will be userdevice 0
+            if vbd_rec['userdevice'] == '0':
+                vdi_rec = session.get_xenapi().VDI.get_record(vbd_rec['VDI'])
+                return vbd_rec['VDI'], vdi_rec
+        raise exception.Error(_("No primary VDI found for"
+                "%(vm_ref)s") % locals())
 
     @classmethod
     def create_snapshot(cls, session, instance_id, vm_ref, label):
@@ -329,12 +326,6 @@ class VMHelper(HelperBase):
         return template_vm_ref, template_vdi_uuids
 
     @classmethod
-    def get_sr(cls, session, sr_label='slices'):
-        """Finds the SR named by the given name label and returns
-        the UUID"""
-        return session.call_xenapi('SR.get_by_name_label', sr_label)[0]
-
-    @classmethod
     def get_sr_path(cls, session):
         """Return the path to our storage repository
 
@@ -358,10 +349,12 @@ class VMHelper(HelperBase):
 
         os_type = instance.os_type or FLAGS.default_os_type
 
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
         params = {'vdi_uuids': vdi_uuids,
                   'image_id': image_id,
-                  'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port,
+                  'glance_host': glance_host,
+                  'glance_port': glance_port,
                   'sr_path': cls.get_sr_path(session),
                   'os_type': os_type}
 
@@ -409,9 +402,11 @@ class VMHelper(HelperBase):
         # here (under Python 2.6+) and pass them as arguments
         uuid_stack = [str(uuid.uuid4()) for i in xrange(2)]
 
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
         params = {'image_id': image,
-                  'glance_host': FLAGS.glance_host,
-                  'glance_port': FLAGS.glance_port,
+                  'glance_host': glance_host,
+                  'glance_port': glance_port,
                   'uuid_stack': uuid_stack,
                   'sr_path': cls.get_sr_path(session)}
 
@@ -576,7 +571,8 @@ class VMHelper(HelperBase):
         Returns: A single filename if image_type is KERNEL_RAMDISK
                  A list of dictionaries that describe VDIs, otherwise
         """
-        url = images.image_url(image)
+        url = "http://%s:%s/_images/%s/image" % (FLAGS.s3_host, FLAGS.s3_port,
+                                                 image)
         LOG.debug(_("Asking xapi to fetch %(url)s as %(access)s") % locals())
         if image_type == ImageType.KERNEL_RAMDISK:
             fn = 'get_kernel'
@@ -784,8 +780,7 @@ class VMHelper(HelperBase):
     @classmethod
     def scan_default_sr(cls, session):
         """Looks for the system default SR and triggers a re-scan"""
-        #FIXME(sirp/mdietz): refactor scan_default_sr in there
-        sr_ref = cls.get_sr(session)
+        sr_ref = find_sr(session)
         session.call_xenapi('SR.scan', sr_ref)
 
 
@@ -877,7 +872,8 @@ def get_vdi_for_vm_safely(session, vm_ref):
     else:
         num_vdis = len(vdi_refs)
         if num_vdis != 1:
-            raise Exception(_("Unexpected number of VDIs (%(num_vdis)s) found"
+            raise exception.Exception(_("Unexpected number of VDIs"
+                    "(%(num_vdis)s) found"
                     " for VM %(vm_ref)s") % locals())
 
     vdi_ref = vdi_refs[0]

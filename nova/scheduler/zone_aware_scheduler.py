@@ -88,9 +88,10 @@ class ZoneAwareScheduler(driver.Scheduler):
         instance_properties = request_spec['instance_properties']
 
         name = instance_properties['display_name']
-        image_id = instance_properties['image_id']
+        image_ref = instance_properties['image_ref']
         meta = instance_properties['metadata']
         flavor_id = instance_type['flavorid']
+        reservation_id = instance_properties['reservation_id']
 
         files = kwargs['injected_files']
         ipgroup = None  # Not supported in OS API ... yet
@@ -99,18 +100,20 @@ class ZoneAwareScheduler(driver.Scheduler):
         child_blob = zone_info['child_blob']
         zone = db.zone_get(context, child_zone)
         url = zone.api_url
-        LOG.debug(_("Forwarding instance create call to child zone %(url)s")
+        LOG.debug(_("Forwarding instance create call to child zone %(url)s"
+                    ". ReservationID=%(reservation_id)s")
                     % locals())
         nova = None
         try:
-            nova = novaclient.OpenStack(zone.username, zone.password, url)
+            nova = novaclient.OpenStack(zone.username, zone.password, None,
+                                        url)
             nova.authenticate()
         except novaclient.exceptions.BadRequest, e:
             raise exception.NotAuthorized(_("Bad credentials attempting "
                             "to talk to zone at %(url)s.") % locals())
 
-        nova.servers.create(name, image_id, flavor_id, ipgroup, meta, files,
-                            child_blob)
+        nova.servers.create(name, image_ref, flavor_id, ipgroup, meta, files,
+                            child_blob, reservation_id=reservation_id)
 
     def _provision_resource_from_blob(self, context, item, instance_id,
                                           request_spec, kwargs):
@@ -182,7 +185,11 @@ class ZoneAwareScheduler(driver.Scheduler):
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
 
-        for item in build_plan:
+        for num in xrange(request_spec['num_instances']):
+            if not build_plan:
+                break
+
+            item = build_plan.pop(0)
             self._provision_resource(context, item, instance_id, request_spec,
                                     kwargs)
 

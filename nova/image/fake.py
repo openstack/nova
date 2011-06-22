@@ -120,6 +120,14 @@ class _FakeImageService(service.BaseImageService):
                  image_id, self.images)
         raise exception.ImageNotFound(image_id=image_id)
 
+    def show_by_name(self, context, name):
+        """Returns a dict containing image data for the given name."""
+        images = copy.deepcopy(self.images.values())
+        for image in images:
+            if name == image.get('name'):
+                return image
+        raise exception.ImageNotFound(image_id=name)
+
     def create(self, context, metadata, data=None):
         """Store the image data and return the new image id.
 

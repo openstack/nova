@@ -44,7 +44,7 @@ class WeightedSumTestCase(test.TestCase):
         hosts = [
             FakeHost(1, 512 * MB, 100),
             FakeHost(2, 256 * MB, 400),
-            FakeHost(3, 512 * MB, 100)
+            FakeHost(3, 512 * MB, 100),
         ]
 
         weighted_fns = [
@@ -96,7 +96,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
     def test_noop_cost_fn(self):
         FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.noop_cost_fn'
+            'nova.scheduler.least_cost.noop_cost_fn',
         ]
         FLAGS.noop_cost_fn_weight = 1
 
@@ -110,7 +110,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
     def test_cost_fn_weights(self):
         FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.noop_cost_fn'
+            'nova.scheduler.least_cost.noop_cost_fn',
         ]
         FLAGS.noop_cost_fn_weight = 2
 
@@ -124,7 +124,7 @@ class LeastCostSchedulerTestCase(test.TestCase):
 
     def test_fill_first_cost_fn(self):
         FLAGS.least_cost_scheduler_cost_functions = [
-            'nova.scheduler.least_cost.fill_first_cost_fn'
+            'nova.scheduler.least_cost.fill_first_cost_fn',
         ]
         FLAGS.fill_first_cost_fn_weight = 1
 

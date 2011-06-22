@@ -22,6 +22,7 @@ import nova
 from nova import exception
 from nova import utils
 from nova import flags
+from nova.image import glance as glance_image_service
 
 FLAGS = flags.FLAGS
 
@@ -48,6 +49,8 @@ def get_default_image_service():
     return ImageService()
 
 
+# FIXME(sirp): perhaps this should be moved to nova/images/glance so that we
+# keep Glance specific code together for the most part
 def get_glance_client(image_href):
     """Get the correct glance client and id for the given image_href.
 
@@ -62,7 +65,9 @@ def get_glance_client(image_href):
     """
     image_href = image_href or 0
     if str(image_href).isdigit():
-        glance_client = GlanceClient(FLAGS.glance_host, FLAGS.glance_port)
+        glance_host, glance_port = \
+            glance_image_service.pick_glance_api_server()
+        glance_client = GlanceClient(glance_host, glance_port)
         return (glance_client, int(image_href))
 
     try:

@@ -376,6 +376,10 @@ class NoFloatingIpsDefinedForInstance(NoFloatingIpsDefined):
     message = _("Zero floating ips defined for instance %(instance_id)s.")
 
 
+class NoMoreFloatingIps(NotFound):
+    message = _("Zero floating ips available.")
+
+
 class KeypairNotFound(NotFound):
     message = _("Keypair %(keypair_name)s not found for user %(user_id)s")
 
@@ -581,3 +585,7 @@ class InstanceExists(Duplicate):
 
 class MigrationError(NovaException):
     message = _("Migration error") + ": %(reason)s"
+
+
+class MalformedRequestBody(NovaException):
+    message = _("Malformed message body: %(reason)s")
