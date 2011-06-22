@@ -59,7 +59,7 @@ class Controller(object):
         context = req.environ['nova.context']
         metadata = self._get_metadata(context, image_id)
         if id in metadata:
-            return {id: metadata[id]}
+            return {'meta': {id: metadata[id]}}
         else:
             return faults.Fault(exc.HTTPNotFound())
 
@@ -77,15 +77,22 @@ class Controller(object):
 
     def update(self, req, image_id, id, body):
         context = req.environ['nova.context']
-        if not id in body:
+
+        try:
+            meta = body['meta']
+        except KeyError:
+            expl = _('Incorrect request body format')
+            raise exc.HTTPBadRequest(explanation=expl)
+
+        if not id in meta:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
-        if len(body) > 1:
+        if len(meta) > 1:
             expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
         img = self.image_service.show(context, image_id)
         metadata = self._get_metadata(context, image_id, img)
-        metadata[id] = body[id]
+        metadata[id] = meta[id]
         self._check_quota_limit(context, metadata)
         img['properties'] = metadata
         self.image_service.update(context, image_id, img, None)
