@@ -111,14 +111,15 @@ class Controller(object):
         extra_values = None
         result = None
         try:
-            extra_values, result = self.helper.create_instance(
+            extra_values, instances = self.helper.create_instance(
                                     req, body, self.compute_api.create)
         except faults.Fault, f:
             return f
 
-        instances = result
-
-        (inst, ) = instances
+        # We can only return 1 instance via the API, if we happen to
+        # build more than one...  instances is a list, so we'll just
+        # use the first one..
+        inst = instances[0]
         for key in ['instance_type', 'image_ref']:
             inst[key] = extra_values[key]
 

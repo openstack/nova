@@ -114,6 +114,12 @@ class CreateInstanceHelper(object):
         name = name.strip()
 
         reservation_id = body['server'].get('reservation_id')
+        min_count = body['server'].get('min_count')
+        max_count = body['server'].get('max_count')
+        if min_count:
+            min_count = int(min_count)
+        if max_count:
+            max_count = int(max_count)
 
         try:
             inst_type = \

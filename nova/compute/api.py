@@ -143,7 +143,7 @@ class API(base.Base):
 
     def _check_create_parameters(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -154,6 +154,10 @@ class API(base.Base):
 
         if not instance_type:
             instance_type = instance_types.get_default_instance_type()
+        if not min_count:
+            min_count = 1
+        if not max_count:
+            max_count = min_count
 
         num_instances = quota.allowed_instances(context, max_count,
                                                 instance_type)
@@ -338,7 +342,7 @@ class API(base.Base):
 
     def create_all_at_once(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
@@ -368,7 +372,7 @@ class API(base.Base):
 
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
-               min_count=1, max_count=1,
+               min_count=None, max_count=None,
                display_name='', display_description='',
                key_name=None, key_data=None, security_group='default',
                availability_zone=None, user_data=None, metadata={},
