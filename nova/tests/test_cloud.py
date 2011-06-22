@@ -294,6 +294,146 @@ class CloudTestCase(test.TestCase):
         db.service_destroy(self.context, comp1['id'])
         db.service_destroy(self.context, comp2['id'])
 
+    def _assertInstance(self, instance_id):
+        ec2_instance_id = ec2utils.id_to_ec2_id(instance_id)
+        result = self.cloud.describe_instances(self.context,
+                                               instance_id=[ec2_instance_id])
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 1)
+        result = result['instancesSet'][0]
+        self.assertEqual(result['instanceId'], ec2_instance_id)
+        return (ec2_instance_id, result)
+
+    def _assertEqualBlockDeviceMapping(self, expected, result):
+        self.assertEqual(len(expected), len(result))
+        for x in expected:
+            found = False
+            for y in result:
+                if x['deviceName'] == y['deviceName']:
+                    self.assertSubDictMatch(x, y)
+                    found = True
+                    break
+            self.assertTrue(found)
+
+    def test_describe_instances_bdm(self):
+        """Make sure describe_instances works with root_device_name and
+        block device mappings
+        """
+        inst1 = db.instance_create(self.context,
+                                  {'image_ref': 1,
+                                   'root_device_name': '/dev/sdb1'})
+        inst2 = db.instance_create(self.context,
+                                  {'image_ref': 2,
+                                   'root_device_name': '/dev/sdc1'})
+
+        instance_id = inst1['id']
+        mappings = [
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb1',
+             'snapshot_id': '1',
+             'volume_id': '2'},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb2',
+             'volume_id': '3'},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb3',
+             'delete_on_termination': True,
+             'snapshot_id': '4',
+             'volume_id': '5'},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb4',
+             'delete_on_termination': False,
+             'snapshot_id': '6',
+             'volume_id': '7'},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb5',
+             'snapshot_id': '8',
+             'volume_id': '9',
+             'volume_size': 0},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb6',
+             'snapshot_id': '10',
+             'volume_id': '11',
+             'volume_size': 1},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb7',
+             'no_device': True},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb8',
+             'virtual_name': 'swap'},
+            {'instance_id': instance_id,
+             'device_name': '/dev/sdb9',
+             'virtual_name': 'ephemeral3'}]
+
+        volumes = []
+        for bdm in mappings:
+            db.block_device_mapping_create(self.context, bdm)
+            if bdm.get('volume_id'):
+                values = {'volume_id': bdm['volume_id']}
+                for bdm_key, vol_key in [('snapshot_id', 'snapshot_id'),
+                                         ('snapshot_size', 'volume_size'),
+                                         ('delete_on_termination',
+                                          'delete_on_termination')]:
+                    if bdm.get(bdm_key):
+                        values[vol_key] = bdm[bdm_key]
+                    vol = db.volume_create(self.context, values)
+                    db.volume_attached(self.context, vol['id'],
+                                       instance_id, bdm['device_name'])
+                    volumes.append(vol)
+
+        ec2_instance_id, result = self._assertInstance(instance_id)
+        expected_result = {'instanceId': ec2_instance_id,
+                           'rootDeviceName': '/dev/sdb1',
+                           'rootDeviceType': 'ebs'}
+        expected_block_device_mapping = [
+            {'deviceName': '/dev/sdb1',
+             'ebs': {'status': 'in-use',
+                     'deleteOnTermination': False,
+                     'volumeId': 2,
+                     }},
+            {'deviceName': '/dev/sdb2',
+             'ebs': {'status': 'in-use',
+                     'deleteOnTermination': False,
+                     'volumeId': 3,
+                     }},
+            {'deviceName': '/dev/sdb3',
+             'ebs': {'status': 'in-use',
+                     'deleteOnTermination': True,
+                     'volumeId': 5,
+                     }},
+            {'deviceName': '/dev/sdb4',
+             'ebs': {'status': 'in-use',
+                     'deleteOnTermination': False,
+                     'volumeId': 7,
+                     }},
+            {'deviceName': '/dev/sdb5',
+             'ebs': {'status': 'in-use',
+                     'deleteOnTermination': False,
+                     'volumeId': 9,
+                     }},
+            {'deviceName': '/dev/sdb6',
+             'ebs': {'status': 'in-use',
+                     'deleteOnTermination': False,
+                     'volumeId': 11, }}]
+            # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
+        self.assertSubDictMatch(expected_result, result)
+        self._assertEqualBlockDeviceMapping(expected_block_device_mapping,
+                                            result['blockDeviceMapping'])
+
+        ec2_instance_id, result = self._assertInstance(inst2['id'])
+        expected_result = {'instanceId': ec2_instance_id,
+                           'rootDeviceName': '/dev/sdc1',
+                           'rootDeviceType': 'instance-store'}
+        self.assertSubDictMatch(expected_result, result)
+
+        for vol in volumes:
+            db.volume_destroy(self.context, vol['id'])
+        for bdm in db.block_device_mapping_get_all_by_instance(self.context,
+                                                               instance_id):
+            db.block_device_mapping_destroy(self.context, bdm['id'])
+        db.instance_destroy(self.context, inst2['id'])
+        db.instance_destroy(self.context, inst1['id'])
+
     def test_describe_images(self):
         describe_images = self.cloud.describe_images
 
