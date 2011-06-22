@@ -833,6 +833,21 @@ def virtual_interface_create(context, values):
 
 
 @require_context
+def virtual_interface_update(context, vif_id, values):
+    """Update a virtual interface record in the database.
+
+    :param vif_id: = id of virtual interface to update
+    :param values: = values to update
+    """
+    session = get_session()
+    with session.begin():
+        vif_ref = virtual_interface_get(context, vif_id, session=session)
+        vif_ref.update(values)
+        vif_ref.save(session=session)
+        return vif_ref
+
+
+@require_context
 def virtual_interface_get(context, vif_id, session=None):
     """Gets a virtual interface from the table.
 

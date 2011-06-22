@@ -410,6 +410,11 @@ def virtual_interface_create(context, values):
     return IMPL.virtual_interface_create(context, values)
 
 
+def virtual_interface_update(context, vif_id, values):
+    """Update a virtual interface record in the database."""
+    return IMPL.virtual_interface_update(context, vif_id, values)
+
+
 def virtual_interface_get(context, vif_id):
     """Gets a virtual interface from the table,"""
     return IMPL.virtual_interface_get(context, vif_id)
