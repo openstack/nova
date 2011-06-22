@@ -1572,6 +1572,7 @@ def network_get_associated_fixed_ips(context, network_id):
                    options(joinedload_all('instance')).\
                    filter_by(network_id=network_id).\
                    filter(models.FixedIp.instance_id != None).\
+                   filter(models.FixedIp.virtual_interface_id != None).\
                    filter_by(deleted=False).\
                    all()
 
