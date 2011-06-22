@@ -1346,7 +1346,7 @@ class CloudController(object):
                 state_description = instance['state_description']
                 # NOTE(yamahata): timeout and error?
 
-        src_image = self.image_service.show(context, instance['image_id'])
+        src_image = self._get_image(context, instance['image_ref'])
         properties = src_image['properties']
         if instance['root_device_name']:
             properties['root_device_name'] = instance['root_device_name']
@@ -1372,7 +1372,7 @@ class CloudController(object):
                 # NOTE(yamahata): Should we wait for snapshot creation?
                 #                 Linux LVM snapshot creation completes in
                 #                 short time, it doesn't matter for now.
-                snapshot = self.volume_api.create_snapshot(
+                snapshot = self.volume_api.create_snapshot_force(
                     context, volume_id=volume_id, name=vol['display_name'],
                     description=vol['display_description'])
                 m['snapshot_id'] = snapshot['id']
@@ -1388,9 +1388,9 @@ class CloudController(object):
 
             assert (virtual_name == 'swap' or
                     virtual_name.startswith('ephemeral'))
-            device_name = m['device_name']
-            if device_name in [b.device_name for b in mapping
-                               if not b.no_device]:
+            device_name = m['device']
+            if device_name in [b['device_name'] for b in mapping
+                               if not b.get('no_device', False)]:
                 continue
 
             # NOTE(yamahata): swap and ephemeral devices are specified in
@@ -1402,7 +1402,7 @@ class CloudController(object):
             properties['block_device_mapping'] = mapping
 
         for attr in ('status', 'location', 'id'):
-            del src_image[attr]
+            src_image.pop(attr, None)
 
         image_id = self._register_image(context, src_image)
 
