@@ -702,7 +702,9 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
 def fixed_ip_get_all(context, session=None):
     if not session:
         session = get_session()
-    result = session.query(models.FixedIp).all()
+    result = session.query(models.FixedIp).\
+                     options(joinedload('floating_ips')).\
+                     all()
     if not result:
         raise exception.NoFixedIpsDefined()
 
@@ -714,10 +716,11 @@ def fixed_ip_get_all_by_host(context, host=None):
     session = get_session()
 
     result = session.query(models.FixedIp).\
-                    join(models.FixedIp.instance).\
-                    filter_by(state=1).\
-                    filter_by(host=host).\
-                    all()
+                     options(joinedload('floating_ips')).\
+                     join(models.FixedIp.instance).\
+                     filter_by(state=1).\
+                     filter_by(host=host).\
+                     all()
 
     if not result:
         raise exception.NoFixedIpsDefinedForHost(host=host)
@@ -732,6 +735,7 @@ def fixed_ip_get_by_address(context, address, session=None):
     result = session.query(models.FixedIp).\
                      filter_by(address=address).\
                      filter_by(deleted=can_read_deleted(context)).\
+                     options(joinedload('floating_ips')).\
                      options(joinedload('network')).\
                      options(joinedload('instance')).\
                      first()
@@ -745,15 +749,10 @@ def fixed_ip_get_by_address(context, address, session=None):
 
 
 @require_context
-def fixed_ip_get_instance(context, address):
-    fixed_ip_ref = fixed_ip_get_by_address(context, address)
-    return fixed_ip_ref.instance
-
-
-@require_context
 def fixed_ip_get_by_instance(context, instance_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
+                 options(joinedload('floating_ips')).\
                  filter_by(instance_id=instance_id).\
                  filter_by(deleted=False).\
                  all()
@@ -766,12 +765,19 @@ def fixed_ip_get_by_instance(context, instance_id):
 def fixed_ip_get_by_virtual_interface(context, vif_id):
     session = get_session()
     rv = session.query(models.FixedIp).\
+                 options(joinedload('floating_ips')).\
                  filter_by(virtual_interface_id=vif_id).\
                  filter_by(deleted=False).\
                  all()
     if not rv:
         raise exception.NoFixedIpFoundForVirtualInterface(vif_id=vif_id)
     return rv
+
+
+@require_context
+def fixed_ip_get_instance(context, address):
+    fixed_ip_ref = fixed_ip_get_by_address(context, address)
+    return fixed_ip_ref.instance
 
 
 @require_context

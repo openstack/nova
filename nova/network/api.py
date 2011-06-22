@@ -107,7 +107,7 @@ class API(base.Base):
             return
         if not floating_ip.get('fixed_ip'):
             raise exception.ApiError('Address is not associated.')
-        host = floating_ip['host']
+        host = floating_ip['fixed_ip']['network']['host']
         rpc.call(context,
                  self.db.queue_get_for(context, FLAGS.network_topic, host),
                  {'method': 'disassociate_floating_ip',
