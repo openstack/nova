@@ -121,6 +121,26 @@ class Ec2utilsTestCase(test.TestCase):
         self.assertEqual(ec2utils.id_to_ec2_snap_id(28), 'snap-0000001c')
         self.assertEqual(ec2utils.id_to_ec2_vol_id(27), 'vol-0000001b')
 
+    def test_dict_from_dotted_str(self):
+        in_str = [('BlockDeviceMapping.1.DeviceName', '/dev/sda1'),
+                  ('BlockDeviceMapping.1.Ebs.SnapshotId', 'snap-0000001c'),
+                  ('BlockDeviceMapping.1.Ebs.VolumeSize', '80'),
+                  ('BlockDeviceMapping.1.Ebs.DeleteOnTermination', 'false'),
+                  ('BlockDeviceMapping.2.DeviceName', '/dev/sdc'),
+                  ('BlockDeviceMapping.2.VirtualName', 'ephemeral0')]
+        expected_dict = {
+            'block_device_mapping': {
+            '1': {'device_name': '/dev/sda1',
+                  'ebs': {'snapshot_id': 'snap-0000001c',
+                          'volume_size': 80,
+                          'delete_on_termination': False}},
+            '2': {'device_name': '/dev/sdc',
+                  'virtual_name': 'ephemeral0'}}}
+        out_dict = ec2utils.dict_from_dotted_str(in_str)
+
+        self.assertDictMatch(out_dict, expected_dict)
+
+
 class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
     def setUp(self):
