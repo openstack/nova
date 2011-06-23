@@ -169,7 +169,7 @@ def _issue_novaclient_command(nova, zone, collection, method_name, item_id):
     result = None
     try:
         try:
-            result = manager.get(int(item_id))
+            result = manager.get(item_id)
         except ValueError, e:
             result = manager.find(name=item_id)
     except novaclient.NotFound:
