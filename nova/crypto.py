@@ -176,7 +176,8 @@ def revoke_certs_by_project(project_id):
 def revoke_certs_by_user_and_project(user_id, project_id):
     """Revoke certs for user in project."""
     admin = context.get_admin_context()
-    for cert in db.certificate_get_all_by_user(admin, user_id, project_id):
+    for cert in db.certificate_get_all_by_user_and_project(admin,
+                                            user_id, project_id):
         revoke_cert(cert['project_id'], cert['file_name'])
 
 

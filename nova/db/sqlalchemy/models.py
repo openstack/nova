@@ -232,6 +232,9 @@ class Instance(BASE, NovaBase):
     locked = Column(Boolean)
 
     os_type = Column(String(255))
+    architecture = Column(String(255))
+    vm_mode = Column(String(255))
+    uuid = Column(String(36))
 
     # TODO(vish): see Ewan's email about state improvements, probably
     #             should be in a driver base class or some such
@@ -354,6 +357,45 @@ class Snapshot(BASE, NovaBase):
 
     display_name = Column(String(255))
     display_description = Column(String(255))
+
+
+class BlockDeviceMapping(BASE, NovaBase):
+    """Represents block device mapping that is defined by EC2"""
+    __tablename__ = "block_device_mapping"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    instance_id = Column(Integer, ForeignKey('instances.id'), nullable=False)
+    instance = relationship(Instance,
+                            backref=backref('balock_device_mapping'),
+                            foreign_keys=instance_id,
+                            primaryjoin='and_(BlockDeviceMapping.instance_id=='
+                                              'Instance.id,'
+                                              'BlockDeviceMapping.deleted=='
+                                              'False)')
+    device_name = Column(String(255), nullable=False)
+
+    # default=False for compatibility of the existing code.
+    # With EC2 API,
+    # default True for ami specified device.
+    # default False for created with other timing.
+    delete_on_termination = Column(Boolean, default=False)
+
+    # for ephemeral device
+    virtual_name = Column(String(255), nullable=True)
+
+    # for snapshot or volume
+    snapshot_id = Column(Integer, ForeignKey('snapshots.id'), nullable=True)
+    # outer join
+    snapshot = relationship(Snapshot,
+                            foreign_keys=snapshot_id)
+
+    volume_id = Column(Integer, ForeignKey('volumes.id'), nullable=True)
+    volume = relationship(Volume,
+                          foreign_keys=volume_id)
+    volume_size = Column(Integer, nullable=True)
+
+    # for no device to suppress devices.
+    no_device = Column(Boolean, nullable=True)
 
 
 class ExportDevice(BASE, NovaBase):
@@ -672,6 +714,18 @@ class Zone(BASE, NovaBase):
     password = Column(String(255))
 
 
+class AgentBuild(BASE, NovaBase):
+    """Represents an agent build."""
+    __tablename__ = 'agent_builds'
+    id = Column(Integer, primary_key=True)
+    hypervisor = Column(String(255))
+    os = Column(String(255))
+    architecture = Column(String(255))
+    version = Column(String(255))
+    url = Column(String(255))
+    md5hash = Column(String(255))
+
+
 def register_models():
     """Register Models and create metadata.
 
@@ -685,7 +739,7 @@ def register_models():
               Network, SecurityGroup, SecurityGroupIngressRule,
               SecurityGroupInstanceAssociation, AuthToken, User,
               Project, Certificate, ConsolePool, Console, Zone,
-              InstanceMetadata, Migration)
+              AgentBuild, InstanceMetadata, Migration)
     engine = create_engine(FLAGS.sql_connection, echo=False)
     for model in models:
         model.metadata.create_all(engine)

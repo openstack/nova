@@ -47,6 +47,21 @@ LOG = logging.getLogger("nova.virt.xenapi.vmops")
 FLAGS = flags.FLAGS
 
 
+def cmp_version(a, b):
+    """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)"""
+    a = a.split('.')
+    b = b.split('.')
+
+    # Compare each individual portion of both version strings
+    for va, vb in zip(a, b):
+        ret = int(va) - int(vb)
+        if ret:
+            return ret
+
+    # Fallback to comparing length last
+    return len(a) - len(b)
+
+
 class VMOps(object):
     """
     Management class for VM-related tasks
@@ -160,9 +175,24 @@ class VMOps(object):
         # Create the VM ref and attach the first disk
         first_vdi_ref = self._session.call_xenapi('VDI.get_by_uuid',
                 vdis[0]['vdi_uuid'])
-        use_pv_kernel = VMHelper.determine_is_pv(self._session,
-                instance.id, first_vdi_ref, disk_image_type,
-                instance.os_type)
+
+        vm_mode = instance.vm_mode and instance.vm_mode.lower()
+        if vm_mode == 'pv':
+            use_pv_kernel = True
+        elif vm_mode in ('hv', 'hvm'):
+            use_pv_kernel = False
+            vm_mode = 'hvm'  # Normalize
+        else:
+            use_pv_kernel = VMHelper.determine_is_pv(self._session,
+                    instance.id, first_vdi_ref, disk_image_type,
+                    instance.os_type)
+            vm_mode = use_pv_kernel and 'pv' or 'hvm'
+
+        if instance.vm_mode != vm_mode:
+            # Update database with normalized (or determined) value
+            db.instance_update(context.get_admin_context(),
+                               instance['id'], {'vm_mode': vm_mode})
+
         vm_ref = VMHelper.create_vm(self._session, instance,
                 kernel, ramdisk, use_pv_kernel)
         VMHelper.create_vbd(session=self._session, vm_ref=vm_ref,
@@ -203,6 +233,34 @@ class VMOps(object):
         LOG.info(_('Spawning VM %(instance_name)s created %(vm_ref)s.')
                  % locals())
 
+        ctx = context.get_admin_context()
+        agent_build = db.agent_build_get_by_triple(ctx, 'xen',
+                              instance.os_type, instance.architecture)
+        if agent_build:
+            LOG.info(_('Latest agent build for %(hypervisor)s/%(os)s' + \
+                       '/%(architecture)s is %(version)s') % agent_build)
+        else:
+            LOG.info(_('No agent build found for %(hypervisor)s/%(os)s' + \
+                       '/%(architecture)s') % {
+                        'hypervisor': 'xen',
+                        'os': instance.os_type,
+                        'architecture': instance.architecture})
+
+        def _check_agent_version():
+            version = self.get_agent_version(instance)
+            if not version:
+                LOG.info(_('No agent version returned by instance'))
+                return
+
+            LOG.info(_('Instance agent version: %s') % version)
+            if not agent_build:
+                return
+
+            if cmp_version(version, agent_build['version']) < 0:
+                LOG.info(_('Updating Agent to %s') % agent_build['version'])
+                self.agent_update(instance, agent_build['url'],
+                              agent_build['md5hash'])
+
         def _inject_files():
             injected_files = instance.injected_files
             if injected_files:
@@ -237,6 +295,7 @@ class VMOps(object):
                 if state == power_state.RUNNING:
                     LOG.debug(_('Instance %s: booted'), instance_name)
                     timer.stop()
+                    _check_agent_version()
                     _inject_files()
                     _set_admin_password()
                     return True
@@ -442,6 +501,34 @@ class VMOps(object):
         vm_ref = self._get_vm_opaque_ref(instance)
         task = self._session.call_xenapi('Async.VM.clean_reboot', vm_ref)
         self._session.wait_for_task(task, instance.id)
+
+    def get_agent_version(self, instance):
+        """Get the version of the agent running on the VM instance."""
+
+        # Send the encrypted password
+        transaction_id = str(uuid.uuid4())
+        args = {'id': transaction_id}
+        resp = self._make_agent_call('version', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
+        resp_dict = json.loads(resp)
+        return resp_dict['message']
+
+    def agent_update(self, instance, url, md5sum):
+        """Update agent on the VM instance."""
+
+        # Send the encrypted password
+        transaction_id = str(uuid.uuid4())
+        args = {'id': transaction_id, 'url': url, 'md5sum': md5sum}
+        resp = self._make_agent_call('agentupdate', instance, '', args)
+        if resp is None:
+            # No response from the agent
+            return
+        resp_dict = json.loads(resp)
+        if resp_dict['returncode'] != '0':
+            raise RuntimeError(resp_dict['message'])
+        return resp_dict['message']
 
     def set_admin_password(self, instance, new_pass):
         """Set the root/admin password on the VM instance.

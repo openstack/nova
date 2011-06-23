@@ -61,7 +61,7 @@ class ComputeDriver(object):
         """Return a list of InstanceInfo for all registered VMs"""
         raise NotImplementedError()
 
-    def spawn(self, instance, network_info=None):
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
         """Launch a VM for the specified instance"""
         raise NotImplementedError()
 
@@ -232,6 +232,10 @@ class ComputeDriver(object):
         """Create a file on the VM instance. The file path and contents
         should be base64-encoded.
         """
+        raise NotImplementedError()
+
+    def agent_update(self, instance, url, md5hash):
+        """Update agent on the VM instance."""
         raise NotImplementedError()
 
     def inject_network_info(self, instance):
