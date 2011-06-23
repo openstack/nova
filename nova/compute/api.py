@@ -640,7 +640,7 @@ class API(base.Base):
                                 novaclient_collection_name="servers",
                                 reservation_id=reservation_id,
                                 project_id=project_id,
-                                fixed_ip=fixed_ip
+                                fixed_ip=fixed_ip,
                                 recurse_zones=True)
 
         for zone, servers in children:
