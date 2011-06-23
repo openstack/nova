@@ -130,6 +130,26 @@ class ImageMetaDataTest(unittest.TestCase):
 
         self.assertEqual(expected.toxml(), actual.toxml())
 
+    def test_index_xml_null_value(self):
+        serializer = openstack.image_metadata.ImageMetadataXMLSerializer()
+        fixture = {
+            'metadata': {
+                'three': None,
+            },
+        }
+        output = serializer.index(fixture)
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected = minidom.parseString("""
+            <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
+                <meta key="three">
+                    None
+                </meta>
+            </metadata>
+        """.replace("  ", ""))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
     def test_show(self):
         req = webob.Request.blank('/v1.1/images/1/meta/key1')
         req.environ['api.version'] = '1.1'
