@@ -7,9 +7,6 @@ image ids.
 GlanceImageService(ImageService):
 image ids are URIs.
 
-LocalImageService(ImageService):
-image ids are random strings.
-
 OpenstackAPITranslationStore:
 translates RS server/images/flavor/etc ids into formats required
 by a given ImageService strategy.

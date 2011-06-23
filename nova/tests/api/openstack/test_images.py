@@ -135,36 +135,6 @@ class _BaseImageServiceTests(test.TestCase):
         return fixture
 
 
-class LocalImageServiceTest(_BaseImageServiceTests):
-
-    """Tests the local image service"""
-
-    def setUp(self):
-        super(LocalImageServiceTest, self).setUp()
-        self.tempdir = tempfile.mkdtemp()
-        self.flags(images_path=self.tempdir)
-        self.stubs = stubout.StubOutForTesting()
-        service_class = 'nova.image.local.LocalImageService'
-        self.service = utils.import_object(service_class)
-        self.context = context.RequestContext(None, None)
-
-    def tearDown(self):
-        shutil.rmtree(self.tempdir)
-        self.stubs.UnsetAll()
-        super(LocalImageServiceTest, self).tearDown()
-
-    def test_get_all_ids_with_incorrect_directory_formats(self):
-        # create some old-style image directories (starting with 'ami-')
-        for x in [1, 2, 3]:
-            tempfile.mkstemp(prefix='ami-', dir=self.tempdir)
-        # create some valid image directories names
-        for x in ["1485baed", "1a60f0ee", "3123a73d"]:
-            os.makedirs(os.path.join(self.tempdir, x))
-        found_image_ids = self.service._ids()
-        self.assertEqual(True, isinstance(found_image_ids, list))
-        self.assertEqual(3, len(found_image_ids), len(found_image_ids))
-
-
 class GlanceImageServiceTest(_BaseImageServiceTests):
 
     """Tests the Glance image service, in particular that metadata translation

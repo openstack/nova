@@ -21,6 +21,9 @@ Handles all requests relating to volumes.
 """
 
 
+from eventlet import greenthread
+
+from nova import db
 from nova import exception
 from nova import flags
 from nova import log as logging
@@ -44,7 +47,8 @@ class API(base.Base):
             if snapshot['status'] != "available":
                 raise exception.ApiError(
                     _("Snapshot status must be available"))
-            size = snapshot['volume_size']
+            if not size:
+                size = snapshot['volume_size']
 
         if quota.allowed_volumes(context, 1, size) < 1:
             pid = context.project_id
@@ -72,6 +76,14 @@ class API(base.Base):
                            "volume_id": volume['id'],
                            "snapshot_id": snapshot_id}})
         return volume
+
+    # TODO(yamahata): eliminate dumb polling
+    def wait_creation(self, context, volume_id):
+        while True:
+            volume = self.get(context, volume_id)
+            if volume['status'] != 'creating':
+                return
+            greenthread.sleep(1)
 
     def delete(self, context, volume_id):
         volume = self.get(context, volume_id)

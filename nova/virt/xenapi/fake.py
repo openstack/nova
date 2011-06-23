@@ -146,6 +146,7 @@ def create_vdi(name_label, read_only, sr_ref, sharable):
 def create_vbd(vm_ref, vdi_ref):
     vbd_rec = {'VM': vm_ref,
                'VDI': vdi_ref,
+               'userdevice': '0',
                'currently_attached': False}
     vbd_ref = _create_object('VBD', vbd_rec)
     after_VBD_create(vbd_ref, vbd_rec)
