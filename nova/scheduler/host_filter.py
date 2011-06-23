@@ -305,11 +305,9 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
                     'instance_type': <InstanceType dict>}
     """
 
-    def filter_hosts(self, topic, request_spec, hosts):
+    def filter_hosts(self, topic, request_spec, hosts=None):
         """Filter the full host list (from the ZoneManager)"""
 
-        if hosts:
-            return hosts
         filter_name = request_spec.get('filter', None)
         host_filter = choose_host_filter(filter_name)
 

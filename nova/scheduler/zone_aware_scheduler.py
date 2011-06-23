@@ -302,6 +302,7 @@ class ZoneAwareScheduler(driver.Scheduler):
                 continue
             if filter_func(host, services['topic'], request_spec):
                 filtered_hosts.append((host, services['topic']))
+        return filtered_hosts
 
     def weigh_hosts(self, topic, request_spec, hosts):
         """Derived classes may override this to provide more sophisticated
