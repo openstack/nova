@@ -64,7 +64,7 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
         self.assertEqual(200, res.status_int)
         res_dict = json.loads(res.body)
         self.assertEqual('application/json', res.headers['Content-Type'])
-        self.assertEqual('value1', res_dict['metadata']['key1'])
+        self.assertEqual('value1', res_dict['extra']['key1'])
         
         
         

@@ -26,14 +26,10 @@ from nova.api.openstack import wsgi
 class Controller(object):
     """ The flavor extra specs API controller for the Openstack API """
 
-    def __init__(self):
-        self.compute_api = compute.API()
-        super(Controller, self).__init__()
-
     def _get_extra_specs(self, context, flavor_id):
-        extra_specs = self.db.instance_type_extra_specs_get(context, flavor_id)
+        extra_specs = db.instance_type_extra_specs_get(context, flavor_id)
         specs_dict = {}
-        for key, value in specs.iteritems():
+        for key, value in extra_specs.iteritems():
             specs_dict[key] = value
         return dict(extra=specs_dict)
 
