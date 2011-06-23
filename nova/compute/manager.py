@@ -291,50 +291,59 @@ class ComputeManager(manager.SchedulerDependentManager):
                                    'networking')
 
         is_vpn = instance_ref['image_ref'] == str(FLAGS.vpn_image_id)
-        # NOTE(vish): This could be a cast because we don't do anything
-        #             with the address currently, but I'm leaving it as
-        #             a call to ensure that network setup completes.  We
-        #             will eventually also need to save the address here.
-        if not FLAGS.stub_network:
-            address = rpc.call(context,
-                               self.get_network_topic(context),
-                               {"method": "allocate_fixed_ip",
-                                "args": {"instance_id": instance_id,
-                                         "vpn": is_vpn}})
-
-            self.network_manager.setup_compute_network(context,
-                                                       instance_id)
-
-        block_device_mapping = self._setup_block_device_mapping(context,
-                                                                instance_id)
-
-        # TODO(vish) check to make sure the availability zone matches
-        self._update_state(context, instance_id, power_state.BUILDING)
-
         try:
-            self.driver.spawn(instance_ref,
-                              block_device_mapping=block_device_mapping)
-        except Exception as ex:  # pylint: disable=W0702
-            msg = _("Instance '%(instance_id)s' failed to spawn. Is "
-                    "virtualization enabled in the BIOS? Details: "
-                    "%(ex)s") % locals()
-            LOG.exception(msg)
+            # NOTE(vish): This could be a cast because we don't do anything
+            #             with the address currently, but I'm leaving it as
+            #             a call to ensure that network setup completes.  We
+            #             will eventually also need to save the address here.
+            if not FLAGS.stub_network:
+                address = rpc.call(context,
+                                   self.get_network_topic(context),
+                                   {"method": "allocate_fixed_ip",
+                                    "args": {"instance_id": instance_id,
+                                             "vpn": is_vpn}})
 
-        if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
-            public_ip = self.network_api.allocate_floating_ip(context)
+                self.network_manager.setup_compute_network(context,
+                                                           instance_id)
 
-            self.db.floating_ip_set_auto_assigned(context, public_ip)
-            fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-            floating_ip = self.db.floating_ip_get_by_address(context,
-                                                             public_ip)
+            block_device_mapping = self._setup_block_device_mapping(
+                context,
+                instance_id)
 
-            self.network_api.associate_floating_ip(context,
-                                                   floating_ip,
-                                                   fixed_ip,
-                                                   affect_auto_assigned=True)
+            # TODO(vish) check to make sure the availability zone matches
+            self._update_state(context, instance_id, power_state.BUILDING)
 
-        self._update_launched_at(context, instance_id)
-        self._update_state(context, instance_id)
+            try:
+                self.driver.spawn(instance_ref,
+                                  block_device_mapping=block_device_mapping)
+            except Exception as ex:  # pylint: disable=W0702
+                msg = _("Instance '%(instance_id)s' failed to spawn. Is "
+                        "virtualization enabled in the BIOS? Details: "
+                        "%(ex)s") % locals()
+                LOG.exception(msg)
+
+            if not FLAGS.stub_network and FLAGS.auto_assign_floating_ip:
+                public_ip = self.network_api.allocate_floating_ip(context)
+
+                self.db.floating_ip_set_auto_assigned(context, public_ip)
+                fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+                floating_ip = self.db.floating_ip_get_by_address(context,
+                                                                 public_ip)
+
+                self.network_api.associate_floating_ip(
+                    context,
+                    floating_ip,
+                    fixed_ip,
+                    affect_auto_assigned=True)
+
+            self._update_launched_at(context, instance_id)
+            self._update_state(context, instance_id)
+        except exception.InstanceNotFound:
+            # FIXME(wwolf): We are just ignoring InstanceNotFound
+            # exceptions here in case the instance was immediately
+            # deleted before it actually got created.  This should
+            # be fixed once we have no-db-messaging
+            pass
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **kwargs):
