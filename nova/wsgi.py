@@ -70,6 +70,15 @@ class Server(object):
         if key:
             self.socket_info[key] = socket.getsockname()
 
+    def start_tcp(self, listener, port, host='0.0.0.0', key=None, backlog=128):
+        """Run a raw TCP server with the given application."""
+        arg0 = sys.argv[0]
+        logging.audit(_('Starting TCP server %(arg0)s on %(host)s:%(port)s') % locals())
+        socket = eventlet.listen((host, port), backlog=backlog)
+        self.pool.spawn_n(self._run_tcp, listener, socket)
+        if key:
+            self.socket_info[key] = socket.getsockname()
+
     def wait(self):
         """Wait until all servers have completed running."""
         try:
@@ -82,6 +91,15 @@ class Server(object):
         logger = logging.getLogger('eventlet.wsgi.server')
         eventlet.wsgi.server(socket, application, custom_pool=self.pool,
                              log=WritableLogger(logger))
+
+    def _run_tcp(self, listener, socket):
+        """Start a raw TCP server in a new green thread."""
+        while True:
+            try:
+                new_sock, address = socket.accept()
+                self.pool.spawn_n(listener, new_sock)
+            except (SystemExit, KeyboardInterrupt):
+                pass
 
 
 class Request(webob.Request):

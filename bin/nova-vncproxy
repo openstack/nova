@@ -39,8 +39,6 @@ from nova import wsgi
 from nova import version
 from nova.vnc import auth
 from nova.vnc import proxy
-from twisted.internet import protocol, reactor
-from twisted.protocols import basic
 
 
 LOG = logging.getLogger('nova.vnc-proxy')
@@ -64,16 +62,16 @@ flags.DEFINE_flag(flags.HelpFlag())
 flags.DEFINE_flag(flags.HelpshortFlag())
 flags.DEFINE_flag(flags.HelpXMLFlag())
 
-class FlashSocketPolicyProtocol(basic.LineReceiver):
-    delimiter = "\0"
+def handle_flash_socket_policy(socket):
+    LOG.info(_("Received connection on flash socket policy port"))
 
-    def lineReceived(self, request):
-        if '<policy-file-request/>' in request:
-            self.transport.write('<?xml version="1.0"?><cross-domain-policy><allow-access-from domain="*" to-ports="%d" /></cross-domain-policy>' % (FLAGS.vncproxy_port))
-        self.transport.loseConnection()
-
-class FlashSocketPolicyFactory(protocol.ServerFactory):
-    protocol = FlashSocketPolicyProtocol
+    fd = socket.makefile('rw')
+    expected_command = "<policy-file-request/>"
+    if expected_command in fd.read(len(expected_command)+1):
+    	LOG.info(_("Received valid flash socket policy request"))
+        fd.write('<?xml version="1.0"?><cross-domain-policy><allow-access-from domain="*" to-ports="%d" /></cross-domain-policy>' % (FLAGS.vncproxy_port))
+        fd.flush()
+    socket.close()
 
 if __name__ == "__main__":
     utils.default_flagfile()
@@ -108,11 +106,7 @@ if __name__ == "__main__":
 
     service.serve()
 
-    flash_socket_policy_pid = os.fork()
-    if flash_socket_policy_pid == 0:
-        reactor.listenTCP(843, FlashSocketPolicyFactory())
-        reactor.run()
-    else:
-        server = wsgi.Server()
-        server.start(with_auth, FLAGS.vncproxy_port, host=FLAGS.vncproxy_host)
-        server.wait()
+    server = wsgi.Server()
+    server.start(with_auth, FLAGS.vncproxy_port, host=FLAGS.vncproxy_host)
+    server.start_tcp(handle_flash_socket_policy, 843, host=FLAGS.vncproxy_host)
+    server.wait()
