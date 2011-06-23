@@ -338,7 +338,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._update_state(context, instance_id)
         except exception.InstanceNotFound:
             # FIXME(wwolf): We are just ignoring InstanceNotFound
-            # exceptions here in case the image was immediately deleted
+            # exceptions here in case the instance was immediately deleted
             # before it actually got created.  This should be fixed once we have
             # no-db-messaging
             pass
