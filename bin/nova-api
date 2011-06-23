@@ -31,10 +31,11 @@ import nova.service
 
 def main():
     """Launch EC2 and OSAPI services."""
+    launcher = nova.service.Launcher(sys.argv)
+
     ec2 = nova.service.WSGIService("ec2")
     osapi = nova.service.WSGIService("osapi")
 
-    launcher = nova.service.Launcher(sys.argv)
     launcher.launch_service(ec2)
     launcher.launch_service(osapi)
 
