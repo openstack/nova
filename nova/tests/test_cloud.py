@@ -245,13 +245,6 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_volumes(self.context)
         self.assertEqual(len(result['volumeSet']), 2)
         volume_id = ec2utils.id_to_ec2_id(vol2['id'], 'vol-%08x')
-    def test_describe_volumes(self):
-        """Makes sure describe_volumes works and filters results."""
-        vol1 = db.volume_create(self.context, {})
-        vol2 = db.volume_create(self.context, {})
-        result = self.cloud.describe_volumes(self.context)
-        self.assertEqual(len(result['volumeSet']), 2)
-        volume_id = ec2utils.id_to_ec2_id(vol2['id'], 'vol-%08x')
         result = self.cloud.describe_volumes(self.context,
                                              volume_id=[volume_id])
         self.assertEqual(len(result['volumeSet']), 1)
