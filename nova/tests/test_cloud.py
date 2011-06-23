@@ -312,31 +312,7 @@ class CloudTestCase(test.TestCase):
                 volumes.append(vol)
         return volumes
 
-    def _assertInstance(self, instance_id):
-        ec2_instance_id = ec2utils.id_to_ec2_id(instance_id)
-        result = self.cloud.describe_instances(self.context,
-                                               instance_id=[ec2_instance_id])
-        result = result['reservationSet'][0]
-        self.assertEqual(len(result['instancesSet']), 1)
-        result = result['instancesSet'][0]
-        self.assertEqual(result['instanceId'], ec2_instance_id)
-        return (ec2_instance_id, result)
-
-    def _assertEqualBlockDeviceMapping(self, expected, result):
-        self.assertEqual(len(expected), len(result))
-        for x in expected:
-            found = False
-            for y in result:
-                if x['deviceName'] == y['deviceName']:
-                    self.assertSubDictMatch(x, y)
-                    found = True
-                    break
-            self.assertTrue(found)
-
-    def test_describe_instances_bdm(self):
-        """Make sure describe_instances works with root_device_name and
-        block device mappings
-        """
+    def _setUpBlockDeviceMapping(self):
         inst1 = db.instance_create(self.context,
                                   {'image_ref': 1,
                                    'root_device_name': '/dev/sdb1'})
@@ -345,7 +321,7 @@ class CloudTestCase(test.TestCase):
                                    'root_device_name': '/dev/sdc1'})
 
         instance_id = inst1['id']
-        mappings = [
+        mappings0 = [
             {'instance_id': instance_id,
              'device_name': '/dev/sdb1',
              'snapshot_id': '1',
@@ -384,60 +360,118 @@ class CloudTestCase(test.TestCase):
              'device_name': '/dev/sdb9',
              'virtual_name': 'ephemeral3'}]
 
-        volumes = self._block_device_mapping_create(instance_id, mappings)
+        volumes = self._block_device_mapping_create(instance_id, mappings0)
+        return (inst1, inst2, volumes)
 
-        ec2_instance_id, result = self._assertInstance(instance_id)
-        expected_result = {'instanceId': ec2_instance_id,
-                           'rootDeviceName': '/dev/sdb1',
-                           'rootDeviceType': 'ebs'}
-        expected_block_device_mapping = [
-            {'deviceName': '/dev/sdb1',
-             'ebs': {'status': 'in-use',
-                     'deleteOnTermination': False,
-                     'volumeId': 2,
-                     }},
-            {'deviceName': '/dev/sdb2',
-             'ebs': {'status': 'in-use',
-                     'deleteOnTermination': False,
-                     'volumeId': 3,
-                     }},
-            {'deviceName': '/dev/sdb3',
-             'ebs': {'status': 'in-use',
-                     'deleteOnTermination': True,
-                     'volumeId': 5,
-                     }},
-            {'deviceName': '/dev/sdb4',
-             'ebs': {'status': 'in-use',
-                     'deleteOnTermination': False,
-                     'volumeId': 7,
-                     }},
-            {'deviceName': '/dev/sdb5',
-             'ebs': {'status': 'in-use',
-                     'deleteOnTermination': False,
-                     'volumeId': 9,
-                     }},
-            {'deviceName': '/dev/sdb6',
-             'ebs': {'status': 'in-use',
-                     'deleteOnTermination': False,
-                     'volumeId': 11, }}]
-            # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
-        self.assertSubDictMatch(expected_result, result)
-        self._assertEqualBlockDeviceMapping(expected_block_device_mapping,
-                                            result['blockDeviceMapping'])
-
-        ec2_instance_id, result = self._assertInstance(inst2['id'])
-        expected_result = {'instanceId': ec2_instance_id,
-                           'rootDeviceName': '/dev/sdc1',
-                           'rootDeviceType': 'instance-store'}
-        self.assertSubDictMatch(expected_result, result)
-
+    def _tearDownBlockDeviceMapping(self, inst1, inst2, volumes):
         for vol in volumes:
             db.volume_destroy(self.context, vol['id'])
-        for bdm in db.block_device_mapping_get_all_by_instance(self.context,
-                                                               instance_id):
-            db.block_device_mapping_destroy(self.context, bdm['id'])
+        for id in (inst1['id'], inst2['id']):
+            for bdm in db.block_device_mapping_get_all_by_instance(
+                self.context, id):
+                db.block_device_mapping_destroy(self.context, bdm['id'])
         db.instance_destroy(self.context, inst2['id'])
         db.instance_destroy(self.context, inst1['id'])
+
+    _expected_instance_bdm1 = {
+        'instanceId': 'i-00000001',
+        'rootDeviceName': '/dev/sdb1',
+        'rootDeviceType': 'ebs'}
+
+    _expected_block_device_mapping0 = [
+        {'deviceName': '/dev/sdb1',
+         'ebs': {'status': 'in-use',
+                 'deleteOnTermination': False,
+                 'volumeId': 2,
+                 }},
+        {'deviceName': '/dev/sdb2',
+         'ebs': {'status': 'in-use',
+                 'deleteOnTermination': False,
+                 'volumeId': 3,
+                 }},
+        {'deviceName': '/dev/sdb3',
+         'ebs': {'status': 'in-use',
+                 'deleteOnTermination': True,
+                 'volumeId': 5,
+                 }},
+        {'deviceName': '/dev/sdb4',
+         'ebs': {'status': 'in-use',
+                 'deleteOnTermination': False,
+                 'volumeId': 7,
+                 }},
+        {'deviceName': '/dev/sdb5',
+         'ebs': {'status': 'in-use',
+                 'deleteOnTermination': False,
+                 'volumeId': 9,
+                 }},
+        {'deviceName': '/dev/sdb6',
+         'ebs': {'status': 'in-use',
+                 'deleteOnTermination': False,
+                 'volumeId': 11, }}]
+        # NOTE(yamahata): swap/ephemeral device case isn't supported yet.
+
+    _expected_instance_bdm2 = {
+        'instanceId': 'i-00000002',
+        'rootDeviceName': '/dev/sdc1',
+        'rootDeviceType': 'instance-store'}
+
+    def test_format_instance_bdm(self):
+        (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
+
+        result = {}
+        self.cloud._format_instance_bdm(self.context, inst1['id'], '/dev/sdb1',
+                                        result)
+        self.assertSubDictMatch(
+            {'rootDeviceType': self._expected_instance_bdm1['rootDeviceType']},
+            result)
+        self._assertEqualBlockDeviceMapping(
+            self._expected_block_device_mapping0, result['blockDeviceMapping'])
+
+        result = {}
+        self.cloud._format_instance_bdm(self.context, inst2['id'], '/dev/sdc1',
+                                        result)
+        self.assertSubDictMatch(
+            {'rootDeviceType': self._expected_instance_bdm2['rootDeviceType']},
+            result)
+
+        self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
+
+    def _assertInstance(self, instance_id):
+        ec2_instance_id = ec2utils.id_to_ec2_id(instance_id)
+        result = self.cloud.describe_instances(self.context,
+                                               instance_id=[ec2_instance_id])
+        result = result['reservationSet'][0]
+        self.assertEqual(len(result['instancesSet']), 1)
+        result = result['instancesSet'][0]
+        self.assertEqual(result['instanceId'], ec2_instance_id)
+        return result
+
+    def _assertEqualBlockDeviceMapping(self, expected, result):
+        self.assertEqual(len(expected), len(result))
+        for x in expected:
+            found = False
+            for y in result:
+                if x['deviceName'] == y['deviceName']:
+                    self.assertSubDictMatch(x, y)
+                    found = True
+                    break
+            self.assertTrue(found)
+
+    def test_describe_instances_bdm(self):
+        """Make sure describe_instances works with root_device_name and
+        block device mappings
+        """
+        (inst1, inst2, volumes) = self._setUpBlockDeviceMapping()
+
+        result = self._assertInstance(inst1['id'])
+        self.assertSubDictMatch(self._expected_instance_bdm1, result)
+        self._assertEqualBlockDeviceMapping(
+            self._expected_block_device_mapping0, result['blockDeviceMapping'])
+
+        result = self._assertInstance(inst2['id'])
+        self.assertSubDictMatch(self._expected_instance_bdm2, result)
+
+        self._tearDownBlockDeviceMapping(inst1, inst2, volumes)
 
     def test_describe_images(self):
         describe_images = self.cloud.describe_images
@@ -481,17 +515,17 @@ class CloudTestCase(test.TestCase):
         mappings1 = [
             {'device': '/dev/sda1', 'virtual': 'root'},
 
-            {'device': '/dev/sdb0', 'virtual': 'ephemeral0'},
-            {'device': '/dev/sdb1', 'virtual': 'ephemeral1'},
-            {'device': '/dev/sdb2', 'virtual': 'ephemeral2'},
-            {'device': '/dev/sdb3', 'virtual': 'ephemeral3'},
-            {'device': '/dev/sdb4', 'virtual': 'ephemeral4'},
+            {'device': 'sdb0', 'virtual': 'ephemeral0'},
+            {'device': 'sdb1', 'virtual': 'ephemeral1'},
+            {'device': 'sdb2', 'virtual': 'ephemeral2'},
+            {'device': 'sdb3', 'virtual': 'ephemeral3'},
+            {'device': 'sdb4', 'virtual': 'ephemeral4'},
 
-            {'device': '/dev/sdc0', 'virtual': 'swap'},
-            {'device': '/dev/sdc1', 'virtual': 'swap'},
-            {'device': '/dev/sdc2', 'virtual': 'swap'},
-            {'device': '/dev/sdc3', 'virtual': 'swap'},
-            {'device': '/dev/sdc4', 'virtual': 'swap'}]
+            {'device': 'sdc0', 'virtual': 'swap'},
+            {'device': 'sdc1', 'virtual': 'swap'},
+            {'device': 'sdc2', 'virtual': 'swap'},
+            {'device': 'sdc3', 'virtual': 'swap'},
+            {'device': 'sdc4', 'virtual': 'swap'}]
         block_device_mapping1 = [
             {'device_name': '/dev/sdb1', 'snapshot_id': 01234567},
             {'device_name': '/dev/sdb2', 'volume_id': 01234567},
