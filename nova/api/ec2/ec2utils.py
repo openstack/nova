@@ -154,3 +154,13 @@ def properties_root_device_name(properties):
         root_device_name = properties['root_device_name']
 
     return root_device_name
+
+
+def mappings_prepend_dev(mappings):
+    """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type"""
+    for m in mappings:
+        virtual = m['virtual']
+        if ((virtual == 'swap' or virtual.startswith('ephemeral')) and
+            (not m['device'].startswith('/'))):
+            m['device'] = '/dev/' + m['device']
+    return mappings
