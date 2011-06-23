@@ -87,3 +87,10 @@ class AdminApiTestCase(test.TestCase):
         result = self.api.block_external_addresses(self.context, '1.1.1.1/32')
         self.assertEqual('OK', result['status'])
         self.assertEqual('Added 3 rules', result['message'])
+
+    def test_list_blocked_ips(self):
+        """Make sure we can see the external blocks that exist."""
+        result = self.api.describe_external_address_blocks(self.context)
+        num = len(db.provider_fw_rule_get_all(self.context))
+        # we only list IP, not tcp/udp/icmp rules
+        self.assertEqual(num / 3, len(result['externalIpBlockInfo']))
