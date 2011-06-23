@@ -126,7 +126,7 @@ class Controller(object):
             if not FLAGS.allow_admin_api:
                 raise webob.exc.HTTPBadRequest()
 
-            rotation = get_param("rotation")
+            rotation = int(get_param("rotation"))
             image = self._compute_service.backup(context, server_id,
                     image_type, rotation)
 
