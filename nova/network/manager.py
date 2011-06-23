@@ -328,7 +328,7 @@ class NetworkManager(manager.SchedulerDependentManager):
 
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
-                    net['gateway_v6'] = str(list(gateway_v6)[1]))
+                    net['gateway_v6'] = str(list(gateway_v6)[1])
                 else:
                     net['gateway_v6'] = str(list(project_net_v6)[1])
 
