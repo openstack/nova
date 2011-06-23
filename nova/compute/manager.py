@@ -306,8 +306,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self.network_manager.setup_compute_network(context,
                                                            instance_id)
 
-            block_device_mapping = self._setup_block_device_mapping(context,
-                                                                    instance_id)
+            block_device_mapping = self._setup_block_device_mapping(
+                context,
+                instance_id)
 
             # TODO(vish) check to make sure the availability zone matches
             self._update_state(context, instance_id, power_state.BUILDING)
@@ -329,20 +330,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                 floating_ip = self.db.floating_ip_get_by_address(context,
                                                                  public_ip)
 
-                self.network_api.associate_floating_ip(context,
-                                                       floating_ip,
-                                                       fixed_ip,
-                                                       affect_auto_assigned=True)
+                self.network_api.associate_floating_ip(
+                    context,
+                    floating_ip,
+                    fixed_ip,
+                    affect_auto_assigned=True)
 
             self._update_launched_at(context, instance_id)
             self._update_state(context, instance_id)
         except exception.InstanceNotFound:
             # FIXME(wwolf): We are just ignoring InstanceNotFound
-            # exceptions here in case the instance was immediately deleted
-            # before it actually got created.  This should be fixed once we have
-            # no-db-messaging
+            # exceptions here in case the instance was immediately
+            # deleted before it actually got created.  This should
+            # be fixed once we have no-db-messaging
             pass
-
 
     @exception.wrap_exception
     def run_instance(self, context, instance_id, **kwargs):
