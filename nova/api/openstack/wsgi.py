@@ -2,7 +2,9 @@
 import json
 import webob
 from xml.dom import minidom
+from xml.parsers import expat
 
+import faults
 from nova import exception
 from nova import log as logging
 from nova import utils
@@ -60,7 +62,7 @@ class TextDeserializer(object):
 
     def deserialize(self, datastring, action='default'):
         """Find local deserialization method and parse request body."""
-        action_method = getattr(self, action, self.default)
+        action_method = getattr(self, str(action), self.default)
         return action_method(datastring)
 
     def default(self, datastring):
@@ -71,7 +73,11 @@ class TextDeserializer(object):
 class JSONDeserializer(TextDeserializer):
 
     def default(self, datastring):
-        return utils.loads(datastring)
+        try:
+            return utils.loads(datastring)
+        except ValueError:
+            raise exception.MalformedRequestBody(
+                               reason=_("malformed JSON in request body"))
 
 
 class XMLDeserializer(TextDeserializer):
@@ -86,8 +92,13 @@ class XMLDeserializer(TextDeserializer):
 
     def default(self, datastring):
         plurals = set(self.metadata.get('plurals', {}))
-        node = minidom.parseString(datastring).childNodes[0]
-        return {node.nodeName: self._from_xml_node(node, plurals)}
+
+        try:
+            node = minidom.parseString(datastring).childNodes[0]
+            return {node.nodeName: self._from_xml_node(node, plurals)}
+        except expat.ExpatError:
+            raise exception.MalformedRequestBody(
+                                    reason=_("malformed XML in request body"))
 
     def _from_xml_node(self, node, listnames):
         """Convert a minidom node to a simple Python type.
@@ -189,7 +200,7 @@ class DictSerializer(object):
 
     def serialize(self, data, action='default'):
         """Find local serialization method and encode response body."""
-        action_method = getattr(self, action, self.default)
+        action_method = getattr(self, str(action), self.default)
         return action_method(data)
 
     def default(self, data):
@@ -296,7 +307,7 @@ class ResponseSerializer(object):
         }
         self.serializers.update(serializers or {})
 
-    def serialize(self, response_data, content_type):
+    def serialize(self, response_data, content_type, action='default'):
         """Serialize a dict into a string and wrap in a wsgi.Request object.
 
         :param response_data: dict produced by the Controller
@@ -307,7 +318,7 @@ class ResponseSerializer(object):
         response.headers['Content-Type'] = content_type
 
         serializer = self.get_serializer(content_type)
-        response.body = serializer.serialize(response_data)
+        response.body = serializer.serialize(response_data, action)
 
         return response
 
@@ -352,22 +363,26 @@ class Resource(wsgi.Application):
             action, action_args, accept = self.deserializer.deserialize(
                                                                       request)
         except exception.InvalidContentType:
-            return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
+            msg = _("Unsupported Content-Type")
+            return webob.exc.HTTPBadRequest(explanation=msg)
+        except exception.MalformedRequestBody:
+            msg = _("Malformed request body")
+            return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         action_result = self.dispatch(request, action, action_args)
 
         #TODO(bcwaldon): find a more elegant way to pass through non-dict types
         if type(action_result) is dict:
-            response = self.serializer.serialize(action_result, accept)
+            response = self.serializer.serialize(action_result, accept, action)
         else:
             response = action_result
 
         try:
             msg_dict = dict(url=request.url, status=response.status_int)
             msg = _("%(url)s returned with HTTP %(status)d") % msg_dict
-        except AttributeError:
-            msg_dict = dict(url=request.url)
-            msg = _("%(url)s returned a fault")
+        except AttributeError, e:
+            msg_dict = dict(url=request.url, e=e)
+            msg = _("%(url)s returned a fault: %(e)s" % msg_dict)
 
         LOG.debug(msg)
 
