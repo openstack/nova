@@ -56,7 +56,7 @@ class FlavorsExtraSpecsTest(unittest.TestCase):
 
 
     def test_index(self):
-        self.stubs.Set(nova.db.api, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
                        return_flavor_extra_specs)
         req = webob.Request.blank('/v1.1/flavors/1/extra')
         req.environ['api.version'] = '1.1'
