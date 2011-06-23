@@ -262,7 +262,7 @@ def create_resource(version='1.0'):
     }
 
     xml_serializer = {
-        '1.0': wsgi.XMLDictSerializer(wsgi.XMLNS_V10, metadata),
+        '1.0': wsgi.XMLDictSerializer(metadata, wsgi.XMLNS_V10),
         '1.1': ImageXMLSerializer(),
     }[version]
 
