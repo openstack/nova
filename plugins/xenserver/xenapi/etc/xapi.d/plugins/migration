@@ -44,7 +44,7 @@ def move_vhds_into_sr(session, args):
     new_cow_uuid = params['new_cow_uuid']
 
     sr_path = params['sr_path']
-    sr_temp_path = "%s/images/" % sr_path
+    sr_temp_path = "%s/tmp/" % sr_path
 
     # Discover the copied VHDs locally, and then set up paths to copy
     # them to under the SR

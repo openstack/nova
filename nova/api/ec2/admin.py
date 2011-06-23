@@ -22,7 +22,7 @@ Admin API controller, exposed through http via the api worker.
 
 import base64
 import datetime
-import IPy
+import netaddr
 import urllib
 
 from nova import compute
@@ -346,7 +346,7 @@ class AdminController(object):
                   cidr, context=context)
         cidr = urllib.unquote(cidr).decode()
         # raise if invalid
-        IPy.IP(cidr)
+        netaddr.IPNetwork(cidr)
         rule = {'cidr': cidr}
         tcp_rule = rule.copy()
         tcp_rule.update({'protocol': 'tcp', 'from_port': 1, 'to_port': 65535})
