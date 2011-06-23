@@ -85,6 +85,7 @@ class AdminApiTestCase(test.TestCase):
     def test_block_external_ips(self):
         """Make sure provider firewall rules are created."""
         result = self.api.block_external_addresses(self.context, '1.1.1.1/32')
+        self.api.remove_external_address_block(self.context, '1.1.1.1/32')
         self.assertEqual('OK', result['status'])
         self.assertEqual('Added 3 rules', result['message'])
 
@@ -93,5 +94,18 @@ class AdminApiTestCase(test.TestCase):
         self.api.block_external_addresses(self.context, '1.1.1.2/32')
         result = self.api.describe_external_address_blocks(self.context)
         num = len(db.provider_fw_rule_get_all(self.context))
+        self.api.remove_external_address_block(self.context, '1.1.1.2/32')
         # we only list IP, not tcp/udp/icmp rules
         self.assertEqual(num / 3, len(result['externalIpBlockInfo']))
+
+    def test_remove_ip_block(self):
+        """Remove ip blocks."""
+        result = self.api.block_external_addresses(self.context, '1.1.1.3/32')
+        self.assertEqual('OK', result['status'])
+        num0 = len(db.provider_fw_rule_get_all(self.context))
+        result = self.api.remove_external_address_block(self.context,
+                                                        '1.1.1.3/32')
+        self.assertEqual('OK', result['status'])
+        self.assertEqual('Deleted 3 rules', result['message'])
+        num1 = len(db.provider_fw_rule_get_all(self.context))
+        self.assert_(num1 < num0)

@@ -382,7 +382,7 @@ class AdminController(object):
         LOG.audit(_('Removing ip block from %s'), cidr, context=context)
         cidr = urllib.unquote(cidr).decode()
         # raise if invalid
-        IPy.IP(cidr)
+        netaddr.IPNetwork(cidr)
         rules = db.provider_fw_rule_get_all_by_cidr(context, cidr)
         for rule in rules:
             db.provider_fw_rule_destroy(context, rule['id'])
