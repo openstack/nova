@@ -14,6 +14,7 @@
 #    under the License.
 
 import webob.exc
+from xml.dom import minidom
 
 from nova import compute
 from nova import exception
@@ -23,6 +24,7 @@ from nova import log
 from nova import utils
 from nova.api.openstack import common
 from nova.api.openstack import faults
+from nova.api.openstack import image_metadata
 from nova.api.openstack.views import images as images_view
 from nova.api.openstack import wsgi
 
@@ -193,16 +195,7 @@ class ControllerV11(Controller):
         return data['image']['serverRef']
 
 
-def create_resource(version='1.0'):
-    controller = {
-        '1.0': ControllerV10,
-        '1.1': ControllerV11,
-    }[version]()
-
-    xmlns = {
-        '1.0': wsgi.XMLNS_V10,
-        '1.1': wsgi.XMLNS_V11,
-    }[version]
+class ImageXMLSerializer(wsgi.XMLDictSerializer):
 
     metadata = {
         "attributes": {
@@ -212,9 +205,69 @@ def create_resource(version='1.0'):
         },
     }
 
+    xmlns = wsgi.XMLNS_V11
+
+    def __init__(self):
+        self.metadata_serializer = image_metadata.ImageMetadataXMLSerializer()
+
+    def _image_to_xml(self, xml_doc, image):
+        metadata = image.pop('metadata').items()
+        metadata_node = self.metadata_serializer.meta_list_to_xml(xml_doc,
+                                                                  metadata)
+        node = self._to_xml_node(xml_doc, self.metadata, 'image', image)
+        node.appendChild(metadata_node)
+        return node
+
+    def _image_list_to_xml(self, xml_doc, images):
+        container_node = xml_doc.createElement('images')
+        for image in images:
+            item_node = self._image_to_xml(xml_doc, image)
+            container_node.appendChild(item_node)
+        return container_node
+
+    def _image_to_xml_string(self, image):
+        xml_doc = minidom.Document()
+        item_node = self._image_to_xml(xml_doc, image)
+        self._add_xmlns(item_node)
+        return item_node.toprettyxml(indent='    ')
+
+    def _image_list_to_xml_string(self, images):
+        xml_doc = minidom.Document()
+        container_node = self._image_list_to_xml(xml_doc, images)
+        self._add_xmlns(container_node)
+        return container_node.toprettyxml(indent='    ')
+
+    def detail(self, images_dict):
+        return self._image_list_to_xml_string(images_dict['images'])
+
+    def show(self, image_dict):
+        return self._image_to_xml_string(image_dict['image'])
+
+    def create(self, image_dict):
+        return self._image_to_xml_string(image_dict['image'])
+
+
+def create_resource(version='1.0'):
+    controller = {
+        '1.0': ControllerV10,
+        '1.1': ControllerV11,
+    }[version]()
+
+    metadata = {
+        "attributes": {
+            "image": ["id", "name", "updated", "created", "status",
+                      "serverId", "progress", "serverRef"],
+            "link": ["rel", "type", "href"],
+        },
+    }
+
+    xml_serializer = {
+        '1.0': wsgi.XMLDictSerializer(wsgi.XMLNS_V10, metadata),
+        '1.1': ImageXMLSerializer(),
+    }[version]
+
     serializers = {
-        'application/xml': wsgi.XMLDictSerializer(xmlns=xmlns,
-                                                  metadata=metadata),
+        'application/xml': xml_serializer,
     }
 
     return wsgi.Resource(controller, serializers=serializers)

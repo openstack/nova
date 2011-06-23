@@ -232,11 +232,13 @@ class XMLDictSerializer(DictSerializer):
         doc = minidom.Document()
         node = self._to_xml_node(doc, self.metadata, root_key, data[root_key])
 
-        xmlns = node.getAttribute('xmlns')
-        if not xmlns and self.xmlns:
-            node.setAttribute('xmlns', self.xmlns)
+        self._add_xmlns(node)
 
         return node.toprettyxml(indent='    ', encoding='utf-8')
+
+    def _add_xmlns(self, node):
+        if self.xmlns is not None:
+            node.setAttribute('xmlns', self.xmlns)
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""

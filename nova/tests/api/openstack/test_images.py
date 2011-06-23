@@ -469,43 +469,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
 
-    def test_get_image_v1_1_xml(self):
-        request = webob.Request.blank('/v1.1/images/124')
-        request.accept = "application/xml"
-        response = request.get_response(fakes.wsgi_app())
-
-        actual_image = minidom.parseString(response.body.replace("  ", ""))
-
-        expected_href = "http://localhost/v1.1/images/124"
-        expected_now = self.NOW_API_FORMAT
-        expected_image = minidom.parseString("""
-        <image id="124"
-                name="queued backup"
-                serverRef="http://localhost/v1.1/servers/42"
-                updated="%(expected_now)s"
-                created="%(expected_now)s"
-                status="QUEUED"
-                xmlns="http://docs.openstack.org/compute/api/v1.1">
-            <links>
-                <link href="%(expected_href)s" rel="self"/>
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/json" />
-                <link href="%(expected_href)s" rel="bookmark"
-                    type="application/xml" />
-            </links>
-            <metadata>
-                <instance_id>
-                    42
-                </instance_id>
-                <user_id>
-                    1
-                </user_id>
-            </metadata>
-        </image>
-        """.replace("  ", "") % (locals()))
-
-        self.assertEqual(expected_image.toxml(), actual_image.toxml())
-
     def test_get_image_404_json(self):
         request = webob.Request.blank('/v1.0/images/NonExistantImage')
         response = request.get_response(fakes.wsgi_app())
@@ -1022,44 +985,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
-    def test_create_image_v1_1_xml_serialization(self):
-
-        body = dict(image=dict(serverRef='123', name='Backup 1'))
-        req = webob.Request.blank('/v1.1/images')
-        req.method = 'POST'
-        req.body = json.dumps(body)
-        req.headers["content-type"] = "application/json"
-        req.headers["accept"] = "application/xml"
-        response = req.get_response(fakes.wsgi_app())
-        self.assertEqual(200, response.status_int)
-        resp_xml = minidom.parseString(response.body.replace("  ", ""))
-        expected_href = "http://localhost/v1.1/images/123"
-        expected_image = minidom.parseString("""
-            <image
-                   created="None"
-                   id="123"
-                   name="None"
-                   serverRef="http://localhost/v1.1/servers/123"
-                   status="ACTIVE"
-                   updated="None"
-                   xmlns="http://docs.openstack.org/compute/api/v1.1">
-                <links>
-                    <link href="%(expected_href)s" rel="self"/>
-                    <link href="%(expected_href)s" rel="bookmark"
-                        type="application/json" />
-                    <link href="%(expected_href)s" rel="bookmark"
-                        type="application/xml" />
-                </links>
-                <metadata>
-                    <instance_id>
-                        123
-                    </instance_id>
-                </metadata>
-            </image>
-        """.replace("  ", "") % (locals()))
-
-        self.assertEqual(expected_image.toxml(), resp_xml.toxml())
-
     def test_create_image_v1_1_no_server_ref(self):
 
         body = dict(image=dict(name='Backup 1'))
@@ -1109,3 +1034,272 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_id += 1
 
         return fixtures
+
+
+class ImageXMLSerializationTest(test.TestCase):
+
+    TIMESTAMP = "2010-10-11T10:30:22Z"
+    SERVER_HREF = 'http://localhost/v1.1/servers/123'
+    IMAGE_HREF = 'http://localhost/v1.1/images/%s'
+
+    def test_show(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'serverRef': self.SERVER_HREF,
+                'status': 'ACTIVE',
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % (1,),
+                        'rel': 'bookmark',
+                        'type': 'application/json',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'show')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_server_href = self.SERVER_HREF
+        expected_href = self.IMAGE_HREF % (1, )
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <image id="1"
+                name="Image1"
+                serverRef="%(expected_server_href)s"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="ACTIVE"
+                xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <links>
+                <link href="%(expected_href)s" rel="bookmark"
+                    type="application/json" />
+            </links>
+            <metadata>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+        </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_index(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixtures = {
+            'images': [
+                {
+                    'id': 1,
+                    'name': 'Image1',
+                    'created': self.TIMESTAMP,
+                    'updated': self.TIMESTAMP,
+                    'serverRef': self.SERVER_HREF,
+                    'status': 'ACTIVE',
+                    'links': [
+                        {
+                            'href': 'http://localhost/v1.1/images/1',
+                            'rel': 'bookmark',
+                            'type': 'application/json',
+                        },
+                    ],
+                },
+                {
+                    'id': 2,
+                    'name': 'queued image',
+                    'created': self.TIMESTAMP,
+                    'updated': self.TIMESTAMP,
+                    'serverRef': self.SERVER_HREF,
+                    'status': 'QUEUED',
+                    'links': [
+                        {
+                            'href': 'http://localhost/v1.1/images/2',
+                            'rel': 'bookmark',
+                            'type': 'application/json',
+                        },
+                    ],
+                },
+            ],
+        }
+
+        output = serializer.serialize(fixtures, 'index')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_serverRef = self.SERVER_HREF
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <images xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <image id="1"
+                    name="Image1"
+                    serverRef="%(expected_serverRef)s"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="ACTIVE">
+                <links>
+                    <link href="http://localhost/v1.1/images/1" rel="bookmark"
+                        type="application/json" />
+                </links>
+            </image>
+            <image id="2"
+                    name="queued image"
+                    serverRef="%(expected_serverRef)s"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="QUEUED">
+                <links>
+                    <link href="http://localhost/v1.1/images/2" rel="bookmark"
+                        type="application/json" />
+                </links>
+            </image>
+        </images>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_detail(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixtures = {
+            'images': [
+                {
+                    'id': 1,
+                    'name': 'Image1',
+                    'created': self.TIMESTAMP,
+                    'updated': self.TIMESTAMP,
+                    'serverRef': self.SERVER_HREF,
+                    'status': 'ACTIVE',
+                    'metadata': {
+                        'key1': 'value1',
+                        'key2': 'value2',
+                    },
+                    'links': [
+                        {
+                            'href': 'http://localhost/v1.1/images/1',
+                            'rel': 'bookmark',
+                            'type': 'application/json',
+                        },
+                    ],
+                },
+                {
+                    'id': 2,
+                    'name': 'queued image',
+                    'created': self.TIMESTAMP,
+                    'updated': self.TIMESTAMP,
+                    'serverRef': self.SERVER_HREF,
+                    'metadata': {},
+                    'status': 'QUEUED',
+                    'links': [
+                        {
+                            'href': 'http://localhost/v1.1/images/2',
+                            'rel': 'bookmark',
+                            'type': 'application/json',
+                        },
+                    ],
+                },
+            ],
+        }
+
+        output = serializer.serialize(fixtures, 'detail')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_serverRef = self.SERVER_HREF
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <images xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <image id="1"
+                    name="Image1"
+                    serverRef="%(expected_serverRef)s"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="ACTIVE">
+                <links>
+                    <link href="http://localhost/v1.1/images/1" rel="bookmark"
+                        type="application/json" />
+                </links>
+                <metadata>
+                    <meta key="key2">
+                        value2
+                    </meta>
+                    <meta key="key1">
+                        value1
+                    </meta>
+                </metadata>
+            </image>
+            <image id="2"
+                    name="queued image"
+                    serverRef="%(expected_serverRef)s"
+                    updated="%(expected_now)s"
+                    created="%(expected_now)s"
+                    status="QUEUED">
+                <links>
+                    <link href="http://localhost/v1.1/images/2" rel="bookmark"
+                        type="application/json" />
+                </links>
+                <metadata />
+            </image>
+        </images>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
+
+    def test_create(self):
+        serializer = images.ImageXMLSerializer()
+
+        fixture = {
+            'image': {
+                'id': 1,
+                'name': 'Image1',
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                'serverRef': self.SERVER_HREF,
+                'status': 'ACTIVE',
+                'metadata': {
+                    'key1': 'value1',
+                },
+                'links': [
+                    {
+                        'href': self.IMAGE_HREF % (1,),
+                        'rel': 'bookmark',
+                        'type': 'application/json',
+                    },
+                ],
+            },
+        }
+
+        output = serializer.serialize(fixture, 'create')
+        actual = minidom.parseString(output.replace("  ", ""))
+
+        expected_server_href = self.SERVER_HREF
+        expected_href = self.IMAGE_HREF % (1, )
+        expected_now = self.TIMESTAMP
+        expected = minidom.parseString("""
+        <image id="1"
+                name="Image1"
+                serverRef="%(expected_server_href)s"
+                updated="%(expected_now)s"
+                created="%(expected_now)s"
+                status="ACTIVE"
+                xmlns="http://docs.openstack.org/compute/api/v1.1">
+            <links>
+                <link href="%(expected_href)s" rel="bookmark"
+                    type="application/json" />
+            </links>
+            <metadata>
+                <meta key="key1">
+                    value1
+                </meta>
+            </metadata>
+        </image>
+        """.replace("  ", "") % (locals()))
+
+        self.assertEqual(expected.toxml(), actual.toxml())
