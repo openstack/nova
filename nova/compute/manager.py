@@ -527,7 +527,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         filters = {'property-image_type': image_type,
                    'property-instance_uuid': instance_uuid}
         images = image_service.detail(context, filters=filters)
-        LOG.debug(_("Found %d images (rotation: %d)" % (len(images), rotation)))
+        LOG.debug(_("Found %d images (rotation: %d)" %
+                    (len(images), rotation)))
         if len(images) > rotation:
             # Sort oldest (by created_at) to end of list
             images.sort(key=itemgetter('created_at'), reverse=True)
