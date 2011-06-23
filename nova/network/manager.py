@@ -502,8 +502,8 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_('Leased IP |%s| to mac |%s|'), address, mac,
-                                                   context=context)
+        LOG.debug(_('Leased IP |%(address)s| to mac |%(mac)s|'), locals(),
+                                                          context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         instance = fixed_ip['instance']
         if not instance:
@@ -520,8 +520,8 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_('Released IP |%s| from mac |%s|'), address, mac,
-                                                       context=context)
+        LOG.debug(_('Released IP |%(address)s| from mac |%(mac)s|'), locals(),
+                                                              context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         instance = fixed_ip['instance']
         if not instance:

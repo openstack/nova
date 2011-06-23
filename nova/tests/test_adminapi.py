@@ -57,12 +57,6 @@ class AdminApiTestCase(test.TestCase):
         self.context = context.RequestContext(user=self.user,
                                               project=self.project)
 
-        # old line was only to set a network to a project
-        # this line is from the middle of the new functionality and makes no
-        # sense to call this way, but it makes the tests work
-        self.network._get_networks_for_instance(self.context.elevated(), 1,
-                                                self.project.id)
-
         def fake_show(meh, context, id):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1,
                     'type': 'machine', 'image_state': 'available'}}
@@ -80,9 +74,6 @@ class AdminApiTestCase(test.TestCase):
         self.stubs.Set(rpc, 'cast', finish_cast)
 
     def tearDown(self):
-        network_ref = db.project_get_network(self.context,
-                                             self.project.id)
-        db.network_disassociate(self.context, network_ref['id'])
         self.manager.delete_project(self.project)
         self.manager.delete_user(self.user)
         super(AdminApiTestCase, self).tearDown()
