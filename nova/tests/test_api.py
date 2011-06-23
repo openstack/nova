@@ -153,6 +153,40 @@ class Ec2utilsTestCase(test.TestCase):
         root_device_name = ec2utils.properties_root_device_name(properties1)
         self.assertEqual(root_device_name, '/dev/sdb')
 
+    def test_mapping_prepend_dev(self):
+        mappings = [
+            {'virtual': 'ami',
+             'device': 'sda1'},
+            {'virtual': 'root',
+             'device': '/dev/sda1'},
+
+            {'virtual': 'swap',
+             'device': 'sdb1'},
+            {'virtual': 'swap',
+             'device': '/dev/sdb2'},
+
+            {'virtual': 'ephemeral0',
+            'device': 'sdc1'},
+            {'virtual': 'ephemeral1',
+             'device': '/dev/sdc1'}]
+        expected_result = [
+            {'virtual': 'ami',
+             'device': 'sda1'},
+            {'virtual': 'root',
+             'device': '/dev/sda1'},
+
+            {'virtual': 'swap',
+             'device': '/dev/sdb1'},
+            {'virtual': 'swap',
+             'device': '/dev/sdb2'},
+
+            {'virtual': 'ephemeral0',
+             'device': '/dev/sdc1'},
+            {'virtual': 'ephemeral1',
+             'device': '/dev/sdc1'}]
+        self.assertDictListMatch(ec2utils.mappings_prepend_dev(mappings),
+                                 expected_result)
+
 
 class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API"""
