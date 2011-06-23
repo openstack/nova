@@ -393,20 +393,25 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image, actual_image)
 
     def test_get_image_v1_1(self):
-        request = webob.Request.blank('/v1.1/images/123')
+        request = webob.Request.blank('/v1.1/images/124')
         response = request.get_response(fakes.wsgi_app())
 
         actual_image = json.loads(response.body)
 
-        href = "http://localhost/v1.1/images/123"
+        href = "http://localhost/v1.1/images/124"
 
         expected_image = {
             "image": {
-                "id": 123,
-                "name": "public image",
+                "id": 124,
+                "name": "queued backup",
+                "serverRef": "http://localhost/v1.1/servers/42",
                 "updated": self.NOW_API_FORMAT,
                 "created": self.NOW_API_FORMAT,
-                "status": "ACTIVE",
+                "status": "QUEUED",
+                "metadata": {
+                    "instance_id": "42",
+                    "user_id": "1",
+                },
                 "links": [{
                     "rel": "self",
                     "href": href,
@@ -465,20 +470,21 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(expected_image.toxml(), actual_image.toxml())
 
     def test_get_image_v1_1_xml(self):
-        request = webob.Request.blank('/v1.1/images/123')
+        request = webob.Request.blank('/v1.1/images/124')
         request.accept = "application/xml"
         response = request.get_response(fakes.wsgi_app())
 
         actual_image = minidom.parseString(response.body.replace("  ", ""))
 
-        expected_href = "http://localhost/v1.1/images/123"
+        expected_href = "http://localhost/v1.1/images/124"
         expected_now = self.NOW_API_FORMAT
         expected_image = minidom.parseString("""
-        <image id="123"
-                name="public image"
+        <image id="124"
+                name="queued backup"
+                serverRef="http://localhost/v1.1/servers/42"
                 updated="%(expected_now)s"
                 created="%(expected_now)s"
-                status="ACTIVE"
+                status="QUEUED"
                 xmlns="http://docs.openstack.org/compute/api/v1.1">
             <links>
                 <link href="%(expected_href)s" rel="self"/>
@@ -487,6 +493,14 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                 <link href="%(expected_href)s" rel="bookmark"
                     type="application/xml" />
             </links>
+            <metadata>
+                <instance_id>
+                    42
+                </instance_id>
+                <user_id>
+                    1
+                </user_id>
+            </metadata>
         </image>
         """.replace("  ", "") % (locals()))
 
@@ -668,6 +682,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         expected = [{
             'id': 123,
             'name': 'public image',
+            'metadata': {},
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -689,6 +704,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued backup',
+            'metadata': {u'instance_id': u'42', u'user_id': u'1'},
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -711,6 +727,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving backup',
+            'metadata': {u'instance_id': u'42', u'user_id': u'1'},
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -734,6 +751,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active backup',
+            'metadata': {u'instance_id': u'42', u'user_id': u'1'},
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -756,6 +774,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed backup',
+            'metadata': {u'instance_id': u'42', u'user_id': u'1'},
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -778,6 +797,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 129,
             'name': None,
+            'metadata': {},
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -1030,6 +1050,11 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     <link href="%(expected_href)s" rel="bookmark"
                         type="application/xml" />
                 </links>
+                <metadata>
+                    <instance_id>
+                        123
+                    </instance_id>
+                </metadata>
             </image>
         """.replace("  ", "") % (locals()))
 

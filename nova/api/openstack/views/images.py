@@ -109,6 +109,9 @@ class ViewBuilderV11(ViewBuilder):
         image = ViewBuilder.build(self, image_obj, detail)
         href = self.generate_href(image_obj["id"])
 
+        if detail:
+            image["metadata"] = image_obj.get("properties", {})
+
         image["links"] = [{
             "rel": "self",
             "href": href,
