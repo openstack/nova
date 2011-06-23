@@ -524,9 +524,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             None if rotation shouldn't be used (as in the case of snapshots)
         """
         image_service = nova.image.get_default_image_service()
-        filters = {'property-image-type': image_type,
-                   'property-instance-uuid': instance_uuid}
+        filters = {'property-image_type': image_type,
+                   'property-instance_uuid': instance_uuid}
         images = image_service.detail(context, filters=filters)
+        LOG.debug(_("Found %d images (rotation: %d)" % (len(images), rotation)))
         if len(images) > rotation:
             # Sort oldest (by created_at) to end of list
             images.sort(key=itemgetter('created_at'), reverse=True)
@@ -534,9 +535,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             # NOTE(sirp): this deletes all backups that exceed the rotation
             # limit
             excess = len(images) - rotation
+            LOG.debug(_("Rotating out %d backups" % excess))
             for i in xrange(excess):
                 image = images.pop()
                 image_id = image['id']
+                LOG.debug(_("Deleting image %d" % image_id))
                 image_service.delete(context, image_id)
 
     @exception.wrap_exception
