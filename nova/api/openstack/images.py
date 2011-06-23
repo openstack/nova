@@ -88,28 +88,53 @@ class Controller(object):
         return webob.exc.HTTPNoContent()
 
     def create(self, req, body):
-        """Snapshot a server instance and save the image.
+        """Snapshot or backup a server instance and save the image.
+
+        Images now have an `image_type` associated with them, which can be
+        'snapshot' or the backup type, like 'daily' or 'weekly'.
+
+        If the image_type is backup-like, then the rotation factor can be
+        included and that will cause the oldest backups that exceed the
+        rotation factor to be deleted.
 
         :param req: `wsgi.Request` object
         """
+        def get_param(param):
+            try:
+                return body["image"][param]
+            except KeyError:
+                raise webob.exc.HTTPBadRequest()
+
         context = req.environ['nova.context']
         content_type = req.get_content_type()
 
         if not body:
             raise webob.exc.HTTPBadRequest()
 
+        image_type = body["image"].get("image_type", "snapshot")
+
         try:
             server_id = self._server_id_from_req_data(body)
-            image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
-        image = self._compute_service.snapshot(context, server_id, image_name)
+        if image_type == "snapshot":
+            image_name = get_param("name")
+            image = self._compute_service.snapshot(context, server_id,
+                    image_name)
+        else:
+            if not FLAGS.allow_admin_api:
+                raise webob.exc.HTTPBadRequest()
+
+            rotation = get_param("rotation")
+            image = self._compute_service.backup(context, server_id,
+                    image_type, rotation)
+
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _server_id_from_req_data(self, data):
         raise NotImplementedError()
