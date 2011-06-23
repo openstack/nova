@@ -873,7 +873,7 @@ class InstanceTypeCommands(object):
         try:
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
-        except exception.InvalidInputException:
+        except exception.InvalidInput:
             print "Must supply valid parameters to create instance_type"
             print e
             sys.exit(1)
@@ -1071,6 +1071,70 @@ class ImageCommands(object):
         self._convert_images(machine_images)
 
 
+class AgentBuildCommands(object):
+    """Class for managing agent builds."""
+
+    def create(self, os, architecture, version, url, md5hash,
+                hypervisor='xen'):
+        """Creates a new agent build.
+        arguments: os architecture version url md5hash [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build = db.agent_build_create(ctxt,
+                                            {'hypervisor': hypervisor,
+                                             'os': os,
+                                             'architecture': architecture,
+                                             'version': version,
+                                             'url': url,
+                                             'md5hash': md5hash})
+
+    def delete(self, os, architecture, hypervisor='xen'):
+        """Deletes an existing agent build.
+        arguments: os architecture [hypervisor='xen']"""
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_destroy(ctxt, agent_build_ref['id'])
+
+    def list(self, hypervisor=None):
+        """Lists all agent builds.
+        arguments: <none>"""
+        fmt = "%-10s  %-8s  %12s  %s"
+        ctxt = context.get_admin_context()
+        by_hypervisor = {}
+        for agent_build in db.agent_build_get_all(ctxt):
+            buildlist = by_hypervisor.get(agent_build.hypervisor)
+            if not buildlist:
+                buildlist = by_hypervisor[agent_build.hypervisor] = []
+
+            buildlist.append(agent_build)
+
+        for key, buildlist in by_hypervisor.iteritems():
+            if hypervisor and key != hypervisor:
+                continue
+
+            print "Hypervisor: %s" % key
+            print fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32)
+            for agent_build in buildlist:
+                print fmt % (agent_build.os, agent_build.architecture,
+                             agent_build.version, agent_build.md5hash)
+                print '    %s' % agent_build.url
+
+            print
+
+    def modify(self, os, architecture, version, url, md5hash,
+               hypervisor='xen'):
+        """Update an existing agent build.
+        arguments: os architecture version url md5hash [hypervisor='xen']
+        """
+        ctxt = context.get_admin_context()
+        agent_build_ref = db.agent_build_get_by_triple(ctxt,
+                                  hypervisor, os, architecture)
+        db.agent_build_update(ctxt, agent_build_ref['id'],
+                              {'version': version,
+                               'url': url,
+                               'md5hash': md5hash})
+
+
 class ConfigCommands(object):
     """Class for exposing the flags defined by flag_file(s)."""
 
@@ -1083,6 +1147,7 @@ class ConfigCommands(object):
 
 CATEGORIES = [
     ('account', AccountCommands),
+    ('agent', AgentBuildCommands),
     ('config', ConfigCommands),
     ('db', DbCommands),
     ('fixed', FixedIpCommands),
