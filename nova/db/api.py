@@ -1292,6 +1292,17 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
 ####################
 
 
+def agent_build_create(context, values):
+    """Create a new agent build entry."""
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    """Get agent build by hypervisor/OS/architecture triple."""
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
+
+
 def agent_build_get_all(context):
     """Get all agent builds."""
     return IMPL.agent_build_get_all(context)
@@ -1306,16 +1317,6 @@ def agent_build_update(context, agent_build_id, values):
     """Update agent build entry."""
     IMPL.agent_build_update(context, agent_build_id, values)
 
-
-def agent_build_create(context, values):
-    """Create a new agent build entry."""
-    return IMPL.agent_build_create(context, values)
-
-
-def agent_build_get_by_triple(context, hypervisor, os, architecture):
-    """Get agent build by hypervisor/OS/architecture triple."""
-    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
-            architecture)
 
 
 ####################
