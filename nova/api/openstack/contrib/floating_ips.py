@@ -18,6 +18,7 @@ from webob import exc
 
 from nova import exception
 from nova import network
+from nova import rpc
 from nova.api.openstack import faults
 from nova.api.openstack import extensions
 
@@ -69,12 +70,27 @@ class FloatingIPController(object):
     def create(self, req, body):
         context = req.environ['nova.context']
 
-        return {'allocate': None}
+        try:
+            ip = self.network_api.allocate_floating_ip(context)
+        except rpc.RemoteError as ex:
+            if ex.exc_type == 'NoMoreAddresses':
+                raise exception.NoMoreFloatingIps()
+            else:
+                raise
+
+        return {'allocated': ip}
 
     def delete(self,req, id):
         context = req.environ['nova.context']
 
-        return {'release': None }
+        if id.isdigit():
+            ip = self.network_api.get(id)
+        else:
+            ip = id
+
+        self.network_api.release_floating_ip(context, address=ip)
+
+        return {'released': ip }
 
     def associate(self, req, id, body):
         context = req.environ['nova.context']
