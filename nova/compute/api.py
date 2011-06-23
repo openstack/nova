@@ -261,7 +261,7 @@ class API(base.Base):
         """tell vm driver to create ephemeral/swap device at boot time by
         updating BlockDeviceMapping
         """
-        for bdm in mappings:
+        for bdm in ec2utils.mappings_prepend_dev(mappings):
             LOG.debug(_("bdm %s"), bdm)
 
             virtual_name = bdm['virtual']

@@ -92,20 +92,25 @@ def _parse_block_device_mapping(bdm):
     """
     ebs = bdm.pop('ebs', None)
     if ebs:
-        ec2_id = ebs.pop('snapshot_id')
-        id = ec2utils.ec2_id_to_id(ec2_id)
-        if ec2_id.startswith('snap-'):
-            bdm['snapshot_id'] = id
-        elif ec2_id.startswith('vol-'):
-            bdm['volume_id'] = id
-        ebs.setdefault('delete_on_termination', True)
+        ec2_id = ebs.pop('snapshot_id', None)
+        if ec2_id:
+            id = ec2utils.ec2_id_to_id(ec2_id)
+            if ec2_id.startswith('snap-'):
+                bdm['snapshot_id'] = id
+            elif ec2_id.startswith('vol-'):
+                bdm['volume_id'] = id
+            ebs.setdefault('delete_on_termination', True)
         bdm.update(ebs)
     return bdm
 
 
+def _properties_get_mappings(properties):
+    return ec2utils.mappings_prepend_dev(properties.get('mappings', []))
+
+
 def _format_block_device_mapping(bdm):
     """Contruct BlockDeviceMappingItemType
-    {'device_name': '...', 'Snapshot_Id': , ...}
+    {'device_name': '...', 'snapshot_id': , ...}
     => BlockDeviceMappingItemType
     """
     keys = (('deviceName', 'device_name'),
@@ -138,7 +143,7 @@ def _format_block_device_mapping(bdm):
 def _format_mappings(properties, result):
     """Format multiple BlockDeviceMappingItemType"""
     mappings = [{'virtualName': m['virtual'], 'deviceName': m['device']}
-                for m in properties.get('mappings', [])
+                for m in _properties_get_mappings(properties)
                 if (m['virtual'] == 'swap' or
                     m['virtual'].startswith('ephemeral'))]
 
@@ -1381,7 +1386,7 @@ class CloudController(object):
             if m:
                 mapping.append(m)
 
-        for m in properties.get('mappings', []):
+        for m in _properties_get_mappings(properties):
             virtual_name = m['virtual']
             if virtual_name in ('ami', 'root'):
                 continue
