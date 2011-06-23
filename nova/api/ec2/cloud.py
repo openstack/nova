@@ -391,7 +391,8 @@ class CloudController(object):
             pass
         return True
 
-    def describe_security_groups(self, context, group_name=None, group_id=None, **kwargs):
+    def describe_security_groups(self, context, group_name=None, group_id=None,
+                                 **kwargs):
         self.compute_api.ensure_default_security_group(context)
         if group_name or group_id:
             groups = []
@@ -403,7 +404,7 @@ class CloudController(object):
                     groups.append(group)
             if group_id:
                 for gid in group_id:
-                    group = db.security_group_get(context, context.project_id, name)
+                    group = db.security_group_get(context, gid)
                     groups.append(group)
         elif context.is_admin:
             groups = db.security_group_get_all(context)
@@ -502,13 +503,26 @@ class CloudController(object):
                     return True
         return False
 
-    def revoke_security_group_ingress(self, context, group_name, **kwargs):
-        LOG.audit(_("Revoke security group ingress %s"), group_name,
-                  context=context)
+    def revoke_security_group_ingress(self, context, group_name=None,
+                                      group_id=None, **kwargs):
+        if not group_name and not group_id:
+            err = "Not enough parameters, need group_name or group_id"
+            raise exception.ApiError(_(err))
         self.compute_api.ensure_default_security_group(context)
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       group_name)
+        notfound = exception.SecurityGroupNotFound
+        if group_name:
+            security_group = db.security_group_get_by_name(context,
+                                                           context.project_id,
+                                                           group_name)
+            if not security_group:
+                raise notfound(security_group_id=group_name)
+        if group_id:
+            security_group = db.security_group_get(context, group_id)
+            if not security_group:
+                raise notfound(security_group_id=group_id)
+
+        msg = "Revoke security group ingress %s"
+        LOG.audit(_(msg), security_group['name'], context=context)
 
         criteria = self._revoke_rule_args_to_dict(context, **kwargs)
         if criteria is None:
@@ -531,14 +545,26 @@ class CloudController(object):
     #              Unfortunately, it seems Boto is using an old API
     #              for these operations, so support for newer API versions
     #              is sketchy.
-    def authorize_security_group_ingress(self, context, group_name, **kwargs):
-        LOG.audit(_("Authorize security group ingress %s"), group_name,
-                  context=context)
+    def authorize_security_group_ingress(self, context, group_name=None,
+                                         group_id=None, **kwargs):
+        if not group_name and not group_id:
+            err = "Not enough parameters, need group_name or group_id"
+            raise exception.ApiError(_(err))
         self.compute_api.ensure_default_security_group(context)
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       group_name)
+        notfound = exception.SecurityGroupNotFound
+        if group_name:
+            security_group = db.security_group_get_by_name(context,
+                                                           context.project_id,
+                                                           group_name)
+            if not security_group:
+                raise notfound(security_group_id=group_name)
+        if group_id:
+            security_group = db.security_group_get(context, group_id)
+            if not security_group:
+                raise notfound(security_group_id=group_id)
 
+        msg = "Authorize security group ingress %s"
+        LOG.audit(_(msg), security_group['name'], context=context)
         values = self._revoke_rule_args_to_dict(context, **kwargs)
         if values is None:
             raise exception.ApiError(_("Not enough parameters to build a "
@@ -573,7 +599,7 @@ class CloudController(object):
 
         return source_project_id
 
-    def create_security_group(self, context, group_name, group_description, group_id=None):
+    def create_security_group(self, context, group_name, group_description):
         LOG.audit(_("Create Security Group %s"), group_name, context=context)
         self.compute_api.ensure_default_security_group(context)
         if db.security_group_exists(context, context.project_id, group_name):
@@ -588,11 +614,23 @@ class CloudController(object):
         return {'securityGroupSet': [self._format_security_group(context,
                                                                  group_ref)]}
 
-    def delete_security_group(self, context, group_name, **kwargs):
+    def delete_security_group(self, context, group_name=None, group_id=None,
+                              **kwargs):
+        if not group_name and not group_id:
+            err = "Not enough parameters, need group_name or group_id"
+            raise exception.ApiError(_(err))
+        notfound = exception.SecurityGroupNotFound
+        if group_name:
+            security_group = db.security_group_get_by_name(context,
+                                                           context.project_id,
+                                                           group_name)
+            if not security_group:
+                raise notfound(security_group_id=group_name)
+        elif group_id:
+            security_group = db.security_group_get(context, group_id)
+            if not security_group:
+                raise notfound(security_group_id=group_id)
         LOG.audit(_("Delete security group %s"), group_name, context=context)
-        security_group = db.security_group_get_by_name(context,
-                                                       context.project_id,
-                                                       group_name)
         db.security_group_destroy(context, security_group.id)
         return True
 

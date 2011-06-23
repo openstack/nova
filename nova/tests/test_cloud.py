@@ -165,6 +165,27 @@ class CloudTestCase(test.TestCase):
                 sec['name'])
         db.security_group_destroy(self.context, sec['id'])
 
+    def test_describe_security_groups_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        result = self.cloud.describe_security_groups(self.context,
+                      group_id=[sec['id']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                sec['name'])
+        default = db.security_group_get_by_name(self.context,
+                                                self.context.project_id,
+                                                'default')
+        result = self.cloud.describe_security_groups(self.context,
+                      group_id=[default['id']])
+        self.assertEqual(len(result['securityGroupInfo']), 1)
+        self.assertEqual(
+                result['securityGroupInfo'][0]['groupName'],
+                'default')
+        db.security_group_destroy(self.context, sec['id'])
+
     def test_create_delete_security_group(self):
         descript = 'test description'
         create = self.cloud.create_security_group
@@ -174,6 +195,56 @@ class CloudTestCase(test.TestCase):
         delete = self.cloud.delete_security_group
         self.assertTrue(delete(self.context, 'testgrp'))
 
+    def test_delete_security_group_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        delete = self.cloud.delete_security_group
+        notfound = exception.SecurityGroupNotFound
+        self.assertRaises(notfound, delete, self.context, 'badname')
+        self.assertRaises(notfound, delete, self.context, group_id=999)
+        self.assertRaises(exception.ApiError, delete, self.context)
+        self.assertTrue(delete(self.context, group_id=sec['id']))
+
+    def test_authorize_revoke_security_group_ingress(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        authz = self.cloud.authorize_security_group_ingress
+        self.assertRaises(exception.ApiError, authz, self.context, sec['name'])
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        # ApiError: Not enough parameters, need group_name or group_id
+        self.assertRaises(exception.ApiError, authz, self.context, **kwargs)
+        authz(self.context, group_name=sec['name'], **kwargs)
+        # ApiError: This rule already exists in group test
+        self.assertRaises(exception.ApiError, authz, self.context,
+                          group_name=sec['name'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        # ApiError: Not enough parameters, need group_name or group_id
+        self.assertRaises(exception.ApiError, revoke, self.context, **kwargs)
+        self.assertTrue(revoke(self.context, group_name=sec['name'], **kwargs))
+
+    def test_authorize_revoke_security_group_ingress_by_id(self):
+        sec = db.security_group_create(self.context,
+                                       {'project_id': self.context.project_id,
+                                        'name': 'test'})
+        authz = self.cloud.authorize_security_group_ingress
+        kwargs = {'to_port': '999', 'from_port': '999', 'ip_protocol': 'tcp'}
+        self.assertRaises(exception.ApiError, authz, self.context, sec['name'])
+        authz(self.context, group_id=sec['id'], **kwargs)
+        # ApiError: This rule already exists in group test
+        self.assertRaises(exception.ApiError, authz, self.context,
+                          group_id=sec['id'], **kwargs)
+        revoke = self.cloud.revoke_security_group_ingress
+        self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
+
+    def test_describe_volumes(self):
+        """Makes sure describe_volumes works and filters results."""
+        vol1 = db.volume_create(self.context, {})
+        vol2 = db.volume_create(self.context, {})
+        result = self.cloud.describe_volumes(self.context)
+        self.assertEqual(len(result['volumeSet']), 2)
+        volume_id = ec2utils.id_to_ec2_id(vol2['id'], 'vol-%08x')
     def test_describe_volumes(self):
         """Makes sure describe_volumes works and filters results."""
         vol1 = db.volume_create(self.context, {})
