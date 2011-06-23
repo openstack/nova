@@ -87,4 +87,3 @@ class AdminApiTestCase(test.TestCase):
         result = self.api.block_external_addresses(self.context, '1.1.1.1/32')
         self.assertEqual('OK', result['status'])
         self.assertEqual('Added 3 rules', result['message'])
-
