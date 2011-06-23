@@ -32,6 +32,7 @@ from nova.api.openstack import faults
 from nova.api.openstack import backup_schedules
 from nova.api.openstack import consoles
 from nova.api.openstack import flavors
+from nova.api.openstack import flavor_extra_specs
 from nova.api.openstack import images
 from nova.api.openstack import image_metadata
 from nova.api.openstack import ips
@@ -178,3 +179,8 @@ class APIRouterV11(APIRouter):
                         controller=server_metadata.create_resource(),
                         parent_resource=dict(member_name='server',
                         collection_name='servers'))
+        
+        mapper.resource("flavor_extra_specs", "extra",
+                        controller=flavor_extra_specs.create_resource(),
+                        parent_resource=dict(member_name='flavor',
+                        collection_name='flavors'))
