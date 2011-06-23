@@ -603,17 +603,45 @@ class API(base.Base):
         """
         return self.get(context, instance_id)
 
-    def get_all_across_zones(self, context, reservation_id):
-        """Get all instances with this reservation_id, across
-        all available Zones (if any).
-        """
-        context = context.elevated()
-        instances = self.db.instance_get_all_by_reservation(
-                                    context, reservation_id)
+    def get_all(self, context, project_id=None, reservation_id=None,
+                fixed_ip=None, recurse_zones=False):
+        """Get all instances filtered by one of the given parameters.
 
-        children = scheduler_api.call_zone_method(context, "list",
+        If there is no filter and the context is an admin, it will retreive
+        all instances in the system.
+        """
+        admin_context = context.elevated()
+
+        if reservation_id is not None:
+            recurse_zones = True
+            instances = self.db.instance_get_all_by_reservation(
+                                    context, reservation_id)
+        elif fixed_ip is not None:
+            instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+        elif project_id or not context.is_admin:
+            if not context.project:
+                instances = self.db.instance_get_all_by_user(
+                    context, context.user_id)
+            else:
+                if project_id is None:
+                    project_id = context.project_id
+                instances = self.db.instance_get_all_by_project(
+                    context, project_id)
+        else:
+            instances = self.db.instance_get_all(context)
+
+        if not isinstance(instances, list):
+            instances = [instances]
+
+        if not recurse_zones:
+            return instances
+
+        children = scheduler_api.call_zone_method(admin_context, "list",
                                 novaclient_collection_name="servers",
-                                reservation_id=reservation_id)
+                                reservation_id=reservation_id,
+                                project_id=project_id,
+                                fixed_ip=fixed_ip
+                                recurse_zones=True)
 
         for zone, servers in children:
             for server in servers:
@@ -621,32 +649,6 @@ class API(base.Base):
                 server._info['_is_precooked'] = True
                 instances.append(server._info)
         return instances
-
-    def get_all(self, context, project_id=None, reservation_id=None,
-                fixed_ip=None):
-        """Get all instances filtered by one of the given parameters.
-
-        If there is no filter and the context is an admin, it will retreive
-        all instances in the system.
-        """
-        if reservation_id is not None:
-            return self.get_all_across_zones(context, reservation_id)
-
-        if fixed_ip is not None:
-            return self.db.fixed_ip_get_instance(context, fixed_ip)
-
-        if project_id or not context.is_admin:
-            if not context.project:
-                return self.db.instance_get_all_by_user(
-                    context, context.user_id)
-
-            if project_id is None:
-                project_id = context.project_id
-
-            return self.db.instance_get_all_by_project(
-                context, project_id)
-
-        return self.db.instance_get_all(context)
 
     def _cast_compute_message(self, method, context, instance_id, host=None,
                               params=None):

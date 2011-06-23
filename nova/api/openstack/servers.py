@@ -76,10 +76,19 @@ class Controller(object):
 
         builder - the response model builder
         """
-        reservation_id = req.str_GET.get('reservation_id')
+        query_str = req.str_GET()
+        reservation_id = query_str.get('reservation_id')
+        project_id = query_str.get('project_id')
+        fixed_ip = query_str.get('fixed_ip')
+        recurse_zones = query_str.get('recurse_zones')
+        if recurse_zones is not None:
+            recurse_zones = True
         instance_list = self.compute_api.get_all(
                                             req.environ['nova.context'],
-                                            reservation_id=reservation_id)
+                                            reservation_id=reservation_id,
+                                            project_id=project_id,
+                                            fixed_ip=fixed_ip,
+                                            recurse_zones=recurse_zones)
         limited_list = self._limit_items(instance_list, req)
         builder = self._get_view_builder(req)
         servers = [builder.build(inst, is_detail)['server']
