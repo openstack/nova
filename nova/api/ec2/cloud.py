@@ -1323,8 +1323,6 @@ class CloudController(object):
     def create_image(self, context, instance_id, **kwargs):
         # NOTE(yamahata): name/description are ignored by register_image(),
         #                 do so here
-        #description = kwargs.get('name')
-        #description = kwargs.get('description')
         no_reboot = kwargs.get('no_reboot', False)
 
         ec2_instance_id = instance_id
@@ -1345,11 +1343,18 @@ class CloudController(object):
                 self.compute_api.stop(context, instance_id=instance_id)
 
             # wait instance for really stopped
+            start_time = time.time()
             while state_description != 'stopped':
                 time.sleep(1)
                 instance = self.compute_api.get(context, instance_id)
                 state_description = instance['state_description']
-                # NOTE(yamahata): timeout and error?
+                # NOTE(yamahata): timeout and error. 1 hour for now for safety.
+                #                 Is it too short/long?
+                #                 Or is there any better way?
+                timeout = 1 * 60 * 60 * 60
+                if time.time() > start_time + timeout:
+                    raise exception.ApiError(
+                        _('Couldn\'t stop instance with in %d sec') % timeout)
 
         src_image = self._get_image(context, instance['image_ref'])
         properties = src_image['properties']
