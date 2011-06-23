@@ -191,6 +191,13 @@ class IptablesTable(object):
                       {'chain': chain, 'rule': rule,
                        'top': top, 'wrap': wrap})
 
+    def empty_chain(self, chain, wrap=True):
+        """Remove all rules from a chain."""
+        chained_rules = [rule for rule in self.rules
+                              if rule.chain == chain and rule.wrap == wrap]
+        for rule in chained_rules:
+            self.rules.remove(rule)
+
 
 class IptablesManager(object):
     """Wrapper for iptables.

@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os.path
+
 import webob.exc
 
 from nova import compute
@@ -99,20 +101,26 @@ class Controller(object):
             raise webob.exc.HTTPBadRequest()
 
         try:
-            server_id = self._server_id_from_req_data(body)
+            server_id = self._server_id_from_req(req, body)
             image_name = body["image"]["name"]
         except KeyError:
             raise webob.exc.HTTPBadRequest()
 
-        image = self._compute_service.snapshot(context, server_id, image_name)
+        props = self._get_extra_properties(req, body)
+
+        image = self._compute_service.snapshot(context, server_id,
+                                               image_name, props)
         return dict(image=self.get_builder(req).build(image, detail=True))
 
     def get_builder(self, request):
         """Indicates that you must use a Controller subclass."""
         raise NotImplementedError
 
-    def _server_id_from_req_data(self, data):
+    def _server_id_from_req(self, req, data):
         raise NotImplementedError()
+
+    def _get_extra_properties(self, req, data):
+        return {}
 
 
 class ControllerV10(Controller):
@@ -149,8 +157,12 @@ class ControllerV10(Controller):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def _server_id_from_req_data(self, data):
-        return data['image']['serverId']
+    def _server_id_from_req(self, req, data):
+        try:
+            return data['image']['serverId']
+        except KeyError:
+            msg = _("Expected serverId attribute on server entity.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
 
 class ControllerV11(Controller):
@@ -189,8 +201,27 @@ class ControllerV11(Controller):
         builder = self.get_builder(req).build
         return dict(images=[builder(image, detail=True) for image in images])
 
-    def _server_id_from_req_data(self, data):
-        return data['image']['serverRef']
+    def _server_id_from_req(self, req, data):
+        try:
+            server_ref = data['image']['serverRef']
+        except KeyError:
+            msg = _("Expected serverRef attribute on server entity.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        head, tail = os.path.split(server_ref)
+
+        if head and head != os.path.join(req.application_url, 'servers'):
+            msg = _("serverRef must match request url")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        return tail
+
+    def _get_extra_properties(self, req, data):
+        server_ref = data['image']['serverRef']
+        if not server_ref.startswith('http'):
+            server_ref = os.path.join(req.application_url, 'servers',
+                                      server_ref)
+        return {'instance_ref': server_ref}
 
 
 def create_resource(version='1.0'):
