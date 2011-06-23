@@ -81,8 +81,7 @@ class Controller(object):
         project_id = query_str.get('project_id')
         fixed_ip = query_str.get('fixed_ip')
         recurse_zones = query_str.get('recurse_zones')
-        if recurse_zones is not None:
-            recurse_zones = True
+        recurse_zones = recurse_zones and True or False
         instance_list = self.compute_api.get_all(
                                             req.environ['nova.context'],
                                             reservation_id=reservation_id,

@@ -610,7 +610,6 @@ class API(base.Base):
         If there is no filter and the context is an admin, it will retreive
         all instances in the system.
         """
-        admin_context = context.elevated()
 
         if reservation_id is not None:
             recurse_zones = True
@@ -630,12 +629,15 @@ class API(base.Base):
         else:
             instances = self.db.instance_get_all(context)
 
-        if not isinstance(instances, list):
+        if instances is None:
+            instances = []
+        elif not isinstance(instances, list):
             instances = [instances]
 
         if not recurse_zones:
             return instances
 
+        admin_context = context.elevated()
         children = scheduler_api.call_zone_method(admin_context, "list",
                                 novaclient_collection_name="servers",
                                 reservation_id=reservation_id,
