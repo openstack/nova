@@ -305,8 +305,11 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
                     'instance_type': <InstanceType dict>}
     """
 
-    def filter_hosts(self, num, request_spec):
+    def filter_hosts(self, topic, request_spec, hosts):
         """Filter the full host list (from the ZoneManager)"""
+
+        if hosts:
+            return hosts
         filter_name = request_spec.get('filter', None)
         host_filter = choose_host_filter(filter_name)
 
@@ -317,8 +320,9 @@ class HostFilterScheduler(zone_aware_scheduler.ZoneAwareScheduler):
         name, query = host_filter.instance_type_to_filter(instance_type)
         return host_filter.filter_hosts(self.zone_manager, query)
 
-    def weigh_hosts(self, num, request_spec, hosts):
+    def weigh_hosts(self, topic, request_spec, hosts):
         """Derived classes must override this method and return
         a lists of hosts in [{weight, hostname}] format.
         """
-        return [dict(weight=1, hostname=host) for host, caps in hosts]
+        return [dict(weight=1, hostname=hostname, capabilities=caps)
+                for hostname, caps in hosts]
