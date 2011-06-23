@@ -35,7 +35,7 @@ class API(base.Base):
     """API for interacting with the network manager."""
 
     def get(self, context, id):
-        rv = self.db.floating_ip_get(context)
+        rv = self.db.floating_ip_get(context, id)
         return dict(rv.iteritems())
 
     def list(self, context):

@@ -22,13 +22,25 @@ from nova import rpc
 from nova.api.openstack import faults
 from nova.api.openstack import extensions
 
-def _translate_floating_ip_detail_view(context, floating_ip):
-    #TODO(enugaev) implement view
-    return None
 
-def _translate_floating_ips_view(context, floating_ips):
-    #TODO(adiantum) implement view
-    return []
+def _translate_floating_ip_view(floating_ip):
+    result = {'id': floating_ip['id'],
+              'ip': floating_ip['address']}
+    if 'fixed_ip' in floating_ip:
+        result['fixed_ip'] = floating_ip['fixed_ip']['address']
+    else:
+        result['fixed_ip'] = None
+    if 'instance' in floating_ip:
+        result['instance_id'] = floating_ip['instance']['id']
+    else:
+        result['instance_id'] = None
+    return {'floating_ip': result}
+
+
+def _translate_floating_ips_view(floating_ips):
+    return {'floating_ips': [_translate_floating_ip_view(floating_ip)
+                             for floating_ip in floating_ips]}
+
 
 class FloatingIPController(object):
     """The Volumes API controller for the OpenStack API."""
@@ -48,7 +60,7 @@ class FloatingIPController(object):
         super(FloatingIPController, self).__init__()
 
     def show(self, req, id):
-        """Return data about the given volume."""
+        """Return data about the given floating ip."""
         context = req.environ['nova.context']
 
         try:
@@ -56,16 +68,14 @@ class FloatingIPController(object):
         except exception.NotFound:
             return faults.Fault(exc.HTTPNotFound())
 
-        return {'floating_ips': _translate_floating_ip_detail_view(context,
-                                                             floating_ip)}
+        return _translate_floating_ip_view(floating_ip)
 
     def index(self, req):
         context = req.environ['nova.context']
 
         floating_ips = self.network_api.list(context)
 
-        return {'floating_ips' : _translate_floating_ips_view(context,
-                                                              floating_ips)}
+        return _translate_floating_ips_view(floating_ips)
 
     def create(self, req, body):
         context = req.environ['nova.context']
@@ -80,17 +90,13 @@ class FloatingIPController(object):
 
         return {'allocated': ip}
 
-    def delete(self,req, id):
+    def delete(self, req, id):
         context = req.environ['nova.context']
-
-        if id.isdigit():
-            ip = self.network_api.get(id)
-        else:
-            ip = id
-
+        
+        ip = self._get_ip_by_id(context, id)
         self.network_api.release_floating_ip(context, address=ip)
 
-        return {'released': ip }
+        return {'released': ip}
 
     def associate(self, req, id, body):
         context = req.environ['nova.context']
@@ -101,6 +107,14 @@ class FloatingIPController(object):
         context = req.environ['nova.context']
 
         return {'disassociate': None}
+
+    def _get_ip_by_id(self, context, value):
+        """Checks that value is id and then returns its address.
+        If value is ip then return value."""
+        if value.isdigit():
+            return self.network_api.get(context, value)['address']
+        return value
+
 
 class Floating_ips(extensions.ExtensionDescriptor):
     def get_name(self):
@@ -124,9 +138,8 @@ class Floating_ips(extensions.ExtensionDescriptor):
         res = extensions.ResourceExtension('floating_ips',
                                         FloatingIPController(),
                                         member_actions={
-                                            'associate' : 'POST',
-                                            'disassociate' : 'POST'})
+                                            'associate': 'POST',
+                                            'disassociate': 'POST'})
         resources.append(res)
 
         return resources
-
