@@ -620,7 +620,12 @@ class API(base.Base):
             instances = self.db.instance_get_all_by_reservation(
                                     context, reservation_id)
         elif fixed_ip is not None:
-            instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+            try:
+                instances = self.db.fixed_ip_get_instance(context, fixed_ip)
+            except exception.FloatingIpNotFound, e:
+                if not recurse_zones:
+                    raise
+                instances = None
         elif project_id or not context.is_admin:
             if not context.project:
                 instances = self.db.instance_get_all_by_user(
