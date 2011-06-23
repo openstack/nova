@@ -585,7 +585,10 @@ class FixedIp(BASE, NovaBase):
                             primaryjoin='and_('
                                 'FixedIp.instance_id == Instance.id,'
                                 'FixedIp.deleted == False)')
+    # associated means that a fixed_ip has its instance_id column set
+    # allocated means that a fixed_ip has a its virtual_interface_id column set
     allocated = Column(Boolean, default=False)
+    # leased means dhcp bridge has leased the ip
     leased = Column(Boolean, default=False)
     reserved = Column(Boolean, default=False)
 

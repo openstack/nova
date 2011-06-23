@@ -379,12 +379,12 @@ class NetworkManager(manager.SchedulerDependentManager):
                   self.db.fixed_ip_get_by_instance(context, instance_id)
         LOG.debug(_("network deallocation for instance |%s|"), instance_id,
                                                                context=context)
-        # deallocate mac addresses
-        self.db.virtual_interface_delete_by_instance(context, instance_id)
-
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
             self.deallocate_fixed_ip(context, fixed_ip['address'], **kwargs)
+
+        # deallocate vifs (mac addresses)
+        self.db.virtual_interface_delete_by_instance(context, instance_id)
 
     def get_instance_nw_info(self, context, instance_id, instance_type_id):
         """Creates network info list for instance.
@@ -496,41 +496,37 @@ class NetworkManager(manager.SchedulerDependentManager):
 
     def deallocate_fixed_ip(self, context, address, **kwargs):
         """Returns a fixed ip to the pool."""
-        self.db.fixed_ip_update(context, address, {'allocated': False})
+        self.db.fixed_ip_update(context, address,
+                                {'allocated': False,
+                                 'virtual_interface_id': None})
 
     def lease_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_('Leasing IP %s'), address, context=context)
+        LOG.debug(_('Leased IP |%s| to mac |%s|'), address, mac,
+                                                   context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         instance = fixed_ip['instance']
         if not instance:
             raise exception.Error(_('IP %s leased that is not associated') %
                                   address)
-        mac_address = fixed_ip['virtual_interface']['address']
-        if mac_address != mac:
-            raise exception.Error(_('IP %(address)s leased to bad'
-                    ' mac %(mac_address)s vs %(mac)s') % locals())
         now = utils.utcnow()
         self.db.fixed_ip_update(context,
                                 fixed_ip['address'],
                                 {'leased': True,
                                  'updated_at': now})
         if not fixed_ip['allocated']:
-            LOG.warn(_('IP %s leased that was already deallocated'), address,
+            LOG.warn(_('IP |%s| leased that isn\'t allocated'), address,
                      context=context)
 
     def release_fixed_ip(self, context, mac, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_('Releasing IP %s'), address, context=context)
+        LOG.debug(_('Released IP |%s| from mac |%s|'), address, mac,
+                                                       context=context)
         fixed_ip = self.db.fixed_ip_get_by_address(context, address)
         instance = fixed_ip['instance']
         if not instance:
             raise exception.Error(_('IP %s released that is not associated') %
                                   address)
-        mac_address = fixed_ip['virtual_interface']['address']
-        if mac_address != mac:
-            raise exception.Error(_('IP %(address)s released from'
-                    ' bad mac %(mac_address)s vs %(mac)s') % locals())
         if not fixed_ip['leased']:
             LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)

@@ -675,7 +675,6 @@ def fixed_ip_disassociate(context, address):
                                                address,
                                                session=session)
         fixed_ip_ref.instance = None
-        fixed_ip_ref.virtual_interface = None
         fixed_ip_ref.save(session=session)
 
 
@@ -691,7 +690,6 @@ def fixed_ip_disassociate_all_by_timeout(_context, host, time):
                      filter(models.FixedIp.instance_id != None).\
                      filter_by(allocated=0).\
                      update({'instance_id': None,
-                             'virtual_interface_id': None,
                              'leased': 0,
                              'updated_at': utils.utcnow()},
                              synchronize_session='fetch')
@@ -953,9 +951,6 @@ def virtual_interface_delete(context, vif_id):
     session = get_session()
     vif_ref = virtual_interface_get(context, vif_id, session)
     with session.begin():
-        # disassociate any fixed_ips from this interface
-        for fixed_ip in vif_ref['fixed_ips']:
-            fixed_ip.virtual_interface = None
         session.delete(vif_ref)
 
 
