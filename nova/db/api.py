@@ -414,6 +414,16 @@ def instance_destroy(context, instance_id):
     return IMPL.instance_destroy(context, instance_id)
 
 
+def instance_stop(context, instance_id):
+    """Stop the instance or raise if it does not exist."""
+    return IMPL.instance_stop(context, instance_id)
+
+
+def instance_get_by_uuid(context, uuid):
+    """Get an instance or raise if it does not exist."""
+    return IMPL.instance_get_by_uuid(context, uuid)
+
+
 def instance_get(context, instance_id):
     """Get an instance or raise if it does not exist."""
     return IMPL.instance_get(context, instance_id)
@@ -920,6 +930,36 @@ def snapshot_update(context, snapshot_id, values):
 ####################
 
 
+def block_device_mapping_create(context, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_create(context, values)
+
+
+def block_device_mapping_update(context, bdm_id, values):
+    """Create an entry of block device mapping"""
+    return IMPL.block_device_mapping_update(context, bdm_id, values)
+
+
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    """Get all block device mapping belonging to a instance"""
+    return IMPL.block_device_mapping_get_all_by_instance(context, instance_id)
+
+
+def block_device_mapping_destroy(context, bdm_id):
+    """Destroy the block device mapping."""
+    return IMPL.block_device_mapping_destroy(context, bdm_id)
+
+
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    """Destroy the block device mapping or raise if it does not exist."""
+    return IMPL.block_device_mapping_destroy_by_instance_and_volume(
+        context, instance_id, volume_id)
+
+
+####################
+
+
 def security_group_get_all(context):
     """Get all security groups."""
     return IMPL.security_group_get_all(context)
@@ -1247,6 +1287,36 @@ def instance_metadata_delete(context, instance_id, key):
 def instance_metadata_update_or_create(context, instance_id, metadata):
     """Create or update instance metadata."""
     IMPL.instance_metadata_update_or_create(context, instance_id, metadata)
+
+
+####################
+
+
+def agent_build_get_all(context):
+    """Get all agent builds."""
+    return IMPL.agent_build_get_all(context)
+
+
+def agent_build_destroy(context, agent_update_id):
+    """Destroy agent build entry."""
+    IMPL.agent_build_destroy(context, agent_update_id)
+
+
+def agent_build_update(context, agent_build_id, values):
+    """Update agent build entry."""
+    IMPL.agent_build_update(context, agent_build_id, values)
+
+
+def agent_build_create(context, values):
+    """Create a new agent build entry."""
+    return IMPL.agent_build_create(context, values)
+
+
+def agent_build_get_by_triple(context, hypervisor, os, architecture):
+    """Get agent build by hypervisor/OS/architecture triple."""
+    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
+            architecture)
+
 
 ####################
 

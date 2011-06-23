@@ -114,8 +114,7 @@ class APIRouter(base_wsgi.Router):
                         collection={'detail': 'GET',
                                     'info': 'GET',
                                     'select': 'POST',
-                                    'boot': 'POST'
-                                   })
+                                    'boot': 'POST'})
 
         mapper.resource("console", "consoles",
                     controller=consoles.create_resource(),
