@@ -18,7 +18,7 @@
 """
 Implementation of SQLAlchemy backend.
 """
-
+import traceback
 import warnings
 
 from nova import db
@@ -797,6 +797,8 @@ def instance_create(context, values):
     values['metadata'] = _metadata_refs(values.get('metadata'))
 
     instance_ref = models.Instance()
+    instance_ref['uuid'] = str(utils.gen_uuid())
+
     instance_ref.update(values)
 
     session = get_session()
@@ -840,37 +842,65 @@ def instance_destroy(context, instance_id):
 
 
 @require_context
-def instance_get(context, instance_id, session=None):
-    if not session:
-        session = get_session()
-    result = None
+def instance_stop(context, instance_id):
+    session = get_session()
+    with session.begin():
+        from nova.compute import power_state
+        session.query(models.Instance).\
+                filter_by(id=instance_id).\
+                update({'host': None,
+                        'state': power_state.SHUTOFF,
+                        'state_description': 'stopped',
+                        'updated_at': literal_column('updated_at')})
+        session.query(models.SecurityGroupInstanceAssociation).\
+                filter_by(instance_id=instance_id).\
+                update({'updated_at': literal_column('updated_at')})
+        session.query(models.InstanceMetadata).\
+                filter_by(instance_id=instance_id).\
+                update({'updated_at': literal_column('updated_at')})
 
-    if is_admin_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('security_groups.rules')).\
-                         options(joinedload('volumes')).\
-                         options(joinedload_all('fixed_ip.network')).\
-                         options(joinedload('metadata')).\
-                         options(joinedload('instance_type')).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=can_read_deleted(context)).\
-                         first()
-    elif is_user_context(context):
-        result = session.query(models.Instance).\
-                         options(joinedload_all('fixed_ip.floating_ips')).\
-                         options(joinedload_all('security_groups.rules')).\
-                         options(joinedload('volumes')).\
-                         options(joinedload('metadata')).\
-                         options(joinedload('instance_type')).\
-                         filter_by(project_id=context.project_id).\
-                         filter_by(id=instance_id).\
-                         filter_by(deleted=False).\
-                         first()
+
+@require_context
+def instance_get_by_uuid(context, uuid, session=None):
+    partial = _build_instance_get(context, session=session)
+    result = partial.filter_by(uuid=uuid)
+    result = result.first()
+    if not result:
+        # FIXME(sirp): it would be nice if InstanceNotFound would accept a
+        # uuid parameter as well
+        raise exception.InstanceNotFound(instance_id=uuid)
+    return result
+
+
+@require_context
+def instance_get(context, instance_id, session=None):
+    partial = _build_instance_get(context, session=session)
+    result = partial.filter_by(id=instance_id)
+    result = result.first()
     if not result:
         raise exception.InstanceNotFound(instance_id=instance_id)
-
     return result
+
+
+@require_context
+def _build_instance_get(context, session=None):
+    if not session:
+        session = get_session()
+
+    partial = session.query(models.Instance).\
+                     options(joinedload_all('fixed_ip.floating_ips')).\
+                     options(joinedload_all('security_groups.rules')).\
+                     options(joinedload('volumes')).\
+                     options(joinedload_all('fixed_ip.network')).\
+                     options(joinedload('metadata')).\
+                     options(joinedload('instance_type'))
+
+    if is_admin_context(context):
+        partial = partial.filter_by(deleted=can_read_deleted(context))
+    elif is_user_context(context):
+        partial = partial.filter_by(project_id=context.project_id).\
+                        filter_by(deleted=False)
+    return partial
 
 
 @require_admin_context
@@ -907,6 +937,7 @@ def instance_get_all_by_host(context, host):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(host=host).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -922,6 +953,7 @@ def instance_get_all_by_project(context, project_id):
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
                    options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(deleted=can_read_deleted(context)).\
@@ -937,6 +969,7 @@ def instance_get_all_by_reservation(context, reservation_id):
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload('metadata')).\
                        options(joinedload('instance_type')).\
                        filter_by(reservation_id=reservation_id).\
                        filter_by(deleted=can_read_deleted(context)).\
@@ -946,6 +979,7 @@ def instance_get_all_by_reservation(context, reservation_id):
                        options(joinedload_all('fixed_ip.floating_ips')).\
                        options(joinedload('security_groups')).\
                        options(joinedload_all('fixed_ip.network')).\
+                       options(joinedload('metadata')).\
                        options(joinedload('instance_type')).\
                        filter_by(project_id=context.project_id).\
                        filter_by(reservation_id=reservation_id).\
@@ -959,6 +993,8 @@ def instance_get_project_vpn(context, project_id):
     return session.query(models.Instance).\
                    options(joinedload_all('fixed_ip.floating_ips')).\
                    options(joinedload('security_groups')).\
+                   options(joinedload_all('fixed_ip.network')).\
+                   options(joinedload('metadata')).\
                    options(joinedload('instance_type')).\
                    filter_by(project_id=project_id).\
                    filter_by(image_ref=str(FLAGS.vpn_image_id)).\
@@ -1877,6 +1913,66 @@ def snapshot_update(context, snapshot_id, values):
 
 
 @require_context
+def block_device_mapping_create(context, values):
+    bdm_ref = models.BlockDeviceMapping()
+    bdm_ref.update(values)
+
+    session = get_session()
+    with session.begin():
+        bdm_ref.save(session=session)
+
+
+@require_context
+def block_device_mapping_update(context, bdm_id, values):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+                filter_by(id=bdm_id).\
+                filter_by(deleted=False).\
+                update(values)
+
+
+@require_context
+def block_device_mapping_get_all_by_instance(context, instance_id):
+    session = get_session()
+    result = session.query(models.BlockDeviceMapping).\
+             filter_by(instance_id=instance_id).\
+             filter_by(deleted=False).\
+             all()
+    if not result:
+        return []
+    return result
+
+
+@require_context
+def block_device_mapping_destroy(context, bdm_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+                filter_by(id=bdm_id).\
+                update({'deleted': True,
+                        'deleted_at': utils.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_context
+def block_device_mapping_destroy_by_instance_and_volume(context, instance_id,
+                                                        volume_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.BlockDeviceMapping).\
+        filter_by(instance_id=instance_id).\
+        filter_by(volume_id=volume_id).\
+        filter_by(deleted=False).\
+        update({'deleted': True,
+                'deleted_at': utils.utcnow(),
+                'updated_at': literal_column('updated_at')})
+
+
+###################
+
+
+@require_context
 def security_group_get_all(context):
     session = get_session()
     return session.query(models.SecurityGroup).\
@@ -2628,7 +2724,17 @@ def zone_get_all(context):
 
 ####################
 
+
+def require_instance_exists(func):
+    def new_func(context, instance_id, *args, **kwargs):
+        db.api.instance_get(context, instance_id)
+        return func(context, instance_id, *args, **kwargs)
+    new_func.__name__ = func.__name__
+    return new_func
+
+
 @require_context
+@require_instance_exists
 def instance_metadata_get(context, instance_id):
     session = get_session()
 
@@ -2644,6 +2750,7 @@ def instance_metadata_get(context, instance_id):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_delete(context, instance_id, key):
     session = get_session()
     session.query(models.InstanceMetadata).\
@@ -2656,6 +2763,7 @@ def instance_metadata_delete(context, instance_id, key):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_delete_all(context, instance_id):
     session = get_session()
     session.query(models.InstanceMetadata).\
@@ -2667,6 +2775,7 @@ def instance_metadata_delete_all(context, instance_id):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_get_item(context, instance_id, key):
     session = get_session()
 
@@ -2683,6 +2792,7 @@ def instance_metadata_get_item(context, instance_id, key):
 
 
 @require_context
+@require_instance_exists
 def instance_metadata_update_or_create(context, instance_id, metadata):
     session = get_session()
 
@@ -2701,3 +2811,54 @@ def instance_metadata_update_or_create(context, instance_id, metadata):
         meta_ref.save(session=session)
 
     return metadata
+
+
+@require_admin_context
+def agent_build_create(context, values):
+    agent_build_ref = models.AgentBuild()
+    agent_build_ref.update(values)
+    agent_build_ref.save()
+    return agent_build_ref
+
+
+@require_admin_context
+def agent_build_get_by_triple(context, hypervisor, os, architecture,
+                              session=None):
+    if not session:
+        session = get_session()
+    return session.query(models.AgentBuild).\
+                   filter_by(hypervisor=hypervisor).\
+                   filter_by(os=os).\
+                   filter_by(architecture=architecture).\
+                   filter_by(deleted=False).\
+                   first()
+
+
+@require_admin_context
+def agent_build_get_all(context):
+    session = get_session()
+    return session.query(models.AgentBuild).\
+                   filter_by(deleted=False).\
+                   all()
+
+
+@require_admin_context
+def agent_build_destroy(context, agent_build_id):
+    session = get_session()
+    with session.begin():
+        session.query(models.AgentBuild).\
+                filter_by(id=agent_build_id).\
+                update({'deleted': 1,
+                        'deleted_at': datetime.datetime.utcnow(),
+                        'updated_at': literal_column('updated_at')})
+
+
+@require_admin_context
+def agent_build_update(context, agent_build_id, values):
+    session = get_session()
+    with session.begin():
+        agent_build_ref = session.query(models.AgentBuild).\
+                   filter_by(id=agent_build_id). \
+                   first()
+        agent_build_ref.update(values)
+        agent_build_ref.save(session=session)

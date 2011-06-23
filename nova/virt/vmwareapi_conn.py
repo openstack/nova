@@ -124,7 +124,7 @@ class VMWareESXConnection(driver.ComputeDriver):
         """List VM instances."""
         return self._vmops.list_instances()
 
-    def spawn(self, instance):
+    def spawn(self, instance, network_info=None, block_device_mapping=None):
         """Create VM instance."""
         self._vmops.spawn(instance)
 

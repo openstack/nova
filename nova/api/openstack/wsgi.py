@@ -2,7 +2,9 @@
 import json
 import webob
 from xml.dom import minidom
+from xml.parsers import expat
 
+import faults
 from nova import exception
 from nova import log as logging
 from nova import utils
@@ -71,7 +73,11 @@ class TextDeserializer(object):
 class JSONDeserializer(TextDeserializer):
 
     def default(self, datastring):
-        return utils.loads(datastring)
+        try:
+            return utils.loads(datastring)
+        except ValueError:
+            raise exception.MalformedRequestBody(
+                               reason=_("malformed JSON in request body"))
 
 
 class XMLDeserializer(TextDeserializer):
@@ -86,8 +92,13 @@ class XMLDeserializer(TextDeserializer):
 
     def default(self, datastring):
         plurals = set(self.metadata.get('plurals', {}))
-        node = minidom.parseString(datastring).childNodes[0]
-        return {node.nodeName: self._from_xml_node(node, plurals)}
+
+        try:
+            node = minidom.parseString(datastring).childNodes[0]
+            return {node.nodeName: self._from_xml_node(node, plurals)}
+        except expat.ExpatError:
+            raise exception.MalformedRequestBody(
+                                    reason=_("malformed XML in request body"))
 
     def _from_xml_node(self, node, listnames):
         """Convert a minidom node to a simple Python type.
@@ -221,11 +232,13 @@ class XMLDictSerializer(DictSerializer):
         doc = minidom.Document()
         node = self._to_xml_node(doc, self.metadata, root_key, data[root_key])
 
-        xmlns = node.getAttribute('xmlns')
-        if not xmlns and self.xmlns:
-            node.setAttribute('xmlns', self.xmlns)
+        self._add_xmlns(node)
 
         return node.toprettyxml(indent='    ', encoding='utf-8')
+
+    def _add_xmlns(self, node):
+        if self.xmlns is not None:
+            node.setAttribute('xmlns', self.xmlns)
 
     def _to_xml_node(self, doc, metadata, nodename, data):
         """Recursive method to convert data members to XML nodes."""
@@ -352,7 +365,11 @@ class Resource(wsgi.Application):
             action, action_args, accept = self.deserializer.deserialize(
                                                                       request)
         except exception.InvalidContentType:
-            return webob.exc.HTTPBadRequest(_("Unsupported Content-Type"))
+            msg = _("Unsupported Content-Type")
+            return webob.exc.HTTPBadRequest(explanation=msg)
+        except exception.MalformedRequestBody:
+            msg = _("Malformed request body")
+            return faults.Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
         action_result = self.dispatch(request, action, action_args)
 
@@ -365,9 +382,9 @@ class Resource(wsgi.Application):
         try:
             msg_dict = dict(url=request.url, status=response.status_int)
             msg = _("%(url)s returned with HTTP %(status)d") % msg_dict
-        except AttributeError:
-            msg_dict = dict(url=request.url)
-            msg = _("%(url)s returned a fault")
+        except AttributeError, e:
+            msg_dict = dict(url=request.url, e=e)
+            msg = _("%(url)s returned a fault: %(e)s" % msg_dict)
 
         LOG.debug(msg)
 
