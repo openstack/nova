@@ -76,7 +76,7 @@ class Controller(object):
 
         builder - the response model builder
         """
-        query_str = req.str_GET()
+        query_str = req.str_GET
         reservation_id = query_str.get('reservation_id')
         project_id = query_str.get('project_id')
         fixed_ip = query_str.get('fixed_ip')
