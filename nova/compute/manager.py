@@ -47,6 +47,7 @@ from operator import itemgetter
 
 from nova import exception
 from nova import flags
+import nova.image
 from nova import log as logging
 from nova import manager
 from nova import network
