@@ -104,10 +104,10 @@ class FloatingIPController(object):
             "id": ip['id'],
             "floating_ip": ip['address']}}
 
-    def associate(self, req, id_ip, body):
+    def associate(self, req, id, body):
         """ /floating_ips/{id}/associate  fixed ip in body """
         context = req.environ['nova.context']
-        floating_ip = self._get_ip_by_id(context, id_ip)
+        floating_ip = self._get_ip_by_id(context, id)
 
         fixed_ip = body['associate_address']['fixed_ip']
 
@@ -117,13 +117,17 @@ class FloatingIPController(object):
         except rpc.RemoteError:
             raise
 
-        return {'associated': [floating_ip, fixed_ip]}
+        return {'associated':
+                {
+                "floating_ip_id": id,
+                "floating_ip": floating_ip,
+                "fixed_ip": fixed_ip}}
 
-    def disassociate(self, req, id_ip, body):
+    def disassociate(self, req, id, body):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
 
-        floating_ip = self._get_ip_by_id(context, id_ip)
+        floating_ip = self._get_ip_by_id(context, id)
 
         try:
             self.network_api.disassociate_floating_ip(context, floating_ip)

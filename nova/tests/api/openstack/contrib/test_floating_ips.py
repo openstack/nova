@@ -28,7 +28,7 @@ from nova.api.openstack.contrib.floating_ips import FloatingIPController
 from nova.api.openstack.contrib.floating_ips import _translate_floating_ip_view
 
 def network_api_get(self, context, id):
-    return {'id': id, 'address': '10.10.10.10'}
+    return {'id': 1, 'address': '10.10.10.10'}
 
 
 def network_api_list(self, context):
@@ -47,7 +47,7 @@ def network_api_allocate(self, context):
 def network_api_release(self, context, address):
     pass
 
-def network_api_associate():
+def network_api_associate(self, context,floating_ip, fixed_ip):
     pass
 
 
@@ -96,12 +96,6 @@ class FloatingIpTest(test.TestCase):
         self.stubs.UnsetAll()
         self._delete_floating_ip()
         super(FloatingIpTest, self).tearDown()
-
-    def test_get_ip_by_id(self):
-        ip = self.controller._get_ip_by_id(self.context, '10.10.10.10')
-        self.assertEqual(ip, '10.10.10.10')
-        ip = self.controller._get_ip_by_id(self.context, '1')
-        self.assertEqual(ip, '10.10.10.10')
 
     def test_translate_floating_ip_view(self):
         floating_ip_address = self._create_floating_ip()
@@ -154,15 +148,28 @@ class FloatingIpTest(test.TestCase):
         req.method = 'DELETE'
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
-        ip = json.loads(res.body)['released']
+        actual = json.loads(res.body)['released']
         expected = {
             "id": 1,
             "floating_ip": '10.10.10.10'
         }
-        self.assertEqual(ip, expected)
+        self.assertEqual(actual, expected)
 
     def test_floating_ip_associate(self):
-        pass
+        body = dict(associate_address=dict(fixed_ip='1.2.3.4'))
+        req = webob.Request.blank('/v1.1/floating_ips/1/associate')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        actual = json.loads(res.body)['associated']
+        expected = {
+            "floating_ip_id": '1',
+            "floating_ip": "10.10.10.10",
+            "fixed_ip": "1.2.3.4"}
+        self.assertEqual(actual, expected)
 
     def test_floating_ip_disassociate(self):
         pass
