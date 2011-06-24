@@ -91,7 +91,7 @@ class FloatingIPController(object):
                 raise
 
         return {'allocated': {
-            "id" : ip['id'],
+            "id": ip['id'],
             "floating_ip": ip['address']}}
 
     def delete(self, req, id):
@@ -126,15 +126,17 @@ class FloatingIPController(object):
     def disassociate(self, req, id, body):
         """ POST /floating_ips/{id}/disassociate """
         context = req.environ['nova.context']
-
-        floating_ip = self._get_ip_by_id(context, id)
+        floating_ip = self.network_api.get(context, id)
+        address = floating_ip['address']
+        fixed_ip = floating_ip['fixed_ip']['address']
 
         try:
-            self.network_api.disassociate_floating_ip(context, floating_ip)
+            self.network_api.disassociate_floating_ip(context, address)
         except rpc.RemoteError:
             raise
 
-        return {'disassociated': floating_ip}
+        return {'disassociated': {'floating_ip': address,
+                                  'fixed_ip': fixed_ip}}
 
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address."""

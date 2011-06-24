@@ -609,6 +609,7 @@ def floating_ip_get_by_address(context, address, session=None):
 
     return result
 
+
 @require_context
 def floating_ip_get_by_ip(context, ip, session=None):
     if not session:
@@ -623,6 +624,7 @@ def floating_ip_get_by_ip(context, ip, session=None):
         raise exception.FloatingIpNotDefined(floating_ip=ip)
 
     return result
+
 
 @require_context
 def floating_ip_update(context, address, values):
