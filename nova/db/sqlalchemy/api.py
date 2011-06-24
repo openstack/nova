@@ -2510,10 +2510,7 @@ def instance_type_get_by_id(context, id):
     if not inst_type:
         raise exception.InstanceTypeNotFound(instance_type=id)
     else:
-        res = dict(inst_type)
-        for field in ['created_at', 'updated_at', 'deleted_at']:
-            res.pop(field, None)
-        return res
+        return dict(inst_type)
 
 
 @require_context
@@ -2526,10 +2523,7 @@ def instance_type_get_by_name(context, name):
     if not inst_type:
         raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
     else:
-        res = dict(inst_type)
-        for field in ['created_at', 'updated_at', 'deleted_at']:
-            res.pop(field, None)
-        return res
+        return dict(inst_type)
 
 
 @require_context
@@ -2542,10 +2536,7 @@ def instance_type_get_by_flavor_id(context, id):
     if not inst_type:
         raise exception.FlavorNotFound(flavor_id=id)
     else:
-        res = dict(inst_type)
-        for field in ['created_at', 'updated_at', 'deleted_at']:
-            res.pop(field, None)
-        return res
+        return dict(inst_type)
 
 
 @require_admin_context

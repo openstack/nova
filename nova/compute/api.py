@@ -291,6 +291,7 @@ class API(base.Base):
             'blob': zone_blob,
             'num_instances': num_instances,
         }
+        LOG.debug(request_spec)
 
         rpc.cast(context,
                  FLAGS.scheduler_topic,

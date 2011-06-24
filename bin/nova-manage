@@ -874,10 +874,10 @@ class InstanceTypeCommands(object):
         try:
             instance_types.create(name, memory, vcpus, local_gb,
                                   flavorid, swap, rxtx_quota, rxtx_cap)
-        except exception.InvalidInputException:
-            print "Must supply valid parameters to create instance_type"
-            print e
-            sys.exit(1)
+        #except exception.InvalidInputException:
+        #    print "Must supply valid parameters to create instance_type"
+        #    print e
+        #    sys.exit(1)
         except exception.ApiError, e:
             print "\n\n"
             print "\n%s" % e
