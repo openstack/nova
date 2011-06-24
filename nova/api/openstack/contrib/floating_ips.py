@@ -43,7 +43,7 @@ def _translate_floating_ips_view(floating_ips):
 
 
 class FloatingIPController(object):
-    """The Volumes API controller for the OpenStack API."""
+    """The Floating IPs API controller for the OpenStack API."""
 
     _serialization_metadata = {
         'application/xml': {
@@ -98,15 +98,32 @@ class FloatingIPController(object):
 
         return {'released': ip}
 
-    def associate(self, req, id, body):
+    def associate(self, req, id_ip, body):
+        """ /floating_ips/ip or id/associate  fixed ip in body """
+        context = req.environ['nova.context']
+        floating_ip = self._get_ip_by_id(context, id_ip)
+
+        fixed_ip = body['associate_address']['fixed_ip']
+
+        try:
+            self.network_api.associate_floating_ip(context, floating_ip, fixed_ip)
+        except rpc.RemoteError:
+            raise
+
+        return {'associated': [floating_ip, fixed_ip]}
+
+    def disassociate(self, req, id_ip, body):
+        """ POST /floating_ips/{ip | ip_id}/disassociate """
         context = req.environ['nova.context']
 
-        return {'associate': None}
+        floating_ip = self._get_ip_by_id(context, id_ip)
 
-    def disassociate(self, req, id, body):
-        context = req.environ['nova.context']
+        try:
+            self.network_api.disassociate_floating_ip(context, floating_ip)
+        except rpc.RemoteError:
+            raise
 
-        return {'disassociate': None}
+        return {'disassociated': floating_ip}
 
     def _get_ip_by_id(self, context, value):
         """Checks that value is id and then returns its address.
