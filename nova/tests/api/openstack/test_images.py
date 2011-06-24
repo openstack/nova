@@ -1008,7 +1008,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         # FIXME(sirp): teardown needed?
         FLAGS.allow_admin_api = True
 
-        # FIXME(sirp): should the fact that backups are admin_only be a FLAG 
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
         body = dict(image=dict(serverId='123', image_type='daily',
                                rotation=1))
         req = webob.Request.blank('/v1.0/images')
