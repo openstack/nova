@@ -23,25 +23,33 @@ from nova import test
 from nova import network
 from nova.tests.api.openstack import fakes
 
+
 from nova.api.openstack.contrib.floating_ips import FloatingIPController
-from nova.api.openstack.contrib.floating_ips import \
-    _translate_floating_ip_view
+from nova.api.openstack.contrib.floating_ips import _translate_floating_ip_view
 
 def network_api_get(self, context, id):
-    return {'id': 1,
-            'address': '10.10.10.10'}
+    return {'id': id, 'address': '10.10.10.10'}
 
-def network_api_list():
-    pass
+
+def network_api_list(self, context):
+    return [{'id': 1,
+             'address': '10.10.10.10',
+             'instance': {'id': 11},
+             'fixed_ip': {'address': '10.0.0.1'}},
+            {'id': 2,
+             'address': '10.10.10.11'}]
+
 
 def network_api_allocate(self, context):
     return '10.10.10.10'
+
 
 def network_api_release(self, context, address):
     pass
 
 def network_api_associate():
     pass
+
 
 def network_api_disassociate():
     pass
@@ -106,12 +114,20 @@ class FloatingIpTest(test.TestCase):
         self.assertEqual(view['floating_ip']['fixed_ip'], None)
         self.assertEqual(view['floating_ip']['instance_id'], None)
 
-    def test_translate_floating_ips_view(self):
-        pass
-
     def test_floating_ips_list(self):
-        pass
-
+        req = webob.Request.blank('/v1.1/floating_ips')
+        res = req.get_response(fakes.wsgi_app())
+        res_dict = json.loads(res.body)
+        response = {'floating_ips': [{'floating_ip': {'instance_id': 11,
+                                                      'ip': '10.10.10.10',
+                                                      'fixed_ip': '10.0.0.1',
+                                                      'id': 1}},
+                                     {'floating_ip': {'instance_id': None,
+                                                      'ip': '10.10.10.11',
+                                                      'fixed_ip': None,
+                                                      'id': 2}}]}
+        self.assertEqual(res_dict, response)
+        
     def test_floating_ip_show(self):
         req = webob.Request.blank('/v1.1/floating_ips/1')
         res = req.get_response(fakes.wsgi_app())
