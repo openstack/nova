@@ -15,16 +15,12 @@
 from nova import context
 from nova import db
 from nova import test
-<<<<<<< TREE
-from nova.api.openstack.contrib.floating_ips import FloatingIPController
-=======
 from nova import network
 from nova.tests.api.openstack import fakes
 
 import stubout
 import webob
 
->>>>>>> MERGE-SOURCE
 from nova.api.openstack.contrib.floating_ips import \
     _translate_floating_ip_view
 
