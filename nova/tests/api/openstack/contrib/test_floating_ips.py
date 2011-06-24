@@ -15,12 +15,16 @@
 from nova import context
 from nova import db
 from nova import test
+<<<<<<< TREE
+from nova.api.openstack.contrib.floating_ips import FloatingIPController
+=======
 from nova import network
 from nova.tests.api.openstack import fakes
 
 import stubout
 import webob
 
+>>>>>>> MERGE-SOURCE
 from nova.api.openstack.contrib.floating_ips import \
     _translate_floating_ip_view
 
@@ -44,18 +48,14 @@ def network_api_disassociate():
 
 
 class FloatingIpTest(test.TestCase):
-    floating_ip_address = "10.10.10.10"
-    fixed_ip_address = '100.100.100.100'
-
-    def _create_fixed_ip(self):
-        """Create a fixed ip object. Returns address as string"""
-        return db.fixed_ip_create(self.context,
-                                  {'address': self.fixed_ip_address})
+    address = "10.10.10.10"
 
     def _create_floating_ip(self):
-        """Create a floating ip object. Returns address as string"""
+        """Create a volume object."""
+        host = "fake_host"
         return db.floating_ip_create(self.context,
-                                     {'address': self.floating_ip_address})
+                                     {'address': self.address,
+                                      'host': host})
 
     def setUp(self):
         super(FloatingIpTest, self).setUp()
@@ -90,22 +90,27 @@ class FloatingIpTest(test.TestCase):
         view = _translate_floating_ip_view(floating_ip)
         self.assertTrue('floating_ip' in view)
         self.assertTrue(view['floating_ip']['id'])
-        self.assertEqual(view['floating_ip']['ip'], self.floating_ip_address)
+        self.assertEqual(view['floating_ip']['ip'], self.address)
         self.assertEqual(view['floating_ip']['fixed_ip'], None)
         self.assertEqual(view['floating_ip']['instance_id'], None)
 
+    def test_translate_floating_ips_view(self):
+        pass
 
-    def test_associate_by_address(self):
-        fixed_ip_address = self._create_fixed_ip()
-        floating_ip_address = self._create_floating_ip()
-        floating_ip = db.floating_ip_get_by_address(self.context, floating_ip_address)
+    def test_floating_ips_list(self):
+        pass
 
-        self.assertEqual(floating_ip['address'], self.floating_ip_address)
-        self.assertEqual(floating_ip['fixed_ip_id'], None)
-        body = {'associate_address': {'fixed_ip': self.fixed_ip_address}}
+    def test_floating_ip_show(self):
+        pass
 
-        req = webob.Request.blank('/v1.1/floating_ips//associate')
-        raise Exception(req.__dict__)
-        #self.controller.associate(req, self.floating_ip_address, body)
-        #self.assertEqual(floating_ip['fixed_ip'], self.fixed_ip_address)
+    def test_floating_ip_allocate(self):
+        pass
 
+    def test_floating_ip_release(self):
+        pass
+
+    def test_floating_ip_associate(self):
+        pass
+
+    def test_floating_ip_disassociate(self):
+        pass

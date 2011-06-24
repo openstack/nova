@@ -2,6 +2,7 @@
 
 # Copyright 2011 OpenStack LLC.
 # Copyright 2011 Grid Dynamics
+# Copyright 2011 Eldar Nugaev, Kirill Shileev, Ilya Alekseyev
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
