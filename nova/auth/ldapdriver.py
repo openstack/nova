@@ -101,6 +101,41 @@ def sanitize(fn):
     return _wrapped
 
 
+class LDAPWrapper(object):
+    def __init__(self, ldap, url, user, password):
+        self.ldap = ldap
+        self.url = url
+        self.user = user
+        self.password = password
+        self.conn = None
+
+    def __wrap_reconnect(f):
+        def inner(self, *args, **kwargs):
+            if self.conn is None:
+                self.connect()
+                return f(self.conn)(*args, **kwargs)
+            else:
+                try:
+                    return f(self.conn)(*args, **kwargs)
+                except self.ldap.SERVER_DOWN:
+                    self.connect()
+                    return f(self.conn)(*args, **kwargs)
+        return inner
+
+    def connect(self):
+        try:
+            self.conn = self.ldap.initialize(self.url)
+            self.conn.bind_s(self.user, self.password)
+        except self.ldap.SERVER_DOWN:
+            self.conn = None
+            raise
+
+    search_s = __wrap_reconnect(lambda conn: conn.search_s)
+    add_s = __wrap_reconnect(lambda conn: conn.add_s)
+    delete_s = __wrap_reconnect(lambda conn: conn.delete_s)
+    modify_s = __wrap_reconnect(lambda conn: conn.modify_s)
+
+
 class LdapDriver(object):
     """Ldap Auth driver
 
@@ -124,8 +159,8 @@ class LdapDriver(object):
             LdapDriver.project_objectclass = 'novaProject'
         self.__cache = None
         if LdapDriver.conn is None:
-            LdapDriver.conn = self.ldap.initialize(FLAGS.ldap_url)
-            LdapDriver.conn.simple_bind_s(FLAGS.ldap_user_dn,
+            LdapDriver.conn = LDAPWrapper(self.ldap, FLAGS.ldap_url,
+                                          FLAGS.ldap_user_dn,
                                           FLAGS.ldap_password)
         if LdapDriver.mc is None:
             LdapDriver.mc = memcache.Client(FLAGS.memcached_servers, debug=0)
