@@ -303,8 +303,8 @@ class ZoneAwareScheduler(driver.Scheduler):
         for host, services in host_list:
             if topic not in services:
                 continue
-            if filter_func(host, services['topic'], request_spec):
-                filtered_hosts.append((host, services['topic']))
+            if filter_func(host, services[topic], request_spec):
+                filtered_hosts.append((host, services[topic]))
         return filtered_hosts
 
     def weigh_hosts(self, topic, request_spec, hosts):
