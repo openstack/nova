@@ -120,6 +120,8 @@ class CreateInstanceHelper(object):
             min_count = int(min_count)
         if max_count:
             max_count = int(max_count)
+        if min_count > max_count:
+            min_count = max_count
 
         try:
             inst_type = \
@@ -143,7 +145,9 @@ class CreateInstanceHelper(object):
                                   injected_files=injected_files,
                                   admin_password=password,
                                   zone_blob=zone_blob,
-                                  reservation_id=reservation_id))
+                                  reservation_id=reservation_id,
+                                  min_count=min_count,
+                                  max_count=max_count))
         except quota.QuotaError as error:
             self._handle_quota_error(error)
         except exception.ImageNotFound as error:
