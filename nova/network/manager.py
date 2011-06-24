@@ -40,6 +40,8 @@ topologies.  All of the network commands are issued to a subclass of
                              is disassociated
 :fixed_ip_disassociate_timeout:  Seconds after which a deallocated ip
                                  is disassociated
+:create_unique_mac_address_attempts:  Number of times to attempt creating
+                                      a unique mac address
 
 """
 
@@ -101,6 +103,8 @@ flags.DEFINE_bool('update_dhcp_on_disassociate', False,
                   'Whether to update dhcp when fixed_ip is disassociated')
 flags.DEFINE_integer('fixed_ip_disassociate_timeout', 600,
                      'Seconds after which a deallocated ip is disassociated')
+flags.DEFINE_integer('create_unique_mac_address_atempts', 5,
+                     'Number of attempts to create unique mac address')
 
 flags.DEFINE_bool('use_ipv6', False,
                   'use the ipv6')
@@ -452,8 +456,8 @@ class NetworkManager(manager.SchedulerDependentManager):
             vif = {'address': self.generate_mac_address(),
                    'instance_id': instance_id,
                    'network_id': network['id']}
-            # try 5 times to create a vif record with a unique mac_address
-            for i in range(5):
+            # try FLAG times to create a vif record with a unique mac_address
+            for i in range(FLAGS.create_unique_mac_address_attempts):
                 try:
                     self.db.virtual_interface_create(context, vif)
                     break
