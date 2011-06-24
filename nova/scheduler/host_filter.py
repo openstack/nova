@@ -103,7 +103,7 @@ class InstanceTypeFilter(HostFilter):
         # Note(lorinh): For now, we are just checking exact matching on the
         # values. Later on, we  want to handle numerical
         # values so we can represent things like number of GPU cards
-        
+
         try:
             for key, value in instance_type['extra_specs'].iteritems():
                 if capabilities[key] != value:
@@ -128,7 +128,7 @@ class InstanceTypeFilter(HostFilter):
             if host_ram_mb >= spec_ram and \
                disk_bytes >= spec_disk and \
                self._satisfies_extra_specs(capabilities, instance_type):
-                    selected_hosts.append((host, capabilities))
+                selected_hosts.append((host, capabilities))
         return selected_hosts
 
 #host entries (currently) are like:

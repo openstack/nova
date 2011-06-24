@@ -77,14 +77,26 @@ class HostFilterTestCase(test.TestCase):
                 swap=500,
                 rxtx_quota=30000,
                 rxtx_cap=200,
-                extra_specs={'gpu': 'nvidia'})
+                extra_specs={'xpu_arch': 'fermi',
+                             'xpu_info': 'Tesla 2050'})
 
         self.zone_manager = FakeZoneManager()
         states = {}
         for x in xrange(10):
             states['host%02d' % (x + 1)] = {'compute': self._host_caps(x)}
         self.zone_manager.service_states = states
-        self.zone_manager.service_states['host07']['compute']['gpu'] = 'nvidia'
+
+        # Add some extra capabilities to some hosts
+        host07 = self.zone_manager.service_states['host07']['compute']
+        host07['xpu_arch'] = 'fermi'
+        host07['xpu_info'] = 'Tesla 2050'
+
+        host08 = self.zone_manager.service_states['host08']['compute']
+        host08['xpu_arch'] = 'radeon'
+
+        host09 = self.zone_manager.service_states['host09']['compute']
+        host09['xpu_arch'] = 'fermi'
+        host09['xpu_info'] = 'Tesla 2150'
 
     def tearDown(self):
         FLAGS.default_host_filter = self.old_flag
