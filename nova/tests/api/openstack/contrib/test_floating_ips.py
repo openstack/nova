@@ -20,6 +20,7 @@ from nova.tests.api.openstack import fakes
 
 import stubout
 import webob
+import json
 
 from nova.api.openstack.contrib.floating_ips import \
     _translate_floating_ip_view
@@ -30,8 +31,8 @@ def network_api_get():
 def network_api_list():
     pass
 
-def network_api_allocate():
-    pass
+def network_api_allocate(context):
+    return '10.10.10.10'
 
 def network_api_release():
     pass
@@ -47,7 +48,7 @@ class FloatingIpTest(test.TestCase):
     address = "10.10.10.10"
 
     def _create_floating_ip(self):
-        """Create a volume object."""
+        """Create a floating ip object."""
         host = "fake_host"
         return db.floating_ip_create(self.context,
                                      {'address': self.address,
@@ -100,7 +101,13 @@ class FloatingIpTest(test.TestCase):
         pass
 
     def test_floating_ip_allocate(self):
-        pass
+        req = webob.Request.blank('/v1.1/floating_ips')
+        req.method = 'POST'
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(res.status_int, 200)
+        ip = json.loads(res.body)['allocated']
+        expected = '10.10.10.10'
+        self.assertEqual(ip, expected)
 
     def test_floating_ip_release(self):
         pass
