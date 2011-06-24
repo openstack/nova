@@ -140,19 +140,20 @@ def stub_out_networking(stubs):
 
 
 def stub_out_compute_api_snapshot(stubs):
-    def snapshot(self, context, instance_id, name):
-        return dict(id='123', status='ACTIVE',
-                    properties=dict(instance_id='123'))
+    def snapshot(self, context, instance_id, name, extra_properties=None):
+        props = dict(instance_id=instance_id, instance_ref=instance_id)
+        props.update(extra_properties or {})
+        return dict(id='123', status='ACTIVE', name=name, properties=props)
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
 def stub_out_compute_api_backup(stubs):
-    def backup(self, context, instance_id, name, backup_type, rotation):
-        return dict(id='123', status='ACTIVE',
-                    properties=dict(instance_id='123',
-                                    name=name,
-                                    backup_type=backup_type,
-                                    rotation=rotation))
+    def backup(self, context, instance_id, name, backup_type, rotation,
+               extra_properties=None):
+        props = dict(instance_id=instance_id, instance_ref=instance_id,
+                     backup_type=backup_type, rotation=rotation)
+        props.update(extra_properties or {})
+        return dict(id='123', status='ACTIVE', name=name, properties=props)
     stubs.Set(nova.compute.API, 'backup', backup)
 
 

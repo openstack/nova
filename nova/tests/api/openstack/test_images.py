@@ -619,7 +619,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued snapshot',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -627,7 +626,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving snapshot',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -636,7 +634,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active snapshot',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE'
@@ -644,7 +641,6 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed snapshot',
-            'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -690,7 +686,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 124,
             'name': 'queued snapshot',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'QUEUED',
@@ -712,7 +708,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 125,
             'name': 'saving snapshot',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'SAVING',
@@ -735,7 +731,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 126,
             'name': 'active snapshot',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'ACTIVE',
@@ -757,7 +753,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         {
             'id': 127,
             'name': 'killed snapshot',
-            'serverRef': "http://localhost/v1.1/servers/42",
+            'serverRef': "http://localhost:8774/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
             'status': 'FAILED',
@@ -1088,6 +1084,30 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
+    def test_create_image_v1_1_actual_server_ref(self):
+
+        serverRef = 'http://localhost/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
+        result = json.loads(response.body)
+        self.assertEqual(result['image']['serverRef'], serverRef)
+
+    def test_create_image_v1_1_server_ref_bad_hostname(self):
+
+        serverRef = 'http://asdf/v1.1/servers/1'
+        body = dict(image=dict(serverRef=serverRef, name='Backup 1'))
+        req = webob.Request.blank('/v1.1/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     def test_create_image_v1_1_xml_serialization(self):
 
         body = dict(image=dict(serverRef='123', name='Snapshot 1'))
@@ -1104,7 +1124,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
             <image
                    created="None"
                    id="123"
-                   name="None"
+                   name="Snapshot 1"
                    serverRef="http://localhost/v1.1/servers/123"
                    status="ACTIVE"
                    updated="None"
@@ -1151,7 +1171,8 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         image_id += 1
 
         # Snapshot for User 1
-        snapshot_properties = {'instance_id': '42', 'user_id': '1'}
+        server_ref = 'http://localhost:8774/v1.1/servers/42'
+        snapshot_properties = {'instance_ref': server_ref, 'user_id': '1'}
         for status in ('queued', 'saving', 'active', 'killed'):
             add_fixture(id=image_id, name='%s snapshot' % status,
                         is_public=False, status=status,
