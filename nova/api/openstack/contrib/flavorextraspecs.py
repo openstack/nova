@@ -43,7 +43,6 @@ class FlavorExtraSpecsController(object):
 
     def index(self, req, flavor_id):
         """ Returns the list of extra specs for a givenflavor """
-        print req.environ
         context = req.environ['nova.context']
         return self._get_extra_specs(context, flavor_id)
 
@@ -97,7 +96,9 @@ class FlavorExtraSpecsController(object):
             raise exc.HTTPBadRequest(explanation=error.message)
         raise error
 
+
 class Flavorextraspecs(extensions.ExtensionDescriptor):
+
     def get_name(self):
         return "FlavorExtraSpecs"
 
@@ -116,11 +117,11 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         resources = []
-        res = extensions.ResourceExtension('flavor_extra_specs/:(flavor_id)',
-               FlavorExtraSpecsController(),
-               member_actions={
-                 'show' : 'flavor_extra_specs/:(flavor_id)/extra/:(id)'  })
+        res = extensions.ResourceExtension(
+                'flavor_extra_specs',
+                FlavorExtraSpecsController(),
+                parent=dict(member_name='flavor', collection_name='flavors'))
+
+
         resources.append(res)
         return resources
-
-
