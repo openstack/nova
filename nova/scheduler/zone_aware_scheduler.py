@@ -244,6 +244,8 @@ class ZoneAwareScheduler(driver.Scheduler):
             # may have been consumed from a previous build..
             host_list = self.filter_hosts(topic, request_spec, host_list)
             if not host_list:
+                LOG.warn(_("Ran out of available hosts after weighing "
+                        "%d of %d instances") % (i, num_instances))
                 break
 
             # then weigh the selected hosts.
@@ -279,7 +281,7 @@ class ZoneAwareScheduler(driver.Scheduler):
         is acceptable for scheduling.
         """
         instance_type = request_spec['instance_type']
-        requested_mem = instance_type['memory_mb']
+        requested_mem = instance_type['memory_mb'] * 1024 * 1024
         return capabilities['host_memory_free'] >= requested_mem
 
     def filter_hosts(self, topic, request_spec, host_list=None):
@@ -297,14 +299,20 @@ class ZoneAwareScheduler(driver.Scheduler):
 
         filter_func = getattr(self, '%s_filter' % topic, _default_filter)
 
-        filtered_hosts = []
         if host_list is None:
+            first_run = True
             host_list = self.zone_manager.service_states.iteritems()
+        else:
+            first_run = False
+
+        filtered_hosts = []
         for host, services in host_list:
-            if topic not in services:
-                continue
-            if filter_func(host, services[topic], request_spec):
-                filtered_hosts.append((host, services[topic]))
+            if first_run:
+                if topic not in services:
+                    continue
+                services = services['topic']
+            if filter_func(host, services, request_spec):
+                filtered_hosts.append((host, services))
         return filtered_hosts
 
     def weigh_hosts(self, topic, request_spec, hosts):
@@ -318,7 +326,7 @@ class ZoneAwareScheduler(driver.Scheduler):
     def compute_consume(self, capabilities, instance_type):
         """Consume compute resources for selected host"""
 
-        requested_mem = max(instance_type['memory_mb'], 0)
+        requested_mem = max(instance_type['memory_mb'], 0) * 1024 * 1024
         capabilities['host_memory_free'] -= requested_mem
 
     def consume_resources(self, topic, capabilities, instance_type):
