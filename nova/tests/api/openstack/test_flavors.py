@@ -93,7 +93,7 @@ class FlavorsTest(test.TestCase):
 
         self.stubs.Set(nova.db.api, "instance_type_get_all",
                        _throw_NoInstanceTypesFound)
-        
+
         req = webob.Request.blank('/v1.0/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
@@ -282,7 +282,7 @@ class FlavorsTest(test.TestCase):
 
         self.stubs.Set(nova.db.api, "instance_type_get_all",
                        _throw_NoInstanceTypesFound)
-        
+
         req = webob.Request.blank('/v1.1/flavors')
         res = req.get_response(fakes.wsgi_app())
         self.assertEqual(res.status_int, 200)
