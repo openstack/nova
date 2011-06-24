@@ -122,13 +122,17 @@ class Controller(object):
             image_name = get_param("name")
             image = self._compute_service.snapshot(context, server_id,
                     image_name)
-        else:
+        elif image_type in ("daily", "weekly"):
             if not FLAGS.allow_admin_api:
                 raise webob.exc.HTTPBadRequest()
 
             rotation = int(get_param("rotation"))
             image = self._compute_service.backup(context, server_id,
                     image_type, rotation)
+        else:
+            LOG.error(_("Invalid image_type '%s' passed" % image_type))
+            raise webob.exc.HTTPBadRequest()
+
 
         return dict(image=self.get_builder(req).build(image, detail=True))
 

@@ -1018,6 +1018,35 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app())
         self.assertEqual(200, response.status_int)
 
+    def test_create_backup_no_rotation(self):
+        """Rotation is required for backup requests"""
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', image_type='daily'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_image_with_invalid_image_type(self):
+        """Valid image_types are snapshot | daily | weekly"""
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG
+        body = dict(image=dict(serverId='123', image_type='monthly',
+                               rotation=1))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
     def test_create_image_no_server_id(self):
 
         body = dict(image=dict(name='Snapshot 1'))
