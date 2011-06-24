@@ -278,7 +278,8 @@ def _filter_duplicates(all_entries):
     return final_list
 
 
-def _set_rhel_networking(network_details=[]):
+def _set_rhel_networking(network_details=None):
+    network_details = network_details or []
     all_dns_servers = []
     for network_detail in network_details:
         mac_address, ip_address, subnet_mask, gateway, broadcast,\
@@ -318,7 +319,8 @@ def _set_rhel_networking(network_details=[]):
     _execute(['/sbin/service', 'network', 'restart'])
 
 
-def _set_ubuntu_networking(network_details=[]):
+def _set_ubuntu_networking(network_details=None):
+    network_details = network_details or []
     """ Set IPv4 network settings for Ubuntu """
     all_dns_servers = []
     for network_detail in network_details:
