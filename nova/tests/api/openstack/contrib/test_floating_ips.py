@@ -15,13 +15,32 @@
 from nova import context
 from nova import db
 from nova import test
+from nova import network
+from nova.tests.api.openstack import fakes
 
 import stubout
 import webob
 
-from nova.api.openstack.contrib.floating_ips import FloatingIPController
 from nova.api.openstack.contrib.floating_ips import \
     _translate_floating_ip_view
+
+def network_api_get():
+    pass
+
+def network_api_list():
+    pass
+
+def network_api_allocate():
+    pass
+
+def network_api_release():
+    pass
+
+def network_api_associate():
+    pass
+
+def network_api_disassociate():
+    pass
 
 
 class FloatingIpTest(test.TestCase):
@@ -40,9 +59,29 @@ class FloatingIpTest(test.TestCase):
 
     def setUp(self):
         super(FloatingIpTest, self).setUp()
-        self.controller = FloatingIPController()
         self.stubs = stubout.StubOutForTesting()
+        fakes.FakeAuthManager.reset_fake_data()
+        fakes.FakeAuthDatabase.data = {}
+        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_rate_limiting(self.stubs)
+        fakes.stub_out_auth(self.stubs)
+        self.stubs.Set(network.api, "get",
+                       network_api_get)
+        self.stubs.Set(network.api, "list",
+                       network_api_list)
+        self.stubs.Set(network.api, "allocate_floating_ip",
+                       network_api_allocate)
+        self.stubs.Set(network.api, "release_floating_ip",
+                       network_api_release)
+        self.stubs.Set(network.api, "associate_floating_ip",
+                       network_api_associate)
+        self.stubs.Set(network.api, "disassociate_floating_ip",
+                       network_api_disassociate)
         self.context = context.get_admin_context()
+
+    def tearDown(self):
+        self.stubs.UnsetAll()
+        super(FloatingIpTest, self).tearDown()
 
     def test_translate_floating_ip_view(self):
         floating_ip_address = self._create_floating_ip()
