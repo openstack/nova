@@ -180,18 +180,21 @@ class ZoneAwareScheduler(driver.Scheduler):
                                     request_spec, kwargs)
             return None
 
+        num_instances = request_spec['num_instances']
+        LOG.debug(_("Attemping to build %d instance%s") %
+            (num_instances, "" if num_instances == 1 else "s"))
+
         # Create build plan and provision ...
         build_plan = self.select(context, request_spec)
         if not build_plan:
             raise driver.NoValidHost(_('No hosts were available'))
 
-        for num in xrange(request_spec['num_instances']):
+        for num in xrange(num_instances):
             if not build_plan:
                 break
-
             item = build_plan.pop(0)
-            self._provision_resource(context, item, instance_id, request_spec,
-                                    kwargs)
+            self._provision_resource(context, item, instance_id,
+                    request_spec, kwargs)
 
         # Returning None short-circuits the routing to Compute (since
         # we've already done it here)
