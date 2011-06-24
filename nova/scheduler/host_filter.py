@@ -97,9 +97,13 @@ class InstanceTypeFilter(HostFilter):
         """Check that the capabilities provided by the compute service
         satisfy the extra specs associated with the instance type"""
 
+        if 'extra_specs' not in instance_type:
+            return True
+
         # Note(lorinh): For now, we are just checking exact matching on the
         # values. Later on, we  want to handle numerical
         # values so we can represent things like number of GPU cards
+        
         try:
             for key, value in instance_type['extra_specs'].iteritems():
                 if capabilities[key] != value:
