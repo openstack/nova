@@ -122,6 +122,5 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
                 FlavorExtraSpecsController(),
                 parent=dict(member_name='flavor', collection_name='flavors'))
 
-
         resources.append(res)
         return resources
