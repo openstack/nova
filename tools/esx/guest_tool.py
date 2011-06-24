@@ -317,6 +317,7 @@ def _set_rhel_networking(network_details=[]):
         dns_file.close()
     _execute(['/sbin/service', 'network', 'restart'])
 
+
 def _set_ubuntu_networking(network_details=[]):
     """ Set IPv4 network settings for Ubuntu """
     all_dns_servers = []
@@ -355,6 +356,7 @@ def _set_ubuntu_networking(network_details=[]):
     print "\nRestarting networking....\n"
     _execute(['/etc/init.d/networking', 'restart'])
 
+
 def _linux_set_networking():
     """Set IP address for the Linux VM."""
     vmware_tools_bin = None
@@ -371,9 +373,9 @@ def _linux_set_networking():
         network_details = _parse_network_details(_execute(cmd,
                                                 check_exit_code=False))
         # TODO(sateesh): For other distros like suse, debian, BSD, etc.
-	if(platform.dist()[0] == 'Ubuntu') :
+        if(platform.dist()[0] == 'Ubuntu'):
             _set_ubuntu_networking(network_details)
-        elif (platform.dist()[0] == 'redhat') :
+        elif (platform.dist()[0] == 'redhat'):
             _set_rhel_networking(network_details)
         else:
             logging.warn(_("Distro '%s' not supported") % platform.dist()[0])

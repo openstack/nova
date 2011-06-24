@@ -89,7 +89,8 @@ def create_controller_spec(client_factory, key):
     return virtual_device_config
 
 
-def create_network_spec(client_factory, network_name, mac_address,network_ref=None):
+def create_network_spec(client_factory, network_name, mac_address,
+                        network_ref=None):
     """
     Builds a config spec for the addition of a new network
     adapter to the VM.
@@ -101,7 +102,7 @@ def create_network_spec(client_factory, network_name, mac_address,network_ref=No
     # Get the recommended card type for the VM based on the guest OS of the VM
     net_device = client_factory.create('ns0:VirtualPCNet32')
 
-    # NOTE: Only works on ESXi if the portgroup binding is set to 
+    # NOTE: Only works on ESXi if the portgroup binding is set to
     # ephemeral. Invalid configuration if set to static and the NIC does
     # not come up on boot if set to dynamic.
     backing = None

@@ -50,9 +50,9 @@ def get_network_with_the_name(session, network_name="vmnet0"):
         # Get network properties
         if network._type == 'DistributedVirtualPortgroup':
             props = session._call_method(vim_util,
-                        "get_dynamic_property",network,
-                        "DistributedVirtualPortgroup","config")
-            # NOTE: This only works on ESXi if the port binding is 
+                        "get_dynamic_property", network,
+                        "DistributedVirtualPortgroup", "config")
+            # NOTE(asomya): This only works on ESXi if the port binding is
             # set to ephemeral
             if props.name == network_name:
                 network_obj['type'] = 'DistributedVirtualPortgroup'
@@ -60,8 +60,8 @@ def get_network_with_the_name(session, network_name="vmnet0"):
                 network_obj['dvsw'] = props.distributedVirtualSwitch.value
         else:
             props = session._call_method(vim_util,
-                        "get_dynamic_property",network,
-                        "Network","summary.name")
+                        "get_dynamic_property", network,
+                        "Network", "summary.name")
             if props == network_name:
                 network_obj['type'] = 'Network'
                 network_obj['name'] = network_name
@@ -69,6 +69,7 @@ def get_network_with_the_name(session, network_name="vmnet0"):
         return network_obj
     else:
         return None
+
 
 def get_vswitch_for_vlan_interface(session, vlan_interface):
     """
