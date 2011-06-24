@@ -291,9 +291,11 @@ def floating_ip_get_by_address(context, address):
     """Get a floating ip by address or raise if it doesn't exist."""
     return IMPL.floating_ip_get_by_address(context, address)
 
+
 def floating_ip_get_by_ip(context, ip):
     """Get a floating ip by floating address."""
     return IMPL.floating_ip_get_by_ip(context, ip)
+
 
 def floating_ip_update(context, address, values):
     """Update a floating ip by address or raise if it doesn't exist."""
