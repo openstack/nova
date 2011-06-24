@@ -310,7 +310,7 @@ class ZoneAwareScheduler(driver.Scheduler):
             if first_run:
                 if topic not in services:
                     continue
-                services = services['topic']
+                services = services[topic]
             if filter_func(host, services, request_spec):
                 filtered_hosts.append((host, services))
         return filtered_hosts
