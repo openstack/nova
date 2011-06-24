@@ -146,6 +146,15 @@ def stub_out_compute_api_snapshot(stubs):
     stubs.Set(nova.compute.API, 'snapshot', snapshot)
 
 
+def stub_out_compute_api_backup(stubs):
+    def backup(self, context, instance_id, backup_type, rotation):
+        return dict(id='123', status='ACTIVE',
+                    properties=dict(instance_id='123',
+                                    image_type=backup_type,
+                                    rotation=rotation))
+    stubs.Set(nova.compute.API, 'backup', backup)
+
+
 def stub_out_glance_add_image(stubs, sent_to_glance):
     """
     We return the metadata sent to glance by modifying the sent_to_glance dict

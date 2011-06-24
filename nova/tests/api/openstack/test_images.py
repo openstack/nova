@@ -340,6 +340,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.fixtures = self._make_image_fixtures()
         fakes.stub_out_glance(self.stubs, initial_fixtures=self.fixtures)
         fakes.stub_out_compute_api_snapshot(self.stubs)
+        fakes.stub_out_compute_api_backup(self.stubs)
 
     def tearDown(self):
         """Run after each test."""
@@ -364,10 +365,10 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         response_list = response_dict["images"]
 
         expected = [{'id': 123, 'name': 'public image'},
-                    {'id': 124, 'name': 'queued backup'},
-                    {'id': 125, 'name': 'saving backup'},
-                    {'id': 126, 'name': 'active backup'},
-                    {'id': 127, 'name': 'killed backup'},
+                    {'id': 124, 'name': 'queued snapshot'},
+                    {'id': 125, 'name': 'saving snapshot'},
+                    {'id': 126, 'name': 'active snapshot'},
+                    {'id': 127, 'name': 'killed snapshot'},
                     {'id': 129, 'name': None}]
 
         self.assertDictListMatch(response_list, expected)
@@ -617,7 +618,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 124,
-            'name': 'queued backup',
+            'name': 'queued snapshot',
             'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -625,7 +626,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 125,
-            'name': 'saving backup',
+            'name': 'saving snapshot',
             'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -634,7 +635,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 126,
-            'name': 'active backup',
+            'name': 'active snapshot',
             'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -642,7 +643,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup',
+            'name': 'killed snapshot',
             'serverId': 42,
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -688,7 +689,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 124,
-            'name': 'queued backup',
+            'name': 'queued snapshot',
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -710,7 +711,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 125,
-            'name': 'saving backup',
+            'name': 'saving snapshot',
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -733,7 +734,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 126,
-            'name': 'active backup',
+            'name': 'active snapshot',
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -755,7 +756,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         },
         {
             'id': 127,
-            'name': 'killed backup',
+            'name': 'killed snapshot',
             'serverRef': "http://localhost/v1.1/servers/42",
             'updated': self.NOW_API_FORMAT,
             'created': self.NOW_API_FORMAT,
@@ -973,8 +974,43 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_create_image(self):
+        body = dict(image=dict(serverId='123', name='Snapshot 1'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, response.status_int)
 
-        body = dict(image=dict(serverId='123', name='Backup 1'))
+    def test_create_snapshot_no_name(self):
+        """Name is required for snapshots
+
+        If an image_type isn't passed, we default to image_type=snapshot,
+        thus `name` is required
+        """
+        body = dict(image=dict(serverId='123'))
+        req = webob.Request.blank('/v1.0/images')
+        req.method = 'POST'
+        req.body = json.dumps(body)
+        req.headers["content-type"] = "application/json"
+        response = req.get_response(fakes.wsgi_app())
+        self.assertEqual(400, response.status_int)
+
+    def test_create_backup_no_name_with_rotation(self):
+        """Name isn't required for backups, but rotation is.
+
+        The reason name isn't required is because it defaults to the
+        image_type.
+
+        Creating a backup is an admin-only operation, as opposed to snapshots
+        which are available to anybody.
+        """
+        # FIXME(sirp): teardown needed?
+        FLAGS.allow_admin_api = True
+
+        # FIXME(sirp): should the fact that backups are admin_only be a FLAG 
+        body = dict(image=dict(serverId='123', image_type='daily',
+                               rotation=1))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -984,7 +1020,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_create_image_no_server_id(self):
 
-        body = dict(image=dict(name='Backup 1'))
+        body = dict(image=dict(name='Snapshot 1'))
         req = webob.Request.blank('/v1.0/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -994,7 +1030,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_create_image_v1_1(self):
 
-        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        body = dict(image=dict(serverRef='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1004,7 +1040,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_create_image_v1_1_xml_serialization(self):
 
-        body = dict(image=dict(serverRef='123', name='Backup 1'))
+        body = dict(image=dict(serverRef='123', name='Snapshot 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1037,7 +1073,7 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
 
     def test_create_image_v1_1_no_server_ref(self):
 
-        body = dict(image=dict(name='Backup 1'))
+        body = dict(image=dict(name='Snapshot 1'))
         req = webob.Request.blank('/v1.1/images')
         req.method = 'POST'
         req.body = json.dumps(body)
@@ -1064,18 +1100,20 @@ class ImageControllerWithGlanceServiceTest(test.TestCase):
                     status='active', properties={})
         image_id += 1
 
-        # Backup for User 1
-        backup_properties = {'instance_id': '42', 'user_id': '1'}
+        # Snapshot for User 1
+        snapshot_properties = {'instance_id': '42', 'user_id': '1'}
         for status in ('queued', 'saving', 'active', 'killed'):
-            add_fixture(id=image_id, name='%s backup' % status,
+            add_fixture(id=image_id, name='%s snapshot' % status,
                         is_public=False, status=status,
-                        properties=backup_properties)
+                        properties=snapshot_properties)
             image_id += 1
 
-        # Backup for User 2
-        other_backup_properties = {'instance_id': '43', 'user_id': '2'}
-        add_fixture(id=image_id, name='someone elses backup', is_public=False,
-                    status='active', properties=other_backup_properties)
+        # Snapshot for User 2
+        other_snapshot_properties = {'instance_id': '43', 'user_id': '2'}
+        add_fixture(id=image_id, name='someone elses snapshot',
+                    is_public=False, status='active',
+                    properties=other_snapshot_properties)
+
         image_id += 1
 
         # Image without a name
