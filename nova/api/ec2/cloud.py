@@ -943,7 +943,7 @@ class CloudController(object):
             i['amiLaunchIndex'] = instance['launch_index']
             i['displayName'] = instance['display_name']
             i['displayDescription'] = instance['display_description']
-            i['rootDeviceName'] = (instance['root_device_name'] or
+            i['rootDeviceName'] = (instance.get('root_device_name') or
                                    _DEFAULT_ROOT_DEVICE_NAME)
             self._format_instance_bdm(context, instance_id,
                                       i['rootDeviceName'], i)
